@@ -2,7 +2,6 @@ import { ExpandMore } from '@mui/icons-material';
 import { Alert, Box, Button, Collapse, MenuItem, Paper, TextField, Typography } from '@mui/material';
 import { useId, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { Config } from 'clock-generator/browser';
-import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ResultDetail } from '../utils/resultsView';
 import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
 import { useBuildSection } from '../hooks/useBuildViewContext';
@@ -37,6 +36,7 @@ import type { Problem } from '../utils/firstProblem';
 interface ResultsWorkspaceProps {
     installOpen: boolean;
     onInstallClose: () => void;
+    onInstall: () => void;
     copyLabel: string;
     comparison: BuildViewContext['comparison'];
     onComparisonChange(comparison: BuildViewContext['comparison']): void;
@@ -119,7 +119,6 @@ interface ResultsWorkspaceProps {
  * the other clocks to compare it with, and the details of the selected clock. Developer tools, when they are on, last.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
-    const { density } = useDisplayPreferences();
     const [comparisonOpen, setComparisonOpen] = useBuildSection('comparison-open');
     const comparisonId = useId();
     const saved = useMemo(() => {
@@ -207,11 +206,13 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 rateWarning={rateWarning}
                 stale={props.staleFor !== null}
                 beltAction={props.beltAction}
-                comparisonAction={<Button size="small" color="inherit" aria-expanded={comparisonOpen} aria-controls={comparisonId}
+                comparisonAction={<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {props.blueprintString && <Button size="small" color="inherit" onClick={props.onInstall}>Install guide</Button>}
+                    <Button size="small" color="inherit" aria-expanded={comparisonOpen} aria-controls={comparisonId}
                     onClick={() => setComparisonOpen(!comparisonOpen)}
                     endIcon={<ExpandMore sx={{ transform: comparisonOpen ? 'rotate(180deg)' : 'none' }} />}>
                     Compare clocks
-                </Button>}
+                </Button></Box>}
                 runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">
                         These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.non_moving_belts ? 'standing-still' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
@@ -224,7 +225,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Box>}
             />
 
-            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: density === 'compact' ? 1.5 : 2, '& > *': { minWidth: 0 } }}>
+            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 1.5, '& > *': { minWidth: 0 } }}>
                 <Collapse id={comparisonId} in={comparisonOpen || !selected} mountOnEnter timeout={150}>
                     <ClockAlternativesPanel
                         comparison={props.comparison}

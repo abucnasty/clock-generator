@@ -15,7 +15,6 @@ import {
     Typography,
 } from '@mui/material';
 import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue } from '../hooks/useConfigForm';
-import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
@@ -61,8 +60,6 @@ function BeltsFormComponent({
     onBeltAnswer,
 }: BeltsFormProps) {
     const { itemLabel } = useGameNames();
-    const { density } = useDisplayPreferences();
-    const compact = density === 'compact';
     const lanes = belts.flatMap(belt => belt.lanes);
     const common = belts.length === 0 ? [] : [
         belts.every(belt => belt.type === belts[0].type) ? entityTypeLabel(belts[0].type, itemLabel) : null,
@@ -123,6 +120,10 @@ function BeltsFormComponent({
                 label: 'About belt strategies',
                 content: (
                     <>
+                        {(common.length > 0 || lanes.length > 0 && lanes.every(lane => lane.stack_size === lanes[0].stack_size)) && <Typography variant="body2" sx={{ mb: 1 }}>
+                            {common.length > 0 && `All ${belts.length} belts: ${common.join(' · ')}. `}
+                            {lanes.length > 0 && lanes.every(lane => lane.stack_size === lanes[0].stack_size) && `All ${lanes.length} lanes: stack size ${lanes[0].stack_size}.`}
+                        </Typography>}
                         {BELT_STRATEGIES.map((strategy) => (
                             <Typography key={strategy.value} variant="body2" sx={{ mb: 1 }}>
                                 <strong>{strategy.label}:</strong> {strategy.description}
@@ -148,10 +149,6 @@ function BeltsFormComponent({
                 </Box>
             )}
 
-            {!compact && (common.length > 0 || lanes.length > 0 && lanes.every(lane => lane.stack_size === lanes[0].stack_size)) && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {common.length > 0 && `All ${belts.length} belts: ${common.join(' · ')}. `}
-                {lanes.length > 0 && lanes.every(lane => lane.stack_size === lanes[0].stack_size) && `All ${lanes.length} lanes: stack size ${lanes[0].stack_size}.`}
-            </Typography>}
             <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
                 <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)} displayLabel={<EntityBadge id={belt.id}><BeltLanePreview belt={belt} /></EntityBadge>}>
@@ -161,8 +158,8 @@ function BeltsFormComponent({
                     role="group"
                     aria-label={entityLabel('belt', belt.id)}
                     sx={{
-                        mb: compact ? 1 : 2,
-                        p: compact ? 1.5 : 2,
+                        mb: 1,
+                        p: 1.5,
                         minWidth: 0,
                         containerType: 'inline-size',
                         containerName: 'belt-row',
@@ -217,7 +214,7 @@ function BeltsFormComponent({
                         </Box>
                     <EntitySettings actionContainerId={`settings-actions-belt-${belt.id}`} label={entityLabel('belt', belt.id)} tabs={[{ label: 'Lanes', content: (<>
                     {/* Lanes */}
-                    <Box sx={{ pl: compact ? 0 : { xs: 0, sm: 2 }, minWidth: 0 }}>
+                    <Box sx={{ pl: 0, minWidth: 0 }}>
                         {!geometryBeltIds.includes(belt.id) && belt.lanes.length < 2 && (
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
                                 <Button size="small" color="inherit" onClick={() => addLane(beltIndex)}>Add Lane</Button>
@@ -228,7 +225,7 @@ function BeltsFormComponent({
                                 key={`lane-${laneIndex}`}
                                 sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px', gap: 1, alignItems: 'start', mb: 1, minWidth: 0 }}
                             >
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 1 : 2, rowGap: 1, alignItems: 'center', minWidth: 0 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, rowGap: 1, alignItems: 'center', minWidth: 0 }}>
                                 <Typography variant="body2" sx={{ width: 60, flexShrink: 0 }}>
                                     Lane {laneIndex + 1}:
                                 </Typography>
@@ -287,7 +284,7 @@ function BeltsFormComponent({
 </>) }]} summary={<Typography variant="body2">
                         {BELT_STRATEGIES.find(strategy => strategy.value === (belt.strategy ?? 'normal'))?.label} · {belt.lanes.map((lane, laneIndex) => `Lane ${laneIndex + 1} stack ${lane.stack_size}${belt.strategy === 'export' ? ` · Consumed ${lane.consumption_per_second ?? 'Automatic'}/s` : ''}`).join(' · ')}
                     </Typography>}>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: compact ? 1 : 2, mb: 1.5 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 1, mb: 1.5 }}>
 
                         <FormControl size="small" sx={{ minWidth: 0, width: '100%' }}>
                             <InputLabel>Strategy</InputLabel>

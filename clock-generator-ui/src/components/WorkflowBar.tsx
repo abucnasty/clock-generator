@@ -1,6 +1,6 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
 import { Box, Button, Chip, CircularProgress, LinearProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { useAnnounce } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
@@ -20,8 +20,9 @@ const SELECTED_CLOCK_PREFIX = 'Selected clock: ';
 /** The note's line in the bar: its button (23px) and the 8px under it */
 
 interface WorkflowBarProps {
-    /** Build identity, entry/tools and browser display choices share the workflow toolbar. */
     identity?: ReactNode;
+    entryAction?: ReactNode;
+    menu?: ReactNode;
     view: WorkflowView;
     onViewChange: (view: WorkflowView) => void;
     isLoading: boolean;
@@ -64,7 +65,6 @@ interface WorkflowBarProps {
     copied: boolean;
     /** Copies the blueprint, or asks first for the clock of an earlier build (the copy every Copy button shares) */
     onCopy: () => void;
-    onHowToInstall: () => void;
     /** Blocking validation errors, shared with the Build validation panel. */
     problems: Problem[];
     /** Guidance for an empty build; validation details stay in the panel. */
@@ -86,28 +86,13 @@ interface WorkflowBarProps {
 }
 
 /**
- * The Copy button's words. What comes after "Copy blueprint" ("(200/s, below target)") keeps its case: upper-cased, the
- * unit would read "200/S"
- */
-export function CopyLabel({ label }: { label: string }) {
-    const at = label.indexOf(' (');
-    if (at < 0) {
-        return label;
-    }
-    // one span: the button lays its children out as flex items, which would drop the space between them
-    return (
-        <span>
-            {label.slice(0, at)} <Box component="span" sx={{ textTransform: 'none' }}>{label.slice(at + 1)}</Box>
-        </span>
-    );
-}
-
-/**
  * The second row of the app bar, so it stays in view with it: switches between configuring the build and its results,
  * and keeps the steps of the workflow (check, generate, copy the blueprint) one click away from either.
  */
 export function WorkflowBar({
     identity,
+    entryAction,
+    menu,
     view,
     onViewChange,
     isLoading,
@@ -131,7 +116,6 @@ export function WorkflowBar({
     staleFor,
     copied,
     onCopy,
-    onHowToInstall,
     problems,
     note,
     startHere,
@@ -193,6 +177,8 @@ export function WorkflowBar({
     // clock warns, green when not; the copy of an old clock is the one to think twice about, never filled
     const warns = rateWarning !== null || staleFor !== null;
     const copyFilled = primaryAction === 'copy-bar' && staleFor === null;
+    const copyWarningId = useId();
+    const shortCopyLabel = copyLabel.split(' (')[0];
     // with problems Generate stays on but goes to the first one instead (2.3): nothing is ready to commit, so nothing is filled
     const generateFilled = primaryAction === 'generate' && problems.length === 0;
 
@@ -303,13 +289,23 @@ export function WorkflowBar({
 
     return (
         <Box>
-            <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: 1, py: 1, px: { xs: 2, sm: 2 } }}>
-                {identity}
+            <Toolbar variant="dense" sx={{
+                display: 'grid', gap: 1, py: 1, px: 2,
+                gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', sm: 'minmax(0, 1fr) auto auto', lg: 'auto auto auto minmax(0, 1fr) auto auto' },
+                gridTemplateAreas: {
+                    xs: '"identity menu" "navigation entry" "actions actions"',
+                    sm: '"identity entry menu" "navigation actions actions"',
+                    lg: '"identity entry navigation spacer actions menu"',
+                },
+            }}>
+                <Box sx={{ gridArea: 'identity', minWidth: 0 }}>{identity}</Box>
+                <Box sx={{ gridArea: 'entry', justifySelf: 'end' }}>{entryAction}</Box>
                 <ToggleButtonGroup
                     value={view}
                     exclusive
                     onChange={(_, value) => { if (value) onViewChange(value); }}
                     size="small"
+                    sx={{ gridArea: 'navigation', justifySelf: 'start' }}
                     aria-label="Configure the build or look at its results"
                     // always in the header: where focus goes back to when what it was on has gone
                     data-focus-fallback=""
@@ -321,7 +317,48 @@ export function WorkflowBar({
                 {noteInBar && <Box sx={{ flex: '1 1 0', minWidth: 0 }}>{noteNode(true)}</Box>}
 
                 {/* the actions wrap together and stay on the right, instead of one dropping to a row of its own */}
-                <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                <Box sx={{ gridArea: 'actions', display: 'flex', flexWrap: { xs: 'wrap', sm: 'nowrap' }, alignItems: 'center', justifyContent: 'flex-end', gap: 1,
+                    '& .MuiButton-root': { whiteSpace: 'nowrap' } }}>
+                    {/* the note under the buttons says where they go instead of checking; it describes both, and is their
+                        tooltip too. Above the buttons, so that the tooltip does not cover the note it repeats */}
+                    <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
+                        {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
+                        <Box component="span" sx={{ display: { xs: 'none', lg: 'inline-flex' } }}>
+                            <Button
+                                ref={checkOnlyRef}
+                                variant="text"
+                                color="inherit"
+                                size="small"
+                                onClick={() => {
+                                    pressedAtRef.current = performance.now();
+                                    onCheckOnly();
+                                }}
+                                disabled={busy}
+                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
+                                startIcon={checking === 'check-only' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
+                            >
+                                {checking === 'check-only' ? CHECK_TEXT.checking : CHECK_TEXT.checkOnly}
+                            </Button>
+                        </Box>
+                    </Tooltip>
+                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
+                        <span>
+                            {/* filled only when it is the next step (generateFilled); a blank build has problems, so there
+                                the next step is the recipe (or the intro card's Paste) and Generate is outlined */}
+                            <Button
+                                ref={generateRef}
+                                variant={generateFilled ? 'contained' : 'outlined'}
+                                size="small"
+                                onClick={onGenerate}
+                                color={generateFilled ? 'secondary' : 'inherit'}
+                                disabled={busy}
+                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
+                                startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
+                            >
+                                {isLoading ? CHECK_TEXT.generating : checking === 'generate' ? CHECK_TEXT.checking : CHECK_TEXT.generate}
+                            </Button>
+                        </span>
+                    </Tooltip>
                     {blueprintString && (
                         <>
                             {selectedLabel && !identity && !noteInBar && (
@@ -336,7 +373,6 @@ export function WorkflowBar({
                                     {SELECTED_CLOCK_PREFIX}{selectedLabel}
                                 </Typography>
                             )}
-                            <Button size="small" color="inherit" onClick={onHowToInstall}>How to install</Button>
                             {/* describeChild keeps the button's label as its name. Below it when the actions wrap, so
                                 the help leaves Configure/Results reachable; above it when wide, clear of the messages.
                                 It stays open under the pointer (WCAG 1.4.13), inside the banner (disablePortal). */}
@@ -346,15 +382,21 @@ export function WorkflowBar({
                                     variant={copyFilled ? 'contained' : 'outlined'}
                                     size="small"
                                     onClick={onCopy}
+                                    aria-describedby={warns ? copyWarningId : undefined}
                                     // "Copied" keeps the colour it had
                                     color={warns ? 'warning' : copyFilled ? 'secondary' : 'inherit'}
                                     startIcon={copied ? <Check /> : warns ? <Warning /> : <ContentCopy />}
                                 >
-                                    {copied ? 'Copied' : <CopyLabel label={copyLabel} />}
+                                    {copied ? 'Copied' : shortCopyLabel}
                                 </Button>
                             </Tooltip>
                         </>
                     )}
+                </Box>
+                <Box sx={{ gridArea: 'menu', justifySelf: 'end' }}>{menu}</Box>
+            </Toolbar>
+            {(problems.length > 0 && !startHere || chip || blueprintString && (staleFor || rateWarning)) && (
+                <Box sx={{ px: 2, pb: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
                     {problems.length > 0 && !startHere && (
                         <Chip
                             size="small"
@@ -380,48 +422,11 @@ export function WorkflowBar({
                             color={chip.color}
                         />
                     )}
-                    {/* the note under the buttons says where they go instead of checking; it describes both, and is their
-                        tooltip too. Above the buttons, so that the tooltip does not cover the note it repeats */}
-                    <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
-                        {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
-                        <span>
-                            <Button
-                                ref={checkOnlyRef}
-                                variant="text"
-                                color="inherit"
-                                size="small"
-                                onClick={() => {
-                                    pressedAtRef.current = performance.now();
-                                    onCheckOnly();
-                                }}
-                                disabled={busy}
-                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
-                                startIcon={checking === 'check-only' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
-                            >
-                                {checking === 'check-only' ? CHECK_TEXT.checking : CHECK_TEXT.checkOnly}
-                            </Button>
-                        </span>
-                    </Tooltip>
-                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
-                        <span>
-                            {/* filled only when it is the next step (generateFilled); a blank build has problems, so there
-                                the next step is the recipe (or the intro card's Paste) and Generate is outlined */}
-                            <Button
-                                ref={generateRef}
-                                variant={generateFilled ? 'contained' : 'outlined'}
-                                size="small"
-                                onClick={onGenerate}
-                                color={generateFilled ? 'secondary' : 'inherit'}
-                                disabled={busy}
-                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
-                                startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
-                            >
-                                {isLoading ? CHECK_TEXT.generating : checking === 'generate' ? CHECK_TEXT.checking : CHECK_TEXT.generate}
-                            </Button>
-                        </span>
-                    </Tooltip>
+                    {blueprintString && (staleFor || rateWarning) && <Typography id={copyWarningId} variant="body2" color="warning.main">
+                        {staleFor ? STALE_COPY_TOOLTIP : rateWarning}
+                    </Typography>}
                 </Box>
-            </Toolbar>
+            )}
             {/* Only empty-build guidance gets a line below the toolbar. Errors are summarized by the count above. */}
             {note && (
                 <Box

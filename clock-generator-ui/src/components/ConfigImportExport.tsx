@@ -1,4 +1,4 @@
-import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link } from '@mui/icons-material';
+import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
@@ -6,6 +6,8 @@ import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
 import { useDismissMessage, useNotify } from '../hooks/useMessages';
 import { useGameNames } from '../hooks/useGameNames';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
+import type { DisplayScheme } from '../utils/displayPreferences';
 import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
@@ -49,6 +51,11 @@ const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
 const freshImportSelections = (): ImportSelections => ({ target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
+const THEME_CHOICES = [
+    { scheme: 'dark', label: 'Theme: Dark', icon: DarkModeOutlined },
+    { scheme: 'light', label: 'Theme: Light', icon: LightModeOutlined },
+    { scheme: 'system', label: 'Theme: Auto (device)', icon: BrightnessAutoOutlined },
+] satisfies { scheme: DisplayScheme; label: string; icon: typeof DarkModeOutlined }[];
 
 /** Describe the destination of this exact preview without suggesting a silent rebind or renumber. */
 function crossingText(warning: PasteReferenceWarning): string {
@@ -112,6 +119,11 @@ interface ConfigImportExportProps {
      * them with the ⋮ button, which a popover they open can hang from. One with `checked` is a check item.
      */
     toolsMenuItems?: ToolsMenuItem[];
+    /** Place the entry action and global menu in separate toolbar groups. */
+    renderControls?: (paste: ReactNode, menu: ReactNode) => ReactNode;
+    onInstall?: () => void;
+    onCheckOnly?: () => void;
+    checkDisabled?: boolean;
 }
 
 /** A share link made when the ⋮ menu opens, so a click can copy it at once; tagged with the build it was made for */
@@ -151,12 +163,16 @@ export function ConfigImportExport({
     buildName,
     buildTitle,
     toolsMenuItems = [],
+    renderControls, onInstall, onCheckOnly, checkDisabled,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
-    const narrow = useMediaQuery(useTheme().breakpoints.down('sm'));
+    const theme = useTheme();
+    const narrow = useMediaQuery(theme.breakpoints.down('sm'));
+    const compactToolbar = useMediaQuery(theme.breakpoints.down('lg'));
     const notify = useNotify();
     const { recipeLabel, itemLabel } = useGameNames();
+    const { scheme, setScheme } = useDisplayPreferences();
     const dismiss = useDismissMessage();
     // the last error of opening a build file or loading an example, which goes as soon as the player tries again
     const errorIdRef = useRef<number | null>(null);
@@ -563,109 +579,142 @@ export function ConfigImportExport({
         onBuildReplaced();
     }, [handleMenuClose, onReset, onBuildReplaced, onUndoable]);
 
+    const pasteButton = <>
+        {/* the way in: below 600px it says only "Paste", and keeps its full name */}
+        <Button
+            onClick={handlePasteFromFactorio}
+            variant={pasteIsNextStep ? 'contained' : 'outlined'}
+            color={pasteIsNextStep ? 'secondary' : 'inherit'}
+            size="small"
+            startIcon={narrow ? undefined : <ContentPaste />}
+            aria-label={narrow ? INTRO_BUTTONS.paste : undefined}
+            sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
+            {narrow ? 'Paste' : INTRO_BUTTONS.paste}
+        </Button>
+    </>;
+    const menuButton = <>
+        {/* the tooltip stays in the header, so its text is inside the banner landmark */}
+        <Tooltip title="More options" slotProps={{ popper: { disablePortal: true } }}>
+            <IconButton
+                ref={menuButtonRef}
+                onClick={handleMenuOpen}
+                size="small"
+                color="inherit"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+            >
+                <MoreVert />
+            </IconButton>
+        </Tooltip>
+    </>;
+
     return (
         <>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                {/* the way in: below 600px it says only "Paste", and keeps its full name */}
-                <Button
-                    onClick={handlePasteFromFactorio}
-                    variant={pasteIsNextStep ? 'contained' : 'outlined'}
-                    color={pasteIsNextStep ? 'secondary' : 'inherit'}
-                    size="small"
-                    startIcon={narrow ? undefined : <ContentPaste />}
-                    aria-label={narrow ? INTRO_BUTTONS.paste : undefined}
-                    sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
-                >
-                    {narrow ? 'Paste' : INTRO_BUTTONS.paste}
-                </Button>
-                {/* the tooltip stays in the header, so its text is inside the banner landmark */}
-                <Tooltip title="More options" slotProps={{ popper: { disablePortal: true } }}>
-                    <IconButton
-                        ref={menuButtonRef}
-                        onClick={handleMenuOpen}
-                        size="small"
-                        color="inherit"
-                        aria-haspopup="menu"
-                        aria-expanded={menuOpen}
+            {renderControls ? renderControls(pasteButton, menuButton) : (
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>{pasteButton}{menuButton}</Box>
+            )}
+            <Menu
+                anchorEl={menuAnchorEl}
+                open={menuOpen}
+                onClose={handleMenuClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+                // The sticky header keeps the opener in place without locking page scrolling.
+                disableScrollLock
+                slotProps={{
+                    paper: { role: 'region', 'aria-label': BUTTON_NAMES.moreOptions },
+                    list: { 'aria-label': BUTTON_NAMES.moreOptions },
+                }}
+            >
+                {compactToolbar && onCheckOnly && <MenuItem disabled={checkDisabled}
+                    onClick={() => { handleMenuClose(); onCheckOnly(); }}>
+                    <ListItemIcon><Check fontSize="small" /></ListItemIcon>
+                    <ListItemText>Check only</ListItemText>
+                </MenuItem>}
+                {compactToolbar && onCheckOnly && <Divider />}
+                <MenuItem onClick={handleMenuImport}>
+                    <ListItemIcon>
+                        <Upload fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Open build file…</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleMenuExport} disabled={!config}>
+                    <ListItemIcon>
+                        <Download fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Save build file</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleMenuShare} disabled={!config}>
+                    <ListItemIcon>
+                        <Link fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Copy share link</ListItemText>
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={handleMenuExamples}>
+                    <ListItemIcon>
+                        <Science fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Try an example…</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleMenuGettingStarted}>
+                    <ListItemIcon>
+                        <MenuBook fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Getting started</ListItemText>
+                </MenuItem>
+                {onInstall && <MenuItem onClick={() => { handleMenuClose(); onInstall(); }}>
+                    <ListItemIcon><MenuBook fontSize="small" /></ListItemIcon>
+                    <ListItemText>Install guide</ListItemText>
+                </MenuItem>}
+                {/* one by one, not in a Fragment: the Menu reads its children for the keyboard */}
+                {toolsMenuItems.map(item => (
+                    <MenuItem
+                        key={item.key}
+                        role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+                        aria-checked={item.checked}
+                        onClick={() => {
+                            handleMenuClose();
+                            item.onClick(menuButtonRef.current);
+                        }}
                     >
-                        <MoreVert />
-                    </IconButton>
-                </Tooltip>
-                <Menu
-                    anchorEl={menuAnchorEl}
-                    open={menuOpen}
-                    onClose={handleMenuClose}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'right',
-                    }}
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'right',
-                    }}
-                    // The sticky header keeps the opener in place without locking page scrolling.
-                    disableScrollLock
-                    slotProps={{
-                        paper: { role: 'region', 'aria-label': BUTTON_NAMES.moreOptions },
-                        list: { 'aria-label': BUTTON_NAMES.moreOptions },
-                    }}
-                >
-                    <MenuItem onClick={handleMenuImport}>
-                        <ListItemIcon>
-                            <Upload fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Open build file…</ListItemText>
+                        <ListItemIcon>{item.icon}</ListItemIcon>
+                        <ListItemText>{item.label}</ListItemText>
+                        {item.checked && <Check fontSize="small" aria-hidden sx={{ ml: 2 }} />}
                     </MenuItem>
-                    <MenuItem onClick={handleMenuExport} disabled={!config}>
-                        <ListItemIcon>
-                            <Download fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Save build file</ListItemText>
+                ))}
+                <Divider />
+                {THEME_CHOICES.map(choice => (
+                    <MenuItem
+                        key={choice.scheme}
+                        role="menuitemradio"
+                        aria-checked={scheme === choice.scheme}
+                        onClick={() => {
+                            setScheme(choice.scheme);
+                            handleMenuClose();
+                        }}
+                    >
+                        <ListItemIcon><choice.icon fontSize="small" /></ListItemIcon>
+                        <ListItemText>{choice.label}</ListItemText>
+                        {scheme === choice.scheme && <Check fontSize="small" aria-hidden sx={{ ml: 2 }} />}
                     </MenuItem>
-                    <MenuItem onClick={handleMenuShare} disabled={!config}>
-                        <ListItemIcon>
-                            <Link fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Copy share link</ListItemText>
-                    </MenuItem>
-                    <MenuItem onClick={handleMenuExamples}>
-                        <ListItemIcon>
-                            <Science fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Try an example…</ListItemText>
-                    </MenuItem>
-                    <MenuItem onClick={handleMenuGettingStarted}>
-                        <ListItemIcon>
-                            <MenuBook fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Getting started</ListItemText>
-                    </MenuItem>
-                    {/* one by one, not in a Fragment: the Menu reads its children for the keyboard */}
-                    {toolsMenuItems.map(item => (
-                        <MenuItem
-                            key={item.key}
-                            role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
-                            aria-checked={item.checked}
-                            onClick={() => {
-                                handleMenuClose();
-                                item.onClick(menuButtonRef.current);
-                            }}
-                        >
-                            <ListItemIcon>{item.icon}</ListItemIcon>
-                            <ListItemText>{item.label}</ListItemText>
-                            {item.checked && <Check fontSize="small" aria-hidden sx={{ ml: 2 }} />}
-                        </MenuItem>
-                    ))}
-                    <Divider />
-                    {/* in the error text red (TEXT.error), 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
-                    <MenuItem onClick={handleMenuReset} sx={{ color: 'error.light' }}>
-                        <ListItemIcon sx={{ color: 'inherit' }}>
-                            <RestartAlt fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Reset build</ListItemText>
-                    </MenuItem>
-                </Menu>
-            </Box>
+                ))}
+                <Divider />
+                {/* in the error text red (TEXT.error), 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
+                <MenuItem onClick={handleMenuReset} sx={{ color: 'error.light' }}>
+                    <ListItemIcon sx={{ color: 'inherit' }}>
+                        <RestartAlt fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Reset build</ListItemText>
+                </MenuItem>
+            </Menu>
 
             <input
                 ref={fileInputRef}

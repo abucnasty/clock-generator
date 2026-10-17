@@ -1,13 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import {
     readDisplayPreferences, writeDisplayPreferences,
-    type DisplayDensity, type DisplayPreferences, type DisplayScheme,
+    type DisplayPreferences, type DisplayScheme,
 } from '../utils/displayPreferences';
 
 interface DisplayPreferencesContextValue {
-    density: DisplayDensity;
     scheme: DisplayScheme;
-    setDensity(density: DisplayDensity): void;
     setScheme(scheme: DisplayScheme): void;
 }
 
@@ -27,9 +25,7 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
     const value = useMemo<DisplayPreferencesContextValue>(() => {
         const update = (change: Partial<DisplayPreferences>) => setPreferences(previous => ({ ...previous, ...change }));
         return {
-            density: preferences.density,
             scheme: preferences.scheme,
-            setDensity: density => update({ density }),
             setScheme: scheme => update({ scheme }),
         };
     }, [preferences]);

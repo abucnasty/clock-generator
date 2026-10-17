@@ -29,6 +29,7 @@ vi.mock('@mui/material', async original => ({ ...await original<typeof import('@
     useTheme: () => ({ breakpoints: { down: () => '' } }) }));
 vi.mock('../hooks/useMessages', () => ({ useNotify: () => runner.notify, useDismissMessage: () => runner.dismiss }));
 vi.mock('../hooks/useGameNames', () => ({ useGameNames: () => ({ recipeLabel: (id: string) => id }) }));
+vi.mock('../hooks/useDisplayPreferences', () => ({ useDisplayPreferences: () => ({ scheme: 'dark', setScheme: vi.fn() }) }));
 vi.mock('../worker/engineClient', () => ({ askEngine: (request: unknown) => runner.validate(request) }));
 
 type Props = Parameters<typeof ConfigImportExport>[0];

@@ -19,7 +19,6 @@ import { AddRow } from './AddRow';
 import { EnableControlFormContent } from './EnableControlModal';
 import { EntityBadge } from './EntityBadge';
 import { EntitySettings } from './EntitySettings';
-import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { describeEnableRule } from '../utils/enableRuleLabel';
 import { enableControlOverrideChanged } from '../utils/enableControlDraft';
 import { FactorioIcon } from './FactorioIcon';
@@ -61,11 +60,10 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
     onMoveDown?: () => void;
 }) {
     const { itemLabel } = useGameNames();
-    const { density } = useDisplayPreferences();
     const [ruleRevision, setRuleRevision] = useState(0);
     const label = entityLabel('drill', drill.id);
     return <SortableItem stableKey={drill._uuid} label={label} displayLabel={<EntityBadge id={drill.id}><FactorioIcon name={drill.type} size={28} alt="" /></EntityBadge>}>
-        {dragHandle => <Box id={`entity-drill-${drill.id}`} role="group" aria-label={label} sx={{ minWidth: 0, mb: density === 'compact' ? 1 : 2, p: density === 'compact' ? 1.5 : 2, containerType: 'inline-size', containerName: 'drill-row', bgcolor: (theme: Theme) => themeTokens(theme).surface.row }}>
+        {dragHandle => <Box id={`entity-drill-${drill.id}`} role="group" aria-label={label} sx={{ minWidth: 0, mb: 1, p: 1.5, containerType: 'inline-size', containerName: 'drill-row', bgcolor: (theme: Theme) => themeTokens(theme).surface.row }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container drill-row (max-width: 600px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
                 <Box sx={{ gridColumn: 1, gridRow: 1 }}>{dragHandle}</Box>
                 <Box data-row-first="" sx={{ minWidth: 0, gridColumn: 2, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 2 } }}>

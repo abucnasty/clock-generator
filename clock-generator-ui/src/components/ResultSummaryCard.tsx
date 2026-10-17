@@ -18,7 +18,6 @@ import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import type { GenerationAssumptions } from '../worker/types';
 import { startCheckSummary } from '../utils/modelAssumptions';
-import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -167,7 +166,6 @@ function ClockExplanation(props: SelectedProps) {
  */
 export function ResultSummaryCard(props: ResultSummaryCardProps) {
     const { alternatives, selectedIndex, isGenerating } = props;
-    const { density } = useDisplayPreferences();
     const nameRef = useRef<HTMLHeadingElement>(null);
     const selected = alternatives[selectedIndex];
 
@@ -191,7 +189,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     // focus, when the run it starts empties the list of clocks
     const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
     return (
-        <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }} data-result-card="" data-build-anchor="selected-clock">
+        <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
             {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (

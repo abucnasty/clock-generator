@@ -17,7 +17,6 @@ import {
 import { memo, useState } from 'react';
 import type { Config, MachineTargetRate } from 'clock-generator/browser';
 import type { MachineFormData } from '../hooks/useConfigForm';
-import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useMachineTargetRates } from '../hooks/useMachineTargetRates';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
@@ -64,8 +63,6 @@ function MachinesFormComponent({
     onReorder,
     onDuplicate,
 }: MachinesFormProps) {
-    const { density } = useDisplayPreferences();
-    const compact = density === 'compact';
     const [rateView, setRateView] = useState<'max' | 'target'>('max');
     const targetRates = useMachineTargetRates(exportConfig, rateView === 'target');
     const common = machines.length === 0 ? [] : [
@@ -97,6 +94,13 @@ function MachinesFormComponent({
                 content: (
                     <>
                         <Typography variant="body2" sx={{ mb: 1 }}>
+                            Rates are per machine, per copy. Max shows the machine's capacity; At target shows its share
+                            of the requested output. Open a machine's settings to edit its speed and productivity.
+                        </Typography>
+                        {common.length > 0 && <Typography variant="body2" sx={{ mb: 1 }}>
+                            All {machines.length} machines: {common.join(' · ')}. Each machine's values remain editable.
+                        </Typography>}
+                        <Typography variant="body2" sx={{ mb: 1 }}>
                             The <SidecarModLink /> copies the crafting speeds of your build: then click Paste from
                             Factorio.
                         </Typography>
@@ -125,9 +129,6 @@ function MachinesFormComponent({
             {rateView === 'target' && targetRates.error && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 At-target rates unavailable: {targetRates.error}
             </Typography>}
-            {!compact && common.length > 0 && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                All {machines.length} machines: {common.join(' · ')}. Values remain editable below.
-            </Typography>}
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}
@@ -136,7 +137,6 @@ function MachinesFormComponent({
                         </EntityBadge>}>
                         {(dragHandle) => (
                             <MachineRow
-                                compact={compact}
                                 machine={machine}
                                 index={index}
                                 recipeNames={recipeNames}
@@ -163,7 +163,6 @@ interface MachineRowProps {
     atTarget: boolean;
     targetRate?: MachineTargetRate;
     targetUpdating: boolean;
-    compact: boolean;
     machine: MachineFormData;
     index: number;
     recipeNames: string[];
@@ -176,7 +175,7 @@ interface MachineRowProps {
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ compact, machine, index, recipeNames, atTarget, targetRate, targetUpdating, canDelete, dragHandle, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
+function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetUpdating, canDelete, dragHandle, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
     const { itemLabel, recipeLabel } = useGameNames();
     const { facts, error, updating } = useMachineFacts({
         recipe: machine.recipe,
@@ -193,8 +192,8 @@ function MachineRow({ compact, machine, index, recipeNames, atTarget, targetRate
             role="group"
             aria-label={entityLabel('machine', machine.id)}
             sx={{
-                mb: compact ? 1 : 2,
-                p: compact ? 1.5 : 2,
+                mb: 1,
+                p: 1.5,
                 minWidth: 0,
                 bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
                 containerType: 'inline-size',
@@ -205,9 +204,9 @@ function MachineRow({ compact, machine, index, recipeNames, atTarget, targetRate
                 sx={{
                     display: 'grid',
                     gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-                    gap: compact ? 1 : 2,
+                    gap: 1,
                     alignItems: 'center',
-                    mb: compact ? 1.5 : 2,
+                    mb: 1.5,
                 }}
             >
                 {dragHandle}
@@ -274,7 +273,7 @@ function MachineRow({ compact, machine, index, recipeNames, atTarget, targetRate
             <Box sx={{
                 display: 'grid',
                 gridTemplateColumns: `repeat(${machine.type === 'biochamber' ? 4 : 3}, minmax(0, 1fr))`,
-                gap: compact ? 1 : 2,
+                gap: 1,
                 '@container machine-row (max-width: 680px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
                 '@container machine-row (max-width: 360px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
             }}>

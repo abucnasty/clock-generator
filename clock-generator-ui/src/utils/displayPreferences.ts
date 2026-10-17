@@ -1,16 +1,14 @@
-export type DisplayDensity = 'explanatory' | 'compact';
 export type DisplayScheme = 'system' | 'light' | 'dark';
 
 export interface DisplayPreferences {
     version: 1;
-    density: DisplayDensity;
     scheme: DisplayScheme;
 }
 
 export const DISPLAY_PREFERENCES_KEY = 'clock-generator-display-preferences';
-export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = { version: 1, density: 'explanatory', scheme: 'system' };
+export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = { version: 1, scheme: 'dark' };
 
-/** Invalid fields fall back independently; an unsupported version cannot be interpreted. */
+/** Legacy density settings are ignored; the saved theme survives the move to one layout. */
 export function readDisplayPreferences(storage: Pick<Storage, 'getItem'> | null): DisplayPreferences {
     try {
         const value: unknown = JSON.parse(storage?.getItem(DISPLAY_PREFERENCES_KEY) ?? 'null');
@@ -20,8 +18,8 @@ export function readDisplayPreferences(storage: Pick<Storage, 'getItem'> | null)
         const saved = value as Partial<DisplayPreferences>;
         return {
             version: 1,
-            density: saved.density === 'compact' ? 'compact' : 'explanatory',
-            scheme: saved.scheme === 'light' || saved.scheme === 'dark' ? saved.scheme : 'system',
+            scheme: saved.scheme === 'light' || saved.scheme === 'dark' || saved.scheme === 'system'
+                ? saved.scheme : DEFAULT_DISPLAY_PREFERENCES.scheme,
         };
     } catch {
         return { ...DEFAULT_DISPLAY_PREFERENCES };
@@ -30,7 +28,7 @@ export function readDisplayPreferences(storage: Pick<Storage, 'getItem'> | null)
 
 export function writeDisplayPreferences(storage: Pick<Storage, 'setItem'> | null, preferences: DisplayPreferences): void {
     try {
-        storage?.setItem(DISPLAY_PREFERENCES_KEY, JSON.stringify(preferences));
+        storage?.setItem(DISPLAY_PREFERENCES_KEY, JSON.stringify({ version: 1, scheme: preferences.scheme }));
     } catch {
         // Display choices still work for this page when browser storage is unavailable.
     }

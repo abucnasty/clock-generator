@@ -52,7 +52,6 @@ import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost, MessageSlot } from './components/Messages';
 import { DisplayPreferencesProvider } from './hooks/useDisplayPreferences';
-import { DisplayPreferencesButton } from './components/DisplayPreferences';
 import type { ResultDetail } from './utils/resultsView';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { StaleCopyDialog } from './components/StaleCopyDialog';
@@ -1062,90 +1061,91 @@ function App() {
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', pb: { xs: 'calc(72px + env(safe-area-inset-bottom))', sm: 'calc(48px + env(safe-area-inset-bottom))' } }}>
                 <AppBar position="sticky" ref={headerRef}>
                     {isInitialized && (
-                        <WorkflowBar
-                            identity={
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center', minWidth: 0 }}>
-                                    <Typography variant="subtitle1" component="h1" sx={{ minWidth: 0, fontWeight: 600 }}>
-                                        Clock Generator
-                                    </Typography>
-                                    <BuildSwitcher
-                                        ref={switcherRef}
-                                        builds={switcherBuilds}
-                                        currentId={library.currentId}
-                                        currentTitle={currentTitle}
-                                        onOpen={handleOpenBuild}
-                                        onNew={handleNewBuild}
-                                        onDuplicate={handleDuplicateBuild}
-                                        onRename={handleRenameBuild}
-                                        onDelete={handleDeleteBuild}
-                                        readOnly={!library.writable}
-                                    />
-                                    <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)} title="View changelog" sx={{ textTransform: 'none' }}>v{__APP_VERSION__}</Button>
-                                    <ConfigImportExport
-                                        currentForm={config}
-                                        ref={buildEntryRef}
-                                        config={exportableConfig}
-                                        target={config.target_output}
-                                        onImport={handleImportConfig}
-                                        onReplaceTarget={replaceTarget}
-                                        onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
-                                        onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
-                                        onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
-                                        onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
-                                        onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
-                                        onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
-                                        onReset={handleReset}
-                                        onBuildReplaced={handleBuildReplaced}
-                                        onUndoable={offerUndoOfReplace}
-                                        onShowIntro={showIntro}
-                                        pasteIsNextStep={blankBuild && !introVisible}
-                                        buildName={library.currentMeta.name}
-                                        buildTitle={currentTitle}
-                                        toolsMenuItems={toolsMenuItems}
-                                    />
-
-                                    <DisplayPreferencesButton />
-                                </Box>
-                            }
-                            view={view}
-                            onViewChange={setView}
-                            isLoading={isRunning}
-                            generationFailed={error !== null}
-                            progressStore={progressStore}
-                            onGenerate={handleGenerate}
+                        <ConfigImportExport
+                            currentForm={config}
+                            ref={buildEntryRef}
+                            config={exportableConfig}
+                            target={config.target_output}
+                            onImport={handleImportConfig}
+                            onReplaceTarget={replaceTarget}
+                            onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
+                            onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
+                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
+                            onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
+                            onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
+                            onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
+                            onReset={handleReset}
+                            onBuildReplaced={handleBuildReplaced}
+                            onUndoable={offerUndoOfReplace}
+                            onShowIntro={showIntro}
+                            pasteIsNextStep={blankBuild && !introVisible}
+                            buildName={library.currentMeta.name}
+                            buildTitle={currentTitle}
+                            toolsMenuItems={toolsMenuItems}
+                            onInstall={blueprintString ? () => setInstallOpen(true) : undefined}
                             onCheckOnly={handleCheckOnly}
-                            primaryAction={conversionIsNextStep ? null : primaryAction}
-                            busy={busy}
-                            checking={checking}
-                            checkStatus={checkStatus}
-                            checkedForGenerate={checkedForGenerate}
-                            chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
-                            blueprintString={blueprintString}
-                            selectedLabel={selectedName}
-                            selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
-                            selectedId={selectedClock?.id ?? null}
-                            selectionQuiet={selectionQuiet}
-                            rateWarning={rateWarning}
-                            onHowToInstall={() => setInstallOpen(true)}
-                            copyLabel={copyLabel}
-                            staleFor={staleFor}
-                            copied={copy.copied}
-                            onCopy={() => { cancelRestore(); copy.request(); }}
-                            problems={problems}
-                            note={note}
-                            startHere={blankBuild && problems.length > 0}
-                            onGoToProblem={handleGoToProblem}
-                            running={isRunning || checkingFor !== null || conversionPending}
-                            onCancel={handleCancel}
-                            lastStop={lastStop}
-                            restoredId={restoredId}
-                            pickGone={pickGone?.label ?? null}
+                            checkDisabled={busy}
+                            renderControls={(paste, menu) => (
+                                <WorkflowBar
+                                    entryAction={paste}
+                                    menu={menu}
+                                    identity={
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center', minWidth: 0 }}>
+                                            <Typography variant="subtitle1" component="h1" sx={{ minWidth: 0, fontWeight: 600 }}>
+                                                Clock Generator
+                                            </Typography>
+                                            <BuildSwitcher
+                                                ref={switcherRef}
+                                                builds={switcherBuilds}
+                                                currentId={library.currentId}
+                                                currentTitle={currentTitle}
+                                                onOpen={handleOpenBuild}
+                                                onNew={handleNewBuild}
+                                                onDuplicate={handleDuplicateBuild}
+                                                onRename={handleRenameBuild}
+                                                onDelete={handleDeleteBuild}
+                                                readOnly={!library.writable}
+                                            />
+                                        </Box>
+                                    }
+                                    view={view}
+                                    onViewChange={setView}
+                                    isLoading={isRunning}
+                                    generationFailed={error !== null}
+                                    progressStore={progressStore}
+                                    onGenerate={handleGenerate}
+                                    onCheckOnly={handleCheckOnly}
+                                    primaryAction={conversionIsNextStep ? null : primaryAction}
+                                    busy={busy}
+                                    checking={checking}
+                                    checkStatus={checkStatus}
+                                    checkedForGenerate={checkedForGenerate}
+                                    chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
+                                    blueprintString={blueprintString}
+                                    selectedLabel={selectedName}
+                                    selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
+                                    selectedId={selectedClock?.id ?? null}
+                                    selectionQuiet={selectionQuiet}
+                                    rateWarning={rateWarning}
+                                    copyLabel={copyLabel}
+                                    staleFor={staleFor}
+                                    copied={copy.copied}
+                                    onCopy={() => { cancelRestore(); copy.request(); }}
+                                    problems={problems}
+                                    note={note}
+                                    startHere={blankBuild && problems.length > 0}
+                                    onGoToProblem={handleGoToProblem}
+                                    running={isRunning || checkingFor !== null || conversionPending}
+                                    onCancel={handleCancel}
+                                    lastStop={lastStop}
+                                    restoredId={restoredId}
+                                    pickGone={pickGone?.label ?? null}
+                                />
+                            )}
                         />
                     )}
                     {!isInitialized && <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography component="h1" variant="subtitle1">Clock Generator</Typography>
-                        <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)}>v{__APP_VERSION__}</Button>
-                        <DisplayPreferencesButton />
                     </Box>}
                     {/* outside the condition: a message can come before the workflow bar is there */}
                     <MessageSlot active={!diagramFullscreen} />
@@ -1321,6 +1321,7 @@ function App() {
                             <ResultsWorkspace key={library.currentId}
                                 installOpen={installOpen}
                                 onInstallClose={() => setInstallOpen(false)}
+                                onInstall={() => setInstallOpen(true)}
                                 copyLabel={copyLabel}
                                 comparison={buildContext.comparison}
                                 onComparisonChange={comparison => patchContext({ comparison })}
@@ -1410,9 +1411,11 @@ function App() {
                         borderColor: 'divider',
                     }}
                 >
-                    <Typography variant="body2" color="text.secondary">
-                        Created by abucnasty
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary">Created by abucnasty</Typography>
+                        <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)} title="View changelog"
+                            sx={{ textTransform: 'none', minWidth: 0 }}>v{__APP_VERSION__}</Button>
+                    </Box>
                     <Button
                         href="https://ko-fi.com/J6D4284EZ5"
                         target="_blank"

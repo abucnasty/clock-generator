@@ -14,7 +14,6 @@ import {
 } from '@mui/material';
 import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef, memo, type MouseEvent } from 'react';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
-import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
@@ -71,8 +70,7 @@ interface InsertersFormProps {
 
 type RuleCopySource = CopyFromOption & { uuid: string };
 
-const InserterRow = memo(function InserterRow({ compact, filterView, fullMetadata, value, index, onUpdate, onRemove, ruleCopySources, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
-    compact: boolean;
+const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value, index, onUpdate, onRemove, ruleCopySources, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
     filterView: boolean;
     metadata: string;
     fullMetadata: string;
@@ -125,9 +123,9 @@ const InserterRow = memo(function InserterRow({ compact, filterView, fullMetadat
     </SortableItem>;
     return <SortableItem stableKey={value._uuid} label={label} displayLabel={<EntityBadge id={value.id}><InserterIcon value={value} size={28} /></EntityBadge>}>
         {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label} data-selected={selectedRow ? 'true' : undefined} sx={{
-            ...ROW_GRID_SX, ...(compact && { p: 1.5, pt: 1.5 }), ...selectionStyle,
+            ...ROW_GRID_SX, p: 1.5, pt: 1.5, ...selectionStyle,
         }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto', gap: compact ? 1 : 1.5, alignItems: 'center',
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto', gap: 1, alignItems: 'center',
                 '@container inserter-row (max-width: 650px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', gridColumn: 1, gridRow: 1, '& .MuiChip-root': { height: 40, bgcolor: 'transparent', '& .MuiChip-label': { px: 0 } } }}>
                     {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)}
@@ -135,7 +133,7 @@ const InserterRow = memo(function InserterRow({ compact, filterView, fullMetadat
                     {dragHandle}
                 </Box>
             <Box sx={{ display: 'contents', '@container inserter-row (max-width: 650px)': { '& > div:nth-of-type(-n+2)': { gridColumn: '1 / -1' } } }}>
-                <InserterEditor {...editor} density={compact ? 'compact' : 'explanatory'} value={value} label={label} layout="row" onChange={onChange}
+                <InserterEditor {...editor} value={value} label={label} layout="row" onChange={onChange}
                     routeActions={<Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gridColumn: 4, gridRow: 1, '@container inserter-row (max-width: 650px)': { gridColumn: 2 } }}>
                         <Box id={`settings-actions-inserter-${value.id}`} sx={{ display: 'flex' }} />
                         <RowActionsMenu label={label} onDuplicate={() => onDuplicate(index, label)}
@@ -185,8 +183,6 @@ function InsertersFormComponent({
     onDuplicate,
     onBulkUpdate,
 }: InsertersFormProps) {
-    const { density } = useDisplayPreferences();
-    const compact = density === 'compact';
     const commonType = inserters.length > 0 && inserters.every(row => row.prototype === inserters[0].prototype);
     const commonQuality = inserters.length > 0 && inserters.every(row => row.quality === inserters[0].quality);
     const typeText = (row: InserterFormData) => `Type: ${row.prototype === undefined ? 'Automatic' : 'Explicit'} ${inserterTimingLabels(row).type}`;
@@ -272,6 +268,22 @@ function InsertersFormComponent({
             ref={cardRef}
             level={3}
             title={`Inserters (${inserters.length})`}
+            help={{ label: 'About inserters', content: <>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                    Routes choose each inserter's source and destination. Filters edit the items it carries.
+                    Automatic filters follow the source and destination; clearing the last explicit filter returns to Automatic.
+                    Open an inserter's settings to edit its stack size and enable rule, or use Bulk edit for several inserters.
+                </Typography>
+                {commonMetadata.length > 0 && <Typography variant="body2" sx={{ mb: 1 }}>All {inserters.length} inserters: {commonMetadata.join(' · ')}.</Typography>}
+                {(missingTypes > 0 || missingQualities > 0) && <Typography variant="body2" sx={{ mb: 1 }}>
+                    Timing defaults: {missingTypes} missing type → Stack inserter; {missingQualities} missing quality → Legendary.
+                </Typography>}
+                {automaticStacks > 0 && <Typography variant="body2" sx={{ mb: 1 }}>Automatic stack capacity uses all capacity research ({automaticStacks} of {inserters.length} inserters). Explicit values stay set by hand.</Typography>}
+                {(automaticFilters === inserters.length || automaticRules === inserters.length) && inserters.length > 0 && <Typography variant="body2">
+                    {automaticFilters === inserters.length && 'All filters: Automatic, from source and destination. '}
+                    {automaticRules === inserters.length && 'All enable rules: Auto.'}
+                </Typography>}
+            </> }}
             actions={(
                 <>
                     <ToggleButtonGroup value={filterView ? 'filters' : 'routes'} exclusive size="small" color="standard" aria-label="Inserter view"
@@ -286,24 +298,12 @@ function InsertersFormComponent({
             )}
         >
 
-            {!filterView && !compact && inserters.length > 0 && <Box sx={{ mb: 1 }}>
-                {commonMetadata.length > 0 && <Typography variant="body2" color="text.secondary">All {inserters.length} inserters: {commonMetadata.join(' · ')}.</Typography>}
-                {(missingTypes > 0 || missingQualities > 0) && <Typography variant="body2" color="text.secondary">
-                    Timing defaults: {missingTypes} missing type → Stack inserter; {missingQualities} missing quality → Legendary.
-                </Typography>}
-                {automaticStacks > 0 && <Typography variant="body2" color="text.secondary">Automatic stack capacity uses all capacity research ({automaticStacks} of {inserters.length} inserters). Explicit values stay set by hand.</Typography>}
-                {(automaticFilters === inserters.length || automaticRules === inserters.length) && <Typography variant="body2" color="text.secondary">
-                    {automaticFilters === inserters.length && 'All filters: Automatic, from source and destination. '}
-                    {automaticRules === inserters.length && 'All enable rules: Auto.'}
-                </Typography>}
-            </Box>}
-            {filterView && !selecting && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Edit filter slots directly. Clearing the last explicit filter returns to Automatic.</Typography>}
             {selecting && <BulkEditBar filtersOnly={filterView} selected={selectedRows} total={inserters.length} priorityIds={priorityIds} availableItems={bulkItems} itemNames={itemNames}
                 onSelectAll={() => setSelection(new Set(inserters.map(row => row._uuid)))} onClear={clearSelection} onDone={finishBulkEdit} onReturnFocus={returnSelectionFocus} onApply={apply} />}
-            <Box sx={{ ...LIST_GRID_SX, rowGap: compact ? 1 : 2 }}>
+            <Box sx={{ ...LIST_GRID_SX, rowGap: 1 }}>
             <SortableList itemKeys={itemKeys} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} compact={compact} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} machines={machines} belts={belts} chests={chests} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
+                <InserterRow key={inserter._uuid} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} machines={machines} belts={belts} chests={chests} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
                     onDuplicate={duplicate} onReorder={onReorder} canMoveDown={index < inserters.length - 1}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}

@@ -1,7 +1,6 @@
 import { Box, Button, Typography } from '@mui/material';
 import { memo, useMemo, useRef, type ReactNode } from 'react';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
-import type { DisplayDensity } from '../utils/displayPreferences';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useGameNames } from '../hooks/useGameNames';
 import { useAnnounce } from '../hooks/useMessages';
@@ -15,17 +14,11 @@ import { NumberField } from './NumberField';
 import { EntitySelector } from './EntitySelector';
 
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start' };
-const ROW_REST_SX = {
-    display: 'flex', gridColumn: '1 / -1',
-    flexWrap: 'wrap', alignItems: 'start', gap: 2, minWidth: 0,
-};
 
 export interface InserterEditorProps {
     value: InserterFormData;
     label: string;
     layout: 'row' | 'stacked';
-    /** Presentation only: form ownership and controlled values stay with the caller. */
-    density?: DisplayDensity;
     machines: MachineFormData[];
     belts: BeltFormData[];
     chests: ChestFormData[];
@@ -42,13 +35,12 @@ export interface InserterEditorProps {
 }
 
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
-export const InserterEditor = memo(function InserterEditor({ value, label, layout, density = 'explanatory', machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
+export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
     const row = layout === 'row';
-    const compact = row && density === 'compact';
     const capacity = effectiveInserterStackSize(value);
     const timing = inserterTimingLabels(value);
     const stackHelp = value.stack_size !== undefined ? `Explicit: ${value.stack_size} items.`
-        : compact && Number.isFinite(capacity) ? `Automatic: ${capacity} items.` : inserterStackSizeHelp(value);
+        : row && Number.isFinite(capacity) ? `Automatic: ${capacity} items.` : inserterStackSizeHelp(value);
     const { itemLabel, recipeLabel } = useGameNames();
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
@@ -69,17 +61,17 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
             rowFirst={side === 'source'} />
     );
     const advancedFields = (
-        <Box sx={row ? compact ? { display: 'flex', gridColumn: '1 / -1', flexWrap: 'wrap', alignItems: 'start', gap: 1.5, minWidth: 0 } : ROW_REST_SX : { display: 'contents' }}>
+        <Box sx={row ? { display: 'flex', gridColumn: '1 / -1', flexWrap: 'wrap', alignItems: 'start', gap: 1.5, minWidth: 0 } : { display: 'contents' }}>
             {row && <NearLaneSelect compact source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />}
             <NumberField id={`${row ? '' : 'diagram-'}inserter-stack-size-${value.id}`} label="Stack size" value={value.stack_size ?? null}
                 placeholder="Automatic" helperText={stackHelp} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
                 min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
-            <Box ref={filtersRef} sx={row ? { alignSelf: 'start', pt: compact ? 0 : '4px', minWidth: 0, flex: '1 1 180px' } : { mt: 2 }}>
-                <FilterSlotSelector compact={compact} label={compact ? `Filters · ${usesAutomaticFilters(value.filters) ? 'Automatic' : 'Explicit'}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
+            <Box ref={filtersRef} sx={row ? { alignSelf: 'start', minWidth: 0, flex: '1 1 180px' } : { mt: 2 }}>
+                <FilterSlotSelector compact={row} label={row ? `Filters · ${usesAutomaticFilters(value.filters) ? 'Automatic' : 'Explicit'}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
-                <Typography variant="caption" color="text.secondary" sx={{ display: compact ? 'none' : 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? 'Automatic filters' : 'Explicit · Set by hand'}</Typography>
-                {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: compact ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
+                {!row && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? 'Automatic filters' : 'Explicit · Set by hand'}</Typography>}
+                {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: row ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                     <Button size="small" color="inherit" onClick={() => {
                         // The return action disappears; slot zero survives the switch back to Automatic.
                         filtersRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
