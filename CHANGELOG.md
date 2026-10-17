@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.17.0] - 2026-10-17
+
+### Added
+- Keep several named builds in the browser, switch between them, share build links, and undo edits and replacements.
+- Inspect the selected clock's wake windows, machine activity, inventories, crafting cycles, and item transfers. Replay recorded item flow on the build diagram, step through a selected route's transfers, and inspect connected entities.
+- Open the selected clock workspace fullscreen and use a dedicated installation guide and wiring reference.
+- Infinity chests support Remove unfiltered items, including empty chests that remove all incoming items. Sidecar 0.8.0 exports this setting and reads configured filters instead of current contents.
+
+### Changed
+- The Configure and Results workflow uses one compact layout, shared item and recipe pickers, category help, and clearer bulk editing. Machine rates can show maximum capacity or their share of the target output.
+- Results lead with the recommended clock and keep comparison and supporting details available when needed. Generate and Copy are highlighted as the next step without moving their controls.
+- Build validation groups connection and chest problems with actions to fix them, including switching a finite output chest to an infinity chest and enabling disposal when needed.
+- Improve light-theme contrast, diagram routing, and keyboard navigation. Dark is the default theme; theme choices are in More options.
+
+### Fixed
+- Each completed generation selects its new recommended clock, including after switching builds.
+- Empty infinity chests retain their inserter connections when imported from the sidecar.
+- Diagram selection and replay stepping follow connected routes consistently, with transfer quantities shown only at the recorded transfer tick.
+
 ## [0.16.0] - 2026-10-16
 
 ### Added
