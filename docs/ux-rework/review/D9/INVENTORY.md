@@ -134,5 +134,5 @@ Detailed source-bound dispositions were retained before integration in [LATER-PR
 
 ## Completion boundary
 
-All currently reachable eligible UI test changes through `9d88162` have dispositions. Combined gates, independent CODE/UX final-delta review, exact-head CI and landing remain root-owned and pending. Any subsequent test or helper edit must be scanned again before final feature→master; this author milestone alone cannot mark D9 complete.
+All currently reachable eligible UI test changes through `9d88162` have dispositions. Final combined gates and independent CODE/UX final-delta review PASS; final root evidence is in EVIDENCE.md. Exact-head CI is shown in PR211; landing awaits owner approval. Any subsequent test or helper edit must be scanned again before final feature→master; this author milestone alone cannot mark D9 complete.
 

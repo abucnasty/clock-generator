@@ -20,6 +20,6 @@ W3C references: https://www.w3.org/TR/WCAG22/ ; https://www.w3.org/WAI/WCAG22/Un
 
 ## Owner operational directions
 
-The owner subsequently requested removal of the custom full-AA capture/audit harness immediately AFTER Phase4 finishes, before further phase work. Do not remove it prematurely; stop expanding it now. Preserve evidence/history outside disposable automation as needed. Inventory at phase7ff9acc:55 tracked capture scripts,34879 lines under docs/ux-rework/capture. Ordinary functional/regression tests and product keyboard/colour support remain.
+The owner requested removal of the custom full-AA capture/audit harness in the final Phase4 cleanup commit after focused acceptance and required reviews, BEFORE marking the PR ready for owner review. That cleanup removes55 tracked capture scripts/34879 lines and five harness-only fixtures. Historical Markdown evidence remains; no runnable capture framework remains in the repository. Original engine sample/D3 builds are unchanged. Ordinary functional/regression/contrast tests and product keyboard/colour support remain. Do not recreate the retired tooling.
 
 The owner explicitly prohibited automatic PR merges. Leave every PR open for owner review; no feature/master merge and no child-PR auto-merge without direct owner authorization. Prepare a concrete reviewable Phase4 aggregate/checkpoint while preserving all independent reviews and CI.

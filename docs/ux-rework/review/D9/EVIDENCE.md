@@ -59,3 +59,8 @@ Comparable sequential local `npm test` pair after both own-source installs/build
 Independent CODE/UX reviews and exact-head CI remain pending. Final later-provider integration refresh remains OPEN. No source-only native boundary is promoted to browser PASS.
 
 Initial independent CODE and UX round0 both PASS without blocker/major. Reports are retained beside this note. They assessed all24 decisions and actual survivors; CODE independently confirmed51 protected declarations plus11 untouched baseline declarations. No formal fix round used. Final provider merge/conflict and later-test reconciliation plus exact-head CI remain open, so this does not close D9 release acceptance.
+
+
+## Final root reconciliation (supersedes historical pending notes)
+
+Final combined source41cbd15 versus complete pre-cleanup source9d88162: UI1433→1376 cases,86 files unchanged; all full UI gates and independent test/build repeat PASS. All later firstvisit/theme/D7/D10 test changes received explicit KEEP decisions and the final merge resolution was independently CODE/UX reviewed. All412 emitted production files are byte-identical before/after and across independent builds. Comparable local sequential wall2.747s→2.729s is effectively unchanged, with no CI/speed claim. [Final receipt](../phase4/receipts/D9-final-benchmark.json). Independent final source CODE and UX PASS; all three fresh phase personas PASS. Exact-head CI is shown in PR211. The implemented cleanup is complete on that review branch; owner authorization is still required before landing into feature/master.

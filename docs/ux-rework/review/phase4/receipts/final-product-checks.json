@@ -1,0 +1,100 @@
+[
+  {
+    "name": "engine-ci",
+    "command": [
+      "npm",
+      "ci",
+      "--ignore-scripts"
+    ],
+    "folder": "clock-generator",
+    "exit": 0,
+    "seconds": 1.026
+  },
+  {
+    "name": "ui-ci",
+    "command": [
+      "npm",
+      "ci",
+      "--ignore-scripts"
+    ],
+    "folder": "clock-generator-ui",
+    "exit": 0,
+    "seconds": 4.113
+  },
+  {
+    "name": "engine-build",
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "folder": "clock-generator",
+    "exit": 0,
+    "seconds": 2.338
+  },
+  {
+    "name": "copy-data",
+    "command": [
+      "node",
+      "scripts/copy-factorio-data.mjs"
+    ],
+    "folder": "clock-generator-ui",
+    "exit": 0,
+    "seconds": 0.039
+  },
+  {
+    "name": "ui-unit",
+    "command": [
+      "npm",
+      "run",
+      "test"
+    ],
+    "folder": "clock-generator-ui",
+    "exit": 0,
+    "seconds": 3.386
+  },
+  {
+    "name": "ui-lint",
+    "command": [
+      "npm",
+      "run",
+      "lint"
+    ],
+    "folder": "clock-generator-ui",
+    "exit": 0,
+    "seconds": 5.95
+  },
+  {
+    "name": "ui-knip",
+    "command": [
+      "npm",
+      "run",
+      "knip"
+    ],
+    "folder": "clock-generator-ui",
+    "exit": 0,
+    "seconds": 1.745
+  },
+  {
+    "name": "ui-icons",
+    "command": [
+      "npm",
+      "run",
+      "check:icons"
+    ],
+    "folder": "clock-generator-ui",
+    "exit": 0,
+    "seconds": 0.227
+  },
+  {
+    "name": "ui-build",
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "folder": "clock-generator-ui",
+    "exit": 0,
+    "seconds": 13.097
+  }
+]

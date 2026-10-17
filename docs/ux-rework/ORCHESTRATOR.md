@@ -39,7 +39,7 @@ unblocks an item, and pass over a two-unit chain head at most once (coach run 5)
 conflicts). An item in its first review counts as one until both verdicts land; an item waiting on a re-review, an
 owner check, CI or its predecessor counts as zero (coach runs 3 and 6). If a returning round would make five, it
 starts and the most recently started item pauses at its next push until a unit frees, so the cap holds and no slot
-sits empty (coach run 6). Read-only agents count as zero too: scouts, capture writers, reviewers,
+sits empty (coach run 6). Read-only agents count as zero too: scouts, reviewers,
 the phase-end capture and review, and the coach (coach run 4). Specs (step 1) can be drafted ahead for any number of items at once. The next phase's scouts start once every item of
 this phase has a final spec, and each spec names the items it must follow, from its Files list, so the chain table
 covers both phases (coach run 5). From step 2
@@ -86,24 +86,13 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - It writes `specs/<item>.md` from the template below.
    - **You** check the spec against the plan and the owner's decisions, tighten the acceptance criteria, and look for
      checkpoint triggers. If the spec trips one, stop and ask the owner before implementing.
-2. **Implement** (implementer), with a **capture writer** alongside.
+2. **Implement** (implementer).
    - Owner hard requirement, 2026-10-16: add tests only for meaningful behavior/regressions not already sufficiently
      protected. Do not add/commit arbitrary cases, implementation-mirroring assertions or permutations to maximize
      coverage. Existing full checks and reviews remain required. D9 independently audits and implements cleanup of
      UX-rework-added UI tests before feat/ux-rework merges to master; see specs/D9-ui-test-audit.md.
    - Create the child branch `feat/ux-rework-p<N>-<topic>` from the phase branch.
-   - As soon as the spec is final and re-checked against the phase head (coach run 4), a `gpt-6.1-sol` capture writer turns the spec's "Screens to capture" and acceptance criteria into
-     `docs/ux-rework/capture/capture-<topic>.mjs` on `lib.mjs`, with PASS/FAIL checks, written against the phase branch
-     and saved to `/tmp/ux-capture/scripts/`. The implementer copies it in, fixes the selectors its code changed, and
-     runs it. Scripts find controls only through `lib.mjs`'s `ui` map and `itemLabel`, and open tooltips and menus only with
-     `openTooltip`, `openMoreMenu` and `chooseMenuItem`; an item that renames a control updates `ui` in the same commit
-     (coach run 5). The checks come from the spec, not from the code.
-   - Reconcile every capture consumer affected by changed labels, navigation or state contracts before reporting.
-     Validate imports and ui bindings, then probe the affected real states against the immutable build. Retain fixture
-     hashes, native input changes, actual available clock options and relevant theme/native-element mappings before
-     finalizing selectors or source-specific classifiers. Keep specification assertions unchanged; observed rendering
-     establishes capture contracts, not acceptance criteria. These probes supplement the full evidence gate and fresh
-     phase captures; they never replace them (phase 2 end coach; phase 3 end coach).
+   - Use the active [focused keyboard-and-colour acceptance](specs/keyboard-colour-profile.md). Take source-matched screenshots and exercise the changed actual workflows through the existing browser controls. Do not assign a custom capture writer, expand an audit framework, invent fixture matrices, or repair retired capture consumers.
    - The implementer builds to the spec, writes the tests the spec lists, and commits in the repo's style.
    - It changes only what the spec covers. Anything else it notices goes in its report as a follow-up, not into the
      code.
@@ -111,28 +100,10 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - Use an immutable verifier outside ignored worktree directories, pinned to the product head. Verify the engine
      file dependency resolves inside that verifier; record source identity and preserve failed diagnostics. Use that
      same source for gates, independent reruns and preview evidence (phase 2 end coach).
-   - Nothing goes to review without all of:
-     - the full local check set passing. In `clock-generator-ui`: `npm test`, `npm run lint`, `npm run knip`,
-       `npm run check:icons`, `npm run build`. The same in `clock-generator` if the engine changed.
-     - after screenshots of every screen the item touches, at 1440 and 720px (and 390px if the item affects
-       reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`. Frame observation screenshots through native
-       scrolling against actual heading/header geometry before default axe; retain original negative diagnostics and
-       separate native keyboard, focus and activation proof so framing cannot hide a focus defect (phase 3 end coach).
-       Capture widths in parallel, one generation per width, the small sample where the build's size doesn't matter, against
-       a `vite preview` of the build, with keyboard reach (`tabTo`), focus not obscured (`focusNotObscured`) and
-       keyboard-inert disabled or out-of-date states (`inertFromKeyboard`), every announcement reaching an unhidden live
-       region (`checkAnnounced`, with and without a dialog open), an axe pass (`checkAxe`) on every captured state,
-       focus not obscured at a short window height for every dialog, editor or sticky bar the item touches, and a
-       visible change in the viewport after a mouse activation of every new action, checked for every control and state the item
-       adds, disables or changes, at every captured width. "Before" screenshots only for
-       states the original review has no shot of (its shots are listed in `review/`); otherwise the review's shot is
-       the "before".
-     - for every text or control colour pair the item adds or changes, a measured `contrast()` ratio, and for every new
-       control an aria snapshot showing its accessible name (which must contain its visible label). Below WCAG AA
-       (4.5:1 text, 3:1 large text and non-text) the gate fails.
-     - for an item that adds or rebuilds a view, the half-width geometry sweep at 960, 800 and 720 (no sideways scroll;
-       wide tables and charts scroll inside their own box), with `lib.mjs`.
-     - a short evidence note: the commands and their result lines, the contrast ratios, and the list of screenshots.
+   - Nothing goes to review without the full local checks: UI test/lint/knip/icons/build; engine unit/generation/lint/knip/build when the engine changes. Preserve the independent root test/build repeat.
+   - Exercise actual changed workflows with keyboard reach/operation, visible focus, sane focus return and no traps or entirely hidden focus. Verify meaningful Light/Dark colour and composited contrast pairs plus text/icon/shape/pattern meaning, reusing relevant ordinary regression tests. Keep useful responsive layout and reachability. Comprehensive AA certification-style capture is outside acceptance.
+   - Record source-matched screenshots of changed views at the relevant widths, and all four1440/960/720/390 widths for phase-end review. Use existing browser screenshot/viewport controls. Keep a concise evidence note, actual outcomes and limitations; preserve original negative diagnostics without requiring a custom harness.
+   - Reuse verified evidence across documentation/retired-audit deletion only when the product tree and build inputs are unchanged; record both heads and the inspected delta, keep exact-head CI and cleanup checks, and obtain fresh affected evidence for any product change. After asynchronous switch/reload/theme changes, confirm the intended build/context and settled UI before the final assertion; keep transients separately and report bounded failures without expanding fixtures or tooling.
    - **You verify this. Don't trust the report.** Re-run at least `npm test` and the build yourself, or through a gpt-6-luna
      runner, and open two or three of the screenshots.
    - **After a fix round of minors only**, the checks re-run but the capture doesn't: the orchestrator reads the diff and
@@ -152,7 +123,7 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    The reviewer may use the `code-review` skill, if it is available, on the branch diff.
 5. **UX audit** (UX auditor, read-only). It audits the change from the before/after screenshots, the spec and the
    diff. Did it fix the review findings it cites (each one: fixed, partly fixed or not fixed)? It also checks:
-   - the owner's decisions (newcomer-first, Factorio GUI grammar, full WCAG 2.2 AA on player-facing views)
+   - the owner's decisions (newcomer-first, Factorio GUI grammar, the active focused keyboard-and-colour profile on player-facing views)
    - the glossary
    - the copy (plain words, from the player's side)
    - regressions on any other screen in the shots.
@@ -236,7 +207,7 @@ used for each run. Historical Claude model names in old reports do not override 
 | Role | Codex model | Why |
 |---|---|---|
 | **Orchestrator (this session)** | **`gpt-6-astra`, high reasoning** | Routing, evidence checks and implementation judgments |
-| Scout, spec draft or capture writer | `gpt-6.1-sol` | Reading code, drafting bounded specs and capture checks |
+| Scout or spec draft | `gpt-6.1-sol` | Reading code, drafting bounded specs and capture checks |
 | Lookups, check runners, evidence runs without script changes, merge runners | `gpt-6-luna` | Mechanical work with explicit commands and verification |
 | Implementer, contained items (labels, palette, snackbars, copy, single-component changes) | `gpt-6.1-sol` | Small, well-specified changes |
 | Implementer, cross-cutting or design-heavy items (state across hooks, Validate into Generate, renumbering, Results restructure, Wake windows, reskin, the sidecar's Lua, Phase 3) | `gpt-6-astra`, high reasoning | Changes spanning files or behavior |
@@ -399,8 +370,7 @@ UX audit only, per cited finding: <A5: fixed | partly | not fixed — why>
 - Then pass the evidence gate:
   - run the full check set (in `clock-generator-ui`: `npm test`, `npm run lint`, `npm run knip`,
     `npm run check:icons`, `npm run build`; in `clock-generator` too if you changed the engine)
-  - capture the before/after screenshots the spec lists, with `docs/ux-rework/capture/` (see its README; run
-    `node scripts/copy-factorio-data.mjs` before `npm run dev`).
+  - record screenshots and targeted actual keyboard/colour checks for the changed workflows using existing browser capabilities; no retired custom capture framework (run `node scripts/copy-factorio-data.mjs` before `npm run dev`).
 - Report:
   - what you changed (files)
   - the check commands and their result lines
@@ -427,7 +397,7 @@ UX audit only, per cited finding: <A5: fixed | partly | not fixed — why>
 - Then check:
   - the newcomer-first default
   - the Factorio GUI grammar (green = confirm, orange = selection)
-  - WCAG 2.2 AA on player-facing views (names, keyboard, focus, contrast, no colour-only meaning)
+  - the active keyboard-and-colour profile (keyboard, focus, contrast, no colour-only meaning)
   - the glossary
   - plain copy
   - regressions on other screens.
@@ -448,3 +418,8 @@ read-only work: don't edit, commit or push anything.
 prompts (A newcomer advocate, B power-user interaction designer, C visual, data-viz and accessibility designer), and
 the new screenshots. Add: "Also report, for each finding in `docs/ux-rework/review/SYNTHESIS.md` that this phase was
 meant to fix, whether it is fixed."
+
+
+## Harness retirement completed in Phase4
+
+The custom full-AA capture/audit scripts, their shared helper/self-tests and five harness-only fixtures are removed. Historical reports remain available and ordinary functional/contrast regression tests remain required. Earlier historical references to those scripts are provenance, not a requirement to restore them. Future work uses the active focused profile and existing browser controls. No automatic PR merge is authorized.

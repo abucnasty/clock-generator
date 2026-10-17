@@ -1,8 +1,0 @@
-// Existing native persistence only. This helper never opens a missing database for creation.
-export async function readExistingResults(page,{all=false}={}){return page.evaluate(async({all})=>{
- const marker=sessionStorage.getItem('clock-generator-results-shown');
- if(typeof indexedDB.databases!=='function')throw Error('Read-only database inventory API unavailable; no implicit database creation');
- const databases=await indexedDB.databases();if(!databases.some(d=>d.name==='clock-generator-results'))return all?{status:'absent',shownMarker:marker,entries:[],records:[]}:null;
- const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('clock-generator-results');request.onupgradeneeded=()=>{request.transaction.abort();reject(Error('Existing results database disappeared; upgrade aborted'));};request.onerror=()=>reject(request.error);request.onsuccess=()=>resolve(request.result);});
- try{if(!db.objectStoreNames.contains('entries')||!db.objectStoreNames.contains('records'))throw Error('Existing results stores unavailable');const transaction=db.transaction(['entries','records'],'readonly');const get=(store,key)=>new Promise((resolve,reject)=>{const request=key===undefined?transaction.objectStore(store).getAll():transaction.objectStore(store).get(key);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});if(all){const [entries,records]=await Promise.all([get('entries'),get('records')]);return {status:'read-only-existing',shownMarker:marker,entries,records};}if(marker===null)return null;const [entry,row]=await Promise.all([get('entries',marker),get('records',marker)]);return row?{key:marker,entry,results:row.results}:null;}finally{db.close();}
- },{all});}
