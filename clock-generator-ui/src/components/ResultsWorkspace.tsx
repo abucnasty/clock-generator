@@ -1,9 +1,11 @@
-import { Alert, Box, Paper, Typography } from '@mui/material';
-import { useMemo, type ReactNode } from 'react';
+import { ExpandMore } from '@mui/icons-material';
+import { Alert, Box, Button, Collapse, Paper, Typography } from '@mui/material';
+import { useId, useMemo, type ReactNode } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ResultDetail } from '../utils/resultsView';
 import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
+import { useBuildSection } from '../hooks/useBuildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
 import { InserterAssumptions } from './InserterAssumptions';
 import type {
@@ -118,6 +120,8 @@ interface ResultsWorkspaceProps {
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const { density } = useDisplayPreferences();
+    const [comparisonOpen, setComparisonOpen] = useBuildSection('comparison-open');
+    const comparisonId = useId();
     const saved = useMemo(() => {
         try {
             return props.generatedFor ? JSON.parse(props.generatedFor.key) as Config : null;
@@ -175,6 +179,11 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 rateWarning={rateWarning}
                 stale={props.staleFor !== null}
                 beltAction={props.beltAction}
+                comparisonAction={<Button size="small" color="inherit" aria-expanded={comparisonOpen} aria-controls={comparisonId}
+                    onClick={() => setComparisonOpen(!comparisonOpen)}
+                    endIcon={<ExpandMore sx={{ transform: comparisonOpen ? 'rotate(180deg)' : 'none' }} />}>
+                    Compare clocks
+                </Button>}
                 runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">
                         These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.non_moving_belts ? 'standing-still' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
@@ -188,27 +197,29 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             />
 
             <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: density === 'compact' ? 1.5 : 2, '& > *': { minWidth: 0 } }}>
-                <ClockAlternativesPanel
-                    comparison={props.comparison}
-                    onComparisonChange={props.onComparisonChange}
-                    alternatives={props.alternatives}
-                    selectedIndex={props.selectedIndex}
-                    onSelect={props.onSelect}
-                    recommendedIndex={props.recommendedIndex}
-                    pickRule={props.pickRule}
-                    isGenerating={props.isRunning}
-                    pending={props.pending}
-                    notice={
-                        <DeeperSearchNotice
-                            kind={noticeKind}
-                            recommendedLabel={props.recommendedIndex === null ? null : props.alternatives[props.recommendedIndex]?.label ?? null}
-                            canSearchDeeper={props.canSearchDeeper}
-                            blockedBy={props.searchDeeperBlockedBy}
-                            onSearchDeeper={props.onSearchDeeper}
-                        />
-                    }
-                    holdNotice={noticeKind === 'searching'}
-                />
+                <Collapse id={comparisonId} in={comparisonOpen || !selected} mountOnEnter timeout={150}>
+                    <ClockAlternativesPanel
+                        comparison={props.comparison}
+                        onComparisonChange={props.onComparisonChange}
+                        alternatives={props.alternatives}
+                        selectedIndex={props.selectedIndex}
+                        onSelect={props.onSelect}
+                        recommendedIndex={props.recommendedIndex}
+                        pickRule={props.pickRule}
+                        isGenerating={props.isRunning}
+                        pending={props.pending}
+                        notice={
+                            <DeeperSearchNotice
+                                kind={noticeKind}
+                                recommendedLabel={props.recommendedIndex === null ? null : props.alternatives[props.recommendedIndex]?.label ?? null}
+                                canSearchDeeper={props.canSearchDeeper}
+                                blockedBy={props.searchDeeperBlockedBy}
+                                onSearchDeeper={props.onSearchDeeper}
+                            />
+                        }
+                        holdNotice={noticeKind === 'searching'}
+                    />
+                </Collapse>
 
                 {selected && (
                     <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}

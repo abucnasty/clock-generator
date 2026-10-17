@@ -25,8 +25,8 @@ export interface ClockTimelineWorkspaceProps {
 
 /** Charts load on first use and stay mounted so switching views preserves their controls and scroll position. */
 export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
-    const [view, setView] = useState<TimelineView>('states');
-    const [visited, setVisited] = useState<Partial<Record<TimelineView, boolean>>>({ states: true });
+    const [view, setView] = useState<TimelineView>('windows');
+    const [visited, setVisited] = useState<Partial<Record<TimelineView, boolean>>>({ windows: true });
     const [run, setRun] = useState<'clock' | 'plan'>('clock');
     const hasClockRun = props.clockOnlyTransferHistory !== null && props.clockOnlyStateTransitionHistory !== null;
     const showClock = hasClockRun && run === 'clock';

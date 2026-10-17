@@ -66,6 +66,7 @@ interface ResultSummaryCardProps {
     beltAction?: ReactNode;
     /** Saved build and inserter assumptions, shown inside the details disclosure. */
     runAssumptions?: ReactNode;
+    comparisonAction?: ReactNode;
 }
 
 /** A small, readable fact; context stays next to its value instead of filling a tile. */
@@ -226,7 +227,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     // focus, when the run it starts empties the list of clocks
     const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
     return (
-        <Panel title={CARD_COPY.heading} actions={selected ? <ClockCopy {...props} selected={selected} /> : undefined} sx={{ '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }} data-result-card="" data-build-anchor="selected-clock">
+        <Panel title={CARD_COPY.heading} actions={selected ? <>{props.comparisonAction}<ClockCopy {...props} selected={selected} /></> : undefined} sx={{ '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
             {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (

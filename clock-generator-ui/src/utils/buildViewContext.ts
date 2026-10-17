@@ -29,12 +29,12 @@ export interface BuildViewContext {
     position: Partial<Record<'configure' | 'results', { anchor: BuildAnchor; offset: number }>>;
 }
 const ANCHORS: BuildAnchor[] = ['configure', 'target', 'build', 'advanced', 'results', 'selected-clock', 'comparison', 'clock-context', 'details', 'developer'];
-const SECTIONS = ['advanced', 'transfer-plan', 'insights-build', 'comparison-help', 'model-assumptions'];
+const SECTIONS = ['advanced', 'transfer-plan', 'insights-build', 'comparison-help', 'comparison-open', 'model-assumptions'];
 const KINDS: EntityClickType[] = ['machine', 'inserter', 'belt', 'chest', 'drill'];
 const MAX_OFFSET = 4000;
 const MAX_TEXT = 2_000_000;
 export function defaultBuildViewContext(): BuildViewContext {
-    return { version: 1, view: 'configure', configView: 'list', resultDetail: 'overview', detailsTab: 'insights', sections: {},
+    return { version: 1, view: 'configure', configView: 'list', resultDetail: 'timeline', detailsTab: 'insights', sections: {},
         comparison: { allColumns: false, showUnstable: false }, wakeAsTable: false, diagramDetailed: true,
         timeline: { viewMode: 'simplified', sortMode: 'byType', filters: { machine: true, inserter: true, drill: true },
             statuses: { machine: Object.keys(MACHINE_STATUS_COLORS), inserter: Object.keys(INSERTER_STATUS_COLORS), drill: Object.keys(DRILL_STATUS_COLORS), categories: Object.keys(CATEGORY_COLORS) } },
@@ -68,6 +68,7 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
     // Preserve the destination of the previous Why / Wake tabs and nested blueprint view.
     const resultDetail = v.resultDetail === 'wake' ? 'timeline'
         : v.resultDetail === 'why' && v.detailsTab === 'blueprint' ? 'install'
+        : v.resultDetail === 'why' ? 'overview'
         : oneOf(v.resultDetail, ['overview', 'timeline', 'install'], d.resultDetail);
     return { ...d, view: oneOf(v.view, ['configure', 'results'], d.view), configView: oneOf(v.configView, ['list', 'diagram'], d.configView),
         resultDetail, detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
