@@ -31,7 +31,7 @@ const DISABLED_GREY = '#707070';
 
 /**
  * Item colours of the Transfer chart. Kept apart from the state colours (no green, yellow or grey), each at least 3:1
- * on the track and distinct for colour-blind viewers. The numbers are in docs/ux-rework/specs/2.10-timelines.md.
+ * on the track and distinct for colour-blind viewers. colors.test.ts checks the palette against the track.
  */
 const ITEM_COLORS = ['#E0298B', '#8BE3F9', '#E9C9C4', '#873DF5', '#8B92F9', '#BC884E'] as const;
 

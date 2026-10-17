@@ -1,7 +1,0 @@
-# Reviewed phase2 copy integrated into phase3
-
-Normal merge88eab3ab1a04a343f356c7a99341d8192ac59aa6 combines reviewed P3B18f1bed and P2F/docs5b59be9. Full detailed evidence, raw conflict/resolution, source/runtime/asset proofs, actual logs and PNGs retained once at `/tmp/ux-p2-copy-into-p3-evidence/EVIDENCE.md`. Only manual conflict: independent capture ui-map additions,209+16=225; root read actual hunks. Five F product files plus two tests, all other P3 UI unchanged; engine/sidecar trees unchanged.
-
-Author gates: UI1222tests/72files, TypeScript/lint/defaultKnip/icons/buildPASS. Fresh combined F795PASS/0FAIL/0failedsteps,265each1440/720/390; real0.5/1/2.25 generation and threehelp surfaces. Prior B5775/0/0 and A2289/0/0 remain for unchanged editor behavior. Engine1008unit/142generation explicitly inherited.
-
-Root independent TypeScript/UItest/buildPASS: `/tmp/ux-p2-copy-root-repeat/{results.json,PROOF.json}`, matching own-engine source and20bundledassets,412totaldistfiles. Root opened390fractional,720expandedhelp and1440Terms actual PNGs. Independent [code](../review/integration-p2-copy/CODE.md) and [UX](../review/integration-p2-copy/UX.md) supplements PASS. Normal FF promoted to P3 after both verdicts and rootrepeat, proof `/tmp/ux-p2-copy-into-p3-evidence/PROMOTION.json`. No phase→feature merge, installation approval or blanketAA claim.3.F current work and D1–D8 deferred remain separate.
