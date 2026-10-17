@@ -14,13 +14,10 @@ import { FilterSlotSelector } from './FilterSlotSelector';
 import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
 
-const ONE_LINE = '@media (min-width: 1600px)';
-const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start', [ONE_LINE]: { alignSelf: 'center' } };
+const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start' };
 const ROW_REST_SX = {
-    display: { xs: 'flex', sm: 'grid' }, gridColumn: '1 / -1',
-    gridTemplateColumns: { sm: '130px minmax(0, 1fr) 8.5rem 30px 40px' },
-    flexWrap: 'wrap', alignItems: 'start', gap: 2,
-    [ONE_LINE]: { display: 'contents', gridColumn: 'auto' },
+    display: 'flex', gridColumn: '1 / -1',
+    flexWrap: 'wrap', alignItems: 'start', gap: 2, minWidth: 0,
 };
 
 export interface InserterEditorProps {
@@ -35,8 +32,9 @@ export interface InserterEditorProps {
     itemNames: string[];
     getRecipeInfo: (name: string) => RecipeInfo | null;
     onChange: (updates: Partial<InserterFormData>) => void;
-    /** Caller-owned rule/menu/delete cells, rendered directly in the row's trailing grid. */
+    /** Caller-owned rule controls, rendered alongside the row's capacity and filters. */
     rowActions?: ReactNode;
+    rowSettings?: (fields: ReactNode) => ReactNode;
     /** A List card shares its memoized options across its rows. */
     options?: EntityOption[];
 }
@@ -59,7 +57,7 @@ function renderOption(props: HTMLAttributes<HTMLLIElement> & { key?: string }, o
 }
 
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
-export const InserterEditor = memo(function InserterEditor({ value, label, layout, density = 'explanatory', machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, options }: InserterEditorProps) {
+export const InserterEditor = memo(function InserterEditor({ value, label, layout, density = 'explanatory', machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, rowSettings, options }: InserterEditorProps) {
     const row = layout === 'row';
     const compact = row && density === 'compact';
     const capacity = effectiveInserterStackSize(value);
@@ -102,24 +100,13 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
             data-row-first={side === 'source' ? '' : undefined}
         />
     );
-    const fields = <>
-        {!row && <>
-            <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>Type: {value.prototype === undefined ? 'Automatic' : 'Explicit'} {timing.type} · Quality: {value.quality === undefined ? 'Automatic' : 'Explicit'} {timing.quality}</Typography>
-            {(!value.prototype || !value.quality) && <Typography variant="body2" color="text.secondary">{INSERTER_TIMING_ASSUMPTION}</Typography>}
-        </>}
-        <Box sx={row ? { ...PICKER_GROUP_SX, flexWrap: 'wrap', ...(compact && { [ONE_LINE]: { alignSelf: 'start' } }) } : { display: 'contents' }}>
-            {picker('source', 'Source')}
-            <NearLaneSelect compact={row} source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />
-        </Box>
-        <Box sx={row ? { ...PICKER_GROUP_SX, gridColumn: compact ? 'auto' : { sm: 2, md: 'auto' }, ...(compact && { [ONE_LINE]: { alignSelf: 'start' } }) } : { display: 'contents' }}>
-            {row && <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>→</Typography>}
-            {picker('sink', 'Destination')}
-        </Box>
+    const advancedFields = (
         <Box sx={row ? compact ? { display: 'flex', gridColumn: '1 / -1', flexWrap: 'wrap', alignItems: 'start', gap: 1.5, minWidth: 0 } : ROW_REST_SX : { display: 'contents' }}>
+            {row && <NearLaneSelect compact source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />}
             <NumberField id={`${row ? '' : 'diagram-'}inserter-stack-size-${value.id}`} label="Stack size" value={value.stack_size ?? null}
                 placeholder="Automatic" helperText={stackHelp} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
                 min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
-            <Box ref={filtersRef} sx={row ? { alignSelf: 'start', pt: compact ? 0 : '4px', minWidth: 0, flex: compact ? '1 1 180px' : undefined } : { mt: 2 }}>
+            <Box ref={filtersRef} sx={row ? { alignSelf: 'start', pt: compact ? 0 : '4px', minWidth: 0, flex: '1 1 180px' } : { mt: 2 }}>
                 <FilterSlotSelector compact={compact} label={compact ? `Filters · ${usesAutomaticFilters(value.filters) ? 'Automatic' : 'Explicit'}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
@@ -135,6 +122,21 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
             </Box>
             {row && rowActions}
         </Box>
+    );
+    const fields = <>
+        {!row && <>
+            <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>Type: {value.prototype === undefined ? 'Automatic' : 'Explicit'} {timing.type} · Quality: {value.quality === undefined ? 'Automatic' : 'Explicit'} {timing.quality}</Typography>
+            {(!value.prototype || !value.quality) && <Typography variant="body2" color="text.secondary">{INSERTER_TIMING_ASSUMPTION}</Typography>}
+        </>}
+        <Box sx={row ? { ...PICKER_GROUP_SX, flexWrap: 'wrap' } : { display: 'contents' }}>
+            {picker('source', 'Source')}
+            {!row && <NearLaneSelect compact={row} source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />}
+        </Box>
+        <Box sx={row ? PICKER_GROUP_SX : { display: 'contents' }}>
+            {row && <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>→</Typography>}
+            {picker('sink', 'Destination')}
+        </Box>
+        {row && rowSettings ? rowSettings(advancedFields) : advancedFields}
     </>;
     return row ? fields : <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>{fields}</Box>;
 });

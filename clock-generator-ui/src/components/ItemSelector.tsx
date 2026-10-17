@@ -18,6 +18,8 @@ interface ItemSelectorProps {
     placeholder?: string;
     size?: 'small' | 'medium';
     minWidth?: number;
+    /** Keep options readable when the selected control contracts to an icon. */
+    dropdownMinWidth?: number;
     freeSolo?: boolean;
     required?: boolean;
     /** The input's element id */
@@ -41,6 +43,7 @@ export function ItemSelector({
     placeholder = 'Search items...',
     size = 'small',
     minWidth = 200,
+    dropdownMinWidth,
     freeSolo = false,
     required,
     inputId,
@@ -95,7 +98,14 @@ export function ItemSelector({
             size={size}
             sx={{ minWidth: effectiveMinWidth, ...sx }}
             options={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).ids : everyOption}
-            slotProps={{ popper: { role: 'region', 'aria-label': `${label} options` } }}
+            slotProps={{ popper: {
+                role: 'region',
+                'aria-label': `${label} options`,
+                sx: dropdownMinWidth === undefined ? undefined : {
+                    minWidth: `min(${dropdownMinWidth}px, calc(100vw - 32px))`,
+                    maxWidth: 'calc(100vw - 32px)',
+                },
+            } }}
             groupBy={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).groupOf : undefined}
             value={value}
             open={open}

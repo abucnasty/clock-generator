@@ -1,3 +1,4 @@
+import { EntitySettings } from './EntitySettings';
 import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
@@ -7,6 +8,7 @@ import {
     InputLabel,
     MenuItem,
     Select,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import { memo } from 'react';
@@ -103,12 +105,16 @@ function MachinesFormComponent({
                 </Button>
             )}
         >
-            {compact && common.length > 0 && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {!compact && common.length > 0 && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 All {machines.length} machines: {common.join(' · ')}. Values remain editable below.
             </Typography>}
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
-                    <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}>
+                    <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}
+                        displayLabel={<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                            <FactorioIcon name={machine.type === 'biochamber' ? 'biochamber' : machine.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3'} size={20} alt="" />
+                            {machine.id}
+                        </Box>}>
                         {(dragHandle) => (
                             <MachineRow
                                 compact={compact}
@@ -146,7 +152,7 @@ interface MachineRowProps {
 }
 
 function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandle, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
-    const { itemLabel } = useGameNames();
+    const { itemLabel, recipeLabel } = useGameNames();
     const { facts, error } = useMachineFacts({
         recipe: machine.recipe,
         productivity: machine.productivity,
@@ -165,33 +171,76 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
                 p: compact ? 1.5 : 2,
                 minWidth: 0,
                 bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
+                containerType: 'inline-size',
+                containerName: 'machine-row',
             }}
         >
             <Box
                 sx={{
-                    display: 'flex',
+                    display: 'grid',
+                    gridTemplateColumns: 'auto minmax(0, 1fr) auto',
                     gap: compact ? 1 : 2,
                     alignItems: 'center',
-                    flexWrap: 'wrap',
+                    mb: compact ? 1.5 : 2,
                 }}
             >
                 {dragHandle}
-                <Box data-row-first="" sx={{ display: 'contents' }}>
-                <ItemSelector
-                    kind="recipe"
-                    inputId={machineRecipeElementId(machine.id)}
-                    sx={{ flex: compact ? '2 1 210px' : '1 1 250px', minWidth: 0, maxWidth: '100%' }}
-                    minWidth={0}
-                    options={recipeNames}
-                    value={machine.recipe || null}
-                    onChange={(newValue) => onUpdate(index, 'recipe', newValue || '')}
-                    label="Recipe"
-                    placeholder="Search recipes..."
-                    // the label says "Recipe" in every row: say whose it is
-                    inputAriaLabel={recipeName(entityLabel('machine', machine.id))}
-                    freeSolo
-                />
+                <Tooltip title={machine.recipe ? nameWithId(recipeLabel(machine.recipe), machine.recipe) : ''} describeChild>
+                    <Box data-row-first="" sx={{ minWidth: 0, containerType: 'inline-size', containerName: 'machine-recipe' }}>
+                        <ItemSelector
+                            kind="recipe"
+                            inputId={machineRecipeElementId(machine.id)}
+                            sx={{
+                                width: '100%',
+                                minWidth: 0,
+                                '@container machine-recipe (max-width: 160px)': {
+                                    '&:has(img):not(:focus-within) .MuiAutocomplete-input': { color: 'transparent' },
+                                    '&:has(img):not(:focus-within) .MuiInputLabel-root': { visibility: 'hidden' },
+                                    '&:has(img):not(:focus-within) .MuiOutlinedInput-notchedOutline legend': { maxWidth: 0 },
+                                    '&:has(img):not(:focus-within) .MuiAutocomplete-clearIndicator': { display: 'none' },
+                                    '& .MuiAutocomplete-input': { minWidth: '0 !important' },
+                                },
+                            }}
+                            minWidth={0}
+                            dropdownMinWidth={300}
+                            options={recipeNames}
+                            value={machine.recipe || null}
+                            onChange={(newValue) => onUpdate(index, 'recipe', newValue || '')}
+                            label="Recipe"
+                            placeholder="Search recipes..."
+                            // the label says "Recipe" in every row: say whose it is
+                            inputAriaLabel={recipeName(entityLabel('machine', machine.id))}
+                            freeSolo
+                        />
+                    </Box>
+                </Tooltip>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    <Box id={`settings-actions-machine-${machine.id}`} sx={{ display: 'flex' }} />
+                    <RowActionsMenu label={entityLabel('machine', machine.id)} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
+                    <IconButton
+                        onClick={() => onRemove(index)}
+                        color="error"
+                        disabled={!canDelete}
+                        aria-label={deleteButtonLabel('machine', machine.id)}
+                        data-row-delete=""
+                    >
+                        <Delete />
+                    </IconButton>
                 </Box>
+            </Box>
+            <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[{ label: 'Machine facts', content: machine.recipe ? <MachineFactsAccordion inline machineId={machine.id} facts={facts} error={error} /> : <Typography variant="body2">Choose a recipe to see machine facts.</Typography> }]} summary={
+                <Typography variant="body2">
+                    {MACHINE_TYPE_LABELS[machine.type ?? 'machine']} · Speed {Number(machine.crafting_speed.toFixed(3))}× · Productivity {machine.productivity}%
+                    {machine.type === 'biochamber' && ` · Energy ${Number((machine.energy_consumption_bonus ?? 0).toFixed(2))}%`}
+                </Typography>
+            }>
+            <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${machine.type === 'biochamber' ? 4 : 3}, minmax(0, 1fr))`,
+                gap: compact ? 1 : 2,
+                '@container machine-row (max-width: 680px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+                '@container machine-row (max-width: 360px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
+            }}>
                 <NumberField
                     label="Productivity (%)"
                     value={machine.productivity}
@@ -199,7 +248,7 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
                     min={0}
                     step={1}
                     defaultValue={0}
-                    sx={{ width: compact ? 140 : 150, maxWidth: '100%' }}
+                    sx={{ minWidth: 0, width: '100%' }}
                     size="small"
                 />
                 <NumberField
@@ -209,7 +258,7 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
                     min={0.01}
                     step={0.1}
                     defaultValue={1}
-                    sx={{ width: compact ? 150 : 180, maxWidth: '100%' }}
+                    sx={{ minWidth: 0, width: '100%' }}
                     size="small"
                 />
                 {machine.type === 'biochamber' && (
@@ -220,11 +269,11 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
                         min={-80}
                         step={1}
                         defaultValue={0}
-                        sx={{ width: 190, maxWidth: '100%' }}
+                        sx={{ minWidth: 0, width: '100%' }}
                         size="small"
                     />
                 )}
-                <FormControl size="small" sx={{ flex: compact ? '1 1 190px' : undefined, minWidth: 0, width: compact ? 190 : 220, maxWidth: '100%' }}>
+                <FormControl size="small" sx={{ minWidth: 0, width: '100%' }}>
                     <InputLabel>Type</InputLabel>
                     <Select
                         inputProps={{ 'aria-label': `${SELECT_NAMES.machineType}, ${entityLabel('machine', machine.id)}` }}
@@ -258,21 +307,10 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
                         </MenuItem>
                     </Select>
                 </FormControl>
-                <RowActionsMenu label={entityLabel('machine', machine.id)} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
-                <IconButton
-                    onClick={() => onRemove(index)}
-                    color="error"
-                    disabled={!canDelete}
-                    aria-label={deleteButtonLabel('machine', machine.id)}
-                    data-row-delete=""
-                >
-                    <Delete />
-                </IconButton>
             </Box>
-            {machine.recipe && (
-                <MachineFactsAccordion machineId={machine.id} facts={facts} error={error} />
-            )}
+
             {machine.fuel !== undefined && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }} title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
+            </EntitySettings>
         </Box>
     );
 }

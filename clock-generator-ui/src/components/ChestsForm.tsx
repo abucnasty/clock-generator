@@ -1,3 +1,4 @@
+import { FactorioIcon } from './FactorioIcon';
 import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
@@ -144,7 +145,10 @@ function ChestsFormComponent({
                 >
                     <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
                     {chests.map((chest, index) => (
-                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)}>
+                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)} displayLabel={<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                    <FactorioIcon name={isBufferChest(chest) ? 'buffer-chest' : 'infinity-chest'} size={20} alt="" />
+                    {chest.id}
+                </Box>}>
                             {(dragHandle) => (
                         <Box
                             id={`entity-chest-${chest.id}`}
@@ -153,14 +157,23 @@ function ChestsFormComponent({
                             sx={{
                                 mb: 2,
                                 p: 2,
+                                minWidth: 0,
                                 bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
                             }}
                         >
-                            {/* Header row with ID, Type, Filters, and Delete */}
-                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center', mb: 1.5 }}>
                                 {dragHandle}
-
-                                <FormControl data-row-first="" size="small" sx={{ minWidth: 150 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                    <RowActionsMenu label={entityLabel('chest', chest.id)} onDuplicate={() => duplicate(index)}
+                                        onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
+                                        onMoveDown={index < chests.length - 1 ? () => onReorder(index, index + 1) : undefined} />
+                                    <IconButton onClick={() => remove(index)} color="error" aria-label={deleteButtonLabel('chest', chest.id)} data-row-delete="">
+                                        <Delete />
+                                    </IconButton>
+                                </Box>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'start', flexWrap: 'wrap', minWidth: 0 }}>
+                                <FormControl data-row-first="" size="small" sx={{ minWidth: 0, flex: '1 1 150px' }}>
                                     <InputLabel>Type</InputLabel>
                                     <Select
                                         inputProps={{ 'aria-label': SELECT_NAMES.chestType }}
@@ -182,7 +195,9 @@ function ChestsFormComponent({
                                             onChange={(newValue) => onUpdate(index, { item_filter: newValue || '' })}
                                             label="Item Filter"
                                             size="small"
-                                            minWidth={200}
+                                            minWidth={0}
+                                            dropdownMinWidth={300}
+                                            sx={{ minWidth: 0, flex: '1 1 200px' }}
                                         />
                                         <TextField
                                             label="Storage Size"
@@ -190,7 +205,7 @@ function ChestsFormComponent({
                                             value={chest.storage_size}
                                             onChange={(e) => onUpdate(index, { storage_size: parseInt(e.target.value) || 1 })}
                                             inputProps={{ min: 1 }}
-                                            sx={{ width: 140 }}
+                                            sx={{ minWidth: 0, flex: '1 1 140px' }}
                                             size="small"
                                             slotProps={{
                                                 input: {
@@ -205,32 +220,26 @@ function ChestsFormComponent({
                                     </>
                                 )}
 
+
                                 {/* Infinity Chest filter slots - multiple slots */}
                                 {isInfinityChest(chest) && (
-                                    <ChestFilterSlotSelector
-                                        filters={getInfinityChestFilters(chest)}
-                                        itemNames={itemNames}
-                                        onFilterChange={(slotIndex, filter) =>
-                                            handleInfinityChestFilterChange(index, slotIndex, filter)
-                                        }
-                                        onRemoveFilter={(slotIndex) =>
-                                            handleInfinityChestRemoveFilter(index, slotIndex)
-                                        }
-                                        onAddFilter={() => handleInfinityChestAddFilter(index)}
-                                        maxSlots={10}
-                                        quantityLabel="Request Count"
-                                        canAddMore={true}
-                                    />
+                                    <Box sx={{ minWidth: 0, flex: '2 1 220px', pt: 0.5 }}>
+                                        <ChestFilterSlotSelector
+                                            filters={getInfinityChestFilters(chest)}
+                                            itemNames={itemNames}
+                                            onFilterChange={(slotIndex, filter) =>
+                                                handleInfinityChestFilterChange(index, slotIndex, filter)
+                                            }
+                                            onRemoveFilter={(slotIndex) =>
+                                                handleInfinityChestRemoveFilter(index, slotIndex)
+                                            }
+                                            onAddFilter={() => handleInfinityChestAddFilter(index)}
+                                            maxSlots={10}
+                                            quantityLabel="Request Count"
+                                            canAddMore={true}
+                                        />
+                                    </Box>
                                 )}
-
-                                <Box sx={{ flex: 1 }} />
-
-                                <RowActionsMenu label={entityLabel('chest', chest.id)} onDuplicate={() => duplicate(index)}
-                                    onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
-                                    onMoveDown={index < chests.length - 1 ? () => onReorder(index, index + 1) : undefined} />
-                                <IconButton onClick={() => remove(index)} color="error" aria-label={deleteButtonLabel('chest', chest.id)} data-row-delete="">
-                                    <Delete />
-                                </IconButton>
                             </Box>
                         </Box>
                             )}

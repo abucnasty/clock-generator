@@ -77,12 +77,13 @@ interface SortableItemProps {
     stableKey: string;
     /** The entity's name shown in the row's chip, e.g. "Inserter 3". */
     label: string;
+    displayLabel?: React.ReactNode;
     /** Render prop: receives the composed drag-handle+ID element to place inside the row. */
     children: (dragHandle: React.ReactNode) => React.ReactNode;
 }
 
 /** Wraps a single row with sortable drag behaviour and injects a drag handle. */
-export function SortableItem({ stableKey, label, children }: SortableItemProps) {
+export function SortableItem({ stableKey, label, displayLabel, children }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -133,9 +134,11 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
             </Box>
             {/* at least as wide as "Inserter 99", so the rows of a card line up */}
             <Chip
-                label={label}
+                label={displayLabel ?? label}
+                aria-label={label}
+                title={label}
                 size="small"
-                sx={{ minWidth: 72, fontSize: '0.7rem', pointerEvents: 'none' }}
+                sx={{ minWidth: displayLabel ? 48 : 72, fontSize: '0.7rem', pointerEvents: 'none' }}
             />
         </Box>
     );

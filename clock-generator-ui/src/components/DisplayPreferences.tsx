@@ -1,36 +1,30 @@
-import { Button, FormControl, FormControlLabel, FormLabel, Popover, Radio, RadioGroup, Switch, Typography, Box } from '@mui/material';
-import { useId, useState, type ReactElement } from 'react';
+import { BrightnessAutoOutlined, DarkModeOutlined, LightModeOutlined, ViewAgendaOutlined, ViewCompactOutlined } from '@mui/icons-material';
+import { Box, IconButton, Tooltip } from '@mui/material';
+import type { ReactElement } from 'react';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 
-/** One browser-wide preference entry in the header; density and the resolved theme apply without replacing the page tree. */
+/** Direct, browser-wide appearance controls in the toolbar. */
 export function DisplayPreferencesButton(): ReactElement {
     const { density, setDensity, scheme, setScheme } = useDisplayPreferences();
-    const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
-    const id = useId();
-    return <>
-        <Button color="inherit" size="small" aria-haspopup="dialog" aria-expanded={anchor !== null}
-            aria-controls={anchor ? id : undefined} onClick={event => setAnchor(event.currentTarget)}>
-            Display
-        </Button>
-        <Popover id={id} open={anchor !== null} anchorEl={anchor} onClose={() => setAnchor(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
-            <Box role="dialog" aria-label="Display preferences" sx={{ p: 2, maxWidth: 'min(320px, calc(100vw - 32px))' }}>
-                <FormControlLabel label="Compact" control={<Switch checked={density === 'compact'}
-                    onChange={(_, compact) => setDensity(compact ? 'compact' : 'explanatory')} />} />
-                <Typography variant="body2" color="text.secondary">Use less space for Configure and Results. Your build and clock stay the same.</Typography>
-                <FormControl sx={{ mt: 2 }}>
-                    <FormLabel id={`${id}-scheme`}>Color scheme</FormLabel>
-                    <RadioGroup aria-labelledby={`${id}-scheme`} value={scheme} onChange={(_, value) => {
-                        if (value === 'system' || value === 'light' || value === 'dark') setScheme(value);
-                    }}>
-                        <FormControlLabel value="system" control={<Radio size="small" />} label="System" />
-                        <FormControlLabel value="light" control={<Radio size="small" />} label="Light" />
-                        <FormControlLabel value="dark" control={<Radio size="small" />} label="Dark" />
-                    </RadioGroup>
-                </FormControl>
-                <Typography variant="body2" color="text.secondary">System follows your device. Display choices apply to all your builds.</Typography>
-            </Box>
-        </Popover>
-    </>;
+    const compact = density === 'compact';
+    const densityLabel = compact ? 'Compact' : 'Expanded';
+    const nextDensityLabel = compact ? 'Expanded' : 'Compact';
+    const nextScheme = scheme === 'light' ? 'dark' : scheme === 'dark' ? 'system' : 'light';
+    const themeLabel = scheme === 'system' ? 'Auto' : scheme === 'dark' ? 'Dark' : 'Light';
+    const nextLabel = nextScheme === 'system' ? 'Auto' : nextScheme === 'dark' ? 'Dark' : 'Light';
+    return <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+        <Tooltip title={`Theme: ${themeLabel}. Switch to ${nextLabel}${nextScheme === 'system' ? ' (follows your device)' : ''}`}>
+            <IconButton size="small" aria-label={`Theme: ${themeLabel}. Switch to ${nextLabel}`} onClick={() => setScheme(nextScheme)}
+                sx={{ color: 'text.secondary', border: 1, borderColor: 'divider', borderRadius: 1, p: 0.75 }}>
+                {scheme === 'system' ? <BrightnessAutoOutlined fontSize="small" /> : scheme === 'dark' ? <DarkModeOutlined fontSize="small" /> : <LightModeOutlined fontSize="small" />}
+            </IconButton>
+        </Tooltip>
+        <Tooltip title={`View: ${densityLabel}. Switch to ${nextDensityLabel}`}>
+            <IconButton size="small" aria-label={`View: ${densityLabel}. Switch to ${nextDensityLabel}`}
+                onClick={() => setDensity(compact ? 'explanatory' : 'compact')}
+                sx={{ color: 'text.secondary', border: 1, borderColor: 'divider', borderRadius: 1, p: 0.75 }}>
+                {compact ? <ViewCompactOutlined fontSize="small" /> : <ViewAgendaOutlined fontSize="small" />}
+            </IconButton>
+        </Tooltip>
+    </Box>;
 }

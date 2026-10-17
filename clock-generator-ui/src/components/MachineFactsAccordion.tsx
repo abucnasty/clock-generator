@@ -21,9 +21,10 @@ interface MachineFactsAccordionProps {
     facts: SerializableMachineFacts | null;
     error?: string | null;
     headingLevel?: 3 | 4;
+    inline?: boolean;
 }
 
-export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineId }: MachineFactsAccordionProps) {
+export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineId, inline = false }: MachineFactsAccordionProps) {
     const [expanded, setExpanded] = useBuildSection(`machine-facts:${machineId}`);
     if (error) {
         return (
@@ -37,43 +38,7 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
         return null;
     }
 
-    return (
-        <Accordion
-            expanded={expanded}
-            onChange={(_, open) => setExpanded(open)}
-            // Under the List's section heading, or the Diagram dialog's title.
-            slotProps={{ heading: { component: `h${headingLevel}` } }}
-            sx={{
-                mt: 1,
-                bgcolor: 'background.paper',
-                '&:before': { display: 'none' },
-                boxShadow: 1,
-            }}
-            disableGutters
-        >
-            <AccordionSummary
-                expandIcon={<ExpandMore />}
-                sx={{
-                    minHeight: 40,
-                    '& .MuiAccordionSummary-content': {
-                        my: 0.5,
-                        alignItems: 'center',
-                        gap: 1,
-                    },
-                }}
-            >
-                <Typography variant="body2" component="span" color="text.secondary">
-                    Machine Facts
-                </Typography>
-                <Tooltip title={`The most this machine can make: ${facts.output_rate_per_second}/s`} arrow describeChild>
-                    <Chip
-                        size="small"
-                        label={maxRateLabel(facts.output_rate_per_second)}
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem' }}
-                    />
-                </Tooltip>
-            </AccordionSummary>
+    const details = (
             <AccordionDetails sx={{ pt: 0 }}>
                 {/* Output Section */}
                 <Box sx={{ mb: 2 }}>
@@ -224,6 +189,47 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
                     </>
                 )}
             </AccordionDetails>
+    );
+    if (inline) return details;
+
+    return (
+        <Accordion
+            expanded={expanded}
+            onChange={(_, open) => setExpanded(open)}
+            // Under the List's section heading, or the Diagram dialog's title.
+            slotProps={{ heading: { component: `h${headingLevel}` } }}
+            sx={{
+                mt: 1,
+                bgcolor: 'background.paper',
+                '&:before': { display: 'none' },
+                boxShadow: 1,
+            }}
+            disableGutters
+        >
+            <AccordionSummary
+                expandIcon={<ExpandMore />}
+                sx={{
+                    minHeight: 40,
+                    '& .MuiAccordionSummary-content': {
+                        my: 0.5,
+                        alignItems: 'center',
+                        gap: 1,
+                    },
+                }}
+            >
+                <Typography variant="body2" component="span" color="text.secondary">
+                    Machine Facts
+                </Typography>
+                <Tooltip title={`The most this machine can make: ${facts.output_rate_per_second}/s`} arrow describeChild>
+                    <Chip
+                        size="small"
+                        label={maxRateLabel(facts.output_rate_per_second)}
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem' }}
+                    />
+                </Tooltip>
+            </AccordionSummary>
+            {details}
         </Accordion>
     );
 }
