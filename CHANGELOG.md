@@ -17,7 +17,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Infinity chests support Remove unfiltered items, including empty chests that remove all incoming items. Sidecar 0.8.0 exports this setting and reads configured filters instead of current contents.
 
 ### Changed
-- The Configure and Results workflow uses one compact layout, shared item and recipe pickers, category help, and clearer bulk editing. Machine rates can show maximum capacity or their share of the target output.
+- A fresh coat of factory paint: a reimagined Clock Generator experience. Configure and Results use one compact layout, shared item and recipe pickers, category help, and clearer bulk editing. Machine rates can show maximum capacity or their share of the target output.
 - Results lead with the recommended clock and keep comparison and supporting details available when needed. Generate and Copy are highlighted as the next step without moving their controls.
 - Build validation groups connection and chest problems with actions to fix them, including switching a finite output chest to an infinity chest and enabling disposal when needed.
 - Improve light-theme contrast, diagram routing, and keyboard navigation. Dark is the default theme; theme choices are in More options.
