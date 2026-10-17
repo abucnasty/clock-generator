@@ -5,39 +5,11 @@ import { formDataToConfig } from '../utils/configForm/configMapping';
 import type { MessageInput } from '../utils/messages';
 import { backupKey, buildKey, LIBRARY_KEY } from '../utils/buildLibrary';
 
-// Reuses the established Node-only hook runner approach: retain actual state/effects, including the interval
-// between an authoritative edit and the next React commit. No DOM or replacement production state owner.
-const runner = vi.hoisted(() => {
-    let states: unknown[] = [], refs: { current: unknown }[] = [], queued: (() => void)[] = [];
-    let memos: { deps: readonly unknown[]; value: unknown }[] = [], effects: { deps: readonly unknown[]; cleanup?: () => void }[] = [];
-    let si = 0, ri = 0, mi = 0, ei = 0;
-    const same = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
-    const memo = (create: () => unknown, deps: readonly unknown[]) => {
-        const i = mi++;
-        if (!memos[i] || !same(memos[i].deps, deps)) memos[i] = { deps, value: create() };
-        return memos[i].value;
-    };
+const runner = await vi.hoisted(async () => {
+    const { createHookRunner } = await import('../test/hookRunner');
     return {
+        ...createHookRunner(),
         ask: vi.fn(), notify: vi.fn(), dismiss: vi.fn(), announce: vi.fn(), announceMessage: vi.fn(),
-        reset() { states = []; refs = []; queued = []; memos = []; effects = []; },
-        begin() { si = ri = mi = ei = 0; queued = []; },
-        commit() { queued.forEach(effect => effect()); },
-        unmount() { effects.forEach(effect => effect.cleanup?.()); },
-        react: {
-            useState(initial: unknown) {
-                const i = si++;
-                if (!(i in states)) states[i] = typeof initial === 'function' ? initial() : initial;
-                return [states[i], (next: unknown) => { states[i] = typeof next === 'function' ? next(states[i]) : next; }];
-            },
-            useRef(value: unknown) { return refs[ri++] ??= { current: value }; },
-            useMemo: memo, useCallback: (fn: unknown, deps: readonly unknown[]) => memo(() => fn, deps),
-            useEffect(create: () => (() => void) | void, deps?: readonly unknown[]) {
-                const i = ei++, next = deps ?? [];
-                if (!effects[i] || !deps || !same(effects[i].deps, next)) queued.push(() => {
-                    effects[i]?.cleanup?.(); effects[i] = { deps: next, cleanup: create() || undefined };
-                });
-            },
-        },
     };
 });
 vi.mock('react', () => runner.react);
@@ -94,6 +66,56 @@ function changedElsewhere(text: string) {
 }
 
 describe('async build loading ownership', () => {
+    it.each(['valid', 'invalid', 'failed'] as const)('never saves the startup placeholder when a cross-tab load overtakes a %s initial answer', async outcome => {
+        const saved = { ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
+        const text = JSON.stringify(saved);
+        local.setItem(buildKey('default'), text);
+        const initial = pendingCheck(), hook = Render();
+        changedElsewhere(JSON.stringify({ ...saved, target_output: { ...saved.target_output, copies: 4 } }));
+        const newer = pendingCheck(), before = vi.fn(), loading = hook.library.loadOtherTabVersion(before);
+        if (outcome === 'valid') initial.resolve(null);
+        if (outcome === 'invalid') initial.resolve('Old validation problem');
+        if (outcome === 'failed') initial.reject(new Error('Old worker failure'));
+        await Promise.resolve();
+        expect(Render().isLoaded).toBe(false);
+        expect(local.getItem(buildKey('default'))).toBe(text);
+        expect(Render().loadError).toBeNull();
+        expect(Render().loadNotice).toBeNull();
+        newer.resolve(null);
+        expect(await loading).toBe(true);
+        expect(before).toHaveBeenCalledOnce();
+        expect(Render().isLoaded).toBe(true);
+        expect(Render().config.target_output.copies).toBe(4);
+    });
+
+    it.each([true, false])('finishes startup if the newer load fails (initial answer first: %s)', async initialFirst => {
+        const saved = { ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
+        local.setItem(buildKey('default'), JSON.stringify(saved));
+        const initial = pendingCheck(), hook = Render();
+        changedElsewhere(JSON.stringify({ ...saved, target_output: { ...saved.target_output, copies: 4 } }));
+        const newer = pendingCheck(), loading = hook.library.loadOtherTabVersion(vi.fn());
+        if (initialFirst) { initial.resolve(null); await Promise.resolve(); }
+        newer.resolve('Invalid newer config');
+        expect(await loading).toBe(false);
+        if (!initialFirst) { initial.resolve(null); await Promise.resolve(); }
+        expect(Render().isLoaded).toBe(true);
+        expect(Render().config.target_output).toEqual(saved.target_output);
+    });
+
+    it('keeps the replayed startup validation current after effect cleanup', async () => {
+        const saved = { ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
+        local.setItem(buildKey('default'), JSON.stringify(saved));
+        const older = pendingCheck();
+        Render();
+        const newer = pendingCheck();
+        runner.replay();
+        older.resolve(null); await Promise.resolve();
+        expect(Render().isLoaded).toBe(false);
+        newer.resolve(null); await Promise.resolve();
+        expect(Render().isLoaded).toBe(true);
+        expect(Render().config.target_output).toEqual(saved.target_output);
+    });
+
     it('only opens the latest requested build when checks finish out of order', async () => {
         const { hook, first, second } = savedBuilds();
         const older = pendingCheck(), openFirst = hook.library.openBuild(first);
