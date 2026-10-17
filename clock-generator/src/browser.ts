@@ -84,6 +84,7 @@ export type {
 
 export {
     validateInserterCoverage,
+    createInserterCoverageValidator,
     assertInserterCoverage,
 } from './config/inserter-coverage-validator';
 

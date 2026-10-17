@@ -45,10 +45,12 @@ function inferStackSize(prev: ConfigFormData): number {
 }
 
 /** Why an offered repair cannot change this build's imported geometry. */
-export function inserterFixProblem(config: Pick<ConfigFormData, 'inserters' | 'belts'>, fix: InserterFixOption): string | null {
-    return fix.type === 'add_lane_to_existing_belt' && config.belts.some(belt => belt.id === fix.belt_id)
-        && hasImportedBeltDrops(config.inserters, fix.belt_id)
-        ? `${entityLabel('belt', fix.belt_id)}: ${DROP_BELT_READ_ONLY}` : null;
+export function inserterFixProblem(config: Pick<ConfigFormData, 'inserters' | 'belts'>, fix: InserterFixOption, issue?: InserterCoverageIssue): string | null {
+    const beltId = fix.type === 'add_lane_to_existing_belt' ? fix.belt_id
+        : fix.type === 'existing_connection' && fix.endpoint_type === 'belt' && issue?.kind === 'missing_output_inserter' ? fix.endpoint_id : null;
+    return beltId !== null && config.belts.some(belt => belt.id === beltId)
+        && hasImportedBeltDrops(config.inserters, beltId)
+        ? `${entityLabel('belt', beltId)}: ${DROP_BELT_READ_ONLY}` : null;
 }
 
 /** Adds the inserter, belt lane, belt or chest that the chosen fix calls for. */
@@ -57,7 +59,20 @@ export function applyInserterFix(
     issue: InserterCoverageIssue,
     fix: InserterFixOption,
 ): ConfigFormData {
-    if (inserterFixProblem(prev, fix)) return prev;
+    if (inserterFixProblem(prev, fix, issue)) return prev;
+    if (fix.type === 'review_filters') return prev;
+    if (fix.type === 'existing_connection') {
+        const entities = fix.endpoint_type === 'machine' ? prev.machines : fix.endpoint_type === 'belt' ? prev.belts : prev.chests;
+        if (!entities.some(entity => entity.id === fix.endpoint_id) || !prev.machines.some(machine => machine.id === issue.machine_id)) return prev;
+        const endpoint = { type: fix.endpoint_type, id: fix.endpoint_id };
+        const machine = { type: 'machine' as const, id: issue.machine_id };
+        const source = issue.kind === 'missing_input_inserter' ? endpoint : machine;
+        const sink = issue.kind === 'missing_input_inserter' ? machine : endpoint;
+        if (prev.inserters.some(ins => ins.source.type === source.type && ins.source.id === source.id && ins.sink.type === sink.type && ins.sink.id === sink.id)) return prev;
+        return { ...prev, inserters: [...prev.inserters, {
+            id: nextId(prev, 'inserters'), _uuid: crypto.randomUUID(), source, sink, stack_size: inferStackSize(prev),
+        }] };
+    }
     // ── machine → machine inserter (highest priority, no new belt/chest) ─
     if (fix.type === 'machine_to_machine') {
         const stackSize = inferStackSize(prev);

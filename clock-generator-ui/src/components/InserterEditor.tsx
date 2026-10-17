@@ -10,12 +10,10 @@ import { entityOptionsOf, findOption, stackSizeFrom, type EntityOption } from '.
 import { inferInserterItems, sourceItemsOf } from '../utils/inferInserterItems';
 import { removeFilterSlot, setFilterSlot, usesAutomaticFilters } from '../utils/inserterFilters';
 import { DROP_ROUTE_READ_ONLY, endpointUpdate, effectiveInserterStackSize, INSERTER_TIMING_ASSUMPTION, inserterTimingLabels, inserterStackSizeHelp } from '../utils/inserterMetadata';
-import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
-import { EntityBadge } from './EntityBadge';
-import { BeltLanePreview } from './BeltLanePreview';
+import { RouteBadge, ContentIcons } from './RouteIdentity';
 
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start' };
 const ROW_REST_SX = {
@@ -48,25 +46,6 @@ const ENTITY_GROUPS = { machine: 'Machines', belt: 'Belts', chest: 'Chests' };
 
 function routeLabel(option: EntityOption | undefined): string {
     return option ? option.sublabel ? `${option.label} - ${option.sublabel}` : option.label : '';
-}
-
-function RouteBadge({ option }: { option: EntityOption }) {
-    return <Box component="span" aria-hidden sx={{ display: 'inline-flex', flexShrink: 0 }}>
-        <EntityBadge id={option.id} size="small">
-            {option.belt
-                ? <Box component="span" sx={{ width: 31, height: 28, position: 'relative', '& > span': { position: 'absolute', left: 0, top: 0, transform: 'scale(0.7)', transformOrigin: 'top left' } }}><BeltLanePreview belt={option.belt} /></Box>
-                : <FactorioIcon name={option.icon} size={22} alt="" />}
-        </EntityBadge>
-    </Box>;
-}
-
-function ContentIcons({ option, size = 18 }: { option: EntityOption; size?: number }) {
-    const icons = option.ingredientIcons ?? [];
-    if (!icons.length) return null;
-    return <Box component="span" aria-hidden sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
-        {icons.slice(0, 2).map((item, i) => <FactorioIcon key={`${item}-${i}`} name={item} size={size} alt="" />)}
-        {icons.length > 2 && <Typography component="span" variant="caption">+{icons.length - 2}</Typography>}
-    </Box>;
 }
 
 function renderOption(props: HTMLAttributes<HTMLLIElement> & { key?: string }, option: EntityOption, { selected }: { selected: boolean }, itemLabel: (id: string) => string) {

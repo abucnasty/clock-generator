@@ -14,7 +14,7 @@ import {
     Alert,
 } from '@mui/material';
 import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
-import type { ChestType, Config, DebugSteps, InserterFixOption } from 'clock-generator/browser';
+import type { ChestType, Config, DebugSteps, InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
 import type { ChestFormData, InserterFormData } from './hooks/useConfigForm';
@@ -70,6 +70,7 @@ import { clockTechnicalName, plainClockName } from './utils/clockSummary';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
+import { entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
 import { createAppTheme } from './theme/theme';
 import { useResolvedColorScheme } from './hooks/useResolvedColorScheme';
@@ -233,7 +234,7 @@ function App() {
     } = useConfigForm();
 
     const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded, library.currentId);
-    const fixUnavailable = useCallback((fix: InserterFixOption) => inserterFixProblem(config, fix), [config]);
+    const fixUnavailable = useCallback((fix: InserterFixOption, issue?: InserterCoverageIssue) => inserterFixProblem({ belts: config.belts, inserters: config.inserters }, fix, issue), [config.belts, config.inserters]);
 
     // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
     // where to start instead of counting problems
@@ -295,6 +296,33 @@ function App() {
     const setAdvancedOpen = useCallback((open: boolean) => patchContext({ sections: { ...buildContext.sections, advanced: open } }), [patchContext, buildContext.sections]);
     const sectionContext = useMemo(() => ({ sections: buildContext.sections, onSectionChange: (key: string, open: boolean) => patchContext({ sections: { ...buildContext.sections, [key]: open } }) }), [buildContext.sections, patchContext]);
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
+    const [inserterFocusRequest, setInserterFocusRequest] = useState<{ id: number; filters: boolean } | null>(null);
+    const [beltFocusRequest, setBeltFocusRequest] = useState<{ id: number } | null>(null);
+    useEffect(() => {
+        if (!beltFocusRequest) return;
+        const frame = requestAnimationFrame(() => {
+            const row = document.getElementById(`entity-belt-${beltFocusRequest.id}`);
+            row?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+            row?.scrollIntoView({ block: 'center' });
+            setBeltFocusRequest(null);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [beltFocusRequest]);
+    const finishInserterFocus = useCallback(() => setInserterFocusRequest(null), []);
+    const handleInserterFix = useCallback((issue: InserterCoverageIssue, fix: InserterFixOption) => {
+        if (fixUnavailable(fix, issue)) return;
+        setDiagramFullscreen(false);
+        setConfigView('list');
+        if (fix.type === 'review_filters') {
+            setInserterFocusRequest({ id: fix.inserter_id, filters: true });
+            return;
+        }
+        const id = Math.max(0, ...config.inserters.map(row => row.id)) + 1;
+        offerUndo(fix.type === 'add_lane_to_existing_belt' ? `Added a lane to ${entityLabel('belt', fix.belt_id)}.` : `Added a connection for ${entityLabel('machine', issue.machine_id)}.`);
+        applyInserterFix(issue, fix);
+        if (fix.type === 'add_lane_to_existing_belt') setBeltFocusRequest({ id: fix.belt_id });
+        else setInserterFocusRequest({ id, filters: false });
+    }, [fixUnavailable, setConfigView, config.inserters, offerUndo, applyInserterFix]);
     const [changelogOpen, setChangelogOpen] = useState(false);
 
     // null until the engine has looked for missing inserters; until then the check catches them
@@ -1196,6 +1224,8 @@ function App() {
 
                                         <InsertersForm
                                             key={library.currentId}
+                                            focusRequest={inserterFocusRequest}
+                                            onFocusHandled={finishInserterFocus}
                                             inserters={config.inserters}
                                             machines={config.machines}
                                             belts={config.belts}
@@ -1211,7 +1241,10 @@ function App() {
                                         />
                                         <MissingInserterAlert
                                             issues={coverageIssues}
-                                            onApplyFix={applyInserterFix}
+                                            machines={config.machines}
+                                            belts={config.belts}
+                                            chests={config.chests}
+                                            onApplyFix={handleInserterFix}
                                             fixUnavailable={fixUnavailable}
                                         />
                                     </>
@@ -1224,7 +1257,10 @@ function App() {
                                         />
                                         <MissingInserterAlert
                                             issues={coverageIssues}
-                                            onApplyFix={applyInserterFix}
+                                            machines={config.machines}
+                                            belts={config.belts}
+                                            chests={config.chests}
+                                            onApplyFix={handleInserterFix}
                                             fixUnavailable={fixUnavailable}
                                         />
                                         {/* the Belts section is not drawn here, so the belt question gets one of its own */}
@@ -1453,7 +1489,7 @@ function App() {
                     {coverageIssues.length > 0 && (
                         <Box sx={{ flexShrink: 0, px: 2, pb: 1 }}>
                             {/* the page's own alert behind this dialog has the ids a problem's jump looks for */}
-                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} fixUnavailable={fixUnavailable} focusTargets={false} />
+                            <MissingInserterAlert issues={coverageIssues} machines={config.machines} belts={config.belts} chests={config.chests} onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} focusTargets={false} />
                         </Box>
                     )}
                 </Box>

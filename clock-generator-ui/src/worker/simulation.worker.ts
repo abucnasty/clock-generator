@@ -19,6 +19,7 @@ type ClockGenerator = typeof import('clock-generator/browser');
 
 // imported dynamically in the worker context
 let clockGenerator: ClockGenerator;
+let liveCoverage: ReturnType<ClockGenerator['createInserterCoverageValidator']>;
 /** The data's in-game names, kept here so that the main thread does not parse the whole data for them */
 let gameNames: GameNames = NO_NAMES;
 /** The recipes the data marks hidden, which the pickers leave out */
@@ -42,6 +43,7 @@ async function handleInitialize(factorioData: string): Promise<void> {
 
         const parsed = JSON.parse(factorioData);
         clockGenerator.FactorioDataService.initialize(parsed);
+        liveCoverage = clockGenerator.createInserterCoverageValidator();
         gameNames = parsed.names ?? NO_NAMES;
         hiddenRecipes = hiddenRecipeIds(parsed.recipe);
 
@@ -340,7 +342,7 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
                 return null;
             }
         case 'inserter-coverage':
-            return clockGenerator.validateInserterCoverage(query.config);
+            return liveCoverage(query.config);
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);
         case 'repeated-unit-conversion':

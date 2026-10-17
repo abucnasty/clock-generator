@@ -12,7 +12,7 @@ import {
     ToggleButtonGroup,
     Typography,
 } from '@mui/material';
-import { useMemo, useState, useCallback, useEffect, useRef, memo, type MouseEvent } from 'react';
+import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef, memo, type MouseEvent } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
@@ -53,6 +53,8 @@ const ROW_GRID_SX = {
     bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
 };
 interface InsertersFormProps {
+    focusRequest?: { id: number; filters: boolean } | null;
+    onFocusHandled?: () => void;
     inserters: InserterFormData[];
     machines: MachineFormData[];
     belts: BeltFormData[];
@@ -67,7 +69,9 @@ interface InsertersFormProps {
     onBulkUpdate: (uuids: string[], updates: Partial<InserterFormData>, message: string) => void;
 }
 
-const InserterRow = memo(function InserterRow({ compact, filterView, fullMetadata, value, index, onUpdate, onRemove, ruleCopyOptions, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
+type RuleCopySource = CopyFromOption & { uuid: string };
+
+const InserterRow = memo(function InserterRow({ compact, filterView, fullMetadata, value, index, onUpdate, onRemove, ruleCopySources, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
     compact: boolean;
     filterView: boolean;
     metadata: string;
@@ -81,10 +85,11 @@ const InserterRow = memo(function InserterRow({ compact, filterView, fullMetadat
     onSelect: (uuid: string, event: MouseEvent<HTMLButtonElement>) => void;
     onUpdate: InsertersFormProps['onUpdate'];
     onRemove: (index: number) => void;
-    ruleCopyOptions: CopyFromOption[];
+    ruleCopySources: RuleCopySource[];
 }) {
     const onChange = useCallback((updates: Partial<InserterFormData>) => onUpdate(index, updates), [index, onUpdate]);
     const [ruleRevision, setRuleRevision] = useState(0);
+    const ruleCopyOptions = useMemo(() => ruleCopySources.filter(source => source.uuid !== value._uuid), [ruleCopySources, value._uuid]);
     const label = entityLabel('inserter', value.id);
     const { itemLabel } = useGameNames();
     const selectedRow = selecting && checked;
@@ -165,6 +170,8 @@ const InserterRow = memo(function InserterRow({ compact, filterView, fullMetadat
 });
 
 function InsertersFormComponent({
+    focusRequest,
+    onFocusHandled,
     inserters,
     machines,
     belts,
@@ -204,11 +211,24 @@ function InsertersFormComponent({
     if (selected !== selection) setSelection(selected);
     const anchor = useRef<string | null>(null);
     const selectRef = useRef<HTMLButtonElement>(null);
+    useEffect(() => {
+        if (!focusRequest) return;
+        setFilterView(focusRequest.filters);
+        const frame = requestAnimationFrame(() => {
+            const row = document.getElementById(`entity-inserter-${focusRequest.id}`);
+            const control = row?.querySelector<HTMLElement>(focusRequest.filters ? 'button[aria-haspopup="dialog"]' : '[role="combobox"]');
+            control?.focus();
+            row?.scrollIntoView({ block: 'center' });
+            onFocusHandled?.();
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [focusRequest, onFocusHandled]);
     const selectedRows = useMemo(() => inserters.filter(row => selected.has(row._uuid)), [inserters, selected]);
     const priorityIds = useMemo(() => itemsUnion(selectedRows.map(row => sourceItemsOf(row.source, machines, belts, chests, getRecipeInfo))), [selectedRows, machines, belts, chests, getRecipeInfo]);
     const bulkItems = useMemo(() => itemsUnion(selectedRows.map(row => itemsAround(row, machines, belts, chests, getRecipeInfo))), [selectedRows, machines, belts, chests, getRecipeInfo]);
-    const rowOrder = useRef(inserters.map(row => row._uuid));
-    useEffect(() => { rowOrder.current = inserters.map(row => row._uuid); }, [inserters]);
+    const itemKeys = useMemo(() => inserters.map(row => row._uuid), [inserters]);
+    const rowOrder = useRef(itemKeys);
+    useEffect(() => { rowOrder.current = itemKeys; }, [itemKeys]);
     const selectRow = useCallback((uuid: string, event: MouseEvent<HTMLButtonElement>) => {
         setSelection(current => {
             if (event.shiftKey) return rangeSelect(rowOrder.current, anchor.current, uuid, current);
@@ -229,15 +249,23 @@ function InsertersFormComponent({
     };
     const addedLabel = () => entityLabel('inserter', Math.max(0, ...inserters.map(row => row.id)) + 1);
     const add = () => { afterAdd(onAdd); announce(`Added ${addedLabel()}.`); };
-    const addedId = Math.max(0, ...inserters.map(row => row.id)) + 1;
+    // Appending a route must not replace every row's action props or copy-from options.
+    const ruleCopyKey = JSON.stringify(inserters.filter(row => row.overrides?.enable_control && row.overrides.enable_control.mode !== 'AUTO')
+        .map(row => ({ uuid: row._uuid, label: entityLabel('inserter', row.id), override: row.overrides!.enable_control! })));
+    const ruleCopySources = useMemo(() => JSON.parse(ruleCopyKey) as RuleCopySource[], [ruleCopyKey]);
+    const actionsRef = useRef({ inserters, remove, afterAdd, onDuplicate, announce });
+    useLayoutEffect(() => { actionsRef.current = { inserters, remove, afterAdd, onDuplicate, announce }; }, [inserters, remove, afterAdd, onDuplicate, announce]);
+    const removeRow = useCallback((index: number) => actionsRef.current.remove(index), []);
     const duplicate = useCallback((index: number, label: string) => {
-        if (inserters[index]?.sink.drop !== undefined) {
-            announce(`${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the build file to supply another position.`);
+        const actions = actionsRef.current;
+        if (actions.inserters[index]?.sink.drop !== undefined) {
+            actions.announce(`${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the build file to supply another position.`);
             return;
         }
-        afterAdd(() => onDuplicate(index));
-        announce(`Added ${entityLabel('inserter', addedId)}, a copy of ${label}.`);
-    }, [afterAdd, onDuplicate, announce, addedId, inserters]);
+        const addedId = Math.max(0, ...actions.inserters.map(row => row.id)) + 1;
+        actions.afterAdd(() => actions.onDuplicate(index));
+        actions.announce(`Added ${entityLabel('inserter', addedId)}, a copy of ${label}.`);
+    }, []);
 
     return (
         <PanelSection
@@ -273,9 +301,9 @@ function InsertersFormComponent({
             {selecting && <BulkEditBar filtersOnly={filterView} selected={selectedRows} total={inserters.length} priorityIds={priorityIds} availableItems={bulkItems} itemNames={itemNames}
                 onSelectAll={() => setSelection(new Set(inserters.map(row => row._uuid)))} onClear={clearSelection} onDone={finishBulkEdit} onReturnFocus={returnSelectionFocus} onApply={apply} />}
             <Box sx={{ ...LIST_GRID_SX, rowGap: compact ? 1 : 2 }}>
-            <SortableList itemKeys={inserters.map((ins) => ins._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={itemKeys} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} compact={compact} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} machines={machines} belts={belts} chests={chests} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={remove} ruleCopyOptions={inserters.filter(other => other._uuid !== inserter._uuid && other.overrides?.enable_control && other.overrides.enable_control.mode !== 'AUTO').map(other => ({ label: entityLabel('inserter', other.id), override: other.overrides!.enable_control! }))}
+                <InserterRow key={inserter._uuid} compact={compact} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} machines={machines} belts={belts} chests={chests} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
                     onDuplicate={duplicate} onReorder={onReorder} canMoveDown={index < inserters.length - 1}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}

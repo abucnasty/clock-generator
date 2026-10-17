@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -101,7 +101,7 @@ export function SortableItem({ stableKey, label, displayLabel, children }: Sorta
         zIndex: isDragging ? 1 : undefined,
     };
 
-    const dragHandle = (
+    const dragHandle = useMemo(() => (
         <Box
             sx={{
                 display: 'flex',
@@ -141,11 +141,13 @@ export function SortableItem({ stableKey, label, displayLabel, children }: Sorta
                 sx={{ minWidth: displayLabel ? 52 : 72, height: displayLabel ? 40 : undefined, bgcolor: displayLabel ? 'transparent' : undefined, '& .MuiChip-label': displayLabel ? { px: 0 } : undefined, fontSize: '0.7rem', pointerEvents: 'none' }}
             />
         </Box>
-    );
+    ), [attributes, listeners, label, displayLabel]);
+    // Sortable context updates positions for the whole list; unchanged row contents can stay as they are.
+    const content = useMemo(() => children(dragHandle), [children, dragHandle]);
 
     return (
         <div ref={setNodeRef} style={style} data-row-key={stableKey}>
-            {children(dragHandle)}
+            {content}
         </div>
     );
 }

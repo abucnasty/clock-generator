@@ -97,7 +97,7 @@ function inserterCoversOutputItem(
  * Returns an empty array if `FactorioDataService` has not been initialized yet,
  * so this is safe to call from the browser before data is loaded.
  */
-export function validateInserterCoverage(config: Config): InserterCoverageIssue[] {
+function coverageForMachines(config: Config, checkedMachines: MachineConfiguration[]): InserterCoverageIssue[] {
     if (!FactorioDataService.isInitialized()) {
         return [];
     }
@@ -107,7 +107,7 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
     const chests = config.chests ?? [];
     const machines = config.machines;
 
-    for (const machine of config.machines) {
+    for (const machine of checkedMachines) {
         let recipe;
         try {
             recipe = FactorioDataService.findRecipeOrThrow(machine.recipe);
@@ -121,10 +121,9 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
         // A burner machine also needs its fuel inserted
         const burner = BurnerEnergySource.forMachineType(machine.type ?? MachineType.MACHINE);
         const inputItemNames = recipe.ingredients.map((ingredient) => ingredient.name);
-        if (burner) {
-            inputItemNames.push(BurnerEnergySource.selectFuel(burner, machine.fuel).item_name);
-        }
-        for (const itemName of inputItemNames) {
+        const fuelItem = burner ? BurnerEnergySource.selectFuel(burner, machine.fuel).item_name : undefined;
+        if (fuelItem) inputItemNames.push(fuelItem);
+        for (const itemName of new Set(inputItemNames)) {
             const covered =
                 config.inserters.some((ins) =>
                     inserterCoversInputItem(ins, machine.id, itemName, belts, chests, machines),
@@ -133,11 +132,23 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
 
             if (!covered) {
                 const fixOptions: InserterFixOption[] = [];
+                const blocked = config.inserters.filter(ins => ins.filters?.length && !ins.filters.includes(itemName)
+                    && inserterCoversInputItem({ ...ins, filters: undefined }, machine.id, itemName, belts, chests, machines));
+                blocked.forEach(ins => fixOptions.push({ type: 'review_filters', inserter_id: ins.id ?? config.inserters.indexOf(ins) + 1, item_name: itemName }));
+                const alreadyConnected = (type: 'machine' | 'belt' | 'chest', id: number) => blocked.some(ins => ins.source.type === type && ins.source.id === id);
+                for (const belt of belts) {
+                    if (beltCoversItem(belt, itemName) && !alreadyConnected('belt', belt.id))
+                        fixOptions.push({ type: 'existing_connection', endpoint_type: 'belt', endpoint_id: belt.id, item_name: itemName });
+                }
+                for (const chest of chests) {
+                    if (chestCoversItem(chest, itemName) && !alreadyConnected('chest', chest.id))
+                        fixOptions.push({ type: 'existing_connection', endpoint_type: 'chest', endpoint_id: chest.id, item_name: itemName });
+                }
 
                 // Highest-priority fix: if another machine in the config
                 // already produces this ingredient, prefer a machine→machine inserter.
                 for (const other of config.machines) {
-                    if (other.id === machine.id) continue;
+                    if (other.id === machine.id || alreadyConnected('machine', other.id)) continue;
                     let otherRecipe;
                     try {
                         otherRecipe = FactorioDataService.findRecipeOrThrow(other.recipe);
@@ -161,7 +172,8 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
                             ins.source.type === 'belt' &&
                             ins.source.id === belt.id &&
                             ins.sink.type === 'machine' &&
-                            ins.sink.id === machine.id,
+                            ins.sink.id === machine.id &&
+                            (!ins.filters?.length || ins.filters.includes(itemName)),
                     );
                     if (feedsMachine && belt.lanes.length < 2 && !beltCoversItem(belt, itemName)) {
                         fixOptions.push({
@@ -180,6 +192,7 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
                     machine_id: machine.id,
                     recipe: machine.recipe,
                     item_name: itemName,
+                    ...(itemName === fuelItem && { is_fuel: true }),
                     fix_options: fixOptions,
                 });
             }
@@ -193,12 +206,35 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
             );
 
             if (!covered) {
+                const fixOptions: InserterFixOption[] = [];
+                const blocked = config.inserters.filter(ins => ins.filters?.length && !ins.filters.includes(itemName)
+                    && inserterCoversOutputItem({ ...ins, filters: undefined }, machine.id, itemName));
+                blocked.forEach(ins => fixOptions.push({ type: 'review_filters', inserter_id: ins.id ?? config.inserters.indexOf(ins) + 1, item_name: itemName }));
+                const alreadyConnected = (type: 'machine' | 'belt' | 'chest', id: number) => blocked.some(ins => ins.sink.type === type && ins.sink.id === id);
+                for (const belt of belts) {
+                    if (beltCoversItem(belt, itemName) && !alreadyConnected('belt', belt.id))
+                        fixOptions.push({ type: 'existing_connection', endpoint_type: 'belt', endpoint_id: belt.id, item_name: itemName });
+                }
+                for (const chest of chests) {
+                    if (chestCoversItem(chest, itemName) && !alreadyConnected('chest', chest.id))
+                        fixOptions.push({ type: 'existing_connection', endpoint_type: 'chest', endpoint_id: chest.id, item_name: itemName });
+                }
+                for (const other of machines) {
+                    if (other.id === machine.id || alreadyConnected('machine', other.id)) continue;
+                    try {
+                        const needs = FactorioDataService.findRecipeOrThrow(other.recipe).ingredients.some(item => item.name === itemName);
+                        const energy = BurnerEnergySource.forMachineType(other.type ?? MachineType.MACHINE);
+                        if (needs || (energy && BurnerEnergySource.selectFuel(energy, other.fuel).item_name === itemName))
+                            fixOptions.push({ type: 'existing_connection', endpoint_type: 'machine', endpoint_id: other.id, item_name: itemName });
+                    } catch { /* Unknown recipes cannot be offered as destinations. */ }
+                }
                 issues.push({
                     kind: 'missing_output_inserter',
                     machine_id: machine.id,
                     recipe: machine.recipe,
                     item_name: itemName,
                     fix_options: [
+                        ...fixOptions,
                         { type: 'new_belt', item_name: itemName },
                         { type: 'infinity_chest', item_name: itemName },
                     ],
@@ -208,6 +244,58 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
     }
 
     return issues;
+}
+
+/** A full, uncached check for generation and other independent callers. */
+export function validateInserterCoverage(config: Config): InserterCoverageIssue[] {
+    return coverageForMachines(config, config.machines);
+}
+
+/**
+ * The live editor reuses each machine's result until its routes or available item sources change.
+ * Keep this cache scoped to one worker and replace it each call, so removed machines do not accumulate.
+ */
+export function createInserterCoverageValidator(): (config: Config) => InserterCoverageIssue[] {
+    let catalog = '';
+    let cached = new Map<number, { key: string; issues: InserterCoverageIssue[] }>();
+    return config => {
+        if (!FactorioDataService.isInitialized()) return [];
+        const nextCatalog = JSON.stringify({
+            machines: config.machines.map(({ id, recipe, type, fuel }) => [id, recipe, type, fuel]),
+            belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => lane.ingredient)]),
+            chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter : chest.item_filter.map(filter => filter.item_name)]),
+        });
+        if (catalog !== nextCatalog) { cached.clear(); catalog = nextCatalog; }
+        const routes = new Map<number, unknown[]>();
+        config.inserters.forEach((inserter, index) => {
+            const route = [inserter.id ?? index + 1, inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters];
+            const ids = new Set<number>();
+            if (inserter.source.type === 'machine') ids.add(inserter.source.id);
+            if (inserter.sink.type === 'machine') ids.add(inserter.sink.id);
+            for (const id of ids) {
+                const own = routes.get(id) ?? [];
+                own.push(route);
+                routes.set(id, own);
+            }
+        });
+        const drills = new Map<number, string[]>();
+        for (const drill of config.drills?.configs ?? []) {
+            const own = drills.get(drill.target.id) ?? [];
+            own.push(drill.mined_item_name);
+            drills.set(drill.target.id, own);
+        }
+        const next = new Map<number, { key: string; issues: InserterCoverageIssue[] }>();
+        const issues: InserterCoverageIssue[] = [];
+        for (const machine of config.machines) {
+            const key = JSON.stringify([routes.get(machine.id), drills.get(machine.id)]);
+            const previous = cached.get(machine.id);
+            const result = previous?.key === key ? previous : { key, issues: coverageForMachines(config, [machine]) };
+            next.set(machine.id, result);
+            issues.push(...result.issues);
+        }
+        cached = next;
+        return issues;
+    };
 }
 
 /**
