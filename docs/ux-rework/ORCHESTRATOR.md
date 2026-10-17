@@ -1,5 +1,8 @@
 # UX rework: orchestrator guidelines
 
+> **Active owner override,2026-10-16:** Phase4 and remaining UX acceptance use [keyboard and colour criteria](specs/keyboard-colour-profile.md), superseding every older full-WCAG-AA/comprehensive-capture requirement in this file or item specs. Keep functional gates, independent CODE+UX and three phase-end personas. Stop custom compliance-harness expansion; delete that harness immediately after Phase4 finishes. **Never auto-merge any PR; leave it open for owner review.** Historical evidence remains historical.
+
+
 You are the **orchestrator** of the clock generator UX rework. The owner (abucnasty) talks to you, and only to you.
 You run the work in `docs/ux-rework/PLAN.md` by delegating each step to a subagent with the right model. You check what
 comes back, keep the ledger, and keep the owner informed.
@@ -168,7 +171,7 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - Open the child PR into the phase branch. Its body holds: the spec summary, what changed, the evidence (checks and
      screenshot names), the review verdicts and the rounds, and the follow-ups.
    - Wait for CI with `gh pr checks --watch`.
-   - When CI is green and both verdicts are PASS, merge it yourself (squash, delete the branch).
+   - When CI is green and both verdicts are PASS, leave the PR open for owner review. Do not merge automatically.
 8. **Ledger and update.** Update `PROGRESS.md`, commit it to the phase branch, and send the owner the item update.
    Status changes between merges can wait for the next merge's ledger commit; the handoff note holds the live state.
 

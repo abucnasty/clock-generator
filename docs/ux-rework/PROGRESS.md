@@ -745,3 +745,12 @@ Compatibility PR #210 merged into feature with a merge commit, preserving upstre
 | D8 | Investigation/proposal only | Owner implementation approval remains separate; no rate feature implemented |
 
 All workers use Sol/high, fast off. No Phase4 formal review fix rounds have started. Full four-width phase capture, same-fixture explanatory and Compact D3 repeat, three fresh phase personas, coach/retro and owner phase-to-feature merge checkpoint remain required. No merge to master is authorized.
+
+
+## Owner directions — focused accessibility and review control
+
+2026-10-16: Owner explicitly adopted keyboard-and-colour scope for Phase4 and remaining UX work, replacing comprehensive WCAG2.2AA acceptance. [Active specification](specs/keyboard-colour-profile.md) and common gate supersede old wording. Preserve ordinary functional checks, code+UX reviews, three fresh phase reviewers, D3 repeat and existing accessibility features. Stop further custom compliance-harness expansion.
+
+Owner then explicitly scheduled custom full-AA capture/audit harness deletion immediately AFTER Phase4 finishes, before further phase work. Inventory55 tracked scripts/34879 lines; no files removed yet. No deletion of ordinary Vitest/regression coverage is authorized by that tooling cleanup.
+
+Owner prohibits automatic PR merges: all PRs remain open for owner review/authorization. Prepare the Phase4 review checkpoint without landing into feature/master or auto-merging child PRs. D9 first cleanup CODE/UX round0 PASS; full gates+root repeat1248/81, all412assets unchanged; final provider reconciliation and CI remain open.
