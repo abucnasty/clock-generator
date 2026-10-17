@@ -1159,6 +1159,7 @@ function App() {
                                 {configView === 'list' ? (
                                     <>
                                         <MachinesForm
+                                            exportConfig={exportConfig}
                                             machines={config.machines}
                                             recipeNames={recipeNames}
                                             onAdd={addMachine}

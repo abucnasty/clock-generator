@@ -24,6 +24,7 @@ import type {
     LogMessage,
     SerializableClockWindows,
     SerializableMachineFacts,
+    MachineTargetRate,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
     SuggestedTarget,
@@ -359,6 +360,7 @@ export interface PastedEntities {
 export type EngineQuery =
     | { kind: 'lookups' }
     | { kind: 'machine-facts'; params: ComputeMachineFactsParams }
+    | { kind: 'machine-target-rates'; config: Config }
     | { kind: 'inserter-coverage'; config: Config }
     | { kind: 'repeated-unit-conversion'; config: Config }
     /** The form state saved in localStorage, migrated but not yet checked against the config schema */
@@ -383,6 +385,7 @@ export interface EngineAnswers {
     'lookups': FactorioLookups;
     /** Null when they cannot be worked out, e.g. for an unknown recipe */
     'machine-facts': SerializableMachineFacts | null;
+    'machine-target-rates': MachineTargetRate[];
     'inserter-coverage': InserterCoverageIssue[];
     'repeated-unit-conversion': CheckedRepeatedUnitConversion;
     /** Why the saved config cannot be used; null when it can */

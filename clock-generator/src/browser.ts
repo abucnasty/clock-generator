@@ -284,6 +284,8 @@ export {
     Machine,
     ComputeMachineFactsParams,
 } from './entities/machine';
+export { computeMachineTargetRates } from './crafting/machine-target-rates';
+export type { MachineTargetRate } from './crafting/machine-target-rates';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
 export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
 export { deadlockRiskNote } from './crafting/deadlock-risk';

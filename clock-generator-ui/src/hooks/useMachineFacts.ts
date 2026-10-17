@@ -9,27 +9,29 @@ interface UseMachineFactsParams {
     crafting_speed: number;
     type?: 'machine' | 'furnace' | 'biochamber';
     energy_consumption_bonus?: number;
+    fuel?: string;
 }
 
 interface UseMachineFactsResult {
     facts: SerializableMachineFacts | null;
     error: string | null;
+    updating: boolean;
 }
 
 // The facts of every machine setting asked for so far; machines configured alike share them
 const requests = new Map<string, Promise<SerializableMachineFacts | null>>();
 const known = new Map<string, SerializableMachineFacts | null>();
 
-type FactsKey = [string, number, number, UseMachineFactsParams['type'] | null, number | null];
+type FactsKey = [string, number, number, UseMachineFactsParams['type'] | null, number | null, string | null];
 
-function keyOf({ recipe, productivity, crafting_speed, type, energy_consumption_bonus }: UseMachineFactsParams): string {
-    const key: FactsKey = [recipe, productivity, crafting_speed, type ?? null, energy_consumption_bonus ?? null];
+function keyOf({ recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel }: UseMachineFactsParams): string {
+    const key: FactsKey = [recipe, productivity, crafting_speed, type ?? null, energy_consumption_bonus ?? null, fuel ?? null];
     return JSON.stringify(key);
 }
 
 function paramsOf(key: string): UseMachineFactsParams {
-    const [recipe, productivity, crafting_speed, type, energy_consumption_bonus] = JSON.parse(key) as FactsKey;
-    return { recipe, productivity, crafting_speed, type: type ?? undefined, energy_consumption_bonus: energy_consumption_bonus ?? undefined };
+    const [recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel] = JSON.parse(key) as FactsKey;
+    return { recipe, productivity, crafting_speed, type: type ?? undefined, energy_consumption_bonus: energy_consumption_bonus ?? undefined, fuel: fuel ?? undefined };
 }
 
 function requestFacts(key: string, params: UseMachineFactsParams): Promise<SerializableMachineFacts | null> {
@@ -53,33 +55,35 @@ function requestFacts(key: string, params: UseMachineFactsParams): Promise<Seria
  * last ones stay shown, so the form does not flicker.
  */
 export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsResult {
-    const { recipe, productivity, crafting_speed, type, energy_consumption_bonus } = params;
+    const { recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel } = params;
     const key = keyOf(params);
-    const [shown, setShown] = useState<UseMachineFactsResult>({ facts: null, error: null });
+    const [shown, setShown] = useState<{ key: string; facts: SerializableMachineFacts | null; error: string | null }>({ key: '', facts: null, error: null });
 
     useEffect(() => {
         if (!recipe || known.has(key)) {
             return;
         }
         let current = true;
-        requestFacts(key, { recipe, productivity, crafting_speed, type, energy_consumption_bonus }).then(
+        requestFacts(key, { recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel }).then(
             (facts) => {
-                if (current) setShown({ facts, error: null });
+                if (current) setShown({ key, facts, error: null });
             },
             (e) => {
-                if (current) setShown({ facts: null, error: e instanceof Error ? e.message : 'Unknown error' });
+                if (current) setShown({ key, facts: null, error: e instanceof Error ? e.message : 'Unknown error' });
             },
         );
         return () => {
             current = false;
         };
-    }, [key, recipe, productivity, crafting_speed, type, energy_consumption_bonus]);
+    }, [key, recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel]);
 
     if (!recipe) {
-        return { facts: null, error: null };
+        return { facts: null, error: null, updating: false };
     }
     const facts = known.get(key);
-    return facts !== undefined ? { facts, error: null } : shown;
+    return known.has(key)
+        ? { facts: facts ?? null, error: null, updating: false }
+        : { facts: shown.facts, error: shown.error, updating: shown.key !== key };
 }
 
 interface MachineSettings extends UseMachineFactsParams {

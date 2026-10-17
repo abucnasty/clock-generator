@@ -341,6 +341,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             }
         case 'inserter-coverage':
             return clockGenerator.validateInserterCoverage(query.config);
+        case 'machine-target-rates':
+            return clockGenerator.computeMachineTargetRates(query.config);
         case 'repeated-unit-conversion':
             return checkRepeatedUnitConversion(query.config);
         case 'saved-config':
