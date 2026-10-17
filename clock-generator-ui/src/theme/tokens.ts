@@ -88,8 +88,8 @@ export interface ThemeTokens {
 
 const DARK_TOKENS: ThemeTokens = { surface: SURFACE, hover: SURFACE_HOVER, role: ROLE, text: TEXT, control: CONTROL, shadow: SHADOW };
 const LIGHT_TOKENS: ThemeTokens = {
-    surface: { page: '#e9e6df', titleBar: '#dedbd3', bar: '#e2dfd7', row: '#f0eee8', panel: '#faf8f2', inset: '#ffffff' },
-    hover: { row: '#dfdcd4', panel: '#e8e5dd' },
+    surface: { page: '#d8d5ce', titleBar: '#cfcbc2', bar: '#d7d3ca', row: '#e8e5dd', panel: '#ffffff', inset: '#ffffff' },
+    hover: { row: '#c9c3b6', panel: '#e4dfd4' },
     role: {
         orange: { main: '#914d00', light: '#8a4900', dark: '#713b00', on: '#ffffff' },
         green: { main: '#256b35', light: '#286f39', dark: '#195226', on: '#ffffff' },
@@ -97,8 +97,8 @@ const LIGHT_TOKENS: ThemeTokens = {
         red: { main: '#b32629', light: '#b02026', dark: '#8e181d', on: '#ffffff' },
         blue: { main: '#00618a', light: '#00678f', dark: '#005271', on: '#ffffff' },
     },
-    text: { primary: '#24231f', secondary: '#55534c', disabled: '#706e66', error: '#b02026' },
-    control: { border: '#77746b', trackOff: '#77746b', edge: '#aaa69b', focus: '#914d00', focusOnFill: '#ffffff' },
+    text: { primary: '#24231f', secondary: '#46443d', disabled: '#706e66', error: '#b02026' },
+    control: { border: '#6c685e', trackOff: '#6c685e', edge: '#9b9588', focus: '#914d00', focusOnFill: '#ffffff' },
     shadow: { inset: 'inset 0 1px 3px rgba(51, 45, 31, 0.22)' },
 };
 

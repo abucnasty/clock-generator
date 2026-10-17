@@ -14,10 +14,21 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
     const { surface: SURFACE, role: ROLE, text: TEXT, control: CONTROL, hover: HOVER } = theme.factorio;
     const titleBand = { backgroundColor: SURFACE.titleBar };
     const edge = `1px solid ${CONTROL.edge}`;
+    const light = theme.palette.mode === 'light';
     return {
+        ...(light && {
+            MuiCssBaseline: {
+                styleOverrides: {
+                    '[data-row-key] > [role="group"]:not(:focus-visible)': {
+                        outline: edge,
+                        outlineOffset: -1,
+                    },
+                },
+            },
+        }),
         // the dark theme lightens every raised surface with a white gradient; off, so each surface is its token and every
         // contrast measured against the tokens is the one on screen
-        MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
+        MuiPaper: { styleOverrides: { root: { backgroundImage: 'none', ...(light && { '&.MuiPaper-outlined': { borderColor: CONTROL.edge } }) } } },
         MuiAppBar: {
             styleOverrides: {
                 root: {
@@ -100,7 +111,7 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
                 },
             },
         },
-        MuiOutlinedInput: { styleOverrides: { notchedOutline: { borderColor: CONTROL.border } } },
+        MuiOutlinedInput: { styleOverrides: { root: light ? { backgroundColor: SURFACE.inset } : {}, notchedOutline: { borderColor: CONTROL.border } } },
         // a field's problem (1.4) and its label in the lighter red; the field's outline stays the red
         MuiFormHelperText: { styleOverrides: { root: { '&.Mui-error': { color: TEXT.error } } } },
         MuiFormLabel: { styleOverrides: { root: { '&.Mui-error': { color: TEXT.error } } } },
