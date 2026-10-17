@@ -801,6 +801,8 @@ function App() {
         && validation.recovery?.sourceConfigKey === configKey ? validation.recovery : undefined;
     const generationRecovery = errorRecovery?.sourceConfigKey === configKey ? errorRecovery : undefined;
     const conversionRecovery = checkRecovery ?? generationRecovery;
+    const conversionIsNextStep = view === 'configure' && !busy && conversionRecovery?.conversion.kind === 'available'
+        && !(validation.status === 'invalid' && validation.crashed === true);
     const handleConvertRepeatedUnit = useCallback(async () => {
         if (!isInitialized || busy || conversionPendingRef.current || conversionRecovery?.conversion.kind !== 'available'
             || document.querySelector('[data-edits-build]')) return;
@@ -1064,7 +1066,7 @@ function App() {
                             progressStore={progressStore}
                             onGenerate={handleGenerate}
                             onCheckOnly={handleCheckOnly}
-                            primaryAction={primaryAction}
+                            primaryAction={conversionIsNextStep ? null : primaryAction}
                             busy={busy}
                             checking={checking}
                             checkStatus={checkStatus}

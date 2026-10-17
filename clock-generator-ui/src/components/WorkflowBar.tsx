@@ -31,8 +31,8 @@ interface WorkflowBarProps {
     onGenerate: () => void;
     /** Checks the build without generating and without moving the page */
     onCheckOnly: () => void;
-    /** The one filled button: Generate, this bar's Copy, or the Results card's Copy (the bar's is then outlined) */
-    primaryAction: NextStep;
+    /** The filled action; null when a current recovery offers the next step outside this toolbar. */
+    primaryAction: NextStep | null;
     /** A check or a generation is running: both buttons are off */
     busy: boolean;
     /** Which button's check is running, for its label; null when none is */
