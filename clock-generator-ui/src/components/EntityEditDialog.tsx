@@ -48,7 +48,8 @@ import { DraftFooter } from './DraftFooter';
 import { switchedChest } from '../utils/configForm/edits';
 import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS } from '../utils/inserterDraft';
 import { FactorioIcon } from './FactorioIcon';
-import { FiniteOutputChestAlert } from './FiniteOutputChestAlert';
+import { InfinityChestSettings } from './InfinityChestSettings';
+import { OutputChestAlert } from './OutputChestAlert';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
@@ -319,10 +320,6 @@ function ChestEditSection({
 
     const handleInfinityFilterRemove = (slotIndex: number) => {
         if (!isInfinityChest(chest)) return;
-        if (chest.item_filter.length <= 1) {
-            onUpdate(entityIndex, { item_filter: [{ item_name: '', request_count: 1 }] } as Partial<ChestFormData>);
-            return;
-        }
         onUpdate(entityIndex, { item_filter: chest.item_filter.filter((_, i) => i !== slotIndex) } as Partial<ChestFormData>);
     };
 
@@ -371,15 +368,17 @@ function ChestEditSection({
             )}
 
             {isInfinityChest(chest) && (
-                <ChestFilterSlotSelector
-                    filters={getInfinityFilters()}
-                    itemNames={itemNames}
-                    onFilterChange={handleInfinityFilterChange}
-                    onRemoveFilter={handleInfinityFilterRemove}
-                    maxSlots={10}
-                    quantityLabel="Request Count"
-                    canAddMore={true}
-                />
+                <InfinityChestSettings chest={chest} onChange={enabled => onUpdate(entityIndex, { remove_unfiltered_items: enabled })}>
+                    <ChestFilterSlotSelector
+                        filters={getInfinityFilters()}
+                        itemNames={itemNames}
+                        onFilterChange={handleInfinityFilterChange}
+                        onRemoveFilter={handleInfinityFilterRemove}
+                        maxSlots={10}
+                        quantityLabel="Stock to maintain"
+                        canAddMore={true}
+                    />
+                </InfinityChestSettings>
             )}
         </Box>
     );
@@ -588,7 +587,7 @@ export function EntityEditDialog({
             case 'belt': return changedFields(draft as BeltFormData, entity as BeltFormData, BELT_FIELDS);
             case 'drill': return changedFields(draft as DrillFormData, entity as DrillFormData, DRILL_FIELDS);
             case 'chest': {
-                const chest = (value: ChestFormData) => ({ ...value, storage_size: isBufferChest(value) ? value.storage_size : undefined });
+                const chest = (value: ChestFormData) => ({ ...value, remove_unfiltered_items: isInfinityChest(value) ? value.remove_unfiltered_items : undefined, storage_size: isBufferChest(value) ? value.storage_size : undefined });
                 return changedFields(chest(draft as ChestFormData), chest(entity as ChestFormData), CHEST_FIELDS);
             }
             default: return {};
@@ -690,8 +689,9 @@ export function EntityEditDialog({
                     )}
                     {draft && entityType === 'chest' && (
                         <Box sx={{ p: 2 }}>
-                            <FiniteOutputChestAlert chests={[draft as ChestFormData]} inserters={inserters}
-                                onSwitchType={(_index, type) => setDraft(d => switchedChest(d as ChestFormData, type))} />
+                            <OutputChestAlert chests={[draft as ChestFormData]} inserters={inserters} focusTargets={false}
+                                onEnableRemoval={() => updateDraft(entityIndex, { remove_unfiltered_items: true })}
+                                onSwitchType={(_index, type) => setDraft(d => switchedChest(d as ChestFormData, type, true))} />
                             <ChestEditSection
                             chest={draft as ChestFormData}
                             entityIndex={entityIndex}

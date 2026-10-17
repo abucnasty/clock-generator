@@ -254,6 +254,7 @@ export interface ValidationFailedResponse {
     requestId: number;
     message: string;
     recovery?: RepeatedUnitsRecovery;
+    diagnostics?: import('../utils/buildValidation').ValidationDiagnostic[];
 }
 
 export interface LogResponse {

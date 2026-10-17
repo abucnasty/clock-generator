@@ -227,7 +227,7 @@ describe('chests', () => {
         const before = form();
         const config = edits.switchChestType(before, 1, ChestType.BUFFER_CHEST);
         expect(config.chests[1]).toEqual({ type: ChestType.BUFFER_CHEST, id: 2, _uuid: before.chests[1]._uuid, storage_size: 1, item_filter: '',
-            _chest_settings: { infinity_filters: [{ item_name: '', request_count: 1 }] } });
+            _chest_settings: { buffer_filter: '', infinity_filters: [{ item_name: '', request_count: 1 }] } });
         expect(config.chests[0]).toBe(before.chests[0]);
     });
 

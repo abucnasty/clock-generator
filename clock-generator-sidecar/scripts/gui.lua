@@ -472,6 +472,9 @@ function gui.create(player, player_data, result)
                         table.insert(item_names, filter.item_name .. ":" .. filter.request_count)
                     end
                     items_text = table.concat(item_names, ", ")
+                    if chest.remove_unfiltered_items then
+                        items_text = #item_names == 0 and "Removes all incoming items" or (items_text .. "; removes unfiltered items")
+                    end
                 else
                     items_text = chest.item_filter
                 end

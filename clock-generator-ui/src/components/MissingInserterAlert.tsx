@@ -19,6 +19,7 @@ interface Props {
     onApplyFix: (issue: InserterCoverageIssue, fix: InserterFixOption) => void;
     fixUnavailable?: (fix: InserterFixOption, issue: InserterCoverageIssue) => string | null;
     focusTargets?: boolean;
+    embedded?: boolean;
 }
 
 interface Repair {
@@ -141,7 +142,7 @@ const ConnectionRepairs = memo(function ConnectionRepairs({ issues, onApplyFix, 
     </Box>;
 });
 
-export const MissingInserterAlert = memo(function MissingInserterAlert({ issues, machines = [], belts, chests, ...props }: Props) {
+export const MissingInserterAlert = memo(function MissingInserterAlert({ issues, machines = [], belts, chests, embedded = false, ...props }: Props) {
     const { recipeLabel, itemLabel } = useGameNames();
     const options = useMemo(() => entityOptionsOf(machines, belts ?? [], chests ?? [], { recipe: recipeLabel, item: itemLabel }), [machines, belts, chests, recipeLabel, itemLabel]);
     const grouped = useMemo(() => {
@@ -158,8 +159,8 @@ export const MissingInserterAlert = memo(function MissingInserterAlert({ issues,
         }));
     }, [issues]);
     if (issues.length === 0) return null;
-    return <Alert severity="error" sx={{ mb: 2, '& .MuiAlert-message': { minWidth: 0, width: '100%' } }}>
-        <AlertTitle sx={{ mb: 0.75 }}>Missing connections <Typography component="span" variant="caption" sx={{ ml: 0.5 }}>{issues.length} items · {grouped.length} {grouped.length === 1 ? 'machine' : 'machines'}</Typography></AlertTitle>
+    const content = <>
+        {!embedded && <AlertTitle sx={{ mb: 0.75 }}>Missing connections <Typography component="span" variant="caption" sx={{ ml: 0.5 }}>{issues.length} items · {grouped.length} {grouped.length === 1 ? 'machine' : 'machines'}</Typography></AlertTitle>}
         <Box role="region" aria-label="Missing connection repairs" tabIndex={0}
             sx={{ maxHeight: 280, overflowY: 'auto', overflowX: 'hidden', pr: 0.5, scrollbarGutter: 'stable', '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}>
             {grouped.map(({ machineId, missing, directions }, index) => {
@@ -181,5 +182,6 @@ export const MissingInserterAlert = memo(function MissingInserterAlert({ issues,
                 </Box>;
             })}
         </Box>
-    </Alert>;
+    </>;
+    return embedded ? <Box>{content}</Box> : <Alert severity="error" sx={{ mb: 2, '& .MuiAlert-message': { minWidth: 0, width: '100%' } }}>{content}</Alert>;
 });

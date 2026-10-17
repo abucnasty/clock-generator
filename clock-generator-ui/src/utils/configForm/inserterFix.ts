@@ -54,7 +54,7 @@ function hasItemConnection(config: ConfigFormData, issue: InserterCoverageIssue,
         if (machine.type !== 'machine' || machine.id !== issue.machine_id) return false;
         if (endpoint.type === 'belt') return config.belts.some(belt => belt.id === endpoint.id && belt.lanes.some(lane => lane.ingredient === item));
         if (endpoint.type === 'chest') return config.chests.some(chest => chest.id === endpoint.id && (chest.type === ChestType.BUFFER_CHEST
-            ? chest.item_filter === item : chest.item_filter.some(filter => filter.item_name === item)));
+            ? chest.item_filter === item : (!input && chest.remove_unfiltered_items) || chest.item_filter.some(filter => filter.item_name === item && (!input || filter.request_count > 0))));
         return false;
     });
 }
@@ -157,7 +157,8 @@ export function applyInserterFix(
             type: ChestType.INFINITY_CHEST,
             id: newChestId,
             _uuid: crypto.randomUUID(),
-            item_filter: [{ item_name: fix.item_name, request_count: 100 }],
+            item_filter: issue.kind === 'missing_input_inserter' ? [{ item_name: fix.item_name, request_count: 100 }] : [],
+            ...(issue.kind === 'missing_output_inserter' && { remove_unfiltered_items: true }),
         };
         const newInserter: InserterFormData = issue.kind === 'missing_input_inserter'
             ? { id: nextId(prev, 'inserters'), _uuid: crypto.randomUUID(), source: { type: 'chest', id: newChestId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }

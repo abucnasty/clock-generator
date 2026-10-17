@@ -15,6 +15,7 @@ interface FilterItemPickerProps {
     initialItem?: string | null;
     initialQuantity?: number;
     quantityLabel?: string;
+    minQuantity?: number;
     itemNames: string[];
     priority?: { label: string; ids: string[] };
     onClose: () => void;
@@ -26,7 +27,7 @@ interface FilterItemPickerProps {
     allowCustom?: boolean;
 }
 
-export function FilterItemPicker({ anchor, label, initialItem, initialQuantity = 1, quantityLabel, itemNames, priority, onClose: close, onApply, onClear, clearLabel = 'Clear slot', kind = 'item', searchOnlyIds = [], allowCustom = false }: FilterItemPickerProps) {
+export function FilterItemPicker({ anchor, label, initialItem, initialQuantity = 1, quantityLabel, minQuantity = 1, itemNames, priority, onClose: close, onApply, onClear, clearLabel = 'Clear slot', kind = 'item', searchOnlyIds = [], allowCustom = false }: FilterItemPickerProps) {
     const { itemLabel, recipeLabel } = useGameNames();
     const nameOf = kind === 'recipe' ? recipeLabel : itemLabel;
     const groupData = kind === 'recipe' ? recipePickerGroups : itemPickerGroups;
@@ -52,7 +53,7 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
     useEffect(() => {
         selectedRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }, [shownItems]);
-    const validQuantity = Number.isSafeInteger(Number(quantity)) && Number(quantity) >= 1;
+    const validQuantity = Number.isSafeInteger(Number(quantity)) && Number(quantity) >= minQuantity;
     const apply = () => { if (item && (!quantityLabel || validQuantity)) onApply(item, Number(quantity)); };
     const slotStyles = (open: boolean, width: number | string = 36) => {
         const base = insetSlotSx({ open });
@@ -98,7 +99,7 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
                     <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{item ? nameOf(item) : kind === 'recipe' ? 'Choose a recipe above' : 'Choose an item above'}</Typography>
                     {quantityLabel && <TextField label={quantityLabel} type="number" size="small" value={quantity} onChange={event => setQuantity(event.target.value)}
                         error={!validQuantity} helperText={!validQuantity ? 'Whole number, at least 1' : undefined}
-                        slotProps={{ htmlInput: { min: 1, step: 1 } }} sx={{ width: 120, flexShrink: 0 }}
+                        slotProps={{ htmlInput: { min: minQuantity, step: 1 } }} sx={{ width: 120, flexShrink: 0 }}
                         onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); apply(); } }} />}
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>

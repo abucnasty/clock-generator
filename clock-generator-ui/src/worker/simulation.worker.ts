@@ -221,6 +221,13 @@ function handleValidate(requestId: number, config: Config): void {
             requestId,
             message,
             recovery,
+            diagnostics: error instanceof clockGenerator.InserterCoverageError
+                ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
+                : error instanceof clockGenerator.ConfigValidationError
+                    ? error.zodError.issues.map(issue => ({ kind: 'field' as const, path: issue.path as (string | number)[], message: issue.message }))
+                    : error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.')
+                        ? [{ kind: 'field', path: ['target_output', 'items_per_second'], message: error.message }]
+                        : undefined,
         });
     }
 }
@@ -313,7 +320,7 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
         inserters: validateEntries(clockGenerator.InserterConfigSchema, pasted.inserters, 'inserter'),
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
-        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines),
+        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined, Array.isArray(pasted.chests) ? pasted.chests : []),
         suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
     };
 }

@@ -316,27 +316,30 @@ export function updateChest(prev: ConfigFormData, index: number, updates: Partia
 }
 
 /** The same chest conversion for a dialog draft and the committed form. */
-export function switchedChest(chest: ChestFormData, newType: ChestType): ChestFormData {
+export function switchedChest(chest: ChestFormData, newType: ChestType, disposal = false): ChestFormData {
     if (chest.type === newType) return chest;
     if (chest.type === ChestType.INFINITY_CHEST) {
         return {
             type: ChestType.BUFFER_CHEST, id: chest.id, _uuid: chest._uuid,
             storage_size: chest._chest_settings?.storage_size ?? 1,
-            item_filter: chest.item_filter[0]?.item_name ?? '',
-            _chest_settings: { ...chest._chest_settings, infinity_filters: chest.item_filter.map(filter => ({ ...filter })) },
+            item_filter: chest.item_filter[0]?.item_name || chest._chest_settings?.buffer_filter || '',
+            _chest_settings: { ...chest._chest_settings, buffer_filter: chest.item_filter[0]?.item_name || chest._chest_settings?.buffer_filter || '', infinity_filters: chest.item_filter.map(filter => ({ ...filter })), remove_unfiltered_items: chest.remove_unfiltered_items },
         };
     }
     const previous = chest._chest_settings?.infinity_filters ?? [];
+    const restoreEmpty = chest._chest_settings?.infinity_filters !== undefined && previous.length === 0
+        && chest.item_filter === chest._chest_settings.buffer_filter;
     const first = { item_name: chest.item_filter, request_count: previous[0]?.item_name === chest.item_filter ? previous[0].request_count : 1 };
     return {
         type: ChestType.INFINITY_CHEST, id: chest.id, _uuid: chest._uuid,
-        item_filter: [first, ...previous.slice(1).map(filter => ({ ...filter }))],
-        _chest_settings: { ...chest._chest_settings, storage_size: chest.storage_size },
+        item_filter: disposal || restoreEmpty ? [] : [first, ...previous.slice(1).map(filter => ({ ...filter }))],
+        ...(disposal ? { remove_unfiltered_items: true } : chest._chest_settings?.remove_unfiltered_items !== undefined ? { remove_unfiltered_items: chest._chest_settings.remove_unfiltered_items } : {}),
+        _chest_settings: { ...chest._chest_settings, buffer_filter: chest.item_filter, storage_size: chest.storage_size },
     };
 }
 
-export function switchChestType(prev: ConfigFormData, index: number, newType: ChestType): ConfigFormData {
-    return { ...prev, chests: prev.chests.map((chest, i) => i === index ? switchedChest(chest, newType) : chest) };
+export function switchChestType(prev: ConfigFormData, index: number, newType: ChestType, disposal = false): ConfigFormData {
+    return { ...prev, chests: prev.chests.map((chest, i) => i === index ? switchedChest(chest, newType, disposal) : chest) };
 }
 
 export function removeChest(prev: ConfigFormData, index: number): ConfigFormData {

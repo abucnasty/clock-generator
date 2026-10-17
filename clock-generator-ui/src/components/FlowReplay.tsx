@@ -52,7 +52,7 @@ function ReplayNode({ data }: NodeProps<Node<ReplayData>>) {
                 <Typography variant="subtitle2" sx={{ fontSize: compact ? 17 : 13, whiteSpace: 'nowrap', color: ins ? tokens.text.primary : flowNodeTitleColor(tokens, role) }}>{label}</Typography>
             </Box>
             <Typography variant="caption" noWrap component="div" sx={{ height: 15, lineHeight: 1.25, visibility: compact ? 'hidden' : 'visible' }}>
-                {entity?.machineParams?.recipe ? recipeLabel(entity.machineParams.recipe) : entity?.filterIcons?.map(itemLabel).join(', ') ?? (drill?.minedItem ? itemLabel(drill.minedItem) : 'Recorded transfers')}
+                {entity?.machineParams?.recipe ? recipeLabel(entity.machineParams.recipe) : entity?.sublabel ?? entity?.filterIcons?.map(itemLabel).join(', ') ?? (drill?.minedItem ? itemLabel(drill.minedItem) : 'Recorded transfers')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'start', gap: 0.5, height: 30 }}>
                 {stateStyle && <Box aria-hidden sx={{ width: 12, height: 12, mt: 0.5, flexShrink: 0, border: `1px solid ${tokens.control.border}`, background: patternBackground(stateStyle) }} />}

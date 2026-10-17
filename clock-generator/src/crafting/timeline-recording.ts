@@ -137,7 +137,9 @@ export class TimelineRecorder {
             entity.items = state.chest.getItemFilters();
             const constant = EntityState.isInfinityChest(state);
             for (const item of entity.items) add({ id: `stock:${item}`, label: constant ? "Configured supply" : "Contents", group: "inventory", unit: "items", item, ...(constant ? {} : { limit: state.getCapacity() }) }, () => state.getCurrentQuantity(item));
-            if (constant) entity.note = "Infinity chest contents are a configured supply, not a finite inventory.";
+            if (EntityState.isInfinityChest(state)) entity.note = state.chest.remove_unfiltered_items
+                ? (entity.items.length ? "Configured items are a constant supply. Unfiltered incoming items are removed." : "All incoming items are removed. This chest supplies no items.")
+                : "Infinity chest contents are a configured supply, not a finite inventory.";
         } else if (Entity.isBelt(model)) {
             entity.items = model.lanes.map(lane => lane.ingredient_name);
             entity.note = "Input belts model a constant supply. Physical belt occupancy is not recorded; inspect connected pickups and deliveries.";

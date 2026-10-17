@@ -21,14 +21,13 @@ function recoveryText(recovery: RepeatedUnitsRecovery): string {
 }
 
 /**
- * At the top of Configure: why the last check of this build failed, in the engine's words (or the page's, for the ones it rewords). Generate and the note in the
- * workflow bar move the focus here, which reads it out. Not a live region (role note, not MUI's role alert), so that it is
- * read once, not once as an alert and again as the focus; a check from Check only says its result through the page's
- * announcer instead.
+ * Engine refusal details inside Build validation, or a standalone operational failure when its worker crashed.
+ * Not a live region: focusing the validation panel or the standalone failure reads the message once.
  */
-export function CheckErrorAlert({ message, crashed = false, recovery, machineCount, conversionPending = false, onConvert }: {
+export function CheckErrorAlert({ message, crashed = false, recovery, machineCount, conversionPending = false, onConvert, embedded = false }: {
     message: string | null; crashed?: boolean; recovery?: RepeatedUnitsRecovery; machineCount?: number;
     conversionPending?: boolean; onConvert?: () => void;
+    embedded?: boolean;
 }) {
     const titleId = useId();
     const messageId = useId();
@@ -38,18 +37,7 @@ export function CheckErrorAlert({ message, crashed = false, recovery, machineCou
     const conversion = !crashed && recovery?.conversion.kind === 'available' ? recovery.conversion : null;
     const reducedMachines = conversion && machineCount !== undefined && Number.isInteger(machineCount / conversion.multiplicity)
         ? machineCount / conversion.multiplicity : null;
-    return (
-        <Alert
-            severity={conversion ? 'warning' : 'error'}
-            role="note"
-            id={ELEMENT_IDS.validationError}
-            // named by its title and described by the message, so the focus reads both
-            aria-labelledby={titleId}
-            aria-describedby={messageId}
-            tabIndex={-1}
-            // a visible outline when Generate or the note in the workflow bar moves the focus here
-            sx={{ mb: 2, '&:focus': { outline: '2px solid', outlineColor: 'error.main', outlineOffset: 2 } }}
-        >
+    const content = <>
             {/* a check whose worker stopped says it was not the build; the browser's words are in the Log */}
             <AlertTitle id={titleId}>{crashed ? CHECK_TEXT.crashTitle : conversion ? 'Hold up, fellow engineer—trying to melt your CPU?' : CHECK_TEXT.errorTitle}</AlertTitle>
             <Box id={messageId}>
@@ -70,6 +58,8 @@ export function CheckErrorAlert({ message, crashed = false, recovery, machineCou
                     </Button>
                 </Box>
             )}
-        </Alert>
-    );
+    </>;
+    return embedded ? <Box>{content}</Box> : <Alert severity="error" role="note" id={ELEMENT_IDS.validationError}
+        aria-labelledby={titleId} aria-describedby={messageId} tabIndex={-1}
+        sx={{ mb: 2, '&:focus': { outline: '2px solid', outlineColor: 'error.main', outlineOffset: 2 } }}>{content}</Alert>;
 }

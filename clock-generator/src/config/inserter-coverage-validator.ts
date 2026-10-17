@@ -11,12 +11,16 @@ function beltCoversItem(belt: BeltConfig, itemName: string): boolean {
     return belt.lanes.some((lane) => lane.ingredient === itemName);
 }
 
-function chestCoversItem(chest: ChestConfig, itemName: string): boolean {
+function chestSuppliesItem(chest: ChestConfig, itemName: string): boolean {
     if (chest.type === 'buffer-chest') {
         return chest.item_filter === itemName;
     }
     // infinity-chest
-    return chest.item_filter.some((f) => f.item_name === itemName);
+    return chest.item_filter.some((f) => f.item_name === itemName && f.request_count > 0);
+}
+
+function chestAcceptsItem(chest: ChestConfig, itemName: string): boolean {
+    return chest.type === 'infinity-chest' ? chest.remove_unfiltered_items === true || chest.item_filter.some(filter => filter.item_name === itemName) : chestSuppliesItem(chest, itemName);
 }
 
 /** Returns true if this inserter carries `itemName` into machine `machineId`. */
@@ -42,7 +46,7 @@ function inserterCoversInputItem(
     }
     if (source.type === 'chest') {
         const chest = chests.find((c) => c.id === source.id);
-        return chest !== undefined && chestCoversItem(chest, itemName);
+        return chest !== undefined && chestSuppliesItem(chest, itemName);
     }
     if (source.type === 'machine') {
         // A machine→machine inserter covers the item if the source machine's
@@ -73,12 +77,17 @@ function inserterCoversOutputItem(
     inserter: InserterConfig,
     machineId: number,
     itemName: string,
+    chests: ChestConfig[],
 ): boolean {
     if (inserter.source.type !== 'machine' || inserter.source.id !== machineId) {
         return false;
     }
     if (inserter.filters && inserter.filters.length > 0 && !inserter.filters.includes(itemName)) {
         return false;
+    }
+    if (inserter.sink.type === 'chest') {
+        const chest = chests.find(chest => chest.id === inserter.sink.id);
+        return chest !== undefined && chestAcceptsItem(chest, itemName);
     }
     return true;
 }
@@ -141,7 +150,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
                         fixOptions.push({ type: 'existing_connection', endpoint_type: 'belt', endpoint_id: belt.id, item_name: itemName });
                 }
                 for (const chest of chests) {
-                    if (chestCoversItem(chest, itemName) && !alreadyConnected('chest', chest.id))
+                    if (chestSuppliesItem(chest, itemName) && !alreadyConnected('chest', chest.id))
                         fixOptions.push({ type: 'existing_connection', endpoint_type: 'chest', endpoint_id: chest.id, item_name: itemName });
                 }
 
@@ -202,13 +211,13 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
         for (const result of recipe.results) {
             const itemName = result.name;
             const covered = config.inserters.some((ins) =>
-                inserterCoversOutputItem(ins, machine.id, itemName),
+                inserterCoversOutputItem(ins, machine.id, itemName, chests),
             );
 
             if (!covered) {
                 const fixOptions: InserterFixOption[] = [];
                 const blocked = config.inserters.filter(ins => ins.filters?.length && !ins.filters.includes(itemName)
-                    && inserterCoversOutputItem({ ...ins, filters: undefined }, machine.id, itemName));
+                    && inserterCoversOutputItem({ ...ins, filters: undefined }, machine.id, itemName, chests));
                 blocked.forEach(ins => fixOptions.push({ type: 'review_filters', inserter_id: ins.id ?? config.inserters.indexOf(ins) + 1, item_name: itemName }));
                 const alreadyConnected = (type: 'machine' | 'belt' | 'chest', id: number) => blocked.some(ins => ins.sink.type === type && ins.sink.id === id);
                 for (const belt of belts) {
@@ -216,7 +225,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
                         fixOptions.push({ type: 'existing_connection', endpoint_type: 'belt', endpoint_id: belt.id, item_name: itemName });
                 }
                 for (const chest of chests) {
-                    if (chestCoversItem(chest, itemName) && !alreadyConnected('chest', chest.id))
+                    if (chestAcceptsItem(chest, itemName) && !alreadyConnected('chest', chest.id))
                         fixOptions.push({ type: 'existing_connection', endpoint_type: 'chest', endpoint_id: chest.id, item_name: itemName });
                 }
                 for (const other of machines) {
@@ -263,7 +272,7 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
         const nextCatalog = JSON.stringify({
             machines: config.machines.map(({ id, recipe, type, fuel }) => [id, recipe, type, fuel]),
             belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => lane.ingredient)]),
-            chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter : chest.item_filter.map(filter => filter.item_name)]),
+            chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter : [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]]),
         });
         if (catalog !== nextCatalog) { cached.clear(); catalog = nextCatalog; }
         const routes = new Map<number, unknown[]>();

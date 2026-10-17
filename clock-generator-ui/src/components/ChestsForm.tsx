@@ -28,6 +28,7 @@ import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
 import { useAnnounce } from '../hooks/useMessages';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { InfinityChestSettings } from './InfinityChestSettings';
 import { SELECT_NAMES } from '../utils/a11yLabels';
 
 interface ChestsFormProps {
@@ -78,15 +79,6 @@ function ChestsFormComponent({
         const chest = chests[chestIndex];
         if (!isInfinityChest(chest)) return;
 
-        // Don't allow removing the last filter
-        if (chest.item_filter.length <= 1) {
-            // Clear the filter instead
-            onUpdate(chestIndex, {
-                item_filter: [{ item_name: '', request_count: 1 }],
-            });
-            return;
-        }
-
         onUpdate(chestIndex, {
             item_filter: chest.item_filter.filter((_, i) => i !== slotIndex),
         });
@@ -122,6 +114,25 @@ function ChestsFormComponent({
                 <PanelSection
                     level={4}
                     title={`Chests (${chests.length})`}
+                    help={{
+                        label: 'About chests',
+                        content: <>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                <strong>Buffer chests</strong> store items in a finite inventory and can fill up.
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                <strong>Infinity chest filters</strong> set the stock to maintain. Pickups are replenished,
+                                and deliveries above that stock are removed, even with unfiltered removal off.
+                                A stock of 0 removes that item and supplies none.
+                            </Typography>
+                            <Typography variant="body2">
+                                <strong>Also remove unfiltered items</strong> removes incoming items without a filter.
+                                With no filters, it removes all incoming items and supplies none. This matches the
+                                “Remove unfiltered items” checkbox in Factorio. With this setting off, the simulator
+                                only accepts filtered items.
+                            </Typography>
+                        </>,
+                    }}
                     actions={(
                         <>
                             <Button startIcon={<Add />} color="inherit" onClick={() => add(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
@@ -198,19 +209,21 @@ function ChestsFormComponent({
                                 {/* Infinity Chest filter slots - multiple slots */}
                                 {isInfinityChest(chest) && (
                                     <Box sx={{ minWidth: 0, flex: '2 1 160px' }}>
-                                        <ChestFilterSlotSelector
-                                            filters={getInfinityChestFilters(chest)}
-                                            itemNames={itemNames}
-                                            onFilterChange={(slotIndex, filter) =>
-                                                handleInfinityChestFilterChange(index, slotIndex, filter)
-                                            }
-                                            onRemoveFilter={(slotIndex) =>
-                                                handleInfinityChestRemoveFilter(index, slotIndex)
-                                            }
-                                            maxSlots={10}
-                                            quantityLabel="Request Count"
-                                            canAddMore={true}
-                                        />
+                                        <InfinityChestSettings chest={chest} onChange={enabled => onUpdate(index, { remove_unfiltered_items: enabled })}>
+                                            <ChestFilterSlotSelector
+                                                filters={getInfinityChestFilters(chest)}
+                                                itemNames={itemNames}
+                                                onFilterChange={(slotIndex, filter) =>
+                                                    handleInfinityChestFilterChange(index, slotIndex, filter)
+                                                }
+                                                onRemoveFilter={(slotIndex) =>
+                                                    handleInfinityChestRemoveFilter(index, slotIndex)
+                                                }
+                                                maxSlots={10}
+                                                quantityLabel="Stock to maintain"
+                                                canAddMore={true}
+                                            />
+                                        </InfinityChestSettings>
                                     </Box>
                                 )}
                             </Box>

@@ -76,49 +76,29 @@ local function extract_chest_data(entity)
         return nil
     end
 
-    -- Get the chest's inventory
-    local inventory = entity.get_inventory(defines.inventory.chest)
-    if not inventory then
-        return nil
-    end
-
-    local contents = inventory.get_contents()
-    if not contents or #contents == 0 then
-        return nil -- Skip empty chests
-    end
-
-    local storage_size = #inventory -- Number of slots
-
-    if (inventory.supports_bar()) then
-        storage_size = inventory.get_bar() - 1
-    end
-
-    -- Check if this is an infinity chest (has infinity_container_filters)
-    -- Infinity containers in Factorio have the infinity_container_filters property
+    -- Infinity settings exist even when the inventory is empty (a disposal chest usually is).
     if entity.type == "infinity-container" then
-        -- This is an infinity chest - extract filters
         local filters = {}
-        for _, item_stack in pairs(contents) do
+        for _, filter in pairs(entity.infinity_container_filters or {}) do
             table.insert(filters, {
-                item_name = item_stack.name,
-                request_count = item_stack.count
+                item_name = filter.name,
+                request_count = filter.count or 0
             })
         end
-
-        if #filters == 0 then
-            return nil
-        end
-
-        ---@type InfinityChestData
+        table.sort(filters, function(a, b) return a.item_name < b.item_name end)
         return {
             chest_type = "infinity-chest",
             unit_number = entity.unit_number,
-            item_filters = filters
+            item_filters = filters,
+            remove_unfiltered_items = entity.remove_unfiltered_items
         }
     else
-        -- This is a buffer chest - use the first item as the filter
-        -- Buffer chests only support a single item type
-        local first_item = contents[1]
+        local inventory = entity.get_inventory(defines.inventory.chest)
+        if not inventory then return nil end
+        local contents = inventory.get_contents()
+        local storage_size = inventory.supports_bar() and (inventory.get_bar() - 1) or #inventory
+        -- Buffer chests still need one known item to infer their filter.
+        local first_item = contents and contents[1]
         if not first_item then
             return nil
         end

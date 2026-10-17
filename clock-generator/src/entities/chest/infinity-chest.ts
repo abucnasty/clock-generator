@@ -32,6 +32,7 @@ export class InfinityChest implements Chest {
          * and their constant quantities.
          */
         public readonly item_filters: InfinityFilterConfig[],
+        public readonly remove_unfiltered_items = false,
     ) {}
 
     /**
@@ -43,16 +44,20 @@ export class InfinityChest implements Chest {
     }
 
     /**
-     * Get all item types this chest is filtered to hold.
+     * Get items supplied by filters with positive configured stock.
      */
     public getItemFilters(): ItemName[] {
-        return this.item_filters.map(filter => filter.item_name);
+        return this.item_filters.filter(filter => filter.request_count > 0).map(filter => filter.item_name);
     }
 
     /**
      * Get the configured quantity for a specific item.
      * Returns 0 if the item is not in the filter list.
      */
+    public acceptsItem(item: ItemName): boolean {
+        return this.remove_unfiltered_items || this.item_filters.some(filter => filter.item_name === item);
+    }
+
     public getItemQuantity(itemName: ItemName): number {
         const filter = this.item_filters.find(f => f.item_name === itemName);
         return filter?.request_count ?? 0;
@@ -68,5 +73,6 @@ function fromConfig(config: InfinityChestConfig): InfinityChest {
     return new InfinityChest(
         EntityId.forChest(config.id),
         config.item_filter,
+        config.remove_unfiltered_items ?? false,
     );
 }

@@ -42,7 +42,8 @@
 ---@class InfinityChestData
 ---@field chest_type "infinity-chest" The chest type discriminator
 ---@field unit_number number The unit number of the chest entity
----@field item_filters InfinityFilterData[] The items and quantities in this chest
+---@field item_filters InfinityFilterData[] The configured infinity filters, not current inventory
+---@field remove_unfiltered_items boolean Whether unfiltered incoming items are removed
 
 ---@alias ChestData BufferChestData|InfinityChestData
 

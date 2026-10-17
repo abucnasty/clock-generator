@@ -7,13 +7,13 @@ function coverageKey(config: Config): string {
     return JSON.stringify({
         machines: config.machines.map(({ id, recipe, type, fuel }) => [id, recipe, type, fuel]),
         belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => lane.ingredient)]),
-        chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter : chest.item_filter.map(filter => filter.item_name)]),
+        chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter : [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]]),
         inserters: config.inserters.map(({ id, source, sink, filters }) => [id, source.type, source.id, sink.type, sink.id, filters]),
         drills: config.drills?.configs.map(({ target, mined_item_name }) => [target.id, mined_item_name]),
     });
 }
 
-/** Check connections after edits settle; keep the previous result until the new one arrives. */
+/** Check connections after edits settle; never display results belonging to different routes/settings. */
 export function useInserterValidation(
     exportConfig: () => Config,
     isInitialized: boolean,
@@ -21,7 +21,7 @@ export function useInserterValidation(
     const config = useMemo(exportConfig, [exportConfig]);
     const key = useMemo(() => coverageKey(config), [config]);
     const latestConfig = useRef(config);
-    const [issues, setIssues] = useState<InserterCoverageIssue[] | null>(null);
+    const [result, setResult] = useState<{ key: string; issues: InserterCoverageIssue[] } | null>(null);
     useEffect(() => { latestConfig.current = config; }, [config]);
 
     useEffect(() => {
@@ -30,7 +30,7 @@ export function useInserterValidation(
         const timer = setTimeout(() => {
             askEngine({ kind: 'inserter-coverage', config: latestConfig.current }).then(
                 found => {
-                    if (current) setIssues(previous => JSON.stringify(previous) === JSON.stringify(found) ? previous : found);
+                    if (current) setResult(previous => previous?.key === key && JSON.stringify(previous.issues) === JSON.stringify(found) ? previous : { key, issues: found });
                 },
                 error => { if (current) console.error('Failed to validate inserter coverage:', error); },
             );
@@ -38,5 +38,5 @@ export function useInserterValidation(
         return () => { current = false; clearTimeout(timer); };
     }, [isInitialized, key]);
 
-    return issues;
+    return result?.key === key ? result.issues : null;
 }

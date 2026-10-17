@@ -26,7 +26,8 @@ export type ValidationState =
     | { status: 'running'; config: Config }
     | { status: 'valid'; config: Config; validation: ConfigValidation }
     /** `crashed`: the check's worker stopped, so the build was not judged; Generate checks again */
-    | { status: 'invalid'; config: Config; message: string; crashed?: boolean; recovery?: RepeatedUnitsRecovery };
+    | { status: 'invalid'; config: Config; message: string; crashed?: boolean; recovery?: RepeatedUnitsRecovery;
+        diagnostics?: import('../utils/buildValidation').ValidationDiagnostic[] };
 
 interface UseSimulationWorkerResult {
     generationAssumptions: GenerationAssumptions | null;
@@ -475,7 +476,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 checkRunningRef.current = false;
                 setValidation(response.type === 'validated'
                     ? { status: 'valid', config: requested.config, validation: response.validation }
-                    : { status: 'invalid', config: requested.config, message: response.message, recovery: response.recovery });
+                    : { status: 'invalid', config: requested.config, message: response.message, recovery: response.recovery, diagnostics: response.diagnostics });
                 pendingChecks.settle(response.requestId, response.type === 'validated'
                     ? { kind: 'valid', validation: response.validation }
                     : { kind: 'invalid', message: response.message, recovery: response.recovery });

@@ -4,7 +4,8 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { useAnnounce } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
-import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
+import { ELEMENT_IDS, type Problem } from '../utils/firstProblem';
+import { validationCountLabel } from '../utils/buildValidation';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
 import { COPY_CURRENT_BEST_TOOLTIP } from '../utils/rateWarning';
 import type { RunStop } from '../utils/resultsCache';
@@ -64,9 +65,9 @@ interface WorkflowBarProps {
     /** Copies the blueprint, or asks first for the clock of an earlier build (the copy every Copy button shares) */
     onCopy: () => void;
     onHowToInstall: () => void;
-    /** What keeps the build from being clocked, first to fix first; empty when nothing does */
+    /** Blocking validation errors, shared with the Build validation panel. */
     problems: Problem[];
-    /** Where Generate and Check only go instead of checking, said under them; null when they check */
+    /** Guidance for an empty build; validation details stay in the panel. */
     note: Problem | null;
     /** Nothing has been entered yet: the note is the next step, not a problem, and there is no count */
     startHere: boolean;
@@ -359,9 +360,10 @@ export function WorkflowBar({
                             size="small"
                             variant="outlined"
                             color="error"
-                            label={problemCountLabel(problems.length)}
-                            onClick={() => onGoToProblem(problems[0])}
-                            aria-label={`${problemCountLabel(problems.length)}. Go to the first one.`}
+                            id={!note ? ELEMENT_IDS.blockReason : undefined}
+                            label={validationCountLabel(problems.length)}
+                            onClick={() => onGoToProblem({ text: 'Build validation', target: { kind: 'validation-panel' } })}
+                            aria-label={`${validationCountLabel(problems.length)}. Show build validation.`}
                             // outlined as "Check failed" is, which takes the same place: one look for red in the bar. A
                             // tint under the red would take its words under 4.5:1; hovered, they are underlined
                             sx={{
@@ -370,7 +372,7 @@ export function WorkflowBar({
                             }}
                         />
                     )}
-                    {chip && (
+                    {chip && !(chip.color === 'error' && problems.length > 0) && (
                         <Chip
                             size="small"
                             variant="outlined"
@@ -420,9 +422,7 @@ export function WorkflowBar({
                     </Tooltip>
                 </Box>
             </Toolbar>
-            {/* Below md the reason has a line of its own under the bar, reserved even when empty, so that the pinned header keeps its
-                height as the note comes and goes, on every edit and check; the generation's progress takes the line when there
-                is no note. A message row under the bar takes the line's place, so that no empty band sits above it. */}
+            {/* Only empty-build guidance gets a line below the toolbar. Errors are summarized by the count above. */}
             {note && (
                 <Box
                     sx={{

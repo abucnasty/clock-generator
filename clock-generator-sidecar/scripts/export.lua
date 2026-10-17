@@ -201,7 +201,9 @@ function export.to_table(result)
             table.insert(output.chests, {
                 type = "infinity-chest",
                 id = i,
-                item_filter = filters
+                -- Missing filters default to [] in the config; avoid ambiguous JSON for an empty Lua table.
+                item_filter = #filters > 0 and filters or nil,
+                remove_unfiltered_items = chest.remove_unfiltered_items == true
             })
         else
             -- Buffer chest format

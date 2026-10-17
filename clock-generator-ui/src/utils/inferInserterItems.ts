@@ -21,7 +21,7 @@ export function sourceItemsOf(
         const c = chests.find(c => c.id === source.id);
         if (c) {
             if (isBufferChest(c) && c.item_filter) return [c.item_filter];
-            if (isInfinityChest(c)) return c.item_filter.map(f => f.item_name).filter(Boolean);
+            if (isInfinityChest(c)) return c.item_filter.filter(filter => filter.request_count > 0).map(f => f.item_name).filter(Boolean);
         }
     }
     return [];
@@ -48,7 +48,7 @@ function getSinkNeeds(
         const c = chests.find(c => c.id === sink.id);
         if (c) {
             if (isBufferChest(c) && c.item_filter) return [c.item_filter];
-            if (isInfinityChest(c)) return c.item_filter.map(f => f.item_name).filter(Boolean);
+            if (isInfinityChest(c)) return c.remove_unfiltered_items ? sourceItems : c.item_filter.map(f => f.item_name).filter(Boolean);
             return sourceItems;
         }
         return sourceItems;
@@ -69,6 +69,8 @@ export function inferInserterItems(
     getRecipeInfo?: (name: string) => RecipeInfo | null,
 ): string[] {
     const sourceItems = sourceItemsOf(inserter.source, machines, belts, chests, getRecipeInfo);
+    const chest = inserter.sink.type === 'chest' ? chests.find(chest => chest.id === inserter.sink.id) : undefined;
+    if (chest && isInfinityChest(chest) && !chest.remove_unfiltered_items && !chest.item_filter.some(filter => filter.item_name)) return [];
     const sinkNeeds = getSinkNeeds(inserter.sink, sourceItems, machines, chests, getRecipeInfo);
 
     if (sinkNeeds.length === 0) return sourceItems;

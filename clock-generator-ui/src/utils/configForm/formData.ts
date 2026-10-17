@@ -117,7 +117,7 @@ export interface InfinityFilterFormData {
 
 /** Form-only settings retained while switching chest types; never sent to the backend. */
 interface ChestSettingsMemory {
-    _chest_settings?: { infinity_filters?: InfinityFilterFormData[]; storage_size?: number };
+    _chest_settings?: { infinity_filters?: InfinityFilterFormData[]; remove_unfiltered_items?: boolean; buffer_filter?: string; storage_size?: number };
 }
 
 // Buffer chest form data
@@ -137,6 +137,7 @@ export interface InfinityChestFormData extends ChestSettingsMemory {
     /** Internal UUID — see MachineFormData._uuid. */
     _uuid: string;
     item_filter: InfinityFilterFormData[];
+    remove_unfiltered_items?: boolean;
 }
 
 // Discriminated union for chest types

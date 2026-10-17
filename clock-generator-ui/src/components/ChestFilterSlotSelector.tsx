@@ -71,7 +71,7 @@ export function ChestFilterSlotSelector({ filters, itemNames, onFilterChange, on
         {filters.length > maxSlots && <Typography variant="caption" color="text.secondary">+{filters.length - maxSlots} more</Typography>}
         {anchor && active !== null && <FilterItemPicker anchor={anchor} label="Choose a chest filter"
             initialItem={filters[active]?.item_name} initialQuantity={filters[active]?.quantity ?? 1}
-            quantityLabel={showQuantity ? quantityLabel : undefined} itemNames={itemNames} onClose={close}
+            quantityLabel={showQuantity ? quantityLabel : undefined} minQuantity={0} itemNames={itemNames} onClose={close}
             onClear={filters[active]?.item_name ? () => clear(active) : undefined}
             onApply={(item, quantity) => { onFilterChange(active, { item_name: item, quantity }); close(); }} />}
 

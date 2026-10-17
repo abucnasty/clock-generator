@@ -128,9 +128,10 @@ describe('worker startup failure recovery through the hook', () => {
             detectedCopies: 8, configuredCopies: 0.5, units: [{ machine_ids: [1] }], conversion: { kind: 'available', multiplicity: 8, copies: 4 } };
         const pending = Render().validate(config);
         const requestId = workers[0].requests('validate').at(-1)!.requestId;
-        workers[0].send({ type: 'validation-failed', requestId, message: 'Actual Copies refusal', recovery });
+        const diagnostics = [{ kind: 'field' as const, path: ['target_output', 'copies'], message: 'Actual Copies refusal' }];
+        workers[0].send({ type: 'validation-failed', requestId, message: 'Actual Copies refusal', recovery, diagnostics });
         expect(await pending).toEqual({ kind: 'invalid', message: 'Actual Copies refusal', recovery });
-        expect(Render().validation).toMatchObject({ status: 'invalid', recovery });
+        expect(Render().validation).toMatchObject({ status: 'invalid', recovery, diagnostics });
         const replacement = Render().validate(config);
         workers[0].send({ type: 'validation-failed', requestId, message: 'Old refusal', recovery });
         expect(Render().validation.status).toBe('running');

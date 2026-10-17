@@ -51,8 +51,9 @@ describe('every Diagram draft', () => {
         const machine = { recipe: 'gear', productivity: 0, crafting_speed: 1, type: 'machine' };
         expect(changedFields({ ...machine, crafting_speed: 2 }, machine, MACHINE_FIELDS)).toEqual({ crafting_speed: 2 });
         expect(changedFields(machine, machine, MACHINE_FIELDS)).toEqual({});
-        const chest = { type: 'buffer-chest', storage_size: 2, item_filter: 'coal' };
+        const chest = { type: 'buffer-chest', storage_size: 2, item_filter: 'coal', remove_unfiltered_items: undefined as boolean | undefined };
         expect(changedFields({ ...chest, type: 'infinity-chest' }, chest, CHEST_FIELDS)).toEqual({ type: 'infinity-chest' });
+        expect(changedFields({ ...chest, remove_unfiltered_items: true }, chest, CHEST_FIELDS)).toEqual({ remove_unfiltered_items: true });
         const drill = { type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, target: { type: 'machine', id: 1 } };
         expect(changedFields({ ...drill, target: { type: 'machine', id: 2 } }, drill, DRILL_FIELDS)).toEqual({ target: { type: 'machine', id: 2 } });
     });

@@ -51,6 +51,12 @@ it('uses the real engine for typed Check/generation recovery and recomputed conv
     expect(recoveryFailed).toMatchObject({ type: 'validation-failed', requestId: 6, message: expect.stringContaining('not-an-inserter') });
     expect('recovery' in recoveryFailed && recoveryFailed.recovery).toBeUndefined();
     expect(source).toEqual(before);
+    const emptyOutput = { ...source, machines: [source.machines[0]], inserters: [source.inserters[0], { ...source.inserters[1], sink: { type: 'chest' as const, id: 7 } }],
+        chests: [{ id: 7, type: 'infinity-chest' as const, item_filter: [] }] };
+    expect(await send({ type: 'validate', requestId: 7, config: emptyOutput })).toMatchObject({ type: 'validation-failed',
+        diagnostics: [{ kind: 'field', path: ['chests', 0, 'item_filter'], message: expect.stringContaining('Remove unfiltered items') }] });
+    expect(await send({ type: 'validate', requestId: 8, config: { ...source, inserters: [] } })).toMatchObject({ type: 'validation-failed',
+        diagnostics: expect.arrayContaining([{ kind: 'coverage', issue: expect.objectContaining({ kind: 'missing_output_inserter' }) }]) });
 });
 
 it('replays detailed activity through the real worker query without changing the saved config', async () => {

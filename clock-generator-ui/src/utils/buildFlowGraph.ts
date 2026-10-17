@@ -222,8 +222,8 @@ export function buildFlowGraph(
         for (const half of halves) {
             const node_id = flowNodeId(data.entityType, data.entityId, half);
             const label = half ? `${data.label}${HALF_SUFFIX[half]}` : data.label;
-            g.setNode(node_id, { width: ENTITY_NODE_WIDTH, height: Math.max(nodeHeight, ENTITY_NODE_HEIGHT) });
-            drawn.set(node_id, { w: ENTITY_NODE_WIDTH, h: Math.max(nodeHeight, ENTITY_NODE_HEIGHT) });
+            g.setNode(node_id, { width: ENTITY_NODE_WIDTH, height: Math.max(nodeHeight, data.sublabel ? 76 : ENTITY_NODE_HEIGHT) });
+            drawn.set(node_id, { w: ENTITY_NODE_WIDTH, h: Math.max(nodeHeight, data.sublabel ? 76 : ENTITY_NODE_HEIGHT) });
             nodes.push({
                 id: node_id,
                 type: 'entityNode',
@@ -293,7 +293,8 @@ export function buildFlowGraph(
             label: entityLabel('chest', chest.id),
             iconName,
             filterIcons,
-        }, filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
+            ...(!isBufferChest(chest) && chest.remove_unfiltered_items && { sublabel: filterIcons?.length ? 'Removes unfiltered items' : 'Removes all incoming items' }),
+        }, !isBufferChest(chest) && chest.remove_unfiltered_items ? 'removes unfiltered incoming items' : filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
     });
 
     // --- Inserter nodes + edges ---
