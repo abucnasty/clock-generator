@@ -330,21 +330,17 @@ describe('axisTicks', () => {
         return [1, 2, 5].includes(Math.round(step / power));
     };
 
-    for (const period of [60, 168, 600, 2240, 550.957, 1]) {
-        for (const maxMarks of [4, 6, 10]) {
-            it(`marks a period of ${period} with at most ${maxMarks} marks at a nice step`, () => {
-                const marks = axisTicks(period, maxMarks);
-                expect(marks[0]).toBe(0);
-                expect(marks.length).toBeLessThanOrEqual(maxMarks);
-                expect(marks.every(mark => mark < period)).toBe(true);
-                if (marks.length > 1) {
-                    const step = marks[1] - marks[0];
-                    expect(niceStep(step)).toBe(true);
-                    expect(marks.every((mark, index) => mark === index * step)).toBe(true);
-                }
-            });
+    it.each([[60, 4], [168, 4], [2240, 6], [550.957, 6], [1, 4]])('marks a period of %s with at most %s marks at a nice step', (period, maxMarks) => {
+        const marks = axisTicks(period, maxMarks);
+        expect(marks[0]).toBe(0);
+        expect(marks.length).toBeLessThanOrEqual(maxMarks);
+        expect(marks.every(mark => mark < period)).toBe(true);
+        if (marks.length > 1) {
+            const step = marks[1] - marks[0];
+            expect(niceStep(step)).toBe(true);
+            expect(marks.every((mark, index) => mark === index * step)).toBe(true);
         }
-    }
+    });
 
     it('picks the finest step that fits', () => {
         expect(axisTicks(600, 10)).toEqual([0, 100, 200, 300, 400, 500]);

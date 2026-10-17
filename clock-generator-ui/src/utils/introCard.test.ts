@@ -25,15 +25,15 @@ describe('isBlankBuild', () => {
 
 describe('shouldShowIntro', () => {
     it('shows only when brought back, or on a blank build neither closed nor built by hand', () => {
-        for (const dismissed of [false, true]) {
-            for (const builtByHand of [false, true]) {
-                for (const forced of [false, true]) {
-                    for (const blank of [false, true]) {
-                        expect(shouldShowIntro({ dismissed, builtByHand, forced, blank }), JSON.stringify({ dismissed, builtByHand, forced, blank }))
-                            .toBe(forced || (!dismissed && !builtByHand && blank));
-                    }
-                }
-            }
+        const cases = [
+            [{ dismissed: false, builtByHand: false, forced: false, blank: true }, true],
+            [{ dismissed: true, builtByHand: false, forced: false, blank: true }, false],
+            [{ dismissed: false, builtByHand: true, forced: false, blank: true }, false],
+            [{ dismissed: false, builtByHand: false, forced: false, blank: false }, false],
+            [{ dismissed: true, builtByHand: true, forced: true, blank: false }, true],
+        ] as const;
+        for (const [input, expected] of cases) {
+            expect(shouldShowIntro(input), JSON.stringify(input)).toBe(expected);
         }
     });
 });

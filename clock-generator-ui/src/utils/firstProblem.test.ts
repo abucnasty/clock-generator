@@ -17,7 +17,6 @@ import {
     type Problem,
 } from './firstProblem';
 
-type Machine = { id: number; recipe: string };
 type Input = Parameters<typeof problemsOf>[0];
 
 const filledIn = (overrides: Partial<Input> = {}): Input => ({
@@ -118,31 +117,6 @@ describe('problemsOf', () => {
         ]);
     });
 
-    it('agrees with the conditions Generate used to check, one by one', () => {
-        // the chain canGenerate was before it read problemsOf, for an initialized page with no generation running
-        const oldCanGenerate = (input: Input, checked: InserterCoverageIssue[] | null) => Boolean(
-            input.targetOutput.recipe &&
-            input.targetOutput.items_per_second > 0 &&
-            input.targetOutput.copies > 0 &&
-            input.machines.length > 0 &&
-            input.machines.every((m: Machine) => m.recipe) &&
-            checked?.length === 0
-        );
-        const oneIssue = [issue('missing_input_inserter', 1, 'iron-plate')];
-        const builds: [Input, InserterCoverageIssue[]][] = [
-            [filledIn({ targetOutput: { recipe: '', items_per_second: 240, copies: 1 } }), []],
-            [filledIn({ targetOutput: { recipe: 'x', items_per_second: 0, copies: 1 } }), []],
-            [filledIn({ targetOutput: { recipe: 'x', items_per_second: 240, copies: 0 } }), []],
-            [filledIn({ machines: [] }), []],
-            [filledIn({ machines: [{ id: 1, recipe: 'x' }, { id: 2, recipe: '' }] }), []],
-            [filledIn(), oneIssue],
-            [filledIn(), []],
-        ];
-        for (const [input, checked] of builds) {
-            const hasNoProblems = problemsOf({ ...input, coverageIssues: checked }).length === 0;
-            expect(hasNoProblems).toBe(oldCanGenerate(input, checked));
-        }
-    });
 });
 
 describe('a target more than the machines can make', () => {

@@ -32,3 +32,7 @@ D9 independence applies to assessed authorship; a worker may need to exclude its
 ## Root adoption after first cleanup default-knip probe
 
 Removing test-only consumers exposed exactly two internal exports with no remaining production caller: SURFACE_HOVER in UI theme/tokens.ts and WakeWindowsChartProps in components/WakeWindowsChart.tsx. D9 may make only these declarations module-private by removing export; values, types and runtime output stay identical. This narrow dead-export cleanup is included in CODE/UX review and full gates, with no exclusion or dummy test consumer. No other product change is authorized by this addendum. Production-equivalence evidence must separately account for these visibility-only lines and compare emitted assets.
+
+## Root adoption after integrated theme/cleanup default-knip probe
+
+At integrated before-source 9d88162, the mode-aware chart palette replaces the fixed WAKE_SELECTED_COLOR and SLACK_BACKGROUND constants in components/WakeWindowsChart.tsx; C20 removes their last raw-source-scanner consumer. Root authorizes deleting exactly these two dead declarations and their orphan comments after confirming no remaining repository caller. Retain live bar/track exports, forced-colour constants and all runtime palette values. No dummy consumer, exclusion or further cleanup is allowed. Full functional gates and emitted-asset equivalence must cover this integration-only deletion; the current owner-adopted keyboard/colour profile governs product evidence.

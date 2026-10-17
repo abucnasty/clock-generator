@@ -40,11 +40,6 @@ import { WakeRowMoves } from './WakeRowMoves';
 export const WAKE_BAR_COLOR = '#56B4E9';
 /** The outline of one clock period, 4.67:1 */
 export const WAKE_TRACK_COLOR = '#8c8c8c';
-/** The outline of the selected window: the theme's primary, 7.77:1 */
-export const WAKE_SELECTED_COLOR = '#fca300';
-/** Grid lines behind the rows; decorative, they repeat the axis marks */
-/** Belt slack: the bar's colour as 45° stripes, 3px on and 3px off */
-export const SLACK_BACKGROUND = `repeating-linear-gradient(45deg, ${WAKE_BAR_COLOR} 0 3px, transparent 3px 6px)`;
 /**
  * In forced colours the browser would paint over the bars' backgrounds and they would vanish, so the chart keeps its
  * own painting (`forced-color-adjust: none`) in the system's colours: bars, stripes and tracks in CanvasText, the
@@ -387,7 +382,7 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
     );
 });
 
-export interface WakeWindowsChartProps {
+interface WakeWindowsChartProps {
     rows: WakeWindowRow[];
     periodTicks: number;
     selected: Selection | null;

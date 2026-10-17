@@ -212,26 +212,3 @@ describe('the definitions', () => {
         expect(strings.filter(([, text]) => how.test(text)).map(([name]) => name)).toEqual(['WAKE_UP_DEFINITION']);
     });
 });
-
-describe('the components', () => {
-    // the files read as text at build time, so the test needs no file system of its own
-    const sources = import.meta.glob('../components/WakeWindows*.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-
-    it('are all found', () => {
-        expect(Object.keys(sources).sort()).toEqual([
-            '../components/WakeWindowsChart.tsx',
-            '../components/WakeWindowsTable.tsx',
-            '../components/WakeWindowsView.tsx',
-        ]);
-    });
-
-    it('hold no wording of wake-ups or wake windows of their own', () => {
-        for (const [file, text] of Object.entries(sources)) {
-            const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
-            const literals = code.match(/'[^'\n]*'|"[^"\n]*"|`[^`]*`|>[^<>{}]+</g) ?? [];
-            // what a template literal fills in is code, not wording
-            const wording = literals.filter(literal => /wake[- ]?ups?|wake windows?/i.test(literal.replace(/\$\{[^}]*\}/g, '')));
-            expect(wording, file).toEqual([]);
-        }
-    });
-});

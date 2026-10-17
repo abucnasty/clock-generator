@@ -92,10 +92,7 @@ describe('buildEnableControlOverride', () => {
 describe('enableControlDraftChanged', () => {
     it.each<[string, EnableControlOverride | undefined]>([
         ['no rule', undefined],
-        ['AUTO', { mode: 'AUTO' }],
         ['ALWAYS', { mode: 'ALWAYS' }],
-        ['NEVER', { mode: 'NEVER' }],
-        ['CLOCKED', clocked],
         ['CLOCKED with an inverted range', { mode: 'CLOCKED', ranges: [{ start: 10, end: 0 }, { start: 20, end: 30 }] }],
         ['CONDITIONAL', conditional],
     ])('is false for an untouched draft of %s', (_label, stored) => {

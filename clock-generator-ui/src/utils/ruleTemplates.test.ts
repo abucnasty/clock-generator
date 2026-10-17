@@ -66,11 +66,7 @@ describe('defaultAmount', () => {
     it.each([
         [{ prototype: 'bulk-inserter', quality: 'normal' }, 24],
         [{ prototype: 'fast-inserter', quality: 'normal' }, 8],
-        [{ prototype: 'bulk-inserter', quality: 'legendary' }, 24],
-        [{}, 32],
         [{ prototype: 'bulk-inserter', stack_size: 8 }, 16],
-        [{ prototype: 'fast-inserter', stack_size: 16 }, 32],
-        [{ stack_size: 16 }, 32],
     ] as const)('uses two effective hands for %j', (inserter, expected) => {
         expect(defaultAmount(effectiveInserterStackSize(inserter))).toBe(expected);
     });

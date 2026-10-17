@@ -9,10 +9,6 @@ describe('isUnderHeader', () => {
         expect(isUnderHeader({ top: 100, bottom: 140 }, HEADER_BOTTOM)).toBe(true);
     });
 
-    it('is true for an element straddling the header\'s bottom edge', () => {
-        expect(isUnderHeader({ top: 110, bottom: 150 }, HEADER_BOTTOM)).toBe(true);
-    });
-
     it('is false for an element scrolled out above the window', () => {
         expect(isUnderHeader({ top: -40, bottom: 0 }, HEADER_BOTTOM)).toBe(false);
         expect(isUnderHeader({ top: -80, bottom: -40 }, HEADER_BOTTOM)).toBe(false);

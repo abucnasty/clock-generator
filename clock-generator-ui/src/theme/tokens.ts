@@ -24,7 +24,7 @@ export const SURFACE = {
 } as const;
 
 /** What the surfaces become under the pointer: MUI's 8% white hover over a row, and over a card, menu or dialog */
-export const SURFACE_HOVER = {
+const SURFACE_HOVER = {
     row: '#3f3f3f',
     panel: '#353535',
 } as const;

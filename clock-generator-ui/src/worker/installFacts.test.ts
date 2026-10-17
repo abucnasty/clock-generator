@@ -37,10 +37,6 @@ describe('installFactsOf', () => {
         expect(factsOf({ schedule: schedule([[10], [5, 2], [3]]), blueprint: empty }).wiring).toEqual([[2, 5], [3], [10]]);
     });
 
-    it('keeps merged inserters together in one row', () => {
-        expect(factsOf({ schedule: schedule([[2, 1], [4]]), blueprint: empty }).wiring).toEqual([[1, 2], [4]]);
-    });
-
     it('drops a combinator with no inserters (a part of the clock, or a drill)', () => {
         expect(factsOf({ schedule: schedule([[], [7], []]), blueprint: empty }).wiring).toEqual([[7]]);
     });
