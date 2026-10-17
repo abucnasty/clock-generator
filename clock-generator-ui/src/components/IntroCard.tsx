@@ -1,6 +1,6 @@
-import { Close, ContentPaste } from '@mui/icons-material';
+import { Close, ContentPaste, ExpandMore } from '@mui/icons-material';
 import { Box, Button, IconButton, Link, Typography } from '@mui/material';
-import { useLayoutEffect, useRef } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import {
     INTRO_BUTTONS,
@@ -44,10 +44,13 @@ interface IntroCardProps {
 }
 
 /**
- * Above Target Output on a first visit: what the tool does, the three steps from a build in Factorio to a clock in it,
- * and the ways in. Paste from Factorio is the next step; an example and building by hand are the others.
+ * Above Target Output on a first visit: what the tool does and the ways in, with the full Sidecar guide on demand.
+ * Paste from Factorio is the next step; an example and building by hand are the others.
  */
 export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: IntroCardProps) {
+    const [guideOpen, setGuideOpen] = useState(false);
+    const guideId = useId();
+    const guideButtonId = useId();
     // when the card goes (hidden, or the build replaced) with the focus in it, the focus moves to the Target Output
     // heading below it instead of falling to the page. Run before the card leaves the page, while the focus is still in it
     const rootRef = useRef<HTMLElement>(null);
@@ -74,17 +77,7 @@ export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: I
             <Typography variant="body2" sx={{ mb: 1 }}>
                 {INTRO_SENTENCE}
             </Typography>
-            <Typography variant="body2" component="ol" sx={{ my: 0, pl: 3, '& > li': { mb: 0.75 } }}>
-                <li>
-                    {INTRO_STEPS.getBuildIn}
-                    <SidecarCopySteps />
-                    {INTRO_STEPS.getBuildInLast}{' '}
-                    Get the <SidecarModLink />. {SIDECAR_NEEDS}
-                </li>
-                <li>{INTRO_STEPS.generate}</li>
-                <li>{INTRO_STEPS.copy}</li>
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <Button variant="contained" color="secondary" startIcon={<ContentPaste />} onClick={onPaste}>
                     {INTRO_BUTTONS.paste}
                 </Button>
@@ -94,6 +87,30 @@ export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: I
                 <Button variant="text" color="inherit" onClick={onBuildByHand}>
                     {INTRO_BUTTONS.byHand}
                 </Button>
+            </Box>
+            <Button
+                id={guideButtonId}
+                variant="text"
+                color="inherit"
+                aria-expanded={guideOpen}
+                aria-controls={guideId}
+                onClick={() => setGuideOpen(open => !open)}
+                endIcon={<ExpandMore sx={{ transform: guideOpen ? 'rotate(180deg)' : 'none' }} />}
+                sx={{ mt: 1, ml: -1, textAlign: 'left' }}
+            >
+                {INTRO_BUTTONS.guide}
+            </Button>
+            <Box id={guideId} role="region" aria-labelledby={guideButtonId} hidden={!guideOpen}>
+                <Typography variant="body2" component="ol" sx={{ mt: 1, mb: 0, pl: 3, '& > li': { mb: 0.75 } }}>
+                    <li>
+                        {INTRO_STEPS.getBuildIn}
+                        <SidecarCopySteps />
+                        {INTRO_STEPS.getBuildInLast}{' '}
+                        Get the <SidecarModLink />. {SIDECAR_NEEDS}
+                    </li>
+                    <li>{INTRO_STEPS.generate}</li>
+                    <li>{INTRO_STEPS.copy}</li>
+                </Typography>
             </Box>
         </Panel>
     );

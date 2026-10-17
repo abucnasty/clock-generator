@@ -224,7 +224,7 @@ function App() {
     // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
     // where to start instead of counting problems
     const blankBuild = isBlankBuild(config);
-    const { visible: introVisible, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(blankBuild);
+    const { visible: introVisible, builtByHand, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(blankBuild);
     const buildEntryRef = useRef<BuildEntryHandle>(null);
     const handleBuildByHand = useCallback(() => {
         // the card goes first: focus then moves to the recipe, which takes its place at the top
@@ -464,7 +464,7 @@ function App() {
     const busy = isRunning || validation.status === 'running' || checkingFor !== null;
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
-    const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild });
+    const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild, entryRoute: builtByHand ? 'manual' : 'routes' });
     // the one filled button of the bar and the card: Generate, or the Copy of the clocks it made
     const primaryAction = nextStepOf({
         problemCount: problems.length,
