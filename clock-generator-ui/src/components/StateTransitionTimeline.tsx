@@ -18,7 +18,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react';
+import { useId, useState, useMemo, useCallback, useEffect, useRef, memo, type ReactNode } from 'react';
 import type {
     SerializableClockWindows,
     SerializableStateTransitionHistory,
@@ -52,6 +52,7 @@ interface StateTransitionTimelineProps {
     stateTransitionHistory: SerializableStateTransitionHistory;
     /** Decider windows in the blueprint per entity id, drawn as a band along the top of each row */
     clockWindows?: SerializableClockWindows;
+    fullscreenActions?: ReactNode;
 }
 
 const CLOCK_WINDOW_LABEL = 'Wake window (decider on; the inserter reacts 2 ticks later)';
@@ -601,12 +602,13 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
     );
 }
 
-function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows, options, onOptionsChange }: StateTransitionTimelineProps) {
+function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows, options, onOptionsChange, fullscreenActions }: StateTransitionTimelineProps) {
     const { categoryColor: getCategoryColor, status: getStatusColor } = useChartColors();
     const factorioStates = useMemo(
         () => factorioStatesIn(stateTransitionHistory.entities.flatMap(entity => (entity.factorio_states ?? []).map(state => state.state))),
         [stateTransitionHistory.entities],
     );
+    const fullscreenTitleId = useId();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { viewMode, sortMode, filters } = options;
     const setViewMode = (viewMode: ViewMode) => onOptionsChange({ ...options, viewMode });
@@ -1057,6 +1059,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
 
             {/* Fullscreen Modal */}
             <Dialog
+                aria-labelledby={fullscreenTitleId}
                 open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 maxWidth={false}
@@ -1069,18 +1072,21 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                     }
                 }}
             >
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                        <Typography variant="h5" component="span">
+                <DialogTitle id={`${fullscreenTitleId}-bar`} component="div" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ flex: '1 1 260px', minWidth: 0 }}>
+                        <Typography id={fullscreenTitleId} variant="h5" component="h2" sx={{ display: 'inline' }}>
                             State Transition Timeline
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }} component="span">
                             {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
                         </Typography>
                     </Box>
-                    <IconButton onClick={() => setIsModalOpen(false)} edge="end" aria-label={BUTTON_NAMES.closeFullscreen}>
-                        <Close />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, flex: '0 1 440px', minWidth: 0, maxWidth: '100%', ml: 'auto' }}>
+                        {fullscreenActions}
+                        <IconButton onClick={() => setIsModalOpen(false)} edge="end" aria-label={BUTTON_NAMES.closeFullscreen} sx={{ flexShrink: 0 }}>
+                            <Close />
+                        </IconButton>
+                    </Box>
                 </DialogTitle>
                 <DialogContent sx={{ overflow: 'auto' }}>
                     {timelineContent(true)}

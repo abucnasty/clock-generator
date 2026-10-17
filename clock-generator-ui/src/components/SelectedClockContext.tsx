@@ -20,7 +20,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
-    timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected'>;
+    timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected' | 'clockSelector'>;
     installContent: ReactNode;
     clockSelector: ReactNode;
     generation: GenerationAssumptions | null;
@@ -61,7 +61,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
         </TabBody>
         <TabBody prefix="result-context" tab="timeline" shown={detail === 'timeline'}>
             {(timelineVisited || detail === 'timeline') && <Suspense fallback={<Typography role="status">Loading timelines…</Typography>}>
-                <ClockTimeline {...timelineProps} selected={selected} />
+                <ClockTimeline {...timelineProps} selected={selected} clockSelector={clockSelector} />
             </Suspense>}
         </TabBody>
         <TabBody prefix="result-context" tab="install" shown={detail === 'install'}>

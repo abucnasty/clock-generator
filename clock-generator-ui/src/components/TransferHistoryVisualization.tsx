@@ -1,6 +1,6 @@
 import { Close, Fullscreen } from '@mui/icons-material';
 import { Box, Dialog, DialogContent, DialogTitle, IconButton, Paper, Tooltip, Typography } from '@mui/material';
-import { useState, memo } from 'react';
+import { useId, useState, memo, type ReactNode } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import { BUTTON_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
@@ -13,6 +13,7 @@ import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
 interface TransferHistoryVisualizationProps {
     transferHistory: SerializableTransferHistory;
+    fullscreenActions?: ReactNode;
 }
 
 interface TransferBarProps {
@@ -177,8 +178,9 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
     );
 }
 
-function TransferHistoryVisualizationComponent({ transferHistory }: TransferHistoryVisualizationProps) {
+function TransferHistoryVisualizationComponent({ transferHistory, fullscreenActions }: TransferHistoryVisualizationProps) {
     const { itemMap: itemColorMap, track: TIMELINE_TRACK_COLOR } = useChartColors();
+    const fullscreenTitleId = useId();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const rowHeight = 24;
     const totalDuration = transferHistory.total_duration_ticks;
@@ -320,6 +322,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
 
             {/* Fullscreen Modal */}
             <Dialog
+                aria-labelledby={fullscreenTitleId}
                 open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 maxWidth={false}
@@ -332,18 +335,21 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                     }
                 }}
             >
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                        <Typography variant="h5" component="span">
+                <DialogTitle id={`${fullscreenTitleId}-bar`} component="div" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ flex: '1 1 260px', minWidth: 0 }}>
+                        <Typography id={fullscreenTitleId} variant="h5" component="h2" sx={{ display: 'inline' }}>
                             Transfer Activity Timeline
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }} component="span">
                             {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
                         </Typography>
                     </Box>
-                    <IconButton onClick={() => setIsModalOpen(false)} edge="end" aria-label={BUTTON_NAMES.closeFullscreen}>
-                        <Close />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, flex: '0 1 440px', minWidth: 0, maxWidth: '100%', ml: 'auto' }}>
+                        {fullscreenActions}
+                        <IconButton onClick={() => setIsModalOpen(false)} edge="end" aria-label={BUTTON_NAMES.closeFullscreen} sx={{ flexShrink: 0 }}>
+                            <Close />
+                        </IconButton>
+                    </Box>
                 </DialogTitle>
                 <DialogContent sx={{ overflow: 'auto' }}>
                     {timelineContent(true)}
