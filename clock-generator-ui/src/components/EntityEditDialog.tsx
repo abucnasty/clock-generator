@@ -685,7 +685,7 @@ export function EntityEditDialog({
                                 onUpdate={(index, field, value) => updateDraft(index, { [field]: value })}
                             />
                             {machineEntity?.recipe && (
-                                <MachineFactsAccordion facts={machineFacts} error={machineFactsError} headingLevel={3} />
+                                <MachineFactsAccordion machineId={entityId ?? 0} facts={machineFacts} error={machineFactsError} headingLevel={3} />
                             )}
                         </Box>
                     )}

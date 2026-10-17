@@ -24,6 +24,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { ScrollX } from './ScrollX';
 import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
+import { useBuildSection } from '../hooks/useBuildViewContext';
 
 interface TransferPlanPanelProps {
     transferPlan: SerializableTransferPlan;
@@ -53,6 +54,7 @@ function TransferPlanPanelComponent({
     onExcludeChange,
     interaction = 'editable',
 }: TransferPlanPanelProps) {
+    const [expanded, setExpanded] = useBuildSection('transfer-plan', true);
     const { entities, computed_lcm } = transferPlan;
     const { itemLabel } = useGameNames();
 
@@ -70,7 +72,7 @@ function TransferPlanPanelComponent({
     const regionRef = useRef<HTMLDivElement>(null);
     const tooltipSlots = { popper: { container: () => regionRef.current } };
     return (
-        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId, ref: regionRef } }} sx={{ mt: 1 }}>
+        <Accordion expanded={expanded} onChange={(_, open) => setExpanded(open)} slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId, ref: regionRef } }} sx={{ mt: 1 }}>
             <AccordionSummary id={summaryId} expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                     Swing Plan

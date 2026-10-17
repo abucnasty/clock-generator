@@ -13,7 +13,8 @@ import {
     TableRow,
     Typography,
 } from '@mui/material';
-import { useId, useState, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+import { useBuildSection } from '../hooks/useBuildViewContext';
 import type { ClockInsight } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import { GameName } from './GameName';
@@ -58,7 +59,7 @@ function Part({ label, children }: { label: string; children: ReactNode }) {
 /** One finding: its title, what it is in a sentence, and the reasons behind "Why?", with its chart or table */
 function InsightCard({ insight }: { insight: ClockInsight }) {
     const { nameIdsIn } = useGameNames();
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useBuildSection(`insight:${insight.id}`);
     const reasonsId = useId();
     return (
         <Panel title={nameIdsIn(insight.title)} level={4}>
@@ -68,7 +69,7 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
                     size="small"
                     aria-expanded={open}
                     aria-controls={reasonsId}
-                    onClick={() => setOpen(shown => !shown)}
+                    onClick={() => setOpen(!open)}
                     endIcon={<ExpandMoreIcon sx={{ transform: open ? 'rotate(180deg)' : 'none' }} />}
                     // the label lines up with the sentence above it
                     sx={{ mt: 0.25, ml: -0.75, minWidth: 0 }}
@@ -135,6 +136,7 @@ function InsightTable({ table, title }: { table: NonNullable<ClockInsight['table
  * behind "Why?"; then, folded away, what holds for the build whichever clock is picked.
  */
 export function InsightsPanel({ insights, children }: InsightsPanelProps) {
+    const [buildOpen, setBuildOpen] = useBuildSection('insights-build');
     const build = insights.filter(insight => insight.scope === 'build');
     const clock = insights.filter(insight => insight.scope === 'clock');
     const buildSummaryId = useId();
@@ -153,7 +155,7 @@ export function InsightsPanel({ insights, children }: InsightsPanelProps) {
             </Panel>
 
             {build.length > 0 && (
-                <Accordion disableGutters variant="outlined" slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': buildSummaryId } }}>
+                <Accordion expanded={buildOpen} onChange={(_, open) => setBuildOpen(open)} disableGutters variant="outlined" slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': buildSummaryId } }}>
                     <AccordionSummary id={buildSummaryId} expandIcon={<ExpandMoreIcon />}>
                         <Typography variant="subtitle1" component="span" sx={{ fontWeight: 600 }}>{INSIGHTS_COPY.buildHeading}</Typography>
                     </AccordionSummary>

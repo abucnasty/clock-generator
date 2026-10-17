@@ -19,6 +19,8 @@ import {
     Typography,
 } from '@mui/material';
 import { useId, useState, type ReactNode } from 'react';
+import { useBuildSection } from '../hooks/useBuildViewContext';
+import type { BuildViewContext } from '../utils/buildViewContext';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
@@ -124,6 +126,8 @@ function HelpHeader({ label, help }: { label: string; help: string }) {
 }
 
 interface ClockAlternativesPanelProps {
+    comparison: BuildViewContext['comparison'];
+    onComparisonChange(comparison: BuildViewContext['comparison']): void;
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     onSelect: (index: number) => void;
@@ -157,6 +161,8 @@ const FULL_CLOCK_TABLE_SX = {
  * what it makes, its wake-ups and whether it works), with every column one press away. A row selects its clock.
  */
 export function ClockAlternativesPanel({
+    comparison,
+    onComparisonChange,
     alternatives,
     selectedIndex,
     onSelect,
@@ -168,8 +174,10 @@ export function ClockAlternativesPanel({
     holdNotice = false,
 }: ClockAlternativesPanelProps) {
     const { density } = useDisplayPreferences();
-    const [showUnstable, setShowUnstable] = useState(false);
-    const [allColumns, setAllColumns] = useState(false);
+    const { showUnstable, allColumns } = comparison;
+    const setShowUnstable = (showUnstable: boolean) => onComparisonChange({ ...comparison, showUnstable });
+    const setAllColumns = (next: boolean | ((shown: boolean) => boolean)) => onComparisonChange({ ...comparison, allColumns: typeof next === 'function' ? next(allColumns) : next });
+    const [helpOpen, setHelpOpen] = useBuildSection('comparison-help');
     // the unstable rows that were on screen when the others were shown
     const [pinnedIds, setPinnedIds] = useState<string[]>([]);
     const tableId = useId();
@@ -300,7 +308,7 @@ export function ClockAlternativesPanel({
             title={COMPARE_COPY.heading}
             help={{ label: COMPARE_COPY.terms, content: <TermsList /> }}
             sx={{ mb: 0, '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }}
-            data-compare-clocks=""
+            data-compare-clocks="" data-build-anchor="comparison"
         >
             {density !== 'compact' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                 Select a clock to compare its rate, recovery and wake-ups. Belt compatibility is a separate condition.
@@ -311,6 +319,8 @@ export function ClockAlternativesPanel({
                 </Typography>
             )}
             <Accordion
+                expanded={helpOpen}
+                onChange={(_, open) => setHelpOpen(open)}
                 disableGutters
                 elevation={0}
                 slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': 'how-clocks-are-chosen-summary' } }}
@@ -420,7 +430,7 @@ export function ClockAlternativesPanel({
                             if (!showUnstable) {
                                 setPinnedIds(unstable.map(({ alternative }) => alternative.id));
                             }
-                            setShowUnstable(shown => !shown);
+                            setShowUnstable(!showUnstable);
                         }}
                     >
                         {showUnstable ? COMPARE_COPY.hideUnstable(unstableCount) : COMPARE_COPY.showUnstable(hiddenCount)}

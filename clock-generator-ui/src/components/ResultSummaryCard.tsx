@@ -231,7 +231,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     // focus, when the run it starts empties the list of clocks
     const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
     return (
-        <Panel title={CARD_COPY.heading} sx={{ '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }} data-result-card="">
+        <Panel title={CARD_COPY.heading} sx={{ '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }} data-result-card="" data-build-anchor="selected-clock">
             {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}

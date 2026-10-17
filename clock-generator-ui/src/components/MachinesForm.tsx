@@ -270,7 +270,7 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
                 </IconButton>
             </Box>
             {machine.recipe && (
-                <MachineFactsAccordion facts={facts} error={error} />
+                <MachineFactsAccordion machineId={machine.id} facts={facts} error={error} />
             )}
             {machine.fuel !== undefined && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }} title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
         </Box>

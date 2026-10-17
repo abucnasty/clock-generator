@@ -44,8 +44,11 @@ import {
     factorioStatesIn,
 } from './colors';
 import { sortByRelationship, sortByType } from './topological-sort';
+import type { TimelineViewContext } from '../utils/buildViewContext';
 
 interface StateTransitionTimelineProps {
+    options: TimelineViewContext;
+    onOptionsChange(options: TimelineViewContext): void;
     stateTransitionHistory: SerializableStateTransitionHistory;
     /** Decider windows in the blueprint per entity id, drawn as a band along the top of each row */
     clockWindows?: SerializableClockWindows;
@@ -598,26 +601,25 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
     );
 }
 
-function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows }: StateTransitionTimelineProps) {
+function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows, options, onOptionsChange }: StateTransitionTimelineProps) {
     const { categoryColor: getCategoryColor, status: getStatusColor } = useChartColors();
     const factorioStates = useMemo(
         () => factorioStatesIn(stateTransitionHistory.entities.flatMap(entity => (entity.factorio_states ?? []).map(state => state.state))),
         [stateTransitionHistory.entities],
     );
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<ViewMode>('simplified');
-    const [sortMode, setSortMode] = useState<SortMode>('byType');
-    const [filters, setFilters] = useState<EntityFilters>({
-        inserter: true,
-        machine: true,
-        drill: true,
-    });
-    const [statusFilters, setStatusFilters] = useState<StatusFilters>({
-        inserterStatuses: new Set(ALL_INSERTER_STATUSES),
-        machineStatuses: new Set(ALL_MACHINE_STATUSES),
-        drillStatuses: new Set(ALL_DRILL_STATUSES),
-        categories: new Set(ALL_CATEGORIES),
-    });
+    const { viewMode, sortMode, filters } = options;
+    const setViewMode = (viewMode: ViewMode) => onOptionsChange({ ...options, viewMode });
+    const setSortMode = (sortMode: SortMode) => onOptionsChange({ ...options, sortMode });
+    const setFilters = (update: (filters: EntityFilters) => EntityFilters) => onOptionsChange({ ...options, filters: update(filters) });
+    const statusFilters = useMemo<StatusFilters>(() => ({
+        machineStatuses: new Set(options.statuses.machine), inserterStatuses: new Set(options.statuses.inserter),
+        drillStatuses: new Set(options.statuses.drill), categories: new Set(options.statuses.categories as StatusCategory[]),
+    }), [options.statuses]);
+    const setStatusFilters = (update: StatusFilters | ((filters: StatusFilters) => StatusFilters)) => {
+        const value = typeof update === 'function' ? update(statusFilters) : update;
+        onOptionsChange({ ...options, statuses: { machine: [...value.machineStatuses], inserter: [...value.inserterStatuses], drill: [...value.drillStatuses], categories: [...value.categories] } });
+    };
     const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
     const [statusFilterAnchorEl, setStatusFilterAnchorEl] = useState<null | HTMLElement>(null);
 

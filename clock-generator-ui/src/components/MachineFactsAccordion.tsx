@@ -13,15 +13,18 @@ import type { SerializableMachineFacts } from 'clock-generator/browser';
 import type { ReactNode } from 'react';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
+import { useBuildSection } from '../hooks/useBuildViewContext';
 import { TICK_DECIMALS, formatNumberText, maxRateLabel } from '../utils/numberText';
 
 interface MachineFactsAccordionProps {
+    machineId: number;
     facts: SerializableMachineFacts | null;
     error?: string | null;
     headingLevel?: 3 | 4;
 }
 
-export function MachineFactsAccordion({ facts, error, headingLevel = 4 }: MachineFactsAccordionProps) {
+export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineId }: MachineFactsAccordionProps) {
+    const [expanded, setExpanded] = useBuildSection(`machine-facts:${machineId}`);
     if (error) {
         return (
             <Typography variant="caption" sx={{ color: 'error.light' }}>
@@ -36,6 +39,8 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4 }: Machin
 
     return (
         <Accordion
+            expanded={expanded}
+            onChange={(_, open) => setExpanded(open)}
             // Under the List's section heading, or the Diagram dialog's title.
             slotProps={{ heading: { component: `h${headingLevel}` } }}
             sx={{
