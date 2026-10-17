@@ -14,8 +14,6 @@ import { TimelineSignals } from './TimelineSignals';
 import { TimelineTickInspector } from './TimelineTickInspector';
 import { TimelinePauses } from './TimelinePauses';
 import { FactorioIcon } from './FactorioIcon';
-import { BeltChartSurface } from './BeltChart';
-import { BELT_CHART } from '../theme/beltCharts';
 
 const EvidenceChart = lazy(() => import('./TimelineEvidenceChart').then(module => ({ default: module.TimelineEvidenceChart })));
 const WakeWindows = lazy(() => import('./WakeWindowsView').then(module => ({ default: module.WakeWindowsView })));
@@ -178,9 +176,9 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                         {primary.status === 'loading' && <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 3 }}><CircularProgress size={20} />Recording this clock’s activity…</Box>}
                         {primary.status === 'idle' && <Alert severity="info">This saved result lacks the build or exact fuel-clock metadata needed for a detailed replay. Generate again to record its activity.</Alert>}
                         {primary.error && <Alert severity="warning" action={<Button color="inherit" onClick={() => setRetry(retry + 1)}>Retry</Button>}>{primary.error}</Alert>}
-                        {recording && selected && <BeltChartSurface><Box sx={{ p: { xs: 1, sm: 1.5 }, bgcolor: BELT_CHART.background }}>
+                        {recording && selected && <Box sx={{ p: { xs: 1, sm: 1.5 } }}>
                             <EvidenceChart recording={recording} selected={selected} groups={inspection.signals} range={range} tick={tick} view={inspection.view} showConnections={inspection.showConnections} onTick={setTick} onInspect={inspect} onRange={setRange} onZoom={zoom} />
-                        </Box></BeltChartSurface>}
+                        </Box>}
                         {recording?.truncated && <Alert severity="info" sx={{ mt: 1 }}>Detailed recording is limited to the first {number(recording.end_tick)} ticks of {number(recording.requested_ticks)} requested ticks to bound memory. Zoom and inspection use only this excerpt.</Alert>}
                     </>}
                 </Suspense>

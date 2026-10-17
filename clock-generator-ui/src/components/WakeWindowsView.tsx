@@ -1,6 +1,5 @@
 import type { Theme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
-import { chartColorsFor } from './colors';
 import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import type { TimelineRange } from '../utils/timelineInspection';
@@ -30,7 +29,7 @@ import {
     WakeWindowsChart,
 } from './WakeWindowsChart';
 import { WakeWindowsTable } from './WakeWindowsTable';
-import { BeltChartFrame, BeltChartSurface, ChartSwatch } from './BeltChart';
+import { BeltChartFrame, ChartSwatch } from './BeltChart';
 import { BELT_CHART } from '../theme/beltCharts';
 import type { Config } from 'clock-generator/browser';
 import { configToFormData } from '../utils/configForm/configMapping';
@@ -52,7 +51,7 @@ interface WakeWindowsViewProps {
 function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track' }) {
     // in forced colours, the system colours the chart uses (see FORCED_COLORS)
     const base = { width: 28, height: 12, boxSizing: 'border-box', flexShrink: 0, forcedColorAdjust: 'none' } as const;
-    const solid = { bgcolor: (theme: Theme) => chartColorsFor(theme.palette.mode).palette.yellow, [FORCED_COLORS]: { bgcolor: 'CanvasText' } } as const;
+    const solid = { bgcolor: BELT_CHART.entity.inserter, border: '1px solid', borderColor: 'text.secondary', [FORCED_COLORS]: { bgcolor: 'CanvasText' } } as const;
     switch (kind) {
         case 'window':
             return <Box aria-hidden sx={{ ...base, ...solid }} />;
@@ -62,8 +61,8 @@ function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track
                     aria-hidden
                     sx={{
                         ...base,
-                        background: (theme: Theme) => `repeating-linear-gradient(45deg, ${chartColorsFor(theme.palette.mode).palette.yellow} 0 3px, transparent 3px 6px)`,
-                        border: (theme: Theme) => `1px solid ${chartColorsFor(theme.palette.mode).palette.yellow}`,
+                        background: `repeating-linear-gradient(45deg, ${BELT_CHART.entity.inserter} 0 3px, #000000 3px 6px)`,
+                        border: '1px solid', borderColor: 'text.secondary',
                         [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
                     }}
                 />
@@ -244,5 +243,5 @@ function WakeWindowsViewComponent({ alternative, config, headingLevel = 'h3', as
 }
 
 export function WakeWindowsView(props: WakeWindowsViewProps) {
-    return <BeltChartSurface><WakeWindowsViewComponent {...props} /></BeltChartSurface>;
+    return <WakeWindowsViewComponent {...props} />;
 }

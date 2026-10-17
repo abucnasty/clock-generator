@@ -6,8 +6,8 @@ import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
-import { BeltChartFrame, BeltChartSurface, ChartSwatch, TimelineAxis, chartGridSx } from './BeltChart';
-import { BELT_CHART, itemChartStyles, patternBackground, type ItemChartStyle } from '../theme/beltCharts';
+import { BeltChartFrame, ChartSwatch, TimelineAxis, chartGridSx } from './BeltChart';
+import { itemChartStyles, patternBackground, type ItemChartStyle } from '../theme/beltCharts';
 import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
 interface TransferHistoryVisualizationProps {
@@ -122,8 +122,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                             noWrap
                             sx={{
                                 fontSize: '0.75rem',
-                                // a drill is not a warning: a fixed orange, not the theme's warning colour
-                                color: BELT_CHART.entity[entity.entity_type],
+                                color: 'text.primary',
                             }}
                         >
                             {nameIdsIn(entity.label)}
@@ -266,5 +265,5 @@ function TransferHistoryVisualizationComponent({ transferHistory, fullscreen = f
 }
 
 export const TransferHistoryVisualization = memo(function TransferHistoryVisualization(props: TransferHistoryVisualizationProps) {
-    return <BeltChartSurface><TransferHistoryVisualizationComponent {...props} /></BeltChartSurface>;
+    return <TransferHistoryVisualizationComponent {...props} />;
 });

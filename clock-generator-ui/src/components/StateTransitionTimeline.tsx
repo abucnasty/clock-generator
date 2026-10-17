@@ -1,7 +1,6 @@
-import { BeltChartFrame, BeltChartSurface, ChartSwatch, TimelineAxis, chartGridSx } from './BeltChart';
+import { BeltChartFrame, ChartSwatch, TimelineAxis, chartGridSx } from './BeltChart';
 import { BELT_CHART, canvasChartFill, statusPattern, type ChartPattern } from '../theme/beltCharts';
 import { axisTicks } from '../utils/wakeWindows';
-import { useChartColors } from '../hooks/useChartColors';
 import { FilterList, Sort, Visibility, Palette } from '@mui/icons-material';
 import {
     Box,
@@ -33,6 +32,7 @@ import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from '../utils/timelineGe
 import { FactorioIcon } from './FactorioIcon';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import {
+    chartColorsFor,
     getStatusLabel,
     getFactorioStateLabel,
     getCategoryLabel,
@@ -44,6 +44,9 @@ import {
 } from './colors';
 import { sortByRelationship, sortByType } from './topological-sort';
 import type { TimelineViewContext } from '../utils/buildViewContext';
+
+/** Plot hues stay fixed on black, while labels and controls use the app theme. */
+const PLOT_COLORS = chartColorsFor('dark');
 
 interface StateTransitionTimelineProps {
     options: TimelineViewContext;
@@ -96,7 +99,7 @@ interface TimelineBarProps {
 
 /** Drawn on a canvas: an element per transition does not scale to tens of thousands of transitions */
 function TimelineBar({ transitions, totalDuration, height, entityType, viewMode, isFiltered, label }: TimelineBarProps) {
-    const { status: getStatusColor, categoryColor: getCategoryColor, clock: CLOCK_WINDOW_COLOR } = useChartColors();
+    const { status: getStatusColor, categoryColor: getCategoryColor, clock: CLOCK_WINDOW_COLOR } = PLOT_COLORS;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [width, setWidth] = useState(0);
     const [hovered, setHovered] = useState<SerializableStateTransition | null>(null);
@@ -230,7 +233,7 @@ interface FactorioStateStripProps {
 
 /** The state the entity would show in Factorio, under the simulator's phases: the shared language with a recording */
 function FactorioStateStrip({ states, totalDuration, height, label }: FactorioStateStripProps) {
-    const { factorio: getFactorioStateColor } = useChartColors();
+    const { factorio: getFactorioStateColor } = PLOT_COLORS;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [width, setWidth] = useState(0);
     const [hovered, setHovered] = useState<SerializableFactorioState | null>(null);
@@ -317,7 +320,7 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, clockWindows = [] }: EntityRowProps) {
-    const { clock: CLOCK_WINDOW_COLOR } = useChartColors();
+    const { clock: CLOCK_WINDOW_COLOR } = PLOT_COLORS;
     const { nameIdsIn } = useGameNames();
     // Determine if a transition is filtered out
     const isTransitionFiltered = (transition: SerializableStateTransition): boolean => {
@@ -535,7 +538,7 @@ function LegendChip({ label, color, pattern = 'solid', active = true, swatch = {
 }
 
 function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioStates }: LegendProps) {
-    const { category: CATEGORY_COLORS, machine: MACHINE_STATUS_COLORS, inserter: INSERTER_STATUS_COLORS, drill: DRILL_STATUS_COLORS, factorio: getFactorioStateColor, clock: CLOCK_WINDOW_COLOR } = useChartColors();
+    const { category: CATEGORY_COLORS, machine: MACHINE_STATUS_COLORS, inserter: INSERTER_STATUS_COLORS, drill: DRILL_STATUS_COLORS, factorio: getFactorioStateColor, clock: CLOCK_WINDOW_COLOR } = PLOT_COLORS;
     const items: { label: string; color: string; active: boolean; pattern: ChartPattern }[] = [];
 
     if (viewMode === 'simplified') {
@@ -605,7 +608,7 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
 }
 
 function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows, options, onOptionsChange, fullscreen = false }: StateTransitionTimelineProps) {
-    const { categoryColor: getCategoryColor, status: getStatusColor } = useChartColors();
+    const { categoryColor: getCategoryColor, status: getStatusColor } = PLOT_COLORS;
     const factorioStates = useMemo(
         () => factorioStatesIn(stateTransitionHistory.entities.flatMap(entity => (entity.factorio_states ?? []).map(state => state.state))),
         [stateTransitionHistory.entities],
@@ -1024,5 +1027,5 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
 }
 
 export const StateTransitionTimeline = memo(function StateTransitionTimeline(props: StateTransitionTimelineProps) {
-    return <BeltChartSurface><StateTransitionTimelineComponent {...props} /></BeltChartSurface>;
+    return <StateTransitionTimelineComponent {...props} />;
 });

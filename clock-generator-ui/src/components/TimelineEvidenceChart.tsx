@@ -4,7 +4,7 @@ import type { TimelineEntity, TimelineEvent, TimelineRecording, TimelineSeries }
 import { BELT_CHART, canvasChartFill, itemChartStyles } from '../theme/beltCharts';
 import { deliveryRateSeries, productionBatches, timelineEntityName, timelinePoints, timelineValueAt, upperBound, type TimelineRange, type TimelineSignalGroup } from '../utils/timelineInspection';
 import { timelineStateLabel, timelineStateStyle, timelineSignalVisible } from '../utils/timelinePresentation';
-import { ChartSwatch } from './BeltChart';
+import { BeltChartSurface, ChartSwatch } from './BeltChart';
 import { FactorioIcon } from './FactorioIcon';
 import { formatNumberText } from '../utils/numberText';
 import { useGameNames } from '../hooks/useGameNames';
@@ -233,7 +233,7 @@ export function TimelineEvidenceChart({ recording, selected, groups, range, tick
         if (series.unit === 'enabled') return Number(value) ? 'Enabled' : 'Disabled';
         return `${formatNumberText(Number(value), { maxDecimals: 2 })}${series.unit === '%' ? '%' : ` ${series.unit}`}`;
     };
-    return <Box data-timeline-evidence sx={{ color: BELT_CHART.text, bgcolor: BELT_CHART.background, minWidth: 0, '@media (forced-colors: active)': { color: 'CanvasText', bgcolor: 'Canvas' } }}>
+    return <Box data-timeline-evidence sx={{ color: 'text.primary', minWidth: 0 }}>
         <Typography variant="body2" component="p" sx={{ mb: 1 }}>
             Charts show one modelled copy. Whole-build rates above cover {formatNumberText(recording.copies)} {recording.copies === 1 ? 'copy' : 'copies'}.
             {hasProduction && ' +N means items made in the marked span; totals run from tick 0 to the selected tick.'}
@@ -243,7 +243,7 @@ export function TimelineEvidenceChart({ recording, selected, groups, range, tick
         </Box>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '180px minmax(0, 1fr)' }, columnGap: 1 }}>
             <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>Game ticks · seconds</Typography>
-            <Box aria-hidden sx={{ position: 'relative', height: 38, borderBottom: 1, borderColor: 'divider' }}>
+            <BeltChartSurface><Box aria-hidden sx={{ position: 'relative', height: 38, borderBottom: 1, borderColor: 'divider' }}>
                 {marks.map(mark => {
                     const fraction = mark / (range.end - range.start), actual = range.start + mark;
                     return <Box key={mark} sx={{ position: 'absolute', left: `${fraction * 100}%`, transform: fraction > 0.85 ? 'translateX(-100%)' : fraction > 0 ? 'translateX(-50%)' : undefined, whiteSpace: 'nowrap' }}>
@@ -251,7 +251,7 @@ export function TimelineEvidenceChart({ recording, selected, groups, range, tick
                         <Typography variant="caption" component="div" color="text.secondary">{formatNumberText(actual / 60, { maxDecimals: 2 })} s</Typography>
                     </Box>;
                 })}
-            </Box>
+            </Box></BeltChartSurface>
         </Box>
         {scaledLanes.slice(shownPage * 12, (shownPage + 1) * 12).map(lane => <Box key={lane.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '180px minmax(0, 1fr)' }, columnGap: 1, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
             <Box sx={{ minWidth: 0 }}>
@@ -260,12 +260,12 @@ export function TimelineEvidenceChart({ recording, selected, groups, range, tick
                 {lane.series && <Typography variant="caption" component="div">{lane.production && tick <= recording.end_tick ? 'Total by selected tick · ' : ''}{valueText(lane.series, recording.end_tick)}{lane.series.limit !== undefined ? ` · threshold ${formatNumberText(lane.series.limit)}` : ''}</Typography>}
                 {lane.series && !lane.production && !['state', 'enabled'].includes(lane.series.unit) && <Typography variant="caption" color="text.secondary" component="div">Scale 0–{formatNumberText(lane.ceiling, { maxDecimals: 2 })} {lane.series.unit}</Typography>}
             </Box>
-            <Box sx={{ position: 'relative', minWidth: 0 }}>
+            <BeltChartSurface sx={{ position: 'relative', alignSelf: 'center' }}>
                 <EvidenceCanvas lane={lane} range={range} end={recording.end_tick}
                     height={lane.production ? 32 : lane.events || lane.series?.unit === 'state' || lane.series?.unit === 'enabled' ? 26 : 68}
                     onTick={value => onInspect ? onInspect(lane.entity.id, value) : onTick(value)} onRange={onRange} onZoom={onZoom} />
                 {tick >= range.start && tick <= range.end && <Box aria-hidden sx={{ pointerEvents: 'none', position: 'absolute', top: 0, bottom: 0, left: `${(tick - range.start) / (range.end - range.start) * 100}%`, borderLeft: '1px solid #ffa600', '@media (forced-colors: active)': { borderColor: 'Highlight' } }} />}
-            </Box>
+            </BeltChartSurface>
         </Box>)}
         {lanes.length === 0 && <Typography variant="body2" sx={{ p: 2 }}>No selected signals were recorded for this entity. Choose another signal group or inspect a connected entity.</Typography>}
         {pageCount > 1 && <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>

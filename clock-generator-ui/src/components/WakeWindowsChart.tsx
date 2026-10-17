@@ -83,14 +83,15 @@ const percent = (ticks: number, period: number) => `${(ticks / period) * 100}%`;
 const trackSx = {
     position: 'relative',
     height: TRACK_HEIGHT,
-    border: (theme: Theme) => `1px solid ${themeTokens(theme).control.border}`,
+    bgcolor: BELT_CHART.background,
+    border: `1px solid ${WAKE_TRACK_COLOR}`,
     boxSizing: 'border-box',
     cursor: 'pointer',
     forcedColorAdjust: 'none',
-    [FORCED_COLORS]: { borderColor: 'CanvasText' },
+    [FORCED_COLORS]: { bgcolor: 'Canvas', borderColor: 'CanvasText' },
 } as const;
 const gridLineSx = {
-    position: 'absolute', top: 0, bottom: 0, width: '1px', bgcolor: (theme: Theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(36, 35, 31, 0.16)', [FORCED_COLORS]: { bgcolor: 'GrayText' },
+    position: 'absolute', top: 0, bottom: 0, width: '1px', bgcolor: BELT_CHART.grid, [FORCED_COLORS]: { bgcolor: 'GrayText' },
 } as const;
 const barSx = {
     position: 'absolute',
@@ -315,14 +316,14 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                     py: 0.75,
                     borderTop: 1,
                     borderColor: 'divider',
-                    '&:hover': { bgcolor: BELT_CHART.row },
+                    '&:hover': { bgcolor: 'action.hover' },
                     outline: 'none',
                     '&:focus-visible': { outline: (theme: Theme) => `2px solid ${themeTokens(theme).control.focus}`, outlineOffset: '2px' },
                 }}
             >
                 <Box sx={{ gridArea: 'label', minWidth: 0 }}>
                     <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: BELT_CHART.entity[row.kind] }}>{row.label}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>{row.label}</Typography>
                         {slackTicks > 0 && <Typography component="span" variant="caption" color="text.secondary" title={BELT_SLACK_EXPLANATION}
                             aria-label={`${slackTicks} ticks of belt slack`} data-wake-slack>{`+${slackTicks} ${slackTicks === 1 ? 'tick' : 'ticks'}`}</Typography>}
                     </Box>
