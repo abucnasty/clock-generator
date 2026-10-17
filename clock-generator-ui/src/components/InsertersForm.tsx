@@ -236,11 +236,11 @@ function InsertersFormComponent({
             title={`Inserters (${inserters.length})`}
             actions={(
                 <>
-                    <Button startIcon={<FilterList />} aria-pressed={filterView} color={filterView ? 'primary' : 'inherit'} variant={filterView ? 'outlined' : 'text'} size="small"
+                    <Button startIcon={<FilterList />} aria-pressed={filterView} color="inherit" variant={filterView ? 'outlined' : 'text'} size="small" sx={{ bgcolor: filterView ? 'action.selected' : undefined }}
                         onClick={() => { setFilterView(!filterView); setSelecting(!filterView); setSelection(new Set()); anchor.current = null; }}>{filterView ? 'Done filtering' : 'Filters view'}</Button>
-                    <Button ref={selectRef} aria-pressed={filterView ? selectedRows.length === inserters.length && inserters.length > 0 : selecting} color={!filterView && selecting ? 'primary' : 'inherit'} variant={!filterView && selecting ? 'outlined' : 'text'} size="small"
+                    <Button ref={selectRef} aria-pressed={filterView ? selectedRows.length === inserters.length && inserters.length > 0 : selecting} color="inherit" variant={!filterView && selecting ? 'outlined' : 'text'} size="small" sx={{ bgcolor: !filterView && selecting ? 'action.selected' : undefined }}
                         onClick={() => { if (filterView) setSelection(new Set(inserters.map(row => row._uuid))); else { if (selecting) clearSelection(); setSelecting(!selecting); } }}>{filterView ? 'Select all' : 'Select'}</Button>
-                    <Button startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">Add Inserter</Button>
+                    <Button startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">Add Inserter</Button>
                 </>
             )}
         >

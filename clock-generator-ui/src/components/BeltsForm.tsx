@@ -136,7 +136,7 @@ function BeltsFormComponent({
                 ),
             }}
             actions={(
-                <Button startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">
+                <Button startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">
                     Add Belt
                 </Button>
             )}
@@ -220,7 +220,7 @@ function BeltsFormComponent({
                     <Box sx={{ pl: compact ? 0 : { xs: 0, sm: 2 }, minWidth: 0 }}>
                         {!geometryBeltIds.includes(belt.id) && belt.lanes.length < 2 && (
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                <Button size="small" onClick={() => addLane(beltIndex)}>Add Lane</Button>
+                                <Button size="small" color="inherit" onClick={() => addLane(beltIndex)}>Add Lane</Button>
                             </Box>
                         )}
                         {belt.lanes.map((lane, laneIndex) => (

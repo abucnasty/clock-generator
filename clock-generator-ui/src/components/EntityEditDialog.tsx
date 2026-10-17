@@ -281,7 +281,7 @@ function BeltEditSection({
             ))}
 
             {!geometryReadOnly && belt.lanes.length < 2 && (
-                <Button size="small" onClick={addLane} sx={{ alignSelf: 'flex-start' }}>
+                <Button size="small" color="inherit" onClick={addLane} sx={{ alignSelf: 'flex-start' }}>
                     Add Second Lane
                 </Button>
             )}

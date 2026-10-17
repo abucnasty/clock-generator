@@ -356,7 +356,7 @@ function FlowContent({
                         <Button
                             variant="outlined"
                             size="small"
-                            startIcon={<Add />}
+                            color="inherit" startIcon={<Add />}
                             onClick={(e) => setAddMenuAnchor(e.currentTarget)}
                             sx={{ borderRadius: 0 }}
                         >
@@ -435,7 +435,7 @@ function FlowContent({
                     <Button
                         variant="outlined"
                         size="small"
-                        startIcon={<Add />}
+                        color="inherit" startIcon={<Add />}
                         onClick={(e) => setAddMenuAnchor(e.currentTarget)}
                         sx={{
                             borderRadius: 0,

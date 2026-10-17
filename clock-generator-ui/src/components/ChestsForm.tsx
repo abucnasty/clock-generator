@@ -124,10 +124,10 @@ function ChestsFormComponent({
                     title={`Chests (${chests.length})`}
                     actions={(
                         <>
-                            <Button startIcon={<Add />} onClick={() => add(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
+                            <Button startIcon={<Add />} color="inherit" onClick={() => add(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
                                 Buffer chest
                             </Button>
-                            <Button startIcon={<Add />} onClick={() => add(ChestType.INFINITY_CHEST)} variant="text" size="small">
+                            <Button startIcon={<Add />} color="inherit" onClick={() => add(ChestType.INFINITY_CHEST)} variant="text" size="small">
                                 Infinity chest
                             </Button>
                         </>

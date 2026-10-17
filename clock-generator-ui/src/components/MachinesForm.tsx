@@ -100,7 +100,7 @@ function MachinesFormComponent({
                 ),
             }}
             actions={(
-                <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">
+                <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">
                     Add Machine
                 </Button>
             )}

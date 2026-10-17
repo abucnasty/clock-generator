@@ -16,8 +16,7 @@ interface AddRowProps {
 
 /**
  * An empty part of the build, folded to one row: a dashed line with "+ Add …" in it, in the place where its rows will be.
- * Orange words, the accent of an add action; the line turns orange under the pointer, and the keyboard's ring is the
- * theme's.
+ * Neutral words and a dashed outline keep it discoverable; keyboard focus uses the theme ring.
  */
 export function AddRow({ label, onClick, menu, ...data }: AddRowProps) {
     const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
@@ -29,6 +28,7 @@ export function AddRow({ label, onClick, menu, ...data }: AddRowProps) {
             <Button
                 disableFocusRipple
                 variant="text"
+                color="inherit"
                 fullWidth
                 startIcon={<Add />}
                 onClick={(event) => (menu ? setAnchor(event.currentTarget) : onClick?.())}
@@ -40,7 +40,7 @@ export function AddRow({ label, onClick, menu, ...data }: AddRowProps) {
                     minHeight: 40,
                     px: 2,
                     border: (theme: Theme) => `1px dashed ${themeTokens(theme).control.border}`,
-                    '&:hover': { borderColor: (theme: Theme) => themeTokens(theme).role.orange.main },
+                    '&:hover': { borderColor: (theme: Theme) => themeTokens(theme).text.primary },
                 }}
                 {...data}
             >

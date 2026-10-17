@@ -31,6 +31,9 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
     const [stack, setStack] = useState<number | null>(() => commonValue(selected, row => row.stack_size) ?? null);
     const [filtersAnchor, setFiltersAnchor] = useState<HTMLButtonElement | null>(null);
     const [filters, setFilters] = useState<string[]>([]);
+    const [filterDraftEdited, setFilterDraftEdited] = useState(false);
+    const sharedFilters = commonValue(selected, row => row.filters);
+    const mixedFilters = sharedFilters === null && !filterDraftEdited;
     const [ruleOpen, setRuleOpen] = useState(false);
     const filtersId = useId();
     const titleId = useId();
@@ -69,19 +72,27 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
     }, []);
 
     const filterSelection = JSON.stringify(selected.map(row => [row._uuid, row.filters]));
-    useEffect(() => { if (filtersOnly) setFilters(commonValue(selected, row => row.filters) ?? []); }, [filterSelection, filtersOnly]);
+    useEffect(() => { if (filtersOnly) { setFilters(commonValue(selected, row => row.filters) ?? []); setFilterDraftEdited(false); } }, [filterSelection, filtersOnly]);
 
     const closeFilters = () => setFiltersAnchor(null);
     return <Box ref={barRef} role="region" aria-label="Edit selected inserters" data-bulk-edit=""
-        sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', '& .MuiButton-root': { minHeight: 40, boxSizing: 'border-box' } }}>
+        sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', '& .MuiButton-root': { minHeight: 40, boxSizing: 'border-box' } }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', pr: { xs: 0, md: 2 }, borderRight: { xs: 0, md: 1 }, borderColor: 'divider' }}>
         <Typography variant="body2">{selected.length} {selected.length === 1 ? 'inserter' : 'inserters'} selected</Typography>
         <Button color="inherit" size="small" onClick={onSelectAll} disabled={selected.length === total}>Select all</Button>
         <Button color="inherit" size="small" onClick={onClear}>Clear selection</Button>
+        </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 0, flex: '1 1 300px' }}>
         {filtersOnly ? <>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+            <Box>
+                {mixedFilters && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Mixed filters — choose a set to apply</Typography>}
             <FilterSlotSelector filters={filters} itemNames={itemNames} priority={{ label: 'From selected sources', ids: priorityIds }}
-                onFilterChange={(slot, item) => setFilters(setFilterSlot(filters, [], slot, item).filters ?? [])}
-                onRemoveFilter={slot => setFilters(removeFilterSlot(filters, [], slot).filters ?? [])} />
+                onFilterChange={(slot, item) => { setFilterDraftEdited(true); setFilters(setFilterSlot(filters, [], slot, item).filters ?? []); }}
+                onRemoveFilter={slot => { setFilterDraftEdited(true); setFilters(removeFilterSlot(filters, [], slot).filters ?? []); }} />
+            </Box>
             <Button variant="outlined" color="inherit" size="small" disabled={filters.length === 0} onClick={() => onApply({ filters }, 'filters')}>Apply filters</Button>
+            </Box>
             <Button variant="outlined" color="inherit" size="small" onClick={() => onApply({ filters: undefined }, 'auto-filters')}>Clear filters / Auto</Button>
         </> : <>
         <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
@@ -91,20 +102,23 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
         </Box>
         <Button variant="outlined" color="inherit" size="small" onClick={event => {
             setFilters(commonValue(selected, row => row.filters) ?? []);
+            setFilterDraftEdited(false);
             setFiltersAnchor(event.currentTarget);
         }} aria-haspopup="dialog" aria-expanded={filtersAnchor !== null} aria-controls={filtersAnchor ? filtersId : undefined}>Filters…</Button>
         <Button variant="outlined" color="inherit" size="small" onClick={() => setRuleOpen(true)}>Enable rule…</Button>
         </>}
+        </Box>
         <Popover open={filtersAnchor !== null} anchorEl={filtersAnchor} onClose={closeFilters}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
             slotProps={{ paper: { id: filtersId, role: 'dialog', 'aria-labelledby': titleId, sx: { width: 380, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 32px)', overflow: 'auto' } } }}>
             <Box sx={{ p: 2 }}>
-                <Typography id={titleId} component="h2" variant="subtitle1" sx={{ mb: 3 }}>Edit selected inserter filters</Typography>
+                <Typography id={titleId} component="h2" variant="subtitle1" sx={{ mb: 1.5 }}>Edit selected inserter filters</Typography>
+                {mixedFilters && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Mixed filters — choose a set to apply</Typography>}
                 <FilterSlotSelector filters={filters} itemNames={itemNames} priority={{ label: "From the selected inserters' sources", ids: priorityIds }}
-                    onFilterChange={(slot, item) => setFilters(setFilterSlot(filters, [], slot, item).filters ?? [])}
-                    onRemoveFilter={slot => setFilters(removeFilterSlot(filters, [], slot).filters ?? [])} />
+                    onFilterChange={(slot, item) => { setFilterDraftEdited(true); setFilters(setFilterSlot(filters, [], slot, item).filters ?? []); }}
+                    onRemoveFilter={slot => { setFilterDraftEdited(true); setFilters(removeFilterSlot(filters, [], slot).filters ?? []); }} />
                 <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    <Button color="inherit" variant="outlined" onClick={() => { closeFilters(); onApply({ filters: filters.length > 0 ? filters : undefined }, 'filters'); }}>Apply</Button>
+                    <Button color="inherit" variant="outlined" disabled={mixedFilters} onClick={() => { closeFilters(); onApply({ filters: filters.length > 0 ? filters : undefined }, 'filters'); }}>Apply</Button>
                     <Button color="inherit" onClick={() => { closeFilters(); onApply({ filters: undefined }, 'auto-filters'); }}>Use automatic filters</Button>
                     <Button color="inherit" onClick={closeFilters}>Cancel</Button>
                 </Box>

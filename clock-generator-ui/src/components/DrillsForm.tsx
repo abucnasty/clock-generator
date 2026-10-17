@@ -245,7 +245,7 @@ function DrillsFormComponent({
                             sx={{ width: 180, my: 0.75 }}
                             size="small"
                         />
-                <Button startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">
+                <Button startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">
                     Add mining drill
                 </Button>
                 </>

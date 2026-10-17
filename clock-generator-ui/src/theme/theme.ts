@@ -11,7 +11,7 @@ const paletteColor = ({ main, light, dark, on }: ThemeTokens['role'][keyof Theme
  * square chips, quiet cancel and delete controls, and the control lines at 3:1
  */
 function grammarComponents(theme: Theme): ThemeOptions['components'] {
-    const { surface: SURFACE, role: ROLE, text: TEXT, control: CONTROL } = theme.factorio;
+    const { surface: SURFACE, role: ROLE, text: TEXT, control: CONTROL, hover: HOVER } = theme.factorio;
     const titleBand = { backgroundColor: SURFACE.titleBar };
     const edge = `1px solid ${CONTROL.edge}`;
     return {
@@ -90,10 +90,13 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
                 root: {
                     color: TEXT.secondary,
                     '&.Mui-selected, &.Mui-selected:hover': {
-                        backgroundColor: ROLE.orange.main,
-                        color: ROLE.orange.on,
+                        backgroundColor: HOVER.row,
+                        color: TEXT.primary,
+                        fontWeight: 700,
+                        borderColor: CONTROL.border,
+                        boxShadow: `inset 0 -2px 0 ${CONTROL.border}`,
                     },
-                    '&.Mui-selected:hover': { backgroundColor: ROLE.orange.light },
+                    '&.Mui-selected:hover': { backgroundColor: HOVER.panel },
                 },
             },
         },
@@ -163,7 +166,7 @@ function buildTheme(mode: ResolvedColorScheme): Theme {
         factorio: tokens,
         palette: {
             mode,
-            // selection and accent: the selected toggle and tab, the focus ring, text actions such as "+ Add" and Undo
+            // Keyboard focus, local item selection, thin tab indicators, and accent actions such as Undo
             primary: paletteColor(ROLE.orange),
             // confirm or commit: the one filled button of a state (Generate, Copy blueprint), Save, Import Selected
             secondary: paletteColor(ROLE.green),

@@ -56,7 +56,7 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
     return (
         <Popover open anchorEl={anchor} onClose={close} transitionDuration={{ enter: 120, exit: 80 }}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { width: 420, maxWidth: 'calc(100vw - 24px)' } }, transition: { onEntered: () => searchRef.current?.focus() } }}>
+            slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { width: 420, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto' } }, transition: { onEntered: () => searchRef.current?.focus() } }}>
             <Box sx={{ p: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{kind === 'recipe' ? 'Choose a recipe' : clearLabel === 'Clear item' ? 'Choose an item' : 'Set the filter'}</Typography>
@@ -75,7 +75,7 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
                     {query.trim() ? 'Search results across all categories' : groups.find(group => group.id === category)?.label ?? groups[0]?.label}
                 </Typography>
-                <Box role="group" aria-label={kind === 'recipe' ? 'Choose a recipe' : 'Choose an item'} sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(36px, 1fr))', gap: 0.5, maxHeight: 250, overflowY: 'auto', p: 0.5, bgcolor: 'action.hover' }}>
+                <Box role="group" aria-label={kind === 'recipe' ? 'Choose a recipe' : 'Choose an item'} sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(36px, 1fr))', gap: 0.5, maxHeight: 'min(250px, max(72px, calc(100dvh - 310px)))', overflowY: 'auto', p: 0.5, bgcolor: 'action.hover' }}>
                     {shownItems.map(name => <Tooltip key={name} title={nameOf(name)}>
                         <ButtonBase aria-label={nameOf(name)} aria-pressed={item === name} onClick={() => setItem(name)}
                             sx={slotStyles(item === name, '100%')}>
