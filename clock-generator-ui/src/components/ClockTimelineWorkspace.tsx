@@ -1,4 +1,4 @@
-import { Alert, Autocomplete, Box, Button, Checkbox, CircularProgress, FormControlLabel, IconButton, MenuItem, Slider, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, CircularProgress, FormControlLabel, IconButton, MenuItem, Slider, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import { ChevronLeft, ChevronRight, RestartAlt, ZoomIn, ZoomOut } from '@mui/icons-material';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Config, SerializableClockWindows, SerializableStateTransitionHistory, SerializableTransferHistory, TimelineEntity } from 'clock-generator/browser';
@@ -13,7 +13,11 @@ import { signalsForTimelinePause } from '../utils/timelinePresentation';
 import { TimelineSignals } from './TimelineSignals';
 import { TimelineTickInspector } from './TimelineTickInspector';
 import { TimelinePauses } from './TimelinePauses';
-import { FactorioIcon } from './FactorioIcon';
+import { EntitySelector } from './EntitySelector';
+import { entitySelectorKey, type EntitySelectorOption } from '../utils/entitySelector';
+import { configToFormData } from '../utils/configForm/configMapping';
+import { entityOptionsOf } from '../utils/inserterOptions';
+import { entityLabel } from '../utils/entityLabel';
 import { craftingCycles, craftingCycleAt, craftingCycleIndex, craftingCycleRange } from '../utils/craftingCycles';
 import { CraftingCycleNavigator } from './CraftingCycleNavigator';
 
@@ -54,7 +58,7 @@ function entityOptions(config: Config | null | undefined, clock: ClockAlternativ
         const id = `drill:${drill.id}`;
         if (!entities.has(id)) entities.set(id, { id, type: 'drill', sink: `machine:${drill.target.id}`, items: [drill.mined_item_name], signals: [] });
     }
-    return [...entities.values()].sort((a, b) => a.type.localeCompare(b.type) || Number(a.id.split(':')[1]) - Number(b.id.split(':')[1]));
+    return [...entities.values()].filter(entity => entity.type !== 'belt').sort((a, b) => a.type.localeCompare(b.type) || Number(a.id.split(':')[1]) - Number(b.id.split(':')[1]));
 }
 
 /** Local cursor updates stay below App; only settled inspection choices are saved with the build. */
@@ -86,11 +90,22 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const [retry, setRetry] = useState(0);
     const recordingWanted = inspection.view !== 'windows' && inspection.view !== 'cycles';
     const options = useMemo(() => entityOptions(props.config, props.selected), [props.config, props.selected]);
+    const identities = useMemo(() => {
+        const form = props.config ? configToFormData(props.config) : null;
+        return new Map((form ? entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel }) : []).map(option => [entitySelectorKey(option), option]));
+    }, [props.config, itemLabel, recipeLabel]);
+    const selectorOptions = useMemo(() => options.map((entity): EntitySelectorOption => identities.get(entity.id) ?? {
+        type: entity.type, id: Number(entity.id.split(':')[1]), label: entityLabel(entity.type, Number(entity.id.split(':')[1])),
+        icon: entity.type === 'inserter' ? props.config?.inserters?.find((ins, index) => (ins.id ?? index + 1) === Number(entity.id.split(':')[1]))?.prototype ?? 'stack-inserter'
+            : entity.type === 'drill' ? 'electric-mining-drill' : entity.type === 'chest' ? 'steel-chest' : 'assembling-machine-3',
+        sublabel: entity.recipe ? recipeLabel(entity.recipe) : undefined,
+        ingredientIcons: entity.recipe ? [entity.recipe] : entity.items,
+    }), [options, identities, props.config, recipeLabel]);
     const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted, retry]);
     const primary = useTimelineRecording(request, retry);
     const recording = primary.data;
     const selectedId = options.some(entity => entity.id === inspection.entityId) ? inspection.entityId : options.find(entity => entity.type === 'machine')?.id ?? options[0]?.id;
-    const selected = recording?.entities.find(entity => entity.id === selectedId) ?? options.find(entity => entity.id === selectedId) ?? recording?.entities[0] ?? null;
+    const selected = recording?.entities.find(entity => entity.id === selectedId && entity.type !== 'belt') ?? options.find(entity => entity.id === selectedId) ?? recording?.entities.find(entity => entity.type !== 'belt') ?? null;
     const duration = !recordingWanted
         ? props.selected.simulationDurationTicks
         : recording?.end_tick ?? props.selected.simulationDurationTicks;
@@ -128,7 +143,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         const { range: window, duration: end } = current.current;
         if (current.current.inspection.view !== 'cycles' && (at < window.start || at > window.end)) { const half = (window.end - window.start) / 2; setRange(clampTimelineRange({ start: at - half, end: at + half }, end)); }
     }, [patch, setRange, cycles]);
-    const connected = useMemo(() => recording && selected ? relatedTimelineEntities(recording, selected) : [], [recording, selected]);
+    const connected = useMemo(() => recording && selected ? relatedTimelineEntities(recording, selected).filter(entity => entity.type !== 'belt') : [], [recording, selected]);
     const events = useMemo(() => recording && selected ? relevantTimelineEvents(recording, selected) : [], [recording, selected]);
     const eventTicks = useMemo(() => events.map(event => event.tick), [events]);
     const tickEvents = events.slice(upperBound(eventTicks, tick - 1), upperBound(eventTicks, tick));
@@ -157,13 +172,9 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
             </ToggleButtonGroup>}
         </Box>
         {inspection.view !== 'cycles' && <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
-            {recordingWanted && <Autocomplete options={options} value={options.find(option => option.id === selectedId) ?? null} isOptionEqualToValue={(a, b) => a.id === b.id}
-                getOptionLabel={entity => timelineEntityName(entity, recipeLabel)}
-                filterOptions={(entities, state) => entities.filter(entity => `${timelineEntityName(entity, recipeLabel)} ${entity.items.map(itemLabel).join(' ')}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 80)}
-                onChange={(_, entity) => { if (entity) { patch({ entityId: entity.id }); setEventPage(0); } }}
-                renderInput={params => <TextField {...params} label="Inspect entity" size="small" />}
-                renderOption={(attributes, entity) => { const { key, ...rest } = attributes; return <li key={key} {...rest}>{entity.items[0] && <FactorioIcon name={entity.items[0]} size={22} alt="" />}<span>{timelineEntityName(entity, recipeLabel)}</span></li>; }}
-                sx={{ width: 330, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }} />}
+            {recordingWanted && <EntitySelector label="Inspect entity" options={selectorOptions} value={selectorOptions.find(option => entitySelectorKey(option) === selectedId)}
+                onChange={option => { patch({ entityId: entitySelectorKey(option) }); setEventPage(0); }}
+                sx={{ width: 390, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }} />}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.25 }}>
                 <Tooltip title="Pan earlier"><IconButton size="small" aria-label="Pan timeline earlier" onClick={() => setRange(panTimeline(range, -0.5, duration))}><ChevronLeft /></IconButton></Tooltip>
                 <Tooltip title="Zoom out"><IconButton size="small" aria-label="Zoom timeline out" onClick={() => zoom(2, tick)}><ZoomOut /></IconButton></Tooltip>

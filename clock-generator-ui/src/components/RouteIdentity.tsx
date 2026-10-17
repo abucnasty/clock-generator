@@ -1,11 +1,11 @@
 import { Box, Typography } from '@mui/material';
-import type { EntityOption } from '../utils/inserterOptions';
+import type { EntitySelectorOption } from '../utils/entitySelector';
 import { EntityBadge } from './EntityBadge';
 import { FactorioIcon } from './FactorioIcon';
 import { BeltLanePreview } from './BeltLanePreview';
 
 /** Shared visual identity for route fields and suggested connections. */
-export function RouteBadge({ option }: { option: EntityOption }) {
+export function RouteBadge({ option }: { option: EntitySelectorOption }) {
     return <Box component="span" aria-hidden sx={{ display: 'inline-flex', flexShrink: 0 }}>
         <EntityBadge id={option.id} size="small">
             {option.belt
@@ -15,7 +15,7 @@ export function RouteBadge({ option }: { option: EntityOption }) {
     </Box>;
 }
 
-export function ContentIcons({ option, size = 18 }: { option: EntityOption; size?: number }) {
+export function ContentIcons({ option, size = 18 }: { option: EntitySelectorOption; size?: number }) {
     const icons = option.ingredientIcons ?? [];
     if (!icons.length) return null;
     return <Box component="span" aria-hidden sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>

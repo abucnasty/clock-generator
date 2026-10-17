@@ -2,15 +2,10 @@ import { TargetType } from 'clock-generator/light';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from './configForm/formData';
 import { isBufferChest, isInfinityChest } from './configForm/formData';
 import { entityLabel } from './entityLabel';
+import type { EntitySelectorOption } from './entitySelector';
 
-export interface EntityOption {
+export interface EntityOption extends EntitySelectorOption {
     type: InserterFormData['source']['type'];
-    id: number;
-    label: string;
-    icon: string;
-    sublabel?: string;
-    ingredientIcons?: string[];
-    belt?: BeltFormData;
 }
 
 /** One option list for the live row and the draft dialog, with in-game names supplied by the caller. */

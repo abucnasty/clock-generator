@@ -1,6 +1,5 @@
-import { Autocomplete, Box, Button, createFilterOptions, TextField, Typography, type AutocompleteRenderInputParams } from '@mui/material';
-import { Check } from '@mui/icons-material';
-import { memo, useMemo, useRef, useState, type HTMLAttributes, type ReactNode } from 'react';
+import { Box, Button, Typography } from '@mui/material';
+import { memo, useMemo, useRef, type ReactNode } from 'react';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import type { DisplayDensity } from '../utils/displayPreferences';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
@@ -13,7 +12,7 @@ import { DROP_ROUTE_READ_ONLY, endpointUpdate, effectiveInserterStackSize, INSER
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
-import { RouteBadge, ContentIcons } from './RouteIdentity';
+import { EntitySelector } from './EntitySelector';
 
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start' };
 const ROW_REST_SX = {
@@ -42,29 +41,6 @@ export interface InserterEditorProps {
     options?: EntityOption[];
 }
 
-const ENTITY_GROUPS = { machine: 'Machines', belt: 'Belts', chest: 'Chests' };
-
-function routeLabel(option: EntityOption | undefined): string {
-    return option ? option.sublabel ? `${option.label} - ${option.sublabel}` : option.label : '';
-}
-
-function renderOption(props: HTMLAttributes<HTMLLIElement> & { key?: string }, option: EntityOption, { selected }: { selected: boolean }, itemLabel: (id: string) => string) {
-    const { key, ...rest } = props;
-    return (
-        <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <RouteBadge option={option} />
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
-                <Typography variant="body2">{option.label}</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <ContentIcons option={option} size={16} />
-                    <Typography variant="caption" color="text.secondary">{option.sublabel ?? (option.ingredientIcons?.length ? option.ingredientIcons.map(itemLabel).join(' · ') : 'No items')}</Typography>
-                </Box>
-            </Box>
-            {selected && <Check aria-hidden sx={{ fontSize: 18, color: 'text.secondary', flexShrink: 0 }} />}
-        </Box>
-    );
-}
-
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
 export const InserterEditor = memo(function InserterEditor({ value, label, layout, density = 'explanatory', machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
     const row = layout === 'row';
@@ -76,45 +52,21 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     const { itemLabel, recipeLabel } = useGameNames();
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
-    const [routeSearch, setRouteSearch] = useState<Partial<Record<'source' | 'sink', string>>>({});
     const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }), [options, machines, belts, chests, itemLabel, recipeLabel]);
-    const filterOptions = useMemo(() => createFilterOptions<EntityOption>({
-        stringify: option => [option.label, option.sublabel, option.icon, ...(option.ingredientIcons ?? []), ...(option.ingredientIcons ?? []).map(itemLabel)].filter(Boolean).join(' '),
-    }), [itemLabel]);
     const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo), [value, machines, belts, chests, getRecipeInfo]);
     const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo]);
     const filterChange = (result: ReturnType<typeof setFilterSlot>) => {
         onChange({ filters: result.filters });
         if (result.becameExplicit) announce(`${label}'s filters are now set by hand.`);
     };
-    const input = (params: AutocompleteRenderInputParams, name: string, selected: EntityOption | undefined) => (
-        <TextField {...params} label={name} error={!selected} title={selected ? [selected.label, selected.sublabel, selected.belt?.lanes.map((lane, i) => `Lane ${i + 1}: ${lane.ingredient ? itemLabel(lane.ingredient) : 'empty'}`).join(' · ')].filter(Boolean).join(' — ') : undefined} helperText={value.sink.drop && name === 'Destination'
-            ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}` : undefined} slotProps={{ htmlInput: { ...params.inputProps, 'aria-label': `${name}, ${label}` }, input: {
-            ...params.InputProps,
-            startAdornment: selected ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
-                <RouteBadge option={selected} />
-                <ContentIcons option={selected} />
-            </Box> : null,
-        } }} />
-    );
     const picker = (side: 'source' | 'sink', name: string) => (
-        <Autocomplete size="small" sx={row ? { flex: '1 1 160px', minWidth: 0 } : { width: '100%' }} options={ownOptions}
-            readOnly={value.sink.drop !== undefined}
-            value={findOption(ownOptions, value[side].type, value[side].id)}
-            inputValue={routeSearch[side] ?? routeLabel(findOption(ownOptions, value[side].type, value[side].id))}
-            onInputChange={(_, text, reason) => setRouteSearch(previous => ({ ...previous, [side]: reason === 'input' ? text : undefined }))}
-            onClose={() => setRouteSearch(previous => ({ ...previous, [side]: undefined }))}
-            onChange={(_, option) => { if (option) onChange(endpointUpdate(value, side, { type: option.type, id: option.id })); }}
-            getOptionLabel={routeLabel}
-            groupBy={option => ENTITY_GROUPS[option.type]}
-            getOptionKey={option => `${option.type}-${option.id}`}
-            filterOptions={filterOptions}
-            isOptionEqualToValue={(a, b) => a.type === b.type && a.id === b.id}
-            renderInput={params => input(params, name, findOption(ownOptions, value[side].type, value[side].id))}
-            slotProps={{ popper: { role: 'region', 'aria-label': `${name} options` } }}
-            renderOption={(props, option, state) => renderOption(props, option, state, itemLabel)} autoHighlight disableClearable
-            data-row-first={side === 'source' ? '' : undefined}
-        />
+        <EntitySelector label={name} ariaLabel={`${name}, ${label}`} options={ownOptions}
+            sx={row ? { flex: '1 1 160px', minWidth: 0 } : { width: '100%' }}
+            readOnly={value.sink.drop !== undefined} value={findOption(ownOptions, value[side].type, value[side].id)}
+            error={!findOption(ownOptions, value[side].type, value[side].id)}
+            helperText={value.sink.drop && side === 'sink' ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}` : undefined}
+            onChange={option => onChange(endpointUpdate(value, side, { type: option.type, id: option.id }))}
+            rowFirst={side === 'source'} />
     );
     const advancedFields = (
         <Box sx={row ? compact ? { display: 'flex', gridColumn: '1 / -1', flexWrap: 'wrap', alignItems: 'start', gap: 1.5, minWidth: 0 } : ROW_REST_SX : { display: 'contents' }}>

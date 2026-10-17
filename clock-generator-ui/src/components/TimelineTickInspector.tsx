@@ -42,7 +42,7 @@ export function TimelineTickInspector({ recording, entity, inspection, tick, eve
         <Typography variant="overline">Tick inspector · {tick}</Typography>
         <Typography component="h3" variant="subtitle2">{timelineEntityName(entity, recipeLabel)}</Typography>
         {entity.note && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>{entity.note}</Typography>}
-        {outside ? <Typography variant="body2" sx={{ mt: 1 }}>A is outside its recorded span. B values remain available beside the matching lanes.</Typography> : <>
+        {outside ? <Typography variant="body2" sx={{ mt: 1 }}>The selected tick is outside its recorded span.</Typography> : <>
             {fields(visible)}
             {shownEvents.length > 0 && <Box sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">Events at this tick</Typography>{eventList(shownEvents)}</Box>}
             {(details.length > 0 || detailedEvents.length > 0) && <Box component="details" data-inspector-details sx={{ my: 1 }}>
