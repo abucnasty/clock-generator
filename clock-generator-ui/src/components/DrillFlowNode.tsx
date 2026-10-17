@@ -19,7 +19,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: tokens.surface.inset,
+                    bgcolor: tokens.surface.page,
                     border: `2px solid ${tokens.role.orange.main}`,
                     borderRadius: 1,
                     display: 'flex',
@@ -29,7 +29,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     cursor: 'pointer',
                     width: DRILL_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: tokens.hover.panel, borderColor: tokens.role.orange.main },
+                    '&:hover': { bgcolor: tokens.surface.page, borderColor: tokens.role.orange.main },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>

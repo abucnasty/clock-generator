@@ -528,11 +528,11 @@ function LegendChip({ label, color, pattern = 'solid', active = true, swatch = {
                 px: 1,
                 py: 0.25,
                 borderRadius: 0,
-                opacity: active ? 1 : 0.4,
+                color: active ? 'text.primary' : 'text.secondary',
             }}
         >
             <ChartSwatch color={color} pattern={pattern} sx={{ width: swatch.width < 12 ? swatch.width : 22, height: swatch.height }} />
-            <Typography variant="caption">{label}</Typography>
+            <Typography variant="caption">{label}{!active && ' (hidden)'}</Typography>
         </Box>
     );
 }

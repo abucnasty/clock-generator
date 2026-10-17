@@ -1,5 +1,6 @@
 import { useTheme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
+import { flowNodeTitleColor } from '../theme/flowDiagram';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
@@ -49,7 +50,8 @@ type EntityFlowNodeType = Node<EntityNodeData, 'entityNode'>;
 
 export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
     const tokens = themeTokens(useTheme());
-    const borderRole = tokens.role[data.entityType === 'machine' ? 'orange' : data.entityType === 'belt' ? 'blue' : 'green'];
+    const role = data.entityType === 'machine' ? 'orange' : data.entityType === 'belt' ? 'blue' : 'green';
+    const borderRole = tokens.role[role];
     const borderColor = borderRole.main;
     // a half takes only its own side's connections: the `in` half feeds, the `out` half receives
     const hasTarget = data.half !== 'in';
@@ -62,7 +64,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: tokens.surface.panel,
+                    bgcolor: tokens.surface.page,
                     border: `2px solid ${borderColor}`,
                     borderRadius: 1,
                     display: 'flex',
@@ -70,7 +72,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     cursor: 'pointer',
                     width: ENTITY_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: tokens.hover.panel },
+                    '&:hover': { bgcolor: tokens.surface.page },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -84,7 +86,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                                 fontWeight: 700,
                                 lineHeight: 1.2,
                                 display: 'block',
-                                color: borderColor,
+                                color: flowNodeTitleColor(tokens, role),
                                 fontSize: FLOW_NODE_FONT_SIZE,
                             }}
                         >

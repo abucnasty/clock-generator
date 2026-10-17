@@ -2,9 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef, memo, type FocusEven
 import {
     ReactFlow,
     ReactFlowProvider,
-    Background,
     Controls,
-    BackgroundVariant,
     Panel,
     useReactFlow,
     useStore,
@@ -18,6 +16,7 @@ import {
 import { Alert, Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typography } from '@mui/material';
 import { Add, Fullscreen } from '@mui/icons-material';
 import { themeTokens } from '../theme/runtimeTokens';
+import { flowRouteStyle } from '../theme/flowDiagram';
 import { useTheme, type Theme } from '@mui/material/styles';
 import { useMeasuredFlowNodes } from '../hooks/useMeasuredFlowNodes';
 import { useGameNames } from '../hooks/useGameNames';
@@ -33,6 +32,7 @@ import { FLOW_NODE_BOX_CLASS } from './flowNodeStyle';
 import { endpointEditProblem, endpointUpdate } from '../utils/inserterMetadata';
 import { entityLabel } from '../utils/entityLabel';
 import { flowFocus, flowEntityKey } from '../utils/flowFocus';
+import { FlowTileBackground } from './FlowTileBackground';
 
 const nodeTypes: NodeTypes = {
     entityNode: EntityFlowNode,
@@ -146,8 +146,6 @@ function FlowContent({
     onRequestFullscreen,
 }: FlowContentProps) {
     const tokens = themeTokens(useTheme());
-    const HIGHLIGHT_COLOR = tokens.role.orange.main;
-    const DIMMED_COLOR = tokens.control.border;
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
     const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set());
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -195,21 +193,20 @@ function FlowContent({
     const activeNode = graphNodes.find(node => node.id === (hoveredNodeId ?? focusedNodeId));
     const focusKey = activeNode ? flowEntityKey(activeNode) : selection ? `${selection.kind}:${selection.id}` : null;
     const focus = useMemo(() => flowFocus(graphNodes, edges, focusKey), [graphNodes, edges, focusKey]);
+    // Route emphasis must leave node text opaque; dimming the wrapper breaks its theme contrast.
     const nodes = useMemo(() => graphNodes.map(node => ({
         ...node,
         selected: flowEntityKey(node) === (selection ? `${selection.kind}:${selection.id}` : null),
         className: activeNode && focus.same.has(node.id) && node.id !== activeNode.id ? TWIN_CLASS : undefined,
-        style: { opacity: focusKey && !focus.related.has(node.id) ? 0.45 : 1 },
-    })), [graphNodes, focus, focusKey, selection, activeNode?.id]);
+    })), [graphNodes, focus, selection, activeNode?.id]);
     const measured = useMeasuredFlowNodes(nodes);
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
     const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
     const edgesWithSelection = useMemo(() => edges.map(edge => {
         const highlighted = focus.routes.has(edge.id) || selectedEdgeIds.has(edge.id);
-        const color = highlighted ? HIGHLIGHT_COLOR : DIMMED_COLOR;
-        return { ...edge, selected: selectedEdgeIds.has(edge.id), markerEnd: { ...(edge.markerEnd as EdgeMarker), color },
-            style: { stroke: color, strokeWidth: highlighted ? 2.5 : 1.5, opacity: focusKey && !highlighted ? 0.3 : 1 } };
-    }), [edges, focus, focusKey, selectedEdgeIds, HIGHLIGHT_COLOR, DIMMED_COLOR]);
+        const style = flowRouteStyle(tokens, highlighted ? 'selected' : 'neutral');
+        return { ...edge, selected: selectedEdgeIds.has(edge.id), markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
+    }), [edges, focus, selectedEdgeIds, tokens]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
         setSelectedEdgeIds(prev => {
@@ -362,7 +359,7 @@ function FlowContent({
             fitViewOptions={fitViewOptions}
             proOptions={{ hideAttribution: true }}
         >
-            <Background color={tokens.control.edge} variant={BackgroundVariant.Dots} gap={20} size={1} />
+            <FlowTileBackground />
             <Controls showInteractive={false} fitViewOptions={fitViewOptions} />
             {connectionProblem && <Panel position="bottom-center" style={{ width: 'max-content', maxWidth: 'calc(100% - 24px)' }}>
                 <Alert role="alert" severity="warning" sx={{ overflowWrap: 'anywhere' }} data-geometry-connection-problem>{connectionProblem}</Alert>

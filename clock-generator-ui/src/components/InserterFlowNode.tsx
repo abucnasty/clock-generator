@@ -18,7 +18,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: tokens.surface.inset,
+                    bgcolor: tokens.surface.page,
                     border: `2px solid ${tokens.control.border}`,
                     borderRadius: 1,
                     display: 'flex',
@@ -28,7 +28,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     cursor: 'pointer',
                     width: data.enableChip ? INSERTER_NODE_CHIP_WIDTH : INSERTER_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: tokens.hover.panel, borderColor: tokens.control.border },
+                    '&:hover': { bgcolor: tokens.surface.page, borderColor: tokens.control.border },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

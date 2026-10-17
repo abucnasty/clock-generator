@@ -59,9 +59,8 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
                     background: patternBackground(style),
                     borderRadius: 0,
                     cursor: 'pointer',
-                    transition: 'opacity 0.2s, transform 0.1s',
+                    transition: 'transform 0.1s',
                     '&:hover': {
-                        opacity: 0.8,
                         transform: 'scaleY(1.1)',
                         zIndex: 1,
                     },

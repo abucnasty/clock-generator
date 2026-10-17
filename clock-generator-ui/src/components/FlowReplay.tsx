@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, ReactFlowProvider, useStore, type Node, type NodeProps, type EdgeMarker, type Viewport } from '@xyflow/react';
+import { Controls, Handle, Position, ReactFlow, ReactFlowProvider, useStore, type Node, type NodeProps, type EdgeMarker, type Viewport } from '@xyflow/react';
 import { Box, Button, Checkbox, FormControlLabel, LinearProgress, MenuItem, TextField, Typography } from '@mui/material';
 import { Pause, PlayArrow, SkipNext, SkipPrevious } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
@@ -12,12 +12,15 @@ import { craftingCycleAt, craftingCycleIndex } from '../utils/craftingCycles';
 import type { TimelineInspection } from '../utils/timelineInspection';
 import { timelineStateLabel, timelineStateStyle } from '../utils/timelinePresentation';
 import { patternBackground } from '../theme/beltCharts';
+import { flowRouteStyle, flowNodeTitleColor } from '../theme/flowDiagram';
 import { themeTokens } from '../theme/runtimeTokens';
 import { useMeasuredFlowNodes } from '../hooks/useMeasuredFlowNodes';
 import { useGameNames } from '../hooks/useGameNames';
 import { formatNumberText } from '../utils/numberText';
 import { FactorioIcon } from './FactorioIcon';
+import { ChartSwatch } from './BeltChart';
 import { FlowTransferEdge } from './FlowTransferEdge';
+import { FlowTileBackground } from './FlowTileBackground';
 
 const NODE_HEIGHT = 168;
 const number = (value: number) => formatNumberText(value, { maxDecimals: 2 });
@@ -35,21 +38,22 @@ function ReplayNode({ data }: NodeProps<Node<ReplayData>>) {
     const drill = 'drillId' in data ? data : null;
     const label = entity?.label ?? (ins ? `Inserter ${ins.inserterId}` : `Drill ${drill?.drillId}`);
     const icon = entity?.iconName ?? drill?.drillType ?? 'stack-inserter';
-    const color = ins ? tokens.control.border : tokens.role[entity?.entityType === 'belt' ? 'blue' : entity?.entityType === 'chest' ? 'green' : 'orange'].main;
+    const role = entity?.entityType === 'belt' ? 'blue' : entity?.entityType === 'chest' ? 'green' : 'orange';
+    const color = ins ? tokens.control.border : tokens.role[role].main;
     const snapshot = data.snapshot;
     const stateStyle = snapshot.state ? timelineStateStyle(snapshot.state) : null;
     const width = ins ? ins.enableChip ? INSERTER_NODE_CHIP_WIDTH : INSERTER_NODE_WIDTH : drill ? DRILL_NODE_WIDTH : ENTITY_NODE_WIDTH;
     return <>
-        <Box title={entity?.entityType === 'belt' ? `${entity.halfTitle ?? entity.label}. Select to highlight all connected inserter routes; physical belt contents are not recorded.` : entity?.halfTitle} sx={{ width, height: NODE_HEIGHT, boxSizing: 'border-box', bgcolor: tokens.surface.panel, border: `2px solid ${color}`, borderRadius: 1, p: 1, overflow: 'hidden' }}>
+        <Box title={entity?.entityType === 'belt' ? `${entity.halfTitle ?? entity.label}. Select to highlight all connected inserter routes; physical belt contents are not recorded.` : entity?.halfTitle} sx={{ width, height: NODE_HEIGHT, boxSizing: 'border-box', bgcolor: tokens.surface.page, border: `2px solid ${color}`, borderRadius: 1, p: 1, overflow: 'hidden' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <FactorioIcon name={icon} size={28} alt="" />
-                <Typography variant="subtitle2" sx={{ fontSize: compact ? 17 : 13, whiteSpace: 'nowrap', color: ins ? tokens.text.primary : color }}>{label}</Typography>
+                <Typography variant="subtitle2" sx={{ fontSize: compact ? 17 : 13, whiteSpace: 'nowrap', color: ins ? tokens.text.primary : flowNodeTitleColor(tokens, role) }}>{label}</Typography>
             </Box>
             <Typography variant="caption" noWrap component="div" sx={{ height: 15, lineHeight: 1.25, visibility: compact ? 'hidden' : 'visible' }}>
                 {entity?.machineParams?.recipe ? recipeLabel(entity.machineParams.recipe) : entity?.filterIcons?.map(itemLabel).join(', ') ?? (drill?.minedItem ? itemLabel(drill.minedItem) : 'Recorded transfers')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'start', gap: 0.5, height: 30 }}>
-                {stateStyle && <Box aria-hidden sx={{ width: 12, height: 12, mt: 0.5, flexShrink: 0, background: patternBackground(stateStyle) }} />}
+                {stateStyle && <Box aria-hidden sx={{ width: 12, height: 12, mt: 0.5, flexShrink: 0, border: `1px solid ${tokens.control.border}`, background: patternBackground(stateStyle) }} />}
                 <Typography variant="caption" title={snapshot.state ? timelineStateLabel(snapshot.state) : undefined} sx={{ fontSize: 12, lineHeight: 1.2, minWidth: 0, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{snapshot.state ? timelineStateLabel(snapshot.state) : entity?.entityType === 'belt' ? 'Belt contents not recorded' : 'Recorded inventory'}</Typography>
             </Box>
             {snapshot.craft !== undefined ? <Box sx={{ height: 23 }}>
@@ -141,13 +145,13 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
     const focusedId = inspection.replayFocus ? inspection.entityId : null;
     const routeFocus = useMemo(() => flowFocus(graph.nodes, graph.edges, hovered ?? focusedId), [graph, hovered, focusedId]);
     const nodeKeys = useMemo(() => new Map(graph.nodes.map(node => [node.id, flowEntityKey(node)])), [graph]);
+    // Selection and hover emphasize routes without fading any node labels or values.
     const nodes = useMemo(() => graph.nodes.map(node => {
         const key = flowEntityKey(node);
         return { ...node, selected: focus.same.has(node.id),
             ariaLabel: `${node.ariaLabel}. Press Enter to ${flowEntityKey(node).startsWith('belt:') ? 'highlight all connected inserter routes' : 'select and show tick details'}.`,
-            style: { opacity: (hovered ?? focusedId) && !routeFocus.related.has(node.id) ? 0.65 : 1 },
             data: { ...node.data, identity: key, snapshot: flowReplaySnapshot(index, key, tick), effects: flowEventSummary(effects, key) } as ReplayData };
-    }), [graph, index, tick, effects, focus, routeFocus, hovered, focusedId]);
+    }), [graph, index, tick, effects, focus]);
     const measured = useMeasuredFlowNodes(nodes);
     const edges = useMemo(() => graph.edges.map(edge => {
         const from = nodeKeys.get(edge.source)!;
@@ -163,13 +167,10 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
         const description = active
             ? `${action} at tick ${tick}: ${amounts.map(value => `${number(value.amount)} ${value.item ? itemLabel(value.item) : 'items'}`).join(', ')}; ${route}`
             : trail ? `Recent transfer on ${route} between ticks ${frame.recentStart} and ${tick - 1}; no transfer at tick ${tick}` : route;
-        const color = active || trail ? tokens.role.green.main : highlighted ? tokens.role.orange.main : tokens.control.border;
+        const style = flowRouteStyle(tokens, active ? 'transfer' : trail ? 'recent' : highlighted ? 'selected' : 'neutral');
         return { ...edge, type: 'transfer', label: undefined, ariaLabel: description, data: { amounts, description },
-            markerEnd: { ...(edge.markerEnd as EdgeMarker), color },
-            style: { stroke: color, strokeWidth: active ? 4 : trail ? 2 : highlighted ? 2.5 : 1.5,
-                strokeDasharray: active ? undefined : trail ? '2 5' : highlighted ? '7 4' : undefined,
-                opacity: trail ? 0.5 : (hovered ?? focusedId) && !highlighted && !active ? 0.3 : 1 } };
-    }), [graph, effects, frame.recentTransfers, frame.recentStart, tick, routeFocus, tokens, hovered, focusedId, nodeKeys, itemLabel]);
+            markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
+    }), [graph, effects, frame.recentTransfers, frame.recentStart, tick, routeFocus, tokens, nodeKeys, itemLabel]);
     const states = useMemo(() => [...new Set(recording.entities.flatMap(entity => entity.signals.filter(signal => signal.id === 'state').flatMap(signal => signal.values.map(String))))], [recording]);
     const previous = adjacentTransfer({ transferTicks }, tick, -1, firstTick, lastTick), next = adjacentTransfer({ transferTicks }, tick, 1, firstTick, lastTick);
     const showAllRoutes = () => onChange({ replayFocus: false, replayTransferScope: 'all' });
@@ -212,12 +213,12 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
         <Box component="ul" aria-label="Connection legend" sx={{ m: 0, mb: 0.5, p: 0, display: 'flex', gap: 2, flexWrap: 'wrap', listStyle: 'none' }}>
             <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `3px dashed ${tokens.role.orange.main}` }} /><Typography variant="caption">Selected or hovered route</Typography></Box>
             <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `4px solid ${tokens.role.green.main}` }} /><Typography variant="caption">Transfer at this tick · item and quantity</Typography></Box>
-            <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `2px dotted ${tokens.role.green.main}`, opacity: 0.5 }} /><Typography variant="caption">Recent activity · no quantity</Typography></Box>
+            <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `2px dotted ${tokens.role.green.main}` }} /><Typography variant="caption">Recent activity · no quantity</Typography></Box>
             <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 12, height: 10, border: `1px solid ${tokens.control.border}`, outline: `2px solid ${tokens.role.orange.main}`, outlineOffset: 2, mr: 0.25 }} /><Typography variant="caption">Selected entity outline</Typography></Box>
         </Box>
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 0.5 }}>Entity states</Typography>
         <Box component="ul" aria-label="Flow replay legend" sx={{ m: 0, mb: 1, p: 0, display: 'flex', gap: 1.5, flexWrap: 'wrap', listStyle: 'none' }}>
-            {states.map(state => <Box component="li" key={state} sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}><Box aria-hidden sx={{ width: 18, height: 10, background: patternBackground(timelineStateStyle(state)) }} /><Typography variant="caption">{timelineStateLabel(state)}</Typography></Box>)}
+            {states.map(state => <Box component="li" key={state} sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}><ChartSwatch {...timelineStateStyle(state)} sx={{ width: 18, height: 10 }} /><Typography variant="caption">{timelineStateLabel(state)}</Typography></Box>)}
         </Box>
         <Typography variant="caption" component="p" sx={{ mb: 1 }}>Transfer quantities show tick {tick}. ↑ pickup · ↓ delivery. {tick > 0 ? `Dotted trails show recent activity (ticks ${frame.recentStart}–${tick - 1}).` : 'No earlier activity at tick 0.'} Belts show routes, not physical item positions.</Typography>
         <Box sx={{ height: fullscreen ? 'max(450px, calc(100vh - 440px))' : 600, minHeight: 400, bgcolor: tokens.surface.inset, border: 1, borderColor: 'divider',
@@ -234,7 +235,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
                 onKeyDown={event => { const target = event.target as HTMLElement; if (event.key === 'Enter' && target.classList.contains('react-flow__node')) { const node = graph.nodes.find(node => node.id === target.dataset.id); if (node) { event.preventDefault(); chooseNode(node); } } }}
                 ariaLabelConfig={{ 'node.a11yDescription.default': 'Press Enter to select and show tick details.', 'node.a11yDescription.keyboardDisabled': 'Press Enter to select and show tick details.' }}
                 proOptions={{ hideAttribution: true }}>
-                <Background color={tokens.control.edge} variant={BackgroundVariant.Dots} gap={20} size={1} /><Controls showInteractive={false} />
+                <FlowTileBackground /><Controls showInteractive={false} />
             </ReactFlow>
         </Box>
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>Node values describe one modelled copy at the selected tick. Production totals start at tick 0. Transfers are schematic, without simulated arm or belt positions. Playback stops at the recorded endpoint.</Typography>
