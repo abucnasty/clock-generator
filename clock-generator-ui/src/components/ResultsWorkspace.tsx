@@ -1,6 +1,6 @@
 import { ExpandMore } from '@mui/icons-material';
-import { Alert, Box, Button, Collapse, Paper, Typography } from '@mui/material';
-import { useId, useMemo, type ReactNode } from 'react';
+import { Alert, Box, Button, Collapse, MenuItem, Paper, TextField, Typography } from '@mui/material';
+import { useId, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ResultDetail } from '../utils/resultsView';
@@ -27,6 +27,7 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
+import { beltValue, clockTechnicalName, wakeUpsText } from '../utils/clockSummary';
 import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
@@ -131,6 +132,38 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     }, [props.generatedFor]);
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
     const selected = props.alternatives[props.selectedIndex];
+    const workspaceRef = useRef<HTMLDivElement>(null);
+    const selectionAnchor = useRef<{ clock: ClockAlternativeView; top: number } | null>(null);
+    const captureWorkspacePosition = (next: ClockAlternativeView | undefined) => {
+        // Keep the workspace at the same viewport offset when summary/comparison text changes above it.
+        selectionAnchor.current = selected?.verdict === 'stable' && next?.verdict === 'stable' && workspaceRef.current
+            ? { clock: selected, top: workspaceRef.current.getBoundingClientRect().top }
+            : null;
+    };
+    const selectClock = (index: number) => {
+        const next = props.alternatives[index];
+        if (!next || next === selected) return;
+        captureWorkspacePosition(next);
+        props.onSelect(index);
+    };
+    const selectRecommended = () => {
+        captureWorkspacePosition(props.recommendedIndex === null ? undefined : props.alternatives[props.recommendedIndex]);
+        props.onCardBackToRecommended();
+    };
+    useLayoutEffect(() => {
+        const anchor = selectionAnchor.current;
+        selectionAnchor.current = null;
+        if (!anchor || anchor.clock === selected || !workspaceRef.current) return;
+        const delta = workspaceRef.current.getBoundingClientRect().top - anchor.top;
+        if (Math.abs(delta) > 0.5) window.scrollBy({ top: delta, behavior: 'instant' });
+    }, [selected]);
+    const selectableClocks = props.alternatives.map((clock, index) => ({ clock, index }))
+        .filter(({ clock, index }) => clock.verdict === 'stable' || index === props.selectedIndex);
+    const clockLabel = (clock: ClockAlternativeView) => [
+        `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
+        wakeUpsText(clock).value.replace(' a minute', ' wake-ups/min'),
+        clock.beltLabel ? beltValue(props.pickRule, clock.beltLabel) : '',
+    ].filter(Boolean).join(' · ');
     const rateWarning = rateWarningOf(selected);
     const noticeKind = deeperSearchNoticeOf({
         searchesSkipped: props.skippedSearches.length > 0,
@@ -168,7 +201,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 alternatives={props.alternatives}
                 selectedIndex={props.selectedIndex}
                 recommendedIndex={props.recommendedIndex}
-                onSelectRecommended={props.onCardBackToRecommended}
+                onSelectRecommended={selectRecommended}
                 pickRule={props.pickRule}
                 isGenerating={props.isRunning}
                 stoppedEarly={props.stoppedEarly}
@@ -203,7 +236,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         onComparisonChange={props.onComparisonChange}
                         alternatives={props.alternatives}
                         selectedIndex={props.selectedIndex}
-                        onSelect={props.onSelect}
+                        onSelect={selectClock}
                         recommendedIndex={props.recommendedIndex}
                         pickRule={props.pickRule}
                         isGenerating={props.isRunning}
@@ -221,9 +254,24 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     />
                 </Collapse>
 
-                {selected && (
+                {selected && <Box ref={workspaceRef}>
                     <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}
                         generation={props.generationAssumptions} stale={props.staleFor !== null}
+                        clockSelector={selectableClocks.length > 1 && <TextField select
+                            label={selected.verdict !== 'stable' ? 'Clock · Not stable' : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
+                            value={props.selectedIndex} onChange={event => selectClock(Number(event.target.value))}
+                            slotProps={{ select: { renderValue: value => clockLabel(props.alternatives[Number(value)]) } }}
+                            sx={{ width: { xs: 280, sm: 380 }, maxWidth: '100%' }}>
+                            {selectableClocks.map(({ clock, index }) => <MenuItem key={clock.id} value={index}
+                                sx={{ display: 'block', whiteSpace: 'normal', maxWidth: { xs: 320, sm: 520 } }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : clock.verdict !== 'stable' ? ' · Not stable' : ''}
+                                </Typography>
+                                <Typography variant="caption" component="p" color="text.secondary">
+                                    {clockTechnicalName(clock)}{!clock.ranking.matches_belt_choice ? ' · Requires a different belt setting' : ''}
+                                </Typography>
+                            </MenuItem>)}
+                        </TextField>}
                         timelineProps={{
                             timeline: props.timeline, onTimelineChange: props.onTimelineChange,
                             wakeAsTable: props.wakeAsTable, onWakeAsTableChange: props.onWakeAsTableChange,
@@ -246,7 +294,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                             fuelView={props.fuelView}
                         />
                     </SelectedClockContext>
-                )}
+                </Box>}
             </Box>
 
             {/* Debug logging remains opt-in; timelines are available in the normal workspace. */}

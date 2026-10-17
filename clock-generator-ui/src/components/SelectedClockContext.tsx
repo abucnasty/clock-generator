@@ -16,12 +16,13 @@ import { useBuildSection } from '../hooks/useBuildViewContext';
 
 const ClockTimeline = lazy(() => import('./ClockTimelineWorkspace').then(module => ({ default: module.ClockTimelineWorkspace })));
 
-export function SelectedClockContext({ selected, detail, onDetailChange, timelineProps, generation, stale, assumptions, installContent, children }: {
+export function SelectedClockContext({ selected, detail, onDetailChange, timelineProps, generation, stale, assumptions, installContent, clockSelector, children }: {
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
     timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected'>;
     installContent: ReactNode;
+    clockSelector: ReactNode;
     generation: GenerationAssumptions | null;
     stale: boolean;
     assumptions: ReactNode;
@@ -32,7 +33,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
     useEffect(() => { if (detail === 'timeline') setTimelineVisited(true); }, [detail]);
     const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
     const moves = new Map(buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]));
-    return <Panel title="Selected clock workspace" sx={{ mb: 0 }} data-result-context="" data-build-anchor="clock-context">
+    return <Panel title="Selected clock workspace" actions={clockSelector} sx={{ mb: 0 }} data-result-context="" data-build-anchor="clock-context">
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
             aria-label="Selected clock workspace" sx={{ borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
             <Tab label="Overview" value="overview" {...tabProps('result-context', 'overview')} />

@@ -103,7 +103,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
     const recovers = recoversOf(selected);
     return (
         <>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5, mt: 0.5 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5, mt: 0.5, minHeight: 32 }}>
                 <Typography
                     ref={nameRef}
                     component="h3"
@@ -118,18 +118,18 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 {isRecommended && (
                     <RecommendedChip isGenerating={isGenerating} data-card-chip="" />
                 )}
+                {!isRecommended && recommended && (
+                    <Button size="small" onClick={() => {
+                        props.onSelectRecommended();
+                        nameRef.current?.focus({ preventScroll: true });
+                    }}>
+                        {isGenerating ? RECOMMENDED_COPY.backWhileGenerating : RECOMMENDED_COPY.backToRecommended}
+                    </Button>
+                )}
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-engine-name>
                 {clockTechnicalName(selected)}
             </Typography>
-            {!isRecommended && recommended && (
-                <Button size="small" onClick={() => {
-                    props.onSelectRecommended();
-                    nameRef.current?.focus();
-                }}>
-                    {isGenerating ? RECOMMENDED_COPY.backWhileGenerating : RECOMMENDED_COPY.backToRecommended}
-                </Button>
-            )}
 
             <Box
                 sx={{
