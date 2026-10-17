@@ -3,10 +3,10 @@
  */
 
 export const BELT_TYPES = [
-    { value: 'transport-belt', label: 'Transport belt' },
-    { value: 'fast-transport-belt', label: 'Fast transport belt' },
-    { value: 'express-transport-belt', label: 'Express transport belt' },
-    { value: 'turbo-transport-belt', label: 'Turbo transport belt' },
+    { value: 'transport-belt', label: 'Yellow' },
+    { value: 'fast-transport-belt', label: 'Red' },
+    { value: 'express-transport-belt', label: 'Blue' },
+    { value: 'turbo-transport-belt', label: 'Green' },
 ];
 
 export const DRILL_TYPES = [
@@ -16,10 +16,11 @@ export const DRILL_TYPES = [
 ];
 
 /**
- * What the player sees for a belt or drill type: the game's name for it (sentence case, "Turbo transport belt"), else
- * the option's own label while no names are known.
+ * Belt types use their short colour names; drills use the game's name when available.
  */
 export function entityTypeLabel(value: string, itemLabel: (id: string) => string): string {
+    const belt = BELT_TYPES.find(option => option.value === value);
+    if (belt) return belt.label;
     const name = itemLabel(value);
     if (name !== value) return name;
     return [...BELT_TYPES, ...DRILL_TYPES].find((option) => option.value === value)?.label ?? value;

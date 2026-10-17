@@ -1195,6 +1195,7 @@ function App() {
                                         </PanelSection>
 
                                         <InsertersForm
+                                            key={library.currentId}
                                             inserters={config.inserters}
                                             machines={config.machines}
                                             belts={config.belts}

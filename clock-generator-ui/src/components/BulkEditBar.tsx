@@ -21,19 +21,21 @@ interface BulkEditBarProps {
     itemNames: string[];
     onSelectAll: () => void;
     onClear: () => void;
+    onDone?: () => void;
     onReturnFocus: () => void;
     onApply: (updates: Partial<InserterFormData>, kind: BulkEditKind) => void;
 }
 
 /** Draft controls apply exactly one chosen field to the selected rows. */
-export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds, availableItems, itemNames, onSelectAll, onClear, onReturnFocus, onApply }: BulkEditBarProps) {
+export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds, availableItems, itemNames, onSelectAll, onClear, onDone, onReturnFocus, onApply }: BulkEditBarProps) {
     const barRef = useRef<HTMLDivElement>(null);
     const [stack, setStack] = useState<number | null>(() => commonValue(selected, row => row.stack_size) ?? null);
     const [filtersAnchor, setFiltersAnchor] = useState<HTMLButtonElement | null>(null);
     const [filters, setFilters] = useState<string[]>([]);
     const [filterDraftEdited, setFilterDraftEdited] = useState(false);
     const sharedFilters = commonValue(selected, row => row.filters);
-    const mixedFilters = sharedFilters === null && !filterDraftEdited;
+    const empty = selected.length === 0;
+    const mixedFilters = !empty && sharedFilters === null && !filterDraftEdited;
     const [ruleOpen, setRuleOpen] = useState(false);
     const filtersId = useId();
     const titleId = useId();
@@ -72,17 +74,20 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
     }, []);
 
     const filterSelection = JSON.stringify(selected.map(row => [row._uuid, row.filters]));
-    useEffect(() => { if (filtersOnly) { setFilters(commonValue(selected, row => row.filters) ?? []); setFilterDraftEdited(false); } }, [filterSelection, filtersOnly]);
+    useEffect(() => { setFilters(commonValue(selected, row => row.filters) ?? []); setFilterDraftEdited(false); }, [filterSelection]);
+    const stackSelection = JSON.stringify(selected.map(row => [row._uuid, row.stack_size]));
+    useEffect(() => { setStack(commonValue(selected, row => row.stack_size) ?? null); }, [stackSelection]);
 
     const closeFilters = () => setFiltersAnchor(null);
     return <Box ref={barRef} role="region" aria-label="Edit selected inserters" data-bulk-edit=""
-        sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', '& .MuiButton-root': { minHeight: 40, boxSizing: 'border-box' } }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', pr: { xs: 0, md: 2 }, borderRight: { xs: 0, md: 1 }, borderColor: 'divider' }}>
-        <Typography variant="body2">{selected.length} {selected.length === 1 ? 'inserter' : 'inserters'} selected</Typography>
+        sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', columnGap: 2, rowGap: 1, alignItems: 'center', flexWrap: 'wrap', containerType: 'inline-size', containerName: 'bulk-edit-bar', '& .MuiButton-root': { minHeight: 40, boxSizing: 'border-box' } }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', pr: { xs: 0, md: 2 }, borderRight: { xs: 0, md: 1 }, borderColor: 'divider', '@container bulk-edit-bar (max-width: 1000px)': { flexBasis: '100%', pr: 0, borderRight: 0 } }}>
+        <Typography variant="body2" role="status" sx={{ fontWeight: 600 }}>{selected.length} {selected.length === 1 ? 'inserter' : 'inserters'} selected</Typography>
         <Button color="inherit" size="small" onClick={onSelectAll} disabled={selected.length === total}>Select all</Button>
-        <Button color="inherit" size="small" onClick={onClear}>Clear selection</Button>
+        <Button color="inherit" size="small" onClick={onClear} disabled={empty}>Clear selection</Button>
+        {onDone && <Button color="inherit" size="small" onClick={onDone}>Done</Button>}
         </Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 0, flex: '1 1 300px' }}>
+        <Box component="fieldset" disabled={empty} aria-label="Bulk changes" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 0, flex: '1 1 300px', border: 0, p: 0, m: 0, '@container bulk-edit-bar (max-width: 1000px)': { flexBasis: '100%' }, ...(empty && { opacity: 0.5, pointerEvents: 'none' }) }}>
         {filtersOnly ? <>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
             <Box>
@@ -91,9 +96,9 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
                 onFilterChange={(slot, item) => { setFilterDraftEdited(true); setFilters(setFilterSlot(filters, [], slot, item).filters ?? []); }}
                 onRemoveFilter={slot => { setFilterDraftEdited(true); setFilters(removeFilterSlot(filters, [], slot).filters ?? []); }} />
             </Box>
-            <Button variant="outlined" color="inherit" size="small" disabled={filters.length === 0} onClick={() => onApply({ filters }, 'filters')}>Apply filters</Button>
+            <Button variant="outlined" color="inherit" size="small" disabled={empty || filters.length === 0 || mixedFilters} onClick={() => onApply({ filters }, 'filters')}>Apply filters to {selected.length}</Button>
             </Box>
-            <Button variant="outlined" color="inherit" size="small" onClick={() => onApply({ filters: undefined }, 'auto-filters')}>Clear filters / Auto</Button>
+            <Button variant="outlined" color="inherit" size="small" onClick={() => onApply({ filters: undefined }, 'auto-filters')}>Use Automatic for {selected.length}</Button>
         </> : <>
         <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
             <NumberField label="Stack size" value={stack} onValueChange={value => setStack(value)} placeholder="Automatic"
