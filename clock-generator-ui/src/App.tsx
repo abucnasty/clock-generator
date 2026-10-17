@@ -43,6 +43,7 @@ import { BuildSwitcher } from './components/BuildSwitcher';
 import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
+import { FiniteOutputChestAlert } from './components/FiniteOutputChestAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -1187,6 +1188,7 @@ function App() {
                             />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
+                                <FiniteOutputChestAlert chests={config.chests} inserters={config.inserters} onSwitchType={undoable.switchChestType} />
                                 {/* in the order a row's sources are made in: an inserter's machines, belts and chests are above it */}
                                 {configView === 'list' ? (
                                     <>
@@ -1482,6 +1484,9 @@ function App() {
                         <IconButton onClick={() => setDiagramFullscreen(false)} size="small" aria-label="Exit fullscreen">
                             <FullscreenExit />
                         </IconButton>
+                    </Box>
+                    <Box sx={{ px: 2, pt: 1, flexShrink: 0 }}>
+                        <FiniteOutputChestAlert chests={config.chests} inserters={config.inserters} onSwitchType={undoable.switchChestType} />
                     </Box>
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                         <ConfigFlowDiagram

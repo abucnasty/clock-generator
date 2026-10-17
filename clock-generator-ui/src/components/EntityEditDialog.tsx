@@ -48,6 +48,7 @@ import { DraftFooter } from './DraftFooter';
 import { switchedChest } from '../utils/configForm/edits';
 import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS } from '../utils/inserterDraft';
 import { FactorioIcon } from './FactorioIcon';
+import { FiniteOutputChestAlert } from './FiniteOutputChestAlert';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
@@ -688,7 +689,10 @@ export function EntityEditDialog({
                         /></Box>
                     )}
                     {draft && entityType === 'chest' && (
-                        <Box sx={{ p: 2 }}><ChestEditSection
+                        <Box sx={{ p: 2 }}>
+                            <FiniteOutputChestAlert chests={[draft as ChestFormData]} inserters={inserters}
+                                onSwitchType={(_index, type) => setDraft(d => switchedChest(d as ChestFormData, type))} />
+                            <ChestEditSection
                             chest={draft as ChestFormData}
                             entityIndex={entityIndex}
                             itemNames={itemNames}
