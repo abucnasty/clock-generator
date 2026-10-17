@@ -20,7 +20,7 @@ function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
     const { facts } = useMachineFacts(params);
     if (!facts) return null;
     return (
-        <Box sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${tokens.control.edge}`, width: '100%' }}>
+        <Box className="flow-node-rates" sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${tokens.control.edge}`, width: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                 <FactorioIcon name={facts.output_item} size={14} titled />
                 <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: tokens.role.orange.main, lineHeight: 1.2 }}>
@@ -78,6 +78,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
+                            className="flow-node-title"
                             title={data.halfTitle}
                             sx={{
                                 fontWeight: 700,
@@ -92,6 +93,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                         {data.sublabel && (
                             <Typography
                                 variant="caption"
+                                className="flow-node-detail"
                                 title={data.entityType === 'machine' ? undefined : data.sublabel}
                                 sx={{
                                     color: 'text.secondary',

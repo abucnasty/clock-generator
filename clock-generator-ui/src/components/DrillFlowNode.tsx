@@ -37,6 +37,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
+                            className="flow-node-title"
                             sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: tokens.role.orange.main }}
                         >
                             {entityLabel('drill', data.drillId)}

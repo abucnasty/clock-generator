@@ -19,6 +19,7 @@ import { Alert, Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typograph
 import { Add, Fullscreen } from '@mui/icons-material';
 import { themeTokens } from '../theme/runtimeTokens';
 import { useTheme, type Theme } from '@mui/material/styles';
+import { useMeasuredFlowNodes } from '../hooks/useMeasuredFlowNodes';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { buildFlowGraph, flowNodeEntity } from '../utils/buildFlowGraph';
@@ -31,6 +32,7 @@ import type { EntityEditDialogProps } from './EntityEditDialog';
 import { FLOW_NODE_BOX_CLASS } from './flowNodeStyle';
 import { endpointEditProblem, endpointUpdate } from '../utils/inserterMetadata';
 import { entityLabel } from '../utils/entityLabel';
+import { flowFocus, flowEntityKey } from '../utils/flowFocus';
 
 const nodeTypes: NodeTypes = {
     entityNode: EntityFlowNode,
@@ -59,12 +61,6 @@ const FIT_VIEW_OPTIONS = { padding: 0.1 };
 const MIN_ZOOM = 0.1;
 /** How long after the diagram opens or the facts are toggled a change in the nodes' sizes still refits the view */
 const REFIT_WINDOW_MS = 2000;
-
-/** Twice in the diagram, once on each side: the other half of a belt or chest drawn as two nodes */
-function twinNodeId(id: string | null): string | null {
-    const half = id ? /^(.*)-(in|out)$/.exec(id) : null;
-    return half && !half[1].startsWith('inserter') ? `${half[1]}-${half[2] === 'in' ? 'out' : 'in'}` : null;
-}
 
 /** What screen readers say after a node's or an edge's name (React Flow's own words mention delete and dragging, both off) */
 const ARIA_LABEL_CONFIG = {
@@ -163,6 +159,7 @@ function FlowContent({
     // Fit the graph again when the canvas changes size (the fullscreen dialog opening, a window resize), since the first
     // fit can run before the canvas has its final size. Never on an edit, which would move the map while you work on it.
     const canvasSize = useStore(canvasSizeSelector);
+    const compact = useStore(state => state.transform[2] < 0.65);
     const fittedSize = useRef<string | null>(null);
     useEffect(() => {
         const previous = fittedSize.current;
@@ -195,56 +192,24 @@ function FlowContent({
         () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, { itemLabel, recipeLabel }),
         [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, itemLabel, recipeLabel],
     );
-    // hovering or focusing one half of a belt drawn twice outlines the other half
-    const twinId = twinNodeId(hoveredNodeId) ?? twinNodeId(focusedNodeId);
-    const nodes = useMemo(
-        () => graphNodes.map(node => {
-            const entity = flowNodeEntity(node);
-            return { ...node, selected: entity.type === selection?.kind && entity.id === selection.id, ...(node.id === twinId ? { className: TWIN_CLASS } : {}) };
-        }),
-        [graphNodes, twinId, selection],
-    );
-    // the entity behind each node, by node id, for the ends of a connection or an edge
+    const activeNode = graphNodes.find(node => node.id === (hoveredNodeId ?? focusedNodeId));
+    const focusKey = activeNode ? flowEntityKey(activeNode) : selection ? `${selection.kind}:${selection.id}` : null;
+    const focus = useMemo(() => flowFocus(graphNodes, edges, focusKey), [graphNodes, edges, focusKey]);
+    const nodes = useMemo(() => graphNodes.map(node => ({
+        ...node,
+        selected: flowEntityKey(node) === (selection ? `${selection.kind}:${selection.id}` : null),
+        className: activeNode && focus.same.has(node.id) && node.id !== activeNode.id ? TWIN_CLASS : undefined,
+        style: { opacity: focusKey && !focus.related.has(node.id) ? 0.45 : 1 },
+    })), [graphNodes, focus, focusKey, selection, activeNode?.id]);
+    const measured = useMeasuredFlowNodes(nodes);
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
     const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
-
-    const edgesWithSelection = useMemo(() => {
-        const anyHovered = hoveredNodeId !== null;
-        
-
-        // Compute highlighted set: direct edges + one hop through connected inserters
-        let highlightedEdgeIds: Set<string> | null = null;
-        if (anyHovered) {
-            const connectedInserterIds = new Set<string>();
-            highlightedEdgeIds = new Set<string>();
-            for (const edge of edges) {
-                if (edge.source === hoveredNodeId || edge.target === hoveredNodeId) {
-                    highlightedEdgeIds.add(edge.id);
-                    if (entityOf(edge.source)?.type === 'inserter') connectedInserterIds.add(edge.source);
-                    if (entityOf(edge.target)?.type === 'inserter') connectedInserterIds.add(edge.target);
-                }
-            }
-            for (const edge of edges) {
-                if (connectedInserterIds.has(edge.source) || connectedInserterIds.has(edge.target)) {
-                    highlightedEdgeIds.add(edge.id);
-                }
-            }
-        }
-
-        // the arrowhead takes its edge's colour, or it stays the default grey on an orange edge
-        const marker = (e: Edge, color: string) => ({ ...(e.markerEnd as EdgeMarker), color });
-        return edges.map(e => {
-            const isConnected = highlightedEdgeIds?.has(e.id) ?? false;
-            const isSelected = selectedEdgeIds.has(e.id);
-            const normal = { ...e, markerEnd: marker(e, DIMMED_COLOR), style: { ...e.style, stroke: DIMMED_COLOR } };
-            if (anyHovered) {
-                return isConnected
-                    ? { ...e, selected: isSelected, markerEnd: marker(e, HIGHLIGHT_COLOR), style: { stroke: HIGHLIGHT_COLOR, strokeWidth: 2.5 } }
-                    : { ...e, selected: isSelected, markerEnd: marker(e, DIMMED_COLOR), style: { stroke: DIMMED_COLOR, strokeWidth: 1, strokeDasharray: '4 3' } };
-            }
-            return isSelected ? { ...normal, selected: true, markerEnd: marker(e, HIGHLIGHT_COLOR), style: { stroke: HIGHLIGHT_COLOR, strokeWidth: 2.5 } } : normal;
-        });
-    }, [edges, selectedEdgeIds, hoveredNodeId, entityOf, HIGHLIGHT_COLOR, DIMMED_COLOR]);
+    const edgesWithSelection = useMemo(() => edges.map(edge => {
+        const highlighted = focus.routes.has(edge.id) || selectedEdgeIds.has(edge.id);
+        const color = highlighted ? HIGHLIGHT_COLOR : DIMMED_COLOR;
+        return { ...edge, selected: selectedEdgeIds.has(edge.id), markerEnd: { ...(edge.markerEnd as EdgeMarker), color },
+            style: { stroke: color, strokeWidth: highlighted ? 2.5 : 1.5, opacity: focusKey && !highlighted ? 0.3 : 1 } };
+    }), [edges, focus, focusKey, selectedEdgeIds, HIGHLIGHT_COLOR, DIMMED_COLOR]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
         setSelectedEdgeIds(prev => {
@@ -370,7 +335,9 @@ function FlowContent({
 
     return (
         <ReactFlow
-            nodes={nodes}
+            className={compact ? 'flow-compact' : undefined}
+            nodes={measured.nodes}
+            onNodesChange={measured.onNodesChange}
             edges={edgesWithSelection}
             nodeTypes={nodeTypes}
             onNodeClick={handleNodeClick}
@@ -429,6 +396,7 @@ function FlowContent({
                         </IconButton>
                     )}
                 </Box>
+                {compact && <Typography variant="caption" sx={{ bgcolor: tokens.surface.panel, px: 0.5 }}>Zoom in for details</Typography>}
             </Panel>
             {hasAddCallbacks && (
                 <Panel position="top-right">
@@ -534,6 +502,10 @@ function ConfigFlowDiagramComponent({
                     overflow: 'hidden',
                     border: '1px solid',
                     borderColor: 'divider',
+                    '& .flow-node-title': { lineHeight: '20px' },
+                    '& .flow-compact .flow-node-title': { fontSize: '1.1rem', whiteSpace: 'nowrap' },
+                    '& .flow-compact .flow-node-detail': { visibility: 'hidden' },
+                    '& .flow-compact .react-flow__node.selected .flow-node-detail, & .flow-compact .react-flow__node:focus-visible .flow-node-detail': { visibility: 'visible' },
                     '& .react-flow__controls': {
                         background: tokens.surface.panel,
                         border: `1px solid ${tokens.control.border}`,

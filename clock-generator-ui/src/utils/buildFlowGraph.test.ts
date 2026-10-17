@@ -205,3 +205,24 @@ describe('buildFlowGraph', () => {
         }
     });
 });
+
+it('reserves stable replay node geometry for chains and machine loops', () => {
+    for (const fixture of Object.values(FIXTURES)) {
+        const config = fixture();
+        const replay = buildFlowGraph(config.machines, config.inserters, config.belts, config.chests, config.drills?.configs ?? [], undefined, false, undefined, 210);
+        expect(replay.nodes.length).toBeGreaterThan(0);
+        for (const node of replay.nodes) {
+            expect(Number.isFinite(node.position.x)).toBe(true);
+            expect(Number.isFinite(node.position.y)).toBe(true);
+        }
+        for (const edge of replay.edges) {
+            expect(replay.nodes.some(node => node.id === edge.source)).toBe(true);
+            expect(replay.nodes.some(node => node.id === edge.target)).toBe(true);
+        }
+        // Nodes in the same column must have room for their fixed replay readout.
+        for (let i = 0; i < replay.nodes.length; i++) for (let j = i + 1; j < replay.nodes.length; j++) {
+            const a = replay.nodes[i], b = replay.nodes[j];
+            if (Math.abs(a.position.x - b.position.x) < 1) expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(210);
+        }
+    }
+});

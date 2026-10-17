@@ -22,7 +22,7 @@ export function TimelineTickInspector({ recording, entity, inspection, tick, eve
         return { visible, details };
     }, [entity, inspection.view, inspection.signals]);
     const outside = tick > recording.end_tick;
-    const showEventFacts = inspection.view === 'transfers' || (inspection.view === 'activity' && inspection.signals.includes('transfers'));
+    const showEventFacts = inspection.view === 'flow' || inspection.view === 'transfers' || (inspection.view === 'activity' && inspection.signals.includes('transfers'));
     const shownEvents = showEventFacts ? events.filter(event => ['produce', 'pickup', 'drop'].includes(event.kind)) : [];
     const detailedEvents = events.filter(event => !shownEvents.includes(event));
     const fields = (signals: TimelineSeries[]) => <Box component="dl" sx={{ m: 0, mt: 1 }}>{signals.map(signal => {

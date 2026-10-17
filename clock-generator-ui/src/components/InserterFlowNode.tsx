@@ -36,12 +36,14 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     <Box>
                         <Typography
                             variant="caption"
+                            className="flow-node-title"
                             sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: tokens.text.primary }}
                         >
                             {entityLabel('inserter', data.inserterId)}
                         </Typography>
                         <Typography
                             variant="caption"
+                            className="flow-node-detail"
                             sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2, display: 'block' }}
                         >
                             Stack: {Number.isFinite(data.stackSize) ? data.stackSize : 'Automatic'}
@@ -59,6 +61,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25, maxWidth: '100%' }}>
                         {/* the List row's chip text; a long rule wraps onto a second line rather than widen the node */}
                         <Chip
+                            className="flow-node-detail"
                             label={data.enableChip}
                             title={data.enableSummary}
                             size="small"

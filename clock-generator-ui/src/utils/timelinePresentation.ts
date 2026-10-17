@@ -37,6 +37,7 @@ export function timelineStateStyle(state: string): ItemChartStyle {
 
 export function timelineSignalVisible(entity: TimelineEntity, series: TimelineSeries, view: TimelineInspection['view'], groups: readonly TimelineSignalGroup[]): boolean {
     if (view === 'windows') return false;
+    if (view === 'flow') return ['state', 'hand'].includes(series.group) || series.id === 'produced' || series.id === 'craft';
     if (view === 'states') return series.group === 'state';
     if (view === 'transfers') return ['state', 'hand'].includes(series.group) || series.id === 'produced';
     if (series.id === 'produced' && groups.includes('transfers')) return true;

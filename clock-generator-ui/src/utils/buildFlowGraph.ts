@@ -191,6 +191,7 @@ export function buildFlowGraph(
     getRecipeInfo?: (name: string) => RecipeInfo | null,
     detailMode?: boolean,
     { itemLabel, recipeLabel }: FlowLabels = ID_LABELS,
+    nodeHeight = 0,
 ): { nodes: Node[], edges: Edge[] } {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
@@ -220,8 +221,8 @@ export function buildFlowGraph(
         for (const half of halves) {
             const node_id = flowNodeId(data.entityType, data.entityId, half);
             const label = half ? `${data.label}${HALF_SUFFIX[half]}` : data.label;
-            g.setNode(node_id, { width: ENTITY_NODE_WIDTH, height: ENTITY_NODE_HEIGHT });
-            drawn.set(node_id, { w: ENTITY_NODE_WIDTH, h: ENTITY_NODE_HEIGHT });
+            g.setNode(node_id, { width: ENTITY_NODE_WIDTH, height: Math.max(nodeHeight, ENTITY_NODE_HEIGHT) });
+            drawn.set(node_id, { w: ENTITY_NODE_WIDTH, h: Math.max(nodeHeight, ENTITY_NODE_HEIGHT) });
             nodes.push({
                 id: node_id,
                 type: 'entityNode',
@@ -235,11 +236,11 @@ export function buildFlowGraph(
     // --- Entity nodes ---
     machines.forEach(machine => {
         const id = flowNodeId('machine', machine.id);
-        const nodeHeight = detailMode ? ENTITY_NODE_DETAIL_HEIGHT : ENTITY_NODE_HEIGHT;
+        const machineHeight = Math.max(nodeHeight, detailMode ? ENTITY_NODE_DETAIL_HEIGHT : ENTITY_NODE_HEIGHT);
         const in_loop = loop_machine_ids.has(machine.id);
         // taller in the layout than it is drawn, which leaves room above and below for the inserters of its loop
-        g.setNode(id, { width: ENTITY_NODE_WIDTH, height: nodeHeight + (in_loop ? INSERTER_NODE_HEIGHT + LOOP_GAP : 0) });
-        drawn.set(id, { w: ENTITY_NODE_WIDTH, h: nodeHeight });
+        g.setNode(id, { width: ENTITY_NODE_WIDTH, height: machineHeight + (in_loop ? Math.max(nodeHeight, INSERTER_NODE_HEIGHT) + LOOP_GAP : 0) });
+        drawn.set(id, { w: ENTITY_NODE_WIDTH, h: machineHeight });
         const label = entityLabel('machine', machine.id);
         nodes.push({
             id,
@@ -307,7 +308,7 @@ export function buildFlowGraph(
             : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         const rule = describeEnableRule(inserter.overrides?.enable_control, { forcedAlways: inserter._forced_always });
-        const height = INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT);
+        const height = Math.max(nodeHeight, INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT));
         const width = rule.quiet ? INSERTER_NODE_WIDTH : INSERTER_NODE_CHIP_WIDTH;
         if (!in_loop) {
             g.setNode(inserterNodeId, { width, height });
@@ -349,8 +350,8 @@ export function buildFlowGraph(
     (drills ?? []).forEach(drill => {
         const drillNodeId = flowNodeId('drill', drill.id);
         const targetNodeId = flowNodeId('machine', drill.target.id);
-        g.setNode(drillNodeId, { width: DRILL_NODE_WIDTH, height: DRILL_NODE_HEIGHT });
-        drawn.set(drillNodeId, { w: DRILL_NODE_WIDTH, h: DRILL_NODE_HEIGHT });
+        g.setNode(drillNodeId, { width: DRILL_NODE_WIDTH, height: Math.max(nodeHeight, DRILL_NODE_HEIGHT) });
+        drawn.set(drillNodeId, { w: DRILL_NODE_WIDTH, h: Math.max(nodeHeight, DRILL_NODE_HEIGHT) });
         nodes.push({
             id: drillNodeId,
             type: 'drillNode',

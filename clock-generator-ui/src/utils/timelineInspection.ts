@@ -4,7 +4,7 @@ export interface TimelineRange { start: number; end: number }
 export type TimelineSignalGroup = TimelineSeries['group'] | 'transfers' | 'throughput' | 'buffers';
 export interface TimelineInspection {
     /** 'states' is accepted for older saved contexts and migrates to Activity with a signal preset. */
-    view: 'windows' | 'activity' | 'states' | 'transfers' | 'cycles';
+    view: 'windows' | 'activity' | 'states' | 'transfers' | 'cycles' | 'flow';
     run: 'clock' | 'plan';
     entityId: string | null;
     tick: number;
@@ -12,6 +12,10 @@ export interface TimelineInspection {
     signals: TimelineSignalGroup[];
     showConnections?: boolean;
     cycleIndex?: number;
+    replaySpeed?: number;
+    replayCycleOnly?: boolean;
+    replayFocus?: boolean;
+    replayViewport?: { x: number; y: number; zoom: number };
 }
 export const DEFAULT_INSPECTION: TimelineInspection = { view: 'windows', run: 'clock', entityId: null, tick: 0, ranges: {}, signals: ['state', 'inventory', 'transfers'] };
 export const SIGNAL_GROUPS: TimelineSignalGroup[] = ['state', 'inventory', 'transfers', 'buffers', 'progress', 'hand', 'fuel', 'production', 'throughput'];
@@ -26,13 +30,18 @@ export function validInspection(value: unknown): TimelineInspection {
         if (range && Number.isFinite(range.start) && Number.isFinite(range.end) && range.start >= 0 && range.end > range.start && range.end <= 500_000) ranges[key] = { start: range.start, end: range.end };
     }
     return {
-        view: input.view === 'states' ? 'activity' : ['windows', 'activity', 'transfers', 'cycles'].includes(input.view ?? '') ? input.view! : 'windows',
+        view: input.view === 'states' ? 'activity' : ['windows', 'activity', 'transfers', 'cycles', 'flow'].includes(input.view ?? '') ? input.view! : 'windows',
         run: input.run === 'plan' ? 'plan' : 'clock',
         entityId: typeof input.entityId === 'string' && /^(machine|inserter|drill|belt|chest):\d+$/.test(input.entityId) ? input.entityId : null,
         tick: typeof input.tick === 'number' && Number.isFinite(input.tick) ? Math.max(0, Math.min(500_000, Math.round(input.tick))) : 0,
         ranges,
         signals: input.view === 'states' ? ['state'] : Array.isArray(input.signals) ? [...new Set(input.signals.filter(group => SIGNAL_GROUPS.includes(group)))] : DEFAULT_INSPECTION.signals,
         showConnections: input.showConnections === true,
+        ...([0.25, 0.5, 1, 2, 4, 8].includes(input.replaySpeed ?? 0) ? { replaySpeed: input.replaySpeed } : {}),
+        ...(typeof input.replayCycleOnly === 'boolean' ? { replayCycleOnly: input.replayCycleOnly } : {}),
+        ...(typeof input.replayFocus === 'boolean' ? { replayFocus: input.replayFocus } : {}),
+        ...(input.replayViewport && Number.isFinite(input.replayViewport.x) && Number.isFinite(input.replayViewport.y) && Number.isFinite(input.replayViewport.zoom) && input.replayViewport.zoom >= 0.1 && input.replayViewport.zoom <= 2
+            ? { replayViewport: { x: input.replayViewport.x, y: input.replayViewport.y, zoom: input.replayViewport.zoom } } : {}),
         ...(typeof input.cycleIndex === 'number' && Number.isSafeInteger(input.cycleIndex) && input.cycleIndex >= 0 ? { cycleIndex: input.cycleIndex } : {}),
     };
 }
