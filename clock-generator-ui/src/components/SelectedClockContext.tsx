@@ -30,8 +30,9 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
     useEffect(() => { if (detail === 'timeline') setTimelineVisited(true); }, [detail]);
     const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
     return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={clockSelector}>
+        {/* Above floating field labels (z-index 1) while the fullscreen body scrolls. */}
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
-            aria-label="Selected clock workspace" sx={{ ...(fullscreen && { position: 'sticky', top: -16, zIndex: 1, bgcolor: 'background.paper' }), borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
+            aria-label="Selected clock workspace" sx={{ ...(fullscreen && { position: 'sticky', top: -16, zIndex: 2, bgcolor: 'background.paper' }), borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
             <Tab label="Overview" value="overview" {...tabProps('result-context', 'overview')} />
             <Tab label="Timeline" value="timeline" {...tabProps('result-context', 'timeline')} />
         </Tabs>
