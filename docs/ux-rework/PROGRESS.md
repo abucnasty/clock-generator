@@ -754,3 +754,12 @@ All workers use Sol/high, fast off. No Phase4 formal review fix rounds have star
 Owner then explicitly scheduled custom full-AA capture/audit harness deletion immediately AFTER Phase4 finishes, before further phase work. Inventory55 tracked scripts/34879 lines; no files removed yet. No deletion of ordinary Vitest/regression coverage is authorized by that tooling cleanup.
 
 Owner prohibits automatic PR merges: all PRs remain open for owner review/authorization. Prepare the Phase4 review checkpoint without landing into feature/master or auto-merging child PRs. D9 first cleanup CODE/UX round0 PASS; full gates+root repeat1248/81, all412assets unchanged; final provider reconciliation and CI remain open.
+
+
+## Phase 4 review candidate and harness removal timing
+
+The combined review candidate is `41cbd15` on `feat/ux-rework-p4-review` in `/tmp/ux-phase4-review`; all product branches have been integrated locally. Neither feature nor master has been changed by that integration. All combined local gates passed: UI 1,376 cases/86 files, engine 1,075 cases/82 files, generation 147 cases/13 files, lint, unused-code checks, icons and production build. The independent UI test/build repeat also passed. The equivalent pre-D9 build passed 1,433 UI cases/86 files. Receipts: `/tmp/ux-p4-combined-checks-r0/RESULTS.json`, `/tmp/ux-p4-combined-repeat-r0/RESULTS.json`, `/tmp/ux-p4-combined-before-r0/RESULTS.json`.
+
+Owner timing clarified: remove the custom full-AA capture/audit harness in a dedicated final Phase4 cleanup commit **after focused acceptance and required reviews, before marking the Phase4 PR ready for owner review**. Do not postpone removal to after a merge or another phase. Keep ordinary functional/regression tests and product keyboard/colour support. No further custom compliance-harness expansion. All PRs remain open for owner review; no automatic merges.
+
+Native focused acceptance has now verified D10 on the combined production build: keyboard Check found eight repeated units; keyboard conversion retained total 4/s, changed Copies from 0.5 to 4, retained one machine/two inserters and automatically passed Check without generating; keyboard Undo restored eight machines/sixteen inserters and Copies 0.5. Root opened the conversion/Undo focus screenshots. Receipts and actual images: `/tmp/ux-p4-focused-acceptance-r0`. Remaining focused interaction checks, final D3 repeat, independent item reviews and fresh phase personas are still open.

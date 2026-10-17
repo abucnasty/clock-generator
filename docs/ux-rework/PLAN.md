@@ -1,6 +1,6 @@
 # UX rework: handoff plan
 
-> **Active owner override,2026-10-16:** Phase4 and remaining UX acceptance use [keyboard and colour criteria](specs/keyboard-colour-profile.md), superseding every older full-WCAG-AA/comprehensive-capture requirement in this file or item specs. Keep functional gates, independent CODE+UX and three phase-end personas. Stop custom compliance-harness expansion; delete that harness immediately after Phase4 finishes. **Never auto-merge any PR; leave it open for owner review.** Historical evidence remains historical.
+> **Active owner override,2026-10-16:** Phase4 and remaining UX acceptance use [keyboard and colour criteria](specs/keyboard-colour-profile.md), superseding every older full-WCAG-AA/comprehensive-capture requirement in this file or item specs. Keep functional gates, independent CODE+UX and three phase-end personas. Stop custom compliance-harness expansion; delete that harness in the final Phase4 cleanup commit after focused acceptance and required reviews, before marking the Phase4 PR ready for owner review. **Never auto-merge any PR; leave it open for owner review.** Historical evidence remains historical.
 
 
 This is the plan for reworking the clock generator site's UX, written for the agent that implements it. It lives on
