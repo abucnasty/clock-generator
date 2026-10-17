@@ -4,12 +4,15 @@ import type { TimelineEntity, TimelineRecording } from 'clock-generator/browser'
 import { TimelineEvidenceChart } from './TimelineEvidenceChart';
 const inserter: TimelineEntity = { id: 'inserter:1', type: 'inserter', source: 'belt:1', sink: 'machine:1', items: ['iron-plate'], signals: [] };
 const a: TimelineRecording = { version: 1, mode: 'clock', start_tick: 0, end_tick: 100, period_ticks: 100, requested_ticks: 100, ticks_before_recording: 1000, ticks_per_second: 60, copies: 1, truncated: false, entities: [inserter], events: [] };
-it('retains comparison deliveries and their rates when A delivered nothing', () => {
+it('shows deliveries and their rates for the selected clock without A/B labels', () => {
     const b: TimelineRecording = { ...a, events: [{ tick: 10, entity_id: inserter.id, kind: 'drop', item: 'iron-plate', amount: 16, source: 'belt:1', sink: 'machine:1' }] };
-    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={a} comparison={b} selected={inserter} groups={['transfers', 'throughput']} range={{ start: 0, end: 100 }} tick={20} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={b} selected={inserter} groups={['transfers', 'throughput']} range={{ start: 0, end: 100 }} tick={20} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
     expect(html).toContain('Pickups ◆ / deliveries ●');
     expect(html).toContain('rolling 1 s');
     expect(html).toContain('16 items/s');
+    expect(html).not.toContain('A/B');
+    expect(html).not.toContain('B:');
+    expect(html).not.toContain('Comparison clock');
 });
 
 const machine: TimelineEntity = { id: 'machine:1', type: 'machine', recipe: 'iron-gear-wheel', items: ['iron-gear-wheel'], signals: [
@@ -23,7 +26,7 @@ it('shows products made and quantities while leaving craft internals in exact ev
         { tick: 10, entity_id: machine.id, kind: 'produce', amount: 3, item: 'iron-gear-wheel' },
         { tick: 15, entity_id: inserter.id, kind: 'drop', amount: 3, item: 'iron-gear-wheel' },
     ] };
-    const props = { recording, comparison: null, selected: machine, groups: ['state', 'transfers'] as const, range: { start: 0, end: 100 }, tick: 20, view: 'activity' as const, onTick() {}, onRange() {}, onZoom() {} };
+    const props = { recording, selected: machine, groups: ['state', 'transfers'] as const, range: { start: 0, end: 100 }, tick: 20, view: 'activity' as const, onTick() {}, onRange() {}, onZoom() {} };
     const html = renderToStaticMarkup(<TimelineEvidenceChart {...props} groups={[...props.groups]} />);
     expect(html).toContain('Products made');
     expect(html).toContain('3 items');
@@ -34,7 +37,7 @@ it('shows products made and quantities while leaving craft internals in exact ev
 });
 it('keeps an empty products-made lane when no output was released', () => {
     const recording = { ...a, entities: [{ ...machine, signals: machine.signals.map(signal => signal.id === 'produced' ? { ...signal, ticks: [0], values: [0] } : signal) }] };
-    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={recording} comparison={null} selected={recording.entities[0]} groups={['transfers']} range={{ start: 0, end: 100 }} tick={20} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={recording} selected={recording.entities[0]} groups={['transfers']} range={{ start: 0, end: 100 }} tick={20} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
     expect(html).toContain('Products made');
     expect(html).toContain('0 items');
 });
@@ -44,7 +47,7 @@ it('keeps machine output buffers optional while retaining ingredient inventories
         { id: 'input:iron-plate', label: 'Ingredient', group: 'inventory', unit: 'items', item: 'iron-plate', ticks: [0], values: [2] },
         { id: 'output:iron-gear-wheel', label: 'Output buffer', group: 'inventory', unit: 'items', item: 'iron-gear-wheel', ticks: [0], values: [3] },
     ] };
-    const props = { recording: { ...a, entities: [entity] }, comparison: null, selected: entity, range: { start: 0, end: 100 }, tick: 0, view: 'activity' as const, onTick() {}, onRange() {}, onZoom() {} };
+    const props = { recording: { ...a, entities: [entity] }, selected: entity, range: { start: 0, end: 100 }, tick: 0, view: 'activity' as const, onTick() {}, onRange() {}, onZoom() {} };
     const basic = renderToStaticMarkup(<TimelineEvidenceChart {...props} groups={['inventory']} />);
     expect(basic).toContain('Ingredient');
     expect(basic).not.toContain('Output buffer');
@@ -54,16 +57,15 @@ it('keeps machine output buffers optional while retaining ingredient inventories
 });
 
 it('explains per-copy, marked-span and cumulative quantities above the chart', () => {
-    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={{ ...a, copies: 5.5, entities: [machine] }} comparison={null} selected={machine} groups={['transfers']} range={{ start: 0, end: 100 }} tick={20} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={{ ...a, copies: 5.5, entities: [machine] }} selected={machine} groups={['transfers']} range={{ start: 0, end: 100 }} tick={20} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
     expect(html).toContain('Charts show one modelled copy');
     expect(html).toContain('5.5');
     expect(html).toContain('+N means items made in the marked span');
     expect(html).toContain('Total by selected tick');
 });
-it('gives a local legend for states in view, including states unique to the comparison', () => {
-    const aEntity = { ...machine, signals: [{ ...machine.signals[0], ticks: [0, 30], values: ['working', 'no_fuel'] }] };
-    const bEntity = { ...machine, signals: [{ ...machine.signals[0], ticks: [0], values: ['item_ingredient_shortage'] }] };
-    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={{ ...a, entities: [aEntity] }} comparison={{ ...a, entities: [bEntity] }} selected={aEntity} groups={['state']} range={{ start: 0, end: 20 }} tick={10} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+it('gives a local legend for the selected clock’s states in the visible range', () => {
+    const aEntity = { ...machine, signals: [{ ...machine.signals[0], ticks: [0, 10, 30], values: ['working', 'item_ingredient_shortage', 'no_fuel'] }] };
+    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={{ ...a, entities: [aEntity] }} selected={aEntity} groups={['state']} range={{ start: 0, end: 20 }} tick={10} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
     expect(html).toContain('aria-label="State legend"');
     expect(html).toContain('Working');
     expect(html).toContain('Waiting for ingredients');

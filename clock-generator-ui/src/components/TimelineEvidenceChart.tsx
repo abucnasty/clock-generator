@@ -14,9 +14,7 @@ export interface EvidenceLane {
     id: string;
     entity: TimelineEntity;
     series?: TimelineSeries;
-    compare?: TimelineSeries;
     events?: TimelineEvent[];
-    compareEvents?: TimelineEvent[];
     label: string;
     color: string;
     unit?: string;
@@ -26,7 +24,7 @@ export interface EvidenceLane {
     itemStyles?: Map<string, { color: string }>;
 }
 
-function drawSeries(context: CanvasRenderingContext2D, series: TimelineSeries, range: TimelineRange, width: number, height: number, color: string, dashed: boolean, ceiling: number, end: number): void {
+function drawSeries(context: CanvasRenderingContext2D, series: TimelineSeries, range: TimelineRange, width: number, height: number, color: string, ceiling: number, end: number): void {
     if (end < range.start) return;
     const x = (tick: number) => (tick - range.start) / (range.end - range.start) * width;
     context.save();
@@ -35,7 +33,7 @@ function drawSeries(context: CanvasRenderingContext2D, series: TimelineSeries, r
         const first = Math.max(0, upperBound(series.ticks, range.start) - 1), last = upperBound(series.ticks, Math.min(end, range.end));
         const forced = matchMedia('(forced-colors: active)').matches;
         const fills = new Map<string, string | CanvasPattern>();
-        const top = dashed ? height / 2 + 2 : 3, barHeight = dashed ? height / 2 - 5 : height / 2 - 3;
+        const top = 3, barHeight = height - 6;
         for (let i = first; i < last; i++) {
             const a = x(Math.max(range.start, series.ticks[i])), b = x(Math.min(range.end, end, series.ticks[i + 1] ?? end));
             const value = String(series.values[i]);
@@ -46,16 +44,14 @@ function drawSeries(context: CanvasRenderingContext2D, series: TimelineSeries, r
                 fills.set(value, fill);
             }
             context.fillStyle = fills.get(value)!;
-            if (dashed) {
-                context.strokeStyle = context.fillStyle; context.setLineDash([4, 3]); context.strokeRect(a, top, Math.max(1, b - a), barHeight);
-            } else context.fillRect(a, top, Math.max(1, b - a), barHeight);
+            context.fillRect(a, top, Math.max(1, b - a), barHeight);
 
         }
     } else {
         const y = (value: number) => height - 7 - value / ceiling * (height - 18);
         const points = timelinePoints(series, { ...range, end: Math.min(range.end, end) }, width);
         if (points.length) {
-            context.strokeStyle = color; context.lineWidth = 1.6; context.setLineDash(dashed ? [5, 4] : []);
+            context.strokeStyle = color; context.lineWidth = 1.6;
             context.beginPath(); context.moveTo(x(points[0].tick), y(points[0].value));
             let previous = points[0].value;
             for (const point of points.slice(1)) { context.lineTo(x(point.tick), y(previous)); context.lineTo(x(point.tick), y(point.value)); previous = point.value; }
@@ -65,7 +61,7 @@ function drawSeries(context: CanvasRenderingContext2D, series: TimelineSeries, r
     context.restore();
 }
 
-function drawEvents(context: CanvasRenderingContext2D, events: TimelineEvent[], range: TimelineRange, width: number, y: number, dashed: boolean, styles: Map<string, { color: string }>): void {
+function drawEvents(context: CanvasRenderingContext2D, events: TimelineEvent[], range: TimelineRange, width: number, y: number, styles: Map<string, { color: string }>): void {
     const ticks = events.map(event => event.tick);
     const first = Math.max(0, upperBound(ticks, range.start - 1)), end = upperBound(ticks, range.end);
     const occupied = new Set<string>();
@@ -81,11 +77,11 @@ function drawEvents(context: CanvasRenderingContext2D, events: TimelineEvent[], 
         if (event.kind === 'pickup') { context.moveTo(x, y - 4); context.lineTo(x + 4, y); context.lineTo(x, y + 4); context.lineTo(x - 4, y); context.closePath(); }
         else if (event.kind === 'drop') context.arc(x, y, 3.5, 0, Math.PI * 2);
         else continue;
-        if (dashed) context.stroke(); else context.fill();
+        context.fill();
     }
 }
 
-function drawProduction(context: CanvasRenderingContext2D, events: TimelineEvent[], range: TimelineRange, width: number, y: number, color: string, outlined: boolean): void {
+function drawProduction(context: CanvasRenderingContext2D, events: TimelineEvent[], range: TimelineRange, width: number, y: number, color: string): void {
     const forced = matchMedia('(forced-colors: active)').matches;
     context.fillStyle = context.strokeStyle = forced ? 'CanvasText' : color;
     context.font = '12px sans-serif'; context.textAlign = 'center'; context.lineWidth = 1;
@@ -95,14 +91,13 @@ function drawProduction(context: CanvasRenderingContext2D, events: TimelineEvent
         const text = `+${formatNumberText(batch.amount, { maxDecimals: 2 })}`;
         const half = context.measureText(text).width / 2 + 2;
         context.fillText(text, Math.max(half, Math.min(width - half, (x + end) / 2)), y);
-        context.setLineDash(outlined ? [3, 2] : []);
         context.beginPath(); context.moveTo(x, y + 4); context.lineTo(Math.max(x + 1, end), y + 4); context.stroke();
     }
 }
 
 /** The expensive data layer is independent of cursor movement; only the CSS guide/readouts change on a scrub. */
-const EvidenceCanvas = memo(function EvidenceCanvas({ lane, range, end, compareEnd, height, onTick, onRange, onZoom }: {
-    lane: EvidenceLane; range: TimelineRange; end: number; compareEnd: number; height: number;
+const EvidenceCanvas = memo(function EvidenceCanvas({ lane, range, end, height, onTick, onRange, onZoom }: {
+    lane: EvidenceLane; range: TimelineRange; end: number; height: number;
     onTick(tick: number): void; onRange(range: TimelineRange): void; onZoom(factor: number, tick: number): void;
 }) {
     const canvas = useRef<HTMLCanvasElement>(null);
@@ -131,22 +126,19 @@ const EvidenceCanvas = memo(function EvidenceCanvas({ lane, range, end, compareE
                 context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke();
             }
             const ceiling = lane.ceiling ?? 1;
-            if (lane.series && !lane.production) drawSeries(context, lane.series, range, width, height, forced.matches ? 'CanvasText' : lane.color, false, ceiling, end);
-            if (lane.compare && !lane.production && compareEnd >= range.start) drawSeries(context, lane.compare, range, width, height, forced.matches ? 'Highlight' : lane.color, true, ceiling, compareEnd);
+            if (lane.series && !lane.production) drawSeries(context, lane.series, range, width, height, forced.matches ? 'CanvasText' : lane.color, ceiling, end);
             if (lane.events) {
                 const styles = lane.itemStyles ?? new Map();
                 if (lane.production) {
-                    drawProduction(context, lane.events, range, width, 16, lane.color, false);
-                    if (lane.compareEvents) drawProduction(context, lane.compareEvents, range, width, 46, lane.color, true);
+                    drawProduction(context, lane.events, range, width, 16, lane.color);
                 } else {
-                    drawEvents(context, lane.events, range, width, 12, false, styles);
-                    if (lane.compareEvents) drawEvents(context, lane.compareEvents, range, width, 29, true, styles);
+                    drawEvents(context, lane.events, range, width, 12, styles);
                 }
             }
         };
         paint(); forced.addEventListener('change', paint);
         return () => forced.removeEventListener('change', paint);
-    }, [lane, range, width, height, end, compareEnd]);
+    }, [lane, range, width, height, end]);
     useEffect(() => {
         const node = canvas.current;
         if (!node) return;
@@ -172,10 +164,10 @@ const EvidenceCanvas = memo(function EvidenceCanvas({ lane, range, end, compareE
         sx={{ display: 'block', width: '100%', height, touchAction: 'pan-y', cursor: 'crosshair', forcedColorAdjust: 'none', '&:focus-visible': { outline: '2px solid #ffa600', outlineOffset: 2 } }} />;
 });
 
-export function TimelineEvidenceChart({ recording, comparison, selected, groups, range, tick, view, showConnections = false, primaryLabel, comparisonLabel, onTick, onInspect, onRange, onZoom }: {
-    recording: TimelineRecording; comparison: TimelineRecording | null; selected: TimelineEntity; groups: TimelineSignalGroup[];
+export function TimelineEvidenceChart({ recording, selected, groups, range, tick, view, showConnections = false, onTick, onInspect, onRange, onZoom }: {
+    recording: TimelineRecording; selected: TimelineEntity; groups: TimelineSignalGroup[];
     range: TimelineRange; tick: number; view: 'activity' | 'states' | 'transfers';
-    showConnections?: boolean; primaryLabel?: string; comparisonLabel?: string;
+    showConnections?: boolean;
     onTick(tick: number): void; onInspect?(entityId: string, tick: number): void; onRange(range: TimelineRange): void; onZoom(factor: number, tick: number): void;
 }) {
     const { itemLabel, recipeLabel } = useGameNames();
@@ -190,53 +182,48 @@ export function TimelineEvidenceChart({ recording, comparison, selected, groups,
                 if (!timelineSignalVisible(entity, series, view, groups)) continue;
                 // The products lane below provides the total; keep the numeric production trace opt-in.
                 if (series.id === 'produced' && !groups.includes('production')) continue;
-                rows.push({ id: `${entity.id}/${series.id}`, entity, series, compare: comparison?.entities.find(other => other.id === entity.id)?.signals.find(other => other.id === series.id),
+                rows.push({ id: `${entity.id}/${series.id}`, entity, series,
                     label: series.item ? `${series.label} · ${itemLabel(series.item)}` : series.label, color: series.item ? styles.get(series.item)?.color ?? '#56B4E9' : entity.type === 'inserter' ? BELT_CHART.entity.inserter : '#56B4E9', unit: series.unit });
             }
             if ((groups.includes('transfers') || view === 'transfers') && view !== 'states') {
                 if (entity.type === 'machine') {
                     const productEvents = recording.events.filter(event => event.entity_id === entity.id && event.kind === 'produce');
-                    const otherEvents = comparison?.events.filter(event => event.entity_id === entity.id && event.kind === 'produce') ?? [];
-                    const products = new Set([...productEvents, ...otherEvents, ...entity.signals.filter(signal => signal.id === 'produced')].flatMap(event => event.item ? [event.item] : []));
+                    const products = new Set([...productEvents, ...entity.signals.filter(signal => signal.id === 'produced')].flatMap(event => event.item ? [event.item] : []));
                     for (const item of products) rows.push({ id: `${entity.id}/products/${item}`, entity, label: 'Products made', production: true, item,
                         color: styles.get(item)?.color ?? '#56B4E9', series: entity.signals.find(signal => signal.id === 'produced' && signal.item === item),
-                        compare: comparison?.entities.find(other => other.id === entity.id)?.signals.find(signal => signal.id === 'produced' && signal.item === item),
-                        events: productEvents.filter(event => event.item === item), compareEvents: comparison ? otherEvents.filter(event => event.item === item) : undefined });
+                        events: productEvents.filter(event => event.item === item) });
                 } else {
                     const events = recording.events.filter(event => event.entity_id === entity.id && ['pickup', 'drop'].includes(event.kind));
-                    const compareEvents = comparison?.events.filter(event => event.entity_id === entity.id && ['pickup', 'drop'].includes(event.kind));
-                    if (events.length || compareEvents?.length) rows.push({ id: `${entity.id}/events`, entity, label: 'Pickups ◆ / deliveries ●', color: '#56B4E9', itemStyles: styles, events, compareEvents });
+                    if (events.length) rows.push({ id: `${entity.id}/events`, entity, label: 'Pickups ◆ / deliveries ●', color: '#56B4E9', itemStyles: styles, events });
                 }
             }
         }
         if (view === 'activity' && groups.includes('throughput')) {
             const events = recording.events.filter(event => event.kind === 'drop' && (event.entity_id === selected.id || event.source === selected.id || event.sink === selected.id));
-            const otherEvents = comparison?.events.filter(event => event.kind === 'drop' && (event.entity_id === selected.id || event.source === selected.id || event.sink === selected.id)) ?? [];
-            for (const item of [...new Set([...events, ...otherEvents].flatMap(event => event.item ? [event.item] : []))]) rows.push({
+            for (const item of [...new Set(events.flatMap(event => event.item ? [event.item] : []))]) rows.push({
                 id: `rate:${item}`, entity: selected, label: `Delivered · ${itemLabel(item)} · rolling 1 s`, color: styles.get(item)?.color ?? '#56B4E9',
-                series: deliveryRateSeries(events, item, recording.end_tick), compare: comparison ? deliveryRateSeries(otherEvents, item, comparison.end_tick) : undefined,
+                series: deliveryRateSeries(events, item, recording.end_tick),
             });
         }
         return rows;
-    }, [recording, comparison, selected, groups, view, showConnections, itemLabel]);
+    }, [recording, selected, groups, view, showConnections, itemLabel]);
     const scaledLanes = useMemo(() => lanes.map(lane => {
         const maximum = (series?: TimelineSeries) => !lane.production && series && !['state', 'enabled'].includes(series.unit)
             ? Math.max(series.limit ?? 0, ...timelinePoints(series, range, 300).map(point => point.value), 1) : 1;
-        return { ...lane, ceiling: Math.max(maximum(lane.series), maximum(lane.compare)) };
+        return { ...lane, ceiling: maximum(lane.series) };
     }), [lanes, range]);
     const pageCount = Math.max(1, Math.ceil(lanes.length / 12)), shownPage = Math.min(page, pageCount - 1);
     const legend = useMemo(() => {
         const states = new Set<string>();
         for (const lane of scaledLanes.slice(shownPage * 12, (shownPage + 1) * 12)) {
-            for (const [series, end] of [[lane.series, recording.end_tick], [lane.compare, comparison?.end_tick ?? 0]] as const) {
-                if (series?.id !== 'state' || series.unit !== 'state' || end < range.start) continue;
-                const first = Math.max(0, upperBound(series.ticks, range.start) - 1);
-                const last = upperBound(series.ticks, Math.min(range.end, end));
-                for (let i = first; i < last; i++) states.add(String(series.values[i]));
-            }
+            const series = lane.series, end = recording.end_tick;
+            if (series?.id !== 'state' || series.unit !== 'state' || end < range.start) continue;
+            const first = Math.max(0, upperBound(series.ticks, range.start) - 1);
+            const last = upperBound(series.ticks, Math.min(range.end, end));
+            for (let i = first; i < last; i++) states.add(String(series.values[i]));
         }
         return [...states].map(state => ({ state, label: timelineStateLabel(state), ...timelineStateStyle(state) }));
-    }, [scaledLanes, shownPage, recording.end_tick, comparison?.end_tick, range]);
+    }, [scaledLanes, shownPage, recording.end_tick, range]);
     const hasProduction = scaledLanes.some(lane => lane.production);
     const marks = axisTicks(range.end - range.start, 5);
     const valueText = (series: TimelineSeries, end: number) => {
@@ -254,7 +241,6 @@ export function TimelineEvidenceChart({ recording, comparison, selected, groups,
         {legend.length > 0 && <Box component="ul" aria-label="State legend" sx={{ display: 'flex', flexWrap: 'wrap', listStyle: 'none', p: 0, m: 0, mb: 1, gap: 1.5 }}>
             {legend.map(state => <Box component="li" key={state.state} sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}><ChartSwatch color={state.color} pattern={state.pattern} /><Typography variant="caption">{state.label}</Typography></Box>)}
         </Box>}
-        {comparison && <Typography variant="caption" component="p" sx={{ mb: 1 }}>A · {primaryLabel ?? 'Selected clock'} (solid line / upper marks) · B · {comparisonLabel ?? 'Comparison clock'} (dashed line / lower marks)</Typography>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '180px minmax(0, 1fr)' }, columnGap: 1 }}>
             <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>Game ticks · seconds</Typography>
             <Box aria-hidden sx={{ position: 'relative', height: 38, borderBottom: 1, borderColor: 'divider' }}>
@@ -271,13 +257,12 @@ export function TimelineEvidenceChart({ recording, comparison, selected, groups,
             <Box sx={{ minWidth: 0 }}>
                 {showConnections && <Typography variant="caption" color="text.secondary" component="div">{timelineEntityName(lane.entity, recipeLabel)}</Typography>}
                 <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, overflowWrap: 'anywhere' }}>{(lane.item ?? lane.series?.item) && <FactorioIcon name={(lane.item ?? lane.series?.item)!} size={18} alt="" />}{lane.label}{lane.production && lane.item ? ` · ${itemLabel(lane.item)}` : ''}</Typography>
-                {lane.series && <Typography variant="caption" component="div">{comparison ? 'A: ' : ''}{lane.production && tick <= recording.end_tick ? 'Total by selected tick · ' : ''}{valueText(lane.series, recording.end_tick)}{lane.series.limit !== undefined ? ` · threshold ${formatNumberText(lane.series.limit)}` : ''}</Typography>}
+                {lane.series && <Typography variant="caption" component="div">{lane.production && tick <= recording.end_tick ? 'Total by selected tick · ' : ''}{valueText(lane.series, recording.end_tick)}{lane.series.limit !== undefined ? ` · threshold ${formatNumberText(lane.series.limit)}` : ''}</Typography>}
                 {lane.series && !lane.production && !['state', 'enabled'].includes(lane.series.unit) && <Typography variant="caption" color="text.secondary" component="div">Scale 0–{formatNumberText(lane.ceiling, { maxDecimals: 2 })} {lane.series.unit}</Typography>}
-                {lane.compare && <Typography variant="caption" color="text.secondary" component="div">B: {lane.production && tick <= (comparison?.end_tick ?? 0) ? 'Total by selected tick · ' : ''}{valueText(lane.compare, comparison?.end_tick ?? 0)}</Typography>}
             </Box>
             <Box sx={{ position: 'relative', minWidth: 0 }}>
-                <EvidenceCanvas lane={lane} range={range} end={recording.end_tick} compareEnd={comparison?.end_tick ?? 0}
-                    height={lane.production ? comparison ? 62 : 32 : lane.events ? comparison ? 42 : 26 : lane.series?.unit === 'state' || lane.series?.unit === 'enabled' ? 36 : 68}
+                <EvidenceCanvas lane={lane} range={range} end={recording.end_tick}
+                    height={lane.production ? 32 : lane.events || lane.series?.unit === 'state' || lane.series?.unit === 'enabled' ? 26 : 68}
                     onTick={value => onInspect ? onInspect(lane.entity.id, value) : onTick(value)} onRange={onRange} onZoom={onZoom} />
                 {tick >= range.start && tick <= range.end && <Box aria-hidden sx={{ pointerEvents: 'none', position: 'absolute', top: 0, bottom: 0, left: `${(tick - range.start) / (range.end - range.start) * 100}%`, borderLeft: '1px solid #ffa600', '@media (forced-colors: active)': { borderColor: 'Highlight' } }} />}
             </Box>
@@ -289,7 +274,7 @@ export function TimelineEvidenceChart({ recording, comparison, selected, groups,
             <Button color="inherit" size="small" disabled={shownPage + 1 === pageCount} onClick={() => setPage(shownPage + 1)}>Next signals</Button>
         </Box>}
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-            {comparison ? 'A solid / filled · B dashed / outlined. ' : ''}Inventories are step changes. Matching A/B lanes share the displayed scale. Production labels show items made; nearby events are grouped when zoomed out. ◆ pickup · ● delivery. Tap to inspect; drag to zoom, Shift-drag to pan, Ctrl-wheel to zoom.
+            Inventories are step changes. Production labels show items made; nearby events are grouped when zoomed out. ◆ pickup · ● delivery. Tap to inspect; drag to zoom, Shift-drag to pan, Ctrl-wheel to zoom.
         </Typography>
     </Box>;
 }

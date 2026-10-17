@@ -36,7 +36,6 @@ export interface ClockTimelineWorkspaceProps {
     clockWindows: SerializableClockWindows | null;
     /** The immutable config captured with the generated results, not the live form. */
     config?: Config | null;
-    alternatives?: ClockAlternativeView[];
 }
 
 function entityOptions(config: Config | null | undefined, clock: ClockAlternativeView): TimelineEntity[] {
@@ -80,7 +79,6 @@ function useInspection(props: ClockTimelineWorkspaceProps) {
 }
 
 const number = (value: number) => formatNumberText(value, { maxDecimals: 2 });
-const measured = (value: number | null | undefined) => value == null ? 'unavailable' : number(value);
 
 export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const { recipeLabel, itemLabel } = useGameNames();
@@ -88,17 +86,14 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const [retry, setRetry] = useState(0);
     const recordingWanted = inspection.view !== 'windows';
     const options = useMemo(() => entityOptions(props.config, props.selected), [props.config, props.selected]);
-    const comparisonClock = (props.alternatives ?? []).find(clock => clock.id === inspection.comparisonId && clock.id !== props.selected.id) ?? null;
     const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted, retry]);
-    const comparisonRequest = useMemo(() => recordingWanted ? timelineRequestFor(props.config, comparisonClock, inspection.run) : null, [props.config, comparisonClock, inspection.run, recordingWanted, retry]);
     const primary = useTimelineRecording(request, retry);
-    const baseline = useTimelineRecording(comparisonRequest, retry);
     const recording = primary.data;
     const selectedId = options.some(entity => entity.id === inspection.entityId) ? inspection.entityId : options.find(entity => entity.type === 'machine')?.id ?? options[0]?.id;
     const selected = recording?.entities.find(entity => entity.id === selectedId) ?? options.find(entity => entity.id === selectedId) ?? recording?.entities[0] ?? null;
     const duration = inspection.view === 'windows'
-        ? Math.max(props.selected.simulationDurationTicks, comparisonClock?.simulationDurationTicks ?? 0)
-        : Math.max(recording?.end_tick ?? props.selected.simulationDurationTicks, baseline.data?.end_tick ?? (comparisonClock && comparisonRequest ? comparisonClock.simulationDurationTicks : 0));
+        ? props.selected.simulationDurationTicks
+        : recording?.end_tick ?? props.selected.simulationDurationTicks;
     const domain = inspection.view === 'windows' ? 'windows' : inspection.run;
     const savedRange = inspection.ranges[domain];
     const range = useMemo(() => clampTimelineRange(savedRange, duration), [savedRange, duration]);
@@ -158,10 +153,6 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                 renderInput={params => <TextField {...params} label="Inspect entity" size="small" />}
                 renderOption={(attributes, entity) => { const { key, ...rest } = attributes; return <li key={key} {...rest}>{entity.items[0] && <FactorioIcon name={entity.items[0]} size={22} alt="" />}<span>{timelineEntityName(entity, recipeLabel)}</span></li>; }}
                 sx={{ width: 330, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }} />
-            {(props.alternatives?.length ?? 0) > 1 && <TextField select label="Compare with" size="small" value={comparisonClock?.id ?? ''} onChange={event => patch({ comparisonId: event.target.value || null })} sx={{ width: 245, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }}>
-                <MenuItem value="">No comparison</MenuItem>
-                {props.alternatives?.filter(clock => clock.id !== props.selected.id && clock.verdict === 'stable').map(clock => <MenuItem key={clock.id} value={clock.id}>{clock.label} · {clock.terminalSwingCount} swings</MenuItem>)}
-            </TextField>}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.25 }}>
                 <Tooltip title="Pan earlier"><IconButton size="small" aria-label="Pan timeline earlier" onClick={() => setRange(panTimeline(range, -0.5, duration))}><ChevronLeft /></IconButton></Tooltip>
                 <Tooltip title="Zoom out"><IconButton size="small" aria-label="Zoom timeline out" onClick={() => zoom(2, tick)}><ZoomOut /></IconButton></Tooltip>
@@ -173,14 +164,8 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         </Box>
         {recordingWanted && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
-        {comparisonClock && <Typography variant="caption" component="p" sx={{ mb: 1 }}>
-            A / B assessed output: {number(props.selected.assessment.items_per_second)} / {number(comparisonClock.assessment.items_per_second)} items/s (all copies) · wake-ups: {measured(props.selected.assessment.wake_ups_per_minute)} / {measured(comparisonClock.assessment.wake_ups_per_minute)} /min (one unit).
-            {props.selected.simulationDurationTicks !== comparisonClock.simulationDurationTicks ? ' Different periods; aligned at replay tick 0, with independent warm-up inventories.' : ''}
-        </Typography>}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
-            {comparisonClock && props.selected.ranking.meets_target_rate && comparisonClock.ranking.meets_target_rate
-                ? `Both clocks meet ${number(props.selected.assessment.items_per_second)} items/s across all copies. Compare how they feed the machine and make products.`
-                : props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
+            {props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
                 : 'Explore the recorded activity alongside this clock’s assessed output.'}
         </Typography>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: recordingWanted ? 'minmax(0,1fr) 245px' : 'minmax(0,1fr)' }, gap: 1.5, alignItems: 'start' }}>
@@ -188,20 +173,15 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                 <Suspense fallback={<Typography role="status">Loading chart…</Typography>}>
                     {inspection.view === 'windows' ? <>
                         <WakeWindows config={props.config} alternative={props.selected} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} headingLevel="h3" inspection={{ range, tick, onInspect: inspect }} />
-                        {comparisonClock && <Box sx={{ mt: 1 }}><Typography variant="body2">B · {comparisonClock.label}</Typography><WakeWindows config={props.config} alternative={comparisonClock} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} inspection={{ range, tick, onInspect: inspect }} /></Box>}
                         {selected && <Button color="inherit" size="small" sx={{ mt: 1 }} onClick={() => patch({ view: 'activity' })}>Inspect {timelineEntityName(selected, recipeLabel)} activity</Button>}
                     </> : <>
                         {primary.status === 'loading' && <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 3 }}><CircularProgress size={20} />Recording this clock’s activity…</Box>}
                         {primary.status === 'idle' && <Alert severity="info">This saved result lacks the build or exact fuel-clock metadata needed for a detailed replay. Generate again to record its activity.</Alert>}
                         {primary.error && <Alert severity="warning" action={<Button color="inherit" onClick={() => setRetry(retry + 1)}>Retry</Button>}>{primary.error}</Alert>}
                         {recording && selected && <BeltChartSurface><Box sx={{ p: { xs: 1, sm: 1.5 }, bgcolor: BELT_CHART.background }}>
-                            <EvidenceChart recording={recording} comparison={baseline.data} selected={selected} groups={inspection.signals} range={range} tick={tick} view={inspection.view} showConnections={inspection.showConnections} primaryLabel={props.selected.label} comparisonLabel={comparisonClock?.label} onTick={setTick} onInspect={inspect} onRange={setRange} onZoom={zoom} />
+                            <EvidenceChart recording={recording} selected={selected} groups={inspection.signals} range={range} tick={tick} view={inspection.view} showConnections={inspection.showConnections} onTick={setTick} onInspect={inspect} onRange={setRange} onZoom={zoom} />
                         </Box></BeltChartSurface>}
                         {recording?.truncated && <Alert severity="info" sx={{ mt: 1 }}>Detailed recording is limited to the first {number(recording.end_tick)} ticks of {number(recording.requested_ticks)} requested ticks to bound memory. Zoom and inspection use only this excerpt.</Alert>}
-                        {baseline.status === 'loading' && <Typography role="status" variant="body2">Recording comparison clock…</Typography>}
-                        {comparisonClock && baseline.status === 'idle' && <Alert severity="info">Regenerate to compare this older result’s exact fuel clocks.</Alert>}
-                        {baseline.error && <Alert severity="info">Comparison recording unavailable: {baseline.error}</Alert>}
-                        {baseline.data?.truncated && <Typography variant="caption">B ends at {number(baseline.data.end_tick)} ticks; values outside that span are unavailable.</Typography>}
                     </>}
                 </Suspense>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>

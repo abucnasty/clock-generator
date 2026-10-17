@@ -61,7 +61,14 @@ it('summarizes repeated waiting intervals as shares of the recorded excerpt', ()
 });
 
 it('migrates saved Entity states views to the Activity states-only preset without losing context', () => {
-    expect(validInspection({ view: 'states', signals: ['inventory', 'transfers'], entityId: 'inserter:12', tick: 235, run: 'plan', comparisonId: 'swings-2', ranges: { plan: { start: 220, end: 253 } } })).toMatchObject({
-        view: 'activity', signals: ['state'], entityId: 'inserter:12', tick: 235, run: 'plan', comparisonId: 'swings-2', ranges: { plan: { start: 220, end: 253 } },
+    expect(validInspection({ view: 'states', signals: ['inventory', 'transfers'], entityId: 'inserter:12', tick: 235, run: 'plan', ranges: { plan: { start: 220, end: 253 } } })).toMatchObject({
+        view: 'activity', signals: ['state'], entityId: 'inserter:12', tick: 235, run: 'plan', ranges: { plan: { start: 220, end: 253 } },
     });
+});
+
+it('discards legacy A/B choices while retaining workspace context', () => {
+    const saved = { view: 'activity', run: 'clock', entityId: 'inserter:5', tick: 235, signals: ['state', 'hand'], showConnections: true, ranges: { clock: { start: 220, end: 253 } }, comparisonId: 'swings-2' };
+    const restored = validInspection(saved);
+    expect(restored).toEqual({ view: 'activity', run: 'clock', entityId: 'inserter:5', tick: 235, signals: ['state', 'hand'], showConnections: true, ranges: { clock: { start: 220, end: 253 } } });
+    expect(restored).not.toHaveProperty('comparisonId');
 });

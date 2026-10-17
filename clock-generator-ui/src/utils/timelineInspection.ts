@@ -10,10 +10,9 @@ export interface TimelineInspection {
     tick: number;
     ranges: Partial<Record<'windows' | 'clock' | 'plan', TimelineRange>>;
     signals: TimelineSignalGroup[];
-    comparisonId: string | null;
     showConnections?: boolean;
 }
-export const DEFAULT_INSPECTION: TimelineInspection = { view: 'windows', run: 'clock', entityId: null, tick: 0, ranges: {}, signals: ['state', 'inventory', 'transfers'], comparisonId: null };
+export const DEFAULT_INSPECTION: TimelineInspection = { view: 'windows', run: 'clock', entityId: null, tick: 0, ranges: {}, signals: ['state', 'inventory', 'transfers'] };
 export const SIGNAL_GROUPS: TimelineSignalGroup[] = ['state', 'inventory', 'transfers', 'buffers', 'progress', 'hand', 'fuel', 'production', 'throughput'];
 export const timelineEntityName = (entity: Pick<TimelineEntity, 'id' | 'type' | 'recipe'>, recipeLabel: (id: string) => string) =>
     `${entity.type[0].toUpperCase()}${entity.type.slice(1)} ${entity.id.split(':')[1]}${entity.recipe ? ` · ${recipeLabel(entity.recipe)}` : ''}`;
@@ -33,7 +32,6 @@ export function validInspection(value: unknown): TimelineInspection {
         ranges,
         signals: input.view === 'states' ? ['state'] : Array.isArray(input.signals) ? [...new Set(input.signals.filter(group => SIGNAL_GROUPS.includes(group)))] : DEFAULT_INSPECTION.signals,
         showConnections: input.showConnections === true,
-        comparisonId: typeof input.comparisonId === 'string' && input.comparisonId.length < 200 ? input.comparisonId : null,
     };
 }
 

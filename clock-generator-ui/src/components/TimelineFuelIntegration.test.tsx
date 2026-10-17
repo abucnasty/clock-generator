@@ -27,7 +27,7 @@ it('reveals nutrient stock and burning energy from a real agricultural-science r
     expect(primary).toContain('nutrients');
     expect(primary).toContain('Burning fuel remaining');
     expect(primary).toContain('MJ');
-    const chart = renderToStaticMarkup(<TimelineEvidenceChart recording={recording} comparison={null} selected={machine} groups={signals} range={{ start: 0, end: recording.end_tick }} tick={10} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    const chart = renderToStaticMarkup(<TimelineEvidenceChart recording={recording} selected={machine} groups={signals} range={{ start: 0, end: recording.end_tick }} tick={10} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
     expect(chart).toContain('Fuel slot');
     expect(chart).toContain('Burning fuel remaining');
 });
