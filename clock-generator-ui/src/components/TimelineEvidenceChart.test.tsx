@@ -52,3 +52,21 @@ it('keeps machine output buffers optional while retaining ingredient inventories
     expect(buffer).toContain('Output buffer');
     expect(buffer).not.toContain('Ingredient');
 });
+
+it('explains per-copy, marked-span and cumulative quantities above the chart', () => {
+    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={{ ...a, copies: 5.5, entities: [machine] }} comparison={null} selected={machine} groups={['transfers']} range={{ start: 0, end: 100 }} tick={20} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    expect(html).toContain('Charts show one modelled copy');
+    expect(html).toContain('5.5');
+    expect(html).toContain('+N means items made in the marked span');
+    expect(html).toContain('Total by selected tick');
+});
+it('gives a local legend for states in view, including states unique to the comparison', () => {
+    const aEntity = { ...machine, signals: [{ ...machine.signals[0], ticks: [0, 30], values: ['working', 'no_fuel'] }] };
+    const bEntity = { ...machine, signals: [{ ...machine.signals[0], ticks: [0], values: ['item_ingredient_shortage'] }] };
+    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={{ ...a, entities: [aEntity] }} comparison={{ ...a, entities: [bEntity] }} selected={aEntity} groups={['state']} range={{ start: 0, end: 20 }} tick={10} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    expect(html).toContain('aria-label="State legend"');
+    expect(html).toContain('Working');
+    expect(html).toContain('Waiting for ingredients');
+    expect(html).not.toContain('Waiting for fuel');
+    expect(html).not.toContain('Item ingredient shortage');
+});

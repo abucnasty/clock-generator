@@ -3,26 +3,20 @@ import { useMemo, useState } from 'react';
 import type { TimelineRecording } from 'clock-generator/browser';
 import { timelineStateDurations, timelineWaits, type TimelineWait } from '../utils/timelineInspection';
 import { formatNumberText } from '../utils/numberText';
-import { getFactorioStateLabel } from './colors';
-
-const PAUSE_LABELS: Record<string, string> = {
-    item_ingredient_shortage: 'Waiting for ingredients', full_output: 'Output buffer full', no_fuel: 'Waiting for fuel',
-    waiting_for_source_items: 'Waiting for source items', waiting_for_more_items: 'Waiting for more items',
-    waiting_for_space_in_destination: 'Waiting for destination space',
-};
+import { timelineStateLabel } from '../utils/timelinePresentation';
 
 export function TimelinePauses({ recording, entityId, targetMet, onExplore }: {
     recording: TimelineRecording; entityId: string; targetMet: boolean; onExplore(wait: TimelineWait): void;
 }) {
     const waits = useMemo(() => timelineWaits(recording, entityId), [recording, entityId]);
     const states = useMemo(() => timelineStateDurations(recording, entityId), [recording, entityId]);
-    const groups = useMemo(() => states.filter(state => Object.hasOwn(PAUSE_LABELS, state.state)).sort((a, b) => b.ticks - a.ticks), [states]);
+    const groups = useMemo(() => states.filter(state => waits.some(wait => wait.state === state.state)).sort((a, b) => b.ticks - a.ticks), [states, waits]);
     const [choice, setChoice] = useState<string | null>(null);
     const [page, setPage] = useState(0);
     const selected = groups.find(group => group.state === choice) ?? groups[0];
     const examples = waits.filter(wait => wait.state === selected?.state);
     const start = Math.min(page * 5, Math.max(0, Math.floor((examples.length - 1) / 5) * 5));
-    const stateSummary = states.filter(state => state.ticks > 0).map(state => `${PAUSE_LABELS[state.state] ?? getFactorioStateLabel(state.state)} ${formatNumberText(state.share * 100, { maxDecimals: 1 })}%`).join(' · ');
+    const stateSummary = states.filter(state => state.ticks > 0).map(state => `${timelineStateLabel(state.state)} ${formatNumberText(state.share * 100, { maxDecimals: 1 })}%`).join(' · ');
     return <Box component="details" data-timeline-pauses>
         <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Explore pauses</Typography>
         <Typography variant="body2" sx={{ mt: 1 }}>
@@ -35,9 +29,9 @@ export function TimelinePauses({ recording, entityId, targetMet, onExplore }: {
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, my: 1 }}>{groups.map(group => <Button key={group.state} color="inherit" size="small" variant={selected?.state === group.state ? 'outlined' : 'text'}
             aria-pressed={selected?.state === group.state} onClick={() => { setChoice(group.state); setPage(0); }}>
-            {PAUSE_LABELS[group.state] ?? getFactorioStateLabel(group.state)} · {formatNumberText(group.share * 100, { maxDecimals: 1 })}%
+            {timelineStateLabel(group.state)} · {formatNumberText(group.share * 100, { maxDecimals: 1 })}%
         </Button>)}</Box>
-        {selected && <Typography variant="caption" color="text.secondary">{PAUSE_LABELS[selected.state]} · {selected.ticks} ticks across {examples.length} {examples.length === 1 ? 'pause' : 'pauses'}</Typography>}
+        {selected && <Typography variant="caption" color="text.secondary">{timelineStateLabel(selected.state)} · {selected.ticks} ticks across {examples.length} {examples.length === 1 ? 'pause' : 'pauses'}</Typography>}
         {examples.slice(start, start + 5).map(wait => <Button key={`${wait.start}-${wait.state}`} color="inherit" size="small" sx={{ display: 'flex' }} onClick={() => onExplore(wait)}>
             Show {wait.start}–{wait.end} ticks · {wait.end - wait.start} ticks long
         </Button>)}

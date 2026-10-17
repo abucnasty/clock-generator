@@ -3,6 +3,7 @@ import type { TimelineEntity, TimelineEvent, TimelineRecording, TimelineSeries, 
 export interface TimelineRange { start: number; end: number }
 export type TimelineSignalGroup = TimelineSeries['group'] | 'transfers' | 'throughput' | 'buffers';
 export interface TimelineInspection {
+    /** 'states' is accepted for older saved contexts and migrates to Activity with a signal preset. */
     view: 'windows' | 'activity' | 'states' | 'transfers';
     run: 'clock' | 'plan';
     entityId: string | null;
@@ -25,12 +26,12 @@ export function validInspection(value: unknown): TimelineInspection {
         if (range && Number.isFinite(range.start) && Number.isFinite(range.end) && range.start >= 0 && range.end > range.start && range.end <= 500_000) ranges[key] = { start: range.start, end: range.end };
     }
     return {
-        view: ['windows', 'activity', 'states', 'transfers'].includes(input.view ?? '') ? input.view! : 'windows',
+        view: input.view === 'states' ? 'activity' : ['windows', 'activity', 'transfers'].includes(input.view ?? '') ? input.view! : 'windows',
         run: input.run === 'plan' ? 'plan' : 'clock',
         entityId: typeof input.entityId === 'string' && /^(machine|inserter|drill|belt|chest):\d+$/.test(input.entityId) ? input.entityId : null,
         tick: typeof input.tick === 'number' && Number.isFinite(input.tick) ? Math.max(0, Math.min(500_000, Math.round(input.tick))) : 0,
         ranges,
-        signals: Array.isArray(input.signals) ? [...new Set(input.signals.filter(group => SIGNAL_GROUPS.includes(group)))] : DEFAULT_INSPECTION.signals,
+        signals: input.view === 'states' ? ['state'] : Array.isArray(input.signals) ? [...new Set(input.signals.filter(group => SIGNAL_GROUPS.includes(group)))] : DEFAULT_INSPECTION.signals,
         showConnections: input.showConnections === true,
         comparisonId: typeof input.comparisonId === 'string' && input.comparisonId.length < 200 ? input.comparisonId : null,
     };
@@ -153,4 +154,12 @@ export function timelineStateDurations(recording: TimelineRecording, entityId: s
         totals.set(state, (totals.get(state) ?? 0) + ticks);
     }
     return [...totals].map(([state, ticks]) => ({ state, ticks, share: ticks / recording.end_tick }));
+}
+
+
+export function timelineSignalPreset(groups: readonly TimelineSignalGroup[]): 'default' | 'states' | 'custom' {
+    const selected = new Set(groups);
+    if (selected.size === 1 && selected.has('state')) return 'states';
+    if (selected.size === DEFAULT_INSPECTION.signals.length && DEFAULT_INSPECTION.signals.every(group => selected.has(group))) return 'default';
+    return 'custom';
 }

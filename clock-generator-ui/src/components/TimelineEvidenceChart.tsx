@@ -1,9 +1,10 @@
 import { Box, Button, Typography } from '@mui/material';
 import { memo, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { TimelineEntity, TimelineEvent, TimelineRecording, TimelineSeries } from 'clock-generator/browser';
-import { BELT_CHART, itemChartStyles } from '../theme/beltCharts';
+import { BELT_CHART, canvasChartFill, itemChartStyles } from '../theme/beltCharts';
 import { deliveryRateSeries, productionBatches, timelineEntityName, timelinePoints, timelineValueAt, upperBound, type TimelineRange, type TimelineSignalGroup } from '../utils/timelineInspection';
-import { getFactorioStateLabel } from './colors';
+import { timelineStateLabel, timelineStateStyle, timelineSignalVisible } from '../utils/timelinePresentation';
+import { ChartSwatch } from './BeltChart';
 import { FactorioIcon } from './FactorioIcon';
 import { formatNumberText } from '../utils/numberText';
 import { useGameNames } from '../hooks/useGameNames';
@@ -25,14 +26,6 @@ export interface EvidenceLane {
     itemStyles?: Map<string, { color: string }>;
 }
 
-function stateColor(state: string, forced: boolean): string {
-    if (forced) return state.includes('disabled') ? 'GrayText' : state === 'working' || state === 'WORKING' ? 'CanvasText' : 'Highlight';
-    if (state === 'working' || state === 'WORKING') return '#009E73';
-    if (state.includes('full') || state.includes('space')) return '#CC79A7';
-    if (state.includes('shortage') || state.includes('waiting') || state === 'no_fuel') return '#F0E442';
-    return '#585858';
-}
-
 function drawSeries(context: CanvasRenderingContext2D, series: TimelineSeries, range: TimelineRange, width: number, height: number, color: string, dashed: boolean, ceiling: number, end: number): void {
     if (end < range.start) return;
     const x = (tick: number) => (tick - range.start) / (range.end - range.start) * width;
@@ -41,18 +34,22 @@ function drawSeries(context: CanvasRenderingContext2D, series: TimelineSeries, r
     if (series.unit === 'state' || series.unit === 'enabled') {
         const first = Math.max(0, upperBound(series.ticks, range.start) - 1), last = upperBound(series.ticks, Math.min(end, range.end));
         const forced = matchMedia('(forced-colors: active)').matches;
+        const fills = new Map<string, string | CanvasPattern>();
         const top = dashed ? height / 2 + 2 : 3, barHeight = dashed ? height / 2 - 5 : height / 2 - 3;
         for (let i = first; i < last; i++) {
             const a = x(Math.max(range.start, series.ticks[i])), b = x(Math.min(range.end, end, series.ticks[i + 1] ?? end));
             const value = String(series.values[i]);
-            context.fillStyle = series.unit === 'enabled' ? Number(value) ? (forced ? 'CanvasText' : color) : (forced ? 'GrayText' : '#303030') : stateColor(value, forced);
+            if (!fills.has(value)) {
+                const fill = series.unit === 'enabled' ? Number(value) ? (forced ? 'CanvasText' : color) : (forced ? 'GrayText' : '#303030')
+                    : forced ? value.toLowerCase().includes('disabled') ? 'GrayText' : value.toLowerCase() === 'working' ? 'CanvasText' : 'Highlight'
+                    : canvasChartFill(context, timelineStateStyle(value));
+                fills.set(value, fill);
+            }
+            context.fillStyle = fills.get(value)!;
             if (dashed) {
                 context.strokeStyle = context.fillStyle; context.setLineDash([4, 3]); context.strokeRect(a, top, Math.max(1, b - a), barHeight);
             } else context.fillRect(a, top, Math.max(1, b - a), barHeight);
-            if (value.includes('shortage') || value.includes('full') || value.includes('space')) {
-                context.fillStyle = forced ? 'Canvas' : '#000';
-                for (let stripe = a; stripe < b; stripe += 7) context.fillRect(stripe, top + barHeight / 2, Math.min(2, b - stripe), 2);
-            }
+
         }
     } else {
         const y = (value: number) => height - 7 - value / ceiling * (height - 18);
@@ -190,9 +187,9 @@ export function TimelineEvidenceChart({ recording, comparison, selected, groups,
         for (const entity of related) {
             for (const series of entity.signals) {
                 if (series.id === 'hand-item') continue;
-                const group = entity.type === 'machine' && series.id.startsWith('output:') ? 'buffers' : series.group;
-                if (view === 'states' ? series.group !== 'state' : view === 'transfers' ? !['state', 'hand'].includes(series.group) : !groups.includes(group)) continue;
-                if (view === 'activity' && entity.id !== selected.id && series.group !== 'state' && series.group !== 'hand') continue;
+                if (!timelineSignalVisible(entity, series, view, groups)) continue;
+                // The products lane below provides the total; keep the numeric production trace opt-in.
+                if (series.id === 'produced' && !groups.includes('production')) continue;
                 rows.push({ id: `${entity.id}/${series.id}`, entity, series, compare: comparison?.entities.find(other => other.id === entity.id)?.signals.find(other => other.id === series.id),
                     label: series.item ? `${series.label} · ${itemLabel(series.item)}` : series.label, color: series.item ? styles.get(series.item)?.color ?? '#56B4E9' : entity.type === 'inserter' ? BELT_CHART.entity.inserter : '#56B4E9', unit: series.unit });
             }
@@ -228,15 +225,35 @@ export function TimelineEvidenceChart({ recording, comparison, selected, groups,
         return { ...lane, ceiling: Math.max(maximum(lane.series), maximum(lane.compare)) };
     }), [lanes, range]);
     const pageCount = Math.max(1, Math.ceil(lanes.length / 12)), shownPage = Math.min(page, pageCount - 1);
+    const legend = useMemo(() => {
+        const states = new Set<string>();
+        for (const lane of scaledLanes.slice(shownPage * 12, (shownPage + 1) * 12)) {
+            for (const [series, end] of [[lane.series, recording.end_tick], [lane.compare, comparison?.end_tick ?? 0]] as const) {
+                if (series?.id !== 'state' || series.unit !== 'state' || end < range.start) continue;
+                const first = Math.max(0, upperBound(series.ticks, range.start) - 1);
+                const last = upperBound(series.ticks, Math.min(range.end, end));
+                for (let i = first; i < last; i++) states.add(String(series.values[i]));
+            }
+        }
+        return [...states].map(state => ({ state, label: timelineStateLabel(state), ...timelineStateStyle(state) }));
+    }, [scaledLanes, shownPage, recording.end_tick, comparison?.end_tick, range]);
+    const hasProduction = scaledLanes.some(lane => lane.production);
     const marks = axisTicks(range.end - range.start, 5);
     const valueText = (series: TimelineSeries, end: number) => {
         if (tick > end) return 'Outside recorded span';
         const value = timelineValueAt(series, tick);
-        if (series.unit === 'state') return getFactorioStateLabel(String(value)) ?? String(value).replaceAll('_', ' ');
+        if (series.unit === 'state') return timelineStateLabel(String(value));
         if (series.unit === 'enabled') return Number(value) ? 'Enabled' : 'Disabled';
         return `${formatNumberText(Number(value), { maxDecimals: 2 })}${series.unit === '%' ? '%' : ` ${series.unit}`}`;
     };
     return <Box data-timeline-evidence sx={{ color: BELT_CHART.text, bgcolor: BELT_CHART.background, minWidth: 0, '@media (forced-colors: active)': { color: 'CanvasText', bgcolor: 'Canvas' } }}>
+        <Typography variant="body2" component="p" sx={{ mb: 1 }}>
+            Charts show one modelled copy. Whole-build rates above cover {formatNumberText(recording.copies)} {recording.copies === 1 ? 'copy' : 'copies'}.
+            {hasProduction && ' +N means items made in the marked span; totals run from tick 0 to the selected tick.'}
+        </Typography>
+        {legend.length > 0 && <Box component="ul" aria-label="State legend" sx={{ display: 'flex', flexWrap: 'wrap', listStyle: 'none', p: 0, m: 0, mb: 1, gap: 1.5 }}>
+            {legend.map(state => <Box component="li" key={state.state} sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}><ChartSwatch color={state.color} pattern={state.pattern} /><Typography variant="caption">{state.label}</Typography></Box>)}
+        </Box>}
         {comparison && <Typography variant="caption" component="p" sx={{ mb: 1 }}>A · {primaryLabel ?? 'Selected clock'} (solid line / upper marks) · B · {comparisonLabel ?? 'Comparison clock'} (dashed line / lower marks)</Typography>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '180px minmax(0, 1fr)' }, columnGap: 1 }}>
             <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>Game ticks · seconds</Typography>
@@ -254,9 +271,9 @@ export function TimelineEvidenceChart({ recording, comparison, selected, groups,
             <Box sx={{ minWidth: 0 }}>
                 {showConnections && <Typography variant="caption" color="text.secondary" component="div">{timelineEntityName(lane.entity, recipeLabel)}</Typography>}
                 <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, overflowWrap: 'anywhere' }}>{(lane.item ?? lane.series?.item) && <FactorioIcon name={(lane.item ?? lane.series?.item)!} size={18} alt="" />}{lane.label}{lane.production && lane.item ? ` · ${itemLabel(lane.item)}` : ''}</Typography>
-                {lane.series && <Typography variant="caption" component="div">{comparison ? 'A: ' : ''}{valueText(lane.series, recording.end_tick)}{lane.production ? ' made since tick 0' : ''}{lane.series.limit !== undefined ? ` · threshold ${formatNumberText(lane.series.limit)}` : ''}</Typography>}
+                {lane.series && <Typography variant="caption" component="div">{comparison ? 'A: ' : ''}{lane.production && tick <= recording.end_tick ? 'Total by selected tick · ' : ''}{valueText(lane.series, recording.end_tick)}{lane.series.limit !== undefined ? ` · threshold ${formatNumberText(lane.series.limit)}` : ''}</Typography>}
                 {lane.series && !lane.production && !['state', 'enabled'].includes(lane.series.unit) && <Typography variant="caption" color="text.secondary" component="div">Scale 0–{formatNumberText(lane.ceiling, { maxDecimals: 2 })} {lane.series.unit}</Typography>}
-                {lane.compare && <Typography variant="caption" color="text.secondary" component="div">B: {valueText(lane.compare, comparison?.end_tick ?? 0)}</Typography>}
+                {lane.compare && <Typography variant="caption" color="text.secondary" component="div">B: {lane.production && tick <= (comparison?.end_tick ?? 0) ? 'Total by selected tick · ' : ''}{valueText(lane.compare, comparison?.end_tick ?? 0)}</Typography>}
             </Box>
             <Box sx={{ position: 'relative', minWidth: 0 }}>
                 <EvidenceCanvas lane={lane} range={range} end={recording.end_tick} compareEnd={comparison?.end_tick ?? 0}

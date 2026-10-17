@@ -7,9 +7,11 @@ import type { TimelineViewContext } from '../utils/buildViewContext';
 import { timelineRequestFor } from '../utils/timelineRequest';
 import { useTimelineRecording } from '../hooks/useTimelineRecording';
 import { useGameNames } from '../hooks/useGameNames';
-import { DEFAULT_INSPECTION, SIGNAL_GROUPS, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, timelineValueAt, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
+import { DEFAULT_INSPECTION, validInspection, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
 import { formatNumberText } from '../utils/numberText';
-import { getFactorioStateLabel } from './colors';
+import { signalsForTimelinePause } from '../utils/timelinePresentation';
+import { TimelineSignals } from './TimelineSignals';
+import { TimelineTickInspector } from './TimelineTickInspector';
 import { TimelinePauses } from './TimelinePauses';
 import { FactorioIcon } from './FactorioIcon';
 import { BeltChartSurface } from './BeltChart';
@@ -59,12 +61,12 @@ function entityOptions(config: Config | null | undefined, clock: ClockAlternativ
 /** Local cursor updates stay below App; only settled inspection choices are saved with the build. */
 function useInspection(props: ClockTimelineWorkspaceProps) {
     const configKey = useMemo(() => JSON.stringify(props.config), [props.config]);
-    const [inspection, setInspection] = useState<TimelineInspection>(props.timeline.inspection ?? DEFAULT_INSPECTION);
+    const [inspection, setInspection] = useState<TimelineInspection>(() => props.timeline.inspection ? validInspection(props.timeline.inspection) : DEFAULT_INSPECTION);
     const latest = useRef(props); latest.current = props;
     const lastSaved = useRef<TimelineInspection | undefined>(props.timeline.inspection);
-    useEffect(() => { setInspection(latest.current.timeline.inspection ?? DEFAULT_INSPECTION); }, [configKey]);
+    useEffect(() => { setInspection(latest.current.timeline.inspection ? validInspection(latest.current.timeline.inspection) : DEFAULT_INSPECTION); }, [configKey]);
     useEffect(() => {
-        if (props.timeline.inspection && props.timeline.inspection !== lastSaved.current) setInspection(props.timeline.inspection);
+        if (props.timeline.inspection && props.timeline.inspection !== lastSaved.current) setInspection(validInspection(props.timeline.inspection));
     }, [props.timeline.inspection]);
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -77,7 +79,6 @@ function useInspection(props: ClockTimelineWorkspaceProps) {
     return [inspection, patch] as const;
 }
 
-const GROUP_LABELS = { state: 'State', inventory: 'Ingredients & inventories', buffers: 'Machine output buffers', transfers: 'Products made & deliveries', progress: 'Craft & productivity progress', hand: 'Hand contents', fuel: 'Fuel', production: 'Production totals', throughput: 'Delivery rate' };
 const number = (value: number) => formatNumberText(value, { maxDecimals: 2 });
 const measured = (value: number | null | undefined) => value == null ? 'unavailable' : number(value);
 
@@ -138,12 +139,11 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     return <Box data-clock-inspection onKeyDown={onKeys}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
             <TextField select size="small" label="Timeline view" value={inspection.view} onChange={event => patch({ view: event.target.value as TimelineInspection['view'] })} sx={{ display: { xs: 'block', sm: 'none' }, flex: '1 1 100%' }}>
-                <MenuItem value="windows">Wake windows</MenuItem><MenuItem value="activity">Machine activity</MenuItem><MenuItem value="states">Entity states</MenuItem><MenuItem value="transfers">Item transfers</MenuItem>
+                <MenuItem value="windows">Wake windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="transfers">Item transfers</MenuItem>
             </TextField>
             <ToggleButtonGroup value={inspection.view} exclusive size="small" aria-label="Timeline view" onChange={(_, view: TimelineInspection['view'] | null) => { if (view) patch({ view }); }} sx={{ display: { xs: 'none', sm: 'flex' }, flexWrap: 'wrap' }}>
                 <ToggleButton value="windows">Wake windows</ToggleButton>
-                <ToggleButton value="activity">Machine activity</ToggleButton>
-                <ToggleButton value="states">Entity states</ToggleButton>
+                <ToggleButton value="activity">Activity</ToggleButton>
                 <ToggleButton value="transfers">Item transfers</ToggleButton>
             </ToggleButtonGroup>
             {recordingWanted && <ToggleButtonGroup value={inspection.run} exclusive size="small" aria-label="Simulation shown in the timelines" onChange={(_, run: 'clock' | 'plan' | null) => { if (run) patch({ run }); }}>
@@ -172,10 +172,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
             </Box>
         </Box>
         {recordingWanted && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
-        {inspection.view === 'activity' && <Box component="details" sx={{ mb: 1 }}>
-            <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Signals · {inspection.signals.length} selected</Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>{SIGNAL_GROUPS.map(group => <FormControlLabel key={group} label={GROUP_LABELS[group]} control={<Checkbox size="small" checked={inspection.signals.includes(group)} onChange={(_, checked) => patch({ signals: checked ? [...inspection.signals, group] : inspection.signals.filter(value => value !== group) })} />} />)}</Box>
-        </Box>}
+        {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
         {comparisonClock && <Typography variant="caption" component="p" sx={{ mb: 1 }}>
             A / B assessed output: {number(props.selected.assessment.items_per_second)} / {number(comparisonClock.assessment.items_per_second)} items/s (all copies) · wake-ups: {measured(props.selected.assessment.wake_ups_per_minute)} / {measured(comparisonClock.assessment.wake_ups_per_minute)} /min (one unit).
             {props.selected.simulationDurationTicks !== comparisonClock.simulationDurationTicks ? ' Different periods; aligned at replay tick 0, with independent warm-up inventories.' : ''}
@@ -214,26 +211,15 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                 </Box>
                 {recording && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>One modelled unit · {inspection.run === 'clock' ? 'exported clock, including circuit latency' : 'planning controls'} · tick 0 is the baseline after preparation/warm-up ({number(recording.ticks_before_recording)} ticks excluded); controls restart at phase 0 with that inventory. Full input supplies; delivery rates exclude events before tick 0. This replay does not change the clock assessment.</Typography>}
             </Box>
-            {recordingWanted && selected && recording && <Box component="aside" aria-label="Tick inspector" sx={{ p: 1.5, border: 1, borderColor: 'divider', position: { lg: 'sticky' }, top: 8, minWidth: 0, overflowWrap: 'anywhere' }}>
-                <Typography variant="overline">Tick inspector · {tick}</Typography>
-                <Typography component="h3" variant="subtitle2">{timelineEntityName(selected, recipeLabel)}</Typography>
-                {selected.note && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>{selected.note}</Typography>}
-                <Box component="dl" sx={{ m: 0, mt: 1 }}>{tick > recording.end_tick ? <Typography variant="body2">A is outside its recorded span. B values remain available beside the matching lanes.</Typography> : selected.signals.filter(signal => ['state', 'inventory', 'hand', 'fuel', 'progress', 'production'].includes(signal.group)).map(signal => {
-                    const value = timelineValueAt(signal, tick);
-                    return <Box key={signal.id} sx={{ mb: 0.75 }}>
-                        <Typography component="dt" variant="caption" color="text.secondary">{signal.item ? `${signal.label} · ${itemLabel(signal.item)}` : signal.label}</Typography>
-                        <Typography component="dd" variant="body2" sx={{ m: 0 }}>{typeof value === 'number' ? `${number(value)}${signal.unit === 'enabled' ? value ? ' · enabled' : ' · disabled' : ` ${signal.unit}`}` : signal.id === 'hand-item' ? value ? itemLabel(String(value)) : 'Empty hand' : getFactorioStateLabel(String(value))}{signal.limit !== undefined ? ` · threshold ${number(signal.limit)}` : ''}</Typography>
-                    </Box>;
-                })}</Box>
-                {tickEvents.length > 0 && <Box sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">Events at this tick</Typography>{tickEvents.slice(0, 8).map((event, index) => <Typography key={index} variant="body2">{event.entity_id} · {event.kind.replaceAll('-', ' ')} · {number(event.amount)} {event.item ? itemLabel(event.item) : ''}</Typography>)}</Box>}
-                {connected.filter(entity => entity.id !== selected.id).length > 0 && <Typography variant="caption" color="text.secondary">Follow a connection</Typography>}
-                {connected.filter(entity => entity.id !== selected.id).map(entity => <Button key={entity.id} color="inherit" size="small" onClick={() => patch({ entityId: entity.id })} sx={{ display: 'flex', justifyContent: 'flex-start', textAlign: 'left' }}>{entity.items[0] && <FactorioIcon name={entity.items[0]} size={18} alt="" />}{timelineEntityName(entity, recipeLabel)}</Button>)}
-            </Box>}
+            {recordingWanted && selected && recording && <TimelineTickInspector recording={recording} entity={selected} inspection={inspection} tick={tick} events={tickEvents} connected={connected} onEntityChange={entityId => patch({ entityId })} />}
+
         </Box>
         {recording && selected && <Box sx={{ mt: 1.5 }}>
             <TimelinePauses key={selected.id} recording={recording} entityId={selected.id} targetMet={props.selected.ranking.meets_target_rate} onExplore={wait => {
                 const padding = Math.max(15, (wait.end - wait.start) * 0.2);
-                patch({ view: 'activity', signals: [...new Set([...inspection.signals, 'state', 'inventory', 'transfers'] as const)], tick: wait.start, entityId: wait.entityId });
+                patch({ view: 'activity', signals: signalsForTimelinePause(inspection.signals, wait.state), tick: wait.start, entityId: wait.entityId,
+                    showConnections: inspection.showConnections || (wait.state === 'waiting_for_space_in_destination' && selected.type === 'inserter' && Boolean(selected.sink)),
+                });
                 setRange({ start: wait.start - padding, end: wait.end + padding });
             }} />
             <Box component="details" sx={{ mt: 1 }}>

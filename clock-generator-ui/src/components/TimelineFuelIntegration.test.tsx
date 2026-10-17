@@ -1,0 +1,33 @@
+import { expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
+import agricultureConfig from '../../../clock-generator/resources/config-samples/science/agriculture-science/agriculture-science.json?raw';
+import { DEFAULT_INSPECTION } from '../utils/timelineInspection';
+import { signalsForTimelinePause } from '../utils/timelinePresentation';
+import { TimelineTickInspector } from './TimelineTickInspector';
+import { TimelineEvidenceChart } from './TimelineEvidenceChart';
+
+it('reveals nutrient stock and burning energy from a real agricultural-science replay when exploring fuel', async () => {
+    const engine = await import('clock-generator/browser');
+    engine.FactorioDataService.initialize(JSON.parse(factorioData));
+    const config = engine.parseConfigFromJson(agricultureConfig);
+    const recording = engine.recordSimulationTimeline({ config, mode: 'plan', period_ticks: 600, terminal_swing_count: 1, windows: {} });
+    const machine = recording.entities.find(entity => entity.recipe === 'agricultural-science-pack')!;
+    expect(machine).toBeDefined();
+    const fuel = machine.signals.find(signal => signal.id === 'fuel')!;
+    expect(fuel).toMatchObject({ item: 'nutrients', unit: 'items' });
+    expect(fuel.values.some(value => Number(value) > 0)).toBe(true);
+    const energy = machine.signals.find(signal => signal.id === 'burning')!;
+    expect(energy.unit).toBe('MJ');
+    expect(energy.values.some(value => Number(value) > 0)).toBe(true);
+    const signals = signalsForTimelinePause(DEFAULT_INSPECTION.signals, 'no_fuel');
+    const inspector = renderToStaticMarkup(<TimelineTickInspector recording={recording} entity={machine} inspection={{ ...DEFAULT_INSPECTION, view: 'activity', signals }} tick={10} events={[]} connected={[]} onEntityChange={() => {}} />);
+    const primary = inspector.split(/<details[^>]*data-inspector-details[^>]*>/)[0];
+    expect(primary).toContain('Fuel slot');
+    expect(primary).toContain('nutrients');
+    expect(primary).toContain('Burning fuel remaining');
+    expect(primary).toContain('MJ');
+    const chart = renderToStaticMarkup(<TimelineEvidenceChart recording={recording} comparison={null} selected={machine} groups={signals} range={{ start: 0, end: recording.end_tick }} tick={10} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    expect(chart).toContain('Fuel slot');
+    expect(chart).toContain('Burning fuel remaining');
+});

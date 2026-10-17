@@ -59,3 +59,9 @@ it('summarizes repeated waiting intervals as shares of the recorded excerpt', ()
         { state: 'working', ticks: 20, share: 2 / 3 }, { state: 'item_ingredient_shortage', ticks: 10, share: 1 / 3 },
     ]);
 });
+
+it('migrates saved Entity states views to the Activity states-only preset without losing context', () => {
+    expect(validInspection({ view: 'states', signals: ['inventory', 'transfers'], entityId: 'inserter:12', tick: 235, run: 'plan', comparisonId: 'swings-2', ranges: { plan: { start: 220, end: 253 } } })).toMatchObject({
+        view: 'activity', signals: ['state'], entityId: 'inserter:12', tick: 235, run: 'plan', comparisonId: 'swings-2', ranges: { plan: { start: 220, end: 253 } },
+    });
+});
