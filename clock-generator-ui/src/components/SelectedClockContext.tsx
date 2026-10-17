@@ -8,7 +8,7 @@ import { useGameNames } from '../hooks/useGameNames';
 import { recoversOf } from '../utils/clockSummary';
 import { formatNumberText } from '../utils/numberText';
 import { buildWakeWindowRows } from '../utils/wakeWindows';
-import { Panel } from './Panel';
+import { FullscreenWorkspace } from './FullscreenWorkspace';
 import { InstallSteps } from './InstallSteps';
 import { tabProps } from '../utils/tabIds';
 import { TabBody } from './TabBody';
@@ -20,7 +20,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
-    timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected' | 'clockSelector'>;
+    timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected' | 'fullscreen'>;
     installContent: ReactNode;
     clockSelector: ReactNode;
     generation: GenerationAssumptions | null;
@@ -29,13 +29,14 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
     children: ReactNode;
 }) {
     const { itemLabel } = useGameNames();
+    const [fullscreen, setFullscreen] = useState(false);
     const [timelineVisited, setTimelineVisited] = useState(detail === 'timeline');
     useEffect(() => { if (detail === 'timeline') setTimelineVisited(true); }, [detail]);
     const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
     const moves = new Map(buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]));
-    return <Panel title="Selected clock workspace" actions={clockSelector} sx={{ mb: 0 }} data-result-context="" data-build-anchor="clock-context">
+    return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={clockSelector}>
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
-            aria-label="Selected clock workspace" sx={{ borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
+            aria-label="Selected clock workspace" sx={{ ...(fullscreen && { position: 'sticky', top: -16, zIndex: 1, bgcolor: 'background.paper' }), borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
             <Tab label="Overview" value="overview" {...tabProps('result-context', 'overview')} />
             <Tab label="Timeline" value="timeline" {...tabProps('result-context', 'timeline')} />
             <Tab label="Install" value="install" {...tabProps('result-context', 'install')} />
@@ -61,7 +62,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
         </TabBody>
         <TabBody prefix="result-context" tab="timeline" shown={detail === 'timeline'}>
             {(timelineVisited || detail === 'timeline') && <Suspense fallback={<Typography role="status">Loading timelines…</Typography>}>
-                <ClockTimeline {...timelineProps} selected={selected} clockSelector={clockSelector} />
+                <ClockTimeline {...timelineProps} selected={selected} fullscreen={fullscreen} />
             </Suspense>}
         </TabBody>
         <TabBody prefix="result-context" tab="install" shown={detail === 'install'}>
@@ -69,5 +70,5 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
             <InstallSteps install={selected.install} movesOf={id => moves.get(id) ?? { items: [], route: '' }} stale={stale} alwaysOpen />
             {installContent}
         </TabBody>
-    </Panel>;
+    </FullscreenWorkspace>;
 }

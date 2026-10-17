@@ -1,9 +1,8 @@
-import { Close, Fullscreen } from '@mui/icons-material';
-import { Box, Dialog, DialogContent, DialogTitle, IconButton, Paper, Tooltip, Typography } from '@mui/material';
-import { useId, useState, memo, type ReactNode } from 'react';
+import { Box, Paper, Tooltip, Typography } from '@mui/material';
+import { memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
-import { BUTTON_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
+import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
@@ -13,7 +12,7 @@ import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
 interface TransferHistoryVisualizationProps {
     transferHistory: SerializableTransferHistory;
-    fullscreenActions?: ReactNode;
+    fullscreen?: boolean;
 }
 
 interface TransferBarProps {
@@ -178,10 +177,8 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
     );
 }
 
-function TransferHistoryVisualizationComponent({ transferHistory, fullscreenActions }: TransferHistoryVisualizationProps) {
+function TransferHistoryVisualizationComponent({ transferHistory, fullscreen = false }: TransferHistoryVisualizationProps) {
     const { itemMap: itemColorMap, track: TIMELINE_TRACK_COLOR } = useChartColors();
-    const fullscreenTitleId = useId();
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const rowHeight = 24;
     const totalDuration = transferHistory.total_duration_ticks;
 
@@ -307,54 +304,14 @@ function TransferHistoryVisualizationComponent({ transferHistory, fullscreenActi
                     <Typography variant="h6" component="h3">
                         Transfer Activity Timeline
                     </Typography>
-                    <Tooltip title="Open fullscreen">
-                        <IconButton onClick={() => setIsModalOpen(true)} size="small">
-                            <Fullscreen />
-                        </IconButton>
-                    </Tooltip>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     Total simulation duration: {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
                 </Typography>
 
-                {timelineContent(false)}
+                {timelineContent(fullscreen)}
             </Paper>
 
-            {/* Fullscreen Modal */}
-            <Dialog
-                aria-labelledby={fullscreenTitleId}
-                open={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                maxWidth={false}
-                fullScreen
-                slotProps={{
-                    paper: {
-                        sx: {
-                            bgcolor: 'background.default',
-                        },
-                    }
-                }}
-            >
-                <DialogTitle id={`${fullscreenTitleId}-bar`} component="div" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box sx={{ flex: '1 1 260px', minWidth: 0 }}>
-                        <Typography id={fullscreenTitleId} variant="h5" component="h2" sx={{ display: 'inline' }}>
-                            Transfer Activity Timeline
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }} component="span">
-                            {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, flex: '0 1 440px', minWidth: 0, maxWidth: '100%', ml: 'auto' }}>
-                        {fullscreenActions}
-                        <IconButton onClick={() => setIsModalOpen(false)} edge="end" aria-label={BUTTON_NAMES.closeFullscreen} sx={{ flexShrink: 0 }}>
-                            <Close />
-                        </IconButton>
-                    </Box>
-                </DialogTitle>
-                <DialogContent sx={{ overflow: 'auto' }}>
-                    {timelineContent(true)}
-                </DialogContent>
-            </Dialog>
         </>
     );
 }

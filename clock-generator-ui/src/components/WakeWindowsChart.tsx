@@ -446,6 +446,7 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
                 if (event.key === 'Escape' && selected !== null) {
                     onSelect(null);
                     event.preventDefault();
+                    event.stopPropagation();
                 }
             }}
             data-wake-chart

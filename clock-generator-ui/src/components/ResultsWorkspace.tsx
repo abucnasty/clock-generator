@@ -132,7 +132,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const selectionAnchor = useRef<{ clock: ClockAlternativeView; top: number } | null>(null);
     const captureWorkspacePosition = (next: ClockAlternativeView | undefined) => {
         // Keep the workspace at the same viewport offset when summary/comparison text changes above it.
-        selectionAnchor.current = selected?.verdict === 'stable' && next?.verdict === 'stable' && workspaceRef.current
+        selectionAnchor.current = selected?.verdict === 'stable' && next?.verdict === 'stable' && workspaceRef.current && !workspaceRef.current.querySelector('[aria-modal="true"]')
             ? { clock: selected, top: workspaceRef.current.getBoundingClientRect().top }
             : null;
     };

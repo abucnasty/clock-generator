@@ -1,5 +1,5 @@
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { SerializableClockWindows, SerializableStateTransitionHistory, SerializableTransferHistory } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import type { TimelineViewContext } from '../utils/buildViewContext';
@@ -12,7 +12,7 @@ type TimelineView = 'states' | 'transfers' | 'windows';
 
 export interface ClockTimelineWorkspaceProps {
     selected: ClockAlternativeView;
-    clockSelector?: ReactNode;
+    fullscreen?: boolean;
     timeline: TimelineViewContext;
     onTimelineChange(timeline: TimelineViewContext): void;
     wakeAsTable: boolean;
@@ -58,13 +58,13 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         </Typography>}
         {visited.states && <Box hidden={view !== 'states'} sx={{ display: view === 'states' ? 'block' : 'none' }}>
             <Suspense fallback={<Typography role="status">Loading entity states…</Typography>}>
-                {states ? <StateTimeline fullscreenActions={props.clockSelector} options={props.timeline} onOptionsChange={props.onTimelineChange} stateTransitionHistory={states} clockWindows={props.clockWindows ?? undefined} />
+                {states ? <StateTimeline fullscreen={props.fullscreen} options={props.timeline} onOptionsChange={props.onTimelineChange} stateTransitionHistory={states} clockWindows={props.clockWindows ?? undefined} />
                     : <Typography>No entity-state history is available for this clock.</Typography>}
             </Suspense>
         </Box>}
         {visited.transfers && <Box hidden={view !== 'transfers'} sx={{ display: view === 'transfers' ? 'block' : 'none' }}>
             <Suspense fallback={<Typography role="status">Loading item transfers…</Typography>}>
-                {transfers ? <TransferTimeline fullscreenActions={props.clockSelector} transferHistory={transfers} /> : <Typography>No transfer history is available for this clock.</Typography>}
+                {transfers ? <TransferTimeline fullscreen={props.fullscreen} transferHistory={transfers} /> : <Typography>No transfer history is available for this clock.</Typography>}
             </Suspense>
         </Box>}
         {visited.windows && <Box hidden={view !== 'windows'} sx={{ display: view === 'windows' ? 'block' : 'none' }}>
