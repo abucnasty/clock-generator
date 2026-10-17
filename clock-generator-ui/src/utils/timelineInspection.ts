@@ -15,6 +15,7 @@ export interface TimelineInspection {
     replaySpeed?: number;
     replayCycleOnly?: boolean;
     replayFocus?: boolean;
+    replayTransferScope?: 'selection' | 'all';
     replayViewport?: { x: number; y: number; zoom: number };
 }
 export const DEFAULT_INSPECTION: TimelineInspection = { view: 'windows', run: 'clock', entityId: null, tick: 0, ranges: {}, signals: ['state', 'inventory', 'transfers'] };
@@ -40,6 +41,7 @@ export function validInspection(value: unknown): TimelineInspection {
         ...([0.25, 0.5, 1, 2, 4, 8].includes(input.replaySpeed ?? 0) ? { replaySpeed: input.replaySpeed } : {}),
         ...(typeof input.replayCycleOnly === 'boolean' ? { replayCycleOnly: input.replayCycleOnly } : {}),
         ...(typeof input.replayFocus === 'boolean' ? { replayFocus: input.replayFocus } : {}),
+        ...(['selection', 'all'].includes(input.replayTransferScope ?? '') ? { replayTransferScope: input.replayTransferScope } : {}),
         ...(input.replayViewport && Number.isFinite(input.replayViewport.x) && Number.isFinite(input.replayViewport.y) && Number.isFinite(input.replayViewport.zoom) && input.replayViewport.zoom >= 0.1 && input.replayViewport.zoom <= 2
             ? { replayViewport: { x: input.replayViewport.x, y: input.replayViewport.y, zoom: input.replayViewport.zoom } } : {}),
         ...(typeof input.cycleIndex === 'number' && Number.isSafeInteger(input.cycleIndex) && input.cycleIndex >= 0 ? { cycleIndex: input.cycleIndex } : {}),
@@ -171,4 +173,9 @@ export function timelineSignalPreset(groups: readonly TimelineSignalGroup[]): 'd
     if (selected.size === 1 && selected.has('state')) return 'states';
     if (selected.size === DEFAULT_INSPECTION.signals.length && DEFAULT_INSPECTION.signals.every(group => selected.has(group))) return 'default';
     return 'custom';
+}
+
+/** All timeline surfaces use the same effective selection, including fresh or stale saved contexts. */
+export function resolveTimelineEntity(entities: readonly TimelineEntity[], requested: string | null): TimelineEntity | null {
+    return entities.find(entity => entity.id === requested) ?? entities.find(entity => entity.type === 'machine') ?? entities[0] ?? null;
 }

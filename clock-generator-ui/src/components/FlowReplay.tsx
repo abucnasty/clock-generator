@@ -3,11 +3,11 @@ import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, R
 import { Box, Button, Checkbox, FormControlLabel, LinearProgress, MenuItem, TextField, Typography } from '@mui/material';
 import { Pause, PlayArrow, SkipNext, SkipPrevious } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
-import type { Config, TimelineRecording } from 'clock-generator/browser';
+import type { Config, TimelineEvent, TimelineRecording } from 'clock-generator/browser';
 import { buildFlowGraph, type EntityNodeData, type InserterNodeData, type DrillNodeData, ENTITY_NODE_WIDTH, INSERTER_NODE_WIDTH, INSERTER_NODE_CHIP_WIDTH, DRILL_NODE_WIDTH } from '../utils/buildFlowGraph';
 import { configToFormData } from '../utils/configForm/configMapping';
 import { flowEntityKey, flowFocus } from '../utils/flowFocus';
-import { adjacentTransfer, flowEventSummary, flowReplayEvents, flowReplayIndex, flowReplaySnapshot, flowReplayCycles, type FlowReplaySnapshot } from '../utils/flowReplay';
+import { adjacentTransfer, flowEventSummary, flowReplayFrame, flowReplayIndex, flowReplaySnapshot, flowReplayCycles, flowTransferTicks, flowTransferAmounts, type FlowReplaySnapshot } from '../utils/flowReplay';
 import { craftingCycleAt, craftingCycleIndex } from '../utils/craftingCycles';
 import type { TimelineInspection } from '../utils/timelineInspection';
 import { timelineStateLabel, timelineStateStyle } from '../utils/timelinePresentation';
@@ -17,6 +17,7 @@ import { useMeasuredFlowNodes } from '../hooks/useMeasuredFlowNodes';
 import { useGameNames } from '../hooks/useGameNames';
 import { formatNumberText } from '../utils/numberText';
 import { FactorioIcon } from './FactorioIcon';
+import { FlowTransferEdge } from './FlowTransferEdge';
 
 const NODE_HEIGHT = 168;
 const number = (value: number) => formatNumberText(value, { maxDecimals: 2 });
@@ -76,6 +77,7 @@ function ReplayNode({ data }: NodeProps<Node<ReplayData>>) {
     </>;
 }
 const nodeTypes = { entityNode: ReplayNode, inserterNode: ReplayNode, drillNode: ReplayNode };
+const edgeTypes = { transfer: FlowTransferEdge };
 
 interface FlowReplayProps {
     config: Config; recording: TimelineRecording; tick: number; inspection: TimelineInspection; cycleTicks: number;
@@ -128,8 +130,12 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
         return () => document.removeEventListener('visibilitychange', pauseWhenHidden);
     }, []);
     const seek = (next: number) => { setPlayingRecording(null); onTick(next); };
-    const effectStart = playing ? Math.max(0, tick - Math.ceil(speed * 6)) : tick;
-    const effects = useMemo(() => flowReplayEvents(index, effectStart, tick), [index, effectStart, tick]);
+    const frame = useMemo(() => flowReplayFrame(index, tick), [index, tick]);
+    const effects = frame.events;
+    const transferScope = inspection.replayTransferScope ?? 'selection';
+    const transferTicks = useMemo(() => flowTransferTicks(index, transferScope === 'selection' ? inspection.entityId : null), [index, transferScope, inspection.entityId]);
+    const selectedEntity = index.entities.get(inspection.entityId ?? '')?.entity;
+    const selectionLabel = selectedEntity ? `${selectedEntity.type[0].toUpperCase()}${selectedEntity.type.slice(1)} ${selectedEntity.id.split(':')[1]} routes` : 'Selected routes';
     const focus = useMemo(() => flowFocus(graph.nodes, graph.edges, inspection.entityId), [graph, inspection.entityId]);
     const [hovered, setHovered] = useState<string | null>(null);
     const focusedId = inspection.replayFocus ? inspection.entityId : null;
@@ -138,7 +144,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
     const nodes = useMemo(() => graph.nodes.map(node => {
         const key = flowEntityKey(node);
         return { ...node, selected: focus.same.has(node.id),
-            ariaLabel: `${node.ariaLabel}. Press Enter to ${flowEntityKey(node).startsWith('belt:') ? 'highlight all connected inserter routes' : 'inspect recorded activity'}.`,
+            ariaLabel: `${node.ariaLabel}. Press Enter to ${flowEntityKey(node).startsWith('belt:') ? 'highlight all connected inserter routes' : 'select and show tick details'}.`,
             style: { opacity: (hovered ?? focusedId) && !routeFocus.related.has(node.id) ? 0.65 : 1 },
             data: { ...node.data, identity: key, snapshot: flowReplaySnapshot(index, key, tick), effects: flowEventSummary(effects, key) } as ReplayData };
     }), [graph, index, tick, effects, focus, routeFocus, hovered, focusedId]);
@@ -146,19 +152,30 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
     const edges = useMemo(() => graph.edges.map(edge => {
         const from = nodeKeys.get(edge.source)!;
         const to = nodeKeys.get(edge.target)!;
-        const transfers = effects.filter(event => event.kind === 'pickup' ? event.entity_id === to : event.kind === 'drop' ? event.entity_id === from : false);
+        const onEdge = (event: TimelineEvent) => event.kind === 'pickup' ? event.entity_id === to : event.kind === 'drop' ? event.entity_id === from : false;
+        const transfers = effects.filter(onEdge);
         const active = transfers.length > 0;
         const highlighted = routeFocus.routes.has(edge.id);
-        const color = active ? tokens.role.green.main : highlighted ? tokens.role.orange.main : tokens.control.border;
-        return { ...edge, label: active ? transfers.reduce((sum, event) => sum + event.amount, 0) + ' items' : undefined,
-            labelStyle: { fill: tokens.text.primary, fontSize: 12 }, labelBgStyle: { fill: tokens.surface.panel },
-            markerEnd: { ...(edge.markerEnd as EdgeMarker), color }, style: { stroke: color, strokeWidth: active ? 4 : highlighted ? 2.5 : 1.5, strokeDasharray: highlighted && !active ? '7 4' : undefined, opacity: (hovered ?? focusedId) && !highlighted && !active ? 0.3 : 1 } };
-    }), [graph, effects, routeFocus, tokens, hovered, focusedId, nodeKeys]);
+        const trail = !active && frame.recentTransfers.some(onEdge);
+        const amounts = flowTransferAmounts(transfers);
+        const action = transfers[0]?.kind === 'pickup' ? 'Pickup' : 'Delivery';
+        const route = `${from.replace(':', ' ')} to ${to.replace(':', ' ')}`;
+        const description = active
+            ? `${action} at tick ${tick}: ${amounts.map(value => `${number(value.amount)} ${value.item ? itemLabel(value.item) : 'items'}`).join(', ')}; ${route}`
+            : trail ? `Recent transfer on ${route} between ticks ${frame.recentStart} and ${tick - 1}; no transfer at tick ${tick}` : route;
+        const color = active || trail ? tokens.role.green.main : highlighted ? tokens.role.orange.main : tokens.control.border;
+        return { ...edge, type: 'transfer', label: undefined, ariaLabel: description, data: { amounts, description },
+            markerEnd: { ...(edge.markerEnd as EdgeMarker), color },
+            style: { stroke: color, strokeWidth: active ? 4 : trail ? 2 : highlighted ? 2.5 : 1.5,
+                strokeDasharray: active ? undefined : trail ? '2 5' : highlighted ? '7 4' : undefined,
+                opacity: trail ? 0.5 : (hovered ?? focusedId) && !highlighted && !active ? 0.3 : 1 } };
+    }), [graph, effects, frame.recentTransfers, frame.recentStart, tick, routeFocus, tokens, hovered, focusedId, nodeKeys, itemLabel]);
     const states = useMemo(() => [...new Set(recording.entities.flatMap(entity => entity.signals.filter(signal => signal.id === 'state').flatMap(signal => signal.values.map(String))))], [recording]);
-    const previous = adjacentTransfer(index, tick, -1, firstTick, lastTick), next = adjacentTransfer(index, tick, 1, firstTick, lastTick);
+    const previous = adjacentTransfer({ transferTicks }, tick, -1, firstTick, lastTick), next = adjacentTransfer({ transferTicks }, tick, 1, firstTick, lastTick);
+    const showAllRoutes = () => onChange({ replayFocus: false, replayTransferScope: 'all' });
     const chooseNode = (node: Node) => {
         setPlayingRecording(null);
-        onChange({ entityId: flowEntityKey(node), replayFocus: true });
+        onChange({ entityId: flowEntityKey(node), replayFocus: true, replayTransferScope: 'selection' });
     };
     return <Box component="section" aria-label="Flow replay">
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
@@ -168,14 +185,22 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
             }}>{playing ? 'Pause' : 'Play'}</Button>
             <Button color="inherit" size="small" onClick={() => seek(Math.max(firstTick, tick - 1))} disabled={tick <= firstTick}>−1 tick</Button>
             <Button color="inherit" size="small" onClick={() => seek(Math.min(lastTick, tick + 1))} disabled={tick >= lastTick}>+1 tick</Button>
+            <TextField select label="Transfer scope" size="small" value={transferScope} onChange={event => {
+                setPlayingRecording(null);
+                onChange(event.target.value === 'selection' ? { replayTransferScope: 'selection', replayFocus: true } : { replayTransferScope: 'all' });
+            }} sx={{ minWidth: 165 }}>
+                <MenuItem value="selection" disabled={!selectedEntity}>{selectionLabel}</MenuItem>
+                <MenuItem value="all">Whole build</MenuItem>
+            </TextField>
             <Button color="inherit" size="small" startIcon={<SkipPrevious />} disabled={previous === null} onClick={() => previous !== null && seek(previous)}>Previous transfer</Button>
             <Button color="inherit" size="small" endIcon={<SkipNext />} disabled={next === null} onClick={() => next !== null && seek(next)}>Next transfer</Button>
             <TextField select label="Playback speed" size="small" value={speed} onChange={event => onChange({ replaySpeed: Number(event.target.value) })} sx={{ minWidth: 130 }}>
                 {[0.25, 0.5, 1, 2, 4, 8].map(value => <MenuItem key={value} value={value}>{value}×</MenuItem>)}
             </TextField>
             <Button color="inherit" size="small" onClick={() => { setPlayingRecording(null); onInspectActivity(); }}>Inspect activity</Button>
-            {inspection.replayFocus && <Button color="inherit" size="small" onClick={() => onChange({ replayFocus: false })}>Show all routes</Button>}
+            {inspection.replayFocus && <Button color="inherit" size="small" onClick={showAllRoutes}>Show all routes</Button>}
         </Box>
+        {transferScope === 'selection' && transferTicks.length === 0 && <Typography variant="caption" component="p" sx={{ mb: 1 }}>No transfers were recorded for these routes. Choose Whole build to step through other transfers.</Typography>}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1 }}>
             <FormControlLabel label="Play one crafting cycle" control={<Checkbox size="small" disabled={!cycles} checked={inspection.replayCycleOnly === true && Boolean(cycles)} onChange={(_, checked) => { setPlayingRecording(null); onChange({ replayCycleOnly: checked }); }} />} />
             {cycle && <>
@@ -186,27 +211,28 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
         </Box>
         <Box component="ul" aria-label="Connection legend" sx={{ m: 0, mb: 0.5, p: 0, display: 'flex', gap: 2, flexWrap: 'wrap', listStyle: 'none' }}>
             <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `3px dashed ${tokens.role.orange.main}` }} /><Typography variant="caption">Selected or hovered route</Typography></Box>
-            <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `4px solid ${tokens.role.green.main}` }} /><Typography variant="caption">Recorded item transfer · quantity on the line</Typography></Box>
+            <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `4px solid ${tokens.role.green.main}` }} /><Typography variant="caption">Transfer at this tick · item and quantity</Typography></Box>
+            <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `2px dotted ${tokens.role.green.main}`, opacity: 0.5 }} /><Typography variant="caption">Recent activity · no quantity</Typography></Box>
             <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 12, height: 10, border: `1px solid ${tokens.control.border}`, outline: `2px solid ${tokens.role.orange.main}`, outlineOffset: 2, mr: 0.25 }} /><Typography variant="caption">Selected entity outline</Typography></Box>
         </Box>
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 0.5 }}>Entity states</Typography>
         <Box component="ul" aria-label="Flow replay legend" sx={{ m: 0, mb: 1, p: 0, display: 'flex', gap: 1.5, flexWrap: 'wrap', listStyle: 'none' }}>
             {states.map(state => <Box component="li" key={state} sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}><Box aria-hidden sx={{ width: 18, height: 10, background: patternBackground(timelineStateStyle(state)) }} /><Typography variant="caption">{timelineStateLabel(state)}</Typography></Box>)}
         </Box>
-        <Typography variant="caption" component="p" sx={{ mb: 1 }}>A selected route turns solid green when items transfer. ↑ pickup · ↓ delivery. {playing ? `Highlights cover ticks ${effectStart}–${tick}.` : `Highlights show tick ${tick}.`} Belts show routes, not physical item positions.</Typography>
+        <Typography variant="caption" component="p" sx={{ mb: 1 }}>Transfer quantities show tick {tick}. ↑ pickup · ↓ delivery. {tick > 0 ? `Dotted trails show recent activity (ticks ${frame.recentStart}–${tick - 1}).` : 'No earlier activity at tick 0.'} Belts show routes, not physical item positions.</Typography>
         <Box sx={{ height: fullscreen ? 'max(450px, calc(100vh - 440px))' : 600, minHeight: 400, bgcolor: tokens.surface.inset, border: 1, borderColor: 'divider',
             '--xy-node-color': tokens.text.primary, '--xy-handle-background-color': tokens.control.border,
             '& .react-flow__node.selected > div:first-of-type': { outline: `2px solid ${tokens.role.orange.main}`, outlineOffset: 3 },
             '& .react-flow__node:focus-visible > div:first-of-type': { outline: `2px solid ${tokens.control.focus}`, outlineOffset: 3 },
             '& .react-flow__controls-button': { bgcolor: tokens.surface.panel, color: tokens.text.primary, borderColor: tokens.control.border, '& svg': { fill: 'currentColor' } },
         }}>
-            <ReactFlow nodes={measured.nodes} onNodesChange={measured.onNodesChange} edges={edges} nodeTypes={nodeTypes} nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
+            <ReactFlow nodes={measured.nodes} onNodesChange={measured.onNodesChange} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
                 minZoom={0.1} maxZoom={2} fitView={!inspection.replayViewport} fitViewOptions={{ padding: 0.1 }} defaultViewport={inspection.replayViewport}
                 onMoveEnd={(_, viewport: Viewport) => onChange({ replayViewport: viewport })}
                 onNodeClick={(_, node) => chooseNode(node)} onNodeMouseEnter={(_, node) => setHovered(flowEntityKey(node))} onNodeMouseLeave={() => setHovered(null)}
-                onPaneClick={() => onChange({ replayFocus: false })}
+                onPaneClick={showAllRoutes}
                 onKeyDown={event => { const target = event.target as HTMLElement; if (event.key === 'Enter' && target.classList.contains('react-flow__node')) { const node = graph.nodes.find(node => node.id === target.dataset.id); if (node) { event.preventDefault(); chooseNode(node); } } }}
-                ariaLabelConfig={{ 'node.a11yDescription.default': 'Press Enter to inspect recorded activity.', 'node.a11yDescription.keyboardDisabled': 'Press Enter to inspect recorded activity.' }}
+                ariaLabelConfig={{ 'node.a11yDescription.default': 'Press Enter to select and show tick details.', 'node.a11yDescription.keyboardDisabled': 'Press Enter to select and show tick details.' }}
                 proOptions={{ hideAttribution: true }}>
                 <Background color={tokens.control.edge} variant={BackgroundVariant.Dots} gap={20} size={1} /><Controls showInteractive={false} />
             </ReactFlow>

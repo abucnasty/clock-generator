@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { TimelineEvent, TimelineRecording, TimelineSeries } from 'clock-generator/browser';
-import { clampTimelineRange, deliveryRateSeries, productionBatches, timelineStateDurations, panTimeline, timelinePoints, timelineValueAt, timelineWaits, validInspection, zoomTimeline } from './timelineInspection';
+import type { TimelineEntity, TimelineEvent, TimelineRecording, TimelineSeries } from 'clock-generator/browser';
+import { resolveTimelineEntity, clampTimelineRange, deliveryRateSeries, productionBatches, timelineStateDurations, panTimeline, timelinePoints, timelineValueAt, timelineWaits, validInspection, zoomTimeline } from './timelineInspection';
 const series: TimelineSeries = { id: 'stock', label: 'Stock', group: 'inventory', unit: 'items', ticks: [0, 10, 11, 12, 30], values: [4, 5, 100, 0, 9] };
 
 describe('timeline inspection', () => {
@@ -77,4 +77,19 @@ it('persists planned crafting-cycle navigation without altering normal timeline 
     const saved = validInspection({ view: 'cycles', cycleIndex: 4, tick: 384, ranges: { windows: { start: 10, end: 60 } } });
     expect(saved).toMatchObject({ view: 'cycles', cycleIndex: 4, tick: 384, ranges: { windows: { start: 10, end: 60 } } });
     expect(validInspection({ cycleIndex: -1 })).not.toHaveProperty('cycleIndex');
+});
+
+
+it('resolves one shared selection for fresh, stale and valid saved contexts', () => {
+    const entities: TimelineEntity[] = [
+        { id: 'belt:1', type: 'belt', items: [], signals: [] },
+        { id: 'inserter:1', type: 'inserter', items: [], signals: [] },
+        { id: 'machine:2', type: 'machine', items: [], signals: [] },
+    ];
+    expect(resolveTimelineEntity(entities, null)?.id).toBe('machine:2');
+    expect(resolveTimelineEntity(entities, 'machine:99')?.id).toBe('machine:2');
+    expect(resolveTimelineEntity(entities, 'belt:1')?.id).toBe('belt:1');
+    expect(resolveTimelineEntity(entities, 'inserter:1')?.id).toBe('inserter:1');
+    expect(resolveTimelineEntity(entities.slice(0, 2), null)?.id).toBe('belt:1');
+    expect(resolveTimelineEntity([], 'machine:2')).toBeNull();
 });

@@ -7,7 +7,7 @@ import type { TimelineViewContext } from '../utils/buildViewContext';
 import { timelineRequestFor } from '../utils/timelineRequest';
 import { useTimelineRecording } from '../hooks/useTimelineRecording';
 import { useGameNames } from '../hooks/useGameNames';
-import { DEFAULT_INSPECTION, validInspection, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
+import { DEFAULT_INSPECTION, validInspection, resolveTimelineEntity, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
 import { formatNumberText } from '../utils/numberText';
 import { signalsForTimelinePause } from '../utils/timelinePresentation';
 import { TimelineSignals } from './TimelineSignals';
@@ -106,8 +106,9 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted, retry]);
     const primary = useTimelineRecording(request, retry);
     const recording = primary.data;
-    const selectedId = options.some(entity => entity.id === inspection.entityId) ? inspection.entityId : options.find(entity => entity.type === 'machine')?.id ?? options[0]?.id;
-    const selected = recording?.entities.find(entity => entity.id === selectedId) ?? options.find(entity => entity.id === selectedId) ?? recording?.entities.find(entity => entity.type !== 'belt') ?? null;
+    const selected = useMemo(() => resolveTimelineEntity(recording?.entities ?? options, inspection.entityId), [recording, options, inspection.entityId]);
+    const selectedId = selected?.id ?? null;
+    const effectiveInspection = useMemo(() => ({ ...inspection, entityId: selectedId }), [inspection, selectedId]);
     const duration = !recordingWanted
         ? props.selected.simulationDurationTicks
         : recording?.end_tick ?? props.selected.simulationDurationTicks;
@@ -176,7 +177,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         </Box>
         {inspection.view !== 'cycles' && <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
             {recordingWanted && <EntitySelector label="Inspect entity" options={selectorOptions} value={selectorOptions.find(option => entitySelectorKey(option) === selectedId)}
-                onChange={option => { patch({ entityId: entitySelectorKey(option), ...(isFlow ? { replayFocus: true } : {}) }); setEventPage(0); }}
+                onChange={option => { patch({ entityId: entitySelectorKey(option), ...(isFlow ? { replayFocus: true, replayTransferScope: 'selection' } as const : {}) }); setEventPage(0); }}
                 sx={{ width: 390, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }} />}
             {!isFlow && <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.25 }}>
                 <Tooltip title="Pan earlier"><IconButton size="small" aria-label="Pan timeline earlier" onClick={() => setRange(panTimeline(range, -0.5, duration))}><ChevronLeft /></IconButton></Tooltip>
@@ -208,7 +209,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                         {recording && selected && !isFlow && <Box sx={{ p: { xs: 1, sm: 1.5 } }}>
                             <EvidenceChart recording={recording} selected={selected} groups={inspection.signals} range={range} tick={tick} view={inspection.view === 'transfers' ? 'transfers' : inspection.view === 'states' ? 'states' : 'activity'} showConnections={inspection.showConnections} onTick={setTick} onInspect={inspect} onRange={setRange} onZoom={zoom} />
                         </Box>}
-                        {isFlow && recording && props.config && <FlowReplay config={props.config} recording={recording} tick={tick} inspection={inspection} cycleTicks={props.selected.cycleTicks}
+                        {isFlow && recording && props.config && <FlowReplay config={props.config} recording={recording} tick={tick} inspection={effectiveInspection} cycleTicks={props.selected.cycleTicks}
                             onTick={setTick} onChange={patch} onInspectActivity={() => patch({ view: 'activity' })} fullscreen={props.fullscreen} />}
                         {recording?.truncated && <Alert severity="info" sx={{ mt: 1 }}>Detailed recording is limited to the first {number(recording.end_tick)} ticks of {number(recording.requested_ticks)} requested ticks to bound memory. Zoom and inspection use only this excerpt.</Alert>}
                     </>}
@@ -220,7 +221,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                 </Box>
                 {recording && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>One modelled unit · {inspection.run === 'clock' ? 'exported clock, including circuit latency' : 'planning controls'} · tick 0 is the baseline after preparation/warm-up ({number(recording.ticks_before_recording)} ticks excluded); controls restart at phase 0 with that inventory. Full input supplies; delivery rates exclude events before tick 0. This replay does not change the clock assessment.</Typography>}
             </Box>
-            {recordingWanted && selected && recording && <TimelineTickInspector recording={recording} entity={selected} inspection={inspection} tick={tick} events={tickEvents} connected={connected} onEntityChange={entityId => patch({ entityId, ...(isFlow ? { replayFocus: true } : {}) })} />}
+            {recordingWanted && selected && recording && <TimelineTickInspector recording={recording} entity={selected} inspection={effectiveInspection} tick={tick} events={tickEvents} connected={connected} onEntityChange={entityId => patch({ entityId, ...(isFlow ? { replayFocus: true, replayTransferScope: 'selection' } as const : {}) })} />}
 
         </Box>
         {recording && selected && <Box sx={{ mt: 1.5 }}>

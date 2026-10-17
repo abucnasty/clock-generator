@@ -18,8 +18,11 @@ it('renders replay controls using an agricultural build with recorded fuel and m
         onTick={() => {}} onChange={() => {}} onInspectActivity={() => {}} />);
     expect(html).toContain('Flow replay legend');
     expect(html).toContain('Selected or hovered route');
-    expect(html).toContain('Recorded item transfer · quantity on the line');
+    expect(html).toContain('Transfer at this tick · item and quantity');
     expect(html).toContain('Selected entity outline');
+    expect(html).toContain('Recent activity · no quantity');
+    expect(html).toContain('Transfer scope');
+    expect(html).not.toContain('Highlights cover ticks');
     expect(html.indexOf('aria-label="Connection legend"')).toBeLessThan(html.indexOf('Entity states'));
     expect(html).toContain('Previous transfer');
     expect(html).toContain('Play one crafting cycle');

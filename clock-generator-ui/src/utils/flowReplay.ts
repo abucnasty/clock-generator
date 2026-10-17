@@ -29,7 +29,7 @@ export function flowReplayEvents(index: FlowReplayIndex, start: number, end: num
     return index.events.slice(upperBound(index.eventTicks, start - 1), upperBound(index.eventTicks, end));
 }
 /** Strictly before/after the cursor, including multiple transfers at a tick as one step. */
-export function adjacentTransfer(index: FlowReplayIndex, tick: number, direction: -1 | 1, start = 0, end = Infinity): number | null {
+export function adjacentTransfer(index: Pick<FlowReplayIndex, 'transferTicks'>, tick: number, direction: -1 | 1, start = 0, end = Infinity): number | null {
     const ticks = index.transferTicks;
     const position = direction === 1 ? upperBound(ticks, tick) : upperBound(ticks, tick - 1) - 1;
     const next = ticks[position];
@@ -51,4 +51,29 @@ export function flowEventSummary(events: TimelineEvent[], entityId: string) {
 /** The recorder rounds its last simulated tick up; that fraction is not an extra planned cycle. */
 export function flowReplayCycles(cycleTicks: number, recording: Pick<TimelineRecording, 'period_ticks' | 'end_tick'>) {
     return craftingCycles(cycleTicks, Math.min(recording.end_tick, recording.period_ticks));
+}
+
+/** Transfer stepping follows whole routes through connected inserters, not machine production events. */
+export function flowTransferTicks(index: FlowReplayIndex, entityId: string | null): number[] {
+    if (entityId === null) return index.transferTicks;
+    const inserters = new Set<string>();
+    if (index.entities.get(entityId)?.entity.type === 'inserter') inserters.add(entityId);
+    for (const { entity } of index.entities.values()) {
+        if (entity.type === 'inserter' && (entity.source === entityId || entity.sink === entityId)) inserters.add(entity.id);
+    }
+    return [...new Set(index.events.filter(event => event.kind !== 'produce' && (inserters.has(event.entity_id) || event.source === entityId || event.sink === entityId)).map(event => event.tick))];
+}
+
+export const FLOW_TRAIL_TICKS = 12;
+/** Quantities always describe one exact tick. Trails carry no amounts and do not change with playback speed. */
+export function flowReplayFrame(index: FlowReplayIndex, tick: number) {
+    const recentStart = Math.max(0, tick - FLOW_TRAIL_TICKS);
+    return { events: flowReplayEvents(index, tick, tick), recentStart,
+        recentTransfers: flowReplayEvents(index, recentStart, tick - 1).filter(event => event.kind !== 'produce') };
+}
+export interface FlowTransferAmount { item?: string; amount: number }
+export function flowTransferAmounts(events: readonly TimelineEvent[]): FlowTransferAmount[] {
+    const amounts = new Map<string | undefined, number>();
+    for (const event of events) amounts.set(event.item, (amounts.get(event.item) ?? 0) + event.amount);
+    return [...amounts].map(([item, amount]) => ({ item, amount }));
 }
