@@ -1,6 +1,6 @@
 import { Check, Close, DeleteOutline, Search } from '@mui/icons-material';
 import { Box, Typography, Popover, TextField, Button, ButtonBase, IconButton, InputAdornment, Tab, Tabs, Tooltip } from '@mui/material';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
 import { searchIds } from '../utils/gameNames';
@@ -31,22 +31,27 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
     const nameOf = kind === 'recipe' ? recipeLabel : itemLabel;
     const groupData = kind === 'recipe' ? recipePickerGroups : itemPickerGroups;
     const searchRef = useRef<HTMLInputElement>(null);
+    const selectedRef = useRef<HTMLButtonElement>(null);
     const [item, setItem] = useState(initialItem ?? null);
     const [quantity, setQuantity] = useState(String(initialQuantity));
     const [query, setQuery] = useState('');
     const groups = useMemo(() => {
-        const offered = new Set(itemNames);
+        const offeredNames = [...new Set(initialItem ? [initialItem, ...itemNames] : itemNames)];
+        const offered = new Set(offeredNames);
         const known = new Set(groupData.flatMap(group => group.items));
-        const catalog = groupData.map(group => ({ ...group, items: [...group.items.filter(name => offered.has(name)), ...(group.id === 'other' ? itemNames.filter(name => !known.has(name)) : [])] })).filter(group => group.items.length > 0);
+        const catalog = groupData.map(group => ({ ...group, items: [...group.items.filter(name => offered.has(name)), ...(group.id === 'other' ? offeredNames.filter(name => !known.has(name)) : [])] })).filter(group => group.items.length > 0);
         const suggested = priority?.ids.filter(name => offered.has(name)) ?? [];
         return suggested.length ? [{ id: 'suggested', label: priority!.label, icon: suggested[0], items: suggested }, ...catalog] : catalog;
-    }, [itemNames, priority, groupData]);
+    }, [itemNames, initialItem, priority, groupData]);
     const [category, setCategory] = useState(() => groups.find(group => group.items.includes(initialItem ?? ''))?.id ?? groups[0]?.id ?? 'other');
     const shownItems = useMemo(() => {
         const search = query.trim().toLocaleLowerCase();
         const candidates = search ? [...new Set([...groups.flatMap(group => group.items), ...searchOnlyIds])] : groups.find(group => group.id === category)?.items ?? groups[0]?.items ?? [];
         return search ? searchIds(query, candidates, nameOf) : candidates;
     }, [groups, category, nameOf, query, searchOnlyIds]);
+    useEffect(() => {
+        selectedRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }, [shownItems]);
     const validQuantity = Number.isSafeInteger(Number(quantity)) && Number(quantity) >= 1;
     const apply = () => { if (item && (!quantityLabel || validQuantity)) onApply(item, Number(quantity)); };
     const slotStyles = (open: boolean, width: number | string = 36) => {
@@ -56,7 +61,10 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
     return (
         <Popover open anchorEl={anchor} onClose={close} transitionDuration={{ enter: 120, exit: 80 }}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { width: 420, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto' } }, transition: { onEntered: () => searchRef.current?.focus() } }}>
+            slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { width: 420, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto' } }, transition: { onEntered: () => {
+                selectedRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                searchRef.current?.focus({ preventScroll: true });
+            } } }}>
             <Box sx={{ p: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{kind === 'recipe' ? 'Choose a recipe' : clearLabel === 'Clear item' ? 'Choose an item' : 'Set the filter'}</Typography>
@@ -77,7 +85,7 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
                 </Typography>
                 <Box role="group" aria-label={kind === 'recipe' ? 'Choose a recipe' : 'Choose an item'} sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(36px, 1fr))', gap: 0.5, maxHeight: 'min(250px, max(72px, calc(100dvh - 310px)))', overflowY: 'auto', p: 0.5, bgcolor: 'action.hover' }}>
                     {shownItems.map(name => <Tooltip key={name} title={nameOf(name)}>
-                        <ButtonBase aria-label={nameOf(name)} aria-pressed={item === name} onClick={() => setItem(name)}
+                        <ButtonBase ref={item === name ? selectedRef : undefined} aria-label={nameOf(name)} aria-pressed={item === name} onClick={() => setItem(name)}
                             sx={slotStyles(item === name, '100%')}>
                             <FactorioIcon name={name} size={28} alt="" fallback={<Typography variant="caption">{nameOf(name).slice(0, 2)}</Typography>} />
                         </ButtonBase>
