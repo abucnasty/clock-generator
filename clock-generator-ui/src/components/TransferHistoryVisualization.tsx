@@ -1,14 +1,13 @@
-import { chartGridSx } from '../theme/beltCharts';
 import { Box, Tooltip, Typography } from '@mui/material';
 import { memo, useMemo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
-import { useGameNames } from '../hooks/useGameNames';
 import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import { BeltChartFrame, ChartSwatch, TimelineAxis } from './BeltChart';
 import { itemChartStyles, patternBackground, type ItemChartStyle } from '../theme/beltCharts';
+import { HistoricalTimelineRow } from './HistoricalTimelineRow';
 import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
 interface TransferHistoryVisualizationProps {
@@ -79,7 +78,6 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProps) {
-    const { nameIdsIn } = useGameNames();
     // Collect unique items transferred by this entity
     const transferredItems = Array.from(new Set(entity.transfers.map(t => t.item_name))).sort();
 
@@ -87,91 +85,18 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
     const totalAmount = entity.transfers.reduce((sum, t) => sum + t.amount, 0);
 
     return (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: rowHeight, mb: 0.5 }}>
-            {/* Entity label */}
-            <Box sx={{ width: 220, flexShrink: 0, pr: 1 }}>
-                <Tooltip
-                    title={
-                        <Box>
-                            <Typography variant="body2">{nameIdsIn(entity.label)}</Typography>
-                            {entity.source && (
-                                <Typography variant="caption" display="block">
-                                    From: {nameIdsIn(entity.source.label)}
-                                </Typography>
-                            )}
-                            {entity.sink && (
-                                <Typography variant="caption" display="block">
-                                    To: {nameIdsIn(entity.sink.label)}
-                                </Typography>
-                            )}
-                            <Typography variant="caption" display="block">
-                                Total transferred: {totalAmount}
-                            </Typography>
-                        </Box>
-                    }
-                    arrow
-                    placement="left"
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <FactorioIcon
-                            name={entity.entity_type === 'inserter' ? 'stack-inserter' : 'electric-mining-drill'}
-                            size={18}
-                        />
-                        <Typography
-                            variant="body2"
-                            noWrap
-                            sx={{
-                                fontSize: '0.75rem',
-                                color: 'text.primary',
-                            }}
-                        >
-                            {nameIdsIn(entity.label)}
-                        </Typography>
-                        {/* Show total amount transferred */}
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                fontSize: '0.65rem',
-                                color: 'text.secondary',
-                                bgcolor: 'action.selected',
-                                px: 0.5,
-                                borderRadius: 0,
-                                fontWeight: 'medium',
-                            }}
-                        >
-                            {totalAmount}
-                        </Typography>
-                        {/* Show item icons for transferred items */}
-                        <Box sx={{ display: 'flex', gap: 0.25, ml: 0.5 }}>
-                            {transferredItems.map(item => (
-                                <FactorioIcon key={item} name={item} size={14} />
-                            ))}
-                        </Box>
-                    </Box>
-                </Tooltip>
-            </Box>
-
-            {/* Timeline bar */}
-            <Box
-                sx={{
-                    flex: 1,
-                    height: rowHeight,
-                    position: 'relative',
-                    ...chartGridSx(totalDuration),
-                    borderRadius: 0,
-                }}
-            >
-                {entity.transfers.map((transfer, idx) => (
-                    <TransferBar
-                        key={`${entity.entity_id}-${idx}`}
-                        transfer={transfer}
-                        totalDuration={totalDuration}
-                        rowHeight={rowHeight}
-                        colorMap={colorMap}
-                    />
-                ))}
-            </Box>
-        </Box>
+        <HistoricalTimelineRow variant="transfer" entity={entity} items={transferredItems} count={totalAmount} duration={totalDuration} height={rowHeight}
+            details={<Typography variant="caption" display="block">Total transferred: {totalAmount}</Typography>}>
+            {entity.transfers.map((transfer, idx) => (
+                <TransferBar
+                    key={`${entity.entity_id}-${idx}`}
+                    transfer={transfer}
+                    totalDuration={totalDuration}
+                    rowHeight={rowHeight}
+                    colorMap={colorMap}
+                />
+            ))}
+        </HistoricalTimelineRow>
     );
 }
 
