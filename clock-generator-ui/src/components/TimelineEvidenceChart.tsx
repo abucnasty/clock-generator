@@ -10,7 +10,7 @@ import { formatNumberText } from '../utils/numberText';
 import { useGameNames } from '../hooks/useGameNames';
 import { axisTicks } from '../utils/wakeWindows';
 
-export interface EvidenceLane {
+interface EvidenceLane {
     id: string;
     entity: TimelineEntity;
     series?: TimelineSeries;

@@ -19,7 +19,7 @@ import { useGameNames } from '../hooks/useGameNames';
 import { formatNumberText } from '../utils/numberText';
 import { FactorioIcon } from './FactorioIcon';
 import { ChartSwatch } from './BeltChart';
-import { FLOW_EDGE_TYPES } from './FlowTransferEdge';
+import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { FlowNodeHandles } from './FlowNodeHandles';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
 import { FlowTileBackground } from './FlowTileBackground';
@@ -102,9 +102,14 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
     const cycle = craftingCycleAt(cycles, craftingCycleIndex(cycles, tick));
     const firstTick = inspection.replayCycleOnly && cycle ? Math.ceil(cycle.start) : 0;
     const lastTick = inspection.replayCycleOnly && cycle ? Math.min(recording.end_tick, Math.ceil(cycle.end) - (cycle.end === cycles?.end ? 0 : 1)) : recording.end_tick;
-    const cursor = useRef({ tick, onTick, lastTick }); cursor.current = { tick, onTick, lastTick };
+    const cursor = useRef({ tick, onTick, lastTick });
+    useEffect(() => { cursor.current = { tick, onTick, lastTick }; }, [tick, onTick, lastTick]);
     // A new recording starts paused, including when a cached clock is selected again.
-    useEffect(() => { setPlayingRecording(null); }, [recording]);
+    const [previousRecording, setPreviousRecording] = useState(recording);
+    if (previousRecording !== recording) {
+        setPreviousRecording(recording);
+        setPlayingRecording(null);
+    }
     useEffect(() => {
         if (!playing) return;
         let frame = 0, previous: number | null = null, position = cursor.current.tick, published = cursor.current.tick;

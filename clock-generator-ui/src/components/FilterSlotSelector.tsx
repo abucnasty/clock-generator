@@ -48,7 +48,7 @@ export function FilterSlotSelector({ priority, filters,
             {Array.from({ length: slotCount }, (_, index) => {
                 const item = displayed[index];
                 const auto = automatic && Boolean(item);
-                const base = insetSlotSx({ auto, open: anchor === slotRefs.current[index] });
+                const base = insetSlotSx({ auto, open: Boolean(anchor) && active === index });
                 return <Tooltip key={index} title={item ? `${itemLabel(item)}${auto ? ' (automatic)' : ''}. Right-click to clear.${displayed.length === 1 ? ' Clearing the last filter returns to Automatic.' : ''}` : 'Choose an item'}>
                     <ButtonBase ref={element => { slotRefs.current[index] = element; }}
                         aria-label={item ? `Filter ${index + 1}: ${itemLabel(item)}${auto ? ' (auto)' : ''}` : `Add filter ${index + 1}`} aria-haspopup="dialog"

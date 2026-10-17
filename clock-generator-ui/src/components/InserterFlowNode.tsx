@@ -1,6 +1,6 @@
 import { useTheme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
-import { type NodeProps, type Node } from '@xyflow/react';
+import type { NodeProps, Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import { FlowNodeHandles } from './FlowNodeHandles';

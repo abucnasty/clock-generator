@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { RecordTimelineRequest, TimelineRecording } from 'clock-generator/browser';
 import { requestTimelineRecording, timelineRecordingKey } from '../worker/timelineClient';
 
-export interface TimelineRecordingState { status: 'idle' | 'loading' | 'ready' | 'error'; data: TimelineRecording | null; error: string | null }
+interface TimelineRecordingState { status: 'idle' | 'loading' | 'ready' | 'error'; data: TimelineRecording | null; error: string | null }
 
 /** A changed clock cancels the old replay; a late answer can never be shown as the new clock's data. */
 export function useTimelineRecording(request: RecordTimelineRequest | null, retry = 0): TimelineRecordingState {

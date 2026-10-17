@@ -1,3 +1,4 @@
+import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
 import type {
     AsBuiltStabilityCheck,
@@ -254,7 +255,7 @@ export interface ValidationFailedResponse {
     requestId: number;
     message: string;
     recovery?: RepeatedUnitsRecovery;
-    diagnostics?: import('../utils/buildValidation').ValidationDiagnostic[];
+    diagnostics?: ValidationDiagnostic[];
 }
 
 export interface LogResponse {

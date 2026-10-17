@@ -29,7 +29,8 @@ export function FullscreenWorkspace({ fullscreen, onFullscreenChange, actions, c
         if (scrollbar > 0) document.body.style.paddingRight = `${parseFloat(getComputedStyle(document.body).paddingRight) + scrollbar}px`;
         // This Modal stays in place to preserve chart state. Hide background siblings along its ancestor path.
         const background: { element: HTMLElement; inert: boolean }[] = [];
-        let branch: HTMLElement = host.current;
+        const fullscreenHost = host.current;
+        let branch: HTMLElement = fullscreenHost;
         while (branch.parentElement) {
             for (const sibling of branch.parentElement.children) {
                 if (sibling !== branch && sibling instanceof HTMLElement) {
@@ -45,7 +46,7 @@ export function FullscreenWorkspace({ fullscreen, onFullscreenChange, actions, c
             document.body.style.paddingRight = padding;
             for (const { element, inert } of background) element.inert = inert;
             requestAnimationFrame(() => {
-                if (host.current && !host.current.querySelector('[aria-modal="true"]')) window.scrollTo({ top: inlinePosition.scrollY, behavior: 'instant' });
+                if (!fullscreenHost.querySelector('[aria-modal="true"]')) window.scrollTo({ top: inlinePosition.scrollY, behavior: 'instant' });
             });
         };
     }, [fullscreen, inlinePosition.scrollY]);

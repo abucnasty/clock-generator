@@ -1,3 +1,4 @@
+import { chartGridSx } from '../theme/beltCharts';
 import { Box, Tooltip, Typography } from '@mui/material';
 import { memo, useMemo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
@@ -6,7 +7,7 @@ import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
-import { BeltChartFrame, ChartSwatch, TimelineAxis, chartGridSx } from './BeltChart';
+import { BeltChartFrame, ChartSwatch, TimelineAxis } from './BeltChart';
 import { itemChartStyles, patternBackground, type ItemChartStyle } from '../theme/beltCharts';
 import { MIN_MARK_PX } from '../utils/timelineGeometry';
 

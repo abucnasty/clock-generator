@@ -33,7 +33,7 @@ import { endpointEditProblem, endpointUpdate } from '../utils/inserterMetadata';
 import { entityLabel } from '../utils/entityLabel';
 import { flowFocus, flowEntityKey } from '../utils/flowFocus';
 import { FlowTileBackground } from './FlowTileBackground';
-import { FLOW_EDGE_TYPES } from './FlowTransferEdge';
+import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
 
 const nodeTypes: NodeTypes = {
@@ -196,11 +196,12 @@ function FlowContent({
     const focusKey = activeNode ? flowEntityKey(activeNode) : selection ? `${selection.kind}:${selection.id}` : null;
     const focus = useMemo(() => flowFocus(graphNodes, edges, focusKey), [graphNodes, edges, focusKey]);
     // Route emphasis must leave node text opaque; dimming the wrapper breaks its theme contrast.
+    const activeNodeId = activeNode?.id;
     const nodes = useMemo(() => graphNodes.map(node => ({
         ...node,
         selected: flowEntityKey(node) === (selection ? `${selection.kind}:${selection.id}` : null),
-        className: activeNode && focus.same.has(node.id) && node.id !== activeNode.id ? TWIN_CLASS : undefined,
-    })), [graphNodes, focus, selection, activeNode?.id]);
+        className: activeNodeId && focus.same.has(node.id) && node.id !== activeNodeId ? TWIN_CLASS : undefined,
+    })), [graphNodes, focus, selection, activeNodeId]);
     const measured = useMeasuredFlowNodes(nodes);
     const routes = useFlowRoutes(graphNodes, edges, measured.measurements);
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);

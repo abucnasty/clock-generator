@@ -10,7 +10,7 @@ export function flowReplayIndex(recording: TimelineRecording) {
         transferTicks: [...new Set(events.filter(event => event.kind !== 'produce').map(event => event.tick))],
     };
 }
-export type FlowReplayIndex = ReturnType<typeof flowReplayIndex>;
+type FlowReplayIndex = ReturnType<typeof flowReplayIndex>;
 export interface FlowReplaySnapshot {
     state?: string; enabled?: boolean; craft?: number; hand?: number; handItem?: string; produced?: number;
     inventory: { label: string; item?: string; value: TimelineValue; unit: string }[];
@@ -64,7 +64,7 @@ export function flowTransferTicks(index: FlowReplayIndex, entityId: string | nul
     return [...new Set(index.events.filter(event => event.kind !== 'produce' && (inserters.has(event.entity_id) || event.source === entityId || event.sink === entityId)).map(event => event.tick))];
 }
 
-export const FLOW_TRAIL_TICKS = 12;
+const FLOW_TRAIL_TICKS = 12;
 /** Quantities always describe one exact tick. Trails carry no amounts and do not change with playback speed. */
 export function flowReplayFrame(index: FlowReplayIndex, tick: number) {
     const recentStart = Math.max(0, tick - FLOW_TRAIL_TICKS);

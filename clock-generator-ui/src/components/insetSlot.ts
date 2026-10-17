@@ -54,21 +54,3 @@ export const AUTO_BADGE_SX: SxProps<Theme> = {
     py: '1px',
     pointerEvents: 'none',
 };
-
-/** A slot's count (an infinity chest's request): 11px white on the slot's dark, at its bottom right as in the game */
-export const SLOT_COUNT_SX: SxProps<Theme> = {
-    position: 'absolute',
-    bottom: -7,
-    right: -6,
-    bgcolor: (theme: Theme) => themeTokens(theme).surface.inset,
-    color: 'text.primary',
-    border: (theme: Theme) => `1px solid ${themeTokens(theme).control.border}`,
-    fontSize: 11,
-    fontWeight: 700,
-    lineHeight: 1,
-    px: 0.5,
-    py: '1px',
-    minWidth: 16,
-    textAlign: 'center',
-    pointerEvents: 'none',
-};

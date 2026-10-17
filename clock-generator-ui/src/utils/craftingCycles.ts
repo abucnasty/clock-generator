@@ -1,6 +1,6 @@
 import type { TimelineRange } from './timelineInspection';
 
-export interface CraftingCycle extends TimelineRange { partial: boolean }
+interface CraftingCycle extends TimelineRange { partial: boolean }
 export interface CraftingCycles { cycleTicks: number; end: number; count: number }
 
 /** The Swing Plan's saved cycle length defines the segments. Actual craft events do not define these boundaries.

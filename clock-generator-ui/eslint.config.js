@@ -29,7 +29,7 @@ export default defineConfig([
     // The engine is bundled once, in the simulation worker: the main thread takes only types from it, and its
     // values from the small 'clock-generator/light' entry. The tests run in Node and can use the engine directly.
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/worker/simulation.worker.ts', 'src/**/*.test.ts'],
+    ignores: ['src/worker/simulation.worker.ts', 'src/**/*.test.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-restricted-imports': ['error', {
         paths: ['clock-generator', 'clock-generator/browser'].map((name) => ({

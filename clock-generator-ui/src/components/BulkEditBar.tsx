@@ -31,7 +31,7 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
     const barRef = useRef<HTMLDivElement>(null);
     const [stack, setStack] = useState<number | null>(() => commonValue(selected, row => row.stack_size) ?? null);
     const [filtersAnchor, setFiltersAnchor] = useState<HTMLButtonElement | null>(null);
-    const [filters, setFilters] = useState<string[]>([]);
+    const [filters, setFilters] = useState<string[]>(() => commonValue(selected, row => row.filters) ?? []);
     const [filterDraftEdited, setFilterDraftEdited] = useState(false);
     const sharedFilters = commonValue(selected, row => row.filters);
     const empty = selected.length === 0;
@@ -74,9 +74,18 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
     }, []);
 
     const filterSelection = JSON.stringify(selected.map(row => [row._uuid, row.filters]));
-    useEffect(() => { setFilters(commonValue(selected, row => row.filters) ?? []); setFilterDraftEdited(false); }, [filterSelection]);
+    const [filterSource, setFilterSource] = useState(filterSelection);
+    if (filterSource !== filterSelection) {
+        setFilterSource(filterSelection);
+        setFilters(sharedFilters ?? []);
+        setFilterDraftEdited(false);
+    }
     const stackSelection = JSON.stringify(selected.map(row => [row._uuid, row.stack_size]));
-    useEffect(() => { setStack(commonValue(selected, row => row.stack_size) ?? null); }, [stackSelection]);
+    const [stackSource, setStackSource] = useState(stackSelection);
+    if (stackSource !== stackSelection) {
+        setStackSource(stackSelection);
+        setStack(commonValue(selected, row => row.stack_size) ?? null);
+    }
 
     const closeFilters = () => setFiltersAnchor(null);
     return <Box ref={barRef} role="region" aria-label="Edit selected inserters" data-bulk-edit=""

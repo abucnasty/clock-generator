@@ -137,7 +137,7 @@ export function deliveryRateSeries(events: readonly TimelineEvent[], item: strin
     return { id: `rate:${item}`, item, label: 'Delivered over the preceding second', group: 'production', unit: 'items/s', ticks, values };
 }
 
-export interface ProductionBatch { start: number; end: number; amount: number }
+interface ProductionBatch { start: number; end: number; amount: number }
 /** Sum nearby recorded production events for legible quantities at wide zooms; never infer crafts or deliveries. */
 export function productionBatches(events: readonly TimelineEvent[], range: TimelineRange, columns: number): ProductionBatch[] {
     const bins = new Map<number, ProductionBatch>();

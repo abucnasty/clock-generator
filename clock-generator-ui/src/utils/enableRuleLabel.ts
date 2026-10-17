@@ -3,7 +3,7 @@ import { isCondition } from '../components/ruleSetUtils';
 import type { EnableControlOverride, RuleSet } from '../hooks/useConfigForm';
 
 /** The entities that have an enable rule */
-export type EnableRuleEntityType = 'inserter' | 'drill';
+type EnableRuleEntityType = 'inserter' | 'drill';
 
 /** The longest text the chip shows; the tooltip and the accessible name always have the whole rule */
 export const ENABLE_CHIP_MAX_CHARS = 32;

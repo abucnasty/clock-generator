@@ -66,10 +66,17 @@ function entityOptions(config: Config | null | undefined, clock: ClockAlternativ
 function useInspection(props: ClockTimelineWorkspaceProps) {
     const configKey = useMemo(() => JSON.stringify(props.config), [props.config]);
     const [inspection, setInspection] = useState<TimelineInspection>(() => props.timeline.inspection ? validInspection(props.timeline.inspection) : DEFAULT_INSPECTION);
-    const latest = useRef(props); latest.current = props;
+    const latest = useRef(props);
+    useEffect(() => { latest.current = props; }, [props]);
     const lastSaved = useRef<TimelineInspection | undefined>(props.timeline.inspection);
-    useEffect(() => { setInspection(latest.current.timeline.inspection ? validInspection(latest.current.timeline.inspection) : DEFAULT_INSPECTION); }, [configKey]);
     useEffect(() => {
+        // Restore externally persisted build state; the cursor remains local between debounced saves.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setInspection(latest.current.timeline.inspection ? validInspection(latest.current.timeline.inspection) : DEFAULT_INSPECTION);
+    }, [configKey]);
+    useEffect(() => {
+        // An external restore must replace local state, while echoes of our own saves must not rewind it.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (props.timeline.inspection && props.timeline.inspection !== lastSaved.current) setInspection(validInspection(props.timeline.inspection));
     }, [props.timeline.inspection]);
     useEffect(() => {
@@ -103,7 +110,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         sublabel: entity.recipe ? recipeLabel(entity.recipe) : undefined,
         ingredientIcons: entity.recipe ? [entity.recipe] : entity.items,
     }), [options, identities, props.config, recipeLabel]);
-    const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted, retry]);
+    const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted]);
     const primary = useTimelineRecording(request, retry);
     const recording = primary.data;
     const selected = useMemo(() => resolveTimelineEntity(recording?.entities ?? options, inspection.entityId), [recording, options, inspection.entityId]);
@@ -121,7 +128,8 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         const cycle = inspection.view === 'cycles' ? craftingCycleAt(cycles, cycleIndex) : null;
         return cycle ? craftingCycleRange(cycle, duration) : clampTimelineRange(savedRange, duration);
     }, [inspection.view, cycles, cycleIndex, savedRange, duration]);
-    const current = useRef({ inspection, duration, domain, range }); current.current = { inspection, duration, domain, range };
+    const current = useRef({ inspection, duration, domain, range });
+    useEffect(() => { current.current = { inspection, duration, domain, range }; }, [inspection, duration, domain, range]);
     const setRange = useCallback((next: TimelineRange) => {
         const { inspection: previous, duration: end, domain: key } = current.current;
         patch({ ranges: { ...previous.ranges, [key]: clampTimelineRange(next, end) } });

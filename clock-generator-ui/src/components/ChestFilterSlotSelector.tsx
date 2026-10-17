@@ -59,7 +59,7 @@ export function ChestFilterSlotSelector({ filters, itemNames, onFilterChange, on
                         onClick={event => openSlot(index, event.currentTarget)}
                         onContextMenu={event => { event.preventDefault(); if (filter?.item_name) clear(index); }}
                         onKeyDown={event => { if ((event.key === 'Delete' || event.key === 'Backspace') && filter?.item_name) { event.preventDefault(); clear(index); } }}
-                        sx={slotStyles(Boolean(anchor) && anchor === slotRefs.current[index])}>
+                        sx={slotStyles(Boolean(anchor) && active === index)}>
                         {filter?.item_name && <>
                             <FactorioIcon name={filter.item_name} size={26} alt="" />
                             {showQuantity && <Box component="span" aria-hidden sx={{ position: 'absolute', bottom: 0, right: 2, fontSize: 11, fontWeight: 700, lineHeight: 1.1, color: '#fff', textShadow: '0 1px 2px #000, 1px 0 2px #000, -1px 0 2px #000' }}>{filter.quantity}</Box>}

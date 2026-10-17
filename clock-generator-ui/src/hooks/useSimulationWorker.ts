@@ -1,3 +1,4 @@
+import type { ValidationDiagnostic } from '../utils/buildValidation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
@@ -27,7 +28,7 @@ export type ValidationState =
     | { status: 'valid'; config: Config; validation: ConfigValidation }
     /** `crashed`: the check's worker stopped, so the build was not judged; Generate checks again */
     | { status: 'invalid'; config: Config; message: string; crashed?: boolean; recovery?: RepeatedUnitsRecovery;
-        diagnostics?: import('../utils/buildValidation').ValidationDiagnostic[] };
+        diagnostics?: ValidationDiagnostic[] };
 
 interface UseSimulationWorkerResult {
     generationAssumptions: GenerationAssumptions | null;

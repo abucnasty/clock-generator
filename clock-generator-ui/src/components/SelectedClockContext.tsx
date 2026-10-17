@@ -1,5 +1,5 @@
 import { Box, Tab, Tabs, Typography } from '@mui/material';
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import type { ClockTimelineWorkspaceProps } from './ClockTimelineWorkspace';
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import type { ResultDetail } from '../utils/resultsView';
@@ -27,7 +27,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
     const { itemLabel } = useGameNames();
     const [fullscreen, setFullscreen] = useState(false);
     const [timelineVisited, setTimelineVisited] = useState(detail === 'timeline');
-    useEffect(() => { if (detail === 'timeline') setTimelineVisited(true); }, [detail]);
+    if (detail === 'timeline' && !timelineVisited) setTimelineVisited(true);
     const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
     return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={clockSelector}>
         {/* Above floating field labels (z-index 1) while the fullscreen body scrolls. */}

@@ -201,7 +201,12 @@ function InsertersFormComponent({
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(inserters.length, onRemove);
     const announce = useAnnounce();
     const [selecting, setSelecting] = useState(false);
-    const [filterView, setFilterView] = useState(false);
+    const [filterView, setFilterView] = useState(focusRequest?.filters ?? false);
+    const [lastFocusRequest, setLastFocusRequest] = useState(focusRequest);
+    if (lastFocusRequest !== focusRequest) {
+        setLastFocusRequest(focusRequest);
+        if (focusRequest) setFilterView(focusRequest.filters);
+    }
     const [selection, setSelection] = useState<ReadonlySet<string>>(new Set());
     const selected = pruneSelection(selection, inserters.map(row => row._uuid));
     if (selected !== selection) setSelection(selected);
@@ -209,7 +214,6 @@ function InsertersFormComponent({
     const selectRef = useRef<HTMLButtonElement>(null);
     useEffect(() => {
         if (!focusRequest) return;
-        setFilterView(focusRequest.filters);
         const frame = requestAnimationFrame(() => {
             const row = document.getElementById(`entity-inserter-${focusRequest.id}`);
             const control = row?.querySelector<HTMLElement>(focusRequest.filters ? 'button[aria-haspopup="dialog"]' : '[role="combobox"]');

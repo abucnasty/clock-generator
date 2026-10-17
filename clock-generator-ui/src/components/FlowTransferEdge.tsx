@@ -7,7 +7,7 @@ import { themeTokens } from '../theme/runtimeTokens';
 import { FactorioIcon } from './FactorioIcon';
 import { attachFlowRoute, flowRoutePath, type FlowRoute } from '../utils/flowRouting';
 
-export type FlowTransferEdgeData = { amounts?: FlowTransferAmount[]; description?: string; flowRoute?: FlowRoute };
+type FlowTransferEdgeData = { amounts?: FlowTransferAmount[]; description?: string; flowRoute?: FlowRoute };
 
 /** Compact item identities keep labels readable without extending over neighbouring nodes. */
 export function FlowTransferEdge(props: EdgeProps<Edge<FlowTransferEdgeData>>) {
@@ -34,5 +34,3 @@ export function FlowTransferEdge(props: EdgeProps<Edge<FlowTransferEdgeData>>) {
         </EdgeLabelRenderer></> : null}
     </>;
 }
-
-export const FLOW_EDGE_TYPES = { transfer: FlowTransferEdge };

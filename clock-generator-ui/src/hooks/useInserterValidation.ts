@@ -18,7 +18,7 @@ export function useInserterValidation(
     exportConfig: () => Config,
     isInitialized: boolean,
 ): InserterCoverageIssue[] | null {
-    const config = useMemo(exportConfig, [exportConfig]);
+    const config = useMemo(() => exportConfig(), [exportConfig]);
     const key = useMemo(() => coverageKey(config), [config]);
     const latestConfig = useRef(config);
     const [result, setResult] = useState<{ key: string; issues: InserterCoverageIssue[] } | null>(null);

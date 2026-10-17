@@ -54,16 +54,3 @@ export function TimelineAxis({ duration, marks = axisTicks(duration, 7), startTi
 export function ChartSwatch({ color, pattern = 'solid', sx }: { color: string; pattern?: ChartPattern; sx?: SxProps<Theme> }) {
     return <Box component="span" aria-hidden sx={[{ display: 'inline-block', width: 22, height: 12, flexShrink: 0, background: patternBackground({ color, pattern }), border: '1px solid', borderColor: 'text.secondary', borderRadius: 0 }, ...(Array.isArray(sx) ? sx : [sx])]} />;
 }
-
-/** All timeline rows share the same plotting grid, including the canvas based state chart. */
-const chartTrackSx = {
-    bgcolor: BELT_CHART.background, borderRadius: 0,
-    backgroundImage: `linear-gradient(to right, ${BELT_CHART.grid} 1px, transparent 1px)`,
-    backgroundSize: `${100 / 6}% 100%`,
-    borderBottom: `1px solid ${BELT_CHART.grid}`,
-} as const;
-
-export function chartGridSx(duration: number) {
-    const marks = axisTicks(duration, 7);
-    return { ...chartTrackSx, backgroundSize: `${duration > 0 ? ((marks[1] ?? duration) / duration) * 100 : 100}% 100%` };
-}

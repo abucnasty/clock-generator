@@ -1,3 +1,4 @@
+import { axisTicks } from '../utils/wakeWindows';
 import { COLOR_BLIND_PALETTE as colors } from '../components/colors';
 
 /** Browser rendering of belt-charts/src/charts/constants.ts and styles.ts (belt-charts 1.24). */
@@ -49,4 +50,17 @@ export function canvasChartFill(context: CanvasRenderingContext2D, style: ItemCh
         paint.beginPath(); paint.moveTo(-4, 8); paint.lineTo(4, 0); paint.moveTo(4, 8); paint.lineTo(12, 0); paint.stroke();
     }
     return context.createPattern(tile, 'repeat') ?? style.color;
+}
+
+/** All timeline rows share the same plotting grid, including the canvas based state chart. */
+const chartTrackSx = {
+    bgcolor: BELT_CHART.background, borderRadius: 0,
+    backgroundImage: `linear-gradient(to right, ${BELT_CHART.grid} 1px, transparent 1px)`,
+    backgroundSize: `${100 / 6}% 100%`,
+    borderBottom: `1px solid ${BELT_CHART.grid}`,
+} as const;
+
+export function chartGridSx(duration: number) {
+    const marks = axisTicks(duration, 7);
+    return { ...chartTrackSx, backgroundSize: `${duration > 0 ? ((marks[1] ?? duration) / duration) * 100 : 100}% 100%` };
 }

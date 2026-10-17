@@ -11,7 +11,7 @@ export interface EntitySelectorOption {
     belt?: BeltFormData;
 }
 export const ENTITY_TYPE_LABELS: Record<SelectorEntityType, string> = { machine: 'Machines', inserter: 'Inserters', drill: 'Mining drills', belt: 'Belts', chest: 'Chests' };
-export const ENTITY_TYPE_ORDER: SelectorEntityType[] = ['machine', 'inserter', 'drill', 'belt', 'chest'];
+const ENTITY_TYPE_ORDER: SelectorEntityType[] = ['machine', 'inserter', 'drill', 'belt', 'chest'];
 export const entitySelectorKey = (option: Pick<EntitySelectorOption, 'type' | 'id'>) => `${option.type}:${option.id}`;
 export const entitySelectorLabel = (option: EntitySelectorOption) => option.sublabel ? `${option.label} - ${option.sublabel}` : option.label;
 const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();

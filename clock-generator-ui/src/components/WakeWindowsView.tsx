@@ -1,7 +1,7 @@
 import type { Theme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
 import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
-import { useCallback, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { TimelineRange } from '../utils/timelineInspection';
 import { useAnnounce } from '../hooks/useMessages';
 import type { ClockAlternativeView } from '../worker/types';
@@ -101,7 +101,8 @@ const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[
  * every wake window, with the wake-ups the engine counted for each inserter. Assumes no layout around it.
  */
 function WakeWindowsViewComponent({ alternative, config, cycleView = false, headingLevel = 'h3', asTable, onAsTableChange: setAsTable, inspection }: WakeWindowsViewProps) {
-    const inspectionRef = useRef(inspection); inspectionRef.current = inspection;
+    const inspectionRef = useRef(inspection);
+    useEffect(() => { inspectionRef.current = inspection; }, [inspection]);
     // keyed on the clock object, not its id: a new generation repeats the ids, and its selection must start empty
     const [selection, setSelection] = useState<{ alternative: ClockAlternativeView; rowId: string; windowIndex: number } | null>(null);
     const viewId = useId();

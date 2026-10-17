@@ -1,4 +1,5 @@
-import { BeltChartFrame, ChartSwatch, TimelineAxis, chartGridSx } from './BeltChart';
+import { chartGridSx } from '../theme/beltCharts';
+import { BeltChartFrame, ChartSwatch, TimelineAxis } from './BeltChart';
 import { BELT_CHART, canvasChartFill, statusPattern, type ChartPattern } from '../theme/beltCharts';
 import { axisTicks } from '../utils/wakeWindows';
 import { FilterList, Sort, Visibility, Palette } from '@mui/icons-material';
