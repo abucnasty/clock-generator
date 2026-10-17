@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Config, InserterCoverageIssue, SerializableTransferPlan } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/light';
+import { ChestType, Option } from 'clock-generator/light';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import * as edits from './configForm/edits';
 import { createDefaultConfig, type ConfigFormData, type EntityKind, type InserterFormData } from './configForm/formData';
 import { applyInserterFix } from './configForm/inserterFix';
+import { applyPaste } from './pastePreview';
 import {
     createUndoEntry,
     describeChestSwitch,
@@ -114,18 +115,15 @@ describe('Undo after Reset, Import and Paste', () => {
         expect(undoOutcome(entry)!.form).toBe(original);
     });
 
-    it('puts back the form from before every part of a paste, with one snapshot taken before the first', () => {
+    it('puts back the form from before an atomic paste, including retained categories', () => {
         const original = form();
-        const pasted = configToFormData(otherConfig);
-        const paste = (config: ConfigFormData) => {
-            config = edits.replaceMachines(config, pasted.machines);
-            config = edits.replaceDrills(config, []);
-            config = edits.updateDrillsConfig(config, 'mining_productivity_level', 0);
-            config = edits.replaceInserters(config, pasted.inserters);
-            config = edits.replaceBelts(config, pasted.belts);
-            return edits.replaceChests(config, pasted.chests);
-        };
-        const { entry } = act(original, paste);
+        const incoming = { ...otherConfig, chests: otherConfig.chests ?? [], drills: [], guidance: Option.none(), suggested_target: Option.none() };
+        const selections = { target: true, machines: true, drills: true, inserters: true, belts: true, chests: true };
+        const { after, entry } = act(original, config => applyPaste(config, incoming, selections, otherConfig.target_output));
+        expect(after.target_output).toEqual(otherConfig.target_output);
+        expect(after.machines[0].recipe).toBe('iron-gear-wheel');
+        expect(after.inserters).toBe(original.inserters);
+        expect(after.drills).toBe(original.drills);
         expect(undoOutcome(entry)!.form).toBe(original);
     });
 });
@@ -183,17 +181,17 @@ describe('the snapshot', () => {
         const all: ((config: ConfigFormData) => unknown)[] = [
             (c) => edits.updateTargetOutput(c, 'items_per_second', 3),
             (c) => edits.addMachine(c), (c) => edits.updateMachine(c, 0, 'productivity', 10), (c) => edits.removeMachine(c, 0),
-            (c) => edits.reorderMachines(c, 0, 2), (c) => edits.replaceMachines(c, []), (c) => edits.mergeMachines(c, []),
+            (c) => edits.reorderMachines(c, 0, 2),
             (c) => edits.addInserter(c), (c) => edits.updateInserter(c, 0, { stack_size: 4 }), (c) => edits.removeInserter(c, 0),
-            (c) => edits.reorderInserters(c, 0, 2), (c) => edits.replaceInserters(c, []),
+            (c) => edits.reorderInserters(c, 0, 2),
             (c) => edits.addBelt(c), (c) => edits.updateBelt(c, 0, { type: 'fast-transport-belt' }), (c) => edits.removeBelt(c, 0),
-            (c) => edits.reorderBelts(c, 0, 0), (c) => edits.replaceBelts(c, []),
+            (c) => edits.reorderBelts(c, 0, 0),
             (c) => edits.addChest(c), (c) => edits.updateChest(c, 0, { storage_size: 2 }), (c) => edits.removeChest(c, 0),
-            (c) => edits.reorderChests(c, 0, 1), (c) => edits.replaceChests(c, []),
+            (c) => edits.reorderChests(c, 0, 1),
             (c) => edits.switchChestType(c, 0, ChestType.INFINITY_CHEST), (c) => edits.switchChestType(c, 1, ChestType.BUFFER_CHEST),
             (c) => edits.updateDrillsConfig(c, 'mining_productivity_level', 1),
             (c) => edits.addDrill(c), (c) => edits.updateDrill(c, 0, { speed_bonus: 1 }), (c) => edits.removeDrill(c, 0),
-            (c) => edits.reorderDrills(c, 0, 1), (c) => edits.replaceDrills(c, []), (c) => edits.mergeDrills(c, []),
+            (c) => edits.reorderDrills(c, 0, 1),
             (c) => edits.updateOverrides(c, 'lcm', 60), (c) => edits.updateIgnoredIngredients(c, ['iron-plate'], plan),
             (c) => applyInserterFix(c, issue, { type: 'machine_to_machine', source_machine_id: 1, item_name: 'copper-cable' }),
             (c) => formDataToConfig(c),

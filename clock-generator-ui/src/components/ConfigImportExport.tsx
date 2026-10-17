@@ -16,7 +16,7 @@ import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, t
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
-import { pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
+import { applyPaste, pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
 import { InserterAssumptions } from './InserterAssumptions';
 import { entityLabel } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
@@ -33,14 +33,7 @@ import {
     shareLongMessage,
 } from '../utils/shareLink';
 import { askEngine } from '../worker/engineClient';
-import type {
-    BeltConfiguration,
-    ChestConfiguration,
-    InserterConfiguration,
-    MachineConfiguration,
-    MiningDrillConfiguration,
-    PastedEntities,
-} from '../worker/types';
+import type { PastedEntities } from '../worker/types';
 import { PasteFromFactorioDialog } from './PasteFromFactorioDialog';
 import { ExamplesDialog } from './ExamplesDialog';
 import { ImportSimplification } from './ImportSimplification';
@@ -91,13 +84,8 @@ interface ConfigImportExportProps {
     /** The form's Target Output, which a paste fills in only when its recipe is empty */
     target: TargetValues;
     onImport: (config: Config) => void;
-    onReplaceTarget: (target: TargetValues) => void;
-    onReplaceMachines: (machines: MachineConfiguration[]) => void;
-    onReplaceDrills: (drills: MiningDrillConfiguration[]) => void;
-    onReplaceInserters: (inserters: InserterConfiguration[]) => void;
-    onReplaceBelts: (belts: BeltConfiguration[]) => void;
-    onReplaceChests: (chests: ChestConfiguration[]) => void;
-    onUpdateMiningProductivityLevel: (level: number) => void;
+    /** Commits a selected paste as one form edit, preserving retained raw fields and row identity. */
+    onApplyPaste: (form: ConfigFormData) => void;
     onReset: () => void;
     /** Called after Open, Paste, an example or Reset replaced the build, so the clocks and the check of the old one go */
     onBuildReplaced: () => void;
@@ -148,13 +136,7 @@ export function ConfigImportExport({
     currentForm,
     target: currentTarget,
     onImport,
-    onReplaceTarget,
-    onReplaceMachines,
-    onReplaceDrills,
-    onReplaceInserters,
-    onReplaceBelts,
-    onReplaceChests,
-    onUpdateMiningProductivityLevel,
+    onApplyPaste,
     onReset,
     onBuildReplaced,
     onUndoable,
@@ -470,48 +452,18 @@ export function ConfigImportExport({
         if (!hasWork || currentPreview.geometryProblem || (currentPreview.crossings.length > 0 && !acknowledgedCurrent)) return;
 
         const fill = importSelections.target ? pendingImport.fill : null;
-        const machines = importSelections.machines && pendingImport.machines.length > 0;
-        const drills = importSelections.drills && pendingImport.drills.length > 0;
-        const inserters = importSelections.inserters && pendingImport.inserters.length > 0;
-        const belts = importSelections.belts && pendingImport.belts.length > 0;
-        const chests = importSelections.chests && pendingImport.chests.length > 0;
-        const parts = [
-            fill !== null && 'Target Output',
-            machines && countOf(pendingImport.machines.length, 'machine', 'machines'),
-            drills && countOf(pendingImport.drills.length, 'drill', 'drills'),
-            inserters && countOf(pendingImport.inserters.length, 'inserter', 'inserters'),
-            belts && countOf(pendingImport.belts.length, 'belt', 'belts'),
-            chests && countOf(pendingImport.chests.length, 'chest', 'chests'),
-        ].filter((part) => part !== false);
+        const parts = currentPreview.counts.filter(row => row.replacing)
+            .map(row => countOf(row.incoming, row.category.slice(0, -1), row.category));
+        if (fill !== null) parts.unshift('Target Output');
+        const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values, pendingImport.miningProductivityLevel);
 
         resetPasteFlow();
 
         // one Undo for the whole paste, taken before any of it is applied; its message says what was imported
         onUndoable(describePaste(parts));
-        if (fill !== null) {
-            onReplaceTarget(fill.values);
-        }
-        if (machines) {
-            onReplaceMachines(pendingImport.machines);
-        }
-        if (drills) {
-            onReplaceDrills(pendingImport.drills);
-            // Also update mining productivity level when importing drills
-            if (pendingImport.miningProductivityLevel !== undefined) {
-                onUpdateMiningProductivityLevel(pendingImport.miningProductivityLevel);
-            }
-        }
-        if (inserters) {
-            onReplaceInserters(pendingImport.inserters);
-        }
-        if (belts) {
-            onReplaceBelts(pendingImport.belts);
-        }
-        if (chests) {
-            onReplaceChests(pendingImport.chests);
-        }
+        onApplyPaste(next);
         onBuildReplaced();
-    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable, resetPasteFlow]);
+    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onApplyPaste, onBuildReplaced, onUndoable, resetPasteFlow]);
 
     const handleCancelImport = resetPasteFlow;
 

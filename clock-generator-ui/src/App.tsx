@@ -18,7 +18,7 @@ import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps, InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
-import type { ChestFormData, InserterFormData } from './hooks/useConfigForm';
+import type { InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
 import { useSharedBuildLink } from './hooks/useSharedBuildLink';
@@ -84,7 +84,6 @@ import { ruleTimingOf, type RuleTiming } from './utils/ruleTiming';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, removalMessage, removedDeleteLabel, reorderMessage } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
-import type { TargetValues } from './utils/pasteTarget';
 import { configToFormData, formDataToConfig } from './utils/configForm/configMapping';
 import { applyRepeatedUnitConversion } from './utils/configForm/repeatedUnitConversion';
 import { askEngine } from './worker/engineClient';
@@ -201,25 +200,20 @@ function App() {
         addMachine,
         updateMachine,
         removeMachine,
-        replaceMachines,
         addInserter,
         updateInserter,
         removeInserter,
         addBelt,
         updateBelt,
         removeBelt,
-        replaceBelts,
         addChest,
         updateChest,
         switchChestType,
         removeChest,
-        replaceChests,
         updateDrillsConfig,
         addDrill,
         updateDrill,
         removeDrill,
-        replaceDrills,
-        replaceInserters,
         updateOverrides,
         updateIgnoredIngredients,
         importConfig,
@@ -250,13 +244,6 @@ function App() {
         resetConfig();
         afterReset();
     }, [resetConfig, afterReset]);
-    // a paste that fills in Target Output
-    const replaceTarget = useCallback((target: TargetValues) => {
-        updateTargetOutput('recipe', target.recipe);
-        updateTargetOutput('items_per_second', target.items_per_second);
-        updateTargetOutput('copies', target.copies);
-    }, [updateTargetOutput]);
-
     // the clocks kept for the build (or shown last) come back once the saved build is loaded, before the page shows
     const [resultsRestored, setResultsRestored] = useState(false);
     // the page waits for the workers, for the saved config, which the engine's worker checks, and for its kept clocks
@@ -1070,13 +1057,7 @@ function App() {
                             config={exportableConfig}
                             target={config.target_output}
                             onImport={handleImportConfig}
-                            onReplaceTarget={replaceTarget}
-                            onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
-                            onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
-                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
-                            onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
-                            onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
-                            onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
+                            onApplyPaste={setConfig}
                             onReset={handleReset}
                             onBuildReplaced={handleBuildReplaced}
                             onUndoable={offerUndoOfReplace}

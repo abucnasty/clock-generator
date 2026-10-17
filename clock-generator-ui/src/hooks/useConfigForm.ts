@@ -34,7 +34,6 @@ export type {
     BeltFormData,
     BeltLaneFormData,
     BeltStrategyFormValue,
-    BufferChestFormData,
     ChestFormData,
     Condition,
     DrillFormData,
@@ -72,22 +71,18 @@ interface UseConfigFormResult {
     updateMachine: (index: number, field: keyof MachineFormData, value: string | number) => void;
     removeMachine: (index: number) => void;
     reorderMachines: (fromIndex: number, toIndex: number) => void;
-    mergeMachines: (machines: MachineFormData[]) => void;
-    replaceMachines: (machines: MachineFormData[]) => void;
     
     // Inserters
     addInserter: () => void;
     updateInserter: (index: number, updates: Partial<InserterFormData>) => void;
     removeInserter: (index: number) => void;
     reorderInserters: (fromIndex: number, toIndex: number) => void;
-    replaceInserters: (inserters: InserterFormData[]) => void;
     
     // Belts
     addBelt: () => void;
     updateBelt: (index: number, updates: Partial<BeltFormData>) => void;
     removeBelt: (index: number) => void;
     reorderBelts: (fromIndex: number, toIndex: number) => void;
-    replaceBelts: (belts: BeltFormData[]) => void;
     
     // Chests
     addChest: (chestType?: ChestType) => void;
@@ -95,7 +90,6 @@ interface UseConfigFormResult {
     switchChestType: (index: number, newType: ChestType, disposal?: boolean) => void;
     removeChest: (index: number) => void;
     reorderChests: (fromIndex: number, toIndex: number) => void;
-    replaceChests: (chests: ChestFormData[]) => void;
     
     // Drills
     updateDrillsConfig: (field: 'mining_productivity_level', value: number) => void;
@@ -103,8 +97,6 @@ interface UseConfigFormResult {
     updateDrill: (index: number, updates: Partial<DrillFormData>) => void;
     removeDrill: (index: number) => void;
     reorderDrills: (fromIndex: number, toIndex: number) => void;
-    mergeDrills: (drills: DrillFormData[]) => void;
-    replaceDrills: (drills: DrillFormData[]) => void;
     
     // Overrides
     updateOverrides: (field: keyof NonNullable<ConfigFormData['overrides']>, value: number | boolean | string[] | undefined) => void;
@@ -141,31 +133,24 @@ export function useConfigForm(): UseConfigFormResult {
             updateMachine: edit(formEdits.updateMachine),
             removeMachine: edit(formEdits.removeMachine),
             reorderMachines: edit(formEdits.reorderMachines),
-            mergeMachines: edit(formEdits.mergeMachines),
-            replaceMachines: edit(formEdits.replaceMachines),
             addInserter: edit(formEdits.addInserter),
             updateInserter: edit(formEdits.updateInserter),
             removeInserter: edit(formEdits.removeInserter),
             reorderInserters: edit(formEdits.reorderInserters),
-            replaceInserters: edit(formEdits.replaceInserters),
             addBelt: edit(formEdits.addBelt),
             updateBelt: edit(formEdits.updateBelt),
             removeBelt: edit(formEdits.removeBelt),
             reorderBelts: edit(formEdits.reorderBelts),
-            replaceBelts: edit(formEdits.replaceBelts),
             addChest: edit(formEdits.addChest),
             updateChest: edit(formEdits.updateChest),
             switchChestType: edit(formEdits.switchChestType),
             removeChest: edit(formEdits.removeChest),
             reorderChests: edit(formEdits.reorderChests),
-            replaceChests: edit(formEdits.replaceChests),
             updateDrillsConfig: edit(formEdits.updateDrillsConfig),
             addDrill: edit(formEdits.addDrill),
             updateDrill: edit(formEdits.updateDrill),
             removeDrill: edit(formEdits.removeDrill),
             reorderDrills: edit(formEdits.reorderDrills),
-            mergeDrills: edit(formEdits.mergeDrills),
-            replaceDrills: edit(formEdits.replaceDrills),
             updateOverrides: edit(formEdits.updateOverrides),
             updateIgnoredIngredients: edit(formEdits.updateIgnoredIngredients),
             applyInserterFix: edit(applyInserterFix),
