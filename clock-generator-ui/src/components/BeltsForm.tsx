@@ -1,3 +1,4 @@
+import { BeltLanePreview } from './BeltLanePreview';
 import { EntityBadge } from './EntityBadge';
 import { EntitySettings } from './EntitySettings';
 import { memo } from 'react';
@@ -20,7 +21,7 @@ import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
 import { FactorioIcon } from './FactorioIcon';
 import { PanelSection } from './Panel';
-import { ItemSelector } from './ItemSelector';
+import { ItemPickerField } from './ItemPickerField';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
@@ -153,7 +154,7 @@ function BeltsFormComponent({
             </Typography>}
             <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
-                <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)} displayLabel={<EntityBadge id={belt.id}><FactorioIcon name={belt.type} size={28} alt="" /></EntityBadge>}>
+                <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)} displayLabel={<EntityBadge id={belt.id}><BeltLanePreview belt={belt} /></EntityBadge>}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-belt-${belt.id}`}
@@ -163,12 +164,49 @@ function BeltsFormComponent({
                         mb: compact ? 1 : 2,
                         p: compact ? 1.5 : 2,
                         minWidth: 0,
+                        containerType: 'inline-size',
+                        containerName: 'belt-row',
                         bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
                     }}
                 >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center', mb: compact ? 1.5 : 2 }}>
-                        {dragHandle}
-                        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container belt-row (max-width: 700px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
+                        <Box sx={{ gridColumn: 1, gridRow: 1 }}>{dragHandle}</Box>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: 1.5, minWidth: 0, gridColumn: 2, gridRow: 1, '@container belt-row (max-width: 700px)': { gridColumn: '1 / -1', gridRow: 2 } }}>
+                        <FormControl data-row-first="" size="small" sx={{ minWidth: 0, width: '100%' }}>
+                            <InputLabel>Belt Type</InputLabel>
+                            <Select
+                                readOnly={geometryBeltIds.includes(belt.id)}
+                                inputProps={{ 'aria-label': `${SELECT_NAMES.beltType}, ${entityLabel('belt', belt.id)}` }}
+                                value={belt.type}
+                                label="Belt Type"
+                                onChange={(e) =>
+                                    onUpdate(beltIndex, {
+                                        type: e.target.value as BeltFormData['type'],
+                                    })
+                                }
+                                renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <FactorioIcon name={selected} size={20} alt="" />
+                                        {entityTypeLabel(selected, itemLabel)}
+                                    </Box>
+                                )}
+                            >
+                                {BELT_TYPES.map((bt) => (
+                                    <MenuItem key={bt.value} value={bt.value}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <FactorioIcon name={bt.value} size={20} alt="" />
+                                            {entityTypeLabel(bt.value, itemLabel)}
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                            {belt.lanes.map((lane, laneIndex) => <ItemPickerField key={laneIndex} value={lane.ingredient || null} options={itemNames}
+                                onChange={value => handleLaneUpdate(beltIndex, laneIndex, 'ingredient', value || '')}
+                                label={`Lane ${laneIndex + 1}`} inputAriaLabel={`Ingredient, ${entityLabel('belt', belt.id)}, lane ${laneIndex + 1}`}
+                                readOnly={geometryBeltIds.includes(belt.id)} />)}
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gridColumn: 3, gridRow: 1, '@container belt-row (max-width: 700px)': { gridColumn: 2 } }}>
                             <Box id={`settings-actions-belt-${belt.id}`} sx={{ display: 'flex' }} />
                             <RowActionsMenu label={entityLabel('belt', belt.id)} onDuplicate={() => duplicate(beltIndex)}
                                 onMoveUp={beltIndex > 0 ? () => onReorder(beltIndex, beltIndex - 1) : undefined}
@@ -177,8 +215,7 @@ function BeltsFormComponent({
                                 <Delete />
                             </IconButton>
                         </Box>
-                    </Box>
-                    <EntitySettings actionContainerId={`settings-actions-belt-${belt.id}`} first label={entityLabel('belt', belt.id)} tabs={[{ label: 'Lanes', content: (<>
+                    <EntitySettings actionContainerId={`settings-actions-belt-${belt.id}`} label={entityLabel('belt', belt.id)} tabs={[{ label: 'Lanes', content: (<>
                     {/* Lanes */}
                     <Box sx={{ pl: compact ? 0 : { xs: 0, sm: 2 }, minWidth: 0 }}>
                         {!geometryBeltIds.includes(belt.id) && belt.lanes.length < 2 && (
@@ -196,18 +233,6 @@ function BeltsFormComponent({
                                     Lane {laneIndex + 1}:
                                 </Typography>
                                 {geometryBeltIds.includes(belt.id) ? <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
-                                <ItemSelector
-                                    value={lane.ingredient || null}
-                                    options={itemNames}
-                                    onChange={(newValue) =>
-                                        handleLaneUpdate(beltIndex, laneIndex, 'ingredient', newValue || '')
-                                    }
-                                    label="Ingredient"
-                                    inputAriaLabel={`Ingredient, ${entityLabel('belt', belt.id)}, lane ${laneIndex + 1}`}
-                                    freeSolo
-                                    minWidth={0}
-                                    sx={{ flex: '1 1 200px', minWidth: 0, maxWidth: '100%' }}
-                                />
                                 <NumberField
                                     label="Stack size"
                                     value={lane.stack_size}
@@ -259,48 +284,11 @@ function BeltsFormComponent({
                             </Box>
                         ))}
                     </Box>
-</>) }]} summary={<>
-                        <Typography variant="body2">{entityTypeLabel(belt.type, itemLabel)} · {BELT_STRATEGIES.find(strategy => strategy.value === (belt.strategy ?? 'normal'))?.label}</Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 0.5 }}>
-                            {belt.lanes.map((lane, laneIndex) => <Box key={laneIndex} sx={{ display: 'flex', gap: 0.5, alignItems: 'center', minWidth: 0 }}>
-                                <Typography variant="body2">Lane {laneIndex + 1}:</Typography>
-                                {lane.ingredient && <FactorioIcon name={lane.ingredient} size={20} alt="" />}
-                                <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{lane.ingredient ? itemLabel(lane.ingredient) : 'No ingredient'} · Stack {lane.stack_size}
-                                    {belt.strategy === 'export' && ` · Consumed ${lane.consumption_per_second ?? 'Automatic'}/s`}
-                                </Typography>
-                            </Box>)}
-                        </Box>
-                    </>}>
+</>) }]} summary={<Typography variant="body2">
+                        {BELT_STRATEGIES.find(strategy => strategy.value === (belt.strategy ?? 'normal'))?.label} · {belt.lanes.map((lane, laneIndex) => `Lane ${laneIndex + 1} stack ${lane.stack_size}${belt.strategy === 'export' ? ` · Consumed ${lane.consumption_per_second ?? 'Automatic'}/s` : ''}`).join(' · ')}
+                    </Typography>}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: compact ? 1 : 2, mb: 1.5 }}>
-                        <FormControl size="small" sx={{ minWidth: 0, width: '100%' }}>
-                            <InputLabel>Belt Type</InputLabel>
-                            <Select
-                                readOnly={geometryBeltIds.includes(belt.id)}
-                                inputProps={{ 'aria-label': `${SELECT_NAMES.beltType}, ${entityLabel('belt', belt.id)}` }}
-                                value={belt.type}
-                                label="Belt Type"
-                                onChange={(e) =>
-                                    onUpdate(beltIndex, {
-                                        type: e.target.value as BeltFormData['type'],
-                                    })
-                                }
-                                renderValue={(selected) => (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <FactorioIcon name={selected} size={20} alt="" />
-                                        {entityTypeLabel(selected, itemLabel)}
-                                    </Box>
-                                )}
-                            >
-                                {BELT_TYPES.map((bt) => (
-                                    <MenuItem key={bt.value} value={bt.value}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <FactorioIcon name={bt.value} size={20} alt="" />
-                                            {entityTypeLabel(bt.value, itemLabel)}
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+
                         <FormControl size="small" sx={{ minWidth: 0, width: '100%' }}>
                             <InputLabel>Strategy</InputLabel>
                             <Select
@@ -326,6 +314,7 @@ function BeltsFormComponent({
 
 
                     </EntitySettings>
+                    </Box>
                 </Box>
                     )}
                 </SortableItem>

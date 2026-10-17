@@ -14,6 +14,7 @@ import { NumberField } from './NumberField';
 
 interface BulkEditBarProps {
     selected: InserterFormData[];
+    filtersOnly?: boolean;
     total: number;
     priorityIds: string[];
     availableItems: string[];
@@ -25,7 +26,7 @@ interface BulkEditBarProps {
 }
 
 /** Draft controls apply exactly one chosen field to the selected rows. */
-export function BulkEditBar({ selected, total, priorityIds, availableItems, itemNames, onSelectAll, onClear, onReturnFocus, onApply }: BulkEditBarProps) {
+export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds, availableItems, itemNames, onSelectAll, onClear, onReturnFocus, onApply }: BulkEditBarProps) {
     const barRef = useRef<HTMLDivElement>(null);
     const [stack, setStack] = useState<number | null>(() => commonValue(selected, row => row.stack_size) ?? null);
     const [filtersAnchor, setFiltersAnchor] = useState<HTMLButtonElement | null>(null);
@@ -67,12 +68,22 @@ export function BulkEditBar({ selected, total, priorityIds, availableItems, item
         };
     }, []);
 
+    const filterSelection = JSON.stringify(selected.map(row => [row._uuid, row.filters]));
+    useEffect(() => { if (filtersOnly) setFilters(commonValue(selected, row => row.filters) ?? []); }, [filterSelection, filtersOnly]);
+
     const closeFilters = () => setFiltersAnchor(null);
     return <Box ref={barRef} role="region" aria-label="Edit selected inserters" data-bulk-edit=""
         sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
         <Typography variant="body2">{selected.length} {selected.length === 1 ? 'inserter' : 'inserters'} selected</Typography>
         <Button color="inherit" size="small" onClick={onSelectAll} disabled={selected.length === total}>Select all</Button>
         <Button color="inherit" size="small" onClick={onClear}>Clear selection</Button>
+        {filtersOnly ? <>
+            <FilterSlotSelector filters={filters} itemNames={itemNames} priority={{ label: 'From selected sources', ids: priorityIds }}
+                onFilterChange={(slot, item) => setFilters(setFilterSlot(filters, [], slot, item).filters ?? [])}
+                onRemoveFilter={slot => setFilters(removeFilterSlot(filters, [], slot).filters ?? [])} />
+            <Button variant="outlined" color="inherit" size="small" disabled={filters.length === 0} onClick={() => onApply({ filters }, 'filters')}>Apply filters</Button>
+            <Button variant="outlined" color="inherit" size="small" onClick={() => onApply({ filters: undefined }, 'auto-filters')}>Clear filters / Auto</Button>
+        </> : <>
         <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
             <NumberField label="Stack size" value={stack} onValueChange={value => setStack(value)} placeholder="Automatic"
                 step={1} size="small" preserveInputOnBlur problem={!validStack ? 'Enter a whole number of at least 1, or clear for Automatic.' : undefined} sx={{ width: 130 }} />
@@ -83,6 +94,7 @@ export function BulkEditBar({ selected, total, priorityIds, availableItems, item
             setFiltersAnchor(event.currentTarget);
         }} aria-haspopup="dialog" aria-expanded={filtersAnchor !== null} aria-controls={filtersAnchor ? filtersId : undefined}>Filters…</Button>
         <Button variant="outlined" color="inherit" size="small" onClick={() => setRuleOpen(true)}>Enable rule…</Button>
+        </>}
         <Popover open={filtersAnchor !== null} anchorEl={filtersAnchor} onClose={closeFilters}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
             slotProps={{ paper: { id: filtersId, role: 'dialog', 'aria-labelledby': titleId, sx: { width: 380, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 32px)', overflow: 'auto' } } }}>

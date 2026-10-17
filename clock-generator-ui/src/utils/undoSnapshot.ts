@@ -51,7 +51,7 @@ export function createUndoEntry(id: number, message: string, before: ConfigFormD
 }
 
 /** Equal by value: a field that commits on blur may give a new object with the same values */
-function sameForm(a: ConfigFormData, b: ConfigFormData): boolean {
+export function sameForm(a: ConfigFormData, b: ConfigFormData): boolean {
     return a === b || JSON.stringify(a) === JSON.stringify(b);
 }
 
@@ -102,6 +102,33 @@ export function undoOutcome(entry: UndoEntry): { form: ConfigFormData; next: Und
 
 const itemsOf = (form: ConfigFormData, kind: EntityKind): { id: number; _uuid: string }[] =>
     kind === 'drills' ? form.drills?.configs ?? [] : form[kind];
+
+/** A fallback for ordinary form edits; destructive actions keep their more specific messages. */
+export function describeConfigEdit(before: ConfigFormData, after: ConfigFormData): { message: string; key: string } {
+    const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
+    for (const field of ['recipe', 'items_per_second', 'copies'] as const) {
+        if (changed(before.target_output[field], after.target_output[field])) {
+            return { message: `Updated ${field === 'copies' ? 'Copies' : field === 'recipe' ? 'target recipe' : 'Items per Second'}.`, key: `target:${field}` };
+        }
+    }
+    for (const kind of Object.keys(KINDS) as EntityKind[]) {
+        const previous = itemsOf(before, kind);
+        const next = itemsOf(after, kind);
+        if (!changed(previous, next)) continue;
+        const added = next.find(item => !previous.some(old => old._uuid === item._uuid));
+        if (added) return { message: `Added ${entityLabel(KINDS[kind].one, added.id)}.`, key: `${kind}:add` };
+        const edited = next.find(item => changed(previous.find(old => old._uuid === item._uuid), item));
+        if (edited) {
+            return { message: `Updated ${entityLabel(KINDS[kind].one, edited.id)}.`, key: `${kind}:${edited._uuid}` };
+        }
+        return { message: `Updated ${KINDS[kind].many.toLowerCase()}.`, key: kind };
+    }
+    return {
+        message: before.drills?.mining_productivity_level !== after.drills?.mining_productivity_level
+            ? 'Updated mining productivity.' : 'Updated build settings.',
+        key: 'build-settings',
+    };
+}
 
 /** The Undo message after an example replaced the build: "Example loaded: Logistic science pack." */
 export function exampleUndoMessage(example: Pick<ExampleBuild, 'recipe'>, name: (id: string) => string): string {

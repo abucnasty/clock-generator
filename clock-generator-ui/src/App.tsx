@@ -232,7 +232,7 @@ function App() {
         reorderDrills,
     } = useConfigForm();
 
-    const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded);
+    const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded, library.currentId);
     const fixUnavailable = useCallback((fix: InserterFixOption) => inserterFixProblem(config, fix), [config]);
 
     // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
@@ -1011,7 +1011,7 @@ function App() {
         <BuildSectionsContext value={sectionContext}>
         <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} ruleTiming={ruleTiming}>
             <CssBaseline />
-            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', pb: { xs: 'calc(72px + env(safe-area-inset-bottom))', sm: 'calc(48px + env(safe-area-inset-bottom))' } }}>
                 <AppBar position="sticky" ref={headerRef}>
                     {isInitialized && (
                         <WorkflowBar
@@ -1351,10 +1351,17 @@ function App() {
                 <Box
                     component="footer"
                     sx={{
-                        py: 1,
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: theme => theme.zIndex.appBar,
+                        minHeight: { xs: 72, sm: 48 },
+                        py: 0.5,
+                        pb: 'calc(4px + env(safe-area-inset-bottom))',
                         px: 2,
                         display: 'flex',
-                        flexWrap: 'wrap',
+                        flexDirection: { xs: 'column', sm: 'row' },
                         justifyContent: 'center',
                         alignItems: 'center',
                         gap: 1.5,

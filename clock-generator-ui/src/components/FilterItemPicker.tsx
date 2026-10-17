@@ -1,6 +1,6 @@
 import { Check, Close, DeleteOutline, Search } from '@mui/icons-material';
 import { Box, Typography, Popover, TextField, Button, ButtonBase, IconButton, InputAdornment, Tab, Tabs, Tooltip } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
 import { insetSlotSx } from './insetSlot';
@@ -18,10 +18,12 @@ interface FilterItemPickerProps {
     onClose: () => void;
     onApply: (item: string, quantity: number) => void;
     onClear?: () => void;
+    clearLabel?: string;
 }
 
-export function FilterItemPicker({ anchor, label, initialItem, initialQuantity = 1, quantityLabel, itemNames, priority, onClose: close, onApply, onClear }: FilterItemPickerProps) {
+export function FilterItemPicker({ anchor, label, initialItem, initialQuantity = 1, quantityLabel, itemNames, priority, onClose: close, onApply, onClear, clearLabel = 'Clear slot' }: FilterItemPickerProps) {
     const { itemLabel } = useGameNames();
+    const searchRef = useRef<HTMLInputElement>(null);
     const [item, setItem] = useState(initialItem ?? null);
     const [quantity, setQuantity] = useState(String(initialQuantity));
     const [query, setQuery] = useState('');
@@ -47,13 +49,13 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
     return (
         <Popover open anchorEl={anchor} onClose={close} transitionDuration={{ enter: 120, exit: 80 }}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { width: 420, maxWidth: 'calc(100vw - 24px)' } } }}>
+            slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { width: 420, maxWidth: 'calc(100vw - 24px)' } }, transition: { onEntered: () => searchRef.current?.focus() } }}>
             <Box sx={{ p: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Set the filter</Typography>
                     <IconButton size="small" aria-label="Cancel filter editing" onClick={close}><Close fontSize="small" /></IconButton>
                 </Box>
-                <TextField autoFocus fullWidth size="small" label="Search items" value={query} onChange={event => setQuery(event.target.value)}
+                <TextField inputRef={searchRef} autoFocus fullWidth size="small" label="Search items" value={query} onChange={event => setQuery(event.target.value)}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }} />
                 <Tabs value={query.trim() ? false : groups.some(group => group.id === category) ? category : groups[0]?.id ?? false}
                     onChange={(_, value: string) => { setCategory(value); setQuery(''); }} aria-label="Item categories"
@@ -84,7 +86,7 @@ export function FilterItemPicker({ anchor, label, initialItem, initialQuantity =
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
                     <Button color="inherit" startIcon={<DeleteOutline />} disabled={!onClear}
-                        onClick={onClear}>Clear slot</Button>
+                        onClick={onClear}>{clearLabel}</Button>
                     <Button variant="contained" color="secondary" startIcon={<Check />} onClick={apply} disabled={!item || !validQuantity}>Apply</Button>
                 </Box>
             </Box>

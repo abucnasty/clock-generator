@@ -27,13 +27,13 @@ interface FilterSlotSelectorProps {
 
 
 export function FilterSlotSelector({ priority, filters,
-    inferredFilters = [], itemNames, onFilterChange, onRemoveFilter, maxSlots = 4,
+    inferredFilters = [], itemNames, onFilterChange, onRemoveFilter, maxSlots = 5,
 }: FilterSlotSelectorProps) {
     const { itemLabel } = useGameNames();
     const automatic = usesAutomaticFilters(filters);
     const displayed = automatic ? inferredFilters.slice(0, maxSlots) : filters!;
     // Older imported configurations remain editable, without offering additional slots beyond the new limit.
-    const slotCount = Math.max(displayed.length, Math.min(maxSlots, displayed.length + 1));
+    const slotCount = Math.max(maxSlots, displayed.length);
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
     const [active, setActive] = useState<number | null>(null);
     const slotRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -44,7 +44,7 @@ export function FilterSlotSelector({ priority, filters,
         requestAnimationFrame(() => slotRefs.current[Math.min(index, Math.max(0, displayed.length - 1))]?.focus());
     };
     return <Box>
-        <Box role="group" aria-label="Inserter filter slots" sx={{ display: 'flex', gap: 0.5, pb: automatic && displayed.length ? 1.25 : 0 }}>
+        <Box role="group" aria-label="Inserter filter slots" sx={{ display: 'flex', gap: 0.5, p: 0.5, pb: automatic && displayed.length ? 1.5 : 0.5, width: 'fit-content', bgcolor: 'action.hover', border: 1, borderColor: 'divider', borderRadius: 0.5, boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.25)' }}>
             {Array.from({ length: slotCount }, (_, index) => {
                 const item = displayed[index];
                 const auto = automatic && Boolean(item);

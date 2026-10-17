@@ -62,7 +62,6 @@ function MachinesFormComponent({
     const common = machines.length === 0 ? [] : [
         machines.every(row => row.productivity === machines[0].productivity) ? `productivity ${machines[0].productivity}%` : null,
         machines.every(row => row.crafting_speed === machines[0].crafting_speed) ? `speed ${machines[0].crafting_speed}×` : null,
-        machines.every(row => (row.type ?? 'machine') === (machines[0].type ?? 'machine')) ? MACHINE_TYPE_LABELS[machines[0].type ?? 'machine'] : null,
         machines.every(row => row.type === 'biochamber' && (row.energy_consumption_bonus ?? 0) === (machines[0].energy_consumption_bonus ?? 0)) ? `energy consumption ${machines[0].energy_consumption_bonus ?? 0}%` : null,
     ].filter(Boolean);
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
@@ -228,7 +227,7 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
             </Box>
             <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[{ label: 'Machine facts', content: machine.recipe ? <MachineFactsAccordion inline machineId={machine.id} facts={facts} error={error} /> : <Typography variant="body2">Choose a recipe to see machine facts.</Typography> }]} summary={
                 <Typography variant="body2">
-                    {MACHINE_TYPE_LABELS[machine.type ?? 'machine']} · Speed {Number(machine.crafting_speed.toFixed(3))}× · Productivity {machine.productivity}%
+                    Speed {Number(machine.crafting_speed.toFixed(3))}× · Productivity {machine.productivity}%
                     {machine.type === 'biochamber' && ` · Energy ${Number((machine.energy_consumption_bonus ?? 0).toFixed(2))}%`}
                 </Typography>
             }>

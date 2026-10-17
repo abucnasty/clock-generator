@@ -112,7 +112,7 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
                     <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete=""><Delete /></IconButton>
                 </Box>
                 <EntitySettings label={label} actionContainerId={`settings-actions-drill-${drill.id}`} summary={<Typography variant="body2">
-                    {entityTypeLabel(drill.type, itemLabel)} · Speed bonus {Number((drill.speed_bonus * 100).toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
+                    Speed bonus {Number((drill.speed_bonus * 100).toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
                 </Typography>} tabs={[{ label: 'Enable control', content: <EnableControlFormContent
                     key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
                     currentOverride={drill.overrides?.enable_control} sinkType="machine" availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
