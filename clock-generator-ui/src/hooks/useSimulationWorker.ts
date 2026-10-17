@@ -457,16 +457,12 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             generation.assumptions = { ...generation.assumptions, complete: true };
             setGenerationAssumptions(generation.assumptions);
         }
-        // the pick is selected when the run made it again; otherwise the recommended clock, and the player is told
+        // A completed generation always opens its new recommendation, including after inspecting a clock mid-run.
         const made = alternativesRef.current;
-        const pick = userSelectionRef.current;
-        const { index, pickGone: lost } = selectionAfterRun(made, pick, recommendedIndexOf(made));
-        if (lost && pick) {
-            setPickGone({ label: pick.label });
-            userSelectionRef.current = null;
-        }
-        setSelectedAlternativeIndex(index);
-        keepShown({ results: keptResultsOf(generation, false), pick: userSelectionRef.current });
+        userSelectionRef.current = null;
+        setPickGone(null);
+        setSelectedAlternativeIndex(recommendedIndexOf(made) ?? 0);
+        keepShown({ results: keptResultsOf(generation, false), pick: null });
     }, [keepShown, keptResultsOf, progressStore, publishAlternatives, reportProgress]);
 
     const handleResponse = useCallback((worker: Worker, response: WorkerResponse) => {
@@ -674,7 +670,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setPendingAlternatives([]);
         setSkippedSearches([]);
         setPickRule(rule);
-        // the pick stays: the run selects it again when it makes it
+        // Follow this run's best clock, rather than a saved pick whose id may also occur in another build.
+        // The previous ShownResults still owns its pick, so Cancel can restore it.
+        userSelectionRef.current = null;
         setStoppedEarly(false);
         setPickGone(null);
         setError(null);

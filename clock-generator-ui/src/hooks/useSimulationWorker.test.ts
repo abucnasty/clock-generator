@@ -52,7 +52,7 @@ vi.mock('../worker/engineClient', () => ({
     askEngine: async () => ({ recipeNames: [], hiddenRecipes: [], itemNames: [], resourceNames: [], names: {}, recipes: new Map() }),
 }));
 vi.mock('../utils/resultsStore', () => ({
-    openResultsStore: async () => ({ entries: () => [], put: async () => {} }),
+    openResultsStore: async () => ({ entries: () => [], put: async () => {}, setPick: async () => {} }),
     readShownMarker: () => null, writeShownMarker: () => {},
 }));
 
@@ -98,6 +98,70 @@ function finishGeneration(planner: WorkerTransport) {
     expect(Render().isRunning).toBe(false);
     expect(Render().error).toBeNull();
 }
+
+function selectionClock(id: string, wakeUps: number): ClockAlternativeView {
+    return { id, label: id, verdict: 'stable', ranking: { meets_target_rate: true, rate_off_target: 0,
+        holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: wakeUps, window_count: 1 },
+        assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: wakeUps,
+            backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 1 }, start_dependence: null },
+        deadlockRisk: null, beltLabel: '', assumptions: { loopSeeds: [], outputDrops: [], machineFuel: [], overrides: undefined },
+    } as unknown as ClockAlternativeView;
+}
+
+function planSelection(clocks: ClockAlternativeView[], pending = false) {
+    const request = workers[0].requests('plan').at(-1)!;
+    workers[0].send({ type: 'planned', runId: request.runId, primary: { signature: `run-${request.runId}`, alternatives: clocks },
+        context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
+        tasks: pending ? [{ id: 'remaining', label: 'Remaining', only_when_needed: false }] : [] });
+    return request.runId;
+}
+
+describe('selection after generation', () => {
+    it.each(['same build', 'different build', 'deeper search'])('selects the new recommendation instead of a reused clock id for %s', async kind => {
+        await initialize();
+        const recommended = selectionClock('recommended', 1), other = selectionClock('other', 10);
+        Render().runSimulation(config, debug, false);
+        planSelection([recommended, other]);
+        Render().selectAlternative(1);
+        expect(Render().selectedAlternativeIndex).toBe(1);
+        const nextConfig = kind === 'different build' ? { ...config, target_output: { ...config.target_output, items_per_second: 99 } } : config;
+        Render().runSimulation(nextConfig, debug, false, kind === 'deeper search');
+        // Reverse the list so choosing index 0 blindly would also fail.
+        planSelection([other, recommended]);
+        expect(Render().isRunning).toBe(false);
+        expect(Render().recommendedIndex).toBe(1);
+        expect(Render().selectedAlternativeIndex).toBe(Render().recommendedIndex);
+        expect(Render().pickGone).toBeNull();
+    });
+
+    it('selects the final recommendation even after inspecting another clock during generation', async () => {
+        await initialize();
+        Render().runSimulation(config, debug, false);
+        const runId = planSelection([selectionClock('early-best', 5), selectionClock('inspected', 10)], true);
+        expect(Render().isRunning).toBe(true);
+        Render().selectAlternative(1);
+        const worker = workers.find(w => w.requests('task').some(request => request.runId === runId))!;
+        worker.send({ type: 'task-completed', runId, taskId: 'remaining', run: { signature: 'better', alternatives: [selectionClock('final-best', 1)] } });
+        const finished = Render();
+        expect(finished.isRunning).toBe(false);
+        expect(finished.selectedAlternativeIndex).toBe(finished.recommendedIndex);
+        expect(finished.alternatives[finished.selectedAlternativeIndex].id).toBe('final-best');
+    });
+
+    it.each([false, true])('restores the previous manual pick when cancelling (partial results: %s)', async partial => {
+        await initialize();
+        const clocks = [selectionClock('recommended', 1), selectionClock('other', 10)];
+        Render().runSimulation(config, debug, false);
+        planSelection(clocks);
+        Render().selectAlternative(1);
+        Render().runSimulation(config, debug, false);
+        if (partial) planSelection(clocks, true);
+        Render().cancel();
+        expect(Render().selectedAlternativeIndex).toBe(1);
+        expect(Render().alternatives[1].id).toBe('other');
+        expect(Render().lastStop?.kept).toBe('previous');
+    });
+});
 beforeEach(() => {
     runner.reset(); workers = [];
     runner.createWorker.mockImplementation(() => {
