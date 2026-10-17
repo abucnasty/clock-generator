@@ -3,7 +3,7 @@ import type { InserterCoverageIssue } from 'clock-generator/browser';
 import { buildValidationIssues, validationCountLabel } from './buildValidation';
 import { createDefaultConfig, type ChestFormData, type InserterFormData } from './configForm/formData';
 import { outputChestIssues } from './outputChestIssues';
-import { focusIdOf, problemsOf } from './firstProblem';
+import { focusIdOf, problemsOf, PROBLEM_TEXT } from './firstProblem';
 
 const empty: ChestFormData = { id: 7, _uuid: 'chest-7', type: 'infinity-chest', item_filter: [] };
 const route: InserterFormData = { id: 2, _uuid: 'inserter-2', stack_size: 1, source: { type: 'machine', id: 3 }, sink: { type: 'chest', id: 7 } };
@@ -44,7 +44,7 @@ it('retains real missing connections and their repair options while deduplicatin
 
 it('merges a field failure from Check with the live field issue and retains its edit action', () => {
     const config = createDefaultConfig();
-    const issues = buildValidationIssues({ fieldProblems: problemsOf({ targetOutput: config.target_output, machines: config.machines, coverageIssues: [] }),
+    const issues = buildValidationIssues({ fieldProblems: problemsOf({ targetOutput: config.target_output, machines: config.machines }),
         coverage: [], chests: [], inserters: [], machines: config.machines, chestIssues: [], coverageText: () => '',
         failure: { message: 'Required recipe', diagnostics: [{ kind: 'field', path: ['target_output', 'recipe'], message: 'Required' }] } });
     expect(issues.filter(issue => issue.id === 'target-recipe')).toHaveLength(1);
@@ -56,4 +56,27 @@ it('does not hide an unrelated engine refusal behind an existing live error', ()
     const issues = collect([empty], [], { message: 'Independent simulation refusal' });
     expect(issues).toHaveLength(2);
     expect(issues[1]).toMatchObject({ source: 'engine', text: 'Independent simulation refusal', blocksGeneration: true });
+});
+
+it('collects field problems before coverage, retaining engine order, game names and stable issue targets', () => {
+    const config = createDefaultConfig();
+    const input: InserterCoverageIssue = { ...output, kind: 'missing_input_inserter', machine_id: 4, item_name: 'iron-plate' };
+    const itemLabel = (id: string) => id === 'iron-gear-wheel' ? 'Iron gear wheel' : 'Iron plate';
+    const issues = buildValidationIssues({
+        fieldProblems: problemsOf({ targetOutput: config.target_output, machines: config.machines }),
+        coverage: [output, input], chests: [], inserters: [], machines: config.machines, chestIssues: [],
+        coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
+            issue.machine_id, issue.item_name, itemLabel),
+    });
+    expect(issues.map(issue => issue.source)).toEqual(['field', 'field', 'coverage', 'coverage']);
+    expect(issues.map(issue => issue.text)).toEqual([
+        'Set the recipe in Target Output', 'Set the recipe of Machine 1',
+        'Machine 3 has no inserter taking Iron gear wheel out',
+        'Machine 4 has no inserter bringing in Iron plate',
+    ]);
+    expect(issues.slice(2).map(issue => focusIdOf(issue.target!))).toEqual([
+        'validation-issue-coverage-issue-missing_output_inserter-3-iron-gear-wheel',
+        'validation-issue-coverage-issue-missing_input_inserter-4-iron-plate',
+    ]);
+    expect(issues.slice(2).map(issue => issue.coverage)).toEqual([output, input]);
 });

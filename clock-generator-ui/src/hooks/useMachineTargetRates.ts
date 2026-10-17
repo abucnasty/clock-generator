@@ -9,9 +9,8 @@ interface Result {
 }
 
 /** Query only while the optional target view is open; never show another config's rates. */
-export function useMachineTargetRates(exportConfig: () => Config, enabled: boolean) {
-    const config = useMemo(() => exportConfig(), [exportConfig]);
-    const key = JSON.stringify(config);
+export function useMachineTargetRates(config: Config, enabled: boolean) {
+    const key = useMemo(() => JSON.stringify(config), [config]);
     const [result, setResult] = useState<Result | null>(null);
     useEffect(() => {
         if (!enabled) return;

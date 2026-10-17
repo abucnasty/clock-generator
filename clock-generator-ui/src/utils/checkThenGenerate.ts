@@ -164,26 +164,25 @@ export function checkChipOf({ checkStatus, clocksAreForThisBuild }: {
  * one. Every promise resolves, never rejects.
  */
 export class PendingChecks {
-    private pending = new Map<number, (outcome: CheckOutcome) => void>();
+    private pending: { requestId: number; resolve: (outcome: CheckOutcome) => void } | null = null;
 
     begin(requestId: number): Promise<CheckOutcome> {
         this.dropAll();
         return new Promise((resolve) => {
-            this.pending.set(requestId, resolve);
+            this.pending = { requestId, resolve };
         });
     }
 
     settle(requestId: number, outcome: CheckOutcome): void {
-        const resolve = this.pending.get(requestId);
-        if (resolve) {
-            this.pending.delete(requestId);
-            resolve(outcome);
-        }
+        if (this.pending?.requestId !== requestId) return;
+        const { resolve } = this.pending;
+        this.pending = null;
+        resolve(outcome);
     }
 
     dropAll(): void {
-        const waiting = [...this.pending.values()];
-        this.pending.clear();
-        waiting.forEach((resolve) => resolve({ kind: 'dropped' }));
+        const waiting = this.pending;
+        this.pending = null;
+        waiting?.resolve({ kind: 'dropped' });
     }
 }

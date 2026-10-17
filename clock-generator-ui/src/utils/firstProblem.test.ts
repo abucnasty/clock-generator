@@ -7,7 +7,6 @@ import {
     PROBLEM_TEXT,
     barNoteOf,
     coverageIssueElementId,
-    firstProblemOf,
     focusIdOf,
     machineRecipeElementId,
     needsListView,
@@ -22,7 +21,6 @@ type Input = Parameters<typeof problemsOf>[0];
 const filledIn = (overrides: Partial<Input> = {}): Input => ({
     targetOutput: { recipe: 'logistic-science-pack', items_per_second: 240, copies: 1 },
     machines: [{ id: 1, recipe: 'logistic-science-pack' }],
-    coverageIssues: [],
     ...overrides,
 });
 
@@ -35,9 +33,8 @@ const issue = (kind: InserterCoverageIssue['kind'], machine_id: number, item_nam
 });
 
 describe('problemsOf', () => {
-    it('finds nothing in a filled-in build with every inserter in place', () => {
+    it('finds no field problems in a filled-in build', () => {
         expect(problemsOf(filledIn())).toEqual([]);
-        expect(firstProblemOf(filledIn())).toBeNull();
     });
 
     it('defers unsupported target/capacity arithmetic to worker validation without formatting an unknown limit', () => {
@@ -51,14 +48,14 @@ describe('problemsOf', () => {
 
     it('finds two problems in the default build: the target recipe, then the machine recipe', () => {
         const config = createDefaultConfig();
-        const problems = problemsOf({ targetOutput: config.target_output, machines: config.machines, coverageIssues: [] });
+        const problems = problemsOf({ targetOutput: config.target_output, machines: config.machines });
         expect(problems.map((p) => p.text)).toEqual(['Set the recipe in Target Output', 'Set the recipe of Machine 1']);
         expect(problems.map((p) => p.target)).toEqual([{ kind: 'target-recipe' }, { kind: 'machine-recipe', machineId: 1 }]);
     });
 
     it('fixing the target recipe of the default build leaves the machine recipe first', () => {
         const config = updateTargetOutput(createDefaultConfig(), 'recipe', 'logistic-science-pack');
-        const first = firstProblemOf({ targetOutput: config.target_output, machines: config.machines, coverageIssues: [] });
+        const [first] = problemsOf({ targetOutput: config.target_output, machines: config.machines });
         expect(first).toEqual({ text: 'Set the recipe of Machine 1', target: { kind: 'machine-recipe', machineId: 1 } });
     });
 
@@ -84,36 +81,14 @@ describe('problemsOf', () => {
         expect(both.map((p) => p.text)).toEqual(['Set the recipe of Machine 1', 'Set the recipe of Machine 2']);
     });
 
-    it('says which inserter is missing, in the words of the plan', () => {
-        const [output] = problemsOf(filledIn({ coverageIssues: [issue('missing_output_inserter', 1, 'logistic-science-pack')] }));
-        expect(output.text).toBe('Machine 1 has no inserter taking logistic-science-pack out');
-        const [input] = problemsOf(filledIn({ coverageIssues: [issue('missing_input_inserter', 2, 'iron-plate')] }));
-        expect(input.text).toBe('Machine 2 has no inserter bringing in iron-plate');
-        expect(input.target).toEqual({ kind: 'coverage-issue', issue: { kind: 'missing_input_inserter', machine_id: 2, item_name: 'iron-plate' } });
-        const three = problemsOf(filledIn({
-            coverageIssues: [issue('missing_input_inserter', 1, 'a'), issue('missing_input_inserter', 1, 'b'), issue('missing_output_inserter', 1, 'c')],
-        }));
-        expect(three).toHaveLength(3);
-    });
-
-    it('says the item by its game name when given a label function, and keeps the id in the element id', () => {
-        const itemLabel = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
-        const [output] = problemsOf({ ...filledIn({ coverageIssues: [issue('missing_output_inserter', 1, 'logistic-science-pack')] }), itemLabel });
-        expect(output.text).toBe('Machine 1 has no inserter taking Logistic science pack out');
-        expect(focusIdOf(output.target!)).toBe('coverage-issue-missing_output_inserter-1-logistic-science-pack');
-        expect(PROBLEM_TEXT.missingInput(2, 'logistic-science-pack', itemLabel)).toBe('Machine 2 has no inserter bringing in Logistic science pack');
-    });
-
-    it('puts the target first, then the machines, then the coverage issues in the engine\'s order', () => {
+    it('puts the target first, then the machines in their order', () => {
         const problems = problemsOf({
             targetOutput: { recipe: '', items_per_second: 0, copies: 1 },
-            machines: [{ id: 1, recipe: 'a' }, { id: 2, recipe: '' }],
-            coverageIssues: [issue('missing_output_inserter', 1, 'z'), issue('missing_input_inserter', 1, 'a')],
+            machines: [{ id: 1, recipe: 'a' }, { id: 2, recipe: '' }, { id: 3, recipe: '' }],
         });
-        expect(problems.map((p) => p.target?.kind)).toEqual(['target-recipe', 'target-rate', 'machine-recipe', 'coverage-issue', 'coverage-issue']);
-        expect(problems.slice(3).map((p) => p.text)).toEqual([
-            'Machine 1 has no inserter taking z out',
-            'Machine 1 has no inserter bringing in a',
+        expect(problems.map((p) => p.target)).toEqual([
+            { kind: 'target-recipe' }, { kind: 'target-rate' },
+            { kind: 'machine-recipe', machineId: 2 }, { kind: 'machine-recipe', machineId: 3 },
         ]);
     });
 
@@ -128,16 +103,14 @@ describe('a target more than the machines can make', () => {
 
     it('is a problem that goes to Items per Second', () => {
         expect(problemsOf(tooHigh)).toEqual([rateProblem]);
-        expect(firstProblemOf(tooHigh)).toEqual(rateProblem);
     });
 
-    it('comes after the machines and before the missing inserters', () => {
+    it('comes after missing machine recipes', () => {
         const problems = problemsOf({
             ...tooHigh,
             machines: [{ id: 1, recipe: 'logistic-science-pack' }, { id: 2, recipe: '' }],
-            coverageIssues: [issue('missing_output_inserter', 1, 'logistic-science-pack')],
         });
-        expect(problems.map((p) => p.target?.kind)).toEqual(['machine-recipe', 'target-rate', 'coverage-issue']);
+        expect(problems.map((p) => p.target?.kind)).toEqual(['machine-recipe', 'target-rate']);
     });
 
     it('is not there for a target the copies make (252.65 is, 252.66 is not), or while the most is not known', () => {

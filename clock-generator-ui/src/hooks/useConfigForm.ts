@@ -112,7 +112,8 @@ interface UseConfigFormResult {
     
     // Import/Export
     importConfig: (config: Config) => void;
-    exportConfig: () => Config;
+    /** Engine config derived once for this form revision, shared by validation and generation. */
+    engineConfig: Config;
     /**
      * The config Export gives: until the saved config is loaded, that one rather than the defaults, so it can be saved
      * even when the engine's worker fails to start; null when it cannot be turned into a config
@@ -176,18 +177,18 @@ export function useConfigForm(): UseConfigFormResult {
         setConfig(configToFormData(imported));
     }, [setConfig]);
 
-    const exportConfig = useCallback((): Config => formDataToConfig(config), [config]);
+    const engineConfig = useMemo(() => formDataToConfig(config), [config]);
 
     const exportableConfig = useMemo((): Config | null => {
         if (unchecked === null) {
-            return exportConfig();
+            return engineConfig;
         }
         try {
             return formDataToConfig(unchecked);
         } catch {
             return null;
         }
-    }, [unchecked, exportConfig]);
+    }, [unchecked, engineConfig]);
 
     return {
         config,
@@ -201,7 +202,7 @@ export function useConfigForm(): UseConfigFormResult {
         commitBuildReplacement,
         ...edits,
         importConfig,
-        exportConfig,
+        engineConfig,
         exportableConfig,
         resetConfig,
     };

@@ -15,10 +15,9 @@ function coverageKey(config: Config): string {
 
 /** Check connections after edits settle; never display results belonging to different routes/settings. */
 export function useInserterValidation(
-    exportConfig: () => Config,
+    config: Config,
     isInitialized: boolean,
 ): InserterCoverageIssue[] | null {
-    const config = useMemo(() => exportConfig(), [exportConfig]);
     const key = useMemo(() => coverageKey(config), [config]);
     const latestConfig = useRef(config);
     const [result, setResult] = useState<{ key: string; issues: InserterCoverageIssue[] } | null>(null);

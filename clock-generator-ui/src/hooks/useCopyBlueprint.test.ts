@@ -4,41 +4,13 @@ import { formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { useCopyBlueprint } from './useCopyBlueprint';
 
-// The established Node-only hook runner retains state, effects and teardown without introducing a DOM dependency.
-const runner = vi.hoisted(() => {
-    let states: unknown[] = [], refs: { current: unknown }[] = [];
-    let memos: { deps: readonly unknown[]; value: unknown }[] = [];
-    let effects: { deps: readonly unknown[]; cleanup?: () => void }[] = [];
-    let queued: (() => void)[] = [];
-    let si = 0, ri = 0, mi = 0, ei = 0;
-    const same = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
+const runner = await vi.hoisted(async () => {
+    const { createHookRunner } = await import('../test/hookRunner');
     return {
-        reset() { states = []; refs = []; memos = []; effects = []; queued = []; },
-        begin() { si = ri = mi = ei = 0; queued = []; },
-        commit() { queued.forEach(f => f()); },
-        unmount() { effects.forEach(e => e.cleanup?.()); },
-        react: {
-            useState(initial: unknown) {
-                const i = si++;
-                if (!(i in states)) states[i] = initial;
-                return [states[i], (value: unknown) => { states[i] = value; }];
-            },
-            useRef(value: unknown) { return refs[ri++] ??= { current: value }; },
-            useCallback(fn: unknown, deps: readonly unknown[]) {
-                const i = mi++;
-                if (!memos[i] || !same(memos[i].deps, deps)) memos[i] = { deps, value: fn };
-                return memos[i].value;
-            },
-            useEffect(effect: () => (() => void) | void, deps?: readonly unknown[]) {
-                const i = ei++;
-                if (!deps || !effects[i] || !same(effects[i].deps, deps)) queued.push(() => {
-                    effects[i]?.cleanup?.(); effects[i] = { deps: deps ?? [], cleanup: effect() || undefined };
-                });
-            },
-        },
+        ...createHookRunner(),
     };
 });
-vi.mock('react', () => ({ ...runner.react, useLayoutEffect: runner.react.useEffect }));
+vi.mock('react', () => runner.react);
 let options: Parameters<typeof useCopyBlueprint>[0];
 let write: ReturnType<typeof vi.fn<(text: string) => Promise<void>>>;
 const Render = () => { runner.begin(); const hook = useCopyBlueprint(options); runner.commit(); return hook; };

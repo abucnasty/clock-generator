@@ -186,12 +186,21 @@ interface Generation {
     searchedDeeper: boolean;
 }
 
+/** The result fields published together, including the clocks of an in-progress run. */
+type ResultsView = Pick<UseSimulationWorkerResult,
+    'generationAssumptions' | 'alternatives' | 'selectedAlternativeIndex' | 'pendingAlternatives' |
+    'skippedSearches' | 'searchedDeeper' | 'pickRule' | 'generatedFor' | 'stoppedEarly' | 'pickGone'>;
+
+const emptyResults = (): ResultsView => ({
+    generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0, pendingAlternatives: [],
+    skippedSearches: [], searchedDeeper: false, pickRule: null, generatedFor: null, stoppedEarly: false, pickGone: null,
+});
+
 /** The kept results, opened once for the page (StrictMode mounts the hook twice) */
 let sharedResultsStore: Promise<ResultsStore> | null = null;
 const resultsStore = () => (sharedResultsStore ??= openResultsStore());
 
 export function useSimulationWorker(): UseSimulationWorkerResult {
-    const [generationAssumptions, setGenerationAssumptions] = useState<GenerationAssumptions | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
     const [progressStore] = useState(createProgressStore);
@@ -202,23 +211,23 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [gameNames, setGameNames] = useState<GameNames>(NO_NAMES);
     const [recipes, setRecipes] = useState<Map<string, RecipeInfo>>(() => new Map());
     const [logs, setLogs] = useState<LogMessage[]>([]);
-    const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
-    const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
-    const [pendingAlternatives, setPendingAlternatives] = useState<string[]>([]);
-    const [skippedSearches, setSkippedSearches] = useState<string[]>([]);
-    const [searchedDeeper, setSearchedDeeper] = useState(false);
-    const [pickRule, setPickRule] = useState<PickRule | null>(null);
-    const [generatedFor, setGeneratedFor] = useState<GeneratedFor | null>(null);
-    const [stoppedEarly, setStoppedEarly] = useState(false);
-    const [pickGone, setPickGone] = useState<{ label: string } | null>(null);
+    const [resultsView, setResultsView] = useState(emptyResults);
+    // Worker messages and selection clicks can arrive before React renders the last publication.
+    const resultsViewRef = useRef(resultsView);
+    const updateResults = useCallback((patch: Partial<ResultsView>) => {
+        const next = { ...resultsViewRef.current, ...patch };
+        resultsViewRef.current = next;
+        setResultsView(next);
+    }, []);
+    const {
+        generationAssumptions, alternatives, selectedAlternativeIndex, pendingAlternatives, skippedSearches,
+        searchedDeeper, pickRule, generatedFor, stoppedEarly, pickGone,
+    } = resultsView;
     const [lastStop, setLastStop] = useState<RunStop | null>(null);
     const [restoredId, setRestoredId] = useState(0);
     const [resultsStoreReady, setResultsStoreReady] = useState(false);
-    // the clock the player picked, so results arriving later do not move the selection, and a regeneration that makes
-    // it again selects it; selectRecommended unsets it, so the selection follows the recommended clock again
+    // The explicit pick survives streaming updates; a new generation follows its recommendation again.
     const userSelectionRef = useRef<KeptPick>(null);
-    // the latest list published, which a render may not show yet; selectRecommended picks from it
-    const alternativesRef = useRef<ClockAlternativeView[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [errorRecovery, setErrorRecovery] = useState<RepeatedUnitsRecovery | null>(null);
     const workersRef = useRef<Worker[]>([]);
@@ -311,22 +320,23 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore]);
 
     const publishAlternatives = useCallback((generation: Generation) => {
-        setGenerationAssumptions(generation.assumptions);
         const combined = combineClockAlternativeRuns(generation.runs, it => it.ranking);
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current?.id);
-        alternativesRef.current = combined.alternatives;
-        setAlternatives(combined.alternatives);
-        setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
         const not_started = [...generation.waiting, ...generation.skipped];
-        setPendingAlternatives(generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(task => task.label));
-        setSkippedSearches(generation.skipped.map(task => task.label));
-    }, []);
+        updateResults({
+            generationAssumptions: generation.assumptions,
+            alternatives: combined.alternatives,
+            selectedAlternativeIndex: user_index >= 0 ? user_index : combined.selected_index,
+            pendingAlternatives: generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(task => task.label),
+            skippedSearches: generation.skipped.map(task => task.label),
+        });
+    }, [updateResults]);
 
     /** The generation's clocks so far, as they are kept */
     const keptResultsOf = useCallback((generation: Generation, stopped: boolean): KeptResults => ({
         generatedFor: generation.generatedFor,
         generationAssumptions: generation.assumptions === null ? null : { ...generation.assumptions, complete: !stopped },
-        alternatives: alternativesRef.current,
+        alternatives: resultsViewRef.current.alternatives,
         pickRule: generation.pickRule,
         skippedSearches: generation.skipped.map(task => task.label),
         searchedDeeper: generation.searchedDeeper,
@@ -349,52 +359,43 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         const pick = lost ? null : shown.pick;
         userSelectionRef.current = pick;
         setShown({ results, pick });
-        alternativesRef.current = results.alternatives;
-        setAlternatives(results.alternatives);
-        setSelectedAlternativeIndex(index);
-        setPendingAlternatives([]);
-        setSkippedSearches(results.skippedSearches);
-        setSearchedDeeper(results.searchedDeeper);
-        setPickRule(results.pickRule);
-        setGeneratedFor(results.generatedFor);
-        setGenerationAssumptions(results.generationAssumptions);
-        setStoppedEarly(results.stopped);
-        setPickGone(null);
+        updateResults({
+            generationAssumptions: results.generationAssumptions,
+            alternatives: results.alternatives,
+            selectedAlternativeIndex: index,
+            pendingAlternatives: [],
+            skippedSearches: results.skippedSearches,
+            searchedDeeper: results.searchedDeeper,
+            pickRule: results.pickRule,
+            generatedFor: results.generatedFor,
+            stoppedEarly: results.stopped,
+            pickGone: null,
+        });
         setLogs([]);
         setError(null);
         setErrorRecovery(null);
-    }, [setShown]);
+    }, [setShown, updateResults]);
 
     /** Empties Results */
     const showNothing = useCallback(() => {
         setShown(null);
-        alternativesRef.current = [];
-        setAlternatives([]);
-        setSelectedAlternativeIndex(0);
-        setPendingAlternatives([]);
-        setSkippedSearches([]);
-        setSearchedDeeper(false);
-        setPickRule(null);
-        setGeneratedFor(null);
-        setGenerationAssumptions(null);
-        setStoppedEarly(false);
-        setPickGone(null);
-    }, [setShown]);
+        updateResults(emptyResults());
+    }, [setShown, updateResults]);
 
     /** Ends the generation where it stands: its workers are replaced, and the screen is what `afterCancel` says */
     const stopGeneration = useCallback((generation: Generation): RunStop['kept'] => {
         replace(busyWorkersFor(generation));
         generationRef.current = null;
         progressStore.set(null);
-        setPendingAlternatives([]);
+        updateResults({ pendingAlternatives: [] });
         setIsRunning(false);
-        const outcome = afterCancel({ runKey: generation.generatedFor.key, clocksMade: alternativesRef.current.length, previous: generation.previous });
+        const outcome = afterCancel({ runKey: generation.generatedFor.key, clocksMade: resultsViewRef.current.alternatives.length, previous: generation.previous });
         switch (outcome.kind) {
             case 'previous':
                 showResults(outcome.shown);
                 break;
             case 'partial':
-                setStoppedEarly(true);
+                updateResults({ stoppedEarly: true });
                 keepShown({ results: keptResultsOf(generation, true), pick: userSelectionRef.current });
                 break;
             case 'none':
@@ -402,7 +403,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 break;
         }
         return outcome.kind;
-    }, [busyWorkersFor, keepShown, keptResultsOf, progressStore, replace, showNothing, showResults]);
+    }, [busyWorkersFor, keepShown, keptResultsOf, progressStore, replace, showNothing, showResults, updateResults]);
 
     /** A generation that failed or lost a worker ends with its error; its other busy workers are replaced */
     const endRunWithError = useCallback((message: string, except?: Worker, recovery?: RepeatedUnitsRecovery) => {
@@ -417,9 +418,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setError(message);
         setErrorRecovery(recovery ?? null);
         progressStore.set(null);
-        setPendingAlternatives([]);
+        updateResults({ pendingAlternatives: [] });
         setIsRunning(false);
-    }, [busyWorkersFor, progressStore, replace, setShown]);
+    }, [busyWorkersFor, progressStore, replace, setShown, updateResults]);
 
     const dispatchTasks = useCallback((generation: Generation) => {
         if (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0) {
@@ -456,15 +457,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setIsRunning(false);
         if (generation.assumptions) {
             generation.assumptions = { ...generation.assumptions, complete: true };
-            setGenerationAssumptions(generation.assumptions);
+            updateResults({ generationAssumptions: generation.assumptions });
         }
         // A completed generation always opens its new recommendation, including after inspecting a clock mid-run.
-        const made = alternativesRef.current;
+        const made = resultsViewRef.current.alternatives;
         userSelectionRef.current = null;
-        setPickGone(null);
-        setSelectedAlternativeIndex(recommendedIndexOf(made) ?? 0);
+        updateResults({ pickGone: null, selectedAlternativeIndex: recommendedIndexOf(made) ?? 0 });
         keepShown({ results: keptResultsOf(generation, false), pick: null });
-    }, [keepShown, keptResultsOf, progressStore, publishAlternatives, reportProgress]);
+    }, [keepShown, keptResultsOf, progressStore, publishAlternatives, reportProgress, updateResults]);
 
     const handleResponse = useCallback((worker: Worker, response: WorkerResponse) => {
         if (response.type === 'validated' || response.type === 'validation-failed') {
@@ -660,22 +660,11 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         restoreTokenRef.current++;
         // the build is accepted: an Undo of a replace is not offered any more, so what it set aside goes
         droppedRef.current = null;
-        setGeneratedFor(run.generatedFor);
-        setGenerationAssumptions(null);
-        setSearchedDeeper(run.searchedDeeper);
+        updateResults({ ...emptyResults(), generatedFor: run.generatedFor, searchedDeeper: run.searchedDeeper, pickRule: rule });
         setIsRunning(true);
         progressStore.set(null);
-        alternativesRef.current = [];
-        setAlternatives([]);
-        setSelectedAlternativeIndex(0);
-        setPendingAlternatives([]);
-        setSkippedSearches([]);
-        setPickRule(rule);
-        // Follow this run's best clock, rather than a saved pick whose id may also occur in another build.
         // The previous ShownResults still owns its pick, so Cancel can restore it.
         userSelectionRef.current = null;
-        setStoppedEarly(false);
-        setPickGone(null);
         setError(null);
         setErrorRecovery(null);
         setLogs([]);
@@ -686,7 +675,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             previous: shownRef.current, generatedFor: run.generatedFor, pickRule: rule, searchedDeeper: run.searchedDeeper,
         };
         worker.postMessage({ type: 'plan', runId, config: engineConfig, debugSteps, streamLogs } satisfies WorkerRequest);
-    }, [progressStore, replace]);
+    }, [progressStore, replace, updateResults]);
 
     const validate = useCallback((config: Config): Promise<CheckOutcome> => {
         setErrorRecovery(null);
@@ -772,16 +761,16 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const selectAlternative = useCallback((index: number) => {
         const clock = alternatives[index];
         keepPick(clock ? { id: clock.id, label: plainClockName(alternatives, index) } : null);
-        setSelectedAlternativeIndex(index);
-    }, [alternatives, keepPick]);
+        updateResults({ selectedAlternativeIndex: index });
+    }, [alternatives, keepPick, updateResults]);
 
     const recommendedIndex = useMemo(() => recommendedIndexOf(alternatives), [alternatives]);
 
     const selectRecommended = useCallback(() => {
         keepPick(null);
         // from the latest list, not the rendered one: a clock that arrived just before the click can move the pick
-        setSelectedAlternativeIndex(recommendedIndexOf(alternativesRef.current) ?? 0);
-    }, [keepPick]);
+        updateResults({ selectedAlternativeIndex: recommendedIndexOf(resultsViewRef.current.alternatives) ?? 0 });
+    }, [keepPick, updateResults]);
 
     const restoreResultsFor = useCallback(async (key: string, mode: 'load' | 'replace', options?: { announce?: boolean }): Promise<boolean> => {
         const token = ++restoreTokenRef.current;
