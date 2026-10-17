@@ -3,11 +3,13 @@ import type { ConfigFormData } from './configForm/formData';
 import type { ResultDetail } from './resultsView';
 import { serializeConfig } from '../hooks/usePersistedConfigForm';
 import { CATEGORY_COLORS, DRILL_STATUS_COLORS, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS } from '../components/colors';
+import { validInspection, type TimelineInspection } from './timelineInspection';
 
 export type DetailsTab = 'insights' | 'fuel' | 'blueprint';
 export type BuildAnchor = 'configure' | 'target' | 'build' | 'advanced' | 'results' | 'selected-clock' | 'comparison' | 'clock-context' | 'details' | 'developer';
 interface BuildEntitySelection { kind: EntityClickType; id: number; signature: string }
 export interface TimelineViewContext {
+    inspection?: TimelineInspection;
     viewMode: 'simplified' | 'detailed';
     sortMode: 'byType' | 'byRelationship';
     filters: { machine: boolean; inserter: boolean; drill: boolean };
@@ -29,12 +31,12 @@ export interface BuildViewContext {
     position: Partial<Record<'configure' | 'results', { anchor: BuildAnchor; offset: number }>>;
 }
 const ANCHORS: BuildAnchor[] = ['configure', 'target', 'build', 'advanced', 'results', 'selected-clock', 'comparison', 'clock-context', 'details', 'developer'];
-const SECTIONS = ['advanced', 'transfer-plan', 'insights-build', 'comparison-help', 'model-assumptions'];
+const SECTIONS = ['advanced', 'transfer-plan', 'insights-build', 'comparison-help', 'comparison-open', 'model-assumptions'];
 const KINDS: EntityClickType[] = ['machine', 'inserter', 'belt', 'chest', 'drill'];
 const MAX_OFFSET = 4000;
 const MAX_TEXT = 2_000_000;
 export function defaultBuildViewContext(): BuildViewContext {
-    return { version: 1, view: 'configure', configView: 'list', resultDetail: 'why', detailsTab: 'insights', sections: {},
+    return { version: 1, view: 'configure', configView: 'list', resultDetail: 'timeline', detailsTab: 'insights', sections: {},
         comparison: { allColumns: false, showUnstable: false }, wakeAsTable: false, diagramDetailed: true,
         timeline: { viewMode: 'simplified', sortMode: 'byType', filters: { machine: true, inserter: true, drill: true },
             statuses: { machine: Object.keys(MACHINE_STATUS_COLORS), inserter: Object.keys(INSERTER_STATUS_COLORS), drill: Object.keys(DRILL_STATUS_COLORS), categories: Object.keys(CATEGORY_COLORS) } },
@@ -65,11 +67,16 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
         const p = record(record(v.position)[view]);
         if (ANCHORS.includes(p.anchor as BuildAnchor) && typeof p.offset === 'number' && Number.isFinite(p.offset)) position[view] = { anchor: p.anchor as BuildAnchor, offset: Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, p.offset)) };
     }
+    // Installation now opens on demand; old Install/blueprint destinations return to Timeline.
+    const resultDetail = v.resultDetail === 'wake' || v.resultDetail === 'install' ? 'timeline'
+        : v.resultDetail === 'why' && v.detailsTab === 'blueprint' ? 'timeline'
+        : v.resultDetail === 'why' ? 'overview'
+        : oneOf(v.resultDetail, ['overview', 'timeline'], d.resultDetail);
     return { ...d, view: oneOf(v.view, ['configure', 'results'], d.view), configView: oneOf(v.configView, ['list', 'diagram'], d.configView),
-        resultDetail: oneOf(v.resultDetail, ['why', 'wake', 'install'], d.resultDetail), detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
+        resultDetail, detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
         comparison: { allColumns: bool(comparison.allColumns, false), showUnstable: bool(comparison.showUnstable, false) },
         wakeAsTable: bool(v.wakeAsTable, false), diagramDetailed: bool(v.diagramDetailed, true),
-        timeline: { ...d.timeline, viewMode: oneOf(timeline.viewMode, ['simplified', 'detailed'], 'simplified'), sortMode: oneOf(timeline.sortMode, ['byType', 'byRelationship'], 'byType'),
+        timeline: { ...d.timeline, ...(timeline.inspection ? { inspection: validInspection(timeline.inspection) } : {}), viewMode: oneOf(timeline.viewMode, ['simplified', 'detailed'], 'simplified'), sortMode: oneOf(timeline.sortMode, ['byType', 'byRelationship'], 'byType'),
             filters: { machine: bool(filters.machine, true), inserter: bool(filters.inserter, true), drill: bool(filters.drill, true) } },
         entity: KINDS.includes(entity.kind as EntityClickType) && Number.isSafeInteger(entity.id) && (entity.id as number) > 0 && text(entity.signature)
             ? { kind: entity.kind as EntityClickType, id: entity.id as number, signature: entity.signature } : null,

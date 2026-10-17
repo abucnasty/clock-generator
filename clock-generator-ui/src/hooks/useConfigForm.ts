@@ -92,7 +92,7 @@ interface UseConfigFormResult {
     // Chests
     addChest: (chestType?: ChestType) => void;
     updateChest: (index: number, updates: Partial<ChestFormData>) => void;
-    switchChestType: (index: number, newType: ChestType) => void;
+    switchChestType: (index: number, newType: ChestType, disposal?: boolean) => void;
     removeChest: (index: number) => void;
     reorderChests: (fromIndex: number, toIndex: number) => void;
     replaceChests: (chests: ChestFormData[]) => void;

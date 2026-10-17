@@ -42,9 +42,9 @@ describe('the words of the Target Output row', () => {
             .toBe('Target Output: iron-gear-wheel, up to 240/s, 11 copies');
     });
 
-    it('says where the target came from, and to lower it to what is needed', () => {
-        expect(targetRowCaption('mod')).toMatch(/^From the mod's export\. .*lower it to what you need/);
-        expect(targetRowCaption('inferred')).toMatch(/^Worked out from your machines: .*lower it to what you need/);
+    it('explains the maximum rate and that it can be lowered after import', () => {
+        expect(targetRowCaption('mod')).toMatch(/^From the Factorio export\. .*maximum output; .*lower the rate after importing\./);
+        expect(targetRowCaption('inferred')).toMatch(/^Estimated maximum output of the imported machines\. .*lower the rate in Target Output after importing\./);
     });
 
     it('says which target it replaces', () => {

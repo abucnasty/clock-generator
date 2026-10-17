@@ -1,41 +1,42 @@
 import { Box, Tab, Tabs, Typography } from '@mui/material';
-import type { ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
+import type { ClockTimelineWorkspaceProps } from './ClockTimelineWorkspace';
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import type { ResultDetail } from '../utils/resultsView';
 import { MODELED_START, PLANNING_START, modeledDetails, startCheckSummary } from '../utils/modelAssumptions';
 import { useGameNames } from '../hooks/useGameNames';
 import { recoversOf } from '../utils/clockSummary';
 import { formatNumberText } from '../utils/numberText';
-import { buildWakeWindowRows } from '../utils/wakeWindows';
-import { Panel } from './Panel';
-import { InstallSteps } from './InstallSteps';
-import { WakeWindowsView } from './WakeWindowsView';
+import { FullscreenWorkspace } from './FullscreenWorkspace';
 import { tabProps } from '../utils/tabIds';
 import { TabBody } from './TabBody';
 import { useBuildSection } from '../hooks/useBuildViewContext';
 
-export function SelectedClockContext({ selected, detail, onDetailChange, wakeAsTable, onWakeAsTableChange, generation, stale, assumptions, children }: {
+const ClockTimeline = lazy(() => import('./ClockTimelineWorkspace').then(module => ({ default: module.ClockTimelineWorkspace })));
+
+export function SelectedClockContext({ selected, detail, onDetailChange, timelineProps, generation, assumptions, clockSelector, children }: {
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
-    wakeAsTable: boolean;
-    onWakeAsTableChange(asTable: boolean): void;
+    timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected' | 'fullscreen'>;
+    clockSelector: ReactNode;
     generation: GenerationAssumptions | null;
-    stale: boolean;
     assumptions: ReactNode;
     children: ReactNode;
 }) {
     const { itemLabel } = useGameNames();
+    const [fullscreen, setFullscreen] = useState(false);
+    const [timelineVisited, setTimelineVisited] = useState(detail === 'timeline');
+    if (detail === 'timeline' && !timelineVisited) setTimelineVisited(true);
     const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
-    const moves = new Map(buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]));
-    return <Panel title="Selected clock details" sx={{ mb: 0 }} data-result-context="" data-build-anchor="clock-context">
+    return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={clockSelector}>
+        {/* Above floating field labels (z-index 1) while the fullscreen body scrolls. */}
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
-            aria-label="Selected clock details" sx={{ borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
-            <Tab label="Why" value="why" {...tabProps('result-context', 'why')} />
-            <Tab label="Wake" value="wake" {...tabProps('result-context', 'wake')} />
-            <Tab label="Install" value="install" {...tabProps('result-context', 'install')} />
+            aria-label="Selected clock workspace" sx={{ ...(fullscreen && { position: 'sticky', top: -16, zIndex: 2, bgcolor: 'background.paper' }), borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
+            <Tab label="Overview" value="overview" {...tabProps('result-context', 'overview')} />
+            <Tab label="Timeline" value="timeline" {...tabProps('result-context', 'timeline')} />
         </Tabs>
-        <TabBody prefix="result-context" tab="why" shown={detail === 'why'}>
+        <TabBody prefix="result-context" tab="overview" shown={detail === 'overview'}>
             <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Why this clock</Typography>
             <Typography variant="body2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{selected.description}</Typography>
             <Typography variant="body2">Clock period: {formatNumberText(selected.simulationDurationTicks, { maxDecimals: 3 })} ticks; {selected.inserterWindowCount} wake windows. Wake-ups count one modeled unit, and are different from wake windows.</Typography>
@@ -54,12 +55,10 @@ export function SelectedClockContext({ selected, detail, onDetailChange, wakeAsT
             </Box>
             {children}
         </TabBody>
-        <TabBody prefix="result-context" tab="wake" shown={detail === 'wake'}>
-            <WakeWindowsView asTable={wakeAsTable} onAsTableChange={onWakeAsTableChange} alternative={selected} headingLevel="h3" />
+        <TabBody prefix="result-context" tab="timeline" shown={detail === 'timeline'}>
+            {(timelineVisited || detail === 'timeline') && <Suspense fallback={<Typography role="status">Loading timelines…</Typography>}>
+                <ClockTimeline {...timelineProps} selected={selected} fullscreen={fullscreen} />
+            </Suspense>}
         </TabBody>
-        <TabBody prefix="result-context" tab="install" shown={detail === 'install'}>
-            <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Install in Factorio</Typography>
-            <InstallSteps install={selected.install} movesOf={id => moves.get(id) ?? { items: [], route: '' }} stale={stale} alwaysOpen />
-        </TabBody>
-    </Panel>;
+    </FullscreenWorkspace>;
 }

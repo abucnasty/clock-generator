@@ -6,7 +6,7 @@ import { ImportInput, ImportedMachine, ImportPipeline, ImportStep } from "./impo
  * The newest version of the sidecar mod. The mod has a version of its own (see "Versioning" in the README) and
  * this is bumped with it, when the mod changes: a paste from an older mod is told to update to this version.
  */
-export const LATEST_SIDECAR_VERSION = "0.7.1";
+export const LATEST_SIDECAR_VERSION = "0.8.0";
 
 /** The first version of the sidecar mod that exports the energy consumption of biochambers. */
 export const SIDECAR_VERSION_WITH_ENERGY_CONSUMPTION = "0.6.0";
@@ -85,7 +85,12 @@ export const ENERGY_CONSUMPTION_FEATURE: SidecarFeature = {
 };
 
 /** Every feature the sidecar added to what it exports, oldest first. Add the next one here. */
-export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE];
+export const INFINITY_CHEST_FEATURE: SidecarFeature = {
+    name: "infinity-chest-settings", since: "0.8.0",
+    appliesTo: input => (input.chests ?? []).some(chest => typeof chest === "object" && chest !== null && "type" in chest && chest.type === "infinity-chest"),
+    missing: () => "Infinity chest filters were read from inventory contents and Remove unfiltered items was not exported. Review those chest settings or re-export with the updated mod.",
+};
+export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE];
 
 /** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
 const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";
@@ -110,10 +115,11 @@ export function checkSidecarImport(
     sidecar_version: unknown,
     machines: readonly ImportedMachine[],
     pipeline: ImportPipeline = SIDECAR_IMPORT_PIPELINE,
+    chests: readonly unknown[] = [],
 ): Option<string> {
     const version = sidecarVersionOf(sidecar_version);
     return Option.map(
-        pipeline.run({ sidecar_version: version, machines }),
+        pipeline.run({ sidecar_version: version, machines, chests }),
         missing => {
             const update = missing === NOTHING_MISSING_MESSAGE
                 ? `You can update the mod to ${LATEST_SIDECAR_VERSION} when you like.`

@@ -21,9 +21,12 @@ export interface Chest extends Entity {
     getCapacity(): number;
 
     /**
-     * Get all item types this chest is filtered to hold.
+     * Get the item types this chest can supply. Destination acceptance is separate.
      */
     getItemFilters(): ItemName[];
+
+    /** Destination acceptance is independent of the items supplied by a chest. */
+    acceptsItem(item: ItemName): boolean;
 }
 
 function createChestFromConfig(config: ChestConfig): Chest {

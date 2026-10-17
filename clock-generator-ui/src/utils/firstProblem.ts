@@ -2,6 +2,7 @@ import { COPIES_POSITIVE_PROBLEM, copiesProblem } from './copiesProblem';
 import type { InserterCoverageIssue } from 'clock-generator/browser';
 import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
+import { outputChestIssueElementId } from './outputChestIssues';
 import { isTargetAboveMax, maxRateText, totalMachineCapacity, type MachinesMax } from './targetRateLimit';
 
 /** The game name of an item id */
@@ -62,6 +63,9 @@ export type FocusTarget =
     | { kind: 'add-machine' }
     | { kind: 'machine-recipe'; machineId: number }
     | { kind: 'coverage-issue'; issue: CoverageIssueKey }
+    | { kind: 'output-chest'; chestId: number }
+    | { kind: 'validation-panel' }
+    | { kind: 'validation-issue'; id: string }
     | { kind: 'validation-error' };
 
 /** Something that keeps the build from being clocked, or the reason the last check failed; and where to go for it */
@@ -182,6 +186,12 @@ export function focusIdOf(target: FocusTarget): string {
             return machineRecipeElementId(target.machineId);
         case 'coverage-issue':
             return coverageIssueElementId(target.issue);
+        case 'output-chest':
+            return outputChestIssueElementId(target.chestId);
+        case 'validation-panel':
+            return 'build-validation';
+        case 'validation-issue':
+            return `validation-issue-${target.id}`;
         case 'validation-error':
             return ELEMENT_IDS.validationError;
     }

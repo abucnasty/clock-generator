@@ -8,9 +8,9 @@ describe('per-build working context', () => {
         const entries = new Map<string, string>();
         const storage = { getItem: (key: string) => entries.get(key) ?? null, setItem: (key: string, value: string) => { entries.set(key, value); }, removeItem: (key: string) => { entries.delete(key); } };
         const form = createDefaultConfig();
-        writeBuildViewContext(storage, 'one', { ...defaultBuildViewContext(), entityConfigKey: serializeConfig(form), configView: 'diagram', resultDetail: 'install' });
+        writeBuildViewContext(storage, 'one', { ...defaultBuildViewContext(), entityConfigKey: serializeConfig(form), configView: 'diagram', resultDetail: 'timeline' });
         writeBuildViewContext(storage, 'two', { ...defaultBuildViewContext(), entityConfigKey: serializeConfig(form), view: 'results', wakeAsTable: true });
-        expect(readBuildViewContext(storage, 'one')).toMatchObject({ configView: 'diagram', resultDetail: 'install', wakeAsTable: false });
+        expect(readBuildViewContext(storage, 'one')).toMatchObject({ configView: 'diagram', resultDetail: 'timeline', wakeAsTable: false });
         expect(readBuildViewContext(storage, 'two')).toMatchObject({ configView: 'list', view: 'results', wakeAsTable: true });
         removeBuildViewContext(storage, 'one');
         expect([...entries.keys()]).toEqual([contextKeyOf('two')]);
@@ -23,7 +23,7 @@ describe('per-build working context', () => {
         const loaded = read({ version: 1, view: 'unknown', resultDetail: 'install', sections: { advanced: true, selector: true },
             comparison: { allColumns: 'true', showUnstable: true }, position: { configure: { anchor: 'build', offset: 90000 }, results: { anchor: '#arbitrary', offset: 100 } },
             timeline: { sortMode: 'invented', statuses: { machine: ['WORKING', 'arbitrary'] } } });
-        expect(loaded).toMatchObject({ view: 'configure', resultDetail: 'install', sections: { advanced: true }, comparison: { allColumns: false, showUnstable: true }, position: { configure: { anchor: 'build', offset: 4000 } }, timeline: { sortMode: 'byType', statuses: { machine: ['WORKING'] } } });
+        expect(loaded).toMatchObject({ view: 'configure', resultDetail: 'timeline', sections: { advanced: true }, comparison: { allColumns: false, showUnstable: true }, position: { configure: { anchor: 'build', offset: 4000 } }, timeline: { sortMode: 'byType', statuses: { machine: ['WORKING'] } } });
         expect(read({ version: 1, position: { configure: { anchor: 'build', offset: '100' } } }).position).toEqual({});
         const denied = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); }, removeItem: () => { throw new Error('denied'); } };
         expect(readBuildViewContext(denied, 'one')).toEqual(defaultBuildViewContext());

@@ -19,6 +19,7 @@ type ClockGenerator = typeof import('clock-generator/browser');
 
 // imported dynamically in the worker context
 let clockGenerator: ClockGenerator;
+let liveCoverage: ReturnType<ClockGenerator['createInserterCoverageValidator']>;
 /** The data's in-game names, kept here so that the main thread does not parse the whole data for them */
 let gameNames: GameNames = NO_NAMES;
 /** The recipes the data marks hidden, which the pickers leave out */
@@ -42,6 +43,7 @@ async function handleInitialize(factorioData: string): Promise<void> {
 
         const parsed = JSON.parse(factorioData);
         clockGenerator.FactorioDataService.initialize(parsed);
+        liveCoverage = clockGenerator.createInserterCoverageValidator();
         gameNames = parsed.names ?? NO_NAMES;
         hiddenRecipes = hiddenRecipeIds(parsed.recipe);
 
@@ -154,6 +156,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
+        inserterClocks: result.unplanned_inserter_clocks ?? {},
+        nonMovingBelts: alternative.belt?.kind === 'non_moving' || (alternative.belt === null && config.overrides?.non_moving_belts === true),
     }));
     return { signature: run.signature, alternatives };
 }
@@ -217,6 +221,13 @@ function handleValidate(requestId: number, config: Config): void {
             requestId,
             message,
             recovery,
+            diagnostics: error instanceof clockGenerator.InserterCoverageError
+                ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
+                : error instanceof clockGenerator.ConfigValidationError
+                    ? error.zodError.issues.map(issue => ({ kind: 'field' as const, path: issue.path as (string | number)[], message: issue.message }))
+                    : error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.')
+                        ? [{ kind: 'field', path: ['target_output', 'items_per_second'], message: error.message }]
+                        : undefined,
         });
     }
 }
@@ -309,7 +320,7 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
         inserters: validateEntries(clockGenerator.InserterConfigSchema, pasted.inserters, 'inserter'),
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
-        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines),
+        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined, Array.isArray(pasted.chests) ? pasted.chests : []),
         suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
     };
 }
@@ -331,6 +342,8 @@ function configFile(config: unknown): Config {
 
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
     switch (query.kind) {
+        case 'timeline-recording':
+            return clockGenerator.recordSimulationTimeline(query.request);
         case 'lookups':
             return lookups();
         case 'machine-facts':
@@ -340,7 +353,9 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
                 return null;
             }
         case 'inserter-coverage':
-            return clockGenerator.validateInserterCoverage(query.config);
+            return liveCoverage(query.config);
+        case 'machine-target-rates':
+            return clockGenerator.computeMachineTargetRates(query.config);
         case 'repeated-unit-conversion':
             return checkRepeatedUnitConversion(query.config);
         case 'saved-config':

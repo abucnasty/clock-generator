@@ -159,7 +159,7 @@ export function RuleSetEditor({
             <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                 <Button
                     size="small"
-                    startIcon={<Add />}
+                    color="inherit" startIcon={<Add />}
                     onClick={handleAddCondition}
                 >
                     Add condition
@@ -167,7 +167,7 @@ export function RuleSetEditor({
                 {canAddStatusCondition && (
                     <Button
                         size="small"
-                        startIcon={<Add />}
+                        color="inherit" startIcon={<Add />}
                         onClick={handleAddStatusCondition}
                     >
                         Add status condition
@@ -175,7 +175,7 @@ export function RuleSetEditor({
                 )}
                 <Button
                     size="small"
-                    startIcon={<AddCircleOutline />}
+                    color="inherit" startIcon={<AddCircleOutline />}
                     onClick={handleAddGroup}
                     variant="outlined"
                 >

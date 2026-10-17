@@ -206,8 +206,8 @@ export function afterCancel({ runKey, clocksMade, previous }: {
 }
 
 /**
- * The clock selected when a run ends or results come back: the player's pick when it is among them; otherwise the
- * recommended one, and `pickGone` when there was a pick
+ * The clock selected when saved results come back: the player's pick when it is among them; otherwise the
+ * recommended one, and `pickGone` when there was a pick. New generations select their own recommendation.
  */
 export function selectionAfterRun(
     alternatives: Pick<ClockAlternativeView, 'id'>[],

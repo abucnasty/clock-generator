@@ -2,9 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef, memo, type FocusEven
 import {
     ReactFlow,
     ReactFlowProvider,
-    Background,
     Controls,
-    BackgroundVariant,
     Panel,
     useReactFlow,
     useStore,
@@ -18,7 +16,9 @@ import {
 import { Alert, Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typography } from '@mui/material';
 import { Add, Fullscreen } from '@mui/icons-material';
 import { themeTokens } from '../theme/runtimeTokens';
+import { flowRouteStyle } from '../theme/flowDiagram';
 import { useTheme, type Theme } from '@mui/material/styles';
+import { useMeasuredFlowNodes } from '../hooks/useMeasuredFlowNodes';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { buildFlowGraph, flowNodeEntity } from '../utils/buildFlowGraph';
@@ -31,6 +31,10 @@ import type { EntityEditDialogProps } from './EntityEditDialog';
 import { FLOW_NODE_BOX_CLASS } from './flowNodeStyle';
 import { endpointEditProblem, endpointUpdate } from '../utils/inserterMetadata';
 import { entityLabel } from '../utils/entityLabel';
+import { flowFocus, flowEntityKey } from '../utils/flowFocus';
+import { FlowTileBackground } from './FlowTileBackground';
+import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
+import { useFlowRoutes } from '../hooks/useFlowRoutes';
 
 const nodeTypes: NodeTypes = {
     entityNode: EntityFlowNode,
@@ -59,12 +63,6 @@ const FIT_VIEW_OPTIONS = { padding: 0.1 };
 const MIN_ZOOM = 0.1;
 /** How long after the diagram opens or the facts are toggled a change in the nodes' sizes still refits the view */
 const REFIT_WINDOW_MS = 2000;
-
-/** Twice in the diagram, once on each side: the other half of a belt or chest drawn as two nodes */
-function twinNodeId(id: string | null): string | null {
-    const half = id ? /^(.*)-(in|out)$/.exec(id) : null;
-    return half && !half[1].startsWith('inserter') ? `${half[1]}-${half[2] === 'in' ? 'out' : 'in'}` : null;
-}
 
 /** What screen readers say after a node's or an edge's name (React Flow's own words mention delete and dragging, both off) */
 const ARIA_LABEL_CONFIG = {
@@ -150,8 +148,6 @@ function FlowContent({
     onRequestFullscreen,
 }: FlowContentProps) {
     const tokens = themeTokens(useTheme());
-    const HIGHLIGHT_COLOR = tokens.role.orange.main;
-    const DIMMED_COLOR = tokens.control.border;
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
     const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set());
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -163,6 +159,7 @@ function FlowContent({
     // Fit the graph again when the canvas changes size (the fullscreen dialog opening, a window resize), since the first
     // fit can run before the canvas has its final size. Never on an edit, which would move the map while you work on it.
     const canvasSize = useStore(canvasSizeSelector);
+    const compact = useStore(state => state.transform[2] < 0.65);
     const fittedSize = useRef<string | null>(null);
     useEffect(() => {
         const previous = fittedSize.current;
@@ -195,56 +192,25 @@ function FlowContent({
         () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, { itemLabel, recipeLabel }),
         [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, itemLabel, recipeLabel],
     );
-    // hovering or focusing one half of a belt drawn twice outlines the other half
-    const twinId = twinNodeId(hoveredNodeId) ?? twinNodeId(focusedNodeId);
-    const nodes = useMemo(
-        () => graphNodes.map(node => {
-            const entity = flowNodeEntity(node);
-            return { ...node, selected: entity.type === selection?.kind && entity.id === selection.id, ...(node.id === twinId ? { className: TWIN_CLASS } : {}) };
-        }),
-        [graphNodes, twinId, selection],
-    );
-    // the entity behind each node, by node id, for the ends of a connection or an edge
+    const activeNode = graphNodes.find(node => node.id === (hoveredNodeId ?? focusedNodeId));
+    const focusKey = activeNode ? flowEntityKey(activeNode) : selection ? `${selection.kind}:${selection.id}` : null;
+    const focus = useMemo(() => flowFocus(graphNodes, edges, focusKey), [graphNodes, edges, focusKey]);
+    // Route emphasis must leave node text opaque; dimming the wrapper breaks its theme contrast.
+    const activeNodeId = activeNode?.id;
+    const nodes = useMemo(() => graphNodes.map(node => ({
+        ...node,
+        selected: flowEntityKey(node) === (selection ? `${selection.kind}:${selection.id}` : null),
+        className: activeNodeId && focus.same.has(node.id) && node.id !== activeNodeId ? TWIN_CLASS : undefined,
+    })), [graphNodes, focus, selection, activeNodeId]);
+    const measured = useMeasuredFlowNodes(nodes);
+    const routes = useFlowRoutes(graphNodes, edges, measured.measurements);
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
     const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
-
-    const edgesWithSelection = useMemo(() => {
-        const anyHovered = hoveredNodeId !== null;
-        
-
-        // Compute highlighted set: direct edges + one hop through connected inserters
-        let highlightedEdgeIds: Set<string> | null = null;
-        if (anyHovered) {
-            const connectedInserterIds = new Set<string>();
-            highlightedEdgeIds = new Set<string>();
-            for (const edge of edges) {
-                if (edge.source === hoveredNodeId || edge.target === hoveredNodeId) {
-                    highlightedEdgeIds.add(edge.id);
-                    if (entityOf(edge.source)?.type === 'inserter') connectedInserterIds.add(edge.source);
-                    if (entityOf(edge.target)?.type === 'inserter') connectedInserterIds.add(edge.target);
-                }
-            }
-            for (const edge of edges) {
-                if (connectedInserterIds.has(edge.source) || connectedInserterIds.has(edge.target)) {
-                    highlightedEdgeIds.add(edge.id);
-                }
-            }
-        }
-
-        // the arrowhead takes its edge's colour, or it stays the default grey on an orange edge
-        const marker = (e: Edge, color: string) => ({ ...(e.markerEnd as EdgeMarker), color });
-        return edges.map(e => {
-            const isConnected = highlightedEdgeIds?.has(e.id) ?? false;
-            const isSelected = selectedEdgeIds.has(e.id);
-            const normal = { ...e, markerEnd: marker(e, DIMMED_COLOR), style: { ...e.style, stroke: DIMMED_COLOR } };
-            if (anyHovered) {
-                return isConnected
-                    ? { ...e, selected: isSelected, markerEnd: marker(e, HIGHLIGHT_COLOR), style: { stroke: HIGHLIGHT_COLOR, strokeWidth: 2.5 } }
-                    : { ...e, selected: isSelected, markerEnd: marker(e, DIMMED_COLOR), style: { stroke: DIMMED_COLOR, strokeWidth: 1, strokeDasharray: '4 3' } };
-            }
-            return isSelected ? { ...normal, selected: true, markerEnd: marker(e, HIGHLIGHT_COLOR), style: { stroke: HIGHLIGHT_COLOR, strokeWidth: 2.5 } } : normal;
-        });
-    }, [edges, selectedEdgeIds, hoveredNodeId, entityOf, HIGHLIGHT_COLOR, DIMMED_COLOR]);
+    const edgesWithSelection = useMemo(() => edges.map(edge => {
+        const highlighted = focus.routes.has(edge.id) || selectedEdgeIds.has(edge.id);
+        const style = flowRouteStyle(tokens, highlighted ? 'selected' : 'neutral');
+        return { ...edge, type: 'transfer', data: { flowRoute: routes.get(edge.id) }, selected: selectedEdgeIds.has(edge.id), markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
+    }), [edges, focus, selectedEdgeIds, tokens, routes]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
         setSelectedEdgeIds(prev => {
@@ -356,7 +322,7 @@ function FlowContent({
                         <Button
                             variant="outlined"
                             size="small"
-                            startIcon={<Add />}
+                            color="inherit" startIcon={<Add />}
                             onClick={(e) => setAddMenuAnchor(e.currentTarget)}
                             sx={{ borderRadius: 0 }}
                         >
@@ -370,9 +336,12 @@ function FlowContent({
 
     return (
         <ReactFlow
-            nodes={nodes}
+            className={compact ? 'flow-compact' : undefined}
+            nodes={measured.nodes}
+            onNodesChange={measured.onNodesChange}
             edges={edgesWithSelection}
             nodeTypes={nodeTypes}
+            edgeTypes={FLOW_EDGE_TYPES}
             onNodeClick={handleNodeClick}
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
@@ -395,7 +364,7 @@ function FlowContent({
             fitViewOptions={fitViewOptions}
             proOptions={{ hideAttribution: true }}
         >
-            <Background color={tokens.control.edge} variant={BackgroundVariant.Dots} gap={20} size={1} />
+            <FlowTileBackground />
             <Controls showInteractive={false} fitViewOptions={fitViewOptions} />
             {connectionProblem && <Panel position="bottom-center" style={{ width: 'max-content', maxWidth: 'calc(100% - 24px)' }}>
                 <Alert role="alert" severity="warning" sx={{ overflowWrap: 'anywhere' }} data-geometry-connection-problem>{connectionProblem}</Alert>
@@ -429,13 +398,14 @@ function FlowContent({
                         </IconButton>
                     )}
                 </Box>
+                {compact && <Typography variant="caption" sx={{ bgcolor: tokens.surface.panel, px: 0.5 }}>Zoom in for details</Typography>}
             </Panel>
             {hasAddCallbacks && (
                 <Panel position="top-right">
                     <Button
                         variant="outlined"
                         size="small"
-                        startIcon={<Add />}
+                        color="inherit" startIcon={<Add />}
                         onClick={(e) => setAddMenuAnchor(e.currentTarget)}
                         sx={{
                             borderRadius: 0,
@@ -534,6 +504,10 @@ function ConfigFlowDiagramComponent({
                     overflow: 'hidden',
                     border: '1px solid',
                     borderColor: 'divider',
+                    '& .flow-node-title': { lineHeight: '20px' },
+                    '& .flow-compact .flow-node-title': { fontSize: '1.1rem', whiteSpace: 'nowrap' },
+                    '& .flow-compact .flow-node-detail': { visibility: 'hidden' },
+                    '& .flow-compact .react-flow__node.selected .flow-node-detail, & .flow-compact .react-flow__node:focus-visible .flow-node-detail': { visibility: 'visible' },
                     '& .react-flow__controls': {
                         background: tokens.surface.panel,
                         border: `1px solid ${tokens.control.border}`,

@@ -21,7 +21,6 @@ import {
 import { useId, useState, type ReactNode } from 'react';
 import { useBuildSection } from '../hooks/useBuildViewContext';
 import type { BuildViewContext } from '../utils/buildViewContext';
-import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
@@ -43,7 +42,7 @@ const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ti
 /** Every string of the panel that is not the clocks' own or the pick's */
 const COMPARE_COPY = {
     heading: 'Compare other clocks',
-    terms: 'Terms',
+    terms: 'About comparing clocks',
     showAll: 'Show all columns',
     clock: 'Clock',
     works: 'Works?',
@@ -173,7 +172,6 @@ export function ClockAlternativesPanel({
     notice,
     holdNotice = false,
 }: ClockAlternativesPanelProps) {
-    const { density } = useDisplayPreferences();
     const { showUnstable, allColumns } = comparison;
     const setShowUnstable = (showUnstable: boolean) => onComparisonChange({ ...comparison, showUnstable });
     const setAllColumns = (next: boolean | ((shown: boolean) => boolean)) => onComparisonChange({ ...comparison, allColumns: typeof next === 'function' ? next(allColumns) : next });
@@ -306,13 +304,15 @@ export function ClockAlternativesPanel({
     return (
         <Panel
             title={COMPARE_COPY.heading}
-            help={{ label: COMPARE_COPY.terms, content: <TermsList /> }}
-            sx={{ mb: 0, '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }}
+            help={{ label: COMPARE_COPY.terms, content: <>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                    Select a clock to compare its rate, recovery and wake-ups. Belt compatibility is a separate condition.
+                </Typography>
+                <TermsList />
+            </> }}
+            sx={{ mb: 0, '& > :last-child': { p: 1.5 } }}
             data-compare-clocks="" data-build-anchor="comparison"
         >
-            {density !== 'compact' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
-                Select a clock to compare its rate, recovery and wake-ups. Belt compatibility is a separate condition.
-            </Typography>}
             {!anyStable && alternatives.length > 0 && pending.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                     {anyHolds ? COMPARE_COPY.noneRecover : COMPARE_COPY.noneHold}

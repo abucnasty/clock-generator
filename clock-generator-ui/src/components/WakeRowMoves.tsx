@@ -4,13 +4,26 @@ import type { WakeWindowRow } from '../utils/wakeWindows';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
+import { RouteBadge, ContentIcons } from './RouteIdentity';
+import { useGameNames } from '../hooks/useGameNames';
 
-/**
- * What a Wake windows row moves and between what: the item's icon, then ": Belt 1 to Machine 2" (a drill's ": into
- * Machine 1"). The icon's name and hover text are the item's game name, so a screen reader says "Electronic circuit:
- * Belt 1 to Machine 2" and no id is shown. An item with no icon shows its name instead.
- */
-export function WakeRowMoves({ row }: { row: Pick<WakeWindowRow, 'items' | 'route'> }) {
+/** Numbered endpoint badges with recipe/content context; older results without config keep their recorded route. */
+export function WakeRowMoves({ row }: { row: Pick<WakeWindowRow, 'items' | 'route' | 'source' | 'sink'> }) {
+    const { itemLabel } = useGameNames();
+    const ends = [row.source, row.sink].filter(option => option !== undefined);
+    if (row.sink && (row.source || row.route.startsWith('into '))) {
+        const description = ends.map(option => [option.label, option.sublabel,
+            !option.sublabel ? option.ingredientIcons?.map(itemLabel).join(', ') : undefined].filter(Boolean).join(' · ')).join(' → ');
+        return <Box component="span" role="img" aria-label={description} title={description}
+            sx={{ display: 'inline-flex', flexDirection: 'column', gap: 0.25, maxWidth: '100%', verticalAlign: 'middle' }}>
+            <Box component="span" aria-hidden sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                {row.source && <><RouteBadge option={row.source} /><ContentIcons option={row.source} size={18} /></>}
+                <Box component="span">→</Box>
+                <RouteBadge option={row.sink} /><ContentIcons option={row.sink} size={18} />
+            </Box>
+            <Box component="span" aria-hidden sx={{ overflowWrap: 'anywhere' }}>{row.route.replace(' to ', ' → ')}</Box>
+        </Box>;
+    }
     const colon = row.items.length > 0 && row.route ? ': ' : '';
     return (
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'nowrap', maxWidth: '100%', verticalAlign: 'middle' }}>

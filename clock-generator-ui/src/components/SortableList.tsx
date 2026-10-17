@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -77,12 +77,13 @@ interface SortableItemProps {
     stableKey: string;
     /** The entity's name shown in the row's chip, e.g. "Inserter 3". */
     label: string;
+    displayLabel?: React.ReactNode;
     /** Render prop: receives the composed drag-handle+ID element to place inside the row. */
     children: (dragHandle: React.ReactNode) => React.ReactNode;
 }
 
 /** Wraps a single row with sortable drag behaviour and injects a drag handle. */
-export function SortableItem({ stableKey, label, children }: SortableItemProps) {
+export function SortableItem({ stableKey, label, displayLabel, children }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -100,7 +101,7 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
         zIndex: isDragging ? 1 : undefined,
     };
 
-    const dragHandle = (
+    const dragHandle = useMemo(() => (
         <Box
             sx={{
                 display: 'flex',
@@ -133,16 +134,20 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
             </Box>
             {/* at least as wide as "Inserter 99", so the rows of a card line up */}
             <Chip
-                label={label}
+                label={displayLabel ?? label}
+                aria-label={label}
+                title={label}
                 size="small"
-                sx={{ minWidth: 72, fontSize: '0.7rem', pointerEvents: 'none' }}
+                sx={{ minWidth: displayLabel ? 52 : 72, height: displayLabel ? 40 : undefined, bgcolor: displayLabel ? 'transparent' : undefined, '& .MuiChip-label': displayLabel ? { px: 0 } : undefined, fontSize: '0.7rem', pointerEvents: 'none' }}
             />
         </Box>
-    );
+    ), [attributes, listeners, label, displayLabel]);
+    // Sortable context updates positions for the whole list; unchanged row contents can stay as they are.
+    const content = useMemo(() => children(dragHandle), [children, dragHandle]);
 
     return (
         <div ref={setNodeRef} style={style} data-row-key={stableKey}>
-            {children(dragHandle)}
+            {content}
         </div>
     );
 }

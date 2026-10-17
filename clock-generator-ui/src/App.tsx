@@ -9,12 +9,13 @@ import {
     CssBaseline,
     Dialog,
     IconButton,
+    Link,
     ThemeProvider,
     Typography,
     Alert,
 } from '@mui/material';
 import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
-import type { ChestType, Config, DebugSteps, InserterFixOption } from 'clock-generator/browser';
+import type { ChestType, Config, DebugSteps, InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
 import type { ChestFormData, InserterFormData } from './hooks/useConfigForm';
@@ -27,7 +28,7 @@ import { useCopyBlueprint, type BlueprintCopyFailure } from './hooks/useCopyBlue
 import { useIntroCard } from './hooks/useIntroCard';
 import { BuildSectionsContext, useBuildViewContext, type BuildContextReady } from './hooks/useBuildViewContext';
 import { serializeConfig } from './hooks/usePersistedConfigForm';
-import { selectBuildEntity, type DetailsTab } from './utils/buildViewContext';
+import { selectBuildEntity } from './utils/buildViewContext';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
@@ -42,7 +43,9 @@ import { IntroCard } from './components/IntroCard';
 import { BuildSwitcher } from './components/BuildSwitcher';
 import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
-import { MissingInserterAlert } from './components/MissingInserterAlert';
+import { BuildValidationPanel } from './components/BuildValidationPanel';
+import { outputChestIssues } from './utils/outputChestIssues';
+import { buildValidationIssues } from './utils/buildValidation';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -50,7 +53,6 @@ import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost, MessageSlot } from './components/Messages';
 import { DisplayPreferencesProvider } from './hooks/useDisplayPreferences';
-import { DisplayPreferencesButton } from './components/DisplayPreferences';
 import type { ResultDetail } from './utils/resultsView';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { StaleCopyDialog } from './components/StaleCopyDialog';
@@ -60,7 +62,7 @@ import { CheckPlanSection } from './components/CheckPlanSection';
 import { BeltAssumption } from './components/BeltAssumption';
 import { BeltAssumptionLine } from './components/BeltAssumptionLine';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
-import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, type FocusTarget, type Problem } from './utils/firstProblem';
+import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, PROBLEM_TEXT, type FocusTarget, type Problem } from './utils/firstProblem';
 import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate, startsRun } from './utils/checkThenGenerate';
 import { copyBlueprintLabelOf, rateWarningOf } from './utils/rateWarning';
 import { buildChangesText } from './utils/buildChanges';
@@ -70,11 +72,11 @@ import { clockTechnicalName, plainClockName } from './utils/clockSummary';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
+import { entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
 import { createAppTheme } from './theme/theme';
 import { useResolvedColorScheme } from './hooks/useResolvedColorScheme';
 import { nextStepOf } from './utils/nextStep';
-import { needsNoClock } from './utils/installSteps';
 import { itemName, recipeName, type GameNames } from './utils/gameNames';
 import { GameNamesContext, SearchOnlyRecipesContext } from './hooks/useGameNames';
 import { RuleTimingContext } from './components/RuleTimingContext';
@@ -86,7 +88,7 @@ import type { TargetValues } from './utils/pasteTarget';
 import { configToFormData, formDataToConfig } from './utils/configForm/configMapping';
 import { applyRepeatedUnitConversion } from './utils/configForm/repeatedUnitConversion';
 import { askEngine } from './worker/engineClient';
-import { inserterFixProblem } from './utils/configForm/inserterFix';
+import { applyInserterFix, inserterFixProblem } from './utils/configForm/inserterFix';
 import { hasImportedBeltDrops } from './utils/inserterMetadata';
 import {
     buildTitles,
@@ -224,7 +226,6 @@ function App() {
         exportConfig,
         exportableConfig,
         resetConfig,
-        applyInserterFix,
         reorderMachines,
         reorderInserters,
         reorderBelts,
@@ -232,8 +233,8 @@ function App() {
         reorderDrills,
     } = useConfigForm();
 
-    const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded);
-    const fixUnavailable = useCallback((fix: InserterFixOption) => inserterFixProblem(config, fix), [config]);
+    const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded, library.currentId);
+    const fixUnavailable = useCallback((fix: InserterFixOption, issue?: InserterCoverageIssue) => inserterFixProblem({ belts: config.belts, inserters: config.inserters }, fix, issue), [config.belts, config.inserters]);
 
     // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
     // where to start instead of counting problems
@@ -269,7 +270,7 @@ function App() {
         simulate: false,
     });
     const [streamLogs, setStreamLogs] = useState(false);
-    // ⋮ > Developer tools, or `?debug`: the timelines and the log. While they are off their switches are out of sight,
+    // ⋮ > Developer tools, or `?debug`: logging controls. While they are off their switches are out of sight,
     // so a generation runs without them
     const [developerTools, setDeveloperTools] = useState(() => developerToolsInitial(window.location.search, readDeveloperTools()));
     const runDebugSteps = developerTools ? debugSteps : NO_DEBUG_STEPS;
@@ -295,6 +296,36 @@ function App() {
     const setAdvancedOpen = useCallback((open: boolean) => patchContext({ sections: { ...buildContext.sections, advanced: open } }), [patchContext, buildContext.sections]);
     const sectionContext = useMemo(() => ({ sections: buildContext.sections, onSectionChange: (key: string, open: boolean) => patchContext({ sections: { ...buildContext.sections, [key]: open } }) }), [buildContext.sections, patchContext]);
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
+    const [inserterFocusRequest, setInserterFocusRequest] = useState<{ id: number; filters: boolean } | null>(null);
+    const [beltFocusRequest, setBeltFocusRequest] = useState<{ id: number } | null>(null);
+    useEffect(() => {
+        if (!beltFocusRequest) return;
+        const frame = requestAnimationFrame(() => {
+            const row = document.getElementById(`entity-belt-${beltFocusRequest.id}`);
+            row?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+            row?.scrollIntoView({ block: 'center' });
+            setBeltFocusRequest(null);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [beltFocusRequest]);
+    const finishInserterFocus = useCallback(() => setInserterFocusRequest(null), []);
+    const handleInserterFix = useCallback((issue: InserterCoverageIssue, fix: InserterFixOption) => {
+        if (fixUnavailable(fix, issue)) return;
+        setDiagramFullscreen(false);
+        setConfigView('list');
+        if (fix.type === 'review_filters') {
+            setInserterFocusRequest({ id: fix.inserter_id, filters: true });
+            return;
+        }
+        const before = captureBuildMutation().form;
+        const next = applyInserterFix(before, issue, fix);
+        if (next === before) return;
+        const id = next.inserters.at(-1)?.id;
+        offerUndo(fix.type === 'add_lane_to_existing_belt' ? `Added a lane to ${entityLabel('belt', fix.belt_id)}.` : `Added a connection for ${entityLabel('machine', issue.machine_id)}.`, { snapshot: before });
+        setConfig(next);
+        if (fix.type === 'add_lane_to_existing_belt') setBeltFocusRequest({ id: fix.belt_id });
+        else if (id !== undefined) setInserterFocusRequest({ id, filters: false });
+    }, [fixUnavailable, setConfigView, captureBuildMutation, offerUndo, setConfig]);
     const [changelogOpen, setChangelogOpen] = useState(false);
 
     // null until the engine has looked for missing inserters; until then the check catches them
@@ -302,7 +333,7 @@ function App() {
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
-    const coverageIssues = checkedCoverageIssues ?? [];
+    const chestIssues = useMemo(() => outputChestIssues(config.chests, config.inserters), [config.chests, config.inserters]);
 
     // Initialize worker on mount
     useEffect(() => {
@@ -399,6 +430,7 @@ function App() {
     const selectedClock = alternatives[selectedAlternativeIndex];
     const selectedName = selectedClock ? plainClockName(alternatives, selectedAlternativeIndex) : null;
     const rateWarning = rateWarningOf(selectedClock);
+    const [installOpen, setInstallOpen] = useState(false);
     const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale, isRunning);
 
     // what the rule editor checks a rule against: the selected clock while it is for this build, else the last check
@@ -484,13 +516,22 @@ function App() {
     // the most the machines making the target recipe can make: a target above it is a problem
     const machinesMax = useMachinesMax(config.target_output.recipe, config.machines);
     // what keeps the build from being clocked, and so where Generate goes instead
-    const problems = useMemo(() => problemsOf({
-        targetOutput: config.target_output,
-        machines: config.machines,
-        coverageIssues: checkedCoverageIssues ?? [],
-        machinesMax,
-        itemLabel: (id) => itemName(gameNames, id),
-    }), [config.target_output, config.machines, checkedCoverageIssues, machinesMax, gameNames]);
+    const validationIssues = useMemo(() => buildValidationIssues({
+        fieldProblems: problemsOf({
+            targetOutput: config.target_output,
+            machines: config.machines,
+            coverageIssues: [],
+            machinesMax,
+            itemLabel: (id) => itemName(gameNames, id),
+        }),
+        coverage: checkedCoverageIssues ?? [], chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
+        coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
+            issue.machine_id, issue.item_name, id => itemName(gameNames, id)),
+        failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
+            ? { message: validation.message, diagnostics: validation.diagnostics }
+            : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
+    }), [config.target_output, config.machines, config.chests, config.inserters, checkedCoverageIssues, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey]);
+    const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
@@ -511,7 +552,7 @@ function App() {
     const busy = isRunning || validation.status === 'running' || checkingFor !== null || conversionPending;
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = conversionPending ? 'generate' : validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
-    const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild, entryRoute: builtByHand ? 'manual' : 'routes' });
+    const note = blankBuild ? barNoteOf({ problems, busy, checkStatus, blank: true, entryRoute: builtByHand ? 'manual' : 'routes' }) : null;
     // the one filled button of the bar and the card: Generate, or the Copy of the clocks it made
     const primaryAction = nextStepOf({
         problemCount: problems.length,
@@ -520,8 +561,8 @@ function App() {
         hasBlueprint: blueprintString !== null,
         stale: resultsAreStale,
         view,
-        // the card shows no Copy for a build that needs no clock; the bar's then is the one
-        pageHasCopy: selectedClock !== undefined && !needsNoClock(selectedClock.install),
+        // Copy stays in the sticky toolbar on both Configure and Results.
+        pageHasCopy: false,
     });
     // who started the running or last check, for the announcements: Generate leads on by itself
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
@@ -549,13 +590,14 @@ function App() {
     const [focusRequest, setFocusRequest] = useState<{ target: FocusTarget } | null>(null);
     useEffect(() => {
         if (focusRequest) {
-            focusProblemTarget(focusRequest.target);
+            if (!focusProblemTarget(focusRequest.target) && focusRequest.target.kind === 'validation-panel')
+                focusProblemTarget({ kind: 'validation-error' });
         }
     }, [focusRequest]);
     const goToCheckError = useCallback(() => {
         cancelRestore();
         setView('configure');
-        setFocusRequest({ target: { kind: 'validation-error' } });
+        setFocusRequest({ target: { kind: 'validation-panel' } });
     }, [cancelRestore, setView]);
 
     /**
@@ -611,15 +653,17 @@ function App() {
     // checks without moving the page: the result shows as the chip, the alert and the swing plan
     const handleCheckOnly = useCallback(() => {
         cancelRestore();
-        const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null || conversionPendingRef.current, checkStatus, problems });
+        const liveProblems = problems.filter(issue => issue.source !== 'engine');
+        const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null || conversionPendingRef.current, checkStatus, problems: liveProblems });
         if (startsRun(decision)) withdrawUndo();
         if (decision.kind === 'show-problems') {
-            focusBarNote();
+            if (blankBuild) focusBarNote();
+            else if (liveProblems[0]?.target) goToTarget(liveProblems[0].target);
         } else if (decision.kind === 'check') {
             setCheckedForGenerate(false);
             validate(exportConfig());
         }
-    }, [cancelRestore, isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, validate, exportConfig]);
+    }, [cancelRestore, isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, validate, exportConfig, blankBuild, goToTarget]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
@@ -706,9 +750,13 @@ function App() {
             removeBelt: removal('belts', removeBelt),
             removeChest: removal('chests', removeChest),
             removeDrill: removal('drills', removeDrill),
-            switchChestType: (index: number, type: ChestType) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type); },
+            switchChestType: (index: number, type: ChestType, disposal = false) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type, disposal); },
+            enableChestRemoval: (index: number) => {
+                offerUndo(form => `Enabled output removal for ${entityLabel('chest', form.chests[index].id)}.`);
+                updateChest(index, { remove_unfiltered_items: true });
+            },
         };
-    }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, reorderMachines, reorderInserters, reorderBelts, reorderChests, reorderDrills]);
+    }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, updateChest, reorderMachines, reorderInserters, reorderBelts, reorderChests, reorderDrills]);
     const duplicate = useMemo(() => ({
         machines: (index: number) => duplicateEntity('machines', index),
         inserters: (index: number) => duplicateEntity('inserters', index),
@@ -1011,92 +1059,94 @@ function App() {
         <BuildSectionsContext value={sectionContext}>
         <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} ruleTiming={ruleTiming}>
             <CssBaseline />
-            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', pb: { xs: 'calc(72px + env(safe-area-inset-bottom))', sm: 'calc(48px + env(safe-area-inset-bottom))' } }}>
                 <AppBar position="sticky" ref={headerRef}>
                     {isInitialized && (
-                        <WorkflowBar
-                            identity={
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center', minWidth: 0 }}>
-                                    <Typography variant="subtitle1" component="h1" sx={{ minWidth: 0, fontWeight: 600 }}>
-                                        Clock Generator
-                                    </Typography>
-                                    <BuildSwitcher
-                                        ref={switcherRef}
-                                        builds={switcherBuilds}
-                                        currentId={library.currentId}
-                                        currentTitle={currentTitle}
-                                        onOpen={handleOpenBuild}
-                                        onNew={handleNewBuild}
-                                        onDuplicate={handleDuplicateBuild}
-                                        onRename={handleRenameBuild}
-                                        onDelete={handleDeleteBuild}
-                                        readOnly={!library.writable}
-                                    />
-                                    <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)} title="View changelog" sx={{ textTransform: 'none' }}>v{__APP_VERSION__}</Button>
-                                    <ConfigImportExport
-                                        currentForm={config}
-                                        ref={buildEntryRef}
-                                        config={exportableConfig}
-                                        target={config.target_output}
-                                        onImport={handleImportConfig}
-                                        onReplaceTarget={replaceTarget}
-                                        onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
-                                        onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
-                                        onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
-                                        onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
-                                        onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
-                                        onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
-                                        onReset={handleReset}
-                                        onBuildReplaced={handleBuildReplaced}
-                                        onUndoable={offerUndoOfReplace}
-                                        onShowIntro={showIntro}
-                                        pasteIsNextStep={blankBuild && !introVisible}
-                                        buildName={library.currentMeta.name}
-                                        buildTitle={currentTitle}
-                                        toolsMenuItems={toolsMenuItems}
-                                    />
-
-                                    <DisplayPreferencesButton />
-                                </Box>
-                            }
-                            view={view}
-                            onViewChange={setView}
-                            isLoading={isRunning}
-                            generationFailed={error !== null}
-                            progressStore={progressStore}
-                            onGenerate={handleGenerate}
+                        <ConfigImportExport
+                            currentForm={config}
+                            ref={buildEntryRef}
+                            config={exportableConfig}
+                            target={config.target_output}
+                            onImport={handleImportConfig}
+                            onReplaceTarget={replaceTarget}
+                            onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
+                            onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
+                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
+                            onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
+                            onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
+                            onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
+                            onReset={handleReset}
+                            onBuildReplaced={handleBuildReplaced}
+                            onUndoable={offerUndoOfReplace}
+                            onShowIntro={showIntro}
+                            pasteIsNextStep={blankBuild && !introVisible}
+                            buildName={library.currentMeta.name}
+                            buildTitle={currentTitle}
+                            toolsMenuItems={toolsMenuItems}
+                            onInstall={blueprintString ? () => setInstallOpen(true) : undefined}
                             onCheckOnly={handleCheckOnly}
-                            primaryAction={conversionIsNextStep ? null : primaryAction}
-                            busy={busy}
-                            checking={checking}
-                            checkStatus={checkStatus}
-                            checkedForGenerate={checkedForGenerate}
-                            chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
-                            blueprintString={blueprintString}
-                            selectedLabel={selectedName}
-                            selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
-                            selectedId={selectedClock?.id ?? null}
-                            selectionQuiet={selectionQuiet}
-                            rateWarning={rateWarning}
-                            copyLabel={copyLabel}
-                            staleFor={staleFor}
-                            copied={copy.copied}
-                            onCopy={() => { cancelRestore(); copy.request(); }}
-                            problems={problems}
-                            note={note}
-                            startHere={blankBuild && problems.length > 0}
-                            onGoToProblem={handleGoToProblem}
-                            running={isRunning || checkingFor !== null || conversionPending}
-                            onCancel={handleCancel}
-                            lastStop={lastStop}
-                            restoredId={restoredId}
-                            pickGone={pickGone?.label ?? null}
+                            checkDisabled={busy}
+                            renderControls={(paste, menu) => (
+                                <WorkflowBar
+                                    entryAction={paste}
+                                    menu={menu}
+                                    identity={
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center', minWidth: 0 }}>
+                                            <Typography variant="subtitle1" component="h1" sx={{ minWidth: 0, fontWeight: 600 }}>
+                                                Clock Generator
+                                            </Typography>
+                                            <BuildSwitcher
+                                                ref={switcherRef}
+                                                builds={switcherBuilds}
+                                                currentId={library.currentId}
+                                                currentTitle={currentTitle}
+                                                onOpen={handleOpenBuild}
+                                                onNew={handleNewBuild}
+                                                onDuplicate={handleDuplicateBuild}
+                                                onRename={handleRenameBuild}
+                                                onDelete={handleDeleteBuild}
+                                                readOnly={!library.writable}
+                                            />
+                                        </Box>
+                                    }
+                                    view={view}
+                                    onViewChange={setView}
+                                    isLoading={isRunning}
+                                    generationFailed={error !== null}
+                                    progressStore={progressStore}
+                                    onGenerate={handleGenerate}
+                                    onCheckOnly={handleCheckOnly}
+                                    primaryAction={conversionIsNextStep ? null : primaryAction}
+                                    busy={busy}
+                                    checking={checking}
+                                    checkStatus={checkStatus}
+                                    checkedForGenerate={checkedForGenerate}
+                                    chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
+                                    blueprintString={blueprintString}
+                                    selectedLabel={selectedName}
+                                    selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
+                                    selectedId={selectedClock?.id ?? null}
+                                    selectionQuiet={selectionQuiet}
+                                    rateWarning={rateWarning}
+                                    copyLabel={copyLabel}
+                                    staleFor={staleFor}
+                                    copied={copy.copied}
+                                    onCopy={() => { cancelRestore(); copy.request(); }}
+                                    problems={problems}
+                                    note={note}
+                                    startHere={blankBuild && problems.length > 0}
+                                    onGoToProblem={handleGoToProblem}
+                                    running={isRunning || checkingFor !== null || conversionPending}
+                                    onCancel={handleCancel}
+                                    lastStop={lastStop}
+                                    restoredId={restoredId}
+                                    pickGone={pickGone?.label ?? null}
+                                />
+                            )}
                         />
                     )}
                     {!isInitialized && <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography component="h1" variant="subtitle1">Clock Generator</Typography>
-                        <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)}>v{__APP_VERSION__}</Button>
-                        <DisplayPreferencesButton />
                     </Box>}
                     {/* outside the condition: a message can come before the workflow bar is there */}
                     <MessageSlot active={!diagramFullscreen} />
@@ -1126,13 +1176,7 @@ function App() {
                                     {error}
                                 </Alert>
                             )}
-                            <CheckErrorAlert
-                                message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : generationRecovery ? error : null}
-                                crashed={validation.status === 'invalid' && validation.crashed === true}
-                                recovery={conversionRecovery}
-                                conversionPending={conversionPending}
-                                onConvert={handleConvertRepeatedUnit}
-                            />
+                            <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' && validation.crashed ? validation.message : null} crashed />
 
                             {introVisible && (
                                 <IntroCard
@@ -1155,10 +1199,14 @@ function App() {
                             />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
+                                <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
+                                    onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
+                                    onReview={goToTarget} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} />
                                 {/* in the order a row's sources are made in: an inserter's machines, belts and chests are above it */}
                                 {configView === 'list' ? (
                                     <>
                                         <MachinesForm
+                                            exportConfig={exportConfig}
                                             machines={config.machines}
                                             recipeNames={recipeNames}
                                             onAdd={addMachine}
@@ -1194,6 +1242,9 @@ function App() {
                                         </PanelSection>
 
                                         <InsertersForm
+                                            key={library.currentId}
+                                            focusRequest={inserterFocusRequest}
+                                            onFocusHandled={finishInserterFocus}
                                             inserters={config.inserters}
                                             machines={config.machines}
                                             belts={config.belts}
@@ -1207,11 +1258,6 @@ function App() {
                                             onDuplicate={duplicate.inserters}
                                             onBulkUpdate={updateInsertersUndoable}
                                         />
-                                        <MissingInserterAlert
-                                            issues={coverageIssues}
-                                            onApplyFix={applyInserterFix}
-                                            fixUnavailable={fixUnavailable}
-                                        />
                                     </>
                                 ) : (
                                     <Box sx={{ mb: 3 }}>
@@ -1219,11 +1265,6 @@ function App() {
                                             key={`${library.currentId}:${replacedCount}`}
                                             {...flowDiagramProps}
                                             onRequestFullscreen={openDiagramFullscreen}
-                                        />
-                                        <MissingInserterAlert
-                                            issues={coverageIssues}
-                                            onApplyFix={applyInserterFix}
-                                            fixUnavailable={fixUnavailable}
                                         />
                                         {/* the Belts section is not drawn here, so the belt question gets one of its own */}
                                         {beltQuestion.ask && (
@@ -1278,9 +1319,11 @@ function App() {
                         </Box>
 
                         <Box data-build-view="results" data-build-anchor="results" sx={{ display: view === 'results' ? 'block' : 'none' }}>
-                            <ResultsWorkspace
-                                detailsTab={buildContext.detailsTab}
-                                onDetailsTabChange={(detailsTab: DetailsTab) => patchContext({ detailsTab })}
+                            <ResultsWorkspace key={library.currentId}
+                                installOpen={installOpen}
+                                onInstallClose={() => setInstallOpen(false)}
+                                onInstall={() => setInstallOpen(true)}
+                                copyLabel={copyLabel}
                                 comparison={buildContext.comparison}
                                 onComparisonChange={comparison => patchContext({ comparison })}
                                 wakeAsTable={buildContext.wakeAsTable}
@@ -1331,8 +1374,6 @@ function App() {
                                 pickGone={pickGone}
                                 copied={copy.copied}
                                 onCopy={() => { cancelRestore(); copy.request(); }}
-                                copyLabel={copyLabel}
-                                copyIsNextStep={primaryAction === 'copy-page'}
                                 // only when the run asked the belt question; otherwise the card says the belt itself
                                 beltAction={beltAssumption?.ask ? (
                                     <BeltAssumptionLine
@@ -1351,10 +1392,17 @@ function App() {
                 <Box
                     component="footer"
                     sx={{
-                        py: 1,
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: theme => theme.zIndex.appBar,
+                        minHeight: { xs: 72, sm: 48 },
+                        py: 0.5,
+                        pb: 'calc(4px + env(safe-area-inset-bottom))',
                         px: 2,
                         display: 'flex',
-                        flexWrap: 'wrap',
+                        flexDirection: { xs: 'column', sm: 'row' },
                         justifyContent: 'center',
                         alignItems: 'center',
                         gap: 1.5,
@@ -1364,9 +1412,14 @@ function App() {
                         borderColor: 'divider',
                     }}
                 >
-                    <Typography variant="body2" color="text.secondary">
-                        Created by abucnasty
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Created by <Link href="https://www.youtube.com/@abucnasty" target="_blank" rel="noopener noreferrer"
+                                color="inherit" underline="hover">abucnasty</Link>
+                        </Typography>
+                        <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)} title="View changelog"
+                            sx={{ textTransform: 'none', minWidth: 0 }}>v{__APP_VERSION__}</Button>
+                    </Box>
                     <Button
                         href="https://ko-fi.com/J6D4284EZ5"
                         target="_blank"
@@ -1435,18 +1488,17 @@ function App() {
                             <FullscreenExit />
                         </IconButton>
                     </Box>
+                    <Box sx={{ px: 2, pt: 1, flexShrink: 0 }}>
+                        <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
+                            onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
+                            onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} focusTargets={false} />
+                    </Box>
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                         <ConfigFlowDiagram
                             {...flowDiagramProps}
                             height="100%"
                         />
                     </Box>
-                    {coverageIssues.length > 0 && (
-                        <Box sx={{ flexShrink: 0, px: 2, pb: 1 }}>
-                            {/* the page's own alert behind this dialog has the ids a problem's jump looks for */}
-                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} fixUnavailable={fixUnavailable} focusTargets={false} />
-                        </Box>
-                    )}
                 </Box>
             </Dialog>
 

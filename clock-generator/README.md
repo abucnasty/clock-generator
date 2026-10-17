@@ -319,6 +319,20 @@ A buffer chest has a number of inventory slots (`storage_size`) and the one item
 ]
 ```
 
+#### Infinity supplies and disposal
+
+Infinity chest filters maintain constant configured quantities. To remove all incoming items without supplying any,
+leave the filters empty and enable `remove_unfiltered_items`:
+
+```json
+{ "type": "infinity-chest", "id": 1, "item_filter": [], "remove_unfiltered_items": true }
+```
+
+With filters and removal enabled, configured items remain constant supplies and other incoming items are discarded.
+With removal omitted or false, the existing filtered-supply model is unchanged; unfiltered items are not accepted.
+The model does not implement Factorio's separate at-least/at-most filter modes. An empty receiving chest with removal
+disabled produces a configuration error instead of a failed simulation. Disposal-only chests never supply ingredients.
+
 #### Using Chests with Inserters
 
 Reference chests in inserter source/sink configurations:

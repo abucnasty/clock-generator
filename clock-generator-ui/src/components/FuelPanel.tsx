@@ -5,6 +5,7 @@ import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
 import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
+import { ChartSwatch } from './BeltChart';
 import { GameName } from './GameName';
 import { InserterStatus, MachineStatus } from 'clock-generator/light';
 import { useChartColors } from '../hooks/useChartColors';
@@ -290,10 +291,10 @@ function FuelClockRow({ inserter, swings, durationTicks, descriptionId }: { inse
     );
 }
 
-function LegendItem({ color, label, opacity = 1 }: { color: string; label: string; opacity?: number }) {
+function LegendItem({ color, label }: { color: string; label: string }) {
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, bgcolor: 'action.hover', borderRadius: 1 }}>
-            <Box sx={{ width: 12, height: 12, bgcolor: color, opacity, borderRadius: 0.25 }} />
+            <ChartSwatch color={color} sx={{ width: 12, height: 12 }} />
             <Typography variant="caption">{label}</Typography>
         </Box>
     );
@@ -349,9 +350,9 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                 <LegendItem color={LEVEL_COLOR} label="Fuel in the machine" />
-                <LegendItem color={WINDOW_COLOR} label="Fuel clock switches the inserter on" opacity={0.6} />
+                <LegendItem color={WINDOW_COLOR} label="Fuel clock switches the inserter on" />
                 <LegendItem color={SWING_COLOR} label="Inserter swings" />
-                <LegendItem color={EMPTY_COLOR} label="No fuel" opacity={0.5} />
+                <LegendItem color={EMPTY_COLOR} label="No fuel" />
             </Box>
 
             <ScrollX label={SCROLL_REGION_NAMES.fuelTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>

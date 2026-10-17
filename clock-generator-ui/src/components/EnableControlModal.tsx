@@ -552,7 +552,7 @@ export function EnableControlFormContent({
                             );
                         })}
 
-                        <Button startIcon={<Add />} onClick={handleAddRange} size="small">
+                        <Button color="inherit" startIcon={<Add />} onClick={handleAddRange} size="small">
                             Add wake window
                         </Button>
 

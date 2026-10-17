@@ -77,13 +77,14 @@ export function configToFormData(imported: Config): ConfigFormData {
             ...(b.strategy !== undefined && { strategy: b.strategy }),
             lanes: b.lanes as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData],
         })),
-        chests: (imported.chests ?? []).map((c: { type?: string; id: number; storage_size?: number; item_filter: string | { item_name: string; request_count: number }[] }): ChestFormData => {
+        chests: (imported.chests ?? []).map((c: { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; item_filter: string | { item_name: string; request_count: number }[] }): ChestFormData => {
             // Handle infinity chest
             if (c.type === ChestType.INFINITY_CHEST) {
                 return {
                     type: ChestType.INFINITY_CHEST,
                     id: c.id,
                     _uuid: crypto.randomUUID(),
+                    ...(c.remove_unfiltered_items !== undefined && { remove_unfiltered_items: c.remove_unfiltered_items }),
                     item_filter: (c.item_filter as { item_name: string; request_count: number }[]).map(f => ({
                         item_name: f.item_name,
                         request_count: f.request_count,
@@ -131,7 +132,11 @@ export function formDataToConfig(config: ConfigFormData): Config {
         machines: config.machines.map(toConfig),
         inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => { void _f; return toConfig(ins); }),
         belts: config.belts.map(toConfig),
-        chests: config.chests.map(toConfig),
+        chests: config.chests.map(({ _chest_settings: memory, ...chest }) => {
+            void memory;
+            return toConfig(chest.type === ChestType.INFINITY_CHEST
+                ? { ...chest, item_filter: chest.item_filter.filter(filter => filter.item_name.trim() !== '') } : chest);
+        }),
         ...(config.drills && {
             drills: { ...config.drills, configs: config.drills.configs.map(toConfig) },
         }),

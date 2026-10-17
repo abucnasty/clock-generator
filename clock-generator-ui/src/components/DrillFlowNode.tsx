@@ -1,8 +1,9 @@
 import { useTheme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import type { NodeProps, Node } from '@xyflow/react';
 import { Box, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
+import { FlowNodeHandles } from './FlowNodeHandles';
 import { GameName } from './GameName';
 import { DRILL_NODE_WIDTH, type DrillNodeData } from '../utils/buildFlowGraph';
 import { entityLabel } from '../utils/entityLabel';
@@ -19,7 +20,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: tokens.surface.inset,
+                    bgcolor: tokens.surface.page,
                     border: `2px solid ${tokens.role.orange.main}`,
                     borderRadius: 1,
                     display: 'flex',
@@ -29,7 +30,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     cursor: 'pointer',
                     width: DRILL_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: tokens.hover.panel, borderColor: tokens.role.orange.main },
+                    '&:hover': { bgcolor: tokens.surface.page, borderColor: tokens.role.orange.main },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
@@ -37,6 +38,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
+                            className="flow-node-title"
                             sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: tokens.role.orange.main }}
                         >
                             {entityLabel('drill', data.drillId)}
@@ -69,7 +71,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     </Box>
                 </Box>
             </Box>
-            <Handle type="source" position={Position.Right} />
+            <FlowNodeHandles data={data} />
         </>
     );
 }

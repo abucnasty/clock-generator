@@ -9,7 +9,7 @@ import {
     Typography,
     Tooltip,
 } from '@mui/material';
-import type { SerializableMachineFacts } from 'clock-generator/browser';
+import type { MachineTargetRate, SerializableMachineFacts } from 'clock-generator/browser';
 import type { ReactNode } from 'react';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
@@ -21,9 +21,11 @@ interface MachineFactsAccordionProps {
     facts: SerializableMachineFacts | null;
     error?: string | null;
     headingLevel?: 3 | 4;
+    inline?: boolean;
+    targetRate?: MachineTargetRate;
 }
 
-export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineId }: MachineFactsAccordionProps) {
+export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineId, inline = false, targetRate }: MachineFactsAccordionProps) {
     const [expanded, setExpanded] = useBuildSection(`machine-facts:${machineId}`);
     if (error) {
         return (
@@ -37,44 +39,14 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
         return null;
     }
 
-    return (
-        <Accordion
-            expanded={expanded}
-            onChange={(_, open) => setExpanded(open)}
-            // Under the List's section heading, or the Diagram dialog's title.
-            slotProps={{ heading: { component: `h${headingLevel}` } }}
-            sx={{
-                mt: 1,
-                bgcolor: 'background.paper',
-                '&:before': { display: 'none' },
-                boxShadow: 1,
-            }}
-            disableGutters
-        >
-            <AccordionSummary
-                expandIcon={<ExpandMore />}
-                sx={{
-                    minHeight: 40,
-                    '& .MuiAccordionSummary-content': {
-                        my: 0.5,
-                        alignItems: 'center',
-                        gap: 1,
-                    },
-                }}
-            >
-                <Typography variant="body2" component="span" color="text.secondary">
-                    Machine Facts
-                </Typography>
-                <Tooltip title={`The most this machine can make: ${facts.output_rate_per_second}/s`} arrow describeChild>
-                    <Chip
-                        size="small"
-                        label={maxRateLabel(facts.output_rate_per_second)}
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem' }}
-                    />
-                </Tooltip>
-            </AccordionSummary>
+    const share = targetRate?.crafting_share ?? 1;
+    const outputRate = targetRate?.output_rate_per_second ?? facts.output_rate_per_second;
+    const rateContext = targetRate ? 'planned at target' : 'at maximum crafting speed';
+    const details = (
             <AccordionDetails sx={{ pt: 0 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    {targetRate ? 'Planned rates at target, per machine in one copy of the build.' : 'Maximum rates while crafting continuously.'}
+                </Typography>
                 {/* Output Section */}
                 <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
@@ -94,10 +66,16 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
                             value={formatNumberText(facts.output_per_craft)}
                         />
                         <FactItem
-                            label="Max rate"
-                            value={`${formatNumberText(facts.output_rate_per_second)}/s`}
-                            tooltip={`${facts.output_rate_per_second}/s`}
+                            label={targetRate ? 'At-target rate' : 'Max rate'}
+                            value={`${formatNumberText(outputRate)}/s`}
+                            tooltip={`${outputRate}/s ${rateContext}`}
                         />
+                        {targetRate && <FactItem
+                            label="Capacity used"
+                            value={<Box component="span" sx={{ color: share > 1 ? 'warning.main' : 'inherit' }}>
+                                {formatNumberText(share * 100, { maxDecimals: 1 })}%{share > 1 ? ' — above max' : ''}
+                            </Box>}
+                        />}
                         <FactItem
                             label="Output Block"
                             value={facts.output_block_size.toString()}
@@ -144,9 +122,9 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                             <FactItem
                                 icon={facts.fuel.item_name}
-                                label="Fuel"
-                                value={<>{`${formatNumberText(facts.fuel.consumption_rate_per_second)}/s `}<GameName id={facts.fuel.item_name} /></>}
-                                tooltip={`${facts.fuel.consumption_rate_per_second}/s while crafting`}
+                                label={targetRate ? 'Fuel at target' : 'Fuel'}
+                                value={<>{`${formatNumberText(facts.fuel.consumption_rate_per_second * share)}/s `}<GameName id={facts.fuel.item_name} /></>}
+                                tooltip={`${facts.fuel.consumption_rate_per_second * share}/s ${targetRate ? 'averaged at target' : 'while crafting'}`}
                             />
                             <FactItem
                                 label="Fuel Per Craft"
@@ -166,7 +144,7 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                                 <Input sx={{ fontSize: 18, color: 'text.secondary' }} />
                                 <Typography variant="subtitle2" color="text.secondary">
-                                    Inputs
+                                    {targetRate ? 'Inputs at target' : 'Inputs'}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -187,11 +165,11 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
                                         <Typography variant="body2" sx={{ minWidth: 120 }}>
                                             <GameName id={input.item_name} />
                                         </Typography>
-                                        <Tooltip title={`${input.consumption_rate_per_second}/s`} arrow describeChild>
+                                        <Tooltip title={`${input.consumption_rate_per_second * share}/s ${rateContext}`} arrow describeChild>
                                             <span>
                                                 <Chip
                                                     size="small"
-                                                    label={`${formatNumberText(input.consumption_rate_per_second)}/s`}
+                                                    label={`${formatNumberText(input.consumption_rate_per_second * share)}/s`}
                                                     variant="outlined"
                                                     sx={{ fontSize: '0.7rem' }}
                                                 />
@@ -224,6 +202,47 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
                     </>
                 )}
             </AccordionDetails>
+    );
+    if (inline) return details;
+
+    return (
+        <Accordion
+            expanded={expanded}
+            onChange={(_, open) => setExpanded(open)}
+            // Under the List's section heading, or the Diagram dialog's title.
+            slotProps={{ heading: { component: `h${headingLevel}` } }}
+            sx={{
+                mt: 1,
+                bgcolor: 'background.paper',
+                '&:before': { display: 'none' },
+                boxShadow: 1,
+            }}
+            disableGutters
+        >
+            <AccordionSummary
+                expandIcon={<ExpandMore />}
+                sx={{
+                    minHeight: 40,
+                    '& .MuiAccordionSummary-content': {
+                        my: 0.5,
+                        alignItems: 'center',
+                        gap: 1,
+                    },
+                }}
+            >
+                <Typography variant="body2" component="span" color="text.secondary">
+                    Machine Facts
+                </Typography>
+                <Tooltip title={`${targetRate ? 'Planned output at target' : 'The most this machine can make'}: ${outputRate}/s`} arrow describeChild>
+                    <Chip
+                        size="small"
+                        label={targetRate ? `at target ${formatNumberText(outputRate)}/s` : maxRateLabel(outputRate)}
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem' }}
+                    />
+                </Tooltip>
+            </AccordionSummary>
+            {details}
         </Accordion>
     );
 }
@@ -238,9 +257,12 @@ interface FactItemProps {
 const FACT_DESCRIPTIONS: Record<string, string> = {
     'Output Item': 'Output item name',
     'Fuel': 'Fuel items burned per second while crafting',
+    'Fuel at target': 'Average fuel demand per second at the requested target',
     'Fuel Per Craft': 'Fuel items burned per craft',
     'Amount Per Craft': 'Amount produced per craft (including productivity)',
     'Max rate': 'Most this machine can make, in items per second',
+    'At-target rate': 'Planned output per second for one machine in one copy of the build',
+    'Capacity used': 'Planned demand as a percentage of this machine’s maximum capacity; above 100% exceeds its capacity',
     'Output Block': 'How many output items the machine holds before it stops crafting until some are taken out',
     'Craft': 'Ticks required per craft',
     'Bonus': 'Ticks per bonus craft from productivity',

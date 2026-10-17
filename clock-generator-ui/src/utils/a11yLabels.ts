@@ -97,12 +97,6 @@ export function termsHelpName(column: string): string {
     return `Terms for ${column}`;
 }
 
-/** The tab lists of Results' Details and Developer tools sections */
-export const TABLIST_NAMES = {
-    details: 'Details',
-    developerTools: 'Developer tools',
-} as const;
-
 /** The names of the charts drawn on a canvas or in an SVG (no text of their own), each naming the clock it shows */
 export const CHART_NAMES = {
     /** "Inserter 3 state timeline, 17 changes" */

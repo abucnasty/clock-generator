@@ -95,3 +95,10 @@ describe("sidecar version convention", () => {
         expect(changelog.match(/^Version: (\S+)/m)?.[1]).toBe(LATEST_SIDECAR_VERSION);
     });
 });
+
+it('asks older sidecar imports with infinity chests to review settings, without guessing the missing flag', () => {
+    const chests = [{ type: 'infinity-chest', id: 1, item_filter: [{ item_name: 'iron-plate', request_count: 200 }] }];
+    expect(Option.toNullable(checkSidecarImport('0.7.1', [], undefined, chests))).toContain('Remove unfiltered items was not exported');
+    expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, chests)).toEqual(Option.none());
+    expect(chests[0]).not.toHaveProperty('remove_unfiltered_items');
+});

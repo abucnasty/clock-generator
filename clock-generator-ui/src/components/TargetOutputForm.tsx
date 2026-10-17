@@ -1,10 +1,10 @@
-import { Box } from '@mui/material';
-import { Panel } from './Panel';
+import { Box, Paper, Typography } from '@mui/material';
+import { HelpButton } from './HelpButton';
 import { copiesProblem } from '../utils/copiesProblem';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
-import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
+import { itemsPerSecondHelper } from '../utils/numberText';
 import { ELEMENT_IDS } from '../utils/firstProblem';
 import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
 import { targetRateLineOf, type MachinesMax } from '../utils/targetRateLimit';
@@ -34,14 +34,19 @@ export function TargetOutputForm({
 }: TargetOutputFormProps) {
     return (
         // the heading is focused by script when the intro card or a dialog that held the focus goes
-        <Panel data-build-anchor="target" title="Target Output" focusableTitleId={TARGET_OUTPUT_HEADING_ID}>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Paper component="section" variant="outlined" data-build-anchor="target" aria-labelledby={TARGET_OUTPUT_HEADING_ID}
+            sx={{ mb: 2, p: 1.5, containerType: 'inline-size', containerName: 'target-output' }}>
+            <Box sx={{ display: 'grid', gap: 1.5, alignItems: 'start', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                '@container target-output (min-width: 700px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 160px 110px', alignItems: 'center' } }}>
+                <Typography component="h2" variant="subtitle1" id={TARGET_OUTPUT_HEADING_ID} tabIndex={-1}
+                    sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container target-output (min-width: 700px)': { gridColumn: 'auto' } }}>Target Output</Typography>
                 <ItemSelector
                     kind="recipe"
                     inputId={ELEMENT_IDS.targetRecipe}
-                    sx={{ flex: 1, minWidth: 'min(300px, 100%)' }}
-                    minWidth={300}
-                    size="medium"
+                    sx={{ minWidth: 0, gridColumn: '1 / -1', '@container target-output (min-width: 700px)': { gridColumn: 'auto' } }}
+                    minWidth={0}
+                    dropdownMinWidth={300}
+                    size="small"
                     options={recipeNames}
                     value={recipe || null}
                     onChange={(newValue) => onRecipeChange(newValue || '')}
@@ -59,10 +64,11 @@ export function TargetOutputForm({
                     onValueChange={(val) => onItemsPerSecondChange(parseFloat(val?.toString() || '') || 0)}
                     min={0}
                     step={0.1}
-                    sx={{ width: 220 }}
+                    sx={{ minWidth: 0 }}
+                    size="small"
                     required
                     error={itemsPerSecond <= 0}
-                    helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : itemsPerSecondHelper(itemsPerSecond, copies)}
+                    helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : undefined}
                     problem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax })}
                 />
                 <NumberField
@@ -72,14 +78,22 @@ export function TargetOutputForm({
                     onValueChange={(val) => onCopiesChange(val ?? 0)}
                     min={0}
                     step={0.5}
-                    sx={{ width: 200 }}
+                    sx={{ minWidth: 0 }}
+                    size="small"
                     required
                     error={Boolean(copiesProblem(copies))}
-                    helperText={COPIES_HELPER}
                     problem={copiesProblem(copies)}
                     preserveInputOnBlur={Boolean(copiesProblem(copies))}
                 />
             </Box>
-        </Panel>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 0.75, mt: 0.5 }}>
+                <Box component="span">{itemsPerSecondHelper(itemsPerSecond, copies)}</Box>
+                <HelpButton label="About copies">
+                    <Typography variant="body2" sx={{ mb: 1 }}>Describe one setup in the Build section: its machines, inserters, belts, and chests. Copies is how many identical setups you want to model.</Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Items per Second is the combined target for all copies. For example, 250 items/s with 5 copies means each setup makes 50 items/s.</Typography>
+                    <Typography variant="body2">Copies may include a partial setup, such as 0.5 or 2.25. You do not need to duplicate the rows for each copy.</Typography>
+                </HelpButton>
+            </Typography>
+        </Paper>
     );
 }

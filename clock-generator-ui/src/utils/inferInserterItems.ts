@@ -21,7 +21,7 @@ export function sourceItemsOf(
         const c = chests.find(c => c.id === source.id);
         if (c) {
             if (isBufferChest(c) && c.item_filter) return [c.item_filter];
-            if (isInfinityChest(c)) return c.item_filter.map(f => f.item_name).filter(Boolean);
+            if (isInfinityChest(c)) return c.item_filter.filter(filter => filter.request_count > 0).map(f => f.item_name).filter(Boolean);
         }
     }
     return [];
@@ -36,14 +36,19 @@ function getSinkNeeds(
 ): string[] {
     if (sink.type === 'machine') {
         const m = machines.find(m => m.id === sink.id);
-        if (m?.recipe && getRecipeInfo) return getRecipeInfo(m.recipe)?.ingredients ?? [];
+        if (m?.recipe && getRecipeInfo) {
+            const ingredients = getRecipeInfo(m.recipe)?.ingredients ?? [];
+            // Fuel is accepted separately from recipe inputs, including recipes that produce their own nutrients.
+            const fuel = m.fuel ?? (m.type === 'biochamber' ? 'nutrients' : undefined);
+            return [...new Set([...ingredients, ...(fuel ? [fuel] : [])])];
+        }
     } else if (sink.type === 'belt') {
         return sourceItems;
     } else if (sink.type === 'chest') {
         const c = chests.find(c => c.id === sink.id);
         if (c) {
             if (isBufferChest(c) && c.item_filter) return [c.item_filter];
-            if (isInfinityChest(c)) return c.item_filter.map(f => f.item_name).filter(Boolean);
+            if (isInfinityChest(c)) return c.remove_unfiltered_items ? sourceItems : c.item_filter.map(f => f.item_name).filter(Boolean);
             return sourceItems;
         }
         return sourceItems;
@@ -64,6 +69,8 @@ export function inferInserterItems(
     getRecipeInfo?: (name: string) => RecipeInfo | null,
 ): string[] {
     const sourceItems = sourceItemsOf(inserter.source, machines, belts, chests, getRecipeInfo);
+    const chest = inserter.sink.type === 'chest' ? chests.find(chest => chest.id === inserter.sink.id) : undefined;
+    if (chest && isInfinityChest(chest) && !chest.remove_unfiltered_items && !chest.item_filter.some(filter => filter.item_name)) return [];
     const sinkNeeds = getSinkNeeds(inserter.sink, sourceItems, machines, chests, getRecipeInfo);
 
     if (sinkNeeds.length === 0) return sourceItems;
@@ -78,6 +85,8 @@ export function itemsAround(inserter: InserterFormData, machines: MachineFormDat
         if (ref.type === 'machine') {
             const machine = machines.find(m => m.id === ref.id);
             if (machine?.recipe) getRecipeInfo?.(machine.recipe)?.ingredients.forEach(item => items.add(item));
+            const fuel = machine?.fuel ?? (machine?.type === 'biochamber' ? 'nutrients' : undefined);
+            if (fuel) items.add(fuel);
         }
     }
     return [...items];

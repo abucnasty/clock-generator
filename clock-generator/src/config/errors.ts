@@ -178,6 +178,8 @@ export class ConfigValidationError extends Error {
 export type InserterCoverageIssueKind = 'missing_input_inserter' | 'missing_output_inserter';
 
 export type InserterFixOption =
+    | { type: 'existing_connection'; endpoint_type: 'machine' | 'belt' | 'chest'; endpoint_id: number; item_name: string }
+    | { type: 'review_filters'; inserter_id: number; item_name: string }
     | { type: 'machine_to_machine'; source_machine_id: number; item_name: string }
     | { type: 'add_lane_to_existing_belt'; belt_id: number; item_name: string }
     | { type: 'new_belt'; item_name: string }
@@ -188,6 +190,7 @@ export interface InserterCoverageIssue {
     machine_id: number;
     recipe: string;
     item_name: string;
+    is_fuel?: boolean;
     fix_options: InserterFixOption[];
 }
 

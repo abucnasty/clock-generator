@@ -3,6 +3,8 @@ import type { ConfigFormData } from '../utils/configForm/formData';
 import { entersEditingDialog, isInOtherDialog, isTextField, isUndoShortcut } from '../utils/undoKeys';
 import {
     createUndoEntry,
+    describeConfigEdit,
+    sameForm,
     settleUndoEntry,
     undoMessageInput,
     undoOutcome,
@@ -39,16 +41,17 @@ function returnTarget(record: ReturnFocus): HTMLElement | null {
 }
 
 /**
- * The safety net for the actions that throw part of the build away: each says what it did in a message with an Undo
+ * The safety net for build edits: each says what it did in a message with an Undo
  * button, which puts the whole form back as it was just before. Ctrl+Z (Cmd+Z) does the same while Undo is offered,
  * outside a text field and an editing dialog. There is one slot, and no timer: the offer lasts until another action
  * replaces it, the message is closed, an editing dialog opens, the player starts a check or a generation or opens
- * another build, or the form changes some other way, since putting the old form back would also throw that change away.
+ * another build. Ordinary field edits replace the offer too, with rapid typing in one input grouped into one edit.
  */
 export function useUndo(
     config: ConfigFormData,
     setConfig: React.Dispatch<React.SetStateAction<ConfigFormData>>,
     isLoaded: boolean,
+    buildId = 'active-build',
 ) {
     const notify = useNotify();
     const dismiss = useDismissMessage();
@@ -61,6 +64,9 @@ export function useUndo(
     const isLoadedRef = useRef(isLoaded);
     const entryRef = useRef(entry);
     const counterRef = useRef(0);
+    const observedRef = useRef({ config, isLoaded, buildId });
+    const undoneFormRef = useRef<ConfigFormData | null>(null);
+    const typingRef = useRef<{ id: number; field: Element; key: string; at: number } | null>(null);
     // the message showing the entry, and where focus goes from it
     const messageIdRef = useRef<number | null>(null);
     const returnRef = useRef<ReturnFocus | null>(null);
@@ -71,11 +77,6 @@ export function useUndo(
         isLoadedRef.current = isLoaded;
     }, [config, isLoaded]);
 
-    // adjusted while rendering, as React suggests for state that follows other state
-    const settled = settleUndoEntry(entry, config);
-    if (settled !== entry) {
-        setEntry(settled);
-    }
     useEffect(() => {
         entryRef.current = entry;
         if (entry === null) revertRef.current = null;
@@ -88,6 +89,7 @@ export function useUndo(
 
     const { offerUndo, withdrawUndo, undo } = useMemo(() => {
         const show = (next: UndoEntry | null, record: ReturnFocus | null, deferAnnouncement = false) => {
+            entryRef.current = next;
             setEntry(next);
             if (next === null) {
                 if (messageIdRef.current !== null) dismiss(messageIdRef.current);
@@ -100,7 +102,10 @@ export function useUndo(
                     hint: UNDO_HINT,
                     onUndo: () => undo(next.id),
                     // closed, or replaced by another message: the offer goes with it
-                    onClose: () => setEntry((current) => (current?.id === next.id ? null : current)),
+                    onClose: () => {
+                        if (entryRef.current?.id === next.id) entryRef.current = null;
+                        setEntry((current) => (current?.id === next.id ? null : current));
+                    },
                     returnFocus: () => (forThis ? returnTarget(forThis) : null),
                 }),
                 ...(deferAnnouncement ? { deferAnnouncement: true } : {}),
@@ -117,6 +122,8 @@ export function useUndo(
             if (!outcome) return;
             if (returnRef.current) returnRef.current.undone = true;
             const revert = revertRef.current?.id === id ? revertRef.current.revert : null;
+            undoneFormRef.current = outcome.form;
+            typingRef.current = null;
             if (revert) {
                 revert(outcome.form);
             } else {
@@ -164,10 +171,67 @@ export function useUndo(
          * owner, 2026-10-14), and for opening another build, which replaces the form. The message goes with it, and
          * Ctrl/Cmd+Z is the browser's again.
          */
-        const withdrawUndo = () => setEntry(null);
+        const withdrawUndo = () => {
+            entryRef.current = null;
+            typingRef.current = null;
+            setEntry(null);
+        };
 
         return { offerUndo, withdrawUndo, undo };
     }, [notify, dismiss, announceMessage, setConfig]);
+
+    // One owner catches every persisted configuration edit, including new inline controls and both diagram views.
+    // Explicit offers made just before an action retain their detailed messages and whole-build restore callbacks.
+    useEffect(() => {
+        const previous = observedRef.current;
+        observedRef.current = { config, isLoaded, buildId };
+        if (config === previous.config && buildId === previous.buildId) return;
+        const current = entryRef.current;
+        // A guarded replacement may capture edits newer than the last React commit. Its explicit
+        // snapshot is authoritative even when it differs from the previously observed form.
+        const explicitlyOffered = current !== null && current.after === undefined;
+        if (undoneFormRef.current === config) {
+            undoneFormRef.current = null;
+            return;
+        }
+        undoneFormRef.current = null;
+        if (explicitlyOffered) {
+            if (buildId === previous.buildId && sameForm(config, current.before)) {
+                withdrawUndo();
+                return;
+            }
+            const settled = settleUndoEntry(current, config);
+            entryRef.current = settled;
+            setEntry(settled);
+            typingRef.current = null;
+            return;
+        }
+        if (buildId !== previous.buildId || !previous.isLoaded || !isLoaded) {
+            withdrawUndo();
+            return;
+        }
+        if (sameForm(config, previous.config)) return;
+
+        const description = describeConfigEdit(previous.config, config);
+        const field = document.activeElement;
+        const at = Date.now();
+        const typing = typingRef.current;
+        if (current && typing?.id === current.id && typing.field === field && typing.key === description.key && at - typing.at < 900 && isTextField(field)) {
+            const grouped = { ...current, after: config };
+            entryRef.current = grouped;
+            setEntry(grouped);
+            typing.at = at;
+            return;
+        }
+        offerUndo(description.message, { snapshot: previous.config });
+        const offered = entryRef.current;
+        if (offered) {
+            const settled = { ...offered, after: config };
+            entryRef.current = settled;
+            setEntry(settled);
+            typingRef.current = field && isTextField(field) ? { id: offered.id, field, key: description.key, at } : null;
+        }
+    }, [config, isLoaded, buildId, offerUndo, withdrawUndo]);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
@@ -188,6 +252,8 @@ export function useUndo(
                     announce(UNDO_WITHDRAWN_MESSAGE);
                 }
                 setEntry(null);
+                entryRef.current = null;
+                typingRef.current = null;
                 return;
             }
             const record = returnRef.current;

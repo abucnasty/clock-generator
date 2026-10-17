@@ -84,6 +84,7 @@ export type {
 
 export {
     validateInserterCoverage,
+    createInserterCoverageValidator,
     assertInserterCoverage,
 } from './config/inserter-coverage-validator';
 
@@ -223,6 +224,10 @@ export {
 // Transfer History (for visualization)
 // ============================================================================
 
+export { recordSimulationTimeline } from './crafting/record-timeline';
+export type { RecordTimelineRequest } from './crafting/record-timeline';
+export type { TimelineRecording, TimelineEntity, TimelineEvent, TimelineSeries, TimelineValue } from './crafting/timeline-recording';
+
 export {
     SerializableTransferHistory,
     SerializableTransferEntry,
@@ -284,6 +289,8 @@ export {
     Machine,
     ComputeMachineFactsParams,
 } from './entities/machine';
+export { computeMachineTargetRates } from './crafting/machine-target-rates';
+export type { MachineTargetRate } from './crafting/machine-target-rates';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
 export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
 export { deadlockRiskNote } from './crafting/deadlock-risk';

@@ -1,8 +1,10 @@
 import { useTheme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { flowNodeTitleColor } from '../theme/flowDiagram';
+import type { NodeProps, Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
+import { FlowNodeHandles } from './FlowNodeHandles';
 import { GameName } from './GameName';
 import { ENTITY_NODE_WIDTH, type EntityNodeData, type MachineNodeParams } from '../utils/buildFlowGraph';
 import { useMachineFacts } from '../hooks/useMachineFacts';
@@ -20,7 +22,7 @@ function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
     const { facts } = useMachineFacts(params);
     if (!facts) return null;
     return (
-        <Box sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${tokens.control.edge}`, width: '100%' }}>
+        <Box className="flow-node-rates" sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${tokens.control.edge}`, width: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                 <FactorioIcon name={facts.output_item} size={14} titled />
                 <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: tokens.role.orange.main, lineHeight: 1.2 }}>
@@ -49,12 +51,9 @@ type EntityFlowNodeType = Node<EntityNodeData, 'entityNode'>;
 
 export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
     const tokens = themeTokens(useTheme());
-    const borderRole = tokens.role[data.entityType === 'machine' ? 'orange' : data.entityType === 'belt' ? 'blue' : 'green'];
+    const role = data.entityType === 'machine' ? 'orange' : data.entityType === 'belt' ? 'blue' : 'green';
+    const borderRole = tokens.role[role];
     const borderColor = borderRole.main;
-    // a half takes only its own side's connections: the `in` half feeds, the `out` half receives
-    const hasTarget = data.half !== 'in';
-    const hasSource = data.half !== 'out';
-
     return (
         <>
             <Box
@@ -62,7 +61,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: tokens.surface.panel,
+                    bgcolor: tokens.surface.page,
                     border: `2px solid ${borderColor}`,
                     borderRadius: 1,
                     display: 'flex',
@@ -70,7 +69,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     cursor: 'pointer',
                     width: ENTITY_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: tokens.hover.panel },
+                    '&:hover': { bgcolor: tokens.surface.page },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -78,12 +77,13 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
+                            className="flow-node-title"
                             title={data.halfTitle}
                             sx={{
                                 fontWeight: 700,
                                 lineHeight: 1.2,
                                 display: 'block',
-                                color: borderColor,
+                                color: flowNodeTitleColor(tokens, role),
                                 fontSize: FLOW_NODE_FONT_SIZE,
                             }}
                         >
@@ -92,6 +92,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                         {data.sublabel && (
                             <Typography
                                 variant="caption"
+                                className="flow-node-detail"
                                 title={data.entityType === 'machine' ? undefined : data.sublabel}
                                 sx={{
                                     color: 'text.secondary',
@@ -134,16 +135,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     <MachineDetailsSection params={data.machineParams} />
                 )}
             </Box>
-            {hasTarget && <Handle type="target" position={Position.Left} />}
-            {hasSource && <Handle type="source" position={Position.Right} />}
-            {data.verticalHandles && (
-                <>
-                    <Handle type="target" id="top-in" position={Position.Top} style={{ left: '35%' }} />
-                    <Handle type="source" id="top-out" position={Position.Top} style={{ left: '65%' }} />
-                    <Handle type="source" id="bottom-out" position={Position.Bottom} style={{ left: '35%' }} />
-                    <Handle type="target" id="bottom-in" position={Position.Bottom} style={{ left: '65%' }} />
-                </>
-            )}
+            <FlowNodeHandles data={data} />
         </>
     );
 }

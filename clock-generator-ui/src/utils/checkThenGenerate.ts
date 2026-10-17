@@ -16,7 +16,7 @@ export const CHECK_TEXT = {
     chipFailed: 'Check failed',
     errorTitle: "The build can't be clocked yet",
     planEmpty: 'Check your build to see its swing plan. Generate does this too.',
-    planFailed: 'The last check failed, so there is no swing plan. The reason is at the top of Configure.',
+    planFailed: 'The last check failed, so there is no swing plan. See Build validation in Configure.',
     planOutOfDate: 'You changed the build since this plan was made. Check only (or Generate) makes a new one.',
     cancel: 'Cancel',
     cancelTooltip: 'Stops at once. No clocks you already have are lost.',
@@ -101,7 +101,7 @@ export function decideGenerate({ initialized, generating, checkStatus, problems,
 
 type CheckOnlyDecision = { kind: 'wait' } | { kind: 'show-problems' } | { kind: 'check' };
 
-/** What pressing Check only does: never a view change or a scroll */
+/** What pressing Check only does; the page focuses blocking issues instead of starting an invalid check. */
 export function decideCheckOnly({ initialized, generating, checkStatus, problems }: DecisionInput): CheckOnlyDecision {
     if (!initialized || generating || checkStatus === 'running') {
         return { kind: 'wait' };

@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.8.0
+Date: 2026-10-17
+  Features:
+    - exports the Remove unfiltered items setting of infinity chests, including empty disposal chests
+  Bugfixes:
+    - infinity chest filters are read from their configured settings instead of their current contents
+---------------------------------------------------------------------------------------------------
 Version: 0.7.1
 Date: 2026-10-16
   Bugfixes:

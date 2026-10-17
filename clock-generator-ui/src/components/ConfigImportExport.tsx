@@ -1,4 +1,4 @@
-import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link } from '@mui/icons-material';
+import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
@@ -6,6 +6,8 @@ import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
 import { useDismissMessage, useNotify } from '../hooks/useMessages';
 import { useGameNames } from '../hooks/useGameNames';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
+import type { DisplayScheme } from '../utils/displayPreferences';
 import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
@@ -41,10 +43,19 @@ import type {
 } from '../worker/types';
 import { PasteFromFactorioDialog } from './PasteFromFactorioDialog';
 import { ExamplesDialog } from './ExamplesDialog';
+import { ImportSimplification } from './ImportSimplification';
+import { importReduction, type ImportReduction } from '../utils/importReduction';
+import { formDataToConfig } from '../utils/configForm/configMapping';
 
 const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
+const freshImportSelections = (): ImportSelections => ({ target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
+const THEME_CHOICES = [
+    { scheme: 'dark', label: 'Theme: Dark', icon: DarkModeOutlined },
+    { scheme: 'light', label: 'Theme: Light', icon: LightModeOutlined },
+    { scheme: 'system', label: 'Theme: Auto (device)', icon: BrightnessAutoOutlined },
+] satisfies { scheme: DisplayScheme; label: string; icon: typeof DarkModeOutlined }[];
 
 /** Describe the destination of this exact preview without suggesting a silent rebind or renumber. */
 function crossingText(warning: PasteReferenceWarning): string {
@@ -55,6 +66,10 @@ function crossingText(warning: PasteReferenceWarning): string {
 }
 
 interface PendingImport extends PastedEntities {
+    original?: PendingImport;
+    reduction?: ImportReduction;
+    repeatedSourceKey?: string;
+    originalSelections?: ImportSelections;
     miningProductivityLevel?: number;
     /** The Target Output the paste can fill in, and where it came from; null when it could not tell */
     fill: { values: TargetValues; source: SuggestedTarget['source'] } | null;
@@ -104,6 +119,11 @@ interface ConfigImportExportProps {
      * them with the ⋮ button, which a popover they open can hang from. One with `checked` is a check item.
      */
     toolsMenuItems?: ToolsMenuItem[];
+    /** Place the entry action and global menu in separate toolbar groups. */
+    renderControls?: (paste: ReactNode, menu: ReactNode) => ReactNode;
+    onInstall?: () => void;
+    onCheckOnly?: () => void;
+    checkDisabled?: boolean;
 }
 
 /** A share link made when the ⋮ menu opens, so a click can copy it at once; tagged with the build it was made for */
@@ -143,12 +163,16 @@ export function ConfigImportExport({
     buildName,
     buildTitle,
     toolsMenuItems = [],
+    renderControls, onInstall, onCheckOnly, checkDisabled,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
-    const narrow = useMediaQuery(useTheme().breakpoints.down('sm'));
+    const theme = useTheme();
+    const narrow = useMediaQuery(theme.breakpoints.down('sm'));
+    const compactToolbar = useMediaQuery(theme.breakpoints.down('lg'));
     const notify = useNotify();
     const { recipeLabel, itemLabel } = useGameNames();
+    const { scheme, setScheme } = useDisplayPreferences();
     const dismiss = useDismissMessage();
     // the last error of opening a build file or loading an example, which goes as soon as the player tries again
     const errorIdRef = useRef<number | null>(null);
@@ -165,14 +189,7 @@ export function ConfigImportExport({
 
     // State for the import confirmation modal
     const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
-    const [importSelections, setImportSelections] = useState<ImportSelections>({
-        target: false,
-        machines: true,
-        drills: true,
-        inserters: true,
-        belts: true,
-        chests: true,
-    });
+    const [importSelections, setImportSelections] = useState<ImportSelections>(freshImportSelections);
 
     // Consent belongs to this exact preview. Identity checks invalidate it in the same render as any change.
     const [acknowledged, setAcknowledged] = useState<{
@@ -188,10 +205,47 @@ export function ConfigImportExport({
     const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
     const canImport = hasImportWork && !preview?.geometryProblem && (!preview?.crossings.length || acknowledgedCurrent);
 
+    // Simplification can replace a complete import, never a category the user chose to retain.
+    const canSimplify = pendingImport && !pendingImport.reduction && canImport && pendingImport.fill && prospectiveTarget.recipe !== ''
+        && preview?.counts.every(row => (row.incoming === 0 || row.replacing) && (row.current === 0 || row.replacing));
+    let simplificationConfig: Config | null = null;
+    if (canSimplify && pendingImport) {
+        const base = formDataToConfig(currentForm);
+        simplificationConfig = {
+            ...base,
+            target_output: prospectiveTarget,
+            machines: pendingImport.machines,
+            inserters: pendingImport.inserters,
+            belts: pendingImport.belts,
+            chests: pendingImport.chests,
+            ...(pendingImport.drills.length > 0 && { drills: {
+                mining_productivity_level: pendingImport.miningProductivityLevel ?? base.drills?.mining_productivity_level ?? 0,
+                configs: pendingImport.drills,
+            } }),
+        };
+    }
+
+    const forceFullImport = simplificationConfig !== null && pendingImport?.repeatedSourceKey === JSON.stringify(simplificationConfig);
+
     // the Paste from Factorio dialog, open when the clipboard could not be used, with why
-    const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null; id: number } | null>(null);
+    const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null; id: number; session: number } | null>(null);
+    const pasteRequestRef = useRef(0);
+    const pasteBusyRef = useRef(false);
     const promptCountRef = useRef(0);
-    const showPastePrompt = useCallback((prompt: PastePrompt) => setPasteDialog({ prompt, id: ++promptCountRef.current }), []);
+    const showPastePrompt = useCallback((prompt: PastePrompt) => {
+        const id = ++promptCountRef.current;
+        const session = pasteRequestRef.current;
+        setPasteDialog(current => ({ prompt, id, session: current?.session ?? session }));
+    }, []);
+    const resetPasteFlow = useCallback(() => {
+        // A closed or replaced paste must not be reopened by an older clipboard read or engine response.
+        pasteRequestRef.current++;
+        pasteBusyRef.current = false;
+        setPendingImport(null);
+        setPasteDialog(null);
+        setAcknowledged(null);
+        setImportSelections(freshImportSelections());
+    }, []);
     // what had the focus when the confirm dialog opened, for it to go back to; see handleConfirmExited
     const confirmOpenerRef = useRef<Element | null>(null);
     const [examplesOpen, setExamplesOpen] = useState(false);
@@ -280,7 +334,8 @@ export function ConfigImportExport({
      * Reads an export of the Sidecar mod and opens the confirm dialog for it. Returns why it could not, for the Paste
      * from Factorio dialog to say, or null once the confirm dialog is open.
      */
-    const startPaste = useCallback(async (text: string): Promise<PastePrompt | null> => {
+    const startPaste = useCallback(async (text: string, request = ++pasteRequestRef.current): Promise<PastePrompt | null> => {
+        if (request !== pasteRequestRef.current) return null;
         const read = readSidecarExport(text);
         if (read.kind === 'problem') {
             return PASTE_PROMPTS[read.problem];
@@ -299,9 +354,11 @@ export function ConfigImportExport({
                 suggested_target: read.suggestedTarget,
             });
         } catch (error) {
+            if (request !== pasteRequestRef.current) return null;
             console.error('Paste from Factorio error:', error);
             return invalidExportPrompt(error instanceof Error ? error.message : 'Unknown error');
         }
+        if (request !== pasteRequestRef.current) return null;
         const suggestion = Option.toNullable(validated.suggested_target);
         const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source } : null;
         confirmOpenerRef.current = document.activeElement;
@@ -350,6 +407,8 @@ export function ConfigImportExport({
     // the clipboard is read in the click itself: a browser refuses a read after an await or a timer
     const handlePasteFromFactorio = useCallback(() => {
         closeLastError();
+        resetPasteFlow();
+        const request = pasteRequestRef.current;
         let reading: Promise<string>;
         try {
             reading = navigator.clipboard.readText();
@@ -359,21 +418,21 @@ export function ConfigImportExport({
         }
         reading.then(
             async (text) => {
-                const prompt = await startPaste(text);
-                if (prompt) {
-                    showPastePrompt(prompt);
-                }
+                if (request !== pasteRequestRef.current) return;
+                const prompt = await startPaste(text, request);
+                if (request === pasteRequestRef.current && prompt) showPastePrompt(prompt);
             },
-            () => showPastePrompt(PASTE_PROMPTS.unreadable),
+            () => { if (request === pasteRequestRef.current) showPastePrompt(PASTE_PROMPTS.unreadable); },
         );
-    }, [closeLastError, startPaste, showPastePrompt]);
+    }, [closeLastError, startPaste, showPastePrompt, resetPasteFlow]);
 
     // a paste into the dialog's box, or Continue; one at a time
-    const pasteBusyRef = useRef(false);
     const handlePasteSubmit = useCallback(async (text: string) => {
         if (pasteBusyRef.current) return;
         pasteBusyRef.current = true;
-        const prompt = await startPaste(text);
+        const request = ++pasteRequestRef.current;
+        const prompt = await startPaste(text, request);
+        if (request !== pasteRequestRef.current) return;
         pasteBusyRef.current = false;
         if (prompt) {
             showPastePrompt(prompt);
@@ -382,7 +441,7 @@ export function ConfigImportExport({
         }
     }, [startPaste, showPastePrompt]);
 
-    const handleClosePasteDialog = useCallback(() => setPasteDialog(null), []);
+    const handleClosePasteDialog = resetPasteFlow;
 
     const handlePickExample = useCallback(async (example: ExampleBuild) => {
         setExamplesOpen(false);
@@ -425,7 +484,7 @@ export function ConfigImportExport({
             chests && countOf(pendingImport.chests.length, 'chest', 'chests'),
         ].filter((part) => part !== false);
 
-        setPendingImport(null);
+        resetPasteFlow();
 
         // one Undo for the whole paste, taken before any of it is applied; its message says what was imported
         onUndoable(describePaste(parts));
@@ -452,11 +511,9 @@ export function ConfigImportExport({
             onReplaceChests(pendingImport.chests);
         }
         onBuildReplaced();
-    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable]);
+    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable, resetPasteFlow]);
 
-    const handleCancelImport = useCallback(() => {
-        setPendingImport(null);
-    }, []);
+    const handleCancelImport = resetPasteFlow;
 
     // the dialog puts the focus back itself: on its opener, unless an import took that off the page (the intro card's
     // Paste button, or the paste box), then on the Target Output heading rather than the page's body
@@ -522,109 +579,142 @@ export function ConfigImportExport({
         onBuildReplaced();
     }, [handleMenuClose, onReset, onBuildReplaced, onUndoable]);
 
+    const pasteButton = <>
+        {/* the way in: below 600px it says only "Paste", and keeps its full name */}
+        <Button
+            onClick={handlePasteFromFactorio}
+            variant={pasteIsNextStep ? 'contained' : 'outlined'}
+            color={pasteIsNextStep ? 'secondary' : 'inherit'}
+            size="small"
+            startIcon={narrow ? undefined : <ContentPaste />}
+            aria-label={narrow ? INTRO_BUTTONS.paste : undefined}
+            sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
+            {narrow ? 'Paste' : INTRO_BUTTONS.paste}
+        </Button>
+    </>;
+    const menuButton = <>
+        {/* the tooltip stays in the header, so its text is inside the banner landmark */}
+        <Tooltip title="More options" slotProps={{ popper: { disablePortal: true } }}>
+            <IconButton
+                ref={menuButtonRef}
+                onClick={handleMenuOpen}
+                size="small"
+                color="inherit"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+            >
+                <MoreVert />
+            </IconButton>
+        </Tooltip>
+    </>;
+
     return (
         <>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                {/* the way in: below 600px it says only "Paste", and keeps its full name */}
-                <Button
-                    onClick={handlePasteFromFactorio}
-                    variant={pasteIsNextStep ? 'contained' : 'outlined'}
-                    color={pasteIsNextStep ? 'secondary' : 'inherit'}
-                    size="small"
-                    startIcon={narrow ? undefined : <ContentPaste />}
-                    aria-label={narrow ? INTRO_BUTTONS.paste : undefined}
-                    sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
-                >
-                    {narrow ? 'Paste' : INTRO_BUTTONS.paste}
-                </Button>
-                {/* the tooltip stays in the header, so its text is inside the banner landmark */}
-                <Tooltip title="More options" slotProps={{ popper: { disablePortal: true } }}>
-                    <IconButton
-                        ref={menuButtonRef}
-                        onClick={handleMenuOpen}
-                        size="small"
-                        color="inherit"
-                        aria-haspopup="menu"
-                        aria-expanded={menuOpen}
+            {renderControls ? renderControls(pasteButton, menuButton) : (
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>{pasteButton}{menuButton}</Box>
+            )}
+            <Menu
+                anchorEl={menuAnchorEl}
+                open={menuOpen}
+                onClose={handleMenuClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+                // The sticky header keeps the opener in place without locking page scrolling.
+                disableScrollLock
+                slotProps={{
+                    paper: { role: 'region', 'aria-label': BUTTON_NAMES.moreOptions },
+                    list: { 'aria-label': BUTTON_NAMES.moreOptions },
+                }}
+            >
+                {compactToolbar && onCheckOnly && <MenuItem disabled={checkDisabled}
+                    onClick={() => { handleMenuClose(); onCheckOnly(); }}>
+                    <ListItemIcon><Check fontSize="small" /></ListItemIcon>
+                    <ListItemText>Check only</ListItemText>
+                </MenuItem>}
+                {compactToolbar && onCheckOnly && <Divider />}
+                <MenuItem onClick={handleMenuImport}>
+                    <ListItemIcon>
+                        <Upload fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Open build file…</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleMenuExport} disabled={!config}>
+                    <ListItemIcon>
+                        <Download fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Save build file</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleMenuShare} disabled={!config}>
+                    <ListItemIcon>
+                        <Link fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Copy share link</ListItemText>
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={handleMenuExamples}>
+                    <ListItemIcon>
+                        <Science fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Try an example…</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={handleMenuGettingStarted}>
+                    <ListItemIcon>
+                        <MenuBook fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Getting started</ListItemText>
+                </MenuItem>
+                {onInstall && <MenuItem onClick={() => { handleMenuClose(); onInstall(); }}>
+                    <ListItemIcon><MenuBook fontSize="small" /></ListItemIcon>
+                    <ListItemText>Install guide</ListItemText>
+                </MenuItem>}
+                {/* one by one, not in a Fragment: the Menu reads its children for the keyboard */}
+                {toolsMenuItems.map(item => (
+                    <MenuItem
+                        key={item.key}
+                        role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+                        aria-checked={item.checked}
+                        onClick={() => {
+                            handleMenuClose();
+                            item.onClick(menuButtonRef.current);
+                        }}
                     >
-                        <MoreVert />
-                    </IconButton>
-                </Tooltip>
-                <Menu
-                    anchorEl={menuAnchorEl}
-                    open={menuOpen}
-                    onClose={handleMenuClose}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'right',
-                    }}
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'right',
-                    }}
-                    // The sticky header keeps the opener in place without locking page scrolling.
-                    disableScrollLock
-                    slotProps={{
-                        paper: { role: 'region', 'aria-label': BUTTON_NAMES.moreOptions },
-                        list: { 'aria-label': BUTTON_NAMES.moreOptions },
-                    }}
-                >
-                    <MenuItem onClick={handleMenuImport}>
-                        <ListItemIcon>
-                            <Upload fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Open build file…</ListItemText>
+                        <ListItemIcon>{item.icon}</ListItemIcon>
+                        <ListItemText>{item.label}</ListItemText>
+                        {item.checked && <Check fontSize="small" aria-hidden sx={{ ml: 2 }} />}
                     </MenuItem>
-                    <MenuItem onClick={handleMenuExport} disabled={!config}>
-                        <ListItemIcon>
-                            <Download fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Save build file</ListItemText>
+                ))}
+                <Divider />
+                {THEME_CHOICES.map(choice => (
+                    <MenuItem
+                        key={choice.scheme}
+                        role="menuitemradio"
+                        aria-checked={scheme === choice.scheme}
+                        onClick={() => {
+                            setScheme(choice.scheme);
+                            handleMenuClose();
+                        }}
+                    >
+                        <ListItemIcon><choice.icon fontSize="small" /></ListItemIcon>
+                        <ListItemText>{choice.label}</ListItemText>
+                        {scheme === choice.scheme && <Check fontSize="small" aria-hidden sx={{ ml: 2 }} />}
                     </MenuItem>
-                    <MenuItem onClick={handleMenuShare} disabled={!config}>
-                        <ListItemIcon>
-                            <Link fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Copy share link</ListItemText>
-                    </MenuItem>
-                    <MenuItem onClick={handleMenuExamples}>
-                        <ListItemIcon>
-                            <Science fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Try an example…</ListItemText>
-                    </MenuItem>
-                    <MenuItem onClick={handleMenuGettingStarted}>
-                        <ListItemIcon>
-                            <MenuBook fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Getting started</ListItemText>
-                    </MenuItem>
-                    {/* one by one, not in a Fragment: the Menu reads its children for the keyboard */}
-                    {toolsMenuItems.map(item => (
-                        <MenuItem
-                            key={item.key}
-                            role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
-                            aria-checked={item.checked}
-                            onClick={() => {
-                                handleMenuClose();
-                                item.onClick(menuButtonRef.current);
-                            }}
-                        >
-                            <ListItemIcon>{item.icon}</ListItemIcon>
-                            <ListItemText>{item.label}</ListItemText>
-                            {item.checked && <Check fontSize="small" aria-hidden sx={{ ml: 2 }} />}
-                        </MenuItem>
-                    ))}
-                    <Divider />
-                    {/* in the error text red (TEXT.error), 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
-                    <MenuItem onClick={handleMenuReset} sx={{ color: 'error.light' }}>
-                        <ListItemIcon sx={{ color: 'inherit' }}>
-                            <RestartAlt fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>Reset build</ListItemText>
-                    </MenuItem>
-                </Menu>
-            </Box>
+                ))}
+                <Divider />
+                {/* in the error text red (TEXT.error), 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
+                <MenuItem onClick={handleMenuReset} sx={{ color: 'error.light' }}>
+                    <ListItemIcon sx={{ color: 'inherit' }}>
+                        <RestartAlt fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Reset build</ListItemText>
+                </MenuItem>
+            </Menu>
 
             <input
                 ref={fileInputRef}
@@ -646,7 +736,7 @@ export function ConfigImportExport({
                 <DialogTitle>Confirm Import from Factorio</DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" sx={{ mb: 2 }}>
-                        Tick what to import. Each ticked part replaces the same part of your build.
+                        Choose what to import. Selected parts replace those in your current build; unselected parts stay as they are.
                     </Typography>
                     
                     {pendingImport?.guidance && Option.match(pendingImport.guidance, {
@@ -654,21 +744,35 @@ export function ConfigImportExport({
                         some: (message) => <Alert severity="warning" sx={{ mb: 2 }}>{message}</Alert>,
                     })}
 
-                    {pendingImport && (
+                    {pendingImport && <ImportSimplification config={simplificationConfig} applied={pendingImport.reduction}
+                        onRepeated={sourceKey => {
+                            if (simplificationConfig && sourceKey === JSON.stringify(simplificationConfig) && pendingImport.repeatedSourceKey !== sourceKey)
+                                setPendingImport(current => current === pendingImport ? { ...current, repeatedSourceKey: sourceKey } : current);
+                        }}
+                        onRestore={() => {
+                            if (pendingImport.original) setPendingImport(pendingImport.original);
+                            if (pendingImport.originalSelections) setImportSelections(pendingImport.originalSelections);
+                        }}
+                        onSimplify={plan => {
+                            if (!simplificationConfig || plan.sourceConfigKey !== JSON.stringify(simplificationConfig)) return;
+                            const candidate = plan.candidate;
+                            setPendingImport({
+                                ...pendingImport,
+                                original: pendingImport,
+                                originalSelections: importSelections,
+                                reduction: importReduction(simplificationConfig, candidate),
+                                machines: candidate.machines,
+                                inserters: candidate.inserters,
+                                belts: candidate.belts,
+                                chests: candidate.chests ?? [],
+                                drills: candidate.drills?.configs ?? [],
+                                fill: { values: candidate.target_output, source: pendingImport.fill!.source },
+                            });
+                            // The explicit simplify action also accepts its displayed Copies change.
+                            setImportSelections(current => ({ ...current, target: true }));
+                        }} />}
+                    {pendingImport && !pendingImport.reduction && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <Box data-import-assumptions sx={{ mb: 1 }}>
-                                <Typography variant="subtitle2" component="h3">After import: modeling assumptions</Typography>
-                                <Typography variant="body2">{preview?.counts.find(row => row.category === 'inserters')?.replacing ? 'Incoming' : 'Retained'} inserters; {preview?.counts.find(row => row.category === 'machines')?.replacing ? 'incoming' : 'retained'} machines. Target and Copies {importSelections.target && pendingImport.fill ? 'come from this export' : 'stay as entered'} ({prospectiveTarget.copies} copies). The current belt-movement setting is retained.</Typography>
-                                <InserterAssumptions inserters={prospectiveInserters} />
-                                <Box component="details" sx={{ mt: 1 }}>
-                                    <Typography component="summary" tabIndex={0} variant="body2" sx={{ cursor: 'pointer' }}>Modeling details after import</Typography>
-                                    <InserterAssumptions inserters={prospectiveInserters} detailed />
-                                    {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
-                                        ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
-                                    {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
-                                    {currentForm.overrides && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Retained run overrides: {JSON.stringify(currentForm.overrides)}.</Typography>}
-                                </Box>
-                            </Box>
                             {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                             {pendingImport.fill ? (
                                 <Box>
@@ -697,9 +801,9 @@ export function ConfigImportExport({
                             {preview?.counts.map(row => {
                                 const title = row.category[0].toUpperCase() + row.category.slice(1);
                                 const consequence = row.replacing
-                                    ? `Replace ${row.current} ${row.category} with ${row.incoming}`
-                                    : row.incoming === 0 ? `Keep ${row.current}; none in this export`
-                                        : `Keep ${row.current} current ${row.category} (${row.incoming} available to import)`;
+                                    ? `${row.current} in your build → ${row.incoming} after import.`
+                                    : row.incoming === 0 ? row.current === 0 ? 'None in this export.' : `None in this export. Your ${row.current} stay unchanged.`
+                                        : `Not selected. Keep the ${row.current} in your build.`;
                                 return (
                                     <Box key={row.category} data-paste-category={row.category}>
                                         <FormControlLabel
@@ -709,7 +813,7 @@ export function ConfigImportExport({
                                             label={`${title} (${row.incoming})${row.category === 'drills' && pendingImport.miningProductivityLevel !== undefined ? ` - Mining Productivity ${pendingImport.miningProductivityLevel}` : ''}`}
                                         />
                                         <Typography id={`paste-${row.category}-counts`} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                                            {row.current} current → {row.incoming} imported. {consequence}.
+                                            {consequence}
                                         </Typography>
                                     </Box>
                                 );
@@ -734,24 +838,38 @@ export function ConfigImportExport({
                                     />
                                 </>
                             )}
+                            <Box component="details" data-import-assumptions sx={{ mt: 1 }}>
+                                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer', fontWeight: 600 }}>Import details and defaults</Typography>
+                                <Typography variant="body2">{preview?.counts.find(row => row.category === 'inserters')?.replacing ? 'Incoming' : 'Retained'} inserters; {preview?.counts.find(row => row.category === 'machines')?.replacing ? 'incoming' : 'retained'} machines. Target and Copies {importSelections.target && pendingImport.fill ? 'come from this export' : 'stay as entered'} ({prospectiveTarget.copies} {prospectiveTarget.copies === 1 ? 'copy' : 'copies'}). The current belt-movement setting is retained.</Typography>
+                                <InserterAssumptions inserters={prospectiveInserters} />
+                                <Box sx={{ mt: 1 }}>
+                                    <InserterAssumptions inserters={prospectiveInserters} detailed />
+                                    {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
+                                        ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
+                                    {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
+                                    {currentForm.overrides && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Retained run overrides: {JSON.stringify(currentForm.overrides)}.</Typography>}
+                                </Box>
+                            </Box>
                         </Box>
                     )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCancelImport} color="inherit">Cancel</Button>
-                    <Button 
-                        onClick={handleConfirmImport} 
-                        variant="contained" 
-                        color="secondary"
+                    <Button
+                        id="confirm-factorio-import"
+                        onClick={handleConfirmImport}
+                        variant={forceFullImport ? 'outlined' : 'contained'}
+                        color={forceFullImport ? 'inherit' : 'secondary'}
                         disabled={!canImport}
                     >
-                        Import Selected
+                        {pendingImport?.reduction ? 'Import simpler build' : forceFullImport ? 'Force import full pasted build' : 'Import Selected'}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {pasteDialog && (
                 <PasteFromFactorioDialog
+                    key={pasteDialog.session}
                     prompt={pasteDialog.prompt}
                     promptId={pasteDialog.id}
                     onSubmit={handlePasteSubmit}

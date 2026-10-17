@@ -34,6 +34,7 @@ import { RunnerStepType } from "../runner/steps/runner-step";
 import { Logger, defaultLogger } from "../../common/logger";
 import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "../fuel-view";
 import { StockRecorder, StockRecording } from "../machine-stock";
+import { TimelineRecorder, TimelineRecording, TimelineRecordingOptions } from "../timeline-recording";
 import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpressure-loss";
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
@@ -350,6 +351,8 @@ export interface RunOptions {
     fuel_levels?: boolean;
     /** Record what every machine and inserter holds after each tick of the run (default false) */
     machine_stock?: boolean;
+    /** Detailed UI recording, requested separately from clock generation. */
+    timeline_recording?: TimelineRecordingOptions;
     /**
      * Record the state the game would show for every entity over the run, for its timelines (default true). A check
      * run whose histories nobody reads leaves it out: working the state out for every entity every tick takes time.
@@ -377,6 +380,7 @@ interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     state_transition_history: StateTransitionHistory;
     fuel_levels: FuelLevelSeries[] | undefined;
     machine_stock: StockRecording | undefined;
+    timeline_recording?: TimelineRecording;
     /** What the run moved against what the plan expects */
     stability_check: SimulationStabilityCheck;
     total_expected_output: number;
@@ -442,6 +446,7 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
         state_transition_history,
         fuel_levels: simulated.fuel_levels,
         machine_stock: simulated.machine_stock,
+        timeline_recording: simulated.timeline_recording,
         stability_check: output.stability_check,
         total_expected_output: output.total_expected_output,
         used_terminal_swing_count: output.used_terminal_swing_count,
@@ -693,8 +698,8 @@ interface RunPeriods {
 
 /** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
 function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
-    const duration: Duration = Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
-    assert(duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
+    const duration: Duration = Duration.ofTicks(options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
+    assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     const requested_warmup_periods = options.warmup_periods ?? 10;
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
     const warmup_periods = Math.min(requested_warmup_periods, Math.floor((MAX_SIMULATION_TICKS - 1) / duration.ticks));
@@ -749,6 +754,7 @@ interface SimulatedRun {
     dropped_before_run: number;
     fuel_levels: FuelLevelSeries[] | undefined;
     machine_stock: StockRecording | undefined;
+    timeline_recording?: TimelineRecording;
 }
 
 /** Step 3: runs the build for the periods asked for, with its transfers and states recorded */
@@ -788,8 +794,11 @@ function simulate(
     const stock_recorder = options.machine_stock
         ? new StockRecorder(new_simulation_context.machines.map(it => it.machine_state), new_simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })))
         : undefined;
+    const timeline_recorder = options.timeline_recording
+        ? new TimelineRecorder(new_simulation_context, options.timeline_recording)
+        : undefined;
     const simulate_step = new SimulateStep(new_simulation_context, recorded_duration,
-        (fuel_level_recorder || stock_recorder) && (() => { fuel_level_recorder?.record(); stock_recorder?.record(); }));
+        (fuel_level_recorder || stock_recorder || timeline_recorder) && (() => { fuel_level_recorder?.record(); stock_recorder?.record(); timeline_recorder?.record(); }));
     withDebugFor(debug, debug_steps, RunnerStepType.SIMULATE, () => simulate_step.execute());
 
     logger.log(`Simulation complete`);
@@ -800,6 +809,8 @@ function simulate(
         dropped_before_run,
         fuel_levels: fuel_level_recorder?.series(),
         machine_stock: stock_recorder?.recording(),
+        timeline_recording: timeline_recorder?.recording("clock", recorded_duration.ticks,
+            inventory_transfer_history.ticks_before_run, new_simulation_context.target_production_rate.copies),
     };
 }
 
@@ -956,6 +967,8 @@ function backpressureLossOf(
  * what was recorded of it. It plans nothing of its own and exports nothing.
  */
 export interface TrialRun {
+    /** On-demand timeline detail; absent from normal generation runs. */
+    timeline_recording?: TimelineRecording;
     /** What the run moved against what the plan expects */
     stability_check: SimulationStabilityCheck;
     simulation_duration: Duration;
@@ -974,6 +987,7 @@ export interface TrialRun {
 
 export function trialRunOf(run: BuildRun): TrialRun {
     return {
+        timeline_recording: run.timeline_recording,
         stability_check: run.stability_check,
         simulation_duration: run.duration,
         transfer_history: run.final_history,

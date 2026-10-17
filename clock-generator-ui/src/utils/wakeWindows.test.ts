@@ -230,11 +230,19 @@ describe('buildWakeWindowRows', () => {
                     }),
                 ],
             },
-        }));
+        }), [
+            { type: 'belt', id: 1, label: 'Belt 1', icon: 'transport-belt' },
+            { type: 'machine', id: 2, label: 'Machine 2', icon: 'assembling-machine-3', sublabel: 'Iron gear wheel' },
+            { type: 'machine', id: 4, label: 'Machine 4', icon: 'electric-furnace', sublabel: 'Iron plate' },
+        ]);
         expect(inserter.items).toEqual(['iron-plate']);
         expect(inserter.route).toBe('Belt\u00a01 to Machine\u00a02');
         expect(drill.items).toEqual(['iron-ore']);
         expect(drill.route).toBe('into Machine\u00a04');
+        expect(inserter.source?.id).toBe(1);
+        expect(inserter.sink?.sublabel).toBe('Iron gear wheel');
+        expect(drill.source).toBeUndefined();
+        expect(drill.sink?.sublabel).toBe('Iron plate');
     });
 
     it('tells the modes apart', () => {

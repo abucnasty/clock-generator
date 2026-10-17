@@ -48,6 +48,8 @@ import { DraftFooter } from './DraftFooter';
 import { switchedChest } from '../utils/configForm/edits';
 import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS } from '../utils/inserterDraft';
 import { FactorioIcon } from './FactorioIcon';
+import { InfinityChestSettings } from './InfinityChestSettings';
+import { OutputChestAlert } from './OutputChestAlert';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
@@ -281,7 +283,7 @@ function BeltEditSection({
             ))}
 
             {!geometryReadOnly && belt.lanes.length < 2 && (
-                <Button size="small" onClick={addLane} sx={{ alignSelf: 'flex-start' }}>
+                <Button size="small" color="inherit" onClick={addLane} sx={{ alignSelf: 'flex-start' }}>
                     Add Second Lane
                 </Button>
             )}
@@ -318,19 +320,9 @@ function ChestEditSection({
 
     const handleInfinityFilterRemove = (slotIndex: number) => {
         if (!isInfinityChest(chest)) return;
-        if (chest.item_filter.length <= 1) {
-            onUpdate(entityIndex, { item_filter: [{ item_name: '', request_count: 1 }] } as Partial<ChestFormData>);
-            return;
-        }
         onUpdate(entityIndex, { item_filter: chest.item_filter.filter((_, i) => i !== slotIndex) } as Partial<ChestFormData>);
     };
 
-    const handleInfinityFilterAdd = () => {
-        if (!isInfinityChest(chest)) return;
-        onUpdate(entityIndex, {
-            item_filter: [...chest.item_filter, { item_name: '', request_count: 1 }],
-        } as Partial<ChestFormData>);
-    };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -344,7 +336,7 @@ function ChestEditSection({
                 >
                     <MenuItem value={ChestType.BUFFER_CHEST}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name="iron-chest" size={20} alt="" />
+                            <FactorioIcon name="steel-chest" size={20} alt="" />
                             Buffer chest
                         </Box>
                     </MenuItem>
@@ -359,14 +351,10 @@ function ChestEditSection({
 
             {isBufferChest(chest) && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    <ItemSelector
-                        value={(chest as BufferChestFormData).item_filter || null}
-                        options={itemNames}
-                        onChange={(newValue) => onUpdate(entityIndex, { item_filter: newValue || '' } as Partial<ChestFormData>)}
-                        label="Item Filter"
-                        size="small"
-                        sx={{ flex: '1 1 200px', minWidth: 'min(200px, 100%)' }}
-                    />
+                    <ChestFilterSlotSelector filters={[{ item_name: chest.item_filter, quantity: 1 }]} itemNames={itemNames}
+                        onFilterChange={(_slot, filter) => onUpdate(entityIndex, { item_filter: filter.item_name })}
+                        onRemoveFilter={() => onUpdate(entityIndex, { item_filter: '' })}
+                        maxSlots={1} canAddMore={false} showQuantity={false} />
                     <TextField
                         label="Storage Size"
                         type="number"
@@ -380,16 +368,17 @@ function ChestEditSection({
             )}
 
             {isInfinityChest(chest) && (
-                <ChestFilterSlotSelector
-                    filters={getInfinityFilters()}
-                    itemNames={itemNames}
-                    onFilterChange={handleInfinityFilterChange}
-                    onRemoveFilter={handleInfinityFilterRemove}
-                    onAddFilter={handleInfinityFilterAdd}
-                    maxSlots={10}
-                    quantityLabel="Request Count"
-                    canAddMore={true}
-                />
+                <InfinityChestSettings chest={chest} onChange={enabled => onUpdate(entityIndex, { remove_unfiltered_items: enabled })}>
+                    <ChestFilterSlotSelector
+                        filters={getInfinityFilters()}
+                        itemNames={itemNames}
+                        onFilterChange={handleInfinityFilterChange}
+                        onRemoveFilter={handleInfinityFilterRemove}
+                        maxSlots={10}
+                        quantityLabel="Stock to maintain"
+                        canAddMore={true}
+                    />
+                </InfinityChestSettings>
             )}
         </Box>
     );
@@ -526,7 +515,7 @@ export function EntityEditDialog({
                 const idx = chests.findIndex(c => c.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const c = chests[idx];
-                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest' };
+                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: isInfinityChest(c) ? 'infinity-chest' : 'steel-chest' };
             }
             case 'inserter': {
                 const idx = inserters.findIndex(i => i.id === entityId);
@@ -598,7 +587,7 @@ export function EntityEditDialog({
             case 'belt': return changedFields(draft as BeltFormData, entity as BeltFormData, BELT_FIELDS);
             case 'drill': return changedFields(draft as DrillFormData, entity as DrillFormData, DRILL_FIELDS);
             case 'chest': {
-                const chest = (value: ChestFormData) => ({ ...value, storage_size: isBufferChest(value) ? value.storage_size : undefined });
+                const chest = (value: ChestFormData) => ({ ...value, remove_unfiltered_items: isInfinityChest(value) ? value.remove_unfiltered_items : undefined, storage_size: isBufferChest(value) ? value.storage_size : undefined });
                 return changedFields(chest(draft as ChestFormData), chest(entity as ChestFormData), CHEST_FIELDS);
             }
             default: return {};
@@ -699,7 +688,11 @@ export function EntityEditDialog({
                         /></Box>
                     )}
                     {draft && entityType === 'chest' && (
-                        <Box sx={{ p: 2 }}><ChestEditSection
+                        <Box sx={{ p: 2 }}>
+                            <OutputChestAlert chests={[draft as ChestFormData]} inserters={inserters} focusTargets={false}
+                                onEnableRemoval={() => updateDraft(entityIndex, { remove_unfiltered_items: true })}
+                                onSwitchType={(_index, type) => setDraft(d => switchedChest(d as ChestFormData, type, true))} />
+                            <ChestEditSection
                             chest={draft as ChestFormData}
                             entityIndex={entityIndex}
                             itemNames={itemNames}

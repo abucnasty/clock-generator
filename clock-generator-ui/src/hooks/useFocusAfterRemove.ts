@@ -21,7 +21,7 @@ export function useFocusAfterRemove(count: number, onRemove: (index: number) => 
         if (before !== null && count > before) {
             const firsts = cardRef.current?.querySelectorAll<HTMLElement>('[data-row-first]');
             const first = firsts?.[firsts.length - 1];
-            const control = first?.matches('input, button, [role="combobox"]') ? first : first?.querySelector<HTMLElement>('input, button, [role="combobox"]');
+            const control = first?.matches('input, button, summary, [role="combobox"]') ? first : first?.querySelector<HTMLElement>('input, button, [role="combobox"]');
             control?.focus();
             // Bring the new row's beginning below the header, with the first field fully in view.
             (control?.closest('[role="group"]') ?? control)?.scrollIntoView({ block: 'start' });

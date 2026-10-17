@@ -68,7 +68,7 @@ function machineSpec(machine: Config['machines'][number]): string {
 function chestSpec(chest: ChestConfig): string {
     return chest.type === 'buffer-chest'
         ? `chest|${chest.type}|${chest.storage_size}|${chest.item_filter}`
-        : `chest|${chest.type}|${JSON.stringify(chest.item_filter)}`;
+        : `chest|${chest.type}|${JSON.stringify(chest.item_filter)}|${chest.remove_unfiltered_items ?? false}`;
 }
 
 function drillSpec(drill: MiningDrillConfig): string {

@@ -30,5 +30,5 @@ export function changedConfigFields(draft: InserterFormData, saved: InserterForm
 
 export const MACHINE_FIELDS = ['recipe', 'productivity', 'crafting_speed', 'type'] as const;
 export const BELT_FIELDS = ['type', 'lanes', 'strategy'] as const;
-export const CHEST_FIELDS = ['type', 'storage_size', 'item_filter'] as const;
+export const CHEST_FIELDS = ['type', 'storage_size', 'item_filter', 'remove_unfiltered_items'] as const;
 export const DRILL_FIELDS = ['type', 'mined_item_name', 'speed_bonus', 'target'] as const;

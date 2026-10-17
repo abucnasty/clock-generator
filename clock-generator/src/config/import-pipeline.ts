@@ -20,6 +20,7 @@ export interface ImportInput {
     /** The version of the mod that exported the data; null when it did not say, as before it exported one */
     sidecar_version: string | null;
     machines: readonly ImportedMachine[];
+    chests?: readonly unknown[];
 }
 
 export type ImportStep = (input: ImportInput) => Option<string>;

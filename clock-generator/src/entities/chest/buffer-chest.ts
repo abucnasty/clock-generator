@@ -52,6 +52,10 @@ export class BufferChest implements Chest {
         return [this.item_filter];
     }
 
+    public acceptsItem(item: ItemName): boolean {
+        return item === this.item_filter;
+    }
+
     public toString(): string {
         return `BufferChest(${this.entity_id.id}, item=${this.item_filter}, capacity=${this.getCapacity()})`;
     }

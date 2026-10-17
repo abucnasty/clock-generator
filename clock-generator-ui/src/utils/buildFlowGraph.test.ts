@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { MarkerType, type Edge, type Node } from '@xyflow/react';
+import { MarkerType, Position, type Edge, type Node } from '@xyflow/react';
 import { ChestType } from 'clock-generator/light';
 import * as edits from './configForm/edits';
 import { createDefaultConfig, type ConfigFormData, type EnableControlOverride, type InserterFormData } from './configForm/formData';
 import { buildFlowGraph, flowNodeEntity, type InserterNodeData } from './buildFlowGraph';
+import { flowNodeRect, routeFlowEdges, type FlowPort } from './flowRouting';
 import { describeEnableRule } from './enableRuleLabel';
 
 type End = InserterFormData['source'];
@@ -76,6 +77,20 @@ const FIXTURES: Record<string, () => ConfigFormData> = {
         inserter(5, machine(1), chest(1)),
         inserter(6, machine(2), chest(1)),
     ]),
+    'loop beside an unrelated belt': () => form({ machines: 3, belts: 2, chests: 1 }, [
+        inserter(1, machine(1), machine(2)), inserter(2, machine(2), machine(1)),
+        inserter(3, belt(1), machine(1)), inserter(4, belt(1), machine(2)),
+        inserter(5, belt(2), machine(3)), inserter(6, machine(1), machine(3)),
+        inserter(7, machine(2), machine(3)), inserter(8, machine(3), chest(1)),
+    ]),
+    'many reciprocal inserters': () => form({ machines: 2 }, Array.from({ length: 8 }, (_, i) =>
+        inserter(i + 1, machine(i % 2 + 1), machine((i + 1) % 2 + 1)))),
+    'three machine cycle': () => form({ machines: 3, belts: 1 }, [
+        inserter(1, machine(1), machine(2)), inserter(2, machine(2), machine(3)),
+        inserter(3, machine(3), machine(1)), inserter(4, belt(1), machine(2)),
+    ]),
+    'self loop': () => form({ machines: 1 }, [inserter(1, machine(1), machine(1))]),
+
 };
 
 describe('buildFlowGraph labels', () => {
@@ -114,7 +129,10 @@ describe('buildFlowGraph', () => {
     it('points every edge to the right, except those that connect a machine loop from above or below', () => {
         for (const [name, fixture] of Object.entries(FIXTURES)) {
             const { nodes, edges } = graph(fixture());
-            for (const edge of edges.filter(it => !it.sourceHandle)) {
+            for (const edge of edges.filter(it => {
+                const ports = nodes.find(node => node.id === it.source)!.data.routePorts as FlowPort[];
+                return ports.find(port => port.id === it.sourceHandle)?.position === Position.Right;
+            })) {
                 expect(x(nodes, edge.source), `${name}: ${edge.id}`).toBeLessThan(x(nodes, edge.target));
             }
         }
@@ -204,4 +222,55 @@ describe('buildFlowGraph', () => {
             }
         }
     });
+});
+
+it('reserves stable replay node geometry for chains and machine loops', () => {
+    for (const fixture of Object.values(FIXTURES)) {
+        const config = fixture();
+        const replay = buildFlowGraph(config.machines, config.inserters, config.belts, config.chests, config.drills?.configs ?? [], undefined, false, undefined, 210);
+        expect(replay.nodes.length).toBeGreaterThan(0);
+        for (const node of replay.nodes) {
+            expect(Number.isFinite(node.position.x)).toBe(true);
+            expect(Number.isFinite(node.position.y)).toBe(true);
+        }
+        for (const edge of replay.edges) {
+            expect(replay.nodes.some(node => node.id === edge.source)).toBe(true);
+            expect(replay.nodes.some(node => node.id === edge.target)).toBe(true);
+        }
+        // Nodes in the same column must have room for their fixed replay readout.
+        for (let i = 0; i < replay.nodes.length; i++) for (let j = i + 1; j < replay.nodes.length; j++) {
+            const a = replay.nodes[i], b = replay.nodes[j];
+            if (Math.abs(a.position.x - b.position.x) < 1) expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(210);
+        }
+    }
+});
+
+
+it.each([0, 168, 210])('keeps all nodes and routes clear with node height %s', nodeHeight => {
+    for (const [name, fixture] of Object.entries(FIXTURES)) {
+        const config = fixture();
+        const { nodes, edges } = buildFlowGraph(config.machines, config.inserters, config.belts, config.chests,
+            config.drills?.configs ?? [], undefined, true, undefined, nodeHeight);
+        const rectangles = nodes.map(node => ({ ...flowNodeRect(node), id: node.id }));
+        for (let i = 0; i < rectangles.length; i++) for (let j = i + 1; j < rectangles.length; j++) {
+            const a = rectangles[i], b = rectangles[j];
+            expect(a.x >= b.x + b.width || b.x >= a.x + a.width || a.y >= b.y + b.height || b.y >= a.y + a.height,
+                `${name}: ${a.id} overlaps ${b.id}`).toBe(true);
+        }
+        const routes = routeFlowEdges(nodes, edges);
+        expect(routes.size, name).toBe(edges.length);
+        for (const edge of edges) {
+            const route = routes.get(edge.id)!;
+            for (let i = 1; i < route.points.length; i++) {
+                const a = route.points[i - 1], b = route.points[i];
+                expect(a.x === b.x || a.y === b.y, `${name}: diagonal ${edge.id}`).toBe(true);
+                for (const rect of rectangles) {
+                    const crosses = a.x === b.x
+                        ? a.x > rect.x && a.x < rect.x + rect.width && Math.max(a.y, b.y) > rect.y && Math.min(a.y, b.y) < rect.y + rect.height
+                        : a.y > rect.y && a.y < rect.y + rect.height && Math.max(a.x, b.x) > rect.x && Math.min(a.x, b.x) < rect.x + rect.width;
+                    expect(crosses, `${name}: ${edge.id} crosses ${rect.id}`).toBe(false);
+                }
+            }
+        }
+    }
 });

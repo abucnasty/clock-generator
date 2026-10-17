@@ -1,1 +1,1 @@
-export type ResultDetail = 'why' | 'wake' | 'install';
+export type ResultDetail = 'overview' | 'timeline';

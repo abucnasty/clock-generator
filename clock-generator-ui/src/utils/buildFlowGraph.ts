@@ -7,6 +7,7 @@ import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { describeEnableRule } from './enableRuleLabel';
 import { entityLabel } from './entityLabel';
 import { inferInserterItems } from './inferInserterItems';
+import { assignFlowPorts } from './flowRouting';
 
 // The sizes the nodes are drawn at (the components use the widths) and the layout places them by: the layout's must be
 // at least what is drawn, or nodes overlap. Heights measured in the browser with 12px text (item 2.11): a belt, chest or
@@ -191,11 +192,12 @@ export function buildFlowGraph(
     getRecipeInfo?: (name: string) => RecipeInfo | null,
     detailMode?: boolean,
     { itemLabel, recipeLabel }: FlowLabels = ID_LABELS,
+    nodeHeight = 0,
 ): { nodes: Node[], edges: Edge[] } {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
-    // close columns, so the fitted graph is drawn as large as it can be
-    g.setGraph({ rankdir: 'LR', nodesep: 40, ranksep: 55, ranker: 'longest-path' });
+    // Leave a corridor between columns for separate routes and replay quantities.
+    const layoutOptions = { rankdir: 'LR', nodesep: 40, ranksep: 112, ranker: 'longest-path' };
 
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -220,8 +222,8 @@ export function buildFlowGraph(
         for (const half of halves) {
             const node_id = flowNodeId(data.entityType, data.entityId, half);
             const label = half ? `${data.label}${HALF_SUFFIX[half]}` : data.label;
-            g.setNode(node_id, { width: ENTITY_NODE_WIDTH, height: ENTITY_NODE_HEIGHT });
-            drawn.set(node_id, { w: ENTITY_NODE_WIDTH, h: ENTITY_NODE_HEIGHT });
+            g.setNode(node_id, { width: ENTITY_NODE_WIDTH, height: Math.max(nodeHeight, data.sublabel ? 76 : ENTITY_NODE_HEIGHT) });
+            drawn.set(node_id, { w: ENTITY_NODE_WIDTH, h: Math.max(nodeHeight, data.sublabel ? 76 : ENTITY_NODE_HEIGHT) });
             nodes.push({
                 id: node_id,
                 type: 'entityNode',
@@ -235,11 +237,10 @@ export function buildFlowGraph(
     // --- Entity nodes ---
     machines.forEach(machine => {
         const id = flowNodeId('machine', machine.id);
-        const nodeHeight = detailMode ? ENTITY_NODE_DETAIL_HEIGHT : ENTITY_NODE_HEIGHT;
+        const machineHeight = Math.max(nodeHeight, detailMode ? ENTITY_NODE_DETAIL_HEIGHT : ENTITY_NODE_HEIGHT);
         const in_loop = loop_machine_ids.has(machine.id);
-        // taller in the layout than it is drawn, which leaves room above and below for the inserters of its loop
-        g.setNode(id, { width: ENTITY_NODE_WIDTH, height: nodeHeight + (in_loop ? INSERTER_NODE_HEIGHT + LOOP_GAP : 0) });
-        drawn.set(id, { w: ENTITY_NODE_WIDTH, h: nodeHeight });
+        g.setNode(id, { width: ENTITY_NODE_WIDTH, height: machineHeight });
+        drawn.set(id, { w: ENTITY_NODE_WIDTH, h: machineHeight });
         const label = entityLabel('machine', machine.id);
         nodes.push({
             id,
@@ -279,7 +280,7 @@ export function buildFlowGraph(
         let iconName: string;
         let filterIcons: string[] | undefined;
         if (isBufferChest(chest)) {
-            iconName = 'iron-chest';
+            iconName = 'steel-chest';
             filterIcons = chest.item_filter ? [chest.item_filter] : undefined;
         } else {
             iconName = 'infinity-chest';
@@ -292,7 +293,8 @@ export function buildFlowGraph(
             label: entityLabel('chest', chest.id),
             iconName,
             filterIcons,
-        }, filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
+            ...(!isBufferChest(chest) && chest.remove_unfiltered_items && { sublabel: filterIcons?.length ? 'Removes unfiltered items' : 'Removes all incoming items' }),
+        }, !isBufferChest(chest) && chest.remove_unfiltered_items ? 'removes unfiltered incoming items' : filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
     });
 
     // --- Inserter nodes + edges ---
@@ -307,7 +309,7 @@ export function buildFlowGraph(
             : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         const rule = describeEnableRule(inserter.overrides?.enable_control, { forcedAlways: inserter._forced_always });
-        const height = INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT);
+        const height = Math.max(nodeHeight, INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT));
         const width = rule.quiet ? INSERTER_NODE_WIDTH : INSERTER_NODE_CHIP_WIDTH;
         if (!in_loop) {
             g.setNode(inserterNodeId, { width, height });
@@ -349,8 +351,8 @@ export function buildFlowGraph(
     (drills ?? []).forEach(drill => {
         const drillNodeId = flowNodeId('drill', drill.id);
         const targetNodeId = flowNodeId('machine', drill.target.id);
-        g.setNode(drillNodeId, { width: DRILL_NODE_WIDTH, height: DRILL_NODE_HEIGHT });
-        drawn.set(drillNodeId, { w: DRILL_NODE_WIDTH, h: DRILL_NODE_HEIGHT });
+        g.setNode(drillNodeId, { width: DRILL_NODE_WIDTH, height: Math.max(nodeHeight, DRILL_NODE_HEIGHT) });
+        drawn.set(drillNodeId, { w: DRILL_NODE_WIDTH, h: Math.max(nodeHeight, DRILL_NODE_HEIGHT) });
         nodes.push({
             id: drillNodeId,
             type: 'drillNode',
@@ -369,58 +371,82 @@ export function buildFlowGraph(
         }
     });
 
-    // Run dagre layout
-    dagre.layout(g);
-
-    // Apply dagre-computed positions (dagre centers nodes, so offset by half size)
-    const positionedNodes = nodes.filter(node => g.hasNode(node.id)).map(node => {
-        const dagreNode = g.node(node.id);
-        const { w, h } = drawn.get(node.id)!;
-        return {
-            ...node,
-            position: {
-                x: dagreNode.x - w / 2,
-                y: dagreNode.y - h / 2,
-            },
-        };
-    });
-
-    // The inserters of a loop go between their two machines: side by side when several connect the same pair
-    const pairKey = (inserter: InserterFormData) => [inserter.source.id, inserter.sink.id].sort((a, b) => a - b).join('-');
+    // Reserve each machine loop as a single block before the outer layout. Placing its inserters
+    // afterwards used to put them on unrelated belts, machines, or other loop rows.
+    const groups: Set<number>[] = [];
     for (const inserter of loop_inserters) {
-        const inserterNodeId = flowNodeId('inserter', inserter.id);
-        const sourceNodeId = flowNodeId('machine', inserter.source.id);
-        const sinkNodeId = flowNodeId('machine', inserter.sink.id);
-        const node = nodes.find(it => it.id === inserterNodeId)!;
-        const source = g.node(sourceNodeId);
-        const sink = g.node(sinkNodeId);
-        if (!source || !sink) {
-            continue;
-        }
-        const down = source.y <= sink.y;
-        // the ones that carry down on the left, under the handle they take from, the ones that carry up on the right
-        const goesDown = (it: InserterFormData) => g.node(flowNodeId('machine', it.source.id)).y <= g.node(flowNodeId('machine', it.sink.id)).y;
-        const in_pair = loop_inserters.filter(it => pairKey(it) === pairKey(inserter));
-        const index = in_pair.filter(it => goesDown(it) === down).indexOf(inserter) + (down ? 0 : in_pair.filter(goesDown).length);
-        // in the row's order: those that carry down, then those that carry up
-        const row = [...in_pair.filter(goesDown), ...in_pair.filter(it => !goesDown(it))];
-        const widthOf = (it: InserterFormData) => drawn.get(flowNodeId('inserter', it.id))!.w;
-        const row_width = row.reduce((sum, it) => sum + widthOf(it), 0) + (row.length - 1) * 20;
-        const left = row.slice(0, index).reduce((sum, it) => sum + widthOf(it) + 20, 0);
-        const width = widthOf(inserter);
-        const center_x = (source.x + sink.x) / 2 - row_width / 2 + left + width / 2;
-        const center_y = (source.y + sink.y) / 2;
-        positionedNodes.push({
-            ...node,
-            data: { ...node.data, vertical: down ? 'down' : 'up' },
-            position: { x: center_x - width / 2, y: center_y - drawn.get(inserterNodeId)!.h / 2 },
+        if (!g.hasNode(flowNodeId('machine', inserter.source.id)) || !g.hasNode(flowNodeId('machine', inserter.sink.id))) continue;
+        const touching = groups.filter(group => group.has(inserter.source.id) || group.has(inserter.sink.id));
+        const merged = new Set([inserter.source.id, inserter.sink.id, ...touching.flatMap(group => [...group])]);
+        touching.forEach(group => groups.splice(groups.indexOf(group), 1));
+        groups.push(merged);
+    }
+    const layout = new dagre.graphlib.Graph();
+    layout.setDefaultEdgeLabel(() => ({}));
+    layout.setGraph(layoutOptions);
+    const blockOf = new Map<string, string>();
+    const local = new Map<string, { x: number; y: number }>();
+    const vertical = new Map<string, 'up' | 'down'>();
+    for (const group of groups) {
+        const ids = [...group].sort((a, b) => a - b);
+        const block = `loop-${ids.join('-')}`;
+        const rows = ids.map((_, index) => loop_inserters.filter(inserter =>
+            group.has(inserter.source.id) && group.has(inserter.sink.id) &&
+            Math.min(ids.indexOf(inserter.source.id), ids.indexOf(inserter.sink.id)) === index)
+            .sort((a, b) => Number(ids.indexOf(a.source.id) > ids.indexOf(a.sink.id)) - Number(ids.indexOf(b.source.id) > ids.indexOf(b.sink.id)) || a.id - b.id));
+        const rowWidth = (row: InserterFormData[]) => row.reduce((sum, it) => sum + drawn.get(flowNodeId('inserter', it.id))!.w, 0) + Math.max(0, row.length - 1) * 24;
+        const width = Math.max(ENTITY_NODE_WIDTH, ...rows.map(rowWidth)) + 48;
+        let y = 24;
+        ids.forEach((id, index) => {
+            const machineId = flowNodeId('machine', id);
+            blockOf.set(machineId, block);
+            const size = drawn.get(machineId)!;
+            local.set(machineId, { x: (width - size.w) / 2, y });
+            y += size.h;
+            const row = rows[index];
+            if (row.length) {
+                y += LOOP_GAP / 2;
+                let x = (width - rowWidth(row)) / 2;
+                for (const inserter of row) {
+                    const nodeId = flowNodeId('inserter', inserter.id);
+                    const size = drawn.get(nodeId)!;
+                    blockOf.set(nodeId, block);
+                    local.set(nodeId, { x, y });
+                    vertical.set(nodeId, ids.indexOf(inserter.source.id) <= ids.indexOf(inserter.sink.id) ? 'down' : 'up');
+                    x += size.w + 24;
+                }
+                y += Math.max(...row.map(it => drawn.get(flowNodeId('inserter', it.id))!.h)) + LOOP_GAP / 2;
+            } else if (index < ids.length - 1) y += LOOP_GAP;
         });
-        edges.push(arrowEdge(sourceNodeId, inserterNodeId, { sourceHandle: down ? 'bottom-out' : 'top-out', targetHandle: 'in' }));
-        edges.push(arrowEdge(inserterNodeId, sinkNodeId, { sourceHandle: 'out', targetHandle: down ? 'top-in' : 'bottom-in' }));
+        layout.setNode(block, { width, height: y + 24 });
+    }
+    for (const id of g.nodes()) if (!blockOf.has(id)) layout.setNode(id, g.node(id));
+    for (const edge of g.edges()) {
+        const source = blockOf.get(edge.v) ?? edge.v, target = blockOf.get(edge.w) ?? edge.w;
+        if (source !== target) layout.setEdge(source, target);
+    }
+    dagre.layout(layout);
+    const positionedNodes = nodes.flatMap(node => {
+        const block = blockOf.get(node.id);
+        const position = layout.node(block ?? node.id);
+        if (!position) return [];
+        const size = drawn.get(node.id)!;
+        const offset = block ? local.get(node.id)! : { x: 0, y: 0 };
+        return [{ ...node, initialWidth: size.w, initialHeight: size.h,
+            ...(vertical.has(node.id) && { data: { ...node.data, vertical: vertical.get(node.id) } }),
+            position: { x: position.x - (block ? position.width : size.w) / 2 + offset.x,
+                y: position.y - (block ? position.height : size.h) / 2 + offset.y } }];
+    });
+    for (const inserter of loop_inserters) {
+        const nodeId = flowNodeId('inserter', inserter.id);
+        if (!vertical.has(nodeId)) continue;
+        const down = vertical.get(nodeId) === 'down';
+        edges.push(arrowEdge(flowNodeId('machine', inserter.source.id), nodeId, { sourceHandle: down ? 'bottom-out' : 'top-out', targetHandle: 'in' }));
+        edges.push(arrowEdge(nodeId, flowNodeId('machine', inserter.sink.id), { sourceHandle: 'out', targetHandle: down ? 'top-in' : 'bottom-in' }));
     }
 
     // Tab goes through the nodes in the order they are drawn: the flow, left to right, then top to bottom
     positionedNodes.sort((a, b) => Math.round(a.position.x) - Math.round(b.position.x) || a.position.y - b.position.y);
 
-    return { nodes: positionedNodes, edges };
+    return assignFlowPorts(positionedNodes, edges);
 }

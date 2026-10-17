@@ -1,3 +1,4 @@
+import { ItemPickerField } from './ItemPickerField';
 import { Autocomplete, Box, TextField, Tooltip, type AutocompleteHighlightChangeReason } from '@mui/material';
 import { useContext, useMemo, useRef, useState } from 'react';
 import { FactorioIcon } from './FactorioIcon';
@@ -18,6 +19,8 @@ interface ItemSelectorProps {
     placeholder?: string;
     size?: 'small' | 'medium';
     minWidth?: number;
+    /** Keep options readable when the selected control contracts to an icon. */
+    dropdownMinWidth?: number;
     freeSolo?: boolean;
     required?: boolean;
     /** The input's element id */
@@ -41,6 +44,7 @@ export function ItemSelector({
     placeholder = 'Search items...',
     size = 'small',
     minWidth = 200,
+    dropdownMinWidth,
     freeSolo = false,
     required,
     inputId,
@@ -89,13 +93,24 @@ export function ItemSelector({
     // For iconOnly mode, use a more compact width
     const effectiveMinWidth = iconOnly && value ? 80 : minWidth;
 
+    if (kind === 'recipe') return <ItemPickerField kind="recipe" label={label} inputAriaLabel={inputAriaLabel ?? label}
+        value={value} options={options} onChange={onChange} inputId={inputId} required={required} errorText={errorText}
+        size={size} iconOnly={iconOnly} allowCustom={freeSolo} sx={{ minWidth: effectiveMinWidth, ...sx }} />;
+
     const autocomplete = (
         <Autocomplete
             id={inputId}
             size={size}
             sx={{ minWidth: effectiveMinWidth, ...sx }}
             options={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).ids : everyOption}
-            slotProps={{ popper: { role: 'region', 'aria-label': `${label} options` } }}
+            slotProps={{ popper: {
+                role: 'region',
+                'aria-label': `${label} options`,
+                sx: dropdownMinWidth === undefined ? undefined : {
+                    minWidth: `min(${dropdownMinWidth}px, calc(100vw - 32px))`,
+                    maxWidth: 'calc(100vw - 32px)',
+                },
+            } }}
             groupBy={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).groupOf : undefined}
             value={value}
             open={open}

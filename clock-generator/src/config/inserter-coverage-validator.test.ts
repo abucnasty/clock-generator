@@ -65,7 +65,7 @@ describe('validateInserterCoverage', () => {
                 ...extraInserters,
             ],
             belts: [{ id: 1, type: 'transport-belt', lanes: [{ ingredient: 'yumako-mash', stack_size: 2 }] }],
-            chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'nutrients', request_from_buffer: false }] }],
+            chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'nutrients', request_count: 100 }] }],
         }) as unknown as Config;
 
         it('reports a missing fuel inserter for a biochamber that is only fed its ingredients', () => {
