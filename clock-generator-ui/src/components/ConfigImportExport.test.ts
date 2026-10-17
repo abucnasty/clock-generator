@@ -67,9 +67,7 @@ beforeEach(() => {
     runner.validate.mockResolvedValue(incoming);
     vi.stubGlobal('document', { activeElement: null });
     vi.stubGlobal('navigator', { clipboard: { readText: async () => JSON.stringify({ sidecar_version: '0.7.1', machines: incoming.machines, inserters: [], belts: [], chests: [], drills: { configs: [], mining_productivity_level: 0 } }) } });
-    props = { ref: entry, config: null, currentForm, target: currentForm.target_output, onImport: vi.fn(), onReplaceTarget: vi.fn(),
-        onReplaceMachines: vi.fn(), onReplaceDrills: vi.fn(), onReplaceInserters: vi.fn(), onReplaceBelts: vi.fn(), onReplaceChests: vi.fn(),
-        onUpdateMiningProductivityLevel: vi.fn(), onReset: vi.fn(), onBuildReplaced: vi.fn(), onUndoable: vi.fn(), onShowIntro: vi.fn(),
+    props = { ref: entry, config: null, currentForm, target: currentForm.target_output, onImport: vi.fn(), onApplyPaste: vi.fn(), onReset: vi.fn(), onBuildReplaced: vi.fn(), onUndoable: vi.fn(), onShowIntro: vi.fn(),
         pasteIsNextStep: false, buildName: null, buildTitle: 'Test build' };
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -77,17 +75,37 @@ afterEach(() => vi.unstubAllGlobals());
 describe('Paste acknowledgment bound to the actual preview', () => {
     it('guards Apply until the current mixed preview is deliberately acknowledged, then applies once with one Undo', async () => {
         await paste(); expect(apply().disabled).toBe(true); clickApply();
-        expect(props.onReplaceMachines).not.toHaveBeenCalled(); expect(props.onUndoable).not.toHaveBeenCalled();
+        expect(props.onApplyPaste).not.toHaveBeenCalled(); expect(props.onUndoable).not.toHaveBeenCalled();
         acknowledge(); expect(apply().disabled).toBe(false); clickApply();
-        expect(props.onReplaceMachines).toHaveBeenCalledExactlyOnceWith(incoming.machines);
-        expect(props.onReplaceInserters).not.toHaveBeenCalled(); expect(props.onUndoable).toHaveBeenCalledOnce();
+        expect(props.onApplyPaste).toHaveBeenCalledOnce();
+        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
+        expect(next.machines).toEqual(incoming.machines.map(row => ({ ...row, _uuid: expect.any(String) })));
+        expect(next.inserters).toBe(props.currentForm.inserters);
+        expect(props.onUndoable).toHaveBeenCalledExactlyOnceWith('Imported 1 machine from Factorio.');
+        expect(props.onBuildReplaced).toHaveBeenCalledOnce();
+        expect(vi.mocked(props.onUndoable).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(props.onApplyPaste).mock.invocationCallOrder[0]);
+        expect(vi.mocked(props.onApplyPaste).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(props.onBuildReplaced).mock.invocationCallOrder[0]);
+    });
+    it('commits several selected categories together with one Undo and one result invalidation', async () => {
+        incoming.inserters = [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 7 } }];
+        incoming.chests = [{ id: 7, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }];
+        await paste();
+        expect(apply().disabled).toBe(false);
+        clickApply();
+        expect(props.onApplyPaste).toHaveBeenCalledOnce();
+        const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
+        expect(next.machines[0]).toMatchObject(incoming.machines[0]);
+        expect(next.inserters[0]).toMatchObject({ ...incoming.inserters[0], id: 1 });
+        expect(next.chests[0]).toMatchObject(incoming.chests[0]);
+        expect(next.belts).toBe(props.currentForm.belts);
+        expect(props.onUndoable).toHaveBeenCalledExactlyOnceWith('Imported 1 machine, 1 inserter, 1 chest from Factorio.');
         expect(props.onBuildReplaced).toHaveBeenCalledOnce();
     });
     it('resets selection consent even when the player returns to the same selections', async () => {
         await paste(); acknowledge(); expect(apply().disabled).toBe(false);
         toggleMachines(); expect(apply().disabled).toBe(true); expect(acknowledgment()).toBeUndefined();
         toggleMachines(); expect(apply().disabled).toBe(true); clickApply();
-        expect(props.onReplaceMachines).not.toHaveBeenCalled();
+        expect(props.onApplyPaste).not.toHaveBeenCalled();
     });
     it('invalidates consent immediately on a raw current-form object change, even if that object is later restored', async () => {
         await paste(); acknowledge(); const original = props.currentForm;
@@ -103,7 +121,7 @@ describe('Paste acknowledgment bound to the actual preview', () => {
         await paste(); const before = structuredClone(props.currentForm); toggleMachines(); expect(apply().disabled).toBe(true); clickApply();
         const cancel = Render().find(e => e.type === Button && e.props.children === 'Cancel')!.props;
         (cancel.onClick as () => void)(); Render(); expect(props.currentForm).toEqual(before);
-        expect(props.onReplaceMachines).not.toHaveBeenCalled(); expect(props.onUndoable).not.toHaveBeenCalled(); expect(props.onBuildReplaced).not.toHaveBeenCalled();
+        expect(props.onApplyPaste).not.toHaveBeenCalled(); expect(props.onUndoable).not.toHaveBeenCalled(); expect(props.onBuildReplaced).not.toHaveBeenCalled();
     });
 });
 
@@ -121,7 +139,7 @@ describe('prospective import assumptions', () => {
         const changed = [{ ...props.currentForm.inserters[0], stack_size: 16 }];
         props = { ...props, currentForm: { ...props.currentForm, inserters: changed } };
         expect(assumptions()).toBe(changed);
-        expect(props.onReplaceInserters).not.toHaveBeenCalled();
+        expect(props.onApplyPaste).not.toHaveBeenCalled();
         expect(props.onUndoable).not.toHaveBeenCalled();
     });
 });

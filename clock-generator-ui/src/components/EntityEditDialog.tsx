@@ -2,7 +2,6 @@ import { Close, DeleteOutline } from '@mui/icons-material';
 import {
     Alert,
     Box,
-    Button,
     Dialog,
     DialogContent,
     DialogTitle,
@@ -11,50 +10,37 @@ import {
     InputLabel,
     MenuItem,
     Select,
-    TextField,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import { useId, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useGameNames } from '../hooks/useGameNames';
 import { useMachineFacts } from '../hooks/useMachineFacts';
-import { ChestType } from 'clock-generator/light';
+import type { ChestType } from 'clock-generator/light';
 import type {
     BeltFormData,
-    BeltLaneFormData,
-    BeltStrategyFormValue,
-    BufferChestFormData,
     ChestFormData,
     DrillFormData,
     InserterFormData,
     MachineFormData,
 } from '../hooks/useConfigForm';
-import {
-    BELT_FORM_DEFAULT_STACK_SIZE,
-    BELT_STRATEGIES,
-    LANE_CONSUMPTION_TOOLTIP,
-    beltStrategyUpdate,
-    isBufferChest,
-    isInfinityChest,
-} from '../hooks/useConfigForm';
+import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES } from '../utils/a11yLabels';
 import type { EntityClickType } from './ConfigFlowDiagram';
-import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
+import { BeltLaneFields, BeltStrategyField, ChestFields, EntityTypeField, MachineSettingsFields } from './EntityFields';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { DraftFooter } from './DraftFooter';
 import { switchedChest } from '../utils/configForm/edits';
 import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS } from '../utils/inserterDraft';
 import { FactorioIcon } from './FactorioIcon';
-import { InfinityChestSettings } from './InfinityChestSettings';
 import { OutputChestAlert } from './OutputChestAlert';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
-import { BELT_TYPES, DRILL_TYPES, MACHINE_TYPE_LABELS, entityTypeLabel } from './entityTypes';
+import { BELT_TYPES, DRILL_TYPES, entityTypeLabel } from './entityTypes';
 import { DROP_BELT_READ_ONLY, beltGeometryEditProblem, hasImportedBeltDrops } from '../utils/inserterMetadata';
 
 // ---- Props ----
@@ -85,305 +71,6 @@ export interface EntityEditDialogProps {
     onDeleteDrill?: (index: number) => void;
 }
 
-// ---- Machine section ----
-
-function MachineEditSection({
-    machine,
-    entityIndex,
-    recipeNames,
-    onUpdate,
-}: {
-    machine: MachineFormData;
-    entityIndex: number;
-    recipeNames: string[];
-    onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
-}) {
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <ItemSelector
-                kind="recipe"
-                options={recipeNames}
-                value={machine.recipe || null}
-                onChange={(newValue) => onUpdate(entityIndex, 'recipe', newValue || '')}
-                label="Recipe"
-                placeholder="Search recipes..."
-                freeSolo
-            />
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                <NumberField
-                    label="Productivity (%)"
-                    value={machine.productivity}
-                    onValueChange={(val) => onUpdate(entityIndex, 'productivity', val ?? 0)}
-                    min={0}
-                    step={1}
-                    defaultValue={0}
-                    sx={{ flex: 1 }}
-                    size="small"
-                />
-                <NumberField
-                    label="Crafting Speed"
-                    value={machine.crafting_speed}
-                    onValueChange={(val) => onUpdate(entityIndex, 'crafting_speed', val ?? 1)}
-                    min={0.01}
-                    step={0.1}
-                    defaultValue={1}
-                    sx={{ flex: 1 }}
-                    size="small"
-                />
-                <FormControl size="small" sx={{ flex: 1, minWidth: { xs: '100%', sm: 200 } }}>
-                    <InputLabel>Type</InputLabel>
-                    <Select
-                        inputProps={{ 'aria-label': SELECT_NAMES.machineType }}
-                        value={machine.type || 'machine'}
-                        label="Type"
-                        onChange={(e) => onUpdate(entityIndex, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
-                    >
-                        <MenuItem value="machine">{MACHINE_TYPE_LABELS.machine}</MenuItem>
-                        <MenuItem value="furnace">{MACHINE_TYPE_LABELS.furnace}</MenuItem>
-                        <MenuItem value="biochamber">{MACHINE_TYPE_LABELS.biochamber}</MenuItem>
-                    </Select>
-                </FormControl>
-            </Box>
-        </Box>
-    );
-}
-
-// ---- Belt section ----
-
-function BeltEditSection({
-    belt,
-    geometryReadOnly,
-    entityIndex,
-    itemNames,
-    onUpdate,
-}: {
-    belt: BeltFormData;
-    geometryReadOnly: boolean;
-    entityIndex: number;
-    itemNames: string[];
-    onUpdate: (index: number, updates: Partial<BeltFormData>) => void;
-}) {
-    const { itemLabel } = useGameNames();
-    const geometryHelpId = useId();
-    const updateLane = (laneIndex: number, field: keyof BeltLaneFormData, value: string | number | undefined) => {
-        const newLanes = [...belt.lanes] as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
-        newLanes[laneIndex] = { ...newLanes[laneIndex], [field]: value };
-        onUpdate(entityIndex, { lanes: newLanes });
-    };
-
-    const addLane = () => {
-        if (belt.lanes.length < 2) {
-            const newLanes: [BeltLaneFormData, BeltLaneFormData] = [
-                belt.lanes[0],
-                { ingredient: '', stack_size: BELT_FORM_DEFAULT_STACK_SIZE },
-            ];
-            onUpdate(entityIndex, { lanes: newLanes });
-        }
-    };
-
-    const removeLane = () => {
-        const newLanes: [BeltLaneFormData] = [belt.lanes[0]];
-        onUpdate(entityIndex, { lanes: newLanes });
-    };
-
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {geometryReadOnly && <Typography id={geometryHelpId} variant="body2">{DROP_BELT_READ_ONLY}</Typography>}
-            <FormControl size="small" fullWidth>
-                <InputLabel>Belt Type</InputLabel>
-                <Select
-                    readOnly={geometryReadOnly}
-                    inputProps={{ 'aria-label': SELECT_NAMES.beltType, 'aria-describedby': geometryReadOnly ? geometryHelpId : undefined }}
-                    value={belt.type}
-                    label="Belt Type"
-                    onChange={(e) => onUpdate(entityIndex, { type: e.target.value as BeltFormData['type'] })}
-                    renderValue={(selected) => (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name={selected} size={20} alt="" />
-                            {entityTypeLabel(selected, itemLabel)}
-                        </Box>
-                    )}
-                >
-                    {BELT_TYPES.map((bt) => (
-                        <MenuItem key={bt.value} value={bt.value}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={bt.value} size={20} alt="" />
-                                {entityTypeLabel(bt.value, itemLabel)}
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
-
-            <FormControl size="small" fullWidth>
-                <InputLabel>Strategy</InputLabel>
-                <Select
-                    inputProps={{ 'aria-label': SELECT_NAMES.beltStrategy }}
-                    value={belt.strategy ?? 'normal'}
-                    label="Strategy"
-                    sx={{ '& .MuiSelect-select': { whiteSpace: 'normal', overflowWrap: 'anywhere' }, '& .MuiTypography-caption': { display: 'block' } }}
-                    onChange={(e) => onUpdate(entityIndex, beltStrategyUpdate(belt, e.target.value as BeltStrategyFormValue))}
-                >
-                    {BELT_STRATEGIES.map((strategy) => (
-                        <MenuItem key={strategy.value} value={strategy.value}>
-                            <Box>
-                                <Typography variant="body2">{strategy.label}</Typography>
-                                <Typography variant="caption" color="text.secondary">{strategy.description}</Typography>
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
-
-            {belt.lanes.map((lane, laneIndex) => (
-                <Box key={laneIndex} sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-                    <Typography variant="body2" sx={{ width: 56, flexShrink: 0 }}>
-                        Lane {laneIndex + 1}:
-                    </Typography>
-                    {geometryReadOnly ? <Typography variant="body2">Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
-                    <ItemSelector
-                        value={lane.ingredient || null}
-                        options={itemNames}
-                        onChange={(newValue) => updateLane(laneIndex, 'ingredient', newValue || '')}
-                        label="Ingredient"
-                        freeSolo
-                        sx={{ flex: '1 1 200px', minWidth: 'min(200px, 100%)' }}
-                    />
-                    <NumberField
-                        label="Stack size"
-                        value={lane.stack_size}
-                        onValueChange={(val) => updateLane(laneIndex, 'stack_size', parseInt(val?.toString() || '') || BELT_FORM_DEFAULT_STACK_SIZE)}
-                        min={1}
-                        sx={{ width: 110, maxWidth: '100%', flexShrink: 0 }}
-                        size="small"
-                    />
-                    </>}
-                    {belt.strategy === 'export' && (
-                    <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild>
-                        <Box>
-                            <NumberField
-                                label="Consumed /s"
-                                value={lane.consumption_per_second ?? null}
-                                onValueChange={(val) => updateLane(laneIndex, 'consumption_per_second', val && val > 0 ? val : undefined)}
-                                min={0}
-                                sx={{ width: 120 }}
-                                size="small"
-                            />
-                        </Box>
-                    </Tooltip>
-                    )}
-                    {!geometryReadOnly && belt.lanes.length > 1 && laneIndex === 1 ? (
-                        <IconButton size="small" onClick={removeLane} color="error" aria-label="Remove lane">
-                            <Close fontSize="small" />
-                        </IconButton>
-                    ) : (
-                        <Box sx={{ width: 28 }} />
-                    )}
-                </Box>
-            ))}
-
-            {!geometryReadOnly && belt.lanes.length < 2 && (
-                <Button size="small" color="inherit" onClick={addLane} sx={{ alignSelf: 'flex-start' }}>
-                    Add Second Lane
-                </Button>
-            )}
-        </Box>
-    );
-}
-
-// ---- Chest section ----
-
-function ChestEditSection({
-    chest,
-    entityIndex,
-    itemNames,
-    onUpdate,
-    onSwitchType,
-}: {
-    chest: ChestFormData;
-    entityIndex: number;
-    itemNames: string[];
-    onUpdate: (index: number, updates: Partial<ChestFormData>) => void;
-    onSwitchType: (index: number, newType: typeof ChestType[keyof typeof ChestType]) => void;
-}) {
-    const getInfinityFilters = (): ChestFilterSlot[] => {
-        if (!isInfinityChest(chest)) return [];
-        return chest.item_filter.map(f => ({ item_name: f.item_name, quantity: f.request_count }));
-    };
-
-    const handleInfinityFilterChange = (slotIndex: number, filter: ChestFilterSlot) => {
-        if (!isInfinityChest(chest)) return;
-        const newFilters = [...chest.item_filter];
-        newFilters[slotIndex] = { item_name: filter.item_name, request_count: filter.quantity };
-        onUpdate(entityIndex, { item_filter: newFilters } as Partial<ChestFormData>);
-    };
-
-    const handleInfinityFilterRemove = (slotIndex: number) => {
-        if (!isInfinityChest(chest)) return;
-        onUpdate(entityIndex, { item_filter: chest.item_filter.filter((_, i) => i !== slotIndex) } as Partial<ChestFormData>);
-    };
-
-
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <FormControl size="small" fullWidth>
-                <InputLabel>Chest Type</InputLabel>
-                <Select
-                    inputProps={{ 'aria-label': SELECT_NAMES.chestType }}
-                    value={chest.type}
-                    label="Chest Type"
-                    onChange={(e) => onSwitchType(entityIndex, e.target.value as typeof ChestType[keyof typeof ChestType])}
-                >
-                    <MenuItem value={ChestType.BUFFER_CHEST}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name="steel-chest" size={20} alt="" />
-                            Buffer chest
-                        </Box>
-                    </MenuItem>
-                    <MenuItem value={ChestType.INFINITY_CHEST}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name="infinity-chest" size={20} alt="" />
-                            Infinity chest
-                        </Box>
-                    </MenuItem>
-                </Select>
-            </FormControl>
-
-            {isBufferChest(chest) && (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    <ChestFilterSlotSelector filters={[{ item_name: chest.item_filter, quantity: 1 }]} itemNames={itemNames}
-                        onFilterChange={(_slot, filter) => onUpdate(entityIndex, { item_filter: filter.item_name })}
-                        onRemoveFilter={() => onUpdate(entityIndex, { item_filter: '' })}
-                        maxSlots={1} canAddMore={false} showQuantity={false} />
-                    <TextField
-                        label="Storage Size"
-                        type="number"
-                        value={(chest as BufferChestFormData).storage_size}
-                        onChange={(e) => onUpdate(entityIndex, { storage_size: parseInt(e.target.value) || 1 } as Partial<ChestFormData>)}
-                        inputProps={{ min: 1 }}
-                        sx={{ width: 130, maxWidth: '100%', flexShrink: 0 }}
-                        size="small"
-                    />
-                </Box>
-            )}
-
-            {isInfinityChest(chest) && (
-                <InfinityChestSettings chest={chest} onChange={enabled => onUpdate(entityIndex, { remove_unfiltered_items: enabled })}>
-                    <ChestFilterSlotSelector
-                        filters={getInfinityFilters()}
-                        itemNames={itemNames}
-                        onFilterChange={handleInfinityFilterChange}
-                        onRemoveFilter={handleInfinityFilterRemove}
-                        maxSlots={10}
-                        quantityLabel="Stock to maintain"
-                        canAddMore={true}
-                    />
-                </InfinityChestSettings>
-            )}
-        </Box>
-    );
-}
-
 // ---- Drill section ----
 
 function DrillEditSection({
@@ -402,30 +89,9 @@ function DrillEditSection({
     const { itemLabel, recipeLabel } = useGameNames();
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <FormControl size="small" fullWidth>
-                <InputLabel>Drill Type</InputLabel>
-                <Select
-                    inputProps={{ 'aria-label': SELECT_NAMES.drillType }}
-                    value={drill.type}
-                    label="Drill Type"
-                    onChange={(e) => onUpdate(entityIndex, { type: e.target.value as DrillFormData['type'] })}
-                    renderValue={(selected) => (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name={selected} size={20} alt="" />
-                            {entityTypeLabel(selected, itemLabel)}
-                        </Box>
-                    )}
-                >
-                    {DRILL_TYPES.map((dt) => (
-                        <MenuItem key={dt.value} value={dt.value}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={dt.value} size={20} alt="" />
-                                {entityTypeLabel(dt.value, itemLabel)}
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
+            <EntityTypeField label="Drill Type" value={drill.type} options={DRILL_TYPES}
+                inputAriaLabel={SELECT_NAMES.drillType} nameOf={value => entityTypeLabel(value, itemLabel)}
+                onChange={type => onUpdate(entityIndex, { type: type as DrillFormData['type'] })} sx={{ width: '100%' }} />
 
             <ItemSelector
                 value={drill.mined_item_name || null}
@@ -494,6 +160,8 @@ export function EntityEditDialog({
     onDeleteChest,
     onDeleteDrill,
 }: EntityEditDialogProps) {
+    const { itemLabel } = useGameNames();
+    const geometryHelpId = useId();
     const { entity, entityIndex, title, iconName } = useMemo(() => {
         if (!entityType || entityId === null) {
             return { entity: null, entityIndex: -1, title: '', iconName: '' };
@@ -667,38 +335,41 @@ export function EntityEditDialog({
                 <DialogContent sx={{ p: 0, scrollPaddingBottom: 72 }}>
                     {draft && entityType === 'machine' && (
                         <Box sx={{ p: 2 }}>
-                            <MachineEditSection
-                                machine={draft as MachineFormData}
-                                entityIndex={entityIndex}
-                                recipeNames={recipeNames}
-                                onUpdate={(index, field, value) => updateDraft(index, { [field]: value })}
-                            />
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <ItemSelector kind="recipe" options={recipeNames} value={(draft as MachineFormData).recipe || null}
+                                    onChange={value => updateDraft(entityIndex, { recipe: value || '' })}
+                                    label="Recipe" placeholder="Search recipes..." freeSolo />
+                                <MachineSettingsFields machine={draft as MachineFormData} dialog
+                                    onChange={(field, value) => updateDraft(entityIndex, { [field]: value })} />
+                            </Box>
                             {machineEntity?.recipe && (
                                 <MachineFactsAccordion machineId={entityId ?? 0} facts={machineFacts} error={machineFactsError} headingLevel={3} />
                             )}
                         </Box>
                     )}
                     {draft && entityType === 'belt' && (
-                        <Box sx={{ p: 2 }}><BeltEditSection
-                            belt={draft as BeltFormData}
-                            geometryReadOnly={hasImportedBeltDrops(inserters, (draft as BeltFormData).id)}
-                            entityIndex={entityIndex}
-                            itemNames={itemNames}
-                            onUpdate={updateDraft}
-                        /></Box>
+                        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {hasImportedBeltDrops(inserters, draft.id) && <Typography id={geometryHelpId} variant="body2">{DROP_BELT_READ_ONLY}</Typography>}
+                            <EntityTypeField label="Belt Type" value={(draft as BeltFormData).type} options={BELT_TYPES}
+                                readOnly={hasImportedBeltDrops(inserters, draft.id)}
+                                describedBy={hasImportedBeltDrops(inserters, draft.id) ? geometryHelpId : undefined}
+                                inputAriaLabel={SELECT_NAMES.beltType} nameOf={value => entityTypeLabel(value, itemLabel)}
+                                onChange={type => updateDraft(entityIndex, { type })} sx={{ width: '100%' }} />
+                            <BeltStrategyField belt={draft as BeltFormData} dialog onChange={update => updateDraft(entityIndex, update)} />
+                            <BeltLaneFields belt={draft as BeltFormData} itemNames={itemNames} readOnly={hasImportedBeltDrops(inserters, draft.id)} dialog
+                                onChange={update => updateDraft(entityIndex, update)} />
+                        </Box>
                     )}
                     {draft && entityType === 'chest' && (
                         <Box sx={{ p: 2 }}>
                             <OutputChestAlert chests={[draft as ChestFormData]} inserters={inserters} focusTargets={false}
                                 onEnableRemoval={() => updateDraft(entityIndex, { remove_unfiltered_items: true })}
                                 onSwitchType={(_index, type) => setDraft(d => switchedChest(d as ChestFormData, type, true))} />
-                            <ChestEditSection
-                            chest={draft as ChestFormData}
-                            entityIndex={entityIndex}
-                            itemNames={itemNames}
-                            onUpdate={updateDraft}
-                            onSwitchType={(_index, type) => setDraft(d => switchedChest(d as ChestFormData, type))}
-                        /></Box>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <ChestFields chest={draft as ChestFormData} itemNames={itemNames} dialog
+                                    onChange={update => updateDraft(entityIndex, update)}
+                                    onSwitchType={type => setDraft(d => switchedChest(d as ChestFormData, type))} />
+                            </Box></Box>
                     )}
                     {entity && entityType === 'inserter' && (
                         <InserterConfigPanel

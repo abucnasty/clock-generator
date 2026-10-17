@@ -1,4 +1,5 @@
 import type { ConfigFormData } from './configForm/formData';
+import type { TargetValues } from './pasteTarget';
 import type { PastedEntities } from '../worker/types';
 
 export type PasteCategory = 'machines' | 'drills' | 'inserters' | 'belts' | 'chests';
@@ -14,11 +15,13 @@ export interface PasteReferenceWarning {
 }
 const categories: PasteCategory[] = ['machines', 'drills', 'inserters', 'belts', 'chests'];
 const endpointCategory = { machine: 'machines', belt: 'belts', chest: 'chests' } as const;
+const replacesCategory = (incoming: PastedEntities, selections: ImportSelections, category: PasteCategory) =>
+    selections[category] && incoming[category].length > 0;
 
 /** Mirrors Apply's selected-and-nonempty replacement rule without changing either input. */
 export function pastePreview(current: ConfigFormData, incoming: PastedEntities, selections: ImportSelections) {
     const existing = { ...current, drills: current.drills?.configs ?? [] };
-    const replacing = (category: PasteCategory) => selections[category] && incoming[category].length > 0;
+    const replacing = (category: PasteCategory) => replacesCategory(incoming, selections, category);
     const counts = categories.map(category => ({
         category,
         current: existing[category].length,
@@ -54,4 +57,25 @@ export function pastePreview(current: ConfigFormData, incoming: PastedEntities, 
         ? `Inserter ${spatialCrossing.ownerId} has an imported drop position tied to its route. Import its inserters and referenced entities together, or open a complete edited build file; this selection would reuse geometry with different entities.`
         : null;
     return { counts, crossings, geometryProblem };
+}
+
+/** Apply the exact preview policy as one edit, leaving retained form rows and their UI identity untouched. */
+export function applyPaste(current: ConfigFormData, incoming: PastedEntities, selections: ImportSelections,
+    target?: TargetValues, miningProductivityLevel?: number): ConfigFormData {
+    const replacing = (category: PasteCategory) => replacesCategory(incoming, selections, category);
+    const withUuid = <T,>(row: T) => ({ ...row, _uuid: crypto.randomUUID() });
+    return {
+        ...current,
+        target_output: selections.target && target ? target : current.target_output,
+        machines: replacing('machines') ? incoming.machines.map(withUuid) : current.machines,
+        inserters: replacing('inserters')
+            ? incoming.inserters.map((row, index) => withUuid({ ...row, id: row.id ?? index + 1 }))
+            : current.inserters,
+        belts: replacing('belts') ? incoming.belts.map(withUuid) : current.belts,
+        chests: replacing('chests') ? incoming.chests.map(withUuid) : current.chests,
+        ...(replacing('drills') && { drills: {
+            mining_productivity_level: miningProductivityLevel ?? current.drills?.mining_productivity_level ?? 0,
+            configs: incoming.drills.map(withUuid),
+        } }),
+    };
 }

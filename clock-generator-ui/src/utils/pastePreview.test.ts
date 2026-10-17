@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Option } from 'clock-generator/light';
 import type { PastedEntities } from '../worker/types';
 import { createDefaultConfig, type ConfigFormData, type InserterFormData } from './configForm/formData';
-import { pastePreview, type ImportSelections } from './pastePreview';
+import { applyPaste, pastePreview, type ImportSelections, type PasteCategory } from './pastePreview';
 
 const none: ImportSelections = { target: false, machines: false, drills: false, inserters: false, belts: false, chests: false };
 const empty = (): PastedEntities => ({ machines: [], drills: [], inserters: [], belts: [], chests: [], guidance: Option.none(), suggested_target: Option.none() });
@@ -84,5 +84,90 @@ describe('selective Paste preview', () => {
         const form = current(), incoming = empty(); incoming.machines = [machine(1)]; incoming.inserters = [inserter(1, 'machine')]; incoming.drills = [drill(1)];
         expect(pastePreview(form, incoming, { ...none, machines: true, inserters: true, drills: true }).crossings).toEqual([]);
         expect(pastePreview(form, incoming, none).crossings).toEqual([]);
+    });
+});
+
+describe('atomic selective Paste', () => {
+    const categories: PasteCategory[] = ['machines', 'drills', 'inserters', 'belts', 'chests'];
+    const populated = (): PastedEntities => ({
+        ...empty(),
+        machines: [{ ...machine(7), fuel: 'coal' }],
+        drills: [drill(8, 7)],
+        inserters: [{ source: { type: 'machine', id: 7 }, sink: { type: 'belt', id: 9, drop: { lane: 2, position: 0.75 } },
+            prototype: 'bulk-inserter', quality: 'rare', filters: ['iron-plate'] }, inserter(12, 'machine')],
+        belts: [{ id: 9, type: 'fast-transport-belt', strategy: 'export', lanes: [{ ingredient: 'iron-plate', stack_size: 4, consumption_per_second: 2 }] }],
+        chests: [{ id: 10, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
+    });
+    const rows = (form: ConfigFormData, category: PasteCategory) => category === 'drills' ? form.drills?.configs ?? [] : form[category];
+
+    it('matches the preview replacement policy for every category selection without mutating the raw destination', () => {
+        const form = current(), incoming = populated();
+        form.machines = [{ ...machine(1), _uuid: 'retained-machine' }];
+        form.inserters = [{ ...formInserter(2, 'machine'), _forced_always: true }];
+        form.belts = [{ id: 4, _uuid: 'retained-belt', type: 'transport-belt', lanes: [{ ingredient: '', stack_size: 1 }] }];
+        form.chests = [{ id: 5, _uuid: 'retained-chest', type: 'infinity-chest', item_filter: [],
+            _chest_settings: { buffer_filter: 'coal', storage_size: 2 } }];
+        form.drills = { mining_productivity_level: 12, configs: [{ ...drill(3), _uuid: 'retained-drill' }] };
+        form.target_output = { recipe: '', copies: 0, items_per_second: 0 };
+        form.overrides = { non_moving_belts: true };
+        const before = structuredClone({ form, incoming });
+        for (let mask = 0; mask < 32; mask++) {
+            const selections = { ...none };
+            categories.forEach((category, index) => { selections[category] = (mask & (1 << index)) !== 0; });
+            const next = applyPaste(form, incoming, selections);
+            for (const count of pastePreview(form, incoming, selections).counts) {
+                expect(rows(next, count.category)).toHaveLength(count.result);
+                if (count.replacing) expect(rows(next, count.category)).not.toBe(rows(form, count.category));
+                else expect(rows(next, count.category)).toBe(rows(form, count.category));
+            }
+            expect(next.target_output).toBe(form.target_output);
+            expect(next.overrides).toBe(form.overrides);
+        }
+        expect({ form, incoming }).toEqual(before);
+    });
+
+    it('assigns fresh unique UUIDs and fallback inserter IDs while preserving imported settings and geometry', () => {
+        const incoming = populated();
+        const selections = { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true };
+        const next = applyPaste(current(), incoming, selections);
+        const uuids = categories.flatMap(category => rows(next, category).map(row => row._uuid));
+        expect(uuids.every(uuid => typeof uuid === 'string' && uuid.length > 0)).toBe(true);
+        expect(new Set(uuids).size).toBe(uuids.length);
+        expect(next.inserters.map(row => row.id)).toEqual([1, 12]);
+        expect(next.inserters[0]).toMatchObject(incoming.inserters[0]);
+        expect(next.machines[0]).toMatchObject(incoming.machines[0]);
+        expect(next.belts[0]).toMatchObject(incoming.belts[0]);
+        expect(next.chests[0]).toMatchObject(incoming.chests[0]);
+        expect(next.drills!.configs[0]).toMatchObject(incoming.drills[0]);
+        const again = applyPaste(current(), incoming, selections);
+        expect(again.inserters[0]._uuid).not.toBe(next.inserters[0]._uuid);
+    });
+
+    it('retains selected empty categories and does not create absent drills or apply their productivity', () => {
+        const form = current();
+        form.inserters = [formInserter(1, 'machine')];
+        const next = applyPaste(form, empty(), { target: true, machines: true, drills: true, inserters: true, belts: true, chests: true }, undefined, 99);
+        for (const category of categories) {
+            if (category !== 'drills') expect(next[category]).toBe(form[category]);
+        }
+        expect(next).not.toHaveProperty('drills');
+        expect(next.target_output).toBe(form.target_output);
+    });
+
+    it('replaces Target Output only when both selected and supplied', () => {
+        const form = current(), target = { recipe: 'iron-plate', copies: 2, items_per_second: 10 };
+        expect(applyPaste(form, empty(), none, target).target_output).toBe(form.target_output);
+        expect(applyPaste(form, empty(), { ...none, target: true }).target_output).toBe(form.target_output);
+        expect(applyPaste(form, empty(), { ...none, target: true }, target).target_output).toBe(target);
+    });
+
+    it('updates mining productivity with imported drills, retaining the current level when unspecified', () => {
+        const form = current(), incoming = populated();
+        form.drills = { mining_productivity_level: 12, configs: [{ ...drill(1), _uuid: 'retained' }] };
+        expect(applyPaste(form, incoming, { ...none, drills: true }, undefined, 0).drills?.mining_productivity_level).toBe(0);
+        expect(applyPaste(form, incoming, { ...none, drills: true }).drills?.mining_productivity_level).toBe(12);
+        expect(applyPaste(current(), incoming, { ...none, drills: true }).drills?.mining_productivity_level).toBe(0);
+        expect(applyPaste(form, incoming, none, undefined, 99).drills).toBe(form.drills);
+        expect(applyPaste(form, empty(), { ...none, drills: true }, undefined, 99).drills).toBe(form.drills);
     });
 });

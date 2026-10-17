@@ -5,7 +5,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { FilterItemPicker } from './FilterItemPicker';
 import { insetSlotSx } from './insetSlot';
 
-export interface ChestFilterSlot {
+interface ChestFilterSlot {
     item_name: string;
     quantity: number;
 }

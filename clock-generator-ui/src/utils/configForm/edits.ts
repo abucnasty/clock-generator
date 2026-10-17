@@ -145,27 +145,6 @@ export function removeMachine(prev: ConfigFormData, index: number): ConfigFormDa
     return followRenumber({ ...prev, machines: removed.items }, 'machines', removed.idMap);
 }
 
-export function mergeMachines(prev: ConfigFormData, newMachines: MachineFormData[]): ConfigFormData {
-    // Reassign IDs to avoid conflicts
-    const firstId = nextId(prev, 'machines');
-    const machinesWithNewIds = newMachines.map((m, i) => ({
-        ...m,
-        id: firstId + i,
-        _uuid: crypto.randomUUID(),
-    }));
-    return {
-        ...prev,
-        machines: [...prev.machines, ...machinesWithNewIds],
-    };
-}
-
-export function replaceMachines(prev: ConfigFormData, newMachines: MachineFormData[]): ConfigFormData {
-    return {
-        ...prev,
-        machines: newMachines,
-    };
-}
-
 // Inserters
 export function addInserter(prev: ConfigFormData): ConfigFormData {
     return {
@@ -236,13 +215,6 @@ export function removeInserter(prev: ConfigFormData, index: number): ConfigFormD
     return { ...prev, inserters: removed.items };
 }
 
-export function replaceInserters(prev: ConfigFormData, newInserters: InserterFormData[]): ConfigFormData {
-    return {
-        ...prev,
-        inserters: newInserters,
-    };
-}
-
 // Belts
 export function addBelt(prev: ConfigFormData): ConfigFormData {
     return {
@@ -274,13 +246,6 @@ export function removeBelt(prev: ConfigFormData, index: number): ConfigFormData 
     const removed = removeAndRenumber(prev.belts, index);
     if (!removed) return prev;
     return followRenumber({ ...prev, belts: removed.items }, 'belts', removed.idMap);
-}
-
-export function replaceBelts(prev: ConfigFormData, newBelts: BeltFormData[]): ConfigFormData {
-    return {
-        ...prev,
-        belts: newBelts,
-    };
 }
 
 // Chests
@@ -348,13 +313,6 @@ export function removeChest(prev: ConfigFormData, index: number): ConfigFormData
     return followRenumber({ ...prev, chests: removed.items }, 'chests', removed.idMap);
 }
 
-export function replaceChests(prev: ConfigFormData, newChests: ChestFormData[]): ConfigFormData {
-    return {
-        ...prev,
-        chests: newChests,
-    };
-}
-
 // Drills
 export function updateDrillsConfig(prev: ConfigFormData, field: 'mining_productivity_level', value: number): ConfigFormData {
     if (!prev.drills) return prev;
@@ -406,46 +364,6 @@ export function removeDrill(prev: ConfigFormData, index: number): ConfigFormData
     const removed = removeAndRenumber(prev.drills.configs, index);
     if (!removed) return prev;
     return { ...prev, drills: { ...prev.drills, configs: removed.items } };
-}
-
-export function mergeDrills(prev: ConfigFormData, newDrills: DrillFormData[]): ConfigFormData {
-    // If drills aren't enabled, enable them first
-    const currentDrills = prev.drills ?? {
-        mining_productivity_level: 0,
-        configs: [],
-    };
-
-    // Reassign IDs to avoid conflicts
-    const firstId = nextId(prev, 'drills');
-    const drillsWithNewIds = newDrills.map((d, i) => ({
-        ...d,
-        id: firstId + i,
-        _uuid: crypto.randomUUID(),
-    }));
-
-    return {
-        ...prev,
-        drills: {
-            ...currentDrills,
-            configs: [...currentDrills.configs, ...drillsWithNewIds],
-        },
-    };
-}
-
-export function replaceDrills(prev: ConfigFormData, newDrills: DrillFormData[]): ConfigFormData {
-    // If drills aren't enabled, enable them first
-    const currentDrills = prev.drills ?? {
-        mining_productivity_level: 0,
-        configs: [],
-    };
-
-    return {
-        ...prev,
-        drills: {
-            ...currentDrills,
-            configs: newDrills,
-        },
-    };
 }
 
 // Overrides

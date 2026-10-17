@@ -48,7 +48,7 @@ describe('ids', () => {
     });
 
     it('are past those of entities that were put in without taking an id', () => {
-        const config = edits.replaceBelts(edits.addBelt(createDefaultConfig()), [{ ...form().belts[0], id: 9 }]);
+        const config = { ...createDefaultConfig(), belts: [{ ...form().belts[0], id: 9 }] };
         expect(edits.addBelt(config).belts.map((b) => b.id)).toEqual([9, 10]);
     });
 });
@@ -105,19 +105,6 @@ describe('machines', () => {
         expect(edits.reorderMachines(config, 1, 0).inserters[1].source).toEqual({ type: 'machine', id: 0 });
     });
 
-    it('merges machines in after the others with new ids and uuids', () => {
-        const pasted = { ...form().machines[0], id: 1, recipe: 'pasted' };
-        const config = edits.mergeMachines(form(), [pasted, pasted]);
-        expect(ids(config.machines)).toEqual([1, 2, 3, 4, 5]);
-        expect(config.machines[3].recipe).toBe('pasted');
-        expect(config.machines[3]._uuid).not.toBe(pasted._uuid);
-    });
-
-    it('replaces the machines', () => {
-        const machines = [{ ...form().machines[0], id: 7 }];
-        expect(edits.replaceMachines(form(), machines).machines).toBe(machines);
-    });
-
     it('renumbers the machines on reorder and follows them in inserters and drills', () => {
         const before = form();
         const config = edits.reorderMachines(before, 2, 0);
@@ -167,9 +154,7 @@ describe('inserters', () => {
         expect(ids(config.inserters)).toEqual([1, 2, 3]);
     });
 
-    it('replaces the inserters', () => {
-        expect(edits.replaceInserters(form(), []).inserters).toEqual([]);
-    });
+
 });
 
 describe('belts', () => {
@@ -295,17 +280,6 @@ describe('drills', () => {
         expect(edits.removeDrill(none, 0)).toBe(none);
     });
 
-    it('merges drills in after the others with new ids, enabling drills first', () => {
-        const pasted = form().drills!.configs[0];
-        expect(ids(edits.mergeDrills(form(), [pasted]).drills!.configs)).toEqual([1, 2, 3]);
-        expect(ids(edits.mergeDrills(createDefaultConfig(), [pasted]).drills!.configs)).toEqual([1]);
-    });
-
-    it('replaces the drills, enabling drills first', () => {
-        const pasted = form().drills!.configs;
-        expect(edits.replaceDrills(createDefaultConfig(), pasted).drills).toEqual({ mining_productivity_level: 0, configs: pasted });
-    });
-
     it('renumbers the drills on reorder', () => {
         const config = edits.reorderDrills(form(), 1, 0);
         expect(config.drills!.configs.map((d) => [d.id, d.target.id])).toEqual([[1, 3], [2, 1]]);
@@ -316,11 +290,14 @@ describe('renumbering', () => {
     const machine = (id: number) => ({ id, _uuid: `machine-${id}`, recipe: '', productivity: 0, crafting_speed: 1 });
 
     it('follows ids that were out of order or had a hole, and unsets the ends at the removed machine', () => {
-        let config = edits.replaceMachines(form(), [machine(5), machine(1), machine(2)]);
-        config = edits.replaceInserters(config, [
-            inserter(1, { type: 'machine', id: 5 }, { type: 'machine', id: 1 }),
-            inserter(2, { type: 'machine', id: 2 }, { type: 'belt', id: 1 }),
-        ]);
+        const config = {
+            ...form(),
+            machines: [machine(5), machine(1), machine(2)],
+            inserters: [
+                inserter(1, { type: 'machine', id: 5 }, { type: 'machine', id: 1 }),
+                inserter(2, { type: 'machine', id: 2 }, { type: 'belt', id: 1 }),
+            ],
+        };
         const removed = edits.removeMachine(config, 1);
         expect(ids(removed.machines)).toEqual([1, 2]);
         expect(removed.inserters.map((ins) => [ins.source.id, ins.sink.id])).toEqual([[1, 0], [2, 1]]);
@@ -332,7 +309,7 @@ describe('renumbering', () => {
     });
 
     it('unsets a reference to an id no entity has, after a remove and after a reorder', () => {
-        const config = edits.replaceInserters(form(), [inserter(1, { type: 'machine', id: 9 }, { type: 'belt', id: 1 })]);
+        const config = { ...form(), inserters: [inserter(1, { type: 'machine', id: 9 }, { type: 'belt', id: 1 })] };
         expect(edits.removeMachine(config, 0).inserters[0].source).toEqual({ type: 'machine', id: 0 });
         expect(edits.reorderMachines(config, 0, 1).inserters[0].source).toEqual({ type: 'machine', id: 0 });
     });
