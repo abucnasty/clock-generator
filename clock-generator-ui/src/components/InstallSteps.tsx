@@ -43,6 +43,8 @@ interface InstallStepsProps {
     movesOf: (id: string) => WiringMoves;
     /** The clocks are for an earlier build: the wiring list would name inserters of a build that has changed */
     stale: boolean;
+    /** The Install context already supplies the disclosure, so all steps stay visible. */
+    alwaysOpen?: boolean;
 }
 
 /**
@@ -127,12 +129,28 @@ function WiringList({ install, movesOf }: Pick<InstallStepsProps, 'install' | 'm
  * The numbered steps that put the clock into the game, with the list of what to wire to each combinator. Open unless
  * the player folded it away; while the clocks are for an earlier build, only one line.
  */
-export function InstallSteps({ install, movesOf, stale }: InstallStepsProps) {
+export function InstallSteps({ install, movesOf, stale, alwaysOpen = false }: InstallStepsProps) {
     const [expanded, setExpanded] = useState(() => !readCollapsed());
     const summaryId = useId();
     const detailsId = useId();
     const steps = installSteps(install);
 
+    const content = stale ? (
+        <Typography variant="body2" data-install-stale>{INSTALL_COPY.stale}</Typography>
+    ) : (
+        <Box component="ol" sx={{ m: 0, pl: 3, maxWidth: '80ch' }}>
+            {steps.map(step => (
+                <Box component="li" key={step.id} sx={{ mb: 1.5 }} data-install-step={step.id}>
+                    <Typography variant="body2" component="p" sx={{ fontWeight: 600 }}>{step.title}</Typography>
+                    <Typography variant="body2" component="p" color="text.secondary">{step.detail}</Typography>
+                    {(step.id === 'wire' || step.id === 'drills') && <WiringList install={install} movesOf={movesOf} />}
+                </Box>
+            ))}
+        </Box>
+    );
+    if (alwaysOpen) {
+        return <Box data-install-steps sx={{ mt: 1 }}>{content}</Box>;
+    }
     return (
         <Accordion
             expanded={expanded}
@@ -150,19 +168,7 @@ export function InstallSteps({ install, movesOf, stale }: InstallStepsProps) {
                 <Typography component="span" variant="subtitle1" sx={{ fontWeight: 600 }}>{INSTALL_COPY.heading}</Typography>
             </AccordionSummary>
             <AccordionDetails id={detailsId} sx={{ pt: 0 }}>
-                {stale ? (
-                    <Typography variant="body2" data-install-stale>{INSTALL_COPY.stale}</Typography>
-                ) : (
-                    <Box component="ol" sx={{ m: 0, pl: 3, maxWidth: '80ch' }}>
-                        {steps.map(step => (
-                            <Box component="li" key={step.id} sx={{ mb: 1.5 }} data-install-step={step.id}>
-                                <Typography variant="body2" component="p" sx={{ fontWeight: 600 }}>{step.title}</Typography>
-                                <Typography variant="body2" component="p" color="text.secondary">{step.detail}</Typography>
-                                {(step.id === 'wire' || step.id === 'drills') && <WiringList install={install} movesOf={movesOf} />}
-                            </Box>
-                        ))}
-                    </Box>
-                )}
+                {content}
             </AccordionDetails>
         </Accordion>
     );

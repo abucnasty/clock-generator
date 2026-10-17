@@ -19,6 +19,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useId, useState, type ReactNode } from 'react';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
@@ -32,7 +33,7 @@ import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
-import { RECOMMENDED_COPY, disclosureRunLine, partitionClockRows, type PickRule } from '../utils/recommendedClock';
+import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
@@ -166,6 +167,7 @@ export function ClockAlternativesPanel({
     notice,
     holdNotice = false,
 }: ClockAlternativesPanelProps) {
+    const { density } = useDisplayPreferences();
     const [showUnstable, setShowUnstable] = useState(false);
     const [allColumns, setAllColumns] = useState(false);
     // the unstable rows that were on screen when the others were shown
@@ -182,6 +184,8 @@ export function ClockAlternativesPanel({
         // under the pointer
         { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
     );
+    const stableBelts: BeltClockGroups<ClockAlternativeView> = groupClockRowsByBelt(stable);
+    const otherBelts: BeltClockGroups<ClockAlternativeView> = groupClockRowsByBelt(unstable);
     const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
@@ -191,7 +195,7 @@ export function ClockAlternativesPanel({
     const columnCount = allColumns ? 10 : fold === null ? 5 : 4;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
-    const renderRow = ({ alternative, index }: { alternative: ClockAlternativeView; index: number }) => {
+    const renderRow = ({ alternative, index }: ClockRow<ClockAlternativeView>) => {
         const works = worksOf(alternative);
         const recovery = recoversOf(alternative);
         return (
@@ -295,12 +299,12 @@ export function ClockAlternativesPanel({
         <Panel
             title={COMPARE_COPY.heading}
             help={{ label: COMPARE_COPY.terms, content: <TermsList /> }}
-            sx={{ mt: 2, mb: 0 }}
+            sx={{ mb: 0, '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }}
             data-compare-clocks=""
         >
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
-                {RECOMMENDED_COPY.intro}
-            </Typography>
+            {density !== 'compact' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
+                Select a clock to compare its rate, recovery and wake-ups. Belt compatibility is a separate condition.
+            </Typography>}
             {!anyStable && alternatives.length > 0 && pending.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                     {anyHolds ? COMPARE_COPY.noneRecover : COMPARE_COPY.noneHold}
@@ -378,23 +382,22 @@ export function ClockAlternativesPanel({
                             )}
                         </TableRow>
                     </TableHead>
-                    <TableBody>{stable.map(renderRow)}</TableBody>
-                    {/* the unstable clocks and the ones still being computed: a group of rows of their own, under their header */}
+                    {(['matches', 'requiresChange'] as const).map(group => {
+                        const stableRows = stableBelts[group];
+                        const otherRows = otherBelts[group];
+                        if (!stableRows.length && !otherRows.length) return null;
+                        const headingId = `${tableId}-belt-${group}`;
+                        return <TableBody key={group} aria-labelledby={headingId}>
+                            <TableRow><TableCell id={headingId} component="th" role="rowheader" scope="rowgroup" colSpan={columnCount}
+                                sx={{ fontWeight: 700, bgcolor: 'background.default' }}>
+                                {group === 'matches' ? 'Matches your belt setting' : 'Requires a different belt setting'}
+                            </TableCell></TableRow>
+                            {stableRows.map(renderRow)}
+                            {stableRows.length > 0 && otherRows.length > 0 && <TableRow><TableCell colSpan={columnCount} sx={{ color: 'text.secondary' }}>{RECOMMENDED_COPY.unstableDivider}</TableCell></TableRow>}
+                            {otherRows.map(renderRow)}
+                        </TableBody>;
+                    })}
                     <TableBody>
-                        {stable.length > 0 && unstable.length > 0 && (
-                            <TableRow>
-                                <TableCell
-                                    // a heading for the rows below it, not a cell of data
-                                    component="th"
-                                    scope="rowgroup"
-                                    colSpan={columnCount}
-                                    sx={{ color: 'text.secondary', borderTop: 1, borderColor: 'divider', fontWeight: 'bold' }}
-                                >
-                                    {RECOMMENDED_COPY.unstableDivider}
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        {unstable.map(renderRow)}
                         {pending.map(label => (
                             <TableRow key={`pending-${label}`}>
                                 <TableCell padding="checkbox">

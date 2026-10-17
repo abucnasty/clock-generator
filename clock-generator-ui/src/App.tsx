@@ -4,17 +4,14 @@ import {
     AppBar,
     Box,
     Button,
-    Chip,
     CircularProgress,
     Container,
     CssBaseline,
     Dialog,
     IconButton,
     ThemeProvider,
-    Toolbar,
     Typography,
     Alert,
-    Icon,
 } from '@mui/material';
 import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps, InserterFixOption } from 'clock-generator/browser';
@@ -49,6 +46,9 @@ import { PanelSection } from './components/Panel';
 import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost, MessageSlot } from './components/Messages';
+import { DisplayPreferencesProvider } from './hooks/useDisplayPreferences';
+import { DisplayPreferencesButton } from './components/DisplayPreferences';
+import type { ResultDetail } from './utils/resultsView';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { StaleCopyDialog } from './components/StaleCopyDialog';
 import { ManualBlueprintDialog } from './components/ManualBlueprintDialog';
@@ -109,13 +109,15 @@ const TOOLS_MENU = {
 /** The theme, the in-game names every picker and label reads, and the timing the rule editor checks a rule against */
 function PageProviders({ gameNames, searchOnlyRecipes, ruleTiming, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; ruleTiming: RuleTiming; children: ReactNode }) {
     return (
-        <ThemeProvider theme={appTheme}>
-            <GameNamesContext value={gameNames}>
-                <SearchOnlyRecipesContext value={searchOnlyRecipes}>
-                    <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
-                </SearchOnlyRecipesContext>
-            </GameNamesContext>
-        </ThemeProvider>
+        <DisplayPreferencesProvider>
+            <ThemeProvider theme={appTheme}>
+                <GameNamesContext value={gameNames}>
+                    <SearchOnlyRecipesContext value={searchOnlyRecipes}>
+                        <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+                    </SearchOnlyRecipesContext>
+                </GameNamesContext>
+            </ThemeProvider>
+        </DisplayPreferencesProvider>
     );
 }
 
@@ -267,6 +269,7 @@ function App() {
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
     const [view, setView] = useState<WorkflowView>('configure');
+    const [resultDetail, setResultDetail] = useState<ResultDetail>('why');
 
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverageIssues = useInserterValidation(exportConfig, isInitialized);
@@ -861,53 +864,52 @@ function App() {
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
-                    <Toolbar>
-                        <Icon sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 0 }}>
-                            <img src="/big_biter_q5_right.png" alt="" style={{ width: 26, height: 26 }} />
-                        </Icon>
-                        <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0, flexShrink: 1 }}>
-                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
-                        </Typography>
-                        {isInitialized && (
-                            <BuildSwitcher
-                                ref={switcherRef}
-                                builds={switcherBuilds}
-                                currentId={library.currentId}
-                                currentTitle={currentTitle}
-                                onOpen={handleOpenBuild}
-                                onNew={handleNewBuild}
-                                onDuplicate={handleDuplicateBuild}
-                                onRename={handleRenameBuild}
-                                onDelete={handleDeleteBuild}
-                                readOnly={!library.writable}
-                            />
-                        )}
-                        <Box sx={{ flexGrow: 1 }} />
-                        <ConfigImportExport
-                            currentForm={config}
-                            ref={buildEntryRef}
-                            config={exportableConfig}
-                            target={config.target_output}
-                            onImport={handleImportConfig}
-                            onReplaceTarget={replaceTarget}
-                            onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
-                            onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
-                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
-                            onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
-                            onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
-                            onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
-                            onReset={handleReset}
-                            onBuildReplaced={handleBuildReplaced}
-                            onUndoable={offerUndoOfReplace}
-                            onShowIntro={showIntro}
-                            pasteIsNextStep={blankBuild && !introVisible}
-                            buildName={library.currentMeta.name}
-                            buildTitle={currentTitle}
-                            toolsMenuItems={toolsMenuItems}
-                        />
-                    </Toolbar>
                     {isInitialized && (
                         <WorkflowBar
+                            identity={
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center', minWidth: 0 }}>
+                                    <Typography variant="subtitle1" component="h1" sx={{ minWidth: 0, fontWeight: 600 }}>
+                                        Clock Generator
+                                    </Typography>
+                                    <BuildSwitcher
+                                        ref={switcherRef}
+                                        builds={switcherBuilds}
+                                        currentId={library.currentId}
+                                        currentTitle={currentTitle}
+                                        onOpen={handleOpenBuild}
+                                        onNew={handleNewBuild}
+                                        onDuplicate={handleDuplicateBuild}
+                                        onRename={handleRenameBuild}
+                                        onDelete={handleDeleteBuild}
+                                        readOnly={!library.writable}
+                                    />
+                                    <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)} title="View changelog" sx={{ textTransform: 'none' }}>v{__APP_VERSION__}</Button>
+                                    <ConfigImportExport
+                                        currentForm={config}
+                                        ref={buildEntryRef}
+                                        config={exportableConfig}
+                                        target={config.target_output}
+                                        onImport={handleImportConfig}
+                                        onReplaceTarget={replaceTarget}
+                                        onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
+                                        onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
+                                        onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
+                                        onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
+                                        onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
+                                        onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
+                                        onReset={handleReset}
+                                        onBuildReplaced={handleBuildReplaced}
+                                        onUndoable={offerUndoOfReplace}
+                                        onShowIntro={showIntro}
+                                        pasteIsNextStep={blankBuild && !introVisible}
+                                        buildName={library.currentMeta.name}
+                                        buildTitle={currentTitle}
+                                        toolsMenuItems={toolsMenuItems}
+                                    />
+
+                                    <DisplayPreferencesButton />
+                                </Box>
+                            }
                             view={view}
                             onViewChange={setView}
                             isLoading={isRunning}
@@ -942,6 +944,11 @@ function App() {
                             pickGone={pickGone?.label ?? null}
                         />
                     )}
+                    {!isInitialized && <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography component="h1" variant="subtitle1">Clock Generator</Typography>
+                        <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)}>v{__APP_VERSION__}</Button>
+                        <DisplayPreferencesButton />
+                    </Box>}
                     {/* outside the condition: a message can come before the workflow bar is there */}
                     <MessageSlot active={!diagramFullscreen} />
                 </AppBar>
@@ -1119,6 +1126,9 @@ function App() {
 
                         <Box sx={{ display: view === 'results' ? 'block' : 'none' }}>
                             <ResultsWorkspace
+                                detail={resultDetail}
+                                onDetailChange={setResultDetail}
+                                generatedFor={generatedFor}
                                 generationAssumptions={generationAssumptions}
                                 isRunning={isRunning}
                                 error={error}
@@ -1196,14 +1206,6 @@ function App() {
                     <Typography variant="body2" color="text.secondary">
                         Created by abucnasty
                     </Typography>
-                    <Chip
-                        label={`v${__APP_VERSION__}`}
-                        size="small"
-                        variant="outlined"
-                        clickable
-                        onClick={() => setChangelogOpen(true)}
-                        title="View changelog"
-                    />
                     <Button
                         href="https://ko-fi.com/J6D4284EZ5"
                         target="_blank"

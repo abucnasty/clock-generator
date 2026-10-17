@@ -58,9 +58,10 @@ function clockWarningOf(
     }
     const { items_per_second } = alternative.assessment;
     if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
-        warnings.push(`This clock does not hold the target rate: it runs at ${figure(items_per_second)} of `
-            + `${figure(items_per_second - alternative.ranking.rate_off_target)} a second in the simulator.`);
-    } else if (alternative.assessment.holds === false) {
+        warnings.push(`This clock’s output rate differs from the target: it runs at ${figure(items_per_second)}/s; requested `
+            + `${figure(items_per_second - alternative.ranking.rate_off_target)}/s in the simulator.`);
+    }
+    if (alternative.assessment.holds === false) {
         warnings.push('This clock does not hold its expected output in the modeled clock checks.');
     }
     return warnings.join(' ') || null;
