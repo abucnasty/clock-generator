@@ -14,7 +14,8 @@ import {
 import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue } from '../hooks/useConfigForm';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { FactorioIcon } from './FactorioIcon';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
@@ -160,7 +161,7 @@ function BeltsFormComponent({
                         mb: compact ? 1 : 2,
                         p: compact ? 1.5 : 2,
                         minWidth: 0,
-                        bgcolor: SURFACE.row,
+                        bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
                     }}
                 >
                     <Box sx={{ display: 'flex', gap: compact ? 1 : 2, alignItems: 'center', mb: compact ? 1 : 2, flexWrap: 'wrap' }}>

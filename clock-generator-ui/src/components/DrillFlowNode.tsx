@@ -1,3 +1,5 @@
+import { useTheme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
@@ -9,6 +11,7 @@ import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 type DrillFlowNodeType = Node<DrillNodeData, 'drillNode'>;
 
 export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
+    const tokens = themeTokens(useTheme());
     return (
         <>
             <Box
@@ -16,8 +19,8 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: '#1e1e1e',
-                    border: '2px solid #a0522d',
+                    bgcolor: tokens.surface.inset,
+                    border: `2px solid ${tokens.role.orange.main}`,
                     borderRadius: 1,
                     display: 'flex',
                     flexDirection: 'column',
@@ -26,7 +29,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     cursor: 'pointer',
                     width: DRILL_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: '#2a2a2a', borderColor: '#c47a45' },
+                    '&:hover': { bgcolor: tokens.hover.panel, borderColor: tokens.role.orange.main },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
@@ -34,7 +37,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
-                            sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: '#c47a45' }}
+                            sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: tokens.role.orange.main }}
                         >
                             {entityLabel('drill', data.drillId)}
                         </Typography>

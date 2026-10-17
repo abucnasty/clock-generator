@@ -6,7 +6,8 @@ import { effectiveInserterStackSize } from '../utils/inserterMetadata';
 import { removeFilterSlot, setFilterSlot } from '../utils/inserterFilters';
 import { stackSizeFrom } from '../utils/inserterOptions';
 import type { BulkEditKind } from '../utils/undoSnapshot';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { EnableControlModal } from './EnableControlModal';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NumberField } from './NumberField';
@@ -68,7 +69,7 @@ export function BulkEditBar({ selected, total, priorityIds, availableItems, item
 
     const closeFilters = () => setFiltersAnchor(null);
     return <Box ref={barRef} role="region" aria-label="Edit selected inserters" data-bulk-edit=""
-        sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: SURFACE.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+        sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
         <Typography variant="body2">{selected.length} {selected.length === 1 ? 'inserter' : 'inserters'} selected</Typography>
         <Button color="inherit" size="small" onClick={onSelectAll} disabled={selected.length === total}>Select all</Button>
         <Button color="inherit" size="small" onClick={onClear}>Clear selection</Button>

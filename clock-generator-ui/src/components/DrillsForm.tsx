@@ -13,7 +13,8 @@ import {
 import { useState, memo } from 'react';
 import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { AddRow } from './AddRow';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
@@ -147,7 +148,7 @@ function DrillsFormComponent({
                                 alignItems: 'center',
                                 mb: 2,
                                 p: 2,
-                                bgcolor: SURFACE.row,
+                                bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
                                 flexWrap: 'wrap',
                             }}
                         >

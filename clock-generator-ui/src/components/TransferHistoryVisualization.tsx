@@ -7,7 +7,8 @@ import { BUTTON_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
-import { COLOR_BLIND_PALETTE, ITEM_COLOR_COUNT, TIMELINE_TRACK_COLOR, itemColorMap } from './colors';
+import { ITEM_COLOR_COUNT } from './colors';
+import { useChartColors } from '../hooks/useChartColors';
 import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
 interface TransferHistoryVisualizationProps {
@@ -78,6 +79,7 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProps) {
+    const { palette: COLOR_BLIND_PALETTE, track: TIMELINE_TRACK_COLOR } = useChartColors();
     const { nameIdsIn } = useGameNames();
     // Collect unique items transferred by this entity
     const transferredItems = Array.from(new Set(entity.transfers.map(t => t.item_name))).sort();
@@ -176,6 +178,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
 }
 
 function TransferHistoryVisualizationComponent({ transferHistory }: TransferHistoryVisualizationProps) {
+    const { itemMap: itemColorMap, track: TIMELINE_TRACK_COLOR } = useChartColors();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const rowHeight = 24;
     const totalDuration = transferHistory.total_duration_ticks;
@@ -324,7 +327,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                 slotProps={{
                     paper: {
                         sx: {
-                            bgcolor: 'common.black',
+                            bgcolor: 'background.default',
                         },
                     }
                 }}

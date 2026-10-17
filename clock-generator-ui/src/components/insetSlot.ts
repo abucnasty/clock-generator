@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material';
-import { CONTROL, ROLE, SHADOW, SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
 
 /** A slot's side; its item icon is 24px */
 const INSET_SLOT_SIZE = 32;
@@ -27,14 +27,14 @@ export function insetSlotSx({ auto = false, open = false }: InsetSlotState = {})
         justifyContent: 'center',
         position: 'relative',
         cursor: 'pointer',
-        bgcolor: SURFACE.inset,
+        bgcolor: (theme: Theme) => themeTokens(theme).surface.inset,
         border: '1px solid',
         borderStyle: auto ? 'dashed' : 'solid',
-        borderColor: open ? ROLE.orange.main : CONTROL.border,
+        borderColor: (theme: Theme) => open ? themeTokens(theme).role.orange.main : themeTokens(theme).control.border,
         borderRadius: '2px',
-        boxShadow: SHADOW.inset,
+        boxShadow: (theme: Theme) => themeTokens(theme).shadow.inset,
         transition: 'border-color 0.2s',
-        '&:hover, &:focus-visible': { borderColor: ROLE.orange.main },
+        '&:hover, &:focus-visible': { borderColor: (theme: Theme) => themeTokens(theme).role.orange.main },
     };
 }
 
@@ -44,9 +44,9 @@ export const AUTO_BADGE_SX: SxProps<Theme> = {
     bottom: -9,
     left: '50%',
     transform: 'translateX(-50%)',
-    bgcolor: SURFACE.inset,
+    bgcolor: (theme: Theme) => themeTokens(theme).surface.inset,
     color: 'text.secondary',
-    border: `1px dashed ${CONTROL.border}`,
+    border: (theme: Theme) => `1px dashed ${themeTokens(theme).control.border}`,
     fontSize: 11,
     fontWeight: 700,
     lineHeight: 1,
@@ -60,9 +60,9 @@ export const SLOT_COUNT_SX: SxProps<Theme> = {
     position: 'absolute',
     bottom: -7,
     right: -6,
-    bgcolor: SURFACE.inset,
+    bgcolor: (theme: Theme) => themeTokens(theme).surface.inset,
     color: 'text.primary',
-    border: `1px solid ${CONTROL.border}`,
+    border: (theme: Theme) => `1px solid ${themeTokens(theme).control.border}`,
     fontSize: 11,
     fontWeight: 700,
     lineHeight: 1,

@@ -6,7 +6,8 @@ import { ANNOUNCER_ATTRIBUTE, announceText } from '../utils/announcer';
 import { canDeliverAnnouncement, isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput, type MessageState } from '../utils/messages';
 import { entersOtherDialog, isEscapeForSomethingElse } from '../utils/undoKeys';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
-import { CONTROL, SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 
 /** Holds the one message shown, for any component to raise with `useNotify()`; goes above `App`, which raises some */
 export function MessageProvider({ children }: { children: ReactNode }) {
@@ -162,7 +163,7 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
                     py: 0,
                     '& .MuiAlert-icon, & .MuiAlert-message': { py: urgent ? '5px' : '4px' },
                     '& .MuiAlert-action': { pt: 0 },
-                    ...(!urgent && { bgcolor: SURFACE.panel, color: 'text.primary', border: `1px solid ${CONTROL.edge}` }),
+                    ...(!urgent && { bgcolor: (theme: Theme) => themeTokens(theme).surface.panel, color: 'text.primary', border: (theme: Theme) => `1px solid ${themeTokens(theme).control.edge}` }),
                     // below 600px an action's button gets a row of its own under the text, which would otherwise be
                     // squeezed into a column a word wide
                     ...(message.action && {

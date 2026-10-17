@@ -1,3 +1,6 @@
+import type { Theme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
+import { chartColorsFor } from './colors';
 import { Box, Typography } from '@mui/material';
 import { Loop, MoreTime, TimerOutlined, ToggleOnOutlined, TrendingUp } from '@mui/icons-material';
 import {
@@ -40,7 +43,6 @@ export const WAKE_TRACK_COLOR = '#8c8c8c';
 /** The outline of the selected window: the theme's primary, 7.77:1 */
 export const WAKE_SELECTED_COLOR = '#fca300';
 /** Grid lines behind the rows; decorative, they repeat the axis marks */
-const GRID_COLOR = 'rgba(255, 255, 255, 0.12)';
 /** Belt slack: the bar's colour as 45° stripes, 3px on and 3px off */
 export const SLACK_BACKGROUND = `repeating-linear-gradient(45deg, ${WAKE_BAR_COLOR} 0 3px, transparent 3px 6px)`;
 /**
@@ -125,14 +127,14 @@ function Axis({ periodTicks, marks }: { periodTicks: number; marks: number[] }) 
 const trackSx = {
     position: 'relative',
     height: TRACK_HEIGHT,
-    border: `1px solid ${WAKE_TRACK_COLOR}`,
+    border: (theme: Theme) => `1px solid ${themeTokens(theme).control.border}`,
     boxSizing: 'border-box',
     cursor: 'pointer',
     forcedColorAdjust: 'none',
     [FORCED_COLORS]: { borderColor: 'CanvasText' },
 } as const;
 const gridLineSx = {
-    position: 'absolute', top: 0, bottom: 0, width: '1px', bgcolor: GRID_COLOR, [FORCED_COLORS]: { bgcolor: 'GrayText' },
+    position: 'absolute', top: 0, bottom: 0, width: '1px', bgcolor: (theme: Theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(36, 35, 31, 0.16)', [FORCED_COLORS]: { bgcolor: 'GrayText' },
 } as const;
 const barSx = {
     position: 'absolute',
@@ -140,17 +142,17 @@ const barSx = {
     transform: 'translateY(-50%)',
     display: 'flex',
     outlineOffset: '2px',
-    '&[data-selected]': { outline: `2px solid ${WAKE_SELECTED_COLOR}`, zIndex: 1 },
+    '&[data-selected]': { outline: (theme: Theme) => `2px solid ${themeTokens(theme).control.focus}`, zIndex: 1 },
     [FORCED_COLORS]: { '&[data-selected]': { outlineColor: 'Highlight' } },
 } as const;
 const solidSx = {
-    minWidth: '1px', boxSizing: 'border-box', bgcolor: WAKE_BAR_COLOR, [FORCED_COLORS]: { bgcolor: 'CanvasText' },
+    minWidth: '1px', boxSizing: 'border-box', bgcolor: (theme: Theme) => chartColorsFor(theme.palette.mode).palette.skyBlue, [FORCED_COLORS]: { bgcolor: 'CanvasText' },
 } as const;
 const slackSx = {
     minWidth: '1px',
     boxSizing: 'border-box',
-    background: SLACK_BACKGROUND,
-    border: `1px solid ${WAKE_BAR_COLOR}`,
+    background: (theme: Theme) => `repeating-linear-gradient(45deg, ${chartColorsFor(theme.palette.mode).palette.skyBlue} 0 3px, transparent 3px 6px)`,
+    border: (theme: Theme) => `1px solid ${chartColorsFor(theme.palette.mode).palette.skyBlue}`,
     [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
 } as const;
 
@@ -347,7 +349,7 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                     borderTop: 1,
                     borderColor: 'divider',
                     outline: 'none',
-                    '&:focus-visible': { outline: `2px solid ${WAKE_SELECTED_COLOR}`, outlineOffset: '2px' },
+                    '&:focus-visible': { outline: (theme: Theme) => `2px solid ${themeTokens(theme).control.focus}`, outlineOffset: '2px' },
                 }}
             >
                 <Box sx={{ gridArea: 'label', minWidth: 0 }}>

@@ -74,6 +74,38 @@ export const SHADOW = {
     inset: 'inset 0 1px 3px rgba(0, 0, 0, 0.6)',
 } as const;
 
+/** Resolved browser theme, independent of the saved System preference. */
+export type ResolvedColorScheme = 'light' | 'dark';
+
+export interface ThemeTokens {
+    surface: Record<keyof typeof SURFACE, string>;
+    hover: Record<keyof typeof SURFACE_HOVER, string>;
+    role: Record<keyof typeof ROLE, { main: string; light: string; dark: string; on: string }>;
+    text: Record<keyof typeof TEXT, string>;
+    control: Record<keyof typeof CONTROL, string>;
+    shadow: Record<keyof typeof SHADOW, string>;
+}
+
+const DARK_TOKENS: ThemeTokens = { surface: SURFACE, hover: SURFACE_HOVER, role: ROLE, text: TEXT, control: CONTROL, shadow: SHADOW };
+const LIGHT_TOKENS: ThemeTokens = {
+    surface: { page: '#e9e6df', titleBar: '#dedbd3', bar: '#e2dfd7', row: '#f0eee8', panel: '#faf8f2', inset: '#ffffff' },
+    hover: { row: '#dfdcd4', panel: '#e8e5dd' },
+    role: {
+        orange: { main: '#914d00', light: '#8a4900', dark: '#713b00', on: '#ffffff' },
+        green: { main: '#256b35', light: '#286f39', dark: '#195226', on: '#ffffff' },
+        yellow: { main: '#6d5b00', light: '#756300', dark: '#574900', on: '#ffffff' },
+        red: { main: '#b32629', light: '#b02026', dark: '#8e181d', on: '#ffffff' },
+        blue: { main: '#00618a', light: '#00678f', dark: '#005271', on: '#ffffff' },
+    },
+    text: { primary: '#24231f', secondary: '#55534c', disabled: '#706e66', error: '#b02026' },
+    control: { border: '#77746b', trackOff: '#77746b', edge: '#aaa69b', focus: '#914d00', focusOnFill: '#ffffff' },
+    shadow: { inset: 'inset 0 1px 3px rgba(51, 45, 31, 0.22)' },
+};
+
+export function tokensFor(mode: ResolvedColorScheme): ThemeTokens {
+    return mode === 'light' ? LIGHT_TOKENS : DARK_TOKENS;
+}
+
 interface TokenPair {
     name: string;
     fg: string;
@@ -93,51 +125,55 @@ const STATUS_TEXT_SURFACES: SurfaceName[] = ['titleBar', 'bar', 'row', 'panel', 
 /** Blue text is an info alert's icon, on the alert's own tint, which is darker than any of these */
 const INFO_TEXT_SURFACES: SurfaceName[] = ['titleBar', 'bar', 'row', 'panel', 'inset'];
 
-const on = (name: string, fg: string, surfaces: SurfaceName[], kind: TokenPair['kind'], note?: string): TokenPair[] =>
-    surfaces.map(surface => ({ name: `${name} on ${surface}`, fg, bg: SURFACE[surface], kind, ...(note && { note }) }));
-
-/** MUI's filled Alert writes in 87% black (`getContrastText`) on the role's `dark` in a dark theme */
-const ALERT_FILLED_TEXT = 'rgba(0, 0, 0, 0.87)';
-
 /** Every pair of the tokens the site may draw, and what WCAG asks of it */
-export const TOKEN_PAIRS: readonly TokenPair[] = [
-    // text (1.4.3)
-    ...on('text.primary', TEXT.primary, SURFACES, 'text'),
-    ...on('text.secondary', TEXT.secondary, SURFACES, 'text', 'also placeholders, the help icon and the "+" of an empty slot'),
-    ...on('orange text', ROLE.orange.main, SURFACES, 'text', 'not on a selected grey (4.0:1)'),
-    ...on('yellow text', ROLE.yellow.main, SURFACES, 'text'),
-    ...on('green text', ROLE.green.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
-    ...on('red text', ROLE.red.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
-    ...on('error text', TEXT.error, SURFACES, 'text', 'field problems, Discard, Clear rule, the red chips'),
-    { name: 'error text on a hovered row', fg: TEXT.error, bg: SURFACE_HOVER.row, kind: 'text' },
-    { name: 'error text on a hovered card or menu item', fg: TEXT.error, bg: SURFACE_HOVER.panel, kind: 'text' },
-    ...on('blue text', ROLE.blue.main, INFO_TEXT_SURFACES, 'text', 'info alerts only'),
-    // the clock table's Status chips carry their own panel fill, so a selected or hovered row's tint is not under them
-    ...(['green', 'yellow', 'red'] as const).map(role => ({
-        name: `Status chip, ${role} words on its panel fill`, fg: ROLE[role].main, bg: SURFACE.panel, kind: 'text' as const,
-    })),
-    // text on a role's fill: a filled button or chip, its hover and its lighter shade
-    ...Object.entries(ROLE).flatMap(([role, { main, dark, light, on: text }]) => [
-        { name: `${role} on-text on main`, fg: text, bg: main, kind: 'text' as const },
-        { name: `${role} on-text on dark (hover)`, fg: text, bg: dark, kind: 'text' as const },
-        { name: `${role} on-text on light`, fg: text, bg: light, kind: 'text' as const },
-    ]),
-    // a filled Alert; the info one is never filled (87% black on its dark blue is 4.28:1)
-    { name: 'filled warning Alert text', fg: ALERT_FILLED_TEXT, bg: ROLE.yellow.dark, kind: 'text' },
-    { name: 'filled error Alert text', fg: ALERT_FILLED_TEXT, bg: ROLE.red.dark, kind: 'text' },
-    { name: 'filled success Alert text', fg: ALERT_FILLED_TEXT, bg: ROLE.green.dark, kind: 'text' },
-    // non-text (1.4.11)
-    ...on('control border', CONTROL.border, SURFACES, 'nonText', 'inputs, outlined buttons and chips, slots'),
-    ...on('switch track, off', CONTROL.trackOff, SURFACES, 'nonText', 'not on a selected grey (2.4:1)'),
-    ...on('focus ring', CONTROL.focus, SURFACES, 'nonText'),
-    ...Object.entries(ROLE).map(([role, { main }]) => ({ name: `${role} fill on panel`, fg: main, bg: SURFACE.panel, kind: 'nonText' as const })),
-    ...on('green fill', ROLE.green.main, STATUS_TEXT_SURFACES, 'nonText'),
-    ...on('red fill', ROLE.red.main, STATUS_TEXT_SURFACES, 'nonText'),
-    ...on('yellow fill', ROLE.yellow.main, SURFACES, 'nonText'),
-    ...(['yellow', 'red', 'green'] as const).map(role => ({
-        name: `focus ring in a filled ${role} alert`, fg: CONTROL.focusOnFill, bg: ROLE[role].dark, kind: 'nonText' as const,
-    })),
-    { name: 'selected toggle fill on bar', fg: ROLE.orange.main, bg: SURFACE.bar, kind: 'nonText' },
-    { name: 'switch thumb, off', fg: TEXT.primary, bg: CONTROL.trackOff, kind: 'nonText' },
-    { name: 'switch thumb, on', fg: ROLE.orange.on, bg: ROLE.orange.main, kind: 'nonText' },
-];
+export function tokenPairsFor(mode: ResolvedColorScheme): readonly TokenPair[] {
+    const { surface: SURFACE, hover: SURFACE_HOVER, role: ROLE, text: TEXT, control: CONTROL } = tokensFor(mode);
+    const on = (name: string, fg: string, surfaces: SurfaceName[], kind: TokenPair['kind'], note?: string): TokenPair[] =>
+        surfaces.map(surface => ({ name: `${name} on ${surface}`, fg, bg: SURFACE[surface], kind, ...(note && { note }) }));
+    const ALERT_FILLED_TEXT = mode === 'dark' ? 'rgba(0, 0, 0, 0.87)' : '#ffffff';
+    return [
+        // text (1.4.3)
+        ...on('text.primary', TEXT.primary, SURFACES, 'text'),
+        ...on('text.secondary', TEXT.secondary, SURFACES, 'text', 'also placeholders, the help icon and the "+" of an empty slot'),
+        ...on('orange text', ROLE.orange.main, SURFACES, 'text', 'not on a selected grey (4.0:1)'),
+        ...on('yellow text', ROLE.yellow.main, SURFACES, 'text'),
+        ...on('green text', ROLE.green.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
+        ...on('red text', ROLE.red.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
+        ...on('error text', TEXT.error, SURFACES, 'text', 'field problems, Discard, Clear rule, the red chips'),
+        { name: 'error text on a hovered row', fg: TEXT.error, bg: SURFACE_HOVER.row, kind: 'text' },
+        { name: 'error text on a hovered card or menu item', fg: TEXT.error, bg: SURFACE_HOVER.panel, kind: 'text' },
+        ...on('blue text', ROLE.blue.main, INFO_TEXT_SURFACES, 'text', 'info alerts only'),
+        // the clock table's Status chips carry their own panel fill, so a selected or hovered row's tint is not under them
+        ...(['green', 'yellow', 'red'] as const).map(role => ({
+            name: `Status chip, ${role} words on its panel fill`, fg: ROLE[role].main, bg: SURFACE.panel, kind: 'text' as const,
+        })),
+        // text on a role's fill: a filled button or chip, its hover and its lighter shade
+        ...Object.entries(ROLE).flatMap(([role, { main, dark, light, on: text }]) => [
+            { name: `${role} on-text on main`, fg: text, bg: main, kind: 'text' as const },
+            { name: `${role} on-text on dark (hover)`, fg: text, bg: dark, kind: 'text' as const },
+            { name: `${role} on-text on light`, fg: text, bg: light, kind: 'text' as const },
+        ]),
+        // a filled Alert; the info one is never filled (87% black on its dark blue is 4.28:1)
+        { name: 'filled warning Alert text', fg: ALERT_FILLED_TEXT, bg: ROLE.yellow.dark, kind: 'text' },
+        { name: 'filled error Alert text', fg: ALERT_FILLED_TEXT, bg: ROLE.red.dark, kind: 'text' },
+        { name: 'filled success Alert text', fg: ALERT_FILLED_TEXT, bg: ROLE.green.dark, kind: 'text' },
+        // non-text (1.4.11)
+        ...on('control border', CONTROL.border, SURFACES, 'nonText', 'inputs, outlined buttons and chips, slots'),
+        ...on('switch track, off', CONTROL.trackOff, SURFACES, 'nonText', 'not on a selected grey (2.4:1)'),
+        ...on('focus ring', CONTROL.focus, SURFACES, 'nonText'),
+        ...Object.entries(ROLE).map(([role, { main }]) => ({ name: `${role} fill on panel`, fg: main, bg: SURFACE.panel, kind: 'nonText' as const })),
+        ...on('green fill', ROLE.green.main, STATUS_TEXT_SURFACES, 'nonText'),
+        ...on('red fill', ROLE.red.main, STATUS_TEXT_SURFACES, 'nonText'),
+        ...on('yellow fill', ROLE.yellow.main, SURFACES, 'nonText'),
+        ...(['yellow', 'red', 'green'] as const).map(role => ({
+            name: `focus ring in a filled ${role} alert`, fg: CONTROL.focusOnFill, bg: ROLE[role].dark, kind: 'nonText' as const,
+        })),
+        { name: 'selected toggle fill on bar', fg: ROLE.orange.main, bg: SURFACE.bar, kind: 'nonText' },
+        { name: 'switch thumb, off', fg: mode === 'dark' ? TEXT.primary : '#ffffff', bg: CONTROL.trackOff, kind: 'nonText' },
+        { name: 'switch thumb, on', fg: ROLE.orange.on, bg: ROLE.orange.main, kind: 'nonText' },
+    ];
+
+}
+
+/** Legacy dark exports support existing palette tests; active UI reads the current MUI theme. */
+export const TOKEN_PAIRS = tokenPairsFor('dark');

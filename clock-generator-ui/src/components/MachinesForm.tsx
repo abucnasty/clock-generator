@@ -14,7 +14,8 @@ import type { MachineFormData } from '../hooks/useConfigForm';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
 import { HelpCommand } from './HelpButton';
@@ -163,7 +164,7 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
                 mb: compact ? 1 : 2,
                 p: compact ? 1.5 : 2,
                 minWidth: 0,
-                bgcolor: SURFACE.row,
+                bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
             }}
         >
             <Box

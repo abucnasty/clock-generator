@@ -1,7 +1,8 @@
 import { Add } from '@mui/icons-material';
 import { Button, Menu, MenuItem } from '@mui/material';
 import { useId, useState } from 'react';
-import { CONTROL, ROLE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 
 interface AddRowProps {
     /** What the row says, and what it is called: "Add chest" */
@@ -38,8 +39,8 @@ export function AddRow({ label, onClick, menu, ...data }: AddRowProps) {
                     justifyContent: 'flex-start',
                     minHeight: 40,
                     px: 2,
-                    border: `1px dashed ${CONTROL.border}`,
-                    '&:hover': { borderColor: ROLE.orange.main },
+                    border: (theme: Theme) => `1px dashed ${themeTokens(theme).control.border}`,
+                    '&:hover': { borderColor: (theme: Theme) => themeTokens(theme).role.orange.main },
                 }}
                 {...data}
             >

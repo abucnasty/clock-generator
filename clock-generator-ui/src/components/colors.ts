@@ -3,6 +3,7 @@
  * Uses a colorblind-friendly palette based on Wong (2011).
  */
 
+import type { ResolvedColorScheme } from '../theme/tokens';
 import { StatusCategory, InserterStatus, MachineStatus, DrillStatus, EntityType } from 'clock-generator/light';
 
 // Colorblind-friendly palette (Wong, 2011)
@@ -83,7 +84,7 @@ export const DRILL_STATUS_COLORS: Record<DrillStatus, string> = {
 /**
  * Get color for a specific status based on entity type (detailed view)
  */
-export function getStatusColor(
+function getStatusColor(
     entityType: EntityType,
     status: string
 ): string {
@@ -102,7 +103,7 @@ export function getStatusColor(
 /**
  * Get color for a status category (simplified view)
  */
-export function getCategoryColor(category: StatusCategory): string {
+function getCategoryColor(category: StatusCategory): string {
     return CATEGORY_COLORS[category] ?? CATEGORY_COLORS.IDLE;
 }
 
@@ -184,4 +185,41 @@ export function getFactorioStateColor(state: string): string {
 export function getFactorioStateLabel(state: string): string {
     const words = state.replace(/_/g, " ");
     return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** Same semantic hues on a light plotting surface, with solid, contrasting marks. */
+const LIGHT_PALETTE: Record<keyof typeof COLOR_BLIND_PALETTE, string> = {
+    blue: '#006da8', orange: '#8d5900', yellow: '#786b00', green: '#007653',
+    skyBlue: '#006f99', vermillion: '#a84400', reddishPurple: '#984078',
+    darkGrey: '#585858', lightGrey: '#74716a', white: '#24231f',
+};
+const LIGHT_ITEMS = ['#b31b6b', '#006b85', '#8c4c43', '#7130cc', '#4d56b5', '#805321'];
+
+/** Pure palette input for both SVG and canvas renderers; item/status meaning never changes with mode. */
+export function chartColorsFor(mode: ResolvedColorScheme) {
+    const palette = mode === 'dark' ? COLOR_BLIND_PALETTE : LIGHT_PALETTE;
+    const colors = new Map<string, string>(Object.keys(COLOR_BLIND_PALETTE).map(key => [
+        COLOR_BLIND_PALETTE[key as keyof typeof COLOR_BLIND_PALETTE], palette[key as keyof typeof COLOR_BLIND_PALETTE],
+    ]));
+    colors.set(DISABLED_GREY, mode === 'dark' ? DISABLED_GREY : '#706d66');
+    const adapt = (color: string) => colors.get(color) ?? color;
+    const adaptMap = <T extends string>(values: Record<T, string>): Record<T, string> =>
+        Object.fromEntries(Object.entries<string>(values).map(([key, color]) => [key, adapt(color)])) as Record<T, string>;
+    return {
+        palette,
+        track: mode === 'dark' ? TIMELINE_TRACK_COLOR : '#ffffff',
+        clock: palette.white,
+        category: adaptMap(CATEGORY_COLORS),
+        inserter: adaptMap(INSERTER_STATUS_COLORS),
+        machine: adaptMap(MACHINE_STATUS_COLORS),
+        drill: adaptMap(DRILL_STATUS_COLORS),
+        status: (entity: EntityType, status: string) => adapt(getStatusColor(entity, status)),
+        categoryColor: (category: StatusCategory) => adapt(getCategoryColor(category)),
+        factorio: (state: string) => adapt(getFactorioStateColor(state)),
+        itemMap: (items: Iterable<string>) => {
+            const result = itemColorMap(items);
+            if (mode === 'light') [...result.keys()].forEach((item, index) => result.set(item, LIGHT_ITEMS[index % LIGHT_ITEMS.length]));
+            return result;
+        },
+    };
 }

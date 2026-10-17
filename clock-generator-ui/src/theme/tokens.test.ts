@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AA, contrastRatio } from './contrast';
-import { CONTROL, ROLE, SURFACE, SURFACE_HOVER, TEXT, TOKEN_PAIRS } from './tokens';
+import { CONTROL, ROLE, SURFACE, SURFACE_HOVER, TEXT, TOKEN_PAIRS, tokenPairsFor } from './tokens';
 
 const has = (fg: string, bg: string) => TOKEN_PAIRS.some(pair => pair.fg === fg && pair.bg === bg);
 
 describe('TOKEN_PAIRS', () => {
-    it.each(TOKEN_PAIRS.map(pair => [pair.name, pair] as const))('%s meets WCAG 2.2 AA', (_, pair) => {
+    it.each((['dark', 'light'] as const).flatMap(mode => tokenPairsFor(mode).map(pair => [`${mode}: ${pair.name}`, pair] as const)))('%s meets WCAG 2.2 AA', (_, pair) => {
         const ratio = contrastRatio(pair.fg, pair.bg);
         const needed = pair.kind === 'text' ? AA.text : AA.nonText;
         expect(ratio, `${pair.name}: ${ratio.toFixed(2)}:1, needs ${needed}:1`).toBeGreaterThanOrEqual(needed);
