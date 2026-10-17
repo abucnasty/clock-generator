@@ -33,6 +33,8 @@ import { endpointEditProblem, endpointUpdate } from '../utils/inserterMetadata';
 import { entityLabel } from '../utils/entityLabel';
 import { flowFocus, flowEntityKey } from '../utils/flowFocus';
 import { FlowTileBackground } from './FlowTileBackground';
+import { FLOW_EDGE_TYPES } from './FlowTransferEdge';
+import { useFlowRoutes } from '../hooks/useFlowRoutes';
 
 const nodeTypes: NodeTypes = {
     entityNode: EntityFlowNode,
@@ -200,13 +202,14 @@ function FlowContent({
         className: activeNode && focus.same.has(node.id) && node.id !== activeNode.id ? TWIN_CLASS : undefined,
     })), [graphNodes, focus, selection, activeNode?.id]);
     const measured = useMeasuredFlowNodes(nodes);
+    const routes = useFlowRoutes(graphNodes, edges, measured.measurements);
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
     const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
     const edgesWithSelection = useMemo(() => edges.map(edge => {
         const highlighted = focus.routes.has(edge.id) || selectedEdgeIds.has(edge.id);
         const style = flowRouteStyle(tokens, highlighted ? 'selected' : 'neutral');
-        return { ...edge, selected: selectedEdgeIds.has(edge.id), markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
-    }), [edges, focus, selectedEdgeIds, tokens]);
+        return { ...edge, type: 'transfer', data: { flowRoute: routes.get(edge.id) }, selected: selectedEdgeIds.has(edge.id), markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
+    }), [edges, focus, selectedEdgeIds, tokens, routes]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
         setSelectedEdgeIds(prev => {
@@ -337,6 +340,7 @@ function FlowContent({
             onNodesChange={measured.onNodesChange}
             edges={edgesWithSelection}
             nodeTypes={nodeTypes}
+            edgeTypes={FLOW_EDGE_TYPES}
             onNodeClick={handleNodeClick}
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}

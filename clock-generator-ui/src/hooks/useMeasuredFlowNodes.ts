@@ -26,5 +26,5 @@ export function useMeasuredFlowNodes<T extends Node>(nodes: T[]) {
         });
     }, []);
     const measuredNodes = useMemo(() => retainFlowMeasurements(nodes, measurements), [nodes, measurements]);
-    return { nodes: measuredNodes, onNodesChange };
+    return { nodes: measuredNodes, onNodesChange, measurements };
 }

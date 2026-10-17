@@ -1,8 +1,9 @@
 import { useTheme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { type NodeProps, type Node } from '@xyflow/react';
 import { Box, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
+import { FlowNodeHandles } from './FlowNodeHandles';
 import { GameName } from './GameName';
 import { DRILL_NODE_WIDTH, type DrillNodeData } from '../utils/buildFlowGraph';
 import { entityLabel } from '../utils/entityLabel';
@@ -70,7 +71,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     </Box>
                 </Box>
             </Box>
-            <Handle type="source" position={Position.Right} />
+            <FlowNodeHandles data={data} />
         </>
     );
 }

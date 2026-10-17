@@ -1,8 +1,9 @@
 import { useTheme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
+import { FlowNodeHandles } from './FlowNodeHandles';
 import { INSERTER_NODE_CHIP_WIDTH, INSERTER_NODE_WIDTH, type InserterNodeData } from '../utils/buildFlowGraph';
 import { entityLabel } from '../utils/entityLabel';
 import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
@@ -79,12 +80,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     </Box>
                 )}
             </Box>
-            {data.vertical
-                ? <Handle type="target" id="in" position={data.vertical === 'down' ? Position.Top : Position.Bottom} />
-                : <Handle type="target" position={Position.Left} />}
-            {data.vertical
-                ? <Handle type="source" id="out" position={data.vertical === 'down' ? Position.Bottom : Position.Top} />
-                : <Handle type="source" position={Position.Right} />}
+            <FlowNodeHandles data={data} />
         </>
     );
 }

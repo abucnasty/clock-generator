@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Controls, Handle, Position, ReactFlow, ReactFlowProvider, useStore, type Node, type NodeProps, type EdgeMarker, type Viewport } from '@xyflow/react';
+import { Controls, ReactFlow, ReactFlowProvider, useStore, type Node, type NodeProps, type EdgeMarker, type Viewport } from '@xyflow/react';
 import { Box, Button, Checkbox, FormControlLabel, LinearProgress, MenuItem, TextField, Typography } from '@mui/material';
 import { Pause, PlayArrow, SkipNext, SkipPrevious } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
@@ -19,7 +19,9 @@ import { useGameNames } from '../hooks/useGameNames';
 import { formatNumberText } from '../utils/numberText';
 import { FactorioIcon } from './FactorioIcon';
 import { ChartSwatch } from './BeltChart';
-import { FlowTransferEdge } from './FlowTransferEdge';
+import { FLOW_EDGE_TYPES } from './FlowTransferEdge';
+import { FlowNodeHandles } from './FlowNodeHandles';
+import { useFlowRoutes } from '../hooks/useFlowRoutes';
 import { FlowTileBackground } from './FlowTileBackground';
 
 const NODE_HEIGHT = 168;
@@ -72,16 +74,10 @@ function ReplayNode({ data }: NodeProps<Node<ReplayData>>) {
                 {data.effects.length ? data.effects.slice(0, 2).map(effect => <Box component="span" key={`${effect.kind}:${effect.item}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, mr: 0.5 }}>{effect.item && <FactorioIcon name={effect.item} size={14} alt={itemLabel(effect.item)} />}{`${effect.kind === 'produce' ? '+' : effect.kind === 'pickup' ? '↑' : '↓'}${number(effect.amount)}`}</Box>) : ' '}
             </Typography>
         </Box>
-        {(!entity || entity.half !== 'in') && !drill && <Handle type="target" id={ins?.vertical ? 'in' : undefined} position={ins?.vertical ? ins.vertical === 'down' ? Position.Top : Position.Bottom : Position.Left} />}
-        {(!entity || entity.half !== 'out') && <Handle type="source" id={ins?.vertical ? 'out' : undefined} position={ins?.vertical ? ins.vertical === 'down' ? Position.Bottom : Position.Top : Position.Right} />}
-        {entity?.verticalHandles && <>
-            <Handle type="target" id="top-in" position={Position.Top} style={{ left: '35%' }} /><Handle type="source" id="top-out" position={Position.Top} style={{ left: '65%' }} />
-            <Handle type="source" id="bottom-out" position={Position.Bottom} style={{ left: '35%' }} /><Handle type="target" id="bottom-in" position={Position.Bottom} style={{ left: '65%' }} />
-        </>}
+        <FlowNodeHandles data={data} />
     </>;
 }
 const nodeTypes = { entityNode: ReplayNode, inserterNode: ReplayNode, drillNode: ReplayNode };
-const edgeTypes = { transfer: FlowTransferEdge };
 
 interface FlowReplayProps {
     config: Config; recording: TimelineRecording; tick: number; inspection: TimelineInspection; cycleTicks: number;
@@ -153,6 +149,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
             data: { ...node.data, identity: key, snapshot: flowReplaySnapshot(index, key, tick), effects: flowEventSummary(effects, key) } as ReplayData };
     }), [graph, index, tick, effects, focus]);
     const measured = useMeasuredFlowNodes(nodes);
+    const routes = useFlowRoutes(graph.nodes, graph.edges, measured.measurements);
     const edges = useMemo(() => graph.edges.map(edge => {
         const from = nodeKeys.get(edge.source)!;
         const to = nodeKeys.get(edge.target)!;
@@ -168,9 +165,9 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
             ? `${action} at tick ${tick}: ${amounts.map(value => `${number(value.amount)} ${value.item ? itemLabel(value.item) : 'items'}`).join(', ')}; ${route}`
             : trail ? `Recent transfer on ${route} between ticks ${frame.recentStart} and ${tick - 1}; no transfer at tick ${tick}` : route;
         const style = flowRouteStyle(tokens, active ? 'transfer' : trail ? 'recent' : highlighted ? 'selected' : 'neutral');
-        return { ...edge, type: 'transfer', label: undefined, ariaLabel: description, data: { amounts, description },
+        return { ...edge, type: 'transfer', label: undefined, ariaLabel: description, data: { amounts, description, flowRoute: routes.get(edge.id) },
             markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
-    }), [graph, effects, frame.recentTransfers, frame.recentStart, tick, routeFocus, tokens, nodeKeys, itemLabel]);
+    }), [graph, effects, frame.recentTransfers, frame.recentStart, tick, routeFocus, tokens, nodeKeys, itemLabel, routes]);
     const states = useMemo(() => [...new Set(recording.entities.flatMap(entity => entity.signals.filter(signal => signal.id === 'state').flatMap(signal => signal.values.map(String))))], [recording]);
     const previous = adjacentTransfer({ transferTicks }, tick, -1, firstTick, lastTick), next = adjacentTransfer({ transferTicks }, tick, 1, firstTick, lastTick);
     const showAllRoutes = () => onChange({ replayFocus: false, replayTransferScope: 'all' });
@@ -227,7 +224,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
             '& .react-flow__node:focus-visible > div:first-of-type': { outline: `2px solid ${tokens.control.focus}`, outlineOffset: 3 },
             '& .react-flow__controls-button': { bgcolor: tokens.surface.panel, color: tokens.text.primary, borderColor: tokens.control.border, '& svg': { fill: 'currentColor' } },
         }}>
-            <ReactFlow nodes={measured.nodes} onNodesChange={measured.onNodesChange} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
+            <ReactFlow nodes={measured.nodes} onNodesChange={measured.onNodesChange} edges={edges} nodeTypes={nodeTypes} edgeTypes={FLOW_EDGE_TYPES} nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
                 minZoom={0.1} maxZoom={2} fitView={!inspection.replayViewport} fitViewOptions={{ padding: 0.1 }} defaultViewport={inspection.replayViewport}
                 onMoveEnd={(_, viewport: Viewport) => onChange({ replayViewport: viewport })}
                 onNodeClick={(_, node) => chooseNode(node)} onNodeMouseEnter={(_, node) => setHovered(flowEntityKey(node))} onNodeMouseLeave={() => setHovered(null)}

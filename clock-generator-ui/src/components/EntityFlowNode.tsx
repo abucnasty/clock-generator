@@ -1,9 +1,10 @@
 import { useTheme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
 import { flowNodeTitleColor } from '../theme/flowDiagram';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
+import { FlowNodeHandles } from './FlowNodeHandles';
 import { GameName } from './GameName';
 import { ENTITY_NODE_WIDTH, type EntityNodeData, type MachineNodeParams } from '../utils/buildFlowGraph';
 import { useMachineFacts } from '../hooks/useMachineFacts';
@@ -53,10 +54,6 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
     const role = data.entityType === 'machine' ? 'orange' : data.entityType === 'belt' ? 'blue' : 'green';
     const borderRole = tokens.role[role];
     const borderColor = borderRole.main;
-    // a half takes only its own side's connections: the `in` half feeds, the `out` half receives
-    const hasTarget = data.half !== 'in';
-    const hasSource = data.half !== 'out';
-
     return (
         <>
             <Box
@@ -138,16 +135,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     <MachineDetailsSection params={data.machineParams} />
                 )}
             </Box>
-            {hasTarget && <Handle type="target" position={Position.Left} />}
-            {hasSource && <Handle type="source" position={Position.Right} />}
-            {data.verticalHandles && (
-                <>
-                    <Handle type="target" id="top-in" position={Position.Top} style={{ left: '35%' }} />
-                    <Handle type="source" id="top-out" position={Position.Top} style={{ left: '65%' }} />
-                    <Handle type="source" id="bottom-out" position={Position.Bottom} style={{ left: '35%' }} />
-                    <Handle type="target" id="bottom-in" position={Position.Bottom} style={{ left: '65%' }} />
-                </>
-            )}
+            <FlowNodeHandles data={data} />
         </>
     );
 }
