@@ -9,6 +9,7 @@ import {
     CssBaseline,
     Dialog,
     IconButton,
+    Link,
     ThemeProvider,
     Typography,
     Alert,
@@ -1412,7 +1413,10 @@ function App() {
                     }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary">Created by abucnasty</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Created by <Link href="https://www.youtube.com/@abucnasty" target="_blank" rel="noopener noreferrer"
+                                color="inherit" underline="hover">abucnasty</Link>
+                        </Typography>
                         <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)} title="View changelog"
                             sx={{ textTransform: 'none', minWidth: 0 }}>v{__APP_VERSION__}</Button>
                     </Box>
