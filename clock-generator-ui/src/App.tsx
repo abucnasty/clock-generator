@@ -75,7 +75,6 @@ import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDevelop
 import { createAppTheme } from './theme/theme';
 import { useResolvedColorScheme } from './hooks/useResolvedColorScheme';
 import { nextStepOf } from './utils/nextStep';
-import { needsNoClock } from './utils/installSteps';
 import { itemName, recipeName, type GameNames } from './utils/gameNames';
 import { GameNamesContext, SearchOnlyRecipesContext } from './hooks/useGameNames';
 import { RuleTimingContext } from './components/RuleTimingContext';
@@ -548,8 +547,8 @@ function App() {
         hasBlueprint: blueprintString !== null,
         stale: resultsAreStale,
         view,
-        // the card shows no Copy for a build that needs no clock; the bar's then is the one
-        pageHasCopy: selectedClock !== undefined && !needsNoClock(selectedClock.install),
+        // Copy stays in the sticky toolbar on both Configure and Results.
+        pageHasCopy: false,
     });
     // who started the running or last check, for the announcements: Generate leads on by itself
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
@@ -1368,8 +1367,6 @@ function App() {
                                 pickGone={pickGone}
                                 copied={copy.copied}
                                 onCopy={() => { cancelRestore(); copy.request(); }}
-                                copyLabel={copyLabel}
-                                copyIsNextStep={primaryAction === 'copy-page'}
                                 // only when the run asked the belt question; otherwise the card says the belt itself
                                 beltAction={beltAssumption?.ask ? (
                                     <BeltAssumptionLine

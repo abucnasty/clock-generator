@@ -1,4 +1,4 @@
-import { Cancel, Check, CheckCircle, ContentCopy, RemoveCircleOutline, Warning } from '@mui/icons-material';
+import { Cancel, CheckCircle, RemoveCircleOutline } from '@mui/icons-material';
 import { Alert, Box, Button, Typography } from '@mui/material';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
@@ -12,11 +12,10 @@ import {
     recoversOf,
     wakeUpsText,
 } from '../utils/clockSummary';
-import { REQUIRES_FACTORIO, needsNoClock } from '../utils/installSteps';
+import { REQUIRES_FACTORIO } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
-import { CopyLabel } from './WorkflowBar';
 import type { GenerationAssumptions } from '../worker/types';
 import { startCheckSummary } from '../utils/modelAssumptions';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
@@ -29,7 +28,6 @@ const CARD_COPY = {
     wakeUps: 'Wake-ups',
     recovers: 'Recovers',
     belt: 'Belt',
-    copied: 'Copied',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
 };
 
@@ -47,14 +45,6 @@ interface ResultSummaryCardProps {
     isGenerating: boolean;
     /** The player stopped the run, so not every clock was tried and the recommendation is not final */
     stoppedEarly?: boolean;
-    /** Every Copy button says "Copied" for a moment after any of them copied */
-    copied: boolean;
-    /** The copy every Copy button shares */
-    onCopy: () => void;
-    /** "Copy blueprint", "Copy blueprint (192/s, below target)" or "Copy old clock…" */
-    copyLabel: string;
-    /** The Copy is the page's one filled button: the clocks are fresh and nothing runs */
-    copyIsNextStep: boolean;
     /** What to warn of for the selected clock; null when nothing */
     rateWarning: string | null;
     /** The clocks are for an earlier build */
@@ -167,39 +157,13 @@ function ClockExplanation(props: SelectedProps) {
         </Typography>
         {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
         {props.runAssumptions}
+        <Typography variant="caption" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
     </Box>;
 }
 
-/** The Copy action stays visible in the title bar while explanations are collapsed. */
-function ClockCopy(props: SelectedProps) {
-    const warns = props.rateWarning !== null || props.stale;
-    const { selected } = props;
-    return (
-        <>
-            {/* a build that needs no clock has nothing to copy: the steps say so (a stale one keeps "Copy old clock…") */}
-            {(props.stale || !needsNoClock(selected.install)) && <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1, rowGap: 0.5 }}>
-                <Button
-                    // the one filled green button of the page while the clocks are fresh; yellow with the warning icon
-                    // when there is something to warn of. Outlined while Generate is the next step (a run, or a changed
-                    // build, whose old clock is the copy to think twice about)
-                    variant={props.copyIsNextStep && !props.stale ? 'contained' : 'outlined'}
-                    color={warns ? 'warning' : props.copyIsNextStep ? 'secondary' : 'inherit'}
-                    onClick={props.onCopy}
-                    startIcon={props.copied ? <Check /> : warns ? <Warning /> : <ContentCopy />}
-                    data-card-copy
-                >
-                    {props.copied ? CARD_COPY.copied : <CopyLabel label={props.copyLabel} />}
-                </Button>
-                <Typography variant="caption" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
-            </Box>}
-
-        </>
-    );
-}
-
 /**
- * The answer at the top of Results: the selected clock by name, why it was picked, its facts, the button that copies
- * it. While a run has no clock yet, it says so.
+ * The answer at the top of Results: the selected clock, its facts, and expandable context.
+ * Copy stays in the sticky toolbar. While a run has no clock yet, the card says so.
  */
 export function ResultSummaryCard(props: ResultSummaryCardProps) {
     const { alternatives, selectedIndex, isGenerating } = props;
@@ -227,7 +191,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     // focus, when the run it starts empties the list of clocks
     const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
     return (
-        <Panel title={CARD_COPY.heading} actions={selected ? <>{props.comparisonAction}<ClockCopy {...props} selected={selected} /></> : undefined} sx={{ '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }} data-result-card="" data-build-anchor="selected-clock">
+        <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
             {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
