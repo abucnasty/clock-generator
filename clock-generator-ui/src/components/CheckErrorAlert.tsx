@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, Box, Button } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
 import { useId } from 'react';
 import { checkErrorText } from '../utils/checkErrorText';
 import { CHECK_TEXT } from '../utils/checkThenGenerate';
@@ -26,8 +26,8 @@ function recoveryText(recovery: RepeatedUnitsRecovery): string {
  * read once, not once as an alert and again as the focus; a check from Check only says its result through the page's
  * announcer instead.
  */
-export function CheckErrorAlert({ message, crashed = false, recovery, conversionPending = false, onConvert }: {
-    message: string | null; crashed?: boolean; recovery?: RepeatedUnitsRecovery;
+export function CheckErrorAlert({ message, crashed = false, recovery, machineCount, conversionPending = false, onConvert }: {
+    message: string | null; crashed?: boolean; recovery?: RepeatedUnitsRecovery; machineCount?: number;
     conversionPending?: boolean; onConvert?: () => void;
 }) {
     const titleId = useId();
@@ -35,9 +35,12 @@ export function CheckErrorAlert({ message, crashed = false, recovery, conversion
     if (message === null) {
         return null;
     }
+    const conversion = !crashed && recovery?.conversion.kind === 'available' ? recovery.conversion : null;
+    const reducedMachines = conversion && machineCount !== undefined && Number.isInteger(machineCount / conversion.multiplicity)
+        ? machineCount / conversion.multiplicity : null;
     return (
         <Alert
-            severity="error"
+            severity={conversion ? 'warning' : 'error'}
             role="note"
             id={ELEMENT_IDS.validationError}
             // named by its title and described by the message, so the focus reads both
@@ -48,13 +51,22 @@ export function CheckErrorAlert({ message, crashed = false, recovery, conversion
             sx={{ mb: 2, '&:focus': { outline: '2px solid', outlineColor: 'error.main', outlineOffset: 2 } }}
         >
             {/* a check whose worker stopped says it was not the build; the browser's words are in the Log */}
-            <AlertTitle id={titleId}>{crashed ? CHECK_TEXT.crashTitle : CHECK_TEXT.errorTitle}</AlertTitle>
-            <span id={messageId}>{crashed ? CHECK_TEXT.crashText : recovery ? recoveryText(recovery) : checkErrorText(message)}</span>
+            <AlertTitle id={titleId}>{crashed ? CHECK_TEXT.crashTitle : conversion ? 'Hold up, fellow engineer—trying to melt your CPU?' : CHECK_TEXT.errorTitle}</AlertTitle>
+            <Box id={messageId}>
+                {conversion && recovery ? <>
+                    <Typography variant="body2">Your build contains {conversion.multiplicity} identical groups of connected machines. Configure one group and use Copies for the rest.</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, my: 1, fontWeight: 600 }}>
+                        {reducedMachines !== null && <span>Machines shown: {machineCount} → {reducedMachines}</span>}
+                        <span>Copies: {recovery.configuredCopies} → {conversion.copies}</span>
+                    </Box>
+                    <Typography variant="body2">The total target output stays the same. This changes the configuration here; your machines in Factorio are untouched. You can undo it.</Typography>
+                </> : crashed ? CHECK_TEXT.crashText : recovery ? recoveryText(recovery) : checkErrorText(message)}
+            </Box>
             {!crashed && recovery?.conversion.kind === 'available' && onConvert && (
                 <Box sx={{ mt: 1, p: '6px' }}>
                     {/* MUI's message scroll container clips outside focus rings; reserve paint space on every side. */}
                     <Button variant="contained" color="success" onClick={onConvert} disabled={conversionPending}>
-                        {conversionPending ? 'Checking one unit…' : `Use one unit · ${recovery.conversion.copies} copies`}
+                        {conversionPending ? 'Checking one unit…' : reducedMachines !== null ? `Use ${reducedMachines} ${reducedMachines === 1 ? 'machine' : 'machines'} × ${recovery.conversion.copies} copies` : `Use 1 group × ${recovery.conversion.copies} copies`}
                     </Button>
                 </Box>
             )}

@@ -2,6 +2,7 @@ import { Config, ConfigSchema } from './schema';
 import { findRepeatedUnits, validateCopies } from './copies-validator';
 import { CopiesError } from './errors';
 import { fraction } from '../data-types/fraction';
+import { orderByMachineDependencies } from '../common/order-by-machine-dependencies';
 
 export type ConversionEntityKind = 'machines' | 'inserters' | 'belts' | 'chests' | 'drills';
 export interface RetainedConversionEntity { sourceIndex: number; sourceId?: number; resultId: number }
@@ -188,7 +189,18 @@ function witness(config: Config, analysis: Analysis, component: Component): unkn
         }
         return { ...endpoint, id: label };
     };
-    const inserters = component.inserters.map(index => {
+    // Compare the order the simulator actually executes, rather than incidental Sidecar export order.
+    // Stable ties still distinguish competing inserters; filter, rule and resource order stay intact.
+    const executionOrder = orderByMachineDependencies(component.inserters,
+        index => {
+            const source = config.inserters[index].source;
+            return source.type === 'machine' ? keyOf(source.type, source.id) : undefined;
+        },
+        index => {
+            const sink = config.inserters[index].sink;
+            return keyOf(sink.type, sink.id);
+        });
+    const inserters = executionOrder.map(index => {
         const ins = config.inserters[index];
         return withoutId({ ...ins, source: end(ins.source), sink: end(ins.sink) } as Row);
     });

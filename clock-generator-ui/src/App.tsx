@@ -1158,6 +1158,7 @@ function App() {
                                 message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : generationRecovery ? error : null}
                                 crashed={validation.status === 'invalid' && validation.crashed === true}
                                 recovery={conversionRecovery}
+                                machineCount={config.machines.length}
                                 conversionPending={conversionPending}
                                 onConvert={handleConvertRepeatedUnit}
                             />

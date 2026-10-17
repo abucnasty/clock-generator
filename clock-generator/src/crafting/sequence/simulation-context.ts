@@ -1,4 +1,5 @@
 import { Config } from "../../config";
+import { orderByMachineDependencies } from "../../common/order-by-machine-dependencies";
 import { AlwaysEnabledControl, EnableControl, MutableTickProvider } from "../../control-logic";
 import { DrillStateMachine } from "../../control-logic/drill/drill-state-machine";
 import { InserterStateMachine } from "../../control-logic/inserter/inserter-state-machine";
@@ -180,31 +181,9 @@ function createSimulationContextFromConfig(
  * the machine as output blocked, which skews identical machines by a tick depending on config order.
  */
 function orderInsertersDownstreamFirst(inserters: InserterState[]): InserterState[] {
-    const pickers_by_machine = new Map<string, InserterState[]>();
-    for (const inserter of inserters) {
-        const source_id = inserter.inserter.source.entity_id;
-        if (!EntityId.isMachine(source_id)) continue;
-        const pickers = pickers_by_machine.get(source_id.id) ?? [];
-        pickers.push(inserter);
-        pickers_by_machine.set(source_id.id, pickers);
-    }
-
-    const depths = new Map<InserterState, number>();
-    const visiting = new Set<InserterState>();
-    const depthOf = (inserter: InserterState): number => {
-        const known = depths.get(inserter);
-        if (known !== undefined) return known;
-        // guards against machine loops
-        if (visiting.has(inserter)) return 0;
-        visiting.add(inserter);
-        const pickers = pickers_by_machine.get(inserter.inserter.sink.entity_id.id) ?? [];
-        const depth = pickers.length === 0 ? 0 : 1 + Math.max(...pickers.map(depthOf));
-        visiting.delete(inserter);
-        depths.set(inserter, depth);
-        return depth;
-    };
-
-    return [...inserters].sort((a, b) => depthOf(a) - depthOf(b));
+    return orderByMachineDependencies(inserters,
+        inserter => EntityId.isMachine(inserter.inserter.source.entity_id) ? inserter.inserter.source.entity_id.id : undefined,
+        inserter => inserter.inserter.sink.entity_id.id);
 }
 
 export function cloneSimulationContextWithInterceptors(

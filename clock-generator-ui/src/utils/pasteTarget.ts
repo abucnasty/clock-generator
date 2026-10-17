@@ -38,10 +38,9 @@ export function targetRowLabel(target: TargetValues, name: (id: string) => strin
 
 /** Where the suggestion came from, and that it is a ceiling */
 export function targetRowCaption(source: SuggestedTarget['source']): string {
-    const from = source === 'mod'
-        ? "From the mod's export"
-        : 'Worked out from your machines: the item they make most of that nothing else in the paste uses';
-    return `${from}. It is the most the machines make at full speed; lower it to what you need in Target Output after importing.`;
+    return source === 'mod'
+        ? 'From the Factorio export. This is the maximum output; you can lower the rate after importing.'
+        : 'Estimated maximum output of the imported machines. You can lower the rate in Target Output after importing.';
 }
 
 /** Said under the row when Target Output is already set, so the row starts unticked */
