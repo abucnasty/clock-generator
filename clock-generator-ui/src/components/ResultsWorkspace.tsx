@@ -22,7 +22,7 @@ import { startCheckSummary } from '../utils/modelAssumptions';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
-import { BlueprintOutput } from './BlueprintOutput';
+import { InstallClockDialog } from './InstallClockDialog';
 import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
@@ -35,6 +35,9 @@ import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
 
 interface ResultsWorkspaceProps {
+    installOpen: boolean;
+    onInstallClose: () => void;
+    copyLabel: string;
     comparison: BuildViewContext['comparison'];
     onComparisonChange(comparison: BuildViewContext['comparison']): void;
     wakeAsTable: boolean;
@@ -248,7 +251,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
                 {selected && <Box ref={workspaceRef}>
                     <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}
-                        generation={props.generationAssumptions} stale={props.staleFor !== null}
+                        generation={props.generationAssumptions}
                         clockSelector={selectableClocks.length > 1 && <TextField select
                             label={selected.verdict !== 'stable' ? 'Clock · Not stable' : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
                             value={props.selectedIndex} onChange={event => selectClock(Number(event.target.value))}
@@ -271,13 +274,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                             clockOnlyTransferHistory: props.clockOnlyTransferHistory, clockOnlyStateTransitionHistory: props.clockOnlyStateTransitionHistory,
                             clockWindows: props.clockWindows,
                         }}
-                        installContent={<Box component="details" sx={{ mt: 2 }}>
-                            <Typography component="summary" sx={{ cursor: 'pointer' }}>Blueprint string</Typography>
-                            <Box sx={{ mt: 1 }}><BlueprintOutput
-                                blueprintString={props.blueprintString} simulationDurationTicks={props.simulationDurationTicks ?? undefined}
-                                rateWarning={rateWarning} staleFor={props.staleFor} copied={props.copied} onCopy={props.onCopy}
-                            /></Box>
-                        </Box>}
                         assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
                         <DetailsPanel
                             insights={selected.insights}
@@ -288,6 +284,10 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     </SelectedClockContext>
                 </Box>}
             </Box>
+
+            {selected && <InstallClockDialog open={props.installOpen} onClose={props.onInstallClose}
+                selected={selected} blueprintString={props.blueprintString} staleFor={props.staleFor}
+                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} />}
 
             {/* Debug logging remains opt-in; timelines are available in the normal workspace. */}
             {props.developerTools && (

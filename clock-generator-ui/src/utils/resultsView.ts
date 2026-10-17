@@ -1,1 +1,1 @@
-export type ResultDetail = 'overview' | 'timeline' | 'install';
+export type ResultDetail = 'overview' | 'timeline';

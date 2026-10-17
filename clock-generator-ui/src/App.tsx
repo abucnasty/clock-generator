@@ -426,6 +426,7 @@ function App() {
     const selectedClock = alternatives[selectedAlternativeIndex];
     const selectedName = selectedClock ? plainClockName(alternatives, selectedAlternativeIndex) : null;
     const rateWarning = rateWarningOf(selectedClock);
+    const [installOpen, setInstallOpen] = useState(false);
     const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale, isRunning);
 
     // what the rule editor checks a rule against: the selected clock while it is for this build, else the last check
@@ -1105,6 +1106,7 @@ function App() {
                             selectedId={selectedClock?.id ?? null}
                             selectionQuiet={selectionQuiet}
                             rateWarning={rateWarning}
+                            onHowToInstall={() => setInstallOpen(true)}
                             copyLabel={copyLabel}
                             staleFor={staleFor}
                             copied={copy.copied}
@@ -1317,6 +1319,9 @@ function App() {
 
                         <Box data-build-view="results" data-build-anchor="results" sx={{ display: view === 'results' ? 'block' : 'none' }}>
                             <ResultsWorkspace
+                                installOpen={installOpen}
+                                onInstallClose={() => setInstallOpen(false)}
+                                copyLabel={copyLabel}
                                 comparison={buildContext.comparison}
                                 onComparisonChange={comparison => patchContext({ comparison })}
                                 wakeAsTable={buildContext.wakeAsTable}

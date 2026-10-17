@@ -1,5 +1,5 @@
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '@mui/material';
+import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Typography } from '@mui/material';
 import { useId, useState } from 'react';
 import type { ClockInstallFacts } from '../worker/installFacts';
 import { WIRING_LIST_NAME } from '../utils/a11yLabels';
@@ -45,6 +45,8 @@ interface InstallStepsProps {
     stale: boolean;
     /** The Install context already supplies the disclosure, so all steps stay visible. */
     alwaysOpen?: boolean;
+    /** Open the shared wiring reference instead of repeating it in the guide. */
+    onShowWiring?: () => void;
 }
 
 /**
@@ -90,7 +92,7 @@ function WiringItem({ row }: { row: WiringRow }) {
 }
 
 /** What to wire to each combinator: what each inserter carries and between which ends */
-function WiringList({ install, movesOf }: Pick<InstallStepsProps, 'install' | 'movesOf'>) {
+export function WiringList({ install, movesOf }: Pick<InstallStepsProps, 'install' | 'movesOf'>) {
     const captionId = useId();
     const rows = wiringList(install, movesOf);
     const scrolls = linesOf(rows) > WIRING_ROWS_SHOWN;
@@ -129,7 +131,7 @@ function WiringList({ install, movesOf }: Pick<InstallStepsProps, 'install' | 'm
  * The numbered steps that put the clock into the game, with the list of what to wire to each combinator. Open unless
  * the player folded it away; while the clocks are for an earlier build, only one line.
  */
-export function InstallSteps({ install, movesOf, stale, alwaysOpen = false }: InstallStepsProps) {
+export function InstallSteps({ install, movesOf, stale, alwaysOpen = false, onShowWiring }: InstallStepsProps) {
     const [expanded, setExpanded] = useState(() => !readCollapsed());
     const summaryId = useId();
     const detailsId = useId();
@@ -143,7 +145,9 @@ export function InstallSteps({ install, movesOf, stale, alwaysOpen = false }: In
                 <Box component="li" key={step.id} sx={{ mb: 1.5 }} data-install-step={step.id}>
                     <Typography variant="body2" component="p" sx={{ fontWeight: 600 }}>{step.title}</Typography>
                     <Typography variant="body2" component="p" color="text.secondary">{step.detail}</Typography>
-                    {(step.id === 'wire' || step.id === 'drills') && <WiringList install={install} movesOf={movesOf} />}
+                    {(step.id === 'wire' || step.id === 'drills') && (onShowWiring
+                        ? <Button size="small" color="inherit" onClick={onShowWiring} sx={{ mt: 0.5 }}>View wiring reference</Button>
+                        : <WiringList install={install} movesOf={movesOf} />)}
                 </Box>
             ))}
         </Box>

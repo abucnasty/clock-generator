@@ -60,7 +60,7 @@ afterEach(() => { runner.unmount(); vi.unstubAllGlobals(); });
 
 describe('working-context hydration and pending restoration', () => {
     it('never writes defaults before matching build/form/cache completion, including effect replay and same-config build switches', () => {
-        const saved = { ...defaultBuildViewContext(), resultDetail: 'install' as const, configView: 'diagram' as const, entityConfigKey: serializeConfig(options.form) };
+        const saved = { ...defaultBuildViewContext(), resultDetail: 'timeline' as const, configView: 'diagram' as const, entityConfigKey: serializeConfig(options.form) };
         writeBuildViewContext(localStorage, 'one', saved);
         const original = values.get(contextKeyOf('one'));
         Render(); runner.replay(); settle();
@@ -71,7 +71,7 @@ describe('working-context hydration and pending restoration', () => {
         settle(); expect(values.get(contextKeyOf('one'))).toBe(original);
         // A deliberate pre-ready navigation wins while unrelated saved choices still hydrate.
         Render().patch({ view: 'results' });
-        expect(complete().context).toMatchObject({ view: 'results', configView: 'diagram', resultDetail: 'install' });
+        expect(complete().context).toMatchObject({ view: 'results', configView: 'diagram', resultDetail: 'timeline' });
         runner.replay(); settle();
         writeBuildViewContext(localStorage, 'two', { ...saved, configView: 'list', resultDetail: 'wake' });
         options = { ...options, buildId: 'two' }; // The form is intentionally identical.
@@ -86,7 +86,7 @@ describe('working-context hydration and pending restoration', () => {
         settle(); runFrames(); expect(scrollTo).toHaveBeenCalledOnce();
         target.dispatchEvent(new Event('scroll'));
         Render().patch({ view: 'results' }); settle();
-        Render().patch({ resultDetail: 'install' }); settle();
+        Render().patch({ resultDetail: 'timeline' }); settle();
         expect(readBuildViewContext(localStorage, 'one').position).toEqual({ configure: { anchor: 'build', offset: -312 }, results: { anchor: 'build', offset: -312 } });
         options = { ...options, buildId: 'two', ready: null };
         writeBuildViewContext(localStorage, 'two', saved); settle(); complete();

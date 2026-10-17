@@ -49,7 +49,7 @@ export const INSTALL_COPY = {
     wire: {
         title: 'Wire the output of each combinator to its inserters.',
         detail: 'A combinator described as "Inserter 3 for [item] from [recipe] into [recipe]" switches that inserter '
-            + 'on. With a green wire, connect its output to each inserter in the list below. Find an inserter by its '
+            + 'on. With a green wire, connect its output to each inserter in the wiring reference. Find an inserter by its '
             + 'item and by the machines at its two ends; the numbers are the ones on Configure. The combinator\'s '
             + 'description names the same inserters; this list has all of it. The other combinators (Clock, Clock lock, Fuel '
             + 'clock, Clock lock filter, and the ones about a modulo or a subtick clock) are the clock itself: leave them.',
@@ -65,7 +65,7 @@ export const INSTALL_COPY = {
     drills: {
         title: 'Wire each combinator\'s output to its mining drills, and set them to switch on with it.',
         detail: 'A combinator described as "Drill 1 for [item] into [recipe]" switches that mining drill on. With a '
-            + 'green wire, connect its output to each drill in the list below; the numbers are the ones on Configure. '
+            + 'green wire, connect its output to each drill in the wiring reference; the numbers are the ones on Configure. '
             + 'Then open the drill, find Circuit network connection, choose Enable/disable, and set the condition to '
             + 'Anything > 0. The other combinators (Clock, Clock lock, Clock lock filter, and the ones about a modulo or '
             + 'a subtick clock) are the clock itself: leave them.',

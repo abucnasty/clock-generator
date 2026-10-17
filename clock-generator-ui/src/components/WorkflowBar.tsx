@@ -63,6 +63,7 @@ interface WorkflowBarProps {
     copied: boolean;
     /** Copies the blueprint, or asks first for the clock of an earlier build (the copy every Copy button shares) */
     onCopy: () => void;
+    onHowToInstall: () => void;
     /** What keeps the build from being clocked, first to fix first; empty when nothing does */
     problems: Problem[];
     /** Where Generate and Check only go instead of checking, said under them; null when they check */
@@ -129,6 +130,7 @@ export function WorkflowBar({
     staleFor,
     copied,
     onCopy,
+    onHowToInstall,
     problems,
     note,
     startHere,
@@ -333,6 +335,7 @@ export function WorkflowBar({
                                     {SELECTED_CLOCK_PREFIX}{selectedLabel}
                                 </Typography>
                             )}
+                            <Button size="small" color="inherit" onClick={onHowToInstall}>How to install</Button>
                             {/* describeChild keeps the button's label as its name. Below it when the actions wrap, so
                                 the help leaves Configure/Results reachable; above it when wide, clear of the messages.
                                 It stays open under the pointer (WCAG 1.4.13), inside the banner (disablePortal). */}

@@ -65,11 +65,11 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
         const p = record(record(v.position)[view]);
         if (ANCHORS.includes(p.anchor as BuildAnchor) && typeof p.offset === 'number' && Number.isFinite(p.offset)) position[view] = { anchor: p.anchor as BuildAnchor, offset: Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, p.offset)) };
     }
-    // Preserve the destination of the previous Why / Wake tabs and nested blueprint view.
-    const resultDetail = v.resultDetail === 'wake' ? 'timeline'
-        : v.resultDetail === 'why' && v.detailsTab === 'blueprint' ? 'install'
+    // Installation now opens on demand; old Install/blueprint destinations return to Timeline.
+    const resultDetail = v.resultDetail === 'wake' || v.resultDetail === 'install' ? 'timeline'
+        : v.resultDetail === 'why' && v.detailsTab === 'blueprint' ? 'timeline'
         : v.resultDetail === 'why' ? 'overview'
-        : oneOf(v.resultDetail, ['overview', 'timeline', 'install'], d.resultDetail);
+        : oneOf(v.resultDetail, ['overview', 'timeline'], d.resultDetail);
     return { ...d, view: oneOf(v.view, ['configure', 'results'], d.view), configView: oneOf(v.configView, ['list', 'diagram'], d.configView),
         resultDetail, detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
         comparison: { allColumns: bool(comparison.allColumns, false), showUnstable: bool(comparison.showUnstable, false) },

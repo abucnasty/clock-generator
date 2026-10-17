@@ -7,24 +7,20 @@ import { MODELED_START, PLANNING_START, modeledDetails, startCheckSummary } from
 import { useGameNames } from '../hooks/useGameNames';
 import { recoversOf } from '../utils/clockSummary';
 import { formatNumberText } from '../utils/numberText';
-import { buildWakeWindowRows } from '../utils/wakeWindows';
 import { FullscreenWorkspace } from './FullscreenWorkspace';
-import { InstallSteps } from './InstallSteps';
 import { tabProps } from '../utils/tabIds';
 import { TabBody } from './TabBody';
 import { useBuildSection } from '../hooks/useBuildViewContext';
 
 const ClockTimeline = lazy(() => import('./ClockTimelineWorkspace').then(module => ({ default: module.ClockTimelineWorkspace })));
 
-export function SelectedClockContext({ selected, detail, onDetailChange, timelineProps, generation, stale, assumptions, installContent, clockSelector, children }: {
+export function SelectedClockContext({ selected, detail, onDetailChange, timelineProps, generation, assumptions, clockSelector, children }: {
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
     timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected' | 'fullscreen'>;
-    installContent: ReactNode;
     clockSelector: ReactNode;
     generation: GenerationAssumptions | null;
-    stale: boolean;
     assumptions: ReactNode;
     children: ReactNode;
 }) {
@@ -33,13 +29,11 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
     const [timelineVisited, setTimelineVisited] = useState(detail === 'timeline');
     useEffect(() => { if (detail === 'timeline') setTimelineVisited(true); }, [detail]);
     const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
-    const moves = new Map(buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]));
     return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={clockSelector}>
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
             aria-label="Selected clock workspace" sx={{ ...(fullscreen && { position: 'sticky', top: -16, zIndex: 1, bgcolor: 'background.paper' }), borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
             <Tab label="Overview" value="overview" {...tabProps('result-context', 'overview')} />
             <Tab label="Timeline" value="timeline" {...tabProps('result-context', 'timeline')} />
-            <Tab label="Install" value="install" {...tabProps('result-context', 'install')} />
         </Tabs>
         <TabBody prefix="result-context" tab="overview" shown={detail === 'overview'}>
             <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Why this clock</Typography>
@@ -64,11 +58,6 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
             {(timelineVisited || detail === 'timeline') && <Suspense fallback={<Typography role="status">Loading timelines…</Typography>}>
                 <ClockTimeline {...timelineProps} selected={selected} fullscreen={fullscreen} />
             </Suspense>}
-        </TabBody>
-        <TabBody prefix="result-context" tab="install" shown={detail === 'install'}>
-            <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Install in Factorio</Typography>
-            <InstallSteps install={selected.install} movesOf={id => moves.get(id) ?? { items: [], route: '' }} stale={stale} alwaysOpen />
-            {installContent}
         </TabBody>
     </FullscreenWorkspace>;
 }
