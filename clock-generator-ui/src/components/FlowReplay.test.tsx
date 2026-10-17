@@ -17,6 +17,10 @@ it('renders replay controls using an agricultural build with recorded fuel and m
     const html = renderToStaticMarkup(<FlowReplay config={config} recording={recording} tick={10} inspection={{ ...DEFAULT_INSPECTION, view: 'flow' }} cycleTicks={96}
         onTick={() => {}} onChange={() => {}} onInspectActivity={() => {}} />);
     expect(html).toContain('Flow replay legend');
+    expect(html).toContain('Selected or hovered route');
+    expect(html).toContain('Recorded item transfer · quantity on the line');
+    expect(html).toContain('Selected entity outline');
+    expect(html.indexOf('aria-label="Connection legend"')).toBeLessThan(html.indexOf('Entity states'));
     expect(html).toContain('Previous transfer');
     expect(html).toContain('Play one crafting cycle');
     expect(html).toContain('not physical item positions');

@@ -21,6 +21,7 @@ export function TimelineTickInspector({ recording, entity, inspection, tick, eve
         }
         return { visible, details };
     }, [entity, inspection.view, inspection.signals]);
+    const connections = connected.filter(other => other.id !== entity.id);
     const outside = tick > recording.end_tick;
     const showEventFacts = inspection.view === 'flow' || inspection.view === 'transfers' || (inspection.view === 'activity' && inspection.signals.includes('transfers'));
     const shownEvents = showEventFacts ? events.filter(event => ['produce', 'pickup', 'drop'].includes(event.kind)) : [];
@@ -42,6 +43,7 @@ export function TimelineTickInspector({ recording, entity, inspection, tick, eve
         <Typography variant="overline">Tick inspector · {tick}</Typography>
         <Typography component="h3" variant="subtitle2">{timelineEntityName(entity, recipeLabel)}</Typography>
         {entity.note && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>{entity.note}</Typography>}
+        {inspection.view === 'flow' && entity.type === 'belt' && <Typography variant="body2" sx={{ mt: 1 }}>{connections.length ? `${inspection.replayFocus ? 'All connected inserter routes are highlighted. ' : ''}Choose an inserter to inspect its activity.` : 'No recorded inserter connections for this belt.'}</Typography>}
         {outside ? <Typography variant="body2" sx={{ mt: 1 }}>The selected tick is outside its recorded span.</Typography> : <>
             {fields(visible)}
             {shownEvents.length > 0 && <Box sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">Events at this tick</Typography>{eventList(shownEvents)}</Box>}
@@ -51,8 +53,8 @@ export function TimelineTickInspector({ recording, entity, inspection, tick, eve
                 {detailedEvents.length > 0 && <Box sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">Additional events at this tick</Typography>{eventList(detailedEvents)}</Box>}
             </Box>}
         </>}
-        {connected.some(other => other.id !== entity.id) && <Typography variant="caption" color="text.secondary">Follow a connection</Typography>}
-        {connected.filter(other => other.id !== entity.id).map(other => <Button key={other.id} color="inherit" size="small" onClick={() => onEntityChange(other.id)} sx={{ display: 'flex', justifyContent: 'flex-start', textAlign: 'left' }}>
+        {connections.length > 0 && <Typography variant="caption" color="text.secondary">{entity.type === 'belt' ? 'Connected inserters' : 'Follow a connection'}</Typography>}
+        {connections.map(other => <Button key={other.id} color="inherit" size="small" onClick={() => onEntityChange(other.id)} sx={{ display: 'flex', justifyContent: 'flex-start', textAlign: 'left' }}>
             {other.items[0] && <FactorioIcon name={other.items[0]} size={18} alt="" />}{timelineEntityName(other, recipeLabel)}
         </Button>)}
     </Box>;

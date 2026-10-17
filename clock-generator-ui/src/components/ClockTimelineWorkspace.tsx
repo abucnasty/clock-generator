@@ -59,7 +59,7 @@ function entityOptions(config: Config | null | undefined, clock: ClockAlternativ
         const id = `drill:${drill.id}`;
         if (!entities.has(id)) entities.set(id, { id, type: 'drill', sink: `machine:${drill.target.id}`, items: [drill.mined_item_name], signals: [] });
     }
-    return [...entities.values()].filter(entity => entity.type !== 'belt').sort((a, b) => a.type.localeCompare(b.type) || Number(a.id.split(':')[1]) - Number(b.id.split(':')[1]));
+    return [...entities.values()].sort((a, b) => a.type.localeCompare(b.type) || Number(a.id.split(':')[1]) - Number(b.id.split(':')[1]));
 }
 
 /** Local cursor updates stay below App; only settled inspection choices are saved with the build. */
@@ -107,7 +107,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const primary = useTimelineRecording(request, retry);
     const recording = primary.data;
     const selectedId = options.some(entity => entity.id === inspection.entityId) ? inspection.entityId : options.find(entity => entity.type === 'machine')?.id ?? options[0]?.id;
-    const selected = recording?.entities.find(entity => entity.id === selectedId && entity.type !== 'belt') ?? options.find(entity => entity.id === selectedId) ?? recording?.entities.find(entity => entity.type !== 'belt') ?? null;
+    const selected = recording?.entities.find(entity => entity.id === selectedId) ?? options.find(entity => entity.id === selectedId) ?? recording?.entities.find(entity => entity.type !== 'belt') ?? null;
     const duration = !recordingWanted
         ? props.selected.simulationDurationTicks
         : recording?.end_tick ?? props.selected.simulationDurationTicks;
@@ -145,7 +145,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         const { range: window, duration: end } = current.current;
         if (current.current.inspection.view !== 'cycles' && (at < window.start || at > window.end)) { const half = (window.end - window.start) / 2; setRange(clampTimelineRange({ start: at - half, end: at + half }, end)); }
     }, [patch, setRange, cycles]);
-    const connected = useMemo(() => recording && selected ? relatedTimelineEntities(recording, selected).filter(entity => entity.type !== 'belt') : [], [recording, selected]);
+    const connected = useMemo(() => recording && selected ? relatedTimelineEntities(recording, selected) : [], [recording, selected]);
     const events = useMemo(() => recording && selected ? relevantTimelineEvents(recording, selected) : [], [recording, selected]);
     const eventTicks = useMemo(() => events.map(event => event.tick), [events]);
     const tickEvents = events.slice(upperBound(eventTicks, tick - 1), upperBound(eventTicks, tick));
@@ -187,7 +187,8 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                 <Typography variant="caption" color="text.secondary">{number(range.start)}–{number(range.end)} t</Typography>
             </Box>}
         </Box>}
-        {recordingWanted && !isFlow && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
+        {recordingWanted && !isFlow && selected?.type === 'belt' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Showing connected inserters. Physical belt contents are not recorded.</Typography>}
+        {recordingWanted && !isFlow && selected?.type !== 'belt' && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
         {inspection.view === 'cycles' && <CraftingCycleNavigator cycles={cycles} index={cycleIndex} periodTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} onSelect={selectCycle} />}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
@@ -223,7 +224,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
 
         </Box>
         {recording && selected && <Box sx={{ mt: 1.5 }}>
-            {!isFlow && <TimelinePauses key={selected.id} recording={recording} entityId={selected.id} targetMet={props.selected.ranking.meets_target_rate} onExplore={wait => {
+            {!isFlow && selected.type !== 'belt' && <TimelinePauses key={selected.id} recording={recording} entityId={selected.id} targetMet={props.selected.ranking.meets_target_rate} onExplore={wait => {
                 const padding = Math.max(15, (wait.end - wait.start) * 0.2);
                 patch({ view: 'activity', signals: signalsForTimelinePause(inspection.signals, wait.state), tick: wait.start, entityId: wait.entityId,
                     showConnections: inspection.showConnections || (wait.state === 'waiting_for_space_in_destination' && selected.type === 'inserter' && Boolean(selected.sink)),

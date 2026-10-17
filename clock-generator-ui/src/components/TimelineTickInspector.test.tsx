@@ -37,3 +37,22 @@ it('does not extrapolate facts or events beyond the recorded span', () => {
     expect(html).not.toContain('Total by selected tick');
     expect(html).not.toContain('Craft progress');
 });
+
+it('shows belt context and all connected inserters instead of choosing the first route', () => {
+    const belt: TimelineEntity = { id: 'belt:3', type: 'belt', items: ['advanced-circuit'], signals: [] };
+    const connected: TimelineEntity[] = [7, 8].map(id => ({ id: `inserter:${id}`, type: 'inserter', items: ['advanced-circuit'], sink: belt.id, signals: [] }));
+    const html = renderToStaticMarkup(<TimelineTickInspector recording={recording} entity={belt} inspection={{ ...DEFAULT_INSPECTION, view: 'flow', entityId: belt.id, replayFocus: true }} tick={10} events={[]} connected={connected} onEntityChange={() => {}} />);
+    expect(html).toContain('Belt 3');
+    expect(html).toContain('All connected inserter routes are highlighted');
+    expect(html).toContain('Connected inserters');
+    expect(html).toContain('Inserter 7');
+    expect(html).toContain('Inserter 8');
+});
+
+it('does not mistake an unconnected belt for its own connected inserter', () => {
+    const belt: TimelineEntity = { id: 'belt:3', type: 'belt', items: [], signals: [] };
+    const html = renderToStaticMarkup(<TimelineTickInspector recording={recording} entity={belt} inspection={{ ...DEFAULT_INSPECTION, view: 'flow', entityId: belt.id, replayFocus: true }} tick={10} events={[]} connected={[belt]} onEntityChange={() => {}} />);
+    expect(html).toContain('No recorded inserter connections for this belt.');
+    expect(html).not.toContain('All connected inserter routes are highlighted');
+    expect(html).not.toContain('Connected inserters');
+});

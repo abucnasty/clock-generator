@@ -72,3 +72,24 @@ it('gives a local legend for the selected clock’s states in the visible range'
     expect(html).not.toContain('Waiting for fuel');
     expect(html).not.toContain('Item ingredient shortage');
 });
+
+it.each(['activity', 'transfers'] as const)('automatically shows every connected inserter for a belt in %s without enabling connections', view => {
+    const belt: TimelineEntity = { id: 'belt:3', type: 'belt', items: ['iron-plate'], signals: [] };
+    const attached = [7, 8].map(id => ({ ...inserter, id: `inserter:${id}`, source: `machine:${id}`, sink: belt.id, signals: [
+        { id: 'state', label: 'Inserter state', group: 'state' as const, unit: 'state' as const, ticks: [0], values: ['working'] },
+    ] }));
+    const unrelated = { ...inserter, id: 'inserter:9', source: 'belt:4', sink: 'machine:9' };
+    const recording = { ...a, entities: [belt, ...attached, unrelated], events: attached.map(entity => ({ tick: 10, entity_id: entity.id, kind: 'drop' as const, item: 'iron-plate', amount: 16, source: entity.source, sink: belt.id })) };
+    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={recording} selected={belt} groups={['state', 'transfers']} range={{ start: 0, end: 100 }} tick={20} view={view} showConnections={false} onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    expect(html).toContain('Inserter 7');
+    expect(html).toContain('Inserter 8');
+    expect(html).not.toContain('Inserter 9');
+    expect(html.match(/Pickups ◆ \/ deliveries ●<\/p>/g)).toHaveLength(2);
+    expect(html).not.toContain('No selected signals');
+});
+
+it('explains an unconnected belt instead of suggesting nonexistent belt signals', () => {
+    const belt: TimelineEntity = { id: 'belt:3', type: 'belt', items: [], signals: [] };
+    const html = renderToStaticMarkup(<TimelineEvidenceChart recording={{ ...a, entities: [belt] }} selected={belt} groups={['state', 'transfers']} range={{ start: 0, end: 100 }} tick={20} view="activity" onTick={() => {}} onRange={() => {}} onZoom={() => {}} />);
+    expect(html).toContain('No recorded inserters are connected to this belt.');
+});

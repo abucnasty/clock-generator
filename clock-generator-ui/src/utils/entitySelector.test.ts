@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { entitySelectorKey, filterEntityOptions, type EntitySelectorOption } from './entitySelector';
+import { entitySelectorKey, searchEntityOptions, type EntitySelectorOption } from './entitySelector';
 
 const options: EntitySelectorOption[] = [
     { type: 'belt', id: 1, label: 'Belt 1', icon: 'turbo-transport-belt', ingredientIcons: ['iron-plate'] },
@@ -8,15 +8,14 @@ const options: EntitySelectorOption[] = [
     { type: 'inserter', id: 1, label: 'Inserter 1', icon: 'stack-inserter', ingredientIcons: ['iron-plate'] },
 ];
 const item = (id: string) => id === 'iron-plate' ? 'Plaque de fer' : id;
-it('combines type filters with recipe, item-id and translated item searches', () => {
-    expect(filterEntityOptions(options, 'machine', 'copper', item).map(entitySelectorKey)).toEqual(['machine:1']);
-    expect(filterEntityOptions(options, 'all', 'advanced-circuit', item).map(entitySelectorKey)).toEqual(['machine:2']);
-    expect(filterEntityOptions(options, 'inserter', 'Plaque de fér', item).map(entitySelectorKey)).toEqual(['inserter:1']);
-    expect(filterEntityOptions(options, 'machine', 'Plaque de fer', item)).toEqual([]);
+it('searches across all entity types using recipes, item IDs and translated names', () => {
+    expect(searchEntityOptions(options, 'copper', item).map(entitySelectorKey)).toEqual(['machine:1']);
+    expect(searchEntityOptions(options, 'advanced-circuit', item).map(entitySelectorKey)).toEqual(['machine:2']);
+    expect(searchEntityOptions(options, 'Plaque de fér', item).map(entitySelectorKey)).toEqual(['inserter:1', 'belt:1']);
 });
-it('keeps entity types with matching numbers distinct, and never changes the selection data while filtering', () => {
+it('keeps entity types with matching numbers distinct, and never changes the selection data while searching', () => {
     expect(new Set(options.map(entitySelectorKey)).size).toBe(options.length);
-    expect(filterEntityOptions(options, 'belt', '', item)).toEqual([options[0]]);
+    expect(searchEntityOptions(options, '', item).map(entitySelectorKey)).toEqual(['machine:1', 'machine:2', 'inserter:1', 'belt:1']);
     expect(options[1].sublabel).toBe('Casting copper cable');
     expect(options.length).toBe(4);
 });

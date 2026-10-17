@@ -164,13 +164,15 @@ const EvidenceCanvas = memo(function EvidenceCanvas({ lane, range, end, height, 
         sx={{ display: 'block', width: '100%', height, touchAction: 'pan-y', cursor: 'crosshair', forcedColorAdjust: 'none', '&:focus-visible': { outline: '2px solid #ffa600', outlineOffset: 2 } }} />;
 });
 
-export function TimelineEvidenceChart({ recording, selected, groups, range, tick, view, showConnections = false, onTick, onInspect, onRange, onZoom }: {
+export function TimelineEvidenceChart({ recording, selected, groups, range, tick, view, showConnections: requestedConnections = false, onTick, onInspect, onRange, onZoom }: {
     recording: TimelineRecording; selected: TimelineEntity; groups: TimelineSignalGroup[];
     range: TimelineRange; tick: number; view: 'activity' | 'states' | 'transfers';
     showConnections?: boolean;
     onTick(tick: number): void; onInspect?(entityId: string, tick: number): void; onRange(range: TimelineRange): void; onZoom(factor: number, tick: number): void;
 }) {
     const { itemLabel, recipeLabel } = useGameNames();
+    // Belts have no recorded occupancy: their useful activity is always on their connected inserters.
+    const showConnections = selected.type === 'belt' || requestedConnections;
     const [page, setPage] = useState(0);
     const lanes = useMemo(() => {
         const related = recording.entities.filter(entity => entity.id === selected.id || showConnections && (entity.source === selected.id || entity.sink === selected.id || entity.id === selected.source || entity.id === selected.sink));
@@ -267,7 +269,7 @@ export function TimelineEvidenceChart({ recording, selected, groups, range, tick
                 {tick >= range.start && tick <= range.end && <Box aria-hidden sx={{ pointerEvents: 'none', position: 'absolute', top: 0, bottom: 0, left: `${(tick - range.start) / (range.end - range.start) * 100}%`, borderLeft: '1px solid #ffa600', '@media (forced-colors: active)': { borderColor: 'Highlight' } }} />}
             </BeltChartSurface>
         </Box>)}
-        {lanes.length === 0 && <Typography variant="body2" sx={{ p: 2 }}>No selected signals were recorded for this entity. Choose another signal group or inspect a connected entity.</Typography>}
+        {lanes.length === 0 && <Typography variant="body2" sx={{ p: 2 }}>{selected.type === 'belt' ? recording.entities.some(entity => entity.source === selected.id || entity.sink === selected.id) ? 'No matching signals were recorded for connected inserters. Choose State or Products made & deliveries in Signals to view their activity.' : 'No recorded inserters are connected to this belt.' : 'No selected signals were recorded for this entity. Choose another signal group or inspect a connected entity.'}</Typography>}
         {pageCount > 1 && <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
             <Button color="inherit" size="small" disabled={shownPage === 0} onClick={() => setPage(shownPage - 1)}>Previous signals</Button>
             <Typography variant="caption">{shownPage + 1} / {pageCount}</Typography>
