@@ -2,26 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DisplayScheme } from '../utils/displayPreferences';
 import { resolveColorScheme, useResolvedColorScheme } from './useResolvedColorScheme';
 
-// A focused hook lifecycle runner follows the existing Node-only hook tests.
-const lifecycle = vi.hoisted(() => {
-    let values: unknown[] = [], cursor = 0;
-    let effect: (() => (() => void) | void) | undefined, cleanup: (() => void) | undefined;
-    let mounted = false;
+const lifecycle = await vi.hoisted(async () => {
+    const { createHookRunner } = await import('../test/hookRunner');
+    const runner = createHookRunner();
     const preferences = { scheme: 'system' as DisplayScheme };
-    return {
-        preferences,
-        begin() { cursor = 0; },
-        commit() { if (!mounted) { cleanup = effect?.() || undefined; mounted = true; } },
-        reset() { cleanup?.(); values = []; cursor = 0; mounted = false; effect = cleanup = undefined; preferences.scheme = 'system'; },
-        react: {
-            useState(initial: unknown) {
-                const index = cursor++;
-                if (!(index in values)) values[index] = typeof initial === 'function' ? initial() : initial;
-                return [values[index], (value: unknown) => { values[index] = value; }];
-            },
-            useEffect(value: () => (() => void) | void) { effect = value; },
-        },
-    };
+    return { ...runner, preferences, reset() { runner.reset(); preferences.scheme = 'system'; } };
 });
 vi.mock('react', () => lifecycle.react);
 vi.mock('./useDisplayPreferences', () => ({ useDisplayPreferences: () => lifecycle.preferences }));

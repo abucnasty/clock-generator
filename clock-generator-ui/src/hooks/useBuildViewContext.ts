@@ -1,6 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ConfigFormData } from '../utils/configForm/formData';
-import { serializeConfig } from './usePersistedConfigForm';
 import { defaultBuildViewContext, knownSection, readBuildViewContext, removeBuildViewContext, restoreBuildViewContext, writeBuildViewContext, selectBuildEntity, type BuildAnchor, type BuildViewContext } from '../utils/buildViewContext';
 
 export interface BuildContextReady { buildId: string; formKey: string; replacementRevision: number }
@@ -25,10 +24,9 @@ function pagePosition(view: BuildViewContext['view']): BuildViewContext['positio
     return anchor ? { anchor: anchor.dataset.buildAnchor as BuildAnchor, offset: Math.max(-4000, Math.min(4000, line - anchor.getBoundingClientRect().top)) } : undefined;
 }
 /** Navigation only: the form and kept clocks remain with their existing owners. */
-export function useBuildViewContext({ buildId, ready, form, hasResults, hasFuel, replacementRevision, insightIds }: {
-    buildId: string; ready: BuildContextReady | null; form: ConfigFormData; hasResults: boolean; hasFuel: boolean; replacementRevision: number; insightIds: readonly string[];
+export function useBuildViewContext({ buildId, ready, form, formKey, hasResults, hasFuel, replacementRevision, insightIds }: {
+    buildId: string; ready: BuildContextReady | null; form: ConfigFormData; formKey: string; hasResults: boolean; hasFuel: boolean; replacementRevision: number; insightIds: readonly string[];
 }) {
-    const formKey = useMemo(() => serializeConfig(form), [form]);
     const ownerKey = `${buildId}:${replacementRevision}`;
     const structure = JSON.stringify([form.machines, form.inserters, form.belts, form.chests, form.drills?.configs ?? []].map(rows => rows.map(row => [row.id, row._uuid])));
     const [state, setState] = useState<{ owner: string; hydrated: boolean; structure: string; context: BuildViewContext }>(() => ({ owner: ownerKey, hydrated: false, structure, context: defaultBuildViewContext() }));

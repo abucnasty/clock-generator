@@ -18,7 +18,7 @@ interface UseMachineFactsResult {
     updating: boolean;
 }
 
-// The facts of every machine setting asked for so far; machines configured alike share them
+// Machines configured alike share pending work and resolved facts.
 const requests = new Map<string, Promise<SerializableMachineFacts | null>>();
 const known = new Map<string, SerializableMachineFacts | null>();
 
@@ -35,14 +35,21 @@ function paramsOf(key: string): UseMachineFactsParams {
 }
 
 function requestFacts(key: string, params: UseMachineFactsParams): Promise<SerializableMachineFacts | null> {
+    // A request may finish between another consumer's render and its effect.
+    if (known.has(key)) return Promise.resolve(known.get(key) ?? null);
     let request = requests.get(key);
     if (!request) {
-        request = askEngine({ kind: 'machine-facts', params }).then((facts) => {
-            known.set(key, facts);
-            return facts;
-        });
-        // a failed request is asked again the next time
-        request.catch(() => requests.delete(key));
+        request = askEngine({ kind: 'machine-facts', params }).then(
+            (facts) => {
+                known.set(key, facts);
+                requests.delete(key);
+                return facts;
+            },
+            (error) => {
+                requests.delete(key);
+                throw error;
+            },
+        );
         requests.set(key, request);
     }
     return request;

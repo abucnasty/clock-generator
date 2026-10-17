@@ -4,44 +4,20 @@ import { contextKeyOf, defaultBuildViewContext, readBuildViewContext, writeBuild
 import { serializeConfig } from './usePersistedConfigForm';
 import { useBuildViewContext } from './useBuildViewContext';
 
-// The existing Node-only hook-runner pattern: retained effects and state, with native layout/input supplied below.
-const runner = vi.hoisted(() => {
-    let states: unknown[] = [], refs: { current: unknown }[] = [], memos: { deps: readonly unknown[]; value: unknown }[] = [];
-    let effects: { deps: readonly unknown[]; cleanup?: () => void; effect: () => (() => void) | void }[] = [], queued: (() => void)[] = [];
-    let si = 0, ri = 0, mi = 0, ei = 0;
-    const same = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
-    const memo = (create: () => unknown, deps: readonly unknown[]) => {
-        const i = mi++;
-        if (!memos[i] || !same(memos[i].deps, deps)) memos[i] = { deps, value: create() };
-        return memos[i].value;
-    };
-    const effect = (effect: () => (() => void) | void, deps: readonly unknown[]) => {
-        const i = ei++;
-        if (!effects[i] || !same(effects[i].deps, deps)) queued.push(() => {
-            effects[i]?.cleanup?.(); effects[i] = { deps, effect, cleanup: effect() || undefined };
-        });
-    };
+const runner = await vi.hoisted(async () => {
+    const { createHookRunner } = await import('../test/hookRunner');
     return {
-        reset() { states = []; refs = []; memos = []; effects = []; queued = []; },
-        begin() { si = ri = mi = ei = 0; queued = []; }, commit() { queued.forEach(run => run()); },
-        replay() { effects.forEach(entry => { entry.cleanup?.(); entry.cleanup = entry.effect() || undefined; }); },
-        unmount() { effects.forEach(entry => entry.cleanup?.()); },
-        react: {
-            useState(initial: unknown) { const i = si++; if (!(i in states)) states[i] = typeof initial === 'function' ? initial() : initial; return [states[i], (next: unknown) => { states[i] = typeof next === 'function' ? next(states[i]) : next; }]; },
-            useRef(value: unknown) { return refs[ri++] ??= { current: value }; },
-            useMemo: memo, useCallback: (fn: unknown, deps: readonly unknown[]) => memo(() => fn, deps), useEffect: effect, useLayoutEffect: effect,
-            createContext: () => ({}), useContext: () => null,
-        },
+        ...createHookRunner(),
     };
 });
-vi.mock('react', () => runner.react);
+vi.mock('react', () => ({ ...runner.react, createContext: () => ({}), useContext: () => null }));
 // This hook only needs the authoritative serializer, not the form-owner hooks in this controlled React runner.
 vi.mock('./usePersistedConfigForm', () => ({ serializeConfig: (form: unknown) => JSON.stringify(form, (key, value) => key === '_uuid' ? undefined : value) }));
-let options: Parameters<typeof useBuildViewContext>[0];
+let options: Omit<Parameters<typeof useBuildViewContext>[0], 'formKey'>;
 let values: Map<string, string>, localStorage: Storage;
 let frames: Map<number, FrameRequestCallback>, nextFrame: number;
 let target: EventTarget, scrollTo: ReturnType<typeof vi.fn>;
-const Render = () => { runner.begin(); const hook = useBuildViewContext(options); runner.commit(); return hook; };
+const Render = () => { runner.begin(); const hook = useBuildViewContext({ ...options, formKey: serializeConfig(options.form) }); runner.commit(); return hook; };
 const settle = () => { Render(); return Render(); };
 const complete = () => { options = { ...options, ready: { buildId: options.buildId, formKey: serializeConfig(options.form), replacementRevision: options.replacementRevision } }; return settle(); };
 const runFrames = () => { for (let round = 0; round < 2; round++) { const pending = [...frames.values()]; frames.clear(); pending.forEach(frame => frame(round)); } };

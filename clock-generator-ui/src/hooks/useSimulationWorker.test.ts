@@ -6,45 +6,9 @@ import { formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { useSimulationWorker } from './useSimulationWorker';
 
-// Node-only runner: actual hook/pool/check logic, controlled React state and Worker transport. Retains effects and
-// callback dependencies across renders (including unmount teardown), so these tests need neither a DOM nor new deps.
-const runner = vi.hoisted(() => {
-    let states: unknown[] = [], refs: { current: unknown }[] = [];
-    let memos: { deps: readonly unknown[]; value: unknown }[] = [];
-    let effects: { deps: readonly unknown[]; cleanup?: () => void }[] = [];
-    let queued: (() => void)[] = [];
-    let si = 0, ri = 0, mi = 0, ei = 0;
-    const same = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
-    const memo = (create: () => unknown, deps: readonly unknown[]) => {
-        const i = mi++;
-        if (!memos[i] || !same(memos[i].deps, deps)) memos[i] = { deps, value: create() };
-        return memos[i].value;
-    };
-    return {
-        createWorker: vi.fn<() => Worker>(), loadData: vi.fn<() => Promise<string>>(),
-        reset() { states = []; refs = []; memos = []; effects = []; queued = []; },
-        begin() { si = ri = mi = ei = 0; queued = []; },
-        commit() { queued.forEach(f => f()); },
-        unmount() { effects.forEach(e => e.cleanup?.()); },
-        react: {
-            useState(initial: unknown) {
-                const i = si++;
-                if (!(i in states)) states[i] = typeof initial === 'function' ? initial() : initial;
-                return [states[i], (value: unknown) => { states[i] = typeof value === 'function' ? value(states[i]) : value; }];
-            },
-            useRef(value: unknown) { return refs[ri++] ??= { current: value }; },
-            useMemo: memo,
-            useCallback: (fn: unknown, deps: readonly unknown[]) => memo(() => fn, deps),
-            useEffect(effect: () => (() => void) | void, deps: readonly unknown[]) {
-                const i = ei++;
-                if (!effects[i] || !same(effects[i].deps, deps)) queued.push(() => {
-                    effects[i]?.cleanup?.();
-                    effects[i] = { deps, cleanup: effect() || undefined };
-                });
-            },
-            useSyncExternalStore: (_subscribe: unknown, get: () => unknown) => get(),
-        },
-    };
+const runner = await vi.hoisted(async () => {
+    const { createHookRunner } = await import('../test/hookRunner');
+    return { ...createHookRunner(), createWorker: vi.fn<() => Worker>(), loadData: vi.fn<() => Promise<string>>() };
 });
 vi.mock('react', () => runner.react);
 vi.mock('../worker/engineClient', () => ({
@@ -146,6 +110,66 @@ describe('selection after generation', () => {
         expect(finished.isRunning).toBe(false);
         expect(finished.selectedAlternativeIndex).toBe(finished.recommendedIndex);
         expect(finished.alternatives[finished.selectedAlternativeIndex].id).toBe('final-best');
+    });
+
+    it('keeps the manual choice through consecutive intermediate publications before another render', async () => {
+        await initialize();
+        Render().runSimulation(config, debug, false);
+        const request = workers[0].requests('plan').at(-1)!;
+        workers[0].send({ type: 'planned', runId: request.runId,
+            primary: { signature: 'primary', alternatives: [selectionClock('initial-best', 5), selectionClock('inspected', 10)] },
+            context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
+            tasks: [
+                { id: 'one', label: 'One', only_when_needed: false },
+                { id: 'two', label: 'Two', only_when_needed: false },
+                { id: 'three', label: 'Three', only_when_needed: false },
+            ] });
+        Render().selectAlternative(1);
+        const busy = workers.filter(worker => worker.requests('task').some(task => task.runId === request.runId));
+        busy.forEach((worker, index) => {
+            const task = worker.requests('task').find(task => task.runId === request.runId)!;
+            worker.send({ type: 'task-completed', runId: request.runId, taskId: task.taskId,
+                run: { signature: `arrival-${index}`, alternatives: [selectionClock(`better-${index}`, index + 1)] } });
+        });
+        const running = Render();
+        expect(running.isRunning).toBe(true);
+        expect(running.alternatives[running.selectedAlternativeIndex].id).toBe('inspected');
+        expect(running.pendingAlternatives).toEqual(['Three']);
+        expect(running.generationAssumptions?.complete).toBe(false);
+    });
+
+    it('uses the latest published recommendation when the click precedes the next render', async () => {
+        await initialize();
+        Render().runSimulation(config, debug, false);
+        planSelection([selectionClock('initial-best', 5), selectionClock('inspected', 10)], true);
+        Render().selectAlternative(1);
+        const beforePublication = Render();
+        const request = workers[0].requests('plan').at(-1)!;
+        const worker = workers.find(worker => worker.requests('task').some(task => task.runId === request.runId))!;
+        worker.send({ type: 'task-completed', runId: request.runId, taskId: 'remaining',
+            run: { signature: 'better', alternatives: [selectionClock('new-best', 1)] } });
+        beforePublication.selectRecommended();
+        const finished = Render();
+        expect(finished.alternatives[finished.selectedAlternativeIndex].id).toBe('new-best');
+        expect(finished.generationAssumptions?.complete).toBe(true);
+        expect(finished.pendingAlternatives).toEqual([]);
+    });
+
+    it('clears the entire result view and starts the next generation with fresh metadata', async () => {
+        await initialize();
+        Render().runSimulation(config, debug, false, true);
+        planSelection([selectionClock('partial', 1)], true);
+        Render().cancel();
+        expect(Render()).toMatchObject({ stoppedEarly: true, searchedDeeper: true });
+        Render().clearResults();
+        expect(Render()).toMatchObject({ generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0,
+            pendingAlternatives: [], skippedSearches: [], searchedDeeper: false, pickRule: null,
+            generatedFor: null, stoppedEarly: false, pickGone: null });
+        Render().runSimulation(config, debug, false);
+        expect(Render()).toMatchObject({ generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0,
+            pendingAlternatives: [], skippedSearches: [], searchedDeeper: false, stoppedEarly: false, pickGone: null });
+        expect(Render().generatedFor).not.toBeNull();
+        expect(Render().pickRule).not.toBeNull();
     });
 
     it.each([false, true])('restores the previous manual pick when cancelling (partial results: %s)', async partial => {

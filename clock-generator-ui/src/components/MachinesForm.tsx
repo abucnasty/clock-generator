@@ -41,7 +41,7 @@ import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
 import { BUTTON_NAMES, SELECT_NAMES, recipeName } from '../utils/a11yLabels';
 
 interface MachinesFormProps {
-    exportConfig: () => Config;
+    engineConfig: Config;
     machines: MachineFormData[];
     recipeNames: string[];
     onAdd: () => void;
@@ -54,7 +54,7 @@ interface MachinesFormProps {
 const CRAFTING_SPEED_COMMAND = '/c game.print(game.player.selected.crafting_speed)';
 
 function MachinesFormComponent({
-    exportConfig,
+    engineConfig,
     machines,
     recipeNames,
     onAdd,
@@ -64,7 +64,7 @@ function MachinesFormComponent({
     onDuplicate,
 }: MachinesFormProps) {
     const [rateView, setRateView] = useState<'max' | 'target'>('max');
-    const targetRates = useMachineTargetRates(exportConfig, rateView === 'target');
+    const targetRates = useMachineTargetRates(engineConfig, rateView === 'target');
     const common = machines.length === 0 ? [] : [
         machines.every(row => row.productivity === machines[0].productivity) ? `productivity ${machines[0].productivity}%` : null,
         machines.every(row => row.crafting_speed === machines[0].crafting_speed) ? `speed ${machines[0].crafting_speed}×` : null,

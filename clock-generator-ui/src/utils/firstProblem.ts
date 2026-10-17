@@ -78,19 +78,16 @@ export interface Problem {
 interface ProblemsInput {
     targetOutput: { recipe: string; items_per_second: number; copies: number };
     machines: { id: number; recipe: string }[];
-    coverageIssues: CoverageIssueKey[];
     /** The most the machines making the target recipe can make; null or left out while it is not known */
     machinesMax?: MachinesMax | null;
-    /** The game name of an item id for the sentences; left out, the ids are said as they are */
-    itemLabel?: LabelOf;
 }
 
 /**
- * What keeps the build from being generated, in the order it is best fixed: the target, the machines, a target more
- * than the machines can make (which their recipes change), then the inserters the engine found missing, in its order.
- * Empty when the build can be generated.
+ * Field problems in the order they are best fixed: the target, the machines, a target more than the machines can
+ * make (which their recipes change). Coverage is collected separately by buildValidationIssues.
+ * Empty when these field checks pass.
  */
-export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax = null, itemLabel = identity }: ProblemsInput): Problem[] {
+export function problemsOf({ targetOutput, machines, machinesMax = null }: ProblemsInput): Problem[] {
     const problems: Problem[] = [];
     if (!targetOutput.recipe) {
         problems.push({ text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } });
@@ -121,20 +118,7 @@ export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax
             target: { kind: 'target-rate' },
         });
     }
-    for (const { kind, machine_id, item_name } of coverageIssues) {
-        problems.push({
-            text: kind === 'missing_input_inserter'
-                ? PROBLEM_TEXT.missingInput(machine_id, item_name, itemLabel)
-                : PROBLEM_TEXT.missingOutput(machine_id, item_name, itemLabel),
-            target: { kind: 'coverage-issue', issue: { kind, machine_id, item_name } },
-        });
-    }
     return problems;
-}
-
-/** The problem to fix first, or null when there is none */
-export function firstProblemOf(input: ProblemsInput): Problem | null {
-    return problemsOf(input)[0] ?? null;
 }
 
 /**

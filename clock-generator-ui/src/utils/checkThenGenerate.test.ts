@@ -228,6 +228,17 @@ describe('PendingChecks', () => {
         await expect(check).resolves.toEqual(passed);
     });
 
+    it('keeps the current check pending when an unrelated answer arrives', async () => {
+        const pending = new PendingChecks();
+        let settled = false;
+        const check = pending.begin(2).then(outcome => { settled = true; return outcome; });
+        pending.settle(1, passed);
+        await Promise.resolve();
+        expect(settled).toBe(false);
+        pending.settle(2, passed);
+        await expect(check).resolves.toEqual(passed);
+    });
+
     it('resolves a cancelled check as dropped, and ignores its late answer', async () => {
         const pending = new PendingChecks();
         const check = pending.begin(1);
@@ -237,7 +248,7 @@ describe('PendingChecks', () => {
         expect(afterCheck(await check)).toBe('stop');
     });
 
-    it('drops every pending check, and never rejects', async () => {
+    it('resolves cancelled and failed checks without rejecting', async () => {
         const pending = new PendingChecks();
         const first = pending.begin(1);
         pending.dropAll();

@@ -223,7 +223,7 @@ function App() {
         updateOverrides,
         updateIgnoredIngredients,
         importConfig,
-        exportConfig,
+        engineConfig,
         exportableConfig,
         resetConfig,
         reorderMachines,
@@ -285,7 +285,7 @@ function App() {
     const contextIdentity = useRef({ buildId: library.currentId, formKey: contextFormKey, replacementRevision: replacedCount });
     useLayoutEffect(() => { contextIdentity.current = { buildId: library.currentId, formKey: contextFormKey, replacementRevision: replacedCount }; }, [library.currentId, contextFormKey, replacedCount]);
     const { context: buildContext, patch: patchContext, cancelRestore, saveDeparture, resetForReplacement, forgetBuild } = useBuildViewContext({
-        buildId: library.currentId, ready: isInitialized ? contextReady : null, form: config, hasResults: alternatives.length > 0, hasFuel: fuelView !== null, replacementRevision: replacedCount,
+        buildId: library.currentId, ready: isInitialized ? contextReady : null, form: config, formKey: contextFormKey, hasResults: alternatives.length > 0, hasFuel: fuelView !== null, replacementRevision: replacedCount,
         insightIds: alternatives.flatMap(clock => clock.insights.map(insight => insight.id)),
     });
     const { configView, view, resultDetail } = buildContext;
@@ -329,7 +329,7 @@ function App() {
     const [changelogOpen, setChangelogOpen] = useState(false);
 
     // null until the engine has looked for missing inserters; until then the check catches them
-    const checkedCoverageIssues = useInserterValidation(exportConfig, isInitialized);
+    const checkedCoverageIssues = useInserterValidation(engineConfig, isInitialized);
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
@@ -353,14 +353,14 @@ function App() {
     }, [itemNames, resourceNames, gameNames]);
 
     // the clocks on screen are for the build as it was when Generate was pressed
-    const configKey = useMemo(() => configKeyOf(exportConfig()), [exportConfig]);
+    const configKey = useMemo(() => configKeyOf(engineConfig), [engineConfig]);
     const resultsAreStale = isStale(generatedFor, configKey);
     const staleFor = resultsAreStale ? generatedFor : null;
     // what changed since the clocks on screen were made, for the stale banner and the Copy-old dialog
     const recipeLabel = useCallback((id: string) => recipeName(gameNames, id), [gameNames]);
     const staleChanges = useMemo(
-        () => (staleFor ? buildChangesText(JSON.parse(staleFor.key) as Config, exportConfig(), 3, recipeLabel) : []),
-        [staleFor, exportConfig, recipeLabel],
+        () => (staleFor ? buildChangesText(JSON.parse(staleFor.key) as Config, engineConfig, 3, recipeLabel) : []),
+        [staleFor, engineConfig, recipeLabel],
     );
     // the key of the form as last rendered: a build replaced as a whole still has it when its replacement is handled
     const configKeyRef = useRef(configKey);
@@ -418,7 +418,7 @@ function App() {
         switchMessageRef.current = null;
     });
     // likewise a check, except that the switches only the clock search reads leave it current
-    const checkKey = useMemo(() => checkKeyOf(exportConfig()), [exportConfig]);
+    const checkKey = useMemo(() => checkKeyOf(engineConfig), [engineConfig]);
     const checkStatus = checkStatusOf(validation, checkKey);
     // whether the clocks can get belt slack, and what the form says of the input belts
     const beltQuestion = useMemo(
@@ -520,9 +520,7 @@ function App() {
         fieldProblems: problemsOf({
             targetOutput: config.target_output,
             machines: config.machines,
-            coverageIssues: [],
             machinesMax,
-            itemLabel: (id) => itemName(gameNames, id),
         }),
         coverage: checkedCoverageIssues ?? [], chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
@@ -606,7 +604,7 @@ function App() {
      */
     const runChecked = useCallback((start: (config: Config) => void) => {
         cancelRestore();
-        const config = exportConfig();
+        const config = engineConfig;
         // a check whose worker crashed did not judge the build: Generate checks again instead of going to its error
         const lastCheckCrashed = validation.status === 'invalid' && validation.crashed === true;
         const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null || conversionPendingRef.current, checkStatus, problems, lastCheckCrashed });
@@ -641,7 +639,7 @@ function App() {
                 });
                 return;
         }
-    }, [cancelRestore, exportConfig, isInitialized, isRunning, checkingFor, checkStatus, validation, problems, withdrawUndo, goToTarget, goToCheckError, validate, setCheckingFor]);
+    }, [cancelRestore, engineConfig, isInitialized, isRunning, checkingFor, checkStatus, validation, problems, withdrawUndo, goToTarget, goToCheckError, validate, setCheckingFor]);
 
     // stops the generation, or the check Generate started (whose Generate then does not start)
     const handleCancel = useCallback(() => {
@@ -661,9 +659,9 @@ function App() {
             else if (liveProblems[0]?.target) goToTarget(liveProblems[0].target);
         } else if (decision.kind === 'check') {
             setCheckedForGenerate(false);
-            validate(exportConfig());
+            validate(engineConfig);
         }
-    }, [cancelRestore, isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, validate, exportConfig, blankBuild, goToTarget]);
+    }, [cancelRestore, isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, validate, engineConfig, blankBuild, goToTarget]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
@@ -674,7 +672,7 @@ function App() {
             const current = captureBuildMutation();
             if (conversion.token !== conversionTokenRef.current || current.buildId !== conversion.owner.buildId
                 || current.revision !== conversion.owner.revision || current.form !== conversion.owner.form
-                || configKeyOf(exportConfig()) !== conversion.key) return;
+                || configKeyOf(engineConfig) !== conversion.key) return;
             setCheckedForGenerate(true); // D10 owns the single deferred announcement and focus.
             // The accepted action has disappeared; move focus only while this committed owner is current.
             cancelRestore();
@@ -691,9 +689,9 @@ function App() {
         }
         if (revalidateOnChangeRef.current) {
             revalidateOnChangeRef.current = false;
-            validate(exportConfig());
+            validate(engineConfig);
         }
-    }, [cancelRestore, exportConfig, validate, captureBuildMutation, goToCheckError]);
+    }, [cancelRestore, engineConfig, validate, captureBuildMutation, goToCheckError]);
 
     const handleGenerate = useCallback(() => runChecked((config) => {
         runSimulation(config, runDebugSteps, runStreamLogs);
@@ -1210,7 +1208,7 @@ function App() {
                                 {configView === 'list' ? (
                                     <>
                                         <MachinesForm
-                                            exportConfig={exportConfig}
+                                            engineConfig={engineConfig}
                                             machines={config.machines}
                                             recipeNames={recipeNames}
                                             onAdd={addMachine}
