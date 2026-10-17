@@ -3,7 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ResultDetail } from '../utils/resultsView';
-import type { BuildViewContext, DetailsTab, TimelineViewContext } from '../utils/buildViewContext';
+import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
 import { InserterAssumptions } from './InserterAssumptions';
 import type {
@@ -20,6 +20,7 @@ import { startCheckSummary } from '../utils/modelAssumptions';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
+import { BlueprintOutput } from './BlueprintOutput';
 import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
@@ -31,8 +32,6 @@ import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
 
 interface ResultsWorkspaceProps {
-    detailsTab: DetailsTab;
-    onDetailsTabChange(tab: DetailsTab): void;
     comparison: BuildViewContext['comparison'];
     onComparisonChange(comparison: BuildViewContext['comparison']): void;
     wakeAsTable: boolean;
@@ -78,7 +77,7 @@ interface ResultsWorkspaceProps {
     clockWindows: SerializableClockWindows | null;
     shiftOptions: ShiftOptionsView | null;
     swingBackoffReport: SwingBackoffReport | null;
-    /** ⋮ > Developer tools, or `?debug`: the timelines and the log, at the end of the page */
+    /** ⋮ > Developer tools, or `?debug`: logging controls at the end of the page. */
     developerTools: boolean;
     logs: LogMessage[];
     debugSteps: DebugSteps;
@@ -188,7 +187,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Box>}
             />
 
-            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1.1fr) minmax(0, 1fr)' }, gap: density === 'compact' ? 1.5 : 2, alignItems: 'start', '& > *': { minWidth: 0 } }}>
+            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: density === 'compact' ? 1.5 : 2, '& > *': { minWidth: 0 } }}>
                 <ClockAlternativesPanel
                     comparison={props.comparison}
                     onComparisonChange={props.onComparisonChange}
@@ -214,37 +213,34 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 {selected && (
                     <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}
                         generation={props.generationAssumptions} stale={props.staleFor !== null}
-                        wakeAsTable={props.wakeAsTable} onWakeAsTableChange={props.onWakeAsTableChange}
+                        timelineProps={{
+                            timeline: props.timeline, onTimelineChange: props.onTimelineChange,
+                            wakeAsTable: props.wakeAsTable, onWakeAsTableChange: props.onWakeAsTableChange,
+                            transferHistory: props.transferHistory, stateTransitionHistory: props.stateTransitionHistory,
+                            clockOnlyTransferHistory: props.clockOnlyTransferHistory, clockOnlyStateTransitionHistory: props.clockOnlyStateTransitionHistory,
+                            clockWindows: props.clockWindows,
+                        }}
+                        installContent={<Box component="details" sx={{ mt: 2 }}>
+                            <Typography component="summary" sx={{ cursor: 'pointer' }}>Blueprint string</Typography>
+                            <Box sx={{ mt: 1 }}><BlueprintOutput
+                                blueprintString={props.blueprintString} simulationDurationTicks={props.simulationDurationTicks ?? undefined}
+                                rateWarning={rateWarning} staleFor={props.staleFor} copied={props.copied} onCopy={props.onCopy}
+                            /></Box>
+                        </Box>}
                         assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
                         <DetailsPanel
-                            tab={props.detailsTab}
-                            onTabChange={props.onDetailsTabChange}
                             insights={selected.insights}
                             shiftOptions={props.shiftOptions}
                             swingBackoffReport={props.swingBackoffReport}
                             fuelView={props.fuelView}
-                            blueprintString={props.blueprintString}
-                            simulationDurationTicks={props.simulationDurationTicks}
-                            rateWarning={rateWarning}
-                            staleFor={props.staleFor}
-                            copied={props.copied}
-                            onCopy={props.onCopy}
                         />
                     </SelectedClockContext>
                 )}
             </Box>
 
-            {/* not mounted while off: no timelines, no log and no debug switches on the page */}
+            {/* Debug logging remains opt-in; timelines are available in the normal workspace. */}
             {props.developerTools && (
                 <DeveloperToolsPanel
-                    timeline={props.timeline}
-                    onTimelineChange={props.onTimelineChange}
-                    hasResults={hasResults}
-                    transferHistory={props.transferHistory}
-                    stateTransitionHistory={props.stateTransitionHistory}
-                    clockOnlyTransferHistory={props.clockOnlyTransferHistory}
-                    clockOnlyStateTransitionHistory={props.clockOnlyStateTransitionHistory}
-                    clockWindows={props.clockWindows}
                     logs={props.logs}
                     debugSteps={props.debugSteps}
                     onDebugStepsChange={props.onDebugStepsChange}

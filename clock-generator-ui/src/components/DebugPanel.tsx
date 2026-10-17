@@ -68,7 +68,7 @@ export function DebugPanel({
 
     const summaryId = useId();
     return (
-        // in Developer tools' Log tab, which is there to be read: open, under the section's h2
+        // Logging is opt-in through Developer tools; keep its controls open when enabled.
         <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId } }}>
             <AccordionSummary id={summaryId} expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">

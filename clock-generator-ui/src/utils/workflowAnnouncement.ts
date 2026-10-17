@@ -20,8 +20,8 @@ export const ANNOUNCEMENTS = {
     itsClocksBack: 'Its clocks are back.',
     pickGone: pickGoneNote,
     copiedCurrentBest: (selectedLabel: string) => `Copied the best clock so far: ${selectedLabel}. It stays selected.`,
-    developerToolsOn: 'Developer tools on. They are at the end of Results.',
-    developerToolsOff: 'Developer tools off.',
+    developerToolsOn: 'Developer logs on. They are at the end of Results.',
+    developerToolsOff: 'Developer logs off.',
 } as const;
 
 /** What a Cancel says, by what it left on screen */

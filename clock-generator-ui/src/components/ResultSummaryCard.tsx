@@ -23,7 +23,7 @@ import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
-    heading: 'Your clock',
+    heading: 'Selected clock',
     makingFirst: 'Making the first clock…',
     makes: 'Makes',
     wakeUps: 'Wake-ups',

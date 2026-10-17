@@ -34,7 +34,7 @@ const KINDS: EntityClickType[] = ['machine', 'inserter', 'belt', 'chest', 'drill
 const MAX_OFFSET = 4000;
 const MAX_TEXT = 2_000_000;
 export function defaultBuildViewContext(): BuildViewContext {
-    return { version: 1, view: 'configure', configView: 'list', resultDetail: 'why', detailsTab: 'insights', sections: {},
+    return { version: 1, view: 'configure', configView: 'list', resultDetail: 'overview', detailsTab: 'insights', sections: {},
         comparison: { allColumns: false, showUnstable: false }, wakeAsTable: false, diagramDetailed: true,
         timeline: { viewMode: 'simplified', sortMode: 'byType', filters: { machine: true, inserter: true, drill: true },
             statuses: { machine: Object.keys(MACHINE_STATUS_COLORS), inserter: Object.keys(INSERTER_STATUS_COLORS), drill: Object.keys(DRILL_STATUS_COLORS), categories: Object.keys(CATEGORY_COLORS) } },
@@ -65,8 +65,12 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
         const p = record(record(v.position)[view]);
         if (ANCHORS.includes(p.anchor as BuildAnchor) && typeof p.offset === 'number' && Number.isFinite(p.offset)) position[view] = { anchor: p.anchor as BuildAnchor, offset: Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, p.offset)) };
     }
+    // Preserve the destination of the previous Why / Wake tabs and nested blueprint view.
+    const resultDetail = v.resultDetail === 'wake' ? 'timeline'
+        : v.resultDetail === 'why' && v.detailsTab === 'blueprint' ? 'install'
+        : oneOf(v.resultDetail, ['overview', 'timeline', 'install'], d.resultDetail);
     return { ...d, view: oneOf(v.view, ['configure', 'results'], d.view), configView: oneOf(v.configView, ['list', 'diagram'], d.configView),
-        resultDetail: oneOf(v.resultDetail, ['why', 'wake', 'install'], d.resultDetail), detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
+        resultDetail, detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
         comparison: { allColumns: bool(comparison.allColumns, false), showUnstable: bool(comparison.showUnstable, false) },
         wakeAsTable: bool(v.wakeAsTable, false), diagramDetailed: bool(v.diagramDetailed, true),
         timeline: { ...d.timeline, viewMode: oneOf(timeline.viewMode, ['simplified', 'detailed'], 'simplified'), sortMode: oneOf(timeline.sortMode, ['byType', 'byRelationship'], 'byType'),

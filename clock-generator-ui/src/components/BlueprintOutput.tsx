@@ -32,12 +32,12 @@ interface BlueprintOutputProps {
 }
 
 /** Under the string */
-const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. The steps are at the top of Results.';
+const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. Follow the installation steps above.';
 /** Before the clock's period over the string */
 const CLOCK_PERIOD_LABEL = 'Clock period:';
 
 /**
- * The selected clock's blueprint string, for reading or copying by hand. The Details tab it is in names it, so it has
+ * The selected clock's blueprint string, for reading or copying by hand. Its disclosure in Install names it, so it has
  * no heading of its own.
  */
 export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor, copied, onCopy }: BlueprintOutputProps) {

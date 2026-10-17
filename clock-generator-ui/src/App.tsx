@@ -27,7 +27,7 @@ import { useCopyBlueprint, type BlueprintCopyFailure } from './hooks/useCopyBlue
 import { useIntroCard } from './hooks/useIntroCard';
 import { BuildSectionsContext, useBuildViewContext, type BuildContextReady } from './hooks/useBuildViewContext';
 import { serializeConfig } from './hooks/usePersistedConfigForm';
-import { selectBuildEntity, type DetailsTab } from './utils/buildViewContext';
+import { selectBuildEntity } from './utils/buildViewContext';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
@@ -270,7 +270,7 @@ function App() {
         simulate: false,
     });
     const [streamLogs, setStreamLogs] = useState(false);
-    // ⋮ > Developer tools, or `?debug`: the timelines and the log. While they are off their switches are out of sight,
+    // ⋮ > Developer tools, or `?debug`: logging controls. While they are off their switches are out of sight,
     // so a generation runs without them
     const [developerTools, setDeveloperTools] = useState(() => developerToolsInitial(window.location.search, readDeveloperTools()));
     const runDebugSteps = developerTools ? debugSteps : NO_DEBUG_STEPS;
@@ -1318,8 +1318,6 @@ function App() {
 
                         <Box data-build-view="results" data-build-anchor="results" sx={{ display: view === 'results' ? 'block' : 'none' }}>
                             <ResultsWorkspace
-                                detailsTab={buildContext.detailsTab}
-                                onDetailsTabChange={(detailsTab: DetailsTab) => patchContext({ detailsTab })}
                                 comparison={buildContext.comparison}
                                 onComparisonChange={comparison => patchContext({ comparison })}
                                 wakeAsTable={buildContext.wakeAsTable}
