@@ -1,14 +1,24 @@
-import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { lazy, Suspense, useState } from 'react';
-import type { SerializableClockWindows, SerializableStateTransitionHistory, SerializableTransferHistory } from 'clock-generator/browser';
+import { Alert, Autocomplete, Box, Button, Checkbox, CircularProgress, FormControlLabel, IconButton, MenuItem, Slider, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
+import { ChevronLeft, ChevronRight, RestartAlt, ZoomIn, ZoomOut } from '@mui/icons-material';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Config, SerializableClockWindows, SerializableStateTransitionHistory, SerializableTransferHistory, TimelineEntity } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import type { TimelineViewContext } from '../utils/buildViewContext';
+import { timelineRequestFor } from '../utils/timelineRequest';
+import { useTimelineRecording } from '../hooks/useTimelineRecording';
+import { useGameNames } from '../hooks/useGameNames';
+import { DEFAULT_INSPECTION, SIGNAL_GROUPS, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, timelineValueAt, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
+import { formatNumberText } from '../utils/numberText';
+import { getFactorioStateLabel } from './colors';
+import { TimelinePauses } from './TimelinePauses';
+import { FactorioIcon } from './FactorioIcon';
+import { BeltChartSurface } from './BeltChart';
+import { BELT_CHART } from '../theme/beltCharts';
 
-const StateTimeline = lazy(() => import('./StateTransitionTimeline').then(module => ({ default: module.StateTransitionTimeline })));
-const TransferTimeline = lazy(() => import('./TransferHistoryVisualization').then(module => ({ default: module.TransferHistoryVisualization })));
+const EvidenceChart = lazy(() => import('./TimelineEvidenceChart').then(module => ({ default: module.TimelineEvidenceChart })));
 const WakeWindows = lazy(() => import('./WakeWindowsView').then(module => ({ default: module.WakeWindowsView })));
-
-type TimelineView = 'states' | 'transfers' | 'windows';
+const OriginalStates = lazy(() => import('./StateTransitionTimeline').then(module => ({ default: module.StateTransitionTimeline })));
+const OriginalTransfers = lazy(() => import('./TransferHistoryVisualization').then(module => ({ default: module.TransferHistoryVisualization })));
 
 export interface ClockTimelineWorkspaceProps {
     selected: ClockAlternativeView;
@@ -22,55 +32,233 @@ export interface ClockTimelineWorkspaceProps {
     clockOnlyTransferHistory: SerializableTransferHistory | null;
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
     clockWindows: SerializableClockWindows | null;
+    /** The immutable config captured with the generated results, not the live form. */
+    config?: Config | null;
+    alternatives?: ClockAlternativeView[];
 }
 
-/** Charts load on first use and stay mounted so switching views preserves their controls and scroll position. */
-export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
-    const [view, setView] = useState<TimelineView>('windows');
-    const [visited, setVisited] = useState<Partial<Record<TimelineView, boolean>>>({ windows: true });
-    const [run, setRun] = useState<'clock' | 'plan'>('clock');
-    const hasClockRun = props.clockOnlyTransferHistory !== null && props.clockOnlyStateTransitionHistory !== null;
-    const showClock = hasClockRun && run === 'clock';
-    const transfers = showClock ? props.clockOnlyTransferHistory : props.transferHistory;
-    const states = showClock ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
+function entityOptions(config: Config | null | undefined, clock: ClockAlternativeView): TimelineEntity[] {
+    const entities = new Map<string, TimelineEntity>();
+    for (const entity of clock.stateTransitionHistory.entities) entities.set(entity.entity_id, {
+        id: entity.entity_id, type: entity.entity_type, items: entity.items, source: entity.source?.entity_id, sink: entity.sink?.entity_id, signals: [],
+    });
+    for (const machine of config?.machines ?? []) entities.set(`machine:${machine.id}`, { ...entities.get(`machine:${machine.id}`), id: `machine:${machine.id}`, type: 'machine', recipe: machine.recipe, items: entities.get(`machine:${machine.id}`)?.items ?? [], signals: [] });
+    for (const belt of config?.belts ?? []) entities.set(`belt:${belt.id}`, { id: `belt:${belt.id}`, type: 'belt', items: belt.lanes.map(lane => lane.ingredient), signals: [] });
+    for (const chest of config?.chests ?? []) entities.set(`chest:${chest.id}`, { id: `chest:${chest.id}`, type: 'chest', items: typeof chest.item_filter === 'string' ? [chest.item_filter] : chest.item_filter.map(filter => filter.item_name), signals: [] });
+    for (const [index, inserter] of (config?.inserters ?? []).entries()) {
+        const id = `inserter:${inserter.id ?? index + 1}`;
+        if (!entities.has(id)) entities.set(id, { id, type: 'inserter', source: `${inserter.source.type}:${inserter.source.id}`, sink: `${inserter.sink.type}:${inserter.sink.id}`, items: inserter.filters ?? [], signals: [] });
+    }
+    for (const drill of config?.drills?.configs ?? []) {
+        const id = `drill:${drill.id}`;
+        if (!entities.has(id)) entities.set(id, { id, type: 'drill', sink: `machine:${drill.target.id}`, items: [drill.mined_item_name], signals: [] });
+    }
+    return [...entities.values()].sort((a, b) => a.type.localeCompare(b.type) || Number(a.id.split(':')[1]) - Number(b.id.split(':')[1]));
+}
 
-    return <Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1.5 }}>
-            <ToggleButtonGroup value={view} exclusive size="small" aria-label="Timeline view" onChange={(_, next: TimelineView | null) => {
-                if (!next) return;
-                setView(next);
-                setVisited(previous => ({ ...previous, [next]: true }));
-            }}>
+/** Local cursor updates stay below App; only settled inspection choices are saved with the build. */
+function useInspection(props: ClockTimelineWorkspaceProps) {
+    const configKey = useMemo(() => JSON.stringify(props.config), [props.config]);
+    const [inspection, setInspection] = useState<TimelineInspection>(props.timeline.inspection ?? DEFAULT_INSPECTION);
+    const latest = useRef(props); latest.current = props;
+    const lastSaved = useRef<TimelineInspection | undefined>(props.timeline.inspection);
+    useEffect(() => { setInspection(latest.current.timeline.inspection ?? DEFAULT_INSPECTION); }, [configKey]);
+    useEffect(() => {
+        if (props.timeline.inspection && props.timeline.inspection !== lastSaved.current) setInspection(props.timeline.inspection);
+    }, [props.timeline.inspection]);
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            lastSaved.current = inspection;
+            latest.current.onTimelineChange({ ...latest.current.timeline, inspection });
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [inspection]);
+    const patch = useCallback((change: Partial<TimelineInspection>) => setInspection(previous => ({ ...previous, ...change })), []);
+    return [inspection, patch] as const;
+}
+
+const GROUP_LABELS = { state: 'State', inventory: 'Ingredients & inventories', buffers: 'Machine output buffers', transfers: 'Products made & deliveries', progress: 'Craft & productivity progress', hand: 'Hand contents', fuel: 'Fuel', production: 'Production totals', throughput: 'Delivery rate' };
+const number = (value: number) => formatNumberText(value, { maxDecimals: 2 });
+const measured = (value: number | null | undefined) => value == null ? 'unavailable' : number(value);
+
+export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
+    const { recipeLabel, itemLabel } = useGameNames();
+    const [inspection, patch] = useInspection(props);
+    const [retry, setRetry] = useState(0);
+    const recordingWanted = inspection.view !== 'windows';
+    const options = useMemo(() => entityOptions(props.config, props.selected), [props.config, props.selected]);
+    const comparisonClock = (props.alternatives ?? []).find(clock => clock.id === inspection.comparisonId && clock.id !== props.selected.id) ?? null;
+    const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted, retry]);
+    const comparisonRequest = useMemo(() => recordingWanted ? timelineRequestFor(props.config, comparisonClock, inspection.run) : null, [props.config, comparisonClock, inspection.run, recordingWanted, retry]);
+    const primary = useTimelineRecording(request, retry);
+    const baseline = useTimelineRecording(comparisonRequest, retry);
+    const recording = primary.data;
+    const selectedId = options.some(entity => entity.id === inspection.entityId) ? inspection.entityId : options.find(entity => entity.type === 'machine')?.id ?? options[0]?.id;
+    const selected = recording?.entities.find(entity => entity.id === selectedId) ?? options.find(entity => entity.id === selectedId) ?? recording?.entities[0] ?? null;
+    const duration = inspection.view === 'windows'
+        ? Math.max(props.selected.simulationDurationTicks, comparisonClock?.simulationDurationTicks ?? 0)
+        : Math.max(recording?.end_tick ?? props.selected.simulationDurationTicks, baseline.data?.end_tick ?? (comparisonClock && comparisonRequest ? comparisonClock.simulationDurationTicks : 0));
+    const domain = inspection.view === 'windows' ? 'windows' : inspection.run;
+    const savedRange = inspection.ranges[domain];
+    const range = useMemo(() => clampTimelineRange(savedRange, duration), [savedRange, duration]);
+    const tick = Math.max(0, Math.min(Math.floor(duration), inspection.tick));
+    const current = useRef({ inspection, duration, domain, range }); current.current = { inspection, duration, domain, range };
+    const setRange = useCallback((next: TimelineRange) => {
+        const { inspection: previous, duration: end, domain: key } = current.current;
+        patch({ ranges: { ...previous.ranges, [key]: clampTimelineRange(next, end) } });
+    }, [patch]);
+    const setTick = useCallback((value: number) => {
+        const { duration: end, range: window } = current.current;
+        const next = Math.max(0, Math.min(Math.floor(end), Math.round(value)));
+        patch({ tick: next });
+        if (next < window.start || next > window.end) {
+            const half = (window.end - window.start) / 2;
+            setRange({ start: next - half, end: next + half });
+        }
+    }, [patch, setRange]);
+    const zoom = useCallback((factor: number, cursor: number) => setRange(zoomTimeline(current.current.range, factor, cursor, current.current.duration)), [setRange]);
+    const inspect = useCallback((entityId: string, at: number) => {
+        patch({ entityId, tick: Math.round(at) });
+        const { range: window, duration: end } = current.current;
+        if (at < window.start || at > window.end) { const half = (window.end - window.start) / 2; setRange(clampTimelineRange({ start: at - half, end: at + half }, end)); }
+    }, [patch, setRange]);
+    const connected = useMemo(() => recording && selected ? relatedTimelineEntities(recording, selected) : [], [recording, selected]);
+    const events = useMemo(() => recording && selected ? relevantTimelineEvents(recording, selected) : [], [recording, selected]);
+    const eventTicks = useMemo(() => events.map(event => event.tick), [events]);
+    const tickEvents = events.slice(upperBound(eventTicks, tick - 1), upperBound(eventTicks, tick));
+    const [eventPage, setEventPage] = useState(0);
+    const eventStart = Math.min(eventPage * 8, Math.max(0, Math.floor((events.length - 1) / 8) * 8));
+    const onKeys = (event: React.KeyboardEvent<HTMLElement>) => {
+        if (event.defaultPrevented) return;
+        if ((event.target as HTMLElement).closest('input,select,textarea,button,[role="combobox"]')) return;
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); setTick(tick + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 15 : 1)); }
+        if (event.key === '+' || event.key === '=') { event.preventDefault(); zoom(0.5, tick); }
+        if (event.key === '-') { event.preventDefault(); zoom(2, tick); }
+    };
+    return <Box data-clock-inspection onKeyDown={onKeys}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
+            <TextField select size="small" label="Timeline view" value={inspection.view} onChange={event => patch({ view: event.target.value as TimelineInspection['view'] })} sx={{ display: { xs: 'block', sm: 'none' }, flex: '1 1 100%' }}>
+                <MenuItem value="windows">Wake windows</MenuItem><MenuItem value="activity">Machine activity</MenuItem><MenuItem value="states">Entity states</MenuItem><MenuItem value="transfers">Item transfers</MenuItem>
+            </TextField>
+            <ToggleButtonGroup value={inspection.view} exclusive size="small" aria-label="Timeline view" onChange={(_, view: TimelineInspection['view'] | null) => { if (view) patch({ view }); }} sx={{ display: { xs: 'none', sm: 'flex' }, flexWrap: 'wrap' }}>
+                <ToggleButton value="windows">Wake windows</ToggleButton>
+                <ToggleButton value="activity">Machine activity</ToggleButton>
                 <ToggleButton value="states">Entity states</ToggleButton>
                 <ToggleButton value="transfers">Item transfers</ToggleButton>
-                <ToggleButton value="windows">Wake windows</ToggleButton>
             </ToggleButtonGroup>
-            {hasClockRun && view !== 'windows' && <ToggleButtonGroup value={run} exclusive size="small" aria-label="Simulation shown in the timelines"
-                onChange={(_, next: 'clock' | 'plan' | null) => { if (next) setRun(next); }}>
-                <ToggleButton value="clock">Exported clock</ToggleButton>
-                <ToggleButton value="plan">Plan</ToggleButton>
+            {recordingWanted && <ToggleButtonGroup value={inspection.run} exclusive size="small" aria-label="Simulation shown in the timelines" onChange={(_, run: 'clock' | 'plan' | null) => { if (run) patch({ run }); }}>
+                <ToggleButton value="clock">Exported clock</ToggleButton><ToggleButton value="plan">Plan</ToggleButton>
             </ToggleButtonGroup>}
         </Box>
-        {hasClockRun && view !== 'windows' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            {run === 'clock'
-                ? 'The build running with the exported blueprint’s wake windows.'
-                : 'The planning simulation. Inserters also wait on machine inventory, so timing can differ from the exported clock.'}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
+            <Autocomplete options={options} value={options.find(option => option.id === selectedId) ?? null} isOptionEqualToValue={(a, b) => a.id === b.id}
+                getOptionLabel={entity => timelineEntityName(entity, recipeLabel)}
+                filterOptions={(entities, state) => entities.filter(entity => `${timelineEntityName(entity, recipeLabel)} ${entity.items.map(itemLabel).join(' ')}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 80)}
+                onChange={(_, entity) => { if (entity) { patch({ entityId: entity.id }); setEventPage(0); } }}
+                renderInput={params => <TextField {...params} label="Inspect entity" size="small" />}
+                renderOption={(attributes, entity) => { const { key, ...rest } = attributes; return <li key={key} {...rest}>{entity.items[0] && <FactorioIcon name={entity.items[0]} size={22} alt="" />}<span>{timelineEntityName(entity, recipeLabel)}</span></li>; }}
+                sx={{ width: 330, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }} />
+            {(props.alternatives?.length ?? 0) > 1 && <TextField select label="Compare with" size="small" value={comparisonClock?.id ?? ''} onChange={event => patch({ comparisonId: event.target.value || null })} sx={{ width: 245, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }}>
+                <MenuItem value="">No comparison</MenuItem>
+                {props.alternatives?.filter(clock => clock.id !== props.selected.id && clock.verdict === 'stable').map(clock => <MenuItem key={clock.id} value={clock.id}>{clock.label} · {clock.terminalSwingCount} swings</MenuItem>)}
+            </TextField>}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.25 }}>
+                <Tooltip title="Pan earlier"><IconButton size="small" aria-label="Pan timeline earlier" onClick={() => setRange(panTimeline(range, -0.5, duration))}><ChevronLeft /></IconButton></Tooltip>
+                <Tooltip title="Zoom out"><IconButton size="small" aria-label="Zoom timeline out" onClick={() => zoom(2, tick)}><ZoomOut /></IconButton></Tooltip>
+                <Tooltip title="Zoom in"><IconButton size="small" aria-label="Zoom timeline in" onClick={() => zoom(0.5, tick)}><ZoomIn /></IconButton></Tooltip>
+                <Tooltip title="Pan later"><IconButton size="small" aria-label="Pan timeline later" onClick={() => setRange(panTimeline(range, 0.5, duration))}><ChevronRight /></IconButton></Tooltip>
+                <Button color="inherit" size="small" startIcon={<RestartAlt />} onClick={() => setRange({ start: 0, end: duration })}>Fit run</Button>
+                <Typography variant="caption" color="text.secondary">{number(range.start)}–{number(range.end)} t</Typography>
+            </Box>
+        </Box>
+        {recordingWanted && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
+        {inspection.view === 'activity' && <Box component="details" sx={{ mb: 1 }}>
+            <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Signals · {inspection.signals.length} selected</Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>{SIGNAL_GROUPS.map(group => <FormControlLabel key={group} label={GROUP_LABELS[group]} control={<Checkbox size="small" checked={inspection.signals.includes(group)} onChange={(_, checked) => patch({ signals: checked ? [...inspection.signals, group] : inspection.signals.filter(value => value !== group) })} />} />)}</Box>
+        </Box>}
+        {comparisonClock && <Typography variant="caption" component="p" sx={{ mb: 1 }}>
+            A / B assessed output: {number(props.selected.assessment.items_per_second)} / {number(comparisonClock.assessment.items_per_second)} items/s (all copies) · wake-ups: {measured(props.selected.assessment.wake_ups_per_minute)} / {measured(comparisonClock.assessment.wake_ups_per_minute)} /min (one unit).
+            {props.selected.simulationDurationTicks !== comparisonClock.simulationDurationTicks ? ' Different periods; aligned at replay tick 0, with independent warm-up inventories.' : ''}
         </Typography>}
-        {visited.states && <Box hidden={view !== 'states'} sx={{ display: view === 'states' ? 'block' : 'none' }}>
-            <Suspense fallback={<Typography role="status">Loading entity states…</Typography>}>
-                {states ? <StateTimeline fullscreen={props.fullscreen} options={props.timeline} onOptionsChange={props.onTimelineChange} stateTransitionHistory={states} clockWindows={props.clockWindows ?? undefined} />
-                    : <Typography>No entity-state history is available for this clock.</Typography>}
-            </Suspense>
+        {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
+            {comparisonClock && props.selected.ranking.meets_target_rate && comparisonClock.ranking.meets_target_rate
+                ? `Both clocks meet ${number(props.selected.assessment.items_per_second)} items/s across all copies. Compare how they feed the machine and make products.`
+                : props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
+                : 'Explore the recorded activity alongside this clock’s assessed output.'}
+        </Typography>}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: recordingWanted ? 'minmax(0,1fr) 245px' : 'minmax(0,1fr)' }, gap: 1.5, alignItems: 'start' }}>
+            <Box sx={{ minWidth: 0 }}>
+                <Suspense fallback={<Typography role="status">Loading chart…</Typography>}>
+                    {inspection.view === 'windows' ? <>
+                        <WakeWindows alternative={props.selected} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} headingLevel="h3" inspection={{ range, tick, onInspect: inspect }} />
+                        {comparisonClock && <Box sx={{ mt: 1 }}><Typography variant="body2">B · {comparisonClock.label}</Typography><WakeWindows alternative={comparisonClock} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} inspection={{ range, tick, onInspect: inspect }} /></Box>}
+                        {selected && <Button color="inherit" size="small" sx={{ mt: 1 }} onClick={() => patch({ view: 'activity' })}>Inspect {timelineEntityName(selected, recipeLabel)} activity</Button>}
+                    </> : <>
+                        {primary.status === 'loading' && <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 3 }}><CircularProgress size={20} />Recording this clock’s activity…</Box>}
+                        {primary.status === 'idle' && <Alert severity="info">This saved result lacks the build or exact fuel-clock metadata needed for a detailed replay. Generate again to record its activity.</Alert>}
+                        {primary.error && <Alert severity="warning" action={<Button color="inherit" onClick={() => setRetry(retry + 1)}>Retry</Button>}>{primary.error}</Alert>}
+                        {recording && selected && <BeltChartSurface><Box sx={{ p: { xs: 1, sm: 1.5 }, bgcolor: BELT_CHART.background }}>
+                            <EvidenceChart recording={recording} comparison={baseline.data} selected={selected} groups={inspection.signals} range={range} tick={tick} view={inspection.view} showConnections={inspection.showConnections} primaryLabel={props.selected.label} comparisonLabel={comparisonClock?.label} onTick={setTick} onInspect={inspect} onRange={setRange} onZoom={zoom} />
+                        </Box></BeltChartSurface>}
+                        {recording?.truncated && <Alert severity="info" sx={{ mt: 1 }}>Detailed recording is limited to the first {number(recording.end_tick)} ticks of {number(recording.requested_ticks)} requested ticks to bound memory. Zoom and inspection use only this excerpt.</Alert>}
+                        {baseline.status === 'loading' && <Typography role="status" variant="body2">Recording comparison clock…</Typography>}
+                        {comparisonClock && baseline.status === 'idle' && <Alert severity="info">Regenerate to compare this older result’s exact fuel clocks.</Alert>}
+                        {baseline.error && <Alert severity="info">Comparison recording unavailable: {baseline.error}</Alert>}
+                        {baseline.data?.truncated && <Typography variant="caption">B ends at {number(baseline.data.end_tick)} ticks; values outside that span are unavailable.</Typography>}
+                    </>}
+                </Suspense>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
+                    <TextField label="Inspect tick" type="number" size="small" value={tick} onChange={event => { const value = Number(event.target.value); if (Number.isFinite(value)) setTick(value); }} slotProps={{ htmlInput: { min: 0, max: Math.floor(duration), step: 1 } }} sx={{ width: 125 }} />
+                    <Slider aria-label="Timeline tick cursor" value={tick} min={0} max={Math.max(1, Math.floor(duration))} step={1} onChange={(_, value) => setTick(Number(value))} sx={{ mx: 1, flex: 1 }} />
+                    <Typography variant="caption" sx={{ minWidth: 55 }}>{number(tick / 60)} s</Typography>
+                </Box>
+                {recording && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>One modelled unit · {inspection.run === 'clock' ? 'exported clock, including circuit latency' : 'planning controls'} · tick 0 is the baseline after preparation/warm-up ({number(recording.ticks_before_recording)} ticks excluded); controls restart at phase 0 with that inventory. Full input supplies; delivery rates exclude events before tick 0. This replay does not change the clock assessment.</Typography>}
+            </Box>
+            {recordingWanted && selected && recording && <Box component="aside" aria-label="Tick inspector" sx={{ p: 1.5, border: 1, borderColor: 'divider', position: { lg: 'sticky' }, top: 8, minWidth: 0, overflowWrap: 'anywhere' }}>
+                <Typography variant="overline">Tick inspector · {tick}</Typography>
+                <Typography component="h3" variant="subtitle2">{timelineEntityName(selected, recipeLabel)}</Typography>
+                {selected.note && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>{selected.note}</Typography>}
+                <Box component="dl" sx={{ m: 0, mt: 1 }}>{tick > recording.end_tick ? <Typography variant="body2">A is outside its recorded span. B values remain available beside the matching lanes.</Typography> : selected.signals.filter(signal => ['state', 'inventory', 'hand', 'fuel', 'progress', 'production'].includes(signal.group)).map(signal => {
+                    const value = timelineValueAt(signal, tick);
+                    return <Box key={signal.id} sx={{ mb: 0.75 }}>
+                        <Typography component="dt" variant="caption" color="text.secondary">{signal.item ? `${signal.label} · ${itemLabel(signal.item)}` : signal.label}</Typography>
+                        <Typography component="dd" variant="body2" sx={{ m: 0 }}>{typeof value === 'number' ? `${number(value)}${signal.unit === 'enabled' ? value ? ' · enabled' : ' · disabled' : ` ${signal.unit}`}` : signal.id === 'hand-item' ? value ? itemLabel(String(value)) : 'Empty hand' : getFactorioStateLabel(String(value))}{signal.limit !== undefined ? ` · threshold ${number(signal.limit)}` : ''}</Typography>
+                    </Box>;
+                })}</Box>
+                {tickEvents.length > 0 && <Box sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">Events at this tick</Typography>{tickEvents.slice(0, 8).map((event, index) => <Typography key={index} variant="body2">{event.entity_id} · {event.kind.replaceAll('-', ' ')} · {number(event.amount)} {event.item ? itemLabel(event.item) : ''}</Typography>)}</Box>}
+                {connected.filter(entity => entity.id !== selected.id).length > 0 && <Typography variant="caption" color="text.secondary">Follow a connection</Typography>}
+                {connected.filter(entity => entity.id !== selected.id).map(entity => <Button key={entity.id} color="inherit" size="small" onClick={() => patch({ entityId: entity.id })} sx={{ display: 'flex', justifyContent: 'flex-start', textAlign: 'left' }}>{entity.items[0] && <FactorioIcon name={entity.items[0]} size={18} alt="" />}{timelineEntityName(entity, recipeLabel)}</Button>)}
+            </Box>}
+        </Box>
+        {recording && selected && <Box sx={{ mt: 1.5 }}>
+            <TimelinePauses key={selected.id} recording={recording} entityId={selected.id} targetMet={props.selected.ranking.meets_target_rate} onExplore={wait => {
+                const padding = Math.max(15, (wait.end - wait.start) * 0.2);
+                patch({ view: 'activity', signals: [...new Set([...inspection.signals, 'state', 'inventory', 'transfers'] as const)], tick: wait.start, entityId: wait.entityId });
+                setRange({ start: wait.start - padding, end: wait.end + padding });
+            }} />
+            <Box component="details" sx={{ mt: 1 }}>
+                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Exact events · {events.length}</Typography>
+                {events.slice(eventStart, eventStart + 8).map((event, index) => <Button key={`${event.tick}-${event.entity_id}-${event.kind}-${index}`} color="inherit" size="small" sx={{ display: 'flex', textAlign: 'left' }} onClick={() => inspect(event.entity_id, event.tick)}>
+                    {event.tick} t · {event.entity_id} · {event.kind.replaceAll('-', ' ')} · {number(event.amount)} {event.item ? itemLabel(event.item) : ''}
+                </Button>)}
+                {events.length > 8 && <Box><Button color="inherit" size="small" disabled={eventStart === 0} onClick={() => setEventPage(Math.max(0, eventPage - 1))}>Previous events</Button><Button color="inherit" size="small" disabled={eventStart + 8 >= events.length} onClick={() => setEventPage(eventPage + 1)}>Next events</Button></Box>}
+            </Box>
         </Box>}
-        {visited.transfers && <Box hidden={view !== 'transfers'} sx={{ display: view === 'transfers' ? 'block' : 'none' }}>
-            <Suspense fallback={<Typography role="status">Loading item transfers…</Typography>}>
-                {transfers ? <TransferTimeline fullscreen={props.fullscreen} transferHistory={transfers} /> : <Typography>No transfer history is available for this clock.</Typography>}
-            </Suspense>
-        </Box>}
-        {visited.windows && <Box hidden={view !== 'windows'} sx={{ display: view === 'windows' ? 'block' : 'none' }}>
-            <Suspense fallback={<Typography role="status">Loading wake windows…</Typography>}>
-                <WakeWindows alternative={props.selected} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} headingLevel="h3" />
-            </Suspense>
-        </Box>}
+        <Box component="details" sx={{ mt: 1.5 }}>
+            <Typography component="summary" variant="caption" color="text.secondary" sx={{ cursor: 'pointer' }}>Original full histories & planning ranges</Typography>
+            <LegacyHistories props={props} />
+        </Box>
+    </Box>;
+}
+
+function LegacyHistories({ props }: { props: ClockTimelineWorkspaceProps }) {
+    const [open, setOpen] = useState(false);
+    return <Box sx={{ mt: 1 }}>
+        <Typography variant="body2">Planning transfer ranges are merged and adjusted to derive clock windows; their endpoints are not exact delivery times.</Typography>
+        <Button color="inherit" size="small" onClick={() => setOpen(!open)}>{open ? 'Hide full histories' : 'Load full histories'}</Button>
+        {open && <Suspense fallback={<Typography>Loading full histories…</Typography>}>
+            {props.stateTransitionHistory && <OriginalStates fullscreen={props.fullscreen} options={props.timeline} onOptionsChange={props.onTimelineChange} stateTransitionHistory={props.stateTransitionHistory} clockWindows={props.clockWindows ?? undefined} />}
+            {props.transferHistory && <OriginalTransfers fullscreen={props.fullscreen} transferHistory={props.transferHistory} />}
+        </Suspense>}
     </Box>;
 }

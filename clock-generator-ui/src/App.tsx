@@ -1320,7 +1320,7 @@ function App() {
                         </Box>
 
                         <Box data-build-view="results" data-build-anchor="results" sx={{ display: view === 'results' ? 'block' : 'none' }}>
-                            <ResultsWorkspace
+                            <ResultsWorkspace key={library.currentId}
                                 installOpen={installOpen}
                                 onInstallClose={() => setInstallOpen(false)}
                                 copyLabel={copyLabel}

@@ -268,6 +268,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                             </MenuItem>)}
                         </TextField>}
                         timelineProps={{
+                            config: saved, alternatives: props.alternatives,
                             timeline: props.timeline, onTimelineChange: props.onTimelineChange,
                             wakeAsTable: props.wakeAsTable, onWakeAsTableChange: props.onWakeAsTableChange,
                             transferHistory: props.transferHistory, stateTransitionHistory: props.stateTransitionHistory,

@@ -3,11 +3,13 @@ import type { ConfigFormData } from './configForm/formData';
 import type { ResultDetail } from './resultsView';
 import { serializeConfig } from '../hooks/usePersistedConfigForm';
 import { CATEGORY_COLORS, DRILL_STATUS_COLORS, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS } from '../components/colors';
+import { validInspection, type TimelineInspection } from './timelineInspection';
 
 export type DetailsTab = 'insights' | 'fuel' | 'blueprint';
 export type BuildAnchor = 'configure' | 'target' | 'build' | 'advanced' | 'results' | 'selected-clock' | 'comparison' | 'clock-context' | 'details' | 'developer';
 interface BuildEntitySelection { kind: EntityClickType; id: number; signature: string }
 export interface TimelineViewContext {
+    inspection?: TimelineInspection;
     viewMode: 'simplified' | 'detailed';
     sortMode: 'byType' | 'byRelationship';
     filters: { machine: boolean; inserter: boolean; drill: boolean };
@@ -74,7 +76,7 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
         resultDetail, detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
         comparison: { allColumns: bool(comparison.allColumns, false), showUnstable: bool(comparison.showUnstable, false) },
         wakeAsTable: bool(v.wakeAsTable, false), diagramDetailed: bool(v.diagramDetailed, true),
-        timeline: { ...d.timeline, viewMode: oneOf(timeline.viewMode, ['simplified', 'detailed'], 'simplified'), sortMode: oneOf(timeline.sortMode, ['byType', 'byRelationship'], 'byType'),
+        timeline: { ...d.timeline, ...(timeline.inspection ? { inspection: validInspection(timeline.inspection) } : {}), viewMode: oneOf(timeline.viewMode, ['simplified', 'detailed'], 'simplified'), sortMode: oneOf(timeline.sortMode, ['byType', 'byRelationship'], 'byType'),
             filters: { machine: bool(filters.machine, true), inserter: bool(filters.inserter, true), drill: bool(filters.drill, true) } },
         entity: KINDS.includes(entity.kind as EntityClickType) && Number.isSafeInteger(entity.id) && (entity.id as number) > 0 && text(entity.signature)
             ? { kind: entity.kind as EntityClickType, id: entity.id as number, signature: entity.signature } : null,

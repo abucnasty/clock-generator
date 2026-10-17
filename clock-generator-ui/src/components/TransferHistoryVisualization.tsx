@@ -1,13 +1,13 @@
-import { Box, Paper, Tooltip, Typography } from '@mui/material';
-import { memo } from 'react';
+import { Box, Tooltip, Typography } from '@mui/material';
+import { memo, useMemo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
-import { ITEM_COLOR_COUNT } from './colors';
-import { useChartColors } from '../hooks/useChartColors';
+import { BeltChartFrame, BeltChartSurface, ChartSwatch, TimelineAxis, chartGridSx } from './BeltChart';
+import { BELT_CHART, itemChartStyles, patternBackground, type ItemChartStyle } from '../theme/beltCharts';
 import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
 interface TransferHistoryVisualizationProps {
@@ -19,13 +19,13 @@ interface TransferBarProps {
     transfer: SerializableTransferEntry;
     totalDuration: number;
     rowHeight: number;
-    colorMap: Map<string, string>;
+    colorMap: Map<string, ItemChartStyle>;
 }
 
 function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferBarProps) {
     const startPercent = (transfer.start_tick / totalDuration) * 100;
     const widthPercent = ((transfer.end_tick - transfer.start_tick) / totalDuration) * 100;
-    const color = colorMap.get(transfer.item_name) ?? 'currentColor'; // unreachable: the map is built from these same transfers
+    const style = colorMap.get(transfer.item_name) ?? { color: '#ffffff', pattern: 'solid' as const }; // unreachable: the map is built from these same transfers
 
     return (
         <Tooltip
@@ -56,8 +56,8 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
                     width: `max(${widthPercent}%, ${MIN_MARK_PX}px)`,
                     height: rowHeight - 4,
                     top: 2,
-                    bgcolor: color,
-                    borderRadius: 0.5,
+                    background: patternBackground(style),
+                    borderRadius: 0,
                     cursor: 'pointer',
                     transition: 'opacity 0.2s, transform 0.1s',
                     '&:hover': {
@@ -75,11 +75,10 @@ interface EntityRowProps {
     entity: SerializableEntityTransferHistory;
     totalDuration: number;
     rowHeight: number;
-    colorMap: Map<string, string>;
+    colorMap: Map<string, ItemChartStyle>;
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProps) {
-    const { palette: COLOR_BLIND_PALETTE, track: TIMELINE_TRACK_COLOR } = useChartColors();
     const { nameIdsIn } = useGameNames();
     // Collect unique items transferred by this entity
     const transferredItems = Array.from(new Set(entity.transfers.map(t => t.item_name))).sort();
@@ -90,7 +89,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', height: rowHeight, mb: 0.5 }}>
             {/* Entity label */}
-            <Box sx={{ width: 200, flexShrink: 0, pr: 1 }}>
+            <Box sx={{ width: 220, flexShrink: 0, pr: 1 }}>
                 <Tooltip
                     title={
                         <Box>
@@ -124,7 +123,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                             sx={{
                                 fontSize: '0.75rem',
                                 // a drill is not a warning: a fixed orange, not the theme's warning colour
-                                color: entity.entity_type === 'drill' ? COLOR_BLIND_PALETTE.orange : 'text.primary',
+                                color: BELT_CHART.entity[entity.entity_type],
                             }}
                         >
                             {nameIdsIn(entity.label)}
@@ -137,7 +136,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                                 color: 'text.secondary',
                                 bgcolor: 'action.selected',
                                 px: 0.5,
-                                borderRadius: 0.5,
+                                borderRadius: 0,
                                 fontWeight: 'medium',
                             }}
                         >
@@ -159,8 +158,8 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                     flex: 1,
                     height: rowHeight,
                     position: 'relative',
-                    bgcolor: TIMELINE_TRACK_COLOR,
-                    borderRadius: 0.5,
+                    ...chartGridSx(totalDuration),
+                    borderRadius: 0,
                 }}
             >
                 {entity.transfers.map((transfer, idx) => (
@@ -178,7 +177,6 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
 }
 
 function TransferHistoryVisualizationComponent({ transferHistory, fullscreen = false }: TransferHistoryVisualizationProps) {
-    const { itemMap: itemColorMap, track: TIMELINE_TRACK_COLOR } = useChartColors();
     const rowHeight = 24;
     const totalDuration = transferHistory.total_duration_ticks;
 
@@ -187,75 +185,15 @@ function TransferHistoryVisualizationComponent({ transferHistory, fullscreen = f
     const drills = transferHistory.entities.filter(e => e.entity_type === 'drill');
 
     // Build color map - assign each unique item a distinct color
-    const colorMap = itemColorMap(transferHistory.entities.flatMap(e => e.transfers.map(t => t.item_name)));
+    const colorMap = useMemo(() => itemChartStyles(transferHistory.entities.flatMap(e => e.transfers.map(t => t.item_name))), [transferHistory]);
     const allItems = Array.from(colorMap.keys());
-
-    // Calculate tick markers
-    const tickMarkers: number[] = [];
-    const markerInterval = Math.ceil(totalDuration / 10 / 100) * 100; // Round to nearest 100
-    for (let tick = 0; tick <= totalDuration; tick += markerInterval) {
-        tickMarkers.push(tick);
-    }
 
     const timelineContent = (isFullscreen: boolean) => (
         <>
-            {/* Legend */}
-            <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {allItems.map(item => (
-                    <Box
-                        key={item}
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            px: 1,
-                            py: 0.25,
-                            bgcolor: TIMELINE_TRACK_COLOR,
-                            borderRadius: 1,
-                        }}
-                    >
-                        <Box
-                            sx={{
-                                width: 12,
-                                height: 12,
-                                bgcolor: colorMap.get(item),
-                                borderRadius: 0.25,
-                            }}
-                        />
-                        <FactorioIcon name={item} size={14} alt="" />
-                        <Typography variant="caption"><GameName id={item} /></Typography>
-                    </Box>
-                ))}
-            </Box>
-            {allItems.length > ITEM_COLOR_COUNT && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                    Colours repeat after {ITEM_COLOR_COUNT} items; the icons name each item.
-                </Typography>
-            )}
-            </Box>
-
             <ScrollX label={SCROLL_REGION_NAMES.transferTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
-            {/* Tick markers */}
-            <Box sx={{ display: 'flex', mb: 0.5 }}>
-                <Box sx={{ width: 200, flexShrink: 0 }} />
-                <Box sx={{ flex: 1, position: 'relative', height: 20 }}>
-                    {tickMarkers.map(tick => (
-                        <Typography
-                            key={tick}
-                            variant="caption"
-                            sx={{
-                                position: 'absolute',
-                                left: `${(tick / totalDuration) * 100}%`,
-                                transform: 'translateX(-50%)',
-                                color: 'text.secondary',
-                                fontSize: '0.65rem',
-                            }}
-                        >
-                            {tick}
-                        </Typography>
-                    ))}
-                </Box>
+            <Box sx={{ display: 'flex', mb: 1 }}>
+                <Box sx={{ width: 220, flexShrink: 0 }} />
+                <Box sx={{ flex: 1 }}><TimelineAxis duration={totalDuration} /></Box>
             </Box>
 
             {/* Inserters section */}
@@ -294,26 +232,39 @@ function TransferHistoryVisualizationComponent({ transferHistory, fullscreen = f
                 </Box>
             )}
             </ScrollX>
+            <Box sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
+            {/* Legend */}
+            <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {allItems.map(item => (
+                    <Box
+                        key={item}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            px: 1,
+                            py: 0.25,
+                            borderRadius: 0,
+                        }}
+                    >
+                        <ChartSwatch {...colorMap.get(item)!} />
+                        <FactorioIcon name={item} size={14} alt="" />
+                        <Typography variant="caption"><GameName id={item} /></Typography>
+                    </Box>
+                ))}
+            </Box>
+            </Box>
+
+            </Box>
         </>
     );
 
-    return (
-        <>
-            <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6" component="h3">
-                        Transfer Activity Timeline
-                    </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Total simulation duration: {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
-                </Typography>
-
-                {timelineContent(fullscreen)}
-            </Paper>
-
-        </>
-    );
+    return <BeltChartFrame title="Item transfers" subtitle={`${totalDuration.toLocaleString()} ticks · ${(totalDuration / 60).toFixed(1)} s · ${allItems.length} items`}>
+        {timelineContent(fullscreen)}
+    </BeltChartFrame>;
 }
 
-export const TransferHistoryVisualization = memo(TransferHistoryVisualizationComponent);
+export const TransferHistoryVisualization = memo(function TransferHistoryVisualization(props: TransferHistoryVisualizationProps) {
+    return <BeltChartSurface><TransferHistoryVisualizationComponent {...props} /></BeltChartSurface>;
+});

@@ -2,7 +2,8 @@ import type { Theme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
 import { chartColorsFor } from './colors';
 import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
-import { useCallback, useId, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
+import type { TimelineRange } from '../utils/timelineInspection';
 import { useAnnounce } from '../hooks/useMessages';
 import type { ClockAlternativeView } from '../worker/types';
 import { buildWakeWindowRows, mostWokenRowId, sumWakeUps, wakeUpsCounted } from '../utils/wakeWindows';
@@ -28,9 +29,11 @@ import {
     WakeWindowsChart,
 } from './WakeWindowsChart';
 import { WakeWindowsTable } from './WakeWindowsTable';
-import { Panel } from './Panel';
+import { BeltChartFrame, BeltChartSurface, ChartSwatch } from './BeltChart';
+import { BELT_CHART } from '../theme/beltCharts';
 
 interface WakeWindowsViewProps {
+    inspection?: { range: TimelineRange; tick: number; onInspect(entityId: string, tick: number): void };
     asTable: boolean;
     onAsTableChange(asTable: boolean): void;
     /** The selected clock; nothing is shown without one */
@@ -43,7 +46,7 @@ interface WakeWindowsViewProps {
 function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track' }) {
     // in forced colours, the system colours the chart uses (see FORCED_COLORS)
     const base = { width: 28, height: 12, boxSizing: 'border-box', flexShrink: 0, forcedColorAdjust: 'none' } as const;
-    const solid = { bgcolor: (theme: Theme) => chartColorsFor(theme.palette.mode).palette.skyBlue, [FORCED_COLORS]: { bgcolor: 'CanvasText' } } as const;
+    const solid = { bgcolor: (theme: Theme) => chartColorsFor(theme.palette.mode).palette.yellow, [FORCED_COLORS]: { bgcolor: 'CanvasText' } } as const;
     switch (kind) {
         case 'window':
             return <Box aria-hidden sx={{ ...base, ...solid }} />;
@@ -53,8 +56,8 @@ function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track
                     aria-hidden
                     sx={{
                         ...base,
-                        background: (theme: Theme) => `repeating-linear-gradient(45deg, ${chartColorsFor(theme.palette.mode).palette.skyBlue} 0 3px, transparent 3px 6px)`,
-                        border: (theme: Theme) => `1px solid ${chartColorsFor(theme.palette.mode).palette.skyBlue}`,
+                        background: (theme: Theme) => `repeating-linear-gradient(45deg, ${chartColorsFor(theme.palette.mode).palette.yellow} 0 3px, transparent 3px 6px)`,
+                        border: (theme: Theme) => `1px solid ${chartColorsFor(theme.palette.mode).palette.yellow}`,
                         [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
                     }}
                 />
@@ -91,7 +94,8 @@ const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[
  * When the selected clock switches each inserter and drill on, over one clock period: a chart (or two tables) of
  * every wake window, with the wake-ups the engine counted for each inserter. Assumes no layout around it.
  */
-export function WakeWindowsView({ alternative, headingLevel = 'h3', asTable, onAsTableChange: setAsTable }: WakeWindowsViewProps) {
+function WakeWindowsViewComponent({ alternative, headingLevel = 'h3', asTable, onAsTableChange: setAsTable, inspection }: WakeWindowsViewProps) {
+    const inspectionRef = useRef(inspection); inspectionRef.current = inspection;
     // keyed on the clock object, not its id: a new generation repeats the ids, and its selection must start empty
     const [selection, setSelection] = useState<{ alternative: ClockAlternativeView; rowId: string; windowIndex: number } | null>(null);
     const viewId = useId();
@@ -105,6 +109,7 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3', asTable, onA
         // the selected window is read out in the page's one announcements region
         const row = next === null ? undefined : rows.find(it => it.id === next.rowId);
         if (next !== null && row && alternative !== null && next.windowIndex < row.windows.length) {
+            inspectionRef.current?.onInspect(row.id, row.windows[next.windowIndex].start);
             announce(selectionAnnouncement(row, next.windowIndex, alternative.simulationDurationTicks));
         }
     }, [alternative, rows, announce]);
@@ -129,26 +134,12 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3', asTable, onA
     });
 
     return (
-        <Panel id={viewId} title={VIEW_HEADING} level={headingLevel === 'h2' ? 2 : 3} sx={{ mb: 0 }} data-wake-view="">
-            <Typography variant="body2" color="text.secondary">{VIEW_INTRO}</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }} data-wake-summary>{summary}</Typography>
+        <BeltChartFrame id={viewId} title={VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
             {!counted && (
                 <Typography variant="body2" color="text.secondary" data-wake-not-counted>
                     {`${NOT_COUNTED_NOTE}. ${NOT_COUNTED_REASON}`}
                 </Typography>
             )}
-
-            <Box
-                component="dl"
-                sx={{ m: 0, mt: 1, display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', columnGap: 1.5, rowGap: 0.25 }}
-            >
-                {TERMS.map(({ term, definition }) => (
-                    <Box key={term} sx={{ display: 'contents' }}>
-                        <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>{term}</Typography>
-                        <Typography component="dd" variant="body2" color="text.secondary" sx={{ m: 0 }}>{definition}</Typography>
-                    </Box>
-                ))}
-            </Box>
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 3, rowGap: 1, mt: 1.5 }}>
                 <FormControlLabel
@@ -164,6 +155,31 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3', asTable, onA
                     label={SHOW_AS_TABLE}
                     sx={{ mr: 0, minHeight: 32 }}
                 />
+            </Box>
+
+            <Box sx={{ mt: 2 }}>
+                {asTable ? (
+                    <WakeWindowsTable rows={rows} periodTicks={periodTicks} mostWakeUpsId={mostWakeUpsId} />
+                ) : (
+                    <>
+                        <Typography id={hintId} variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
+                            Select a window for details. Use ↑ ↓ to change rows and ← → to step through windows.
+                        </Typography>
+                        <WakeWindowsChart
+                            range={inspection?.range}
+                            tick={inspection?.tick}
+                            rows={rows}
+                            periodTicks={periodTicks}
+                            selected={selected}
+                            onSelect={onSelect}
+                            mostWakeUpsId={mostWakeUpsId}
+                            labelledBy={headingId}
+                            describedBy={hintId}
+                        />
+                    </>
+                )}
+            </Box>
+            <Box sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
                 {!asTable && (
                     <Box
                         component="ul"
@@ -173,6 +189,7 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3', asTable, onA
                         }}
                         data-wake-legend
                     >
+                        {rows.some(row => row.kind === 'drill') && <Typography component="li" variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ChartSwatch color={BELT_CHART.entity.drill} />Drill wake window</Typography>}
                         {LEGEND.map(item => (
                             <Typography
                                 key={item.kind}
@@ -187,28 +204,30 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3', asTable, onA
                         ))}
                     </Box>
                 )}
+
+            </Box>
+            <Box component="details" sx={{ mt: 1.5 }}>
+                <Typography component="summary" variant="body2" color="text.secondary" sx={{ cursor: 'pointer' }}>Reading this chart</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{VIEW_INTRO}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{KEYBOARD_HINT}</Typography>
+            <Box
+                component="dl"
+                sx={{ m: 0, mt: 1, display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', columnGap: 1.5, rowGap: 0.25 }}
+            >
+                {TERMS.map(({ term, definition }) => (
+                    <Box key={term} sx={{ display: 'contents' }}>
+                        <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>{term}</Typography>
+                        <Typography component="dd" variant="body2" color="text.secondary" sx={{ m: 0 }}>{definition}</Typography>
+                    </Box>
+                ))}
             </Box>
 
-            <Box sx={{ mt: 2 }}>
-                {asTable ? (
-                    <WakeWindowsTable rows={rows} periodTicks={periodTicks} mostWakeUpsId={mostWakeUpsId} />
-                ) : (
-                    <>
-                        <Typography id={hintId} variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
-                            {KEYBOARD_HINT}
-                        </Typography>
-                        <WakeWindowsChart
-                            rows={rows}
-                            periodTicks={periodTicks}
-                            selected={selected}
-                            onSelect={onSelect}
-                            mostWakeUpsId={mostWakeUpsId}
-                            labelledBy={headingId}
-                            describedBy={hintId}
-                        />
-                    </>
-                )}
+
             </Box>
-        </Panel>
+        </BeltChartFrame>
     );
+}
+
+export function WakeWindowsView(props: WakeWindowsViewProps) {
+    return <BeltChartSurface><WakeWindowsViewComponent {...props} /></BeltChartSurface>;
 }

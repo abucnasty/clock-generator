@@ -156,6 +156,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
+        inserterClocks: result.unplanned_inserter_clocks ?? {},
+        nonMovingBelts: alternative.belt?.kind === 'non_moving' || (alternative.belt === null && config.overrides?.non_moving_belts === true),
     }));
     return { signature: run.signature, alternatives };
 }
@@ -333,6 +335,8 @@ function configFile(config: unknown): Config {
 
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
     switch (query.kind) {
+        case 'timeline-recording':
+            return clockGenerator.recordSimulationTimeline(query.request);
         case 'lookups':
             return lookups();
         case 'machine-facts':

@@ -224,6 +224,10 @@ export {
 // Transfer History (for visualization)
 // ============================================================================
 
+export { recordSimulationTimeline } from './crafting/record-timeline';
+export type { RecordTimelineRequest } from './crafting/record-timeline';
+export type { TimelineRecording, TimelineEntity, TimelineEvent, TimelineSeries, TimelineValue } from './crafting/timeline-recording';
+
 export {
     SerializableTransferHistory,
     SerializableTransferEntry,

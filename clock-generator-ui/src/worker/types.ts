@@ -32,6 +32,8 @@ import type {
     RepeatedUnitConversionPlan,
     RepeatedUnitConversionReason,
     RepeatedUnitConversionReasonCode,
+    RecordTimelineRequest,
+    TimelineRecording,
 } from 'clock-generator/browser';
 import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
@@ -158,6 +160,10 @@ export interface ClockAlternativeView {
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     swingBackoffReport: SwingBackoffReport | null;
+    /** Exact independent inserter clocks exported with this alternative, including measured fuel clocks. */
+    inserterClocks?: RecordTimelineRequest['inserter_clocks'];
+    /** The belt timing actually used by this alternative, including clocks for the other belt setting. */
+    nonMovingBelts?: boolean;
 }
 
 export interface ClockModelAssumptions {
@@ -358,6 +364,7 @@ export interface PastedEntities {
  * up by a generation running on the others.
  */
 export type EngineQuery =
+    | { kind: 'timeline-recording'; request: RecordTimelineRequest }
     | { kind: 'lookups' }
     | { kind: 'machine-facts'; params: ComputeMachineFactsParams }
     | { kind: 'machine-target-rates'; config: Config }
@@ -382,6 +389,7 @@ export type EngineQuery =
     };
 
 export interface EngineAnswers {
+    'timeline-recording': TimelineRecording;
     'lookups': FactorioLookups;
     /** Null when they cannot be worked out, e.g. for an unknown recipe */
     'machine-facts': SerializableMachineFacts | null;

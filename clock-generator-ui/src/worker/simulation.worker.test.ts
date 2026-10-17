@@ -52,3 +52,25 @@ it('uses the real engine for typed Check/generation recovery and recomputed conv
     expect('recovery' in recoveryFailed && recoveryFailed.recovery).toBeUndefined();
     expect(source).toEqual(before);
 });
+
+it('replays detailed activity through the real worker query without changing the saved config', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    await port.onmessage!({ data: { type: 'initialize', factorioData } });
+    const config = {
+        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
+        inserters: [
+            { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
+            { source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 1 },
+        ], belts: [{ id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] }],
+        chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-gear-wheel', request_count: 1 }] }],
+    } as Config;
+    const before = JSON.stringify(config);
+    await port.onmessage!({ data: { type: 'query', requestId: 40, query: { kind: 'timeline-recording', request: { config, mode: 'plan', period_ticks: 240, terminal_swing_count: 1, windows: {} } } } });
+    expect(posted.at(-1)).toMatchObject({ type: 'answer', requestId: 40, answer: { mode: 'plan', start_tick: 0, end_tick: 240, entities: expect.arrayContaining([expect.objectContaining({ id: 'machine:1', recipe: 'iron-gear-wheel' })]) } });
+    expect(JSON.stringify(config)).toBe(before);
+});

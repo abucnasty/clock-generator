@@ -1,3 +1,6 @@
+import { BeltChartFrame, BeltChartSurface, ChartSwatch, TimelineAxis, chartGridSx } from './BeltChart';
+import { BELT_CHART, canvasChartFill, statusPattern, type ChartPattern } from '../theme/beltCharts';
+import { axisTicks } from '../utils/wakeWindows';
 import { useChartColors } from '../hooks/useChartColors';
 import { FilterList, Sort, Visibility, Palette } from '@mui/icons-material';
 import {
@@ -9,7 +12,6 @@ import {
     IconButton,
     Menu,
     MenuItem,
-    Paper,
     ToggleButton,
     ToggleButtonGroup,
     Tooltip,
@@ -135,9 +137,14 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         canvas.height = height * ratio;
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
         context.clearRect(0, 0, width, height);
+        const fills = new Map<string, string | CanvasPattern>();
         for (const { transition, span } of marks) {
             context.globalAlpha = isFiltered(transition) ? 0.15 : 1;
-            context.fillStyle = colorOf(transition);
+            const color = colorOf(transition);
+            const pattern = statusPattern(statusToCategory(entityType, transition.to_status));
+            const key = `${color}:${pattern}`;
+            if (!fills.has(key)) fills.set(key, canvasChartFill(context, { color, pattern }));
+            context.fillStyle = fills.get(key)!;
             // whole device pixels, so a 3px mark is three solid pixels and not two solid and two half-covered
             const snapped = snapSpan(span, ratio);
             context.fillRect(snapped.x, 0, snapped.width, height);
@@ -149,7 +156,7 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
             const snapped = snapSpan(span, ratio);
             context.strokeRect(snapped.x + 0.5, 0.5, snapped.width - 1, height - 1);
         }
-    }, [marks, totalDuration, width, height, colorOf, isFiltered, hovered, CLOCK_WINDOW_COLOR]);
+    }, [marks, totalDuration, width, height, colorOf, isFiltered, hovered, CLOCK_WINDOW_COLOR, entityType]);
 
     const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
         const rect = event.currentTarget.getBoundingClientRect();
@@ -310,7 +317,7 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, clockWindows = [] }: EntityRowProps) {
-    const { track: TIMELINE_TRACK_COLOR, clock: CLOCK_WINDOW_COLOR, palette: COLOR_BLIND_PALETTE } = useChartColors();
+    const { clock: CLOCK_WINDOW_COLOR } = useChartColors();
     const { nameIdsIn } = useGameNames();
     // Determine if a transition is filtered out
     const isTransitionFiltered = (transition: SerializableStateTransition): boolean => {
@@ -340,17 +347,12 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
         : 'assembling-machine-3';
 
     // Get entity type color
-    const entityTypeColor = entity.entity_type === 'machine' 
-        ? 'success.main' 
-        : entity.entity_type === 'drill'
-        // a drill is not a warning: a fixed orange, not the theme's warning colour
-        ? COLOR_BLIND_PALETTE.orange
-        : 'info.main';
+    const entityTypeColor = BELT_CHART.entity[entity.entity_type];
 
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', height: rowHeight, mb: 0.5 }}>
             {/* Entity label */}
-            <Box sx={{ width: 200, flexShrink: 0, pr: 1 }}>
+            <Box sx={{ width: 220, flexShrink: 0, pr: 1, pl: 1, borderLeft: 2, borderColor: entityTypeColor }}>
                 <Tooltip
                     title={
                         <Box>
@@ -383,7 +385,7 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                             noWrap
                             sx={{
                                 fontSize: '0.75rem',
-                                color: entityTypeColor,
+                                color: 'text.primary',
                             }}
                         >
                             {nameIdsIn(entity.label)}
@@ -395,7 +397,7 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                                 color: 'text.secondary',
                                 bgcolor: 'action.selected',
                                 px: 0.5,
-                                borderRadius: 0.5,
+                                borderRadius: 0,
                             }}
                         >
                             {visibleTransitionCount !== totalTransitionCount 
@@ -420,8 +422,8 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                     flex: 1,
                     height: rowHeight,
                     position: 'relative',
-                    bgcolor: TIMELINE_TRACK_COLOR,
-                    borderRadius: 0.5,
+                    ...chartGridSx(totalDuration),
+                    borderRadius: 0,
                 }}
             >
                 <TimelineBar
@@ -507,13 +509,13 @@ interface LegendProps {
 }
 
 /** A swatch and its label, the swatch on the same surface as the marks it names */
-function LegendChip({ label, color, active = true, swatch = { width: 12, height: 12 } }: {
+function LegendChip({ label, color, pattern = 'solid', active = true, swatch = { width: 12, height: 12 } }: {
     label: string;
     color: string;
     active?: boolean;
+    pattern?: ChartPattern;
     swatch?: { width: number; height: number };
 }) {
-    const { track: TIMELINE_TRACK_COLOR } = useChartColors();
     return (
         <Box
             sx={{
@@ -522,12 +524,11 @@ function LegendChip({ label, color, active = true, swatch = { width: 12, height:
                 gap: 0.5,
                 px: 1,
                 py: 0.25,
-                bgcolor: TIMELINE_TRACK_COLOR,
-                borderRadius: 1,
+                borderRadius: 0,
                 opacity: active ? 1 : 0.4,
             }}
         >
-            <Box sx={{ width: swatch.width, height: swatch.height, bgcolor: color, borderRadius: 0.25 }} />
+            <ChartSwatch color={color} pattern={pattern} sx={{ width: swatch.width < 12 ? swatch.width : 22, height: swatch.height }} />
             <Typography variant="caption">{label}</Typography>
         </Box>
     );
@@ -535,7 +536,7 @@ function LegendChip({ label, color, active = true, swatch = { width: 12, height:
 
 function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioStates }: LegendProps) {
     const { category: CATEGORY_COLORS, machine: MACHINE_STATUS_COLORS, inserter: INSERTER_STATUS_COLORS, drill: DRILL_STATUS_COLORS, factorio: getFactorioStateColor, clock: CLOCK_WINDOW_COLOR } = useChartColors();
-    const items: { label: string; color: string; active: boolean }[] = [];
+    const items: { label: string; color: string; active: boolean; pattern: ChartPattern }[] = [];
 
     if (viewMode === 'simplified') {
         // Category legend
@@ -544,6 +545,7 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
                 label: getCategoryLabel(category as StatusCategory), 
                 color,
                 active: statusFilters.categories.has(category as StatusCategory),
+                pattern: statusPattern(category),
             });
         });
     } else {
@@ -554,6 +556,7 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
                     label: `Machine: ${getStatusLabel(status)}`, 
                     color,
                     active: statusFilters.machineStatuses.has(status),
+                    pattern: statusPattern(statusToCategory('machine', status)),
                 });
             });
         }
@@ -563,6 +566,7 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
                     label: `Inserter: ${getStatusLabel(status)}`, 
                     color,
                     active: statusFilters.inserterStatuses.has(status),
+                    pattern: statusPattern(statusToCategory('inserter', status)),
                 });
             });
         }
@@ -572,6 +576,7 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
                     label: `Drill: ${getStatusLabel(status)}`, 
                     color,
                     active: statusFilters.drillStatuses.has(status),
+                    pattern: statusPattern(statusToCategory('drill', status)),
                 });
             });
         }
@@ -580,8 +585,8 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
     return (
         <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {items.map(({ label, color, active }) => (
-                    <LegendChip key={label} label={label} color={color} active={active} />
+                {items.map(({ label, color, active, pattern }) => (
+                    <LegendChip key={label} label={label} color={color} active={active} pattern={pattern} />
                 ))}
                 {showClockWindows && (
                     <LegendChip label={CLOCK_WINDOW_LABEL} color={CLOCK_WINDOW_COLOR} swatch={{ width: 12, height: 3 }} />
@@ -685,12 +690,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
         };
     }, [machines, inserters, drills, isTransitionVisible]);
 
-    // Calculate tick markers
-    const tickMarkers: number[] = [];
-    const markerInterval = Math.ceil(totalDuration / 10 / 100) * 100;
-    for (let tick = 0; tick <= totalDuration; tick += markerInterval) {
-        tickMarkers.push(tick);
-    }
+    const tickMarkers = axisTicks(totalDuration, 7);
 
     const handleViewModeChange = (_: React.MouseEvent, newMode: ViewMode | null) => {
         if (newMode) setViewMode(newMode);
@@ -945,29 +945,12 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
             </Box>
 
             {/* Legend */}
-            <Legend viewMode={viewMode} filters={filters} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} factorioStates={factorioStates} />
+
 
             <ScrollX label={SCROLL_REGION_NAMES.stateTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
-            {/* Tick markers */}
-            <Box sx={{ display: 'flex', mb: 0.5 }}>
-                <Box sx={{ width: 200, flexShrink: 0 }} />
-                <Box sx={{ flex: 1, position: 'relative', height: 20 }}>
-                    {tickMarkers.map(tick => (
-                        <Typography
-                            key={tick}
-                            variant="caption"
-                            sx={{
-                                position: 'absolute',
-                                left: `${(tick / totalDuration) * 100}%`,
-                                transform: 'translateX(-50%)',
-                                color: 'text.secondary',
-                                fontSize: '0.65rem',
-                            }}
-                        >
-                            {tick}
-                        </Typography>
-                    ))}
-                </Box>
+            <Box sx={{ display: 'flex', mb: 1 }}>
+                <Box sx={{ width: 220, flexShrink: 0 }} />
+                <Box sx={{ flex: 1 }}><TimelineAxis duration={totalDuration} marks={tickMarkers} /></Box>
             </Box>
 
             {/* Timeline content */}
@@ -1029,26 +1012,17 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                 </Box>
             )}
             </ScrollX>
+            <Box sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
+            <Legend viewMode={viewMode} filters={{ machine: filters.machine && machines.length > 0, inserter: filters.inserter && inserters.length > 0, drill: filters.drill && drills.length > 0 }} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} factorioStates={factorioStates} />
+            </Box>
         </>
     );
 
-    return (
-        <>
-            <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6" component="h3">
-                        State Transition Timeline
-                    </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Total simulation duration: {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
-                </Typography>
-
-                {timelineContent(fullscreen)}
-            </Paper>
-
-        </>
-    );
+    return <BeltChartFrame title="Entity states" subtitle={`${totalDuration.toLocaleString()} ticks · ${(totalDuration / 60).toFixed(1)} s · ${filteredEntities.length} entities`}>
+        {timelineContent(fullscreen)}
+    </BeltChartFrame>;
 }
 
-export const StateTransitionTimeline = memo(StateTransitionTimelineComponent);
+export const StateTransitionTimeline = memo(function StateTransitionTimeline(props: StateTransitionTimelineProps) {
+    return <BeltChartSurface><StateTransitionTimelineComponent {...props} /></BeltChartSurface>;
+});

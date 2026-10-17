@@ -1,6 +1,7 @@
+import { BELT_CHART } from '../theme/beltCharts';
+import { TimelineAxis } from './BeltChart';
 import type { Theme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
-import { chartColorsFor } from './colors';
 import { Box, Typography } from '@mui/material';
 import { Loop, MoreTime, TimerOutlined, ToggleOnOutlined, TrendingUp } from '@mui/icons-material';
 import {
@@ -23,10 +24,8 @@ import {
     type WakeWindowRow,
 } from '../utils/wakeWindows';
 import {
-    axisMarkText,
     modeText,
-    onForText,
-    periodEndText,
+    onShareText,
     rowSummary,
     wakeUpsRowText,
     watchNotes,
@@ -34,6 +33,7 @@ import {
     type WatchNoteKind,
 } from '../utils/wakeWindowCopy';
 import { WakeRowMoves } from './WakeRowMoves';
+import type { TimelineRange } from '../utils/timelineInspection';
 
 // Colours of the chart, measured on the outlined Paper (#232323, no elevation overlay): see the 2.6 spec
 /** A wake window (Wong sky blue), 6.81:1 */
@@ -57,9 +57,9 @@ const MIN_BAR_PX = 4;
 /** A tap this close to a window selects it */
 const TAP_TOLERANCE_PX = 12;
 /** From this width of the chart the label, the track and the numbers sit side by side */
-const WIDE_PX = 900;
-const LABEL_COLUMN_PX = 220;
-const NUMBERS_COLUMN_PX = 150;
+const WIDE_PX = 760;
+const LABEL_COLUMN_PX = 206;
+const NUMBERS_COLUMN_PX = 120;
 const COLUMN_GAP_PX = 14;
 
 /** Width of an element, kept up to date */
@@ -78,46 +78,6 @@ function useWidth(): [(element: HTMLElement | null) => (() => void) | undefined,
 }
 
 const percent = (ticks: number, period: number) => `${(ticks / period) * 100}%`;
-
-function Axis({ periodTicks, marks }: { periodTicks: number; marks: number[] }) {
-    return (
-        <Box aria-hidden sx={{ pb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary" component="div" sx={{ textAlign: 'right' }} data-wake-axis-end>
-                {periodEndText(periodTicks)}
-            </Typography>
-            <Box sx={{ position: 'relative', height: 36 }}>
-                {marks.map(mark => {
-                    const fraction = mark / periodTicks;
-                    const text = axisMarkText(mark);
-                    // the first label starts at its mark, the ones near the end finish at theirs, the rest are centred on it
-                    const shift = fraction === 0 ? '0' : fraction > 0.85 ? '-100%' : '-50%';
-                    return (
-                        <Box
-                            key={mark}
-                            data-wake-axis-mark
-                            style={{ left: percent(mark, periodTicks), transform: `translateX(${shift})` }}
-                            sx={{
-                                position: 'absolute',
-                                top: 0,
-                                borderLeft: fraction === 0 ? '1px solid' : 'none',
-                                borderColor: 'text.secondary',
-                                pl: fraction === 0 ? 0.5 : 0,
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            <Typography variant="caption" color="text.secondary" component="div" sx={{ lineHeight: 1.3 }}>
-                                {text.ticks}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" component="div" sx={{ lineHeight: 1.3 }}>
-                                {text.seconds}
-                            </Typography>
-                        </Box>
-                    );
-                })}
-            </Box>
-        </Box>
-    );
-}
 
 const trackSx = {
     position: 'relative',
@@ -141,17 +101,19 @@ const barSx = {
     [FORCED_COLORS]: { '&[data-selected]': { outlineColor: 'Highlight' } },
 } as const;
 const solidSx = {
-    minWidth: '1px', boxSizing: 'border-box', bgcolor: (theme: Theme) => chartColorsFor(theme.palette.mode).palette.skyBlue, [FORCED_COLORS]: { bgcolor: 'CanvasText' },
+    minWidth: '1px', boxSizing: 'border-box', bgcolor: 'var(--wake-color)', [FORCED_COLORS]: { bgcolor: 'CanvasText' },
 } as const;
 const slackSx = {
     minWidth: '1px',
     boxSizing: 'border-box',
-    background: (theme: Theme) => `repeating-linear-gradient(45deg, ${chartColorsFor(theme.palette.mode).palette.skyBlue} 0 3px, transparent 3px 6px)`,
-    border: (theme: Theme) => `1px solid ${chartColorsFor(theme.palette.mode).palette.skyBlue}`,
+    background: 'repeating-linear-gradient(135deg, var(--wake-color) 0 3px, #000000 3px 6px)',
+    border: '1px solid var(--wake-color)',
     [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
 } as const;
 
 interface TrackProps {
+    range: TimelineRange;
+    tick?: number;
     row: WakeWindowRow;
     periodTicks: number;
     marks: number[];
@@ -161,7 +123,8 @@ interface TrackProps {
     onTap: (event: MouseEvent<HTMLElement>) => void;
 }
 
-function Track({ row, periodTicks, marks, selectedIndex, ticksPerPx, onTap }: TrackProps) {
+function Track({ row, range, tick, marks, selectedIndex, ticksPerPx, onTap }: TrackProps) {
+    const span = range.end - range.start;
     const words = modeText(row);
     if (words !== null) {
         return (
@@ -173,9 +136,11 @@ function Track({ row, periodTicks, marks, selectedIndex, ticksPerPx, onTap }: Tr
     return (
         <Box data-wake-track onClick={onTap} sx={trackSx}>
             {marks.filter(mark => mark > 0).map(mark => (
-                <Box key={mark} aria-hidden style={{ left: percent(mark, periodTicks) }} sx={gridLineSx} />
+                <Box key={mark} aria-hidden style={{ left: percent(mark, span) }} sx={gridLineSx} />
             ))}
             {barsToDraw(row.windows, ticksPerPx, selectedIndex).map(bar => {
+                const start = Math.max(range.start, bar.start), end = Math.min(range.end, bar.end + 1);
+                if (end <= start) return null;
                 const selected = !bar.merged && bar.windowIndex === selectedIndex;
                 return (
                     <Box
@@ -185,23 +150,24 @@ function Track({ row, periodTicks, marks, selectedIndex, ticksPerPx, onTap }: Tr
                         data-window-index={bar.windowIndex}
                         data-selected={selected ? 'true' : undefined}
                         style={{
-                            left: `min(${percent(bar.start, periodTicks)}, calc(100% - ${MIN_BAR_PX}px))`,
-                            width: `max(${MIN_BAR_PX}px, ${percent(bar.end - bar.start + 1, periodTicks)})`,
+                            left: `min(${percent(start - range.start, span)}, calc(100% - ${MIN_BAR_PX}px))`,
+                            width: `max(${MIN_BAR_PX}px, ${percent(end - start, span)})`,
                             height: selected ? SELECTED_BAR_HEIGHT : BAR_HEIGHT,
                         }}
                         sx={barSx}
                     >
-                        {bar.spans.map(span => (
+                        {bar.spans.filter(part => part.end + 1 > start && part.start < end).map(span => (
                             <Box
                                 key={span.start}
                                 data-wake-slack={span.slack ? 'true' : undefined}
-                                style={{ flex: `${span.end - span.start + 1} 1 0` }}
+                                style={{ flex: `${Math.min(end, span.end + 1) - Math.max(start, span.start)} 1 0` }}
                                 sx={span.slack ? slackSx : solidSx}
                             />
                         ))}
                     </Box>
                 );
             })}
+            {tick !== undefined && tick >= range.start && tick <= range.end && <Box aria-hidden sx={{ pointerEvents: 'none', position: 'absolute', top: 0, bottom: 0, left: percent(tick - range.start, span), borderLeft: '1px solid #ffa600', [FORCED_COLORS]: { borderColor: 'Highlight' } }} />}
         </Box>
     );
 }
@@ -245,6 +211,8 @@ function WatchNotes(props: { row: WakeWindowRow; periodTicks: number; mostWakeUp
 type Selection = { rowId: string; windowIndex: number };
 
 interface RowProps {
+    range: TimelineRange;
+    tick?: number;
     row: WakeWindowRow;
     rowIndex: number;
     periodTicks: number;
@@ -312,8 +280,9 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
         if (rect.width <= 0) {
             return;
         }
-        const tick = tickAtFraction((event.clientX - rect.left) / rect.width, periodTicks);
-        const index = nearestWindowIndex(row.windows, tick, (TAP_TOLERANCE_PX / rect.width) * periodTicks);
+        const span = props.range.end - props.range.start;
+        const tick = props.range.start + tickAtFraction((event.clientX - rect.left) / rect.width, span);
+        const index = nearestWindowIndex(row.windows, tick, (TAP_TOLERANCE_PX / rect.width) * span);
         onSelect(index === null ? null : { rowId: row.id, windowIndex: index });
         props.onActivate(row.id, true);
     };
@@ -334,6 +303,7 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                 }}
                 data-wake-row={row.id}
                 sx={{
+                    '--wake-color': BELT_CHART.entity[row.kind],
                     display: 'grid',
                     gridTemplateColumns: gridColumns,
                     gridTemplateAreas: props.wide ? '"label track numbers"' : '"label numbers" "track track"',
@@ -343,12 +313,13 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                     py: 0.75,
                     borderTop: 1,
                     borderColor: 'divider',
+                    '&:hover': { bgcolor: BELT_CHART.row },
                     outline: 'none',
                     '&:focus-visible': { outline: (theme: Theme) => `2px solid ${themeTokens(theme).control.focus}`, outlineOffset: '2px' },
                 }}
             >
                 <Box sx={{ gridArea: 'label', minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{row.label}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: BELT_CHART.entity[row.kind] }}>{row.label}</Typography>
                     {(row.items.length > 0 || row.route) && (
                         <Typography variant="caption" color="text.secondary" component="div" sx={{ overflowWrap: 'anywhere' }}>
                             <WakeRowMoves row={row} />
@@ -357,6 +328,8 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                 </Box>
                 <Box sx={{ gridArea: 'track', minWidth: 0 }}>
                     <Track
+                        range={props.range}
+                        tick={props.tick}
                         row={row}
                         periodTicks={periodTicks}
                         marks={props.marks}
@@ -366,8 +339,8 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                     />
                 </Box>
                 <Box sx={{ gridArea: 'numbers', textAlign: 'right' }}>
-                    <Typography variant="body2">{onForText(row.onShare)}</Typography>
-                    <Typography variant="body2" color="text.secondary" data-wake-ups={row.wakeUpsPerMinute ?? ''}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{onShareText(row.onShare)} on</Typography>
+                    <Typography variant="caption" color="text.secondary" data-wake-ups={row.wakeUpsPerMinute ?? ''}>
                         {wakeUpsRowText(row)}
                     </Typography>
                 </Box>
@@ -383,6 +356,8 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
 });
 
 interface WakeWindowsChartProps {
+    range?: TimelineRange;
+    tick?: number;
     rows: WakeWindowRow[];
     periodTicks: number;
     selected: Selection | null;
@@ -401,6 +376,8 @@ interface WakeWindowsChartProps {
  */
 export function WakeWindowsChart(props: WakeWindowsChartProps) {
     const { rows, periodTicks, selected, onSelect } = props;
+    const range = props.range ?? { start: 0, end: periodTicks };
+    const span = range.end - range.start;
     const [rootRef, width] = useWidth();
     const [activeRowId, setActiveRowId] = useState<string | null>(null);
     const rowElements = useRef(new Map<string, HTMLElement>());
@@ -408,9 +385,9 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
     const wide = width >= WIDE_PX;
     const trackWidth = wide ? width - LABEL_COLUMN_PX - NUMBERS_COLUMN_PX - 2 * COLUMN_GAP_PX : width;
     const maxMarks = trackWidth >= 640 ? 10 : trackWidth >= 360 ? 6 : 4;
-    const marks = useMemo(() => axisTicks(periodTicks, maxMarks), [periodTicks, maxMarks]);
+    const marks = useMemo(() => axisTicks(span, maxMarks), [span, maxMarks]);
     // nothing is merged before the chart has been measured
-    const ticksPerPx = trackWidth > 0 ? periodTicks / trackWidth : 0;
+    const ticksPerPx = trackWidth > 0 ? span / trackWidth : 0;
     const activeId = rows.some(row => row.id === activeRowId) ? activeRowId : rows[0]?.id ?? null;
 
     const registerElement = useCallback((rowId: string, element: HTMLElement | null) => {
@@ -453,13 +430,15 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
         >
             <Box sx={{ display: 'grid', gridTemplateColumns: gridColumnsOf(wide), columnGap: `${COLUMN_GAP_PX}px` }}>
                 <Box sx={{ gridColumn: wide ? '2' : '1 / -1' }}>
-                    <Axis periodTicks={periodTicks} marks={marks} />
+                    <TimelineAxis duration={span} marks={marks} startTick={range.start} />
                 </Box>
             </Box>
             {rows.map((row, rowIndex) => (
                 <WakeWindowsRow
                         key={row.id}
                         row={row}
+                        range={range}
+                        tick={props.tick}
                         rowIndex={rowIndex}
                         periodTicks={periodTicks}
                         marks={marks}
