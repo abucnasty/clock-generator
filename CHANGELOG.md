@@ -11,21 +11,30 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.17.0] - 2026-10-17
 
 ### Added
-- Keep several named builds in the browser, switch between them, share build links, and undo edits and replacements.
+- Keep several named builds in the browser: create, duplicate, rename, switch, and share build links. Undo edits, removals, and whole-build replacements.
+- Restore compatible saved results after a reload and remember each build's working views and page position. Cancel a run while retaining previous results or the clocks already found.
+- Start with an example, build by hand, or follow the Sidecar paste guide. Import previews show what will be replaced and offer a suggested target recipe, rate, and Copies.
+- Simplify verified repeated layouts into one complete group plus Copies, preserving total target output, with a preview and whole-build Undo.
+- Bulk-edit selected inserters' stack sizes, filters, and enable rules, including returning settings to Automatic.
 - Inspect the selected clock's wake windows, machine activity, inventories, crafting cycles, and item transfers. Replay recorded item flow on the build diagram, step through a selected route's transfers, and inspect connected entities.
-- Open the selected clock workspace fullscreen and use a dedicated installation guide and wiring reference.
+- Open the selected clock workspace fullscreen, switch clocks there, and use a dedicated installation guide and wiring reference.
 - Infinity chests support Remove unfiltered items, including empty chests that remove all incoming items. Sidecar 0.8.0 exports this setting and reads configured filters instead of current contents.
 
 ### Changed
-- A fresh coat of factory paint: a reimagined Clock Generator experience. Configure and Results use one compact layout, shared item and recipe pickers, category help, and clearer bulk editing. Machine rates can show maximum capacity or their share of the target output.
-- Results lead with the recommended clock and keep comparison and supporting details available when needed. Generate and Copy are highlighted as the next step without moving their controls.
-- Build validation groups connection and chest problems with actions to fix them, including switching a finite output chest to an infinity chest and enabling disposal when needed.
-- Improve light-theme contrast, diagram routing, and keyboard navigation. Dark is the default theme; theme choices are in More options.
+- A fresh coat of factory paint: a reimagined Clock Generator experience. Configure uses one compact Build layout with category help and entity settings on demand. Machine rates can show maximum capacity or their share of the target output.
+- Results lead with the recommended clock, explain its selection and assumptions, and keep clock comparison, deeper searches, and developer details available when needed.
+- Generate checks the current build first; Check only inspects the plan without generating clocks. Validation points to the problem, shows machine capacity when the target is too high, and offers connection and chest repairs.
+- Warn when a final buffer chest can fill up, and offer conversion to an infinity chest or enabling disposal on an existing one. Chest and missing-connection problems share one validation flow.
+- Item and recipe pickers show searchable game names and icons; entity pickers group and filter by type. Enable-rule editing adds plain-language summaries, timing previews, context-aware templates, and confirmation before replacing or discarding drafts.
+- Mark results that belong to an earlier build, explain what changed, and confirm before copying their blueprint. Generate and Copy are highlighted as the next step in a responsive sticky toolbar; messages no longer cover the editor.
+- Add light and system theme choices under More options, with dark as the default. Diagrams use a shared tile grid; keyboard focus, accessible control names, chart patterns, and narrow-screen layouts are improved.
 
 ### Fixed
 - Each completed generation selects its new recommended clock, including after switching builds.
 - Empty infinity chests retain their inserter connections when imported from the sidecar.
-- Diagram selection and replay stepping follow connected routes consistently, with transfer quantities shown only at the recorded transfer tick.
+- Preserve custom enable rules, fractional Copies, and automatic inserter capacity through editing and imports; Backspace in an editor no longer deletes the selected inserter.
+- Diagram routes avoid node overlaps and separate shared paths. Selection and replay stepping follow connected routes consistently, with transfer quantities shown only at the recorded transfer tick.
+- Opening category pickers reveals the current selection. Fullscreen floating labels stay below the tabs, and the footer no longer hides page content.
 
 ## [0.16.0] - 2026-10-16
 
