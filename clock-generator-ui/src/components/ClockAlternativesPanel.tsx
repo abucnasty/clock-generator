@@ -19,6 +19,9 @@ import {
     Typography,
 } from '@mui/material';
 import { useId, useState, type ReactNode } from 'react';
+import { useBuildSection } from '../hooks/useBuildViewContext';
+import type { BuildViewContext } from '../utils/buildViewContext';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
@@ -32,7 +35,7 @@ import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
-import { RECOMMENDED_COPY, disclosureRunLine, partitionClockRows, type PickRule } from '../utils/recommendedClock';
+import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
@@ -123,6 +126,8 @@ function HelpHeader({ label, help }: { label: string; help: string }) {
 }
 
 interface ClockAlternativesPanelProps {
+    comparison: BuildViewContext['comparison'];
+    onComparisonChange(comparison: BuildViewContext['comparison']): void;
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     onSelect: (index: number) => void;
@@ -156,6 +161,8 @@ const FULL_CLOCK_TABLE_SX = {
  * what it makes, its wake-ups and whether it works), with every column one press away. A row selects its clock.
  */
 export function ClockAlternativesPanel({
+    comparison,
+    onComparisonChange,
     alternatives,
     selectedIndex,
     onSelect,
@@ -166,8 +173,11 @@ export function ClockAlternativesPanel({
     notice,
     holdNotice = false,
 }: ClockAlternativesPanelProps) {
-    const [showUnstable, setShowUnstable] = useState(false);
-    const [allColumns, setAllColumns] = useState(false);
+    const { density } = useDisplayPreferences();
+    const { showUnstable, allColumns } = comparison;
+    const setShowUnstable = (showUnstable: boolean) => onComparisonChange({ ...comparison, showUnstable });
+    const setAllColumns = (next: boolean | ((shown: boolean) => boolean)) => onComparisonChange({ ...comparison, allColumns: typeof next === 'function' ? next(allColumns) : next });
+    const [helpOpen, setHelpOpen] = useBuildSection('comparison-help');
     // the unstable rows that were on screen when the others were shown
     const [pinnedIds, setPinnedIds] = useState<string[]>([]);
     const tableId = useId();
@@ -182,6 +192,8 @@ export function ClockAlternativesPanel({
         // under the pointer
         { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
     );
+    const stableBelts: BeltClockGroups<ClockAlternativeView> = groupClockRowsByBelt(stable);
+    const otherBelts: BeltClockGroups<ClockAlternativeView> = groupClockRowsByBelt(unstable);
     const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
@@ -191,7 +203,7 @@ export function ClockAlternativesPanel({
     const columnCount = allColumns ? 10 : fold === null ? 5 : 4;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
-    const renderRow = ({ alternative, index }: { alternative: ClockAlternativeView; index: number }) => {
+    const renderRow = ({ alternative, index }: ClockRow<ClockAlternativeView>) => {
         const works = worksOf(alternative);
         const recovery = recoversOf(alternative);
         return (
@@ -295,18 +307,20 @@ export function ClockAlternativesPanel({
         <Panel
             title={COMPARE_COPY.heading}
             help={{ label: COMPARE_COPY.terms, content: <TermsList /> }}
-            sx={{ mt: 2, mb: 0 }}
-            data-compare-clocks=""
+            sx={{ mb: 0, '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }}
+            data-compare-clocks="" data-build-anchor="comparison"
         >
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
-                {RECOMMENDED_COPY.intro}
-            </Typography>
+            {density !== 'compact' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
+                Select a clock to compare its rate, recovery and wake-ups. Belt compatibility is a separate condition.
+            </Typography>}
             {!anyStable && alternatives.length > 0 && pending.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                     {anyHolds ? COMPARE_COPY.noneRecover : COMPARE_COPY.noneHold}
                 </Typography>
             )}
             <Accordion
+                expanded={helpOpen}
+                onChange={(_, open) => setHelpOpen(open)}
                 disableGutters
                 elevation={0}
                 slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': 'how-clocks-are-chosen-summary' } }}
@@ -378,23 +392,22 @@ export function ClockAlternativesPanel({
                             )}
                         </TableRow>
                     </TableHead>
-                    <TableBody>{stable.map(renderRow)}</TableBody>
-                    {/* the unstable clocks and the ones still being computed: a group of rows of their own, under their header */}
+                    {(['matches', 'requiresChange'] as const).map(group => {
+                        const stableRows = stableBelts[group];
+                        const otherRows = otherBelts[group];
+                        if (!stableRows.length && !otherRows.length) return null;
+                        const headingId = `${tableId}-belt-${group}`;
+                        return <TableBody key={group} aria-labelledby={headingId}>
+                            <TableRow><TableCell id={headingId} component="th" role="rowheader" scope="rowgroup" colSpan={columnCount}
+                                sx={{ fontWeight: 700, bgcolor: 'background.default' }}>
+                                {group === 'matches' ? 'Matches your belt setting' : 'Requires a different belt setting'}
+                            </TableCell></TableRow>
+                            {stableRows.map(renderRow)}
+                            {stableRows.length > 0 && otherRows.length > 0 && <TableRow><TableCell colSpan={columnCount} sx={{ color: 'text.secondary' }}>{RECOMMENDED_COPY.unstableDivider}</TableCell></TableRow>}
+                            {otherRows.map(renderRow)}
+                        </TableBody>;
+                    })}
                     <TableBody>
-                        {stable.length > 0 && unstable.length > 0 && (
-                            <TableRow>
-                                <TableCell
-                                    // a heading for the rows below it, not a cell of data
-                                    component="th"
-                                    scope="rowgroup"
-                                    colSpan={columnCount}
-                                    sx={{ color: 'text.secondary', borderTop: 1, borderColor: 'divider', fontWeight: 'bold' }}
-                                >
-                                    {RECOMMENDED_COPY.unstableDivider}
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        {unstable.map(renderRow)}
                         {pending.map(label => (
                             <TableRow key={`pending-${label}`}>
                                 <TableCell padding="checkbox">
@@ -417,7 +430,7 @@ export function ClockAlternativesPanel({
                             if (!showUnstable) {
                                 setPinnedIds(unstable.map(({ alternative }) => alternative.id));
                             }
-                            setShowUnstable(shown => !shown);
+                            setShowUnstable(!showUnstable);
                         }}
                     >
                         {showUnstable ? COMPARE_COPY.hideUnstable(unstableCount) : COMPARE_COPY.showUnstable(hiddenCount)}

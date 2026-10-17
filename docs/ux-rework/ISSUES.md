@@ -364,3 +364,12 @@ All three exact reports and original/carry matrices are preserved in `review/pha
 - Phase2 review also suggests onboarding-prerequisite order, standing-belt consequence copy, a product identity on the answer card and local selection navigation; keep as focused future candidates alongside D1/D4/D7. These are not permission to implement deferred design work now.
 - The nine390 failures remain historical observations of three causes; the landmark is not waived as phone geometry. Actual320 evidence is still required before a policy decision or compliance claim.
 - Phase3 final review must close assigned carries, refresh remaining candidates with concrete evidence, and remove closed entries. Owner review precedes any filing.
+
+
+## Phase4 review additions — draft, not filed
+
+### Clarify clock belt timing versus the saved run setting
+Minor; A-P4-1. A result can show raw “Standing still” clock timing, a saved Moving run and a selection-rule match. Explain these as separate facts without changing ranking, simulation or compatibility policy. Proposed copy should describe pickup-slack timing separately from the saved setting/engine-rule acceptance. Evidence: review/phase4/PERSONA-A.md and the selected-result screenshots.
+
+### Preserve page position when dismissing a header menu
+Minor; A-P3-05/B3E-2/C3E-2, reconfirmed by all Phase4 personas. From scrolled Results, open More options and Escape: focus returns correctly, but the underlying page moves1048→93 in the recorded sequence. Preserve the position through plain open/dismissal and restore the sticky opener without scrolling; deliberate navigation keeps intentional scroll. Evidence: review/phase4/receipts/menu-return.json. D7 saved-context restoration does not close this menu issue.

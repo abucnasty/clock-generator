@@ -1,49 +1,17 @@
+import './types';
 import { createTheme, type Theme, type ThemeOptions } from '@mui/material/styles';
 import { a11yThemeComponents } from '../utils/a11yTheme';
-import { CONTROL, ROLE, SURFACE, TEXT } from './tokens';
+import { tokensFor, type ResolvedColorScheme, type ThemeTokens } from './tokens';
 
-/** A role of `tokens.ts` as an MUI palette colour; black text on every shade of it */
-const paletteColor = ({ main, light, dark, on }: (typeof ROLE)[keyof typeof ROLE]) => ({ main, light, dark, contrastText: on });
-
-const base = createTheme({
-    palette: {
-        mode: 'dark',
-        // selection and accent: the selected toggle and tab, the focus ring, text actions such as "+ Add" and Undo
-        primary: paletteColor(ROLE.orange),
-        // confirm or commit: the one filled button of a state (Generate, Copy blueprint), Save, Import Selected
-        secondary: paletteColor(ROLE.green),
-        // the same green, for "ok" (the Valid chip, success messages)
-        success: paletteColor(ROLE.green),
-        // a lemon yellow, told apart from the brand orange at a glance; always with a warning icon and words
-        warning: paletteColor(ROLE.yellow),
-        // danger; light enough to read at 4.5:1 on a card and on the bar
-        error: paletteColor(ROLE.red),
-        // info alerts only
-        info: paletteColor(ROLE.blue),
-        background: {
-            default: SURFACE.page,
-            paper: SURFACE.panel,
-        },
-        text: { primary: TEXT.primary, secondary: TEXT.secondary, disabled: TEXT.disabled },
-        common: {
-            black: '#121212',
-        },
-    },
-    typography: {
-        fontFamily: '"Titillium Web", "Helvetica", "Arial", sans-serif',
-        fontWeightMedium: 600,
-    },
-    shape: {
-        borderRadius: 0,
-    },
-    spacing: (factor: number) => factor * 7,
-});
+/** A role of `tokens.ts` as an MUI palette colour, including the resolved text on its filled shades */
+const paletteColor = ({ main, light, dark, on }: ThemeTokens['role'][keyof ThemeTokens['role']]) => ({ main, light, dark, contrastText: on });
 
 /**
  * The Factorio look and the colour roles, on top of MUI's components: flat surfaces (each exactly its token), title bars,
  * square chips, quiet cancel and delete controls, and the control lines at 3:1
  */
 function grammarComponents(theme: Theme): ThemeOptions['components'] {
+    const { surface: SURFACE, role: ROLE, text: TEXT, control: CONTROL } = theme.factorio;
     const titleBand = { backgroundColor: SURFACE.titleBar };
     const edge = `1px solid ${CONTROL.edge}`;
     return {
@@ -175,7 +143,7 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
             styleOverrides: {
                 // an opaque track at 3:1 or more, off and on; a black thumb on the orange
                 track: { backgroundColor: CONTROL.trackOff, opacity: 1 },
-                thumb: { color: TEXT.primary },
+                thumb: { color: theme.palette.mode === 'light' ? '#ffffff' : TEXT.primary },
                 switchBase: {
                     '&.Mui-checked .MuiSwitch-thumb': { color: ROLE.orange.on },
                     '&.Mui-checked + .MuiSwitch-track': { backgroundColor: ROLE.orange.main, opacity: 1 },
@@ -188,9 +156,59 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
     };
 }
 
-// three steps, so that each set of components reads the palette above: 1.11's accessibility rules (the focus ring),
-// then the colour roles and shapes; `createTheme` merges them, so a component in both keeps the rules of each
-const withA11y = createTheme(base, { components: a11yThemeComponents(base) });
+function buildTheme(mode: ResolvedColorScheme): Theme {
+    const tokens = tokensFor(mode);
+    const { surface: SURFACE, role: ROLE, text: TEXT } = tokens;
+    const base = createTheme({
+        factorio: tokens,
+        palette: {
+            mode,
+            // selection and accent: the selected toggle and tab, the focus ring, text actions such as "+ Add" and Undo
+            primary: paletteColor(ROLE.orange),
+            // confirm or commit: the one filled button of a state (Generate, Copy blueprint), Save, Import Selected
+            secondary: paletteColor(ROLE.green),
+            // the same green, for "ok" (the Valid chip, success messages)
+            success: paletteColor(ROLE.green),
+            // a lemon yellow, told apart from the brand orange at a glance; always with a warning icon and words
+            warning: paletteColor(ROLE.yellow),
+            // danger; light enough to read at 4.5:1 on a card and on the bar
+            error: paletteColor(ROLE.red),
+            // info alerts only
+            info: paletteColor(ROLE.blue),
+            background: {
+                default: SURFACE.page,
+                paper: SURFACE.panel,
+            },
+            text: { primary: TEXT.primary, secondary: TEXT.secondary, disabled: TEXT.disabled },
+            common: {
+                black: '#121212',
+            },
+        },
+        typography: {
+            fontFamily: '"Titillium Web", "Helvetica", "Arial", sans-serif',
+            fontWeightMedium: 600,
+        },
+        shape: {
+            borderRadius: 0,
+        },
+        spacing: (factor: number) => factor * 7,
+    });
 
-/** The site's one theme */
-export const appTheme = createTheme(withA11y, { components: grammarComponents(withA11y) });
+    // three steps, so that each set of components reads the palette above: 1.11's accessibility rules (the focus ring),
+    // then the colour roles and shapes; `createTheme` merges them, so a component in both keeps the rules of each
+    const withA11y = createTheme(base, { components: a11yThemeComponents(base) });
+
+    /** The site's one theme */
+    return createTheme(withA11y, { components: grammarComponents(withA11y) });
+}
+
+const themes = new Map<ResolvedColorScheme, Theme>();
+/** Stable identity per resolved mode; preference changes never remount the provider's children. */
+export function createAppTheme(mode: ResolvedColorScheme): Theme {
+    let theme = themes.get(mode);
+    if (!theme) { theme = buildTheme(mode); themes.set(mode, theme); }
+    return theme;
+}
+
+/** Backward-compatible reference for existing dark-theme contract tests. */
+export const appTheme = createAppTheme('dark');

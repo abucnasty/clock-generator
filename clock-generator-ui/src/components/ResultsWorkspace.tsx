@@ -1,5 +1,11 @@
 import { Alert, Box, Paper, Typography } from '@mui/material';
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import type { Config } from 'clock-generator/browser';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
+import type { ResultDetail } from '../utils/resultsView';
+import type { BuildViewContext, DetailsTab, TimelineViewContext } from '../utils/buildViewContext';
+import { SelectedClockContext } from './SelectedClockContext';
+import { InserterAssumptions } from './InserterAssumptions';
 import type {
     LogMessage,
     DebugSteps,
@@ -18,7 +24,6 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { WakeWindowsView } from './WakeWindowsView';
 import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
@@ -26,6 +31,17 @@ import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
 
 interface ResultsWorkspaceProps {
+    detailsTab: DetailsTab;
+    onDetailsTabChange(tab: DetailsTab): void;
+    comparison: BuildViewContext['comparison'];
+    onComparisonChange(comparison: BuildViewContext['comparison']): void;
+    wakeAsTable: boolean;
+    onWakeAsTableChange(asTable: boolean): void;
+    timeline: TimelineViewContext;
+    onTimelineChange(timeline: TimelineViewContext): void;
+    detail: ResultDetail;
+    onDetailChange: (detail: ResultDetail) => void;
+    generatedFor: GeneratedFor | null;
     generationAssumptions: GenerationAssumptions | null;
     isRunning: boolean;
     error: string | null;
@@ -102,6 +118,14 @@ interface ResultsWorkspaceProps {
  * the other clocks to compare it with, and the details of the selected clock. Developer tools, when they are on, last.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
+    const { density } = useDisplayPreferences();
+    const saved = useMemo(() => {
+        try {
+            return props.generatedFor ? JSON.parse(props.generatedFor.key) as Config : null;
+        } catch {
+            return null;
+        }
+    }, [props.generatedFor]);
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
     const selected = props.alternatives[props.selectedIndex];
     const rateWarning = rateWarningOf(selected);
@@ -154,47 +178,67 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 beltAction={props.beltAction}
             />
 
-            {/* 2.6's slot: the Wake windows section, between the card and the clocks to compare */}
-            {selected && <WakeWindowsView alternative={selected} headingLevel="h2" />}
-
-            <ClockAlternativesPanel
-                alternatives={props.alternatives}
-                selectedIndex={props.selectedIndex}
-                onSelect={props.onSelect}
-                recommendedIndex={props.recommendedIndex}
-                pickRule={props.pickRule}
-                isGenerating={props.isRunning}
-                pending={props.pending}
-                notice={
-                    <DeeperSearchNotice
-                        kind={noticeKind}
-                        recommendedLabel={props.recommendedIndex === null ? null : props.alternatives[props.recommendedIndex]?.label ?? null}
-                        canSearchDeeper={props.canSearchDeeper}
-                        blockedBy={props.searchDeeperBlockedBy}
-                        onSearchDeeper={props.onSearchDeeper}
-                    />
-                }
-                holdNotice={noticeKind === 'searching'}
-            />
-
-            {selected && (
-                <DetailsPanel
-                    insights={selected.insights}
-                    shiftOptions={props.shiftOptions}
-                    swingBackoffReport={props.swingBackoffReport}
-                    fuelView={props.fuelView}
-                    blueprintString={props.blueprintString}
-                    simulationDurationTicks={props.simulationDurationTicks}
-                    rateWarning={rateWarning}
-                    staleFor={props.staleFor}
-                    copied={props.copied}
-                    onCopy={props.onCopy}
+            {selected && <Box data-result-assumptions sx={{ mb: density === 'compact' ? 1 : 2, overflowWrap: 'anywhere' }}>
+                <Typography variant="body2">
+                    These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.non_moving_belts ? 'standing-still' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
+                    {selected.assumptions?.loopSeeds.length ? ` ${selected.assumptions.loopSeeds.length} modeled loop seed(s).` : ''}
+                    {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' Supplied output-drop positions model shared-lane spacing.' : ''}
+                    {selected.assumptions?.outputDrops.some(drop => drop.mode === 'free-lane') ? ' Output belts without supplied shared-lane positions use free-lane drop timing.' : ''}
+                    {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
+                </Typography>
+                {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
+            </Box>}
+            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1.1fr) minmax(0, 1fr)' }, gap: density === 'compact' ? 1.5 : 2, alignItems: 'start', '& > *': { minWidth: 0 } }}>
+                <ClockAlternativesPanel
+                    comparison={props.comparison}
+                    onComparisonChange={props.onComparisonChange}
+                    alternatives={props.alternatives}
+                    selectedIndex={props.selectedIndex}
+                    onSelect={props.onSelect}
+                    recommendedIndex={props.recommendedIndex}
+                    pickRule={props.pickRule}
+                    isGenerating={props.isRunning}
+                    pending={props.pending}
+                    notice={
+                        <DeeperSearchNotice
+                            kind={noticeKind}
+                            recommendedLabel={props.recommendedIndex === null ? null : props.alternatives[props.recommendedIndex]?.label ?? null}
+                            canSearchDeeper={props.canSearchDeeper}
+                            blockedBy={props.searchDeeperBlockedBy}
+                            onSearchDeeper={props.onSearchDeeper}
+                        />
+                    }
+                    holdNotice={noticeKind === 'searching'}
                 />
-            )}
+
+                {selected && (
+                    <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}
+                        generation={props.generationAssumptions} stale={props.staleFor !== null}
+                        wakeAsTable={props.wakeAsTable} onWakeAsTableChange={props.onWakeAsTableChange}
+                        assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
+                        <DetailsPanel
+                            tab={props.detailsTab}
+                            onTabChange={props.onDetailsTabChange}
+                            insights={selected.insights}
+                            shiftOptions={props.shiftOptions}
+                            swingBackoffReport={props.swingBackoffReport}
+                            fuelView={props.fuelView}
+                            blueprintString={props.blueprintString}
+                            simulationDurationTicks={props.simulationDurationTicks}
+                            rateWarning={rateWarning}
+                            staleFor={props.staleFor}
+                            copied={props.copied}
+                            onCopy={props.onCopy}
+                        />
+                    </SelectedClockContext>
+                )}
+            </Box>
 
             {/* not mounted while off: no timelines, no log and no debug switches on the page */}
             {props.developerTools && (
                 <DeveloperToolsPanel
+                    timeline={props.timeline}
+                    onTimelineChange={props.onTimelineChange}
                     hasResults={hasResults}
                     transferHistory={props.transferHistory}
                     stateTransitionHistory={props.stateTransitionHistory}

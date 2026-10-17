@@ -15,6 +15,7 @@ import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
+import { InserterAssumptions } from './InserterAssumptions';
 import { entityLabel } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
@@ -178,6 +179,9 @@ export function ConfigImportExport({
         incoming: PendingImport; current: ConfigFormData; selections: ImportSelections;
     } | null>(null);
     const preview = pendingImport ? pastePreview(currentForm, pendingImport, importSelections) : null;
+    const prospectiveInserters = pendingImport && preview?.counts.find(row => row.category === 'inserters')?.replacing ? pendingImport.inserters : currentForm.inserters;
+    const prospectiveMachines = pendingImport && preview?.counts.find(row => row.category === 'machines')?.replacing ? pendingImport.machines : currentForm.machines;
+    const prospectiveTarget = importSelections.target && pendingImport?.fill ? pendingImport.fill.values : currentTarget;
     const acknowledgedCurrent = acknowledged?.incoming === pendingImport && acknowledged?.current === currentForm
         && acknowledged?.selections === importSelections;
     if (acknowledged && !acknowledgedCurrent) setAcknowledged(null);
@@ -652,9 +656,19 @@ export function ConfigImportExport({
 
                     {pendingImport && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
-                                ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
-                            {pendingImport.machines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
+                            <Box data-import-assumptions sx={{ mb: 1 }}>
+                                <Typography variant="subtitle2" component="h3">After import: modeling assumptions</Typography>
+                                <Typography variant="body2">{preview?.counts.find(row => row.category === 'inserters')?.replacing ? 'Incoming' : 'Retained'} inserters; {preview?.counts.find(row => row.category === 'machines')?.replacing ? 'incoming' : 'retained'} machines. Target and Copies {importSelections.target && pendingImport.fill ? 'come from this export' : 'stay as entered'} ({prospectiveTarget.copies} copies). The current belt-movement setting is retained.</Typography>
+                                <InserterAssumptions inserters={prospectiveInserters} />
+                                <Box component="details" sx={{ mt: 1 }}>
+                                    <Typography component="summary" tabIndex={0} variant="body2" sx={{ cursor: 'pointer' }}>Modeling details after import</Typography>
+                                    <InserterAssumptions inserters={prospectiveInserters} detailed />
+                                    {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
+                                        ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
+                                    {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
+                                    {currentForm.overrides && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Retained run overrides: {JSON.stringify(currentForm.overrides)}.</Typography>}
+                                </Box>
+                            </Box>
                             {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                             {pendingImport.fill ? (
                                 <Box>

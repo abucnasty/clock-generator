@@ -13,7 +13,7 @@ import { plainClockName } from '../utils/clockSummary';
 import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
 import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
 import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
-import type { GenerationAssumptions } from '../worker/types';
+import type { GenerationAssumptions, RepeatedUnitsRecovery } from '../worker/types';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -26,7 +26,7 @@ export type ValidationState =
     | { status: 'running'; config: Config }
     | { status: 'valid'; config: Config; validation: ConfigValidation }
     /** `crashed`: the check's worker stopped, so the build was not judged; Generate checks again */
-    | { status: 'invalid'; config: Config; message: string; crashed?: boolean };
+    | { status: 'invalid'; config: Config; message: string; crashed?: boolean; recovery?: RepeatedUnitsRecovery };
 
 interface UseSimulationWorkerResult {
     generationAssumptions: GenerationAssumptions | null;
@@ -80,6 +80,7 @@ interface UseSimulationWorkerResult {
      */
     validate: (config: Config) => Promise<CheckOutcome>;
     error: string | null;
+    errorRecovery: RepeatedUnitsRecovery | null;
     initialize: () => void;
     /** Generates clocks for `config`; `searchDeeper` runs the slower searches this once, without changing what is recorded */
     runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean, searchDeeper?: boolean) => void;
@@ -217,6 +218,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     // the latest list published, which a render may not show yet; selectRecommended picks from it
     const alternativesRef = useRef<ClockAlternativeView[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [errorRecovery, setErrorRecovery] = useState<RepeatedUnitsRecovery | null>(null);
     const workersRef = useRef<Worker[]>([]);
     // startup failures stay in their slots until an explicit Check only or Generate retries them
     const unusableWorkersRef = useRef(new Set<Worker>());
@@ -358,6 +360,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setPickGone(null);
         setLogs([]);
         setError(null);
+        setErrorRecovery(null);
     }, [setShown]);
 
     /** Empties Results */
@@ -400,7 +403,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [busyWorkersFor, keepShown, keptResultsOf, progressStore, replace, showNothing, showResults]);
 
     /** A generation that failed or lost a worker ends with its error; its other busy workers are replaced */
-    const endRunWithError = useCallback((message: string, except?: Worker) => {
+    const endRunWithError = useCallback((message: string, except?: Worker, recovery?: RepeatedUnitsRecovery) => {
         const generation = generationRef.current;
         if (!generation) {
             return;
@@ -410,6 +413,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         // the clocks on screen are part of a failed run: a pick among them is not kept for the build shown before it
         setShown(null);
         setError(message);
+        setErrorRecovery(recovery ?? null);
         progressStore.set(null);
         setPendingAlternatives([]);
         setIsRunning(false);
@@ -471,10 +475,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 checkRunningRef.current = false;
                 setValidation(response.type === 'validated'
                     ? { status: 'valid', config: requested.config, validation: response.validation }
-                    : { status: 'invalid', config: requested.config, message: response.message });
+                    : { status: 'invalid', config: requested.config, message: response.message, recovery: response.recovery });
                 pendingChecks.settle(response.requestId, response.type === 'validated'
                     ? { kind: 'valid', validation: response.validation }
-                    : { kind: 'invalid', message: response.message });
+                    : { kind: 'invalid', message: response.message, recovery: response.recovery });
             }
             return;
         }
@@ -486,6 +490,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         if (response.type === 'initialized' || !generation || response.runId !== generation.runId) {
             if (response.type === 'error' && response.runId === undefined) {
                 setError(response.message);
+                setErrorRecovery(null);
             }
             return;
         }
@@ -524,7 +529,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             case 'error':
                 console.error('Simulation error:', response.message, response.stack);
                 // the other tasks of the run are thrown away: their workers stop now, not when they are done
-                endRunWithError(response.message, worker);
+                endRunWithError(response.message, worker, response.recovery);
                 break;
         }
     }, [dispatchTasks, endRunWithError, pendingChecks, publishAlternatives, reportProgress]);
@@ -637,6 +642,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         } catch (err) {
             console.error('Failed to initialize:', err);
             setError(err instanceof Error ? err.message : 'Failed to initialize');
+            setErrorRecovery(null);
         }
     }, [startWorker, terminateWorkers]);
 
@@ -645,6 +651,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
+            setErrorRecovery(null);
             return;
         }
 
@@ -670,6 +677,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setStoppedEarly(false);
         setPickGone(null);
         setError(null);
+        setErrorRecovery(null);
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
@@ -681,10 +689,12 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore, replace]);
 
     const validate = useCallback((config: Config): Promise<CheckOutcome> => {
+        setErrorRecovery(null);
         replace(workersRef.current.slice(0, 1).filter(worker => unusableWorkersRef.current.has(worker)));
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
+            setErrorRecovery(null);
             return Promise.resolve({ kind: 'dropped' });
         }
         const requestId = (validationRef.current?.requestId ?? 0) + 1;
@@ -708,6 +718,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [pendingChecks]);
 
     const cancel = useCallback(() => {
+        setErrorRecovery(null);
         const generation = generationRef.current;
         if (generation) {
             const kept = stopGeneration(generation);
@@ -724,6 +735,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [dropCheck, replace, stopGeneration]);
 
     const clearResults = useCallback((options?: { formKey?: string }) => {
+        setErrorRecovery(null);
         restoreTokenRef.current++;
         // a run still going stops now, and what it leaves is what is set aside
         const generation = generationRef.current;
@@ -844,6 +856,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         validation,
         validate,
         error,
+        errorRecovery,
         initialize,
         runSimulation,
         generatedFor,

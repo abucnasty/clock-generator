@@ -10,7 +10,8 @@ import {
 } from '@mui/material';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { BUTTON_NAMES, FIELD_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { durationText } from '../utils/numberText';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
 
@@ -80,7 +81,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         slotProps={{
                             htmlInput: { 'aria-label': FIELD_NAMES.blueprintString },
                             // an inset box, as the game draws a text field
-                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem', bgcolor: SURFACE.inset } },
+                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem', bgcolor: (theme: Theme) => themeTokens(theme).surface.inset } },
                         }}
                     />
                     <IconButton

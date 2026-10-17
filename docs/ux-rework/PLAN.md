@@ -1,5 +1,8 @@
 # UX rework: handoff plan
 
+> **Active owner override,2026-10-16:** Phase4 and remaining UX acceptance use [keyboard and colour criteria](specs/keyboard-colour-profile.md), superseding every older full-WCAG-AA/comprehensive-capture requirement in this file or item specs. Keep functional gates, independent CODE+UX and three phase-end personas. Stop custom compliance-harness expansion; delete that harness in the final Phase4 cleanup commit after focused acceptance and required reviews, before marking the Phase4 PR ready for owner review. **Never auto-merge any PR; leave it open for owner review.** Historical evidence remains historical.
+
+
 This is the plan for reworking the clock generator site's UX, written for the agent that implements it. It lives on
 `feat/ux-rework` with the review it comes from, and **all of `docs/ux-rework/` is deleted in the last commit before
 `feat/ux-rework` is merged to `master`**.
@@ -13,7 +16,7 @@ merged, and the owner then decided how to resolve every open question (the table
   has the merged findings, the three full reviews and all 40 captured screenshots.
 - **In this folder:** `review/SYNTHESIS.md` (merged findings, ranked), `review/A-newcomer.md`, `review/B-power-user.md`
   and `review/C-visual-a11y.md` (full reviews), `review/BRIEF.md` (the brief the reviewers worked from), and
-  `capture/` (the screenshot scripts; see its README).
+  `capture/` (historical evidence; the custom scripts were retired in Phase4).
 
 **How the work is run:** `ORCHESTRATOR.md` sets out the loop (spec, implement, evidence gate, code review, UX audit,
 fix cap, merge), which model each role uses, and the checkpoints with the owner. `PROGRESS.md` is the ledger.
@@ -361,7 +364,7 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - A short "what to watch for" note. For example: a window that spans the whole period means the inserter could just
     be always on; "+N ticks" is belt pickup slack; very short windows are sensitive to timing.
   - Engine changes are allowed if the window data is missing anything.
-- **Accessibility (full WCAG 2.2 AA):**
+- **Accessibility (historical scope; current acceptance is the focused keyboard-and-colour profile):**
   - every row has a text summary
   - rows are focusable, and ←/→ step through the windows
   - a "Show as table" toggle
@@ -560,8 +563,7 @@ Owner request,2026-10-16: replace the dead-end identical-unit message with an of
    Run `npm test`, `npm run lint`, `npm run knip`, `npm run check:icons` and `npm run build` in `clock-generator-ui`.
    When the engine changes, run its tests and lint too.
 2. **Fresh UX review at the end of each phase.**
-   - Capture the screenshots with `capture/` (see its README) at 1440, 960, 720 and 390px. Update the selectors for the
-     new UI.
+   - Take fresh screenshots at1440,960,720 and390px using existing browser viewport/screenshot capabilities. Apply the focused keyboard-and-colour gate. The custom full-AA capture/audit harness is retired; do not rebuild it or expand fixtures/selectors to replace it.
    - Run three reviewer agents in parallel, each on `review/BRIEF.md` with its persona from `review/SYNTHESIS.md`. Add
      to the brief: "Check whether the findings in docs/ux-rework/review/SYNTHESIS.md for this phase are fixed, and
      report any that are not."

@@ -1,14 +1,11 @@
 import { Box, Tooltip, Typography } from '@mui/material';
 import type { ShiftRangeEdge } from '../worker/types';
 import type { ShiftOptionsView } from '../worker/types';
-import { COLOR_BLIND_PALETTE } from './colors';
+import { useChartColors } from '../hooks/useChartColors';
 import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { Panel } from './Panel';
 import { ScrollX } from './ScrollX';
 
-const WORKS_COLOR = COLOR_BLIND_PALETTE.green;
-const FAILS_COLOR = COLOR_BLIND_PALETTE.vermillion;
-const USED_COLOR = COLOR_BLIND_PALETTE.white;
 const ROW_HEIGHT = 18;
 /** A 150px label column and a 360px plot */
 const SHIFT_CHART_MIN_WIDTH = 510;
@@ -64,6 +61,8 @@ function EdgeReasons({ title, edge }: { title: string; edge: ShiftRangeEdge }) {
  * so the range the machines accept is visible next to the one place the clock uses.
  */
 export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
+    const { palette, clock: USED_COLOR } = useChartColors();
+    const WORKS_COLOR = palette.green, FAILS_COLOR = palette.vermillion;
     const rowLabel = (index: number) => options.moved === 'output-swing' ? `Output swing ${index}`
         : index === options.chosenIndex && options.plannedTicks ? `Swings from tick ${options.plannedTicks.start}`
         : `Swings, round ${index}`;
@@ -124,7 +123,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                                             left: percent(shift.shift_ticks - cell / 2),
                                             width,
                                             bgcolor: shift.holds ? WORKS_COLOR : FAILS_COLOR,
-                                            opacity: shift.holds ? 1 : 0.55,
+                                            opacity: 1,
                                             boxSizing: 'border-box',
                                             border: used ? `2px solid ${USED_COLOR}` : '1px solid rgba(0, 0, 0, 0.35)',
                                             zIndex: used ? 1 : 0,
@@ -167,7 +166,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
                 {[
                     { label: 'Works', swatch: { bgcolor: WORKS_COLOR } },
-                    { label: 'Does not hold the expected output', swatch: { bgcolor: FAILS_COLOR, opacity: 0.55 } },
+                    { label: 'Does not hold the expected output', swatch: { bgcolor: FAILS_COLOR } },
                     { label: 'Used by this clock', swatch: { bgcolor: WORKS_COLOR, border: `2px solid ${USED_COLOR}` } },
                 ].map(({ label, swatch }) => (
                     <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

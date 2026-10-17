@@ -16,7 +16,8 @@ import { ChestType } from 'clock-generator/light';
 import type { ChestFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { CONTROL, SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { AddRow } from './AddRow';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { HelpButton } from './HelpButton';
@@ -152,7 +153,7 @@ function ChestsFormComponent({
                             sx={{
                                 mb: 2,
                                 p: 2,
-                                bgcolor: SURFACE.row,
+                                bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
                             }}
                         >
                             {/* Header row with ID, Type, Filters, and Delete */}
@@ -256,7 +257,7 @@ const STORAGE_SIZE_HELP = (
             component="img"
             src="/images/chest_slot_count_example.png"
             alt="Example of chest slot limit in Factorio showing 8 slots available out of 48"
-            sx={{ width: '100%', display: 'block', my: 1, border: `1px solid ${CONTROL.edge}` }}
+            sx={{ width: '100%', display: 'block', my: 1, border: (theme: Theme) => `1px solid ${themeTokens(theme).control.edge}` }}
         />
         <Typography variant="body2" color="text.secondary">
             <strong>Example:</strong> if your chest has 8 slots available (as shown above), enter "8" as the storage

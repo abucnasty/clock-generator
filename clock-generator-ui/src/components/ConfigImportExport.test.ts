@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isValidElement, type ReactNode } from 'react';
 import { Button, FormControlLabel } from '@mui/material';
 import { Option } from 'clock-generator/light';
+import { InserterAssumptions } from './InserterAssumptions';
 import { ConfigImportExport, type BuildEntryHandle } from './ConfigImportExport';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import type { PastedEntities } from '../worker/types';
@@ -102,5 +103,24 @@ describe('Paste acknowledgment bound to the actual preview', () => {
         const cancel = Render().find(e => e.type === Button && e.props.children === 'Cancel')!.props;
         (cancel.onClick as () => void)(); Render(); expect(props.currentForm).toEqual(before);
         expect(props.onReplaceMachines).not.toHaveBeenCalled(); expect(props.onUndoable).not.toHaveBeenCalled(); expect(props.onBuildReplaced).not.toHaveBeenCalled();
+    });
+});
+
+
+describe('prospective import assumptions', () => {
+    it('summarizes the actual retained/incoming inserters as selections and current drafts change', async () => {
+        incoming.inserters = [{ id: 1, prototype: 'fast-inserter', quality: 'normal', stack_size: 4,
+            source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 0 } }];
+        await paste();
+        const assumptions = () => Render().find(element => element.type === InserterAssumptions)!.props.inserters;
+        expect(assumptions()).toBe(incoming.inserters);
+        const label = Render().find(element => element.type === FormControlLabel && element.props.label === 'Inserters (1)')!;
+        (elements(label.props.control)[0].props.onChange as () => void)();
+        expect(assumptions()).toBe(props.currentForm.inserters);
+        const changed = [{ ...props.currentForm.inserters[0], stack_size: 16 }];
+        props = { ...props, currentForm: { ...props.currentForm, inserters: changed } };
+        expect(assumptions()).toBe(changed);
+        expect(props.onReplaceInserters).not.toHaveBeenCalled();
+        expect(props.onUndoable).not.toHaveBeenCalled();
     });
 });

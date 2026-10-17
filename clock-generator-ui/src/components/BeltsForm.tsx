@@ -12,8 +12,10 @@ import {
     Typography,
 } from '@mui/material';
 import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue } from '../hooks/useConfigForm';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { FactorioIcon } from './FactorioIcon';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
@@ -56,6 +58,13 @@ function BeltsFormComponent({
     onBeltAnswer,
 }: BeltsFormProps) {
     const { itemLabel } = useGameNames();
+    const { density } = useDisplayPreferences();
+    const compact = density === 'compact';
+    const lanes = belts.flatMap(belt => belt.lanes);
+    const common = belts.length === 0 ? [] : [
+        belts.every(belt => belt.type === belts[0].type) ? entityTypeLabel(belts[0].type, itemLabel) : null,
+        belts.every(belt => (belt.strategy ?? 'normal') === (belts[0].strategy ?? 'normal')) ? `${BELT_STRATEGIES.find(strategy => strategy.value === (belts[0].strategy ?? 'normal'))?.label} strategy` : null,
+    ].filter(Boolean);
 
     const handleLaneUpdate = (
         beltIndex: number,
@@ -136,6 +145,10 @@ function BeltsFormComponent({
                 </Box>
             )}
 
+            {compact && (common.length > 0 || lanes.length > 0 && lanes.every(lane => lane.stack_size === lanes[0].stack_size)) && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                {common.length > 0 && `All ${belts.length} belts: ${common.join(' · ')}. `}
+                {lanes.length > 0 && lanes.every(lane => lane.stack_size === lanes[0].stack_size) && `All ${lanes.length} lanes: stack size ${lanes[0].stack_size}.`}
+            </Typography>}
             <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
                 <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)}>
@@ -145,18 +158,19 @@ function BeltsFormComponent({
                     role="group"
                     aria-label={entityLabel('belt', belt.id)}
                     sx={{
-                        mb: 2,
-                        p: 2,
-                        bgcolor: SURFACE.row,
+                        mb: compact ? 1 : 2,
+                        p: compact ? 1.5 : 2,
+                        minWidth: 0,
+                        bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
                     }}
                 >
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', gap: compact ? 1 : 2, alignItems: 'center', mb: compact ? 1 : 2, flexWrap: 'wrap' }}>
                         {dragHandle}
-                        <FormControl data-row-first="" size="small" sx={{ minWidth: 180 }}>
+                        <FormControl data-row-first="" size="small" sx={{ minWidth: 0, flex: compact ? '1 1 190px' : undefined, width: 200, maxWidth: '100%' }}>
                             <InputLabel>Belt Type</InputLabel>
                             <Select
                                 readOnly={geometryBeltIds.includes(belt.id)}
-                                inputProps={{ 'aria-label': SELECT_NAMES.beltType }}
+                                inputProps={{ 'aria-label': `${SELECT_NAMES.beltType}, ${entityLabel('belt', belt.id)}` }}
                                 value={belt.type}
                                 label="Belt Type"
                                 onChange={(e) =>
@@ -181,10 +195,10 @@ function BeltsFormComponent({
                                 ))}
                             </Select>
                         </FormControl>
-                        <FormControl size="small" sx={{ minWidth: 130 }}>
+                        <FormControl size="small" sx={{ minWidth: 130, maxWidth: '100%' }}>
                             <InputLabel>Strategy</InputLabel>
                             <Select
-                                inputProps={{ 'aria-label': SELECT_NAMES.beltStrategy }}
+                                inputProps={{ 'aria-label': `${SELECT_NAMES.beltStrategy}, ${entityLabel('belt', belt.id)}` }}
                                 value={belt.strategy ?? 'normal'}
                                 label="Strategy"
                                 onChange={(e) =>
@@ -217,16 +231,16 @@ function BeltsFormComponent({
                     {geometryBeltIds.includes(belt.id) && <Typography variant="body2" sx={{ mb: 1 }}>{DROP_BELT_READ_ONLY}</Typography>}
 
                     {/* Lanes */}
-                    <Box sx={{ pl: 2 }}>
+                    <Box sx={{ pl: compact ? 0 : { xs: 0, sm: 2 }, minWidth: 0 }}>
                         {belt.lanes.map((lane, laneIndex) => (
                             <Box
                                 key={`lane-${laneIndex}`}
-                                sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, rowGap: 1, alignItems: 'center', mb: 1 }}
+                                sx={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 1 : 2, rowGap: 1, alignItems: 'center', mb: 1, minWidth: 0 }}
                             >
                                 <Typography variant="body2" sx={{ width: 60, flexShrink: 0 }}>
                                     Lane {laneIndex + 1}:
                                 </Typography>
-                                {geometryBeltIds.includes(belt.id) ? <Typography variant="body2">Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
+                                {geometryBeltIds.includes(belt.id) ? <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
                                 <ItemSelector
                                     value={lane.ingredient || null}
                                     options={itemNames}
@@ -234,8 +248,10 @@ function BeltsFormComponent({
                                         handleLaneUpdate(beltIndex, laneIndex, 'ingredient', newValue || '')
                                     }
                                     label="Ingredient"
+                                    inputAriaLabel={`Ingredient, ${entityLabel('belt', belt.id)}, lane ${laneIndex + 1}`}
                                     freeSolo
-                                    sx={{ flex: '1 1 200px' }}
+                                    minWidth={0}
+                                    sx={{ flex: '1 1 200px', minWidth: 0, maxWidth: '100%' }}
                                 />
                                 <NumberField
                                     label="Stack size"

@@ -1,0 +1,11 @@
+# Active common gate — owner scope replacement2026-10-16
+
+This replaces older comprehensive AA/capture machinery requirements across Phase4 and remaining UX work. Exact accepted scope: [keyboard and colour](keyboard-colour-profile.md). Preserve product features and meaningful regression protection; do not claim full AA conformance.
+
+- Matching immutable own-engine source for full UI test/lint/default knip/check:icons/build and engine checks when changed. Root independently repeats tests/build. Preserve genuine failures and source identity. Exact-head CI and independent code+UX reviews remain required.
+- Target native keyboard operation of real changed workflows: every interactive control reachable/operable, logical Tab/Arrow order, visible focus, no trap, sensible dialog/menu entry/return and focus not entirely hidden. Use standard component contracts and a short targeted walkthrough, without a new framework or exhaustive position/state matrix.
+- Text contrast4.5:1, large text3:1 and meaningful controls/graphics/focus3:1; actual theme/composited colours and relevant states. Meaning also appears as labels/icons/shapes/patterns. Verify Light/Dark and System selection with existing actual fixtures. Reuse unchanged source/evidence and flag unsupported instrumentation honestly rather than building more infrastructure.
+- Retain functional responsive reachability/layout and required final four-width screenshots1440/960/720/390. Remove comprehensive screen-reader/announcement, touch-target, zoom/text-spacing/reflow-certification audits as accessibility gates. Existing features and useful names/feedback stay intact.
+- Preserve original config/results/pick/assumptions, worker lifecycle, Undo, edits/Save/Cancel, engine correctness and explicit native/source-only boundaries. No fabricated worker data or extra fixture searches.
+- Keep two-round blocker/major limit, three fresh phase personas, the same-fixture D3 repeat/scorecard and owner phase review checkpoint. D9 actual reviewed cleanup remains mandatory. Ordinary functional checks/reviews/CI are unchanged.
+- The custom full-AA capture/audit harness is removed in Phase4’s final cleanup before PR readiness. Preserve historical receipts; do not recreate it. No automatic PR merges of any kind; owner reviews and authorizes merges.

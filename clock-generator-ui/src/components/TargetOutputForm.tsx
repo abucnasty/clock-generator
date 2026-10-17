@@ -34,7 +34,7 @@ export function TargetOutputForm({
 }: TargetOutputFormProps) {
     return (
         // the heading is focused by script when the intro card or a dialog that held the focus goes
-        <Panel title="Target Output" focusableTitleId={TARGET_OUTPUT_HEADING_ID}>
+        <Panel data-build-anchor="target" title="Target Output" focusableTitleId={TARGET_OUTPUT_HEADING_ID}>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <ItemSelector
                     kind="recipe"

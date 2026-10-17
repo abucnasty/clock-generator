@@ -4,6 +4,7 @@ import { combineClockAlternativeRuns } from 'clock-generator/light';
 import {
     RECOMMENDED_COPY,
     disclosureRunLine,
+    groupClockRowsByBelt,
     partitionClockRows,
     pickRuleOf,
     recommendationReason,
@@ -400,5 +401,24 @@ describe('partitionClockRows', () => {
         expect(rows.anyStable).toBe(false);
         expect(rows.hiddenCount).toBe(0);
         expect(rows.unstableCount).toBe(2);
+    });
+});
+
+describe('belt grouping after global eligibility', () => {
+    it('retains original indexes, recommendation order and selected exceptions without exposing hidden clocks in another belt group', () => {
+        const clocks = [
+            clock('stable', { verdict: 'stable', matches_belt_choice: true }),
+            clock('hidden-other-belt', { verdict: 'unstable', matches_belt_choice: false }),
+            clock('selected-other-belt', { verdict: 'unstable', matches_belt_choice: false }),
+            clock('recommended', { verdict: 'stable', matches_belt_choice: true }),
+        ];
+        const rows = partitionClockRows(clocks, { selectedIndex: 2, recommendedIndex: 3, showUnstable: false });
+        const stable = groupClockRowsByBelt(rows.stable);
+        const other = groupClockRowsByBelt(rows.unstable);
+        expect(stable.matches.map(row => row.index)).toEqual([3, 0]);
+        expect(other.requiresChange.map(row => row.index)).toEqual([2]);
+        expect(other.requiresChange[0]).toBe(rows.unstable[0]);
+        expect(stable.requiresChange).toEqual([]);
+        expect(rows.hiddenCount).toBe(1);
     });
 });

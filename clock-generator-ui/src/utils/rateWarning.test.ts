@@ -67,3 +67,16 @@ describe('copyBlueprintLabelOf', () => {
         expect(copyBlueprintLabelOf(holds, false)).toBe('Copy blueprint');
     });
 });
+
+
+describe('numerical output and actual hold checks', () => {
+    it('does not turn the observed above-target numerical mismatch into a failed hold check', () => {
+        const result = clock(216.061381, 0.061381, false);
+        result.assessment.holds = true;
+        expect(rateWarningOf(result)).toContain('output rate differs from the target');
+        expect(rateWarningOf(result)).toContain('216.06/s; requested 216/s');
+        expect(rateWarningOf(result)).not.toContain('does not hold');
+        result.assessment.holds = false;
+        expect(rateWarningOf(result)).toContain('does not hold its expected output');
+    });
+});

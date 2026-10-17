@@ -11,9 +11,11 @@ import {
 } from '@mui/material';
 import { memo } from 'react';
 import type { MachineFormData } from '../hooks/useConfigForm';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
 import { HelpCommand } from './HelpButton';
@@ -52,6 +54,14 @@ function MachinesFormComponent({
     onReorder,
     onDuplicate,
 }: MachinesFormProps) {
+    const { density } = useDisplayPreferences();
+    const compact = density === 'compact';
+    const common = machines.length === 0 ? [] : [
+        machines.every(row => row.productivity === machines[0].productivity) ? `productivity ${machines[0].productivity}%` : null,
+        machines.every(row => row.crafting_speed === machines[0].crafting_speed) ? `speed ${machines[0].crafting_speed}×` : null,
+        machines.every(row => (row.type ?? 'machine') === (machines[0].type ?? 'machine')) ? MACHINE_TYPE_LABELS[machines[0].type ?? 'machine'] : null,
+        machines.every(row => row.type === 'biochamber' && (row.energy_consumption_bonus ?? 0) === (machines[0].energy_consumption_bonus ?? 0)) ? `energy consumption ${machines[0].energy_consumption_bonus ?? 0}%` : null,
+    ].filter(Boolean);
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(machines.length, onRemove);
     const announce = useAnnounce();
@@ -93,11 +103,15 @@ function MachinesFormComponent({
                 </Button>
             )}
         >
+            {compact && common.length > 0 && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                All {machines.length} machines: {common.join(' · ')}. Values remain editable below.
+            </Typography>}
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}>
                         {(dragHandle) => (
                             <MachineRow
+                                compact={compact}
                                 machine={machine}
                                 index={index}
                                 recipeNames={recipeNames}
@@ -118,6 +132,7 @@ function MachinesFormComponent({
 }
 
 interface MachineRowProps {
+    compact: boolean;
     machine: MachineFormData;
     index: number;
     recipeNames: string[];
@@ -130,7 +145,7 @@ interface MachineRowProps {
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
+function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandle, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
     const { itemLabel } = useGameNames();
     const { facts, error } = useMachineFacts({
         recipe: machine.recipe,
@@ -146,15 +161,16 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
             role="group"
             aria-label={entityLabel('machine', machine.id)}
             sx={{
-                mb: 2,
-                p: 2,
-                bgcolor: SURFACE.row,
+                mb: compact ? 1 : 2,
+                p: compact ? 1.5 : 2,
+                minWidth: 0,
+                bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
             }}
         >
             <Box
                 sx={{
                     display: 'flex',
-                    gap: 2,
+                    gap: compact ? 1 : 2,
                     alignItems: 'center',
                     flexWrap: 'wrap',
                 }}
@@ -164,8 +180,8 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                 <ItemSelector
                     kind="recipe"
                     inputId={machineRecipeElementId(machine.id)}
-                    sx={{ flex: 1, minWidth: 'min(250px, 100%)' }}
-                    minWidth={250}
+                    sx={{ flex: compact ? '2 1 210px' : '1 1 250px', minWidth: 0, maxWidth: '100%' }}
+                    minWidth={0}
                     options={recipeNames}
                     value={machine.recipe || null}
                     onChange={(newValue) => onUpdate(index, 'recipe', newValue || '')}
@@ -183,7 +199,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     min={0}
                     step={1}
                     defaultValue={0}
-                    sx={{ width: 150 }}
+                    sx={{ width: compact ? 140 : 150, maxWidth: '100%' }}
                     size="small"
                 />
                 <NumberField
@@ -193,7 +209,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     min={0.01}
                     step={0.1}
                     defaultValue={1}
-                    sx={{ width: 180 }}
+                    sx={{ width: compact ? 150 : 180, maxWidth: '100%' }}
                     size="small"
                 />
                 {machine.type === 'biochamber' && (
@@ -204,14 +220,14 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                         min={-80}
                         step={1}
                         defaultValue={0}
-                        sx={{ width: 190 }}
+                        sx={{ width: 190, maxWidth: '100%' }}
                         size="small"
                     />
                 )}
-                <FormControl size="small" sx={{ minWidth: 220 }}>
+                <FormControl size="small" sx={{ flex: compact ? '1 1 190px' : undefined, minWidth: 0, width: compact ? 190 : 220, maxWidth: '100%' }}>
                     <InputLabel>Type</InputLabel>
                     <Select
-                        inputProps={{ 'aria-label': SELECT_NAMES.machineType }}
+                        inputProps={{ 'aria-label': `${SELECT_NAMES.machineType}, ${entityLabel('machine', machine.id)}` }}
                         value={machine.type || 'machine'}
                         label="Type"
                         onChange={(e) => onUpdate(index, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
@@ -254,9 +270,9 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                 </IconButton>
             </Box>
             {machine.recipe && (
-                <MachineFactsAccordion facts={facts} error={error} />
+                <MachineFactsAccordion machineId={machine.id} facts={facts} error={error} />
             )}
-            {machine.fuel !== undefined && <Typography variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
+            {machine.fuel !== undefined && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }} title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
         </Box>
     );
 }

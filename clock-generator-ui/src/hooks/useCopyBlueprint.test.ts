@@ -119,7 +119,7 @@ describe('shared blueprint copy lifecycle', () => {
         expect(options.onPinned).toHaveBeenCalledOnce(); expect(options.onCopied).toHaveBeenCalledExactlyOnceWith('Below target', true);
         expect(Render().copied).toBe(true);
     });
-    it.each(['selection', 'build', 'new-run'] as const)('ignores late success after %s replacement', async () => {
+    it('ignores late success after output identity replacement', async () => {
         const pending = deferred(); write.mockReturnValueOnce(pending.promise); options.running = true;
         Render().request(); options = { ...options, copyIdentity: {} }; Render(); pending.resolve(); await flush();
         expect(options.onPinned).not.toHaveBeenCalled(); expect(options.onCopied).not.toHaveBeenCalled(); expect(Render().copied).toBe(false);

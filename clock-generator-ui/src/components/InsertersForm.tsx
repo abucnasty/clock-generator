@@ -1,4 +1,4 @@
-import { INSERTER_TIMING_ASSUMPTION, effectiveInserterStackSize, inserterMetadataText } from '../utils/inserterMetadata';
+import { INSERTER_TIMING_ASSUMPTION, effectiveInserterStackSize, inserterTimingLabels } from '../utils/inserterMetadata';
 import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
@@ -9,8 +9,10 @@ import {
 } from '@mui/material';
 import { useMemo, useState, useCallback, useEffect, useRef, memo, type MouseEvent } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { PanelSection } from './Panel';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
@@ -28,6 +30,7 @@ import { itemsUnion, pruneSelection, rangeSelect } from '../utils/bulkEdit';
 import { sourceItemsOf } from '../utils/inferInserterItems';
 import { selectRowName } from '../utils/a11yLabels';
 import { describeBulkEdit, type BulkEditKind } from '../utils/undoSnapshot';
+import { usesAutomaticFilters } from '../utils/inserterFilters';
 import { describeEnableRule } from '../utils/enableRuleLabel';
 
 /** Where an inserter row fits on one line with its names in full */
@@ -64,7 +67,7 @@ const ROW_GRID_SX = {
     p: 2,
     // and above a one-line row's
     pt: 2.5,
-    bgcolor: SURFACE.row,
+    bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
 };
 interface InsertersFormProps {
     inserters: InserterFormData[];
@@ -81,7 +84,10 @@ interface InsertersFormProps {
     onBulkUpdate: (uuids: string[], updates: Partial<InserterFormData>, message: string) => void;
 }
 
-const InserterRow = memo(function InserterRow({ value, index, onUpdate, onRemove, onEditRule, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
+const InserterRow = memo(function InserterRow({ compact, metadata, fullMetadata, value, index, onUpdate, onRemove, onEditRule, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
+    compact: boolean;
+    metadata: string;
+    fullMetadata: string;
     index: number;
     onDuplicate: (index: number, label: string) => void;
     onReorder: InsertersFormProps['onReorder'];
@@ -96,15 +102,20 @@ const InserterRow = memo(function InserterRow({ value, index, onUpdate, onRemove
     const onChange = useCallback((updates: Partial<InserterFormData>) => onUpdate(index, updates), [index, onUpdate]);
     const label = entityLabel('inserter', value.id);
     return <SortableItem stableKey={value._uuid} label={label}>
-        {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label} sx={ROW_GRID_SX}>
-            <Typography variant="body2" color="text.secondary" sx={{ gridColumn: '1 / -1' }}>{inserterMetadataText(value)}</Typography>
+        {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label} sx={compact ? {
+            ...ROW_GRID_SX, p: 1.5, pt: 1.5, rowGap: 1.5, columnGap: 1,
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'auto minmax(0, 1fr) minmax(0, 1fr)' },
+            [ONE_LINE]: { gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr)' },
+        } : ROW_GRID_SX}>
+            <Typography variant="body2" color="text.secondary" sx={{ gridColumn: '1 / -1', overflowWrap: 'anywhere', display: compact && !metadata ? 'none' : undefined }}>{compact ? metadata : fullMetadata}</Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)}
                     slotProps={{ input: { 'aria-label': selectRowName(label) } }} sx={{ p: 0.5 }} />}
                 {dragHandle}
             </Box>
-            <InserterEditor {...editor} value={value} label={label} layout="row" onChange={onChange} rowActions={<>
-                <Box sx={{ display: 'flex', minWidth: 0, alignSelf: 'start', mt: '4px' }}>
+            <InserterEditor {...editor} density={compact ? 'compact' : 'explanatory'} value={value} label={label} layout="row" onChange={onChange} rowActions={<>
+                <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%', flex: compact ? '1 1 140px' : undefined, alignSelf: 'start', mt: '4px', '& .MuiChip-root': { height: 'auto', minHeight: 24 }, '& .MuiChip-label': { whiteSpace: 'normal', overflowWrap: 'anywhere', py: 0.5 } }}>
+                    <Typography variant="caption" color="text.secondary">{value.overrides?.enable_control === undefined ? 'Automatic rule' : 'Explicit rule'}</Typography>
                     <EnableRuleChip override={value.overrides?.enable_control} entityLabel={label} entityType="inserter" forcedAlways={value._forced_always} onClick={() => onEditRule(index)} />
                 </Box>
                 <RowActionsMenu label={label} onDuplicate={() => onDuplicate(index, label)}
@@ -130,6 +141,18 @@ function InsertersFormComponent({
     onDuplicate,
     onBulkUpdate,
 }: InsertersFormProps) {
+    const { density } = useDisplayPreferences();
+    const compact = density === 'compact';
+    const commonType = inserters.length > 0 && inserters.every(row => row.prototype === inserters[0].prototype);
+    const commonQuality = inserters.length > 0 && inserters.every(row => row.quality === inserters[0].quality);
+    const typeText = (row: InserterFormData) => `Type: ${row.prototype === undefined ? 'Automatic' : 'Explicit'} ${inserterTimingLabels(row).type}`;
+    const qualityText = (row: InserterFormData) => `Quality: ${row.quality === undefined ? 'Automatic' : 'Explicit'} ${inserterTimingLabels(row).quality}`;
+    const commonMetadata = inserters.length === 0 ? [] : [commonType ? typeText(inserters[0]) : null, commonQuality ? qualityText(inserters[0]) : null].filter(Boolean);
+    const missingTypes = inserters.filter(row => row.prototype === undefined).length;
+    const missingQualities = inserters.filter(row => row.quality === undefined).length;
+    const automaticStacks = inserters.filter(row => row.stack_size === undefined).length;
+    const automaticFilters = inserters.filter(row => usesAutomaticFilters(row.filters)).length;
+    const automaticRules = inserters.filter(row => row.overrides?.enable_control === undefined).length;
     const [enableControlModalInserterIndex, setEnableControlModalInserterIndex] = useState<number | null>(null);
 
     const selectedInserter = enableControlModalInserterIndex === null ? undefined : inserters[enableControlModalInserterIndex];
@@ -194,15 +217,26 @@ function InsertersFormComponent({
             )}
         >
 
-            {inserters.some(inserter => !inserter.prototype || !inserter.quality) && (
+            {compact && inserters.length > 0 && <Box sx={{ mb: 1 }}>
+                {commonMetadata.length > 0 && <Typography variant="body2" color="text.secondary">All {inserters.length} inserters: {commonMetadata.join(' · ')}.</Typography>}
+                {(missingTypes > 0 || missingQualities > 0) && <Typography variant="body2" color="text.secondary">
+                    Timing defaults: {missingTypes} missing type → Stack inserter; {missingQualities} missing quality → Legendary.
+                </Typography>}
+                {automaticStacks > 0 && <Typography variant="body2" color="text.secondary">Automatic stack capacity uses all capacity research ({automaticStacks} of {inserters.length} inserters). Explicit values stay set by hand.</Typography>}
+                {(automaticFilters === inserters.length || automaticRules === inserters.length) && <Typography variant="body2" color="text.secondary">
+                    {automaticFilters === inserters.length && 'All filters: Automatic, from source and destination. '}
+                    {automaticRules === inserters.length && 'All enable rules: Auto.'}
+                </Typography>}
+            </Box>}
+            {!compact && inserters.some(inserter => !inserter.prototype || !inserter.quality) && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{INSERTER_TIMING_ASSUMPTION}</Typography>
             )}
             {selectedRows.length > 0 && <BulkEditBar selected={selectedRows} total={inserters.length} priorityIds={priorityIds} availableItems={bulkItems} itemNames={itemNames}
                 onSelectAll={() => setSelection(new Set(inserters.map(row => row._uuid)))} onClear={clearSelection} onReturnFocus={returnSelectionFocus} onApply={apply} />}
-            <Box sx={LIST_GRID_SX}>
+            <Box sx={compact ? { ...LIST_GRID_SX, rowGap: 1, gridTemplateColumns: 'minmax(0, 1fr)', [ONE_LINE]: { gridTemplateColumns: 'minmax(0, 1fr)' } } : LIST_GRID_SX}>
             <SortableList itemKeys={inserters.map((ins) => ins._uuid)} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} value={inserter} index={index} machines={machines} belts={belts} chests={chests} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={remove} onEditRule={setEnableControlModalInserterIndex}
+                <InserterRow key={inserter._uuid} compact={compact} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} machines={machines} belts={belts} chests={chests} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={remove} onEditRule={setEnableControlModalInserterIndex}
                     onDuplicate={duplicate} onReorder={onReorder} canMoveDown={index < inserters.length - 1}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}

@@ -18,7 +18,8 @@ import type {
     MachineFormData,
 } from '../utils/configForm/formData';
 import { applyInserterFix } from '../utils/configForm/inserterFix';
-import { usePersistedConfigForm, type BuildLibrary } from './usePersistedConfigForm';
+import { usePersistedConfigForm, type BuildLibrary, type BuildMutationSnapshot } from './usePersistedConfigForm';
+export type { BuildMutationSnapshot } from './usePersistedConfigForm';
 
 // The form data types and helpers, for the components that use the form
 export {
@@ -57,6 +58,8 @@ interface UseConfigFormResult {
     /** Your builds: the builds kept in this browser, and the one open in this tab */
     library: BuildLibrary;
     setConfig: React.Dispatch<React.SetStateAction<ConfigFormData>>;
+    captureBuildMutation: () => BuildMutationSnapshot;
+    commitBuildReplacement: (expected: BuildMutationSnapshot, next: ConfigFormData, beforeCommit: () => void) => boolean;
     
     duplicateEntity: (kind: EntityKind, index: number) => void;
     updateInserters: (uuids: readonly string[], updates: Partial<InserterFormData>) => void;
@@ -122,7 +125,8 @@ interface UseConfigFormResult {
 }
 
 export function useConfigForm(): UseConfigFormResult {
-    const { config, setConfig, resetConfig, isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice, library } = usePersistedConfigForm();
+    const { config, setConfig, resetConfig, captureBuildMutation, commitBuildReplacement,
+        isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice, library } = usePersistedConfigForm();
 
     // Each edit applies its plain function of the form state
     const edits = useMemo(() => {
@@ -193,6 +197,8 @@ export function useConfigForm(): UseConfigFormResult {
         dismissLoadNotice,
         library,
         setConfig,
+        captureBuildMutation,
+        commitBuildReplacement,
         ...edits,
         importConfig,
         exportConfig,

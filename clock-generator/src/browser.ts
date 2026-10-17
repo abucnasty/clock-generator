@@ -74,6 +74,13 @@ export {
 
 export { validateCopies, findRepeatedUnits } from './config/copies-validator';
 export type { RepeatedUnits } from './config/copies-validator';
+export { planRepeatedUnitConversion } from './config/repeated-unit-conversion';
+export { AssertionError } from './common/assert';
+export type {
+    ConversionEntityKind, RetainedConversionEntity, RetainedConversionEntities,
+    RepeatedUnitConversionReasonCode, RepeatedUnitConversionReason,
+    RepeatedUnitConversionPlan, RepeatedUnitConversionResult,
+} from './config/repeated-unit-conversion';
 
 export {
     validateInserterCoverage,

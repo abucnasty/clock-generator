@@ -1,0 +1,30 @@
+{
+  "beforeHead": "9d88162",
+  "afterHead": "41cbd15",
+  "productionAssetCount": 412,
+  "beforeAfterAssetsIdentical": true,
+  "independentBuildAssetsIdentical": true,
+  "cacheConditions": "Both immutable sources already completed own-engine builds and full UI gate. One sequential measured run per source; no cache flush. Local durations only, no CI speed claim.",
+  "runs": [
+    {
+      "name": "before",
+      "exit": 0,
+      "wallSeconds": 2.747,
+      "results": [
+        "Test Files  86 passed (86)",
+        "Tests  1433 passed (1433)",
+        "Duration  2.32s (transform 3.72s, setup 0ms, import 10.59s, tests 1.09s, environment 4ms)"
+      ]
+    },
+    {
+      "name": "after",
+      "exit": 0,
+      "wallSeconds": 2.729,
+      "results": [
+        "Test Files  86 passed (86)",
+        "Tests  1376 passed (1376)",
+        "Duration  2.31s (transform 3.71s, setup 0ms, import 10.10s, tests 1.24s, environment 4ms)"
+      ]
+    }
+  ]
+}

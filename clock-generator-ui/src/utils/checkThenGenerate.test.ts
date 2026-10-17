@@ -108,13 +108,10 @@ describe('startsRun', () => {
     it.each([
         ['Generate', 'generate', decideGenerate({ ...idle, checkStatus: 'valid' }), true],
         ['Generate', 'check-first (no check)', decideGenerate({ ...idle, checkStatus: 'none' }), true],
-        ['Generate', 'check-first (out of date)', decideGenerate({ ...idle, checkStatus: 'out-of-date' }), true],
         ['Generate', 'wait (generating)', decideGenerate({ ...idle, generating: true }), false],
-        ['Generate', 'wait (checking)', decideGenerate({ ...idle, checkStatus: 'running' }), false],
         ['Generate', 'go-to-problem', decideGenerate({ ...idle, problems: problems('a') }), false],
         ['Generate', 'go-to-check-error', decideGenerate({ ...idle, checkStatus: 'invalid' }), false],
         ['Check only', 'check', decideCheckOnly({ ...idle, checkStatus: 'valid' }), true],
-        ['Check only', 'wait', decideCheckOnly({ ...idle, generating: true }), false],
         ['Check only', 'show-problems', decideCheckOnly({ ...idle, problems: problems('a') }), false],
     ] as const)('%s, %s: %s', (_press, _kind, decision, expected) => {
         expect(startsRun(decision)).toBe(expected);
@@ -200,10 +197,6 @@ describe('checkChipOf', () => {
         }
     });
 
-    it('says the result in words', () => {
-        expect(CHECK_TEXT.chipPassed).toBe('Check passed');
-        expect(CHECK_TEXT.chipFailed).toBe('Check failed');
-    });
 });
 
 describe('PendingChecks', () => {

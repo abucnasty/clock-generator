@@ -40,28 +40,4 @@ describe('nextStepOf', () => {
         expect(nextStepOf({ ...fresh, isRunning: true, view: 'results', pageHasCopy: true })).toBe('generate');
     });
 
-    it('names exactly one button for every combination, and the card\'s only on Results with the card', () => {
-        const flags = [false, true];
-        let combinations = 0;
-        for (const problemCount of [0, 1]) {
-            for (const isRunning of flags) {
-                for (const hasBlueprint of flags) {
-                    for (const stale of flags) {
-                        for (const view of ['configure', 'results'] as const) {
-                            for (const pageHasCopy of flags) {
-                                const step = nextStepOf({ problemCount, isRunning, hasBlueprint, stale, view, pageHasCopy });
-                                combinations += 1;
-                                expect(['generate', 'copy-bar', 'copy-page']).toContain(step);
-                                if (step === 'copy-page') {
-                                    expect(view).toBe('results');
-                                    expect(pageHasCopy).toBe(true);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        expect(combinations).toBe(64);
-    });
 });

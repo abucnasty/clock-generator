@@ -16,7 +16,7 @@ type PickableClock = Pick<ClockAlternativeView, 'id' | 'verdict' | 'ranking' | '
 };
 
 /** A row of the clock table: the clock and its index in the list, which selecting it goes by */
-interface ClockRow<T> {
+export interface ClockRow<T> {
     alternative: T;
     index: number;
 }
@@ -270,5 +270,20 @@ export function partitionClockRows<T extends Pick<ClockAlternativeView, 'id' | '
         unstableCount: allUnstable.length,
         hiddenCount: allUnstable.length - unstable.length,
         anyStable,
+    };
+}
+
+export interface BeltClockGroups<T> {
+    matches: ClockRow<T>[];
+    requiresChange: ClockRow<T>[];
+}
+
+/** Group eligible, globally indexed rows without changing their order or eligibility. */
+export function groupClockRowsByBelt<T extends Pick<ClockAlternativeView, 'ranking'>>(
+    rows: readonly ClockRow<T>[],
+): BeltClockGroups<T> {
+    return {
+        matches: rows.filter(({ alternative }) => alternative.ranking.matches_belt_choice),
+        requiresChange: rows.filter(({ alternative }) => !alternative.ranking.matches_belt_choice),
     };
 }

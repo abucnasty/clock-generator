@@ -7,17 +7,12 @@ import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { InserterStatus, MachineStatus } from 'clock-generator/light';
-import { COLOR_BLIND_PALETTE, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS, TIMELINE_TRACK_COLOR } from './colors';
+import { useChartColors } from '../hooks/useChartColors';
 import { Panel } from './Panel';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import { fuelEventRows, fuelTraceSummary, type FuelEventRow } from '../utils/fuelAccessibility';
 import { durationText } from '../utils/numberText';
 
-const LEVEL_COLOR = COLOR_BLIND_PALETTE.skyBlue;
-const WINDOW_COLOR = COLOR_BLIND_PALETTE.lightGrey;
-// the colours the Detailed state chart gives the same things: an inserter's swing, and a machine with no fuel
-const SWING_COLOR = INSERTER_STATUS_COLORS[InserterStatus.SWING];
-const EMPTY_COLOR = MACHINE_STATUS_COLORS[MachineStatus.NO_FUEL];
 /** One line to a cell, the first (the entity's name) apart: the tables scroll sideways in their box instead of breaking a value over five lines */
 /** The same for the fuel clocks, whose last cell ("17 in 3 wake windows (5.1/min)") is the one that wraps */
 const NOWRAP_CLOCK_CELLS = { '& td:not(:first-of-type):not(:last-of-type)': { whiteSpace: 'nowrap' } } as const;
@@ -189,6 +184,8 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
 
 /** The fuel a machine held: the highest of each sample as an area, the lowest as a line, and the insertion limit dashed */
 function FuelLevelChart({ levels, durationTicks, insertionLimit, label, descriptionId }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number; label: string; descriptionId: string }) {
+    const { palette, track: TIMELINE_TRACK_COLOR, machine } = useChartColors();
+    const LEVEL_COLOR = palette.skyBlue, WINDOW_COLOR = palette.lightGrey, EMPTY_COLOR = machine[MachineStatus.NO_FUEL];
     const top = Math.max(levels.max_level, insertionLimit) * 1.08;
     const y = (level: number) => (1 - level / top) * LEVEL_HEIGHT;
     const x = (sample: number) => Math.min(sample * levels.ticks_per_sample, durationTicks);
@@ -206,7 +203,7 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit, label, descript
             preserveAspectRatio="none"
             sx={{ display: 'block', width: '100%', height: LEVEL_HEIGHT, bgcolor: TIMELINE_TRACK_COLOR, borderRadius: 0.5 }}
         >
-            <polygon points={[`0,${LEVEL_HEIGHT}`, ...steps(levels.max), `${durationTicks},${LEVEL_HEIGHT}`].join(' ')} fill={LEVEL_COLOR} fillOpacity={0.3} />
+            <polygon points={[`0,${LEVEL_HEIGHT}`, ...steps(levels.max), `${durationTicks},${LEVEL_HEIGHT}`].join(' ')} fill={LEVEL_COLOR} fillOpacity={0.3} stroke={LEVEL_COLOR} strokeWidth={1} vectorEffect="non-scaling-stroke" />
             <polyline points={steps(levels.min).join(' ')} fill="none" stroke={LEVEL_COLOR} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
             <line
                 x1={0} x2={durationTicks} y1={y(insertionLimit)} y2={y(insertionLimit)}
@@ -215,7 +212,7 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit, label, descript
             {emptySamples.map(sample => (
                 <rect
                     key={sample} x={x(sample)} width={x(sample + 1) - x(sample)} y={0} height={LEVEL_HEIGHT}
-                    fill={EMPTY_COLOR} fillOpacity={0.5} stroke={EMPTY_COLOR} strokeWidth={1} vectorEffect="non-scaling-stroke"
+                    fill={EMPTY_COLOR} fillOpacity={1} stroke={EMPTY_COLOR} strokeWidth={1} vectorEffect="non-scaling-stroke"
                 />
             ))}
         </Box>
@@ -223,6 +220,8 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit, label, descript
 }
 
 function SwingBar({ swing, durationTicks, inserterNumber }: { swing: FuelSwing; durationTicks: number; inserterNumber: number }) {
+    const { inserter } = useChartColors();
+    const SWING_COLOR = inserter[InserterStatus.SWING];
     return (
         <Tooltip
             title={`${swing.amount} items, tick ${swing.start} to ${swing.end}`}
@@ -248,6 +247,8 @@ function SwingBar({ swing, durationTicks, inserterNumber }: { swing: FuelSwing; 
 
 /** One fuel inserter over the run: every enable window of its fuel clock, and the windows it swung in */
 function FuelClockRow({ inserter, swings, durationTicks, descriptionId }: { inserter: FuelInserterPlan; swings: FuelSwing[]; durationTicks: number; descriptionId: string }) {
+    const { palette, track: TIMELINE_TRACK_COLOR } = useChartColors();
+    const WINDOW_COLOR = palette.lightGrey;
     const windowStarts: number[] = [];
     for (let start = inserter.window.start; start < durationTicks; start += inserter.modulus) {
         windowStarts.push(start);
@@ -279,7 +280,7 @@ function FuelClockRow({ inserter, swings, durationTicks, descriptionId }: { inse
                         // the stroke keeps a window visible when a long run makes it narrower than a pixel
                         <rect
                             key={start} x={start} width={windowTicks} y={0} height={1}
-                            fill={WINDOW_COLOR} fillOpacity={0.6} stroke={WINDOW_COLOR} strokeWidth={1} vectorEffect="non-scaling-stroke"
+                            fill={WINDOW_COLOR} fillOpacity={1} stroke={WINDOW_COLOR} strokeWidth={1} vectorEffect="non-scaling-stroke"
                         />
                     ))}
                 </Box>
@@ -299,6 +300,8 @@ function LegendItem({ color, label, opacity = 1 }: { color: string; label: strin
 }
 
 function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
+    const { palette, inserter, machine } = useChartColors();
+    const LEVEL_COLOR = palette.skyBlue, WINDOW_COLOR = palette.lightGrey, SWING_COLOR = inserter[InserterStatus.SWING], EMPTY_COLOR = machine[MachineStatus.NO_FUEL];
     const { durationTicks } = run;
     const summaryId = useId();
     const events: FuelEventRow[] = fuelEventRows(fuel);

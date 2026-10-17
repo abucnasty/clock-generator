@@ -1,6 +1,6 @@
 import { Cancel, Check, CheckCircle, ContentCopy, RemoveCircleOutline, Warning } from '@mui/icons-material';
 import { Alert, Box, Button, Typography } from '@mui/material';
-import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
 import {
     beltLine,
@@ -14,16 +14,14 @@ import {
 } from '../utils/clockSummary';
 import { REQUIRES_FACTORIO, needsNoClock } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
-import { buildWakeWindowRows } from '../utils/wakeWindows';
-import { SURFACE } from '../theme/tokens';
-import { InstallSteps } from './InstallSteps';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { CopyLabel } from './WorkflowBar';
 import type { GenerationAssumptions } from '../worker/types';
-import { MODELED_START, PLANNING_START, modeledDetails, startCheckSummary } from '../utils/modelAssumptions';
-import { formatNumberText } from '../utils/numberText';
-import { useGameNames } from '../hooks/useGameNames';
+import { startCheckSummary } from '../utils/modelAssumptions';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -72,9 +70,10 @@ interface ResultSummaryCardProps {
 
 /** One fact of the clock in an inset tile: its name, the value, and a line under it */
 function Tile({ label, value, sub, icon }: { label: string; value: string; sub: string; icon?: ReactNode }) {
+    const { density } = useDisplayPreferences();
     return (
         // a row of the card, as an entity row is on Configure
-        <Box sx={{ bgcolor: SURFACE.row, p: 1.5, minWidth: 0 }} data-summary-tile={label}>
+        <Box sx={{ bgcolor: (theme: Theme) => themeTokens(theme).surface.row, p: density === 'compact' ? 1 : 1.5, minWidth: 0 }} data-summary-tile={label}>
             <Typography variant="body2" color="text.secondary" component="p">{label}</Typography>
             <Typography variant="h6" component="p" sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }} data-tile-value>
                 {icon}
@@ -96,7 +95,7 @@ type SelectedProps = ResultSummaryCardProps & { selected: ClockAlternativeView }
 
 /** The selected clock's name, why it is the one, and its four facts */
 function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingElement | null> }) {
-    const { itemLabel } = useGameNames();
+    const { density } = useDisplayPreferences();
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected, nameRef } = props;
     const isRecommended = selectedIndex === recommendedIndex;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
@@ -128,26 +127,12 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 {clockTechnicalName(selected)}
             </Typography>
             <Typography variant="body2" sx={{ mt: 1 }} data-start-assumption>
-                Modeled cold start. {startCheckSummary(alternatives, props.generationAssumptions ?? null)}
+                Full input supplies; empty modeled machines, buffers and hands; phase 0. Rates follow model warm-up. {startCheckSummary([selected], props.generationAssumptions ?? null)}
             </Typography>
-            <Box component="details" sx={{ mt: 1, maxWidth: '80ch', overflowWrap: 'anywhere' }} data-model-assumptions>
-                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Model and tested starts</Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START} {PLANNING_START}</Typography>
-                {modeledDetails(selected, itemLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                    Existing clock-phase checks: {selected.asBuilt?.start_phases_checked ?? 'unavailable'}. Extended sampled starts are a separate check.
-                </Typography>
-                {(selected.assessment.start_dependence?.starts.length ?? 0) === 0 && <Typography variant="body2" sx={{ mt: 1 }}>
-                    {props.generationAssumptions?.startDependenceRequested === false ? 'This clock: other starts were not checked.' : 'This clock: other-start results are unavailable.'}
-                </Typography>}
-                {selected.assessment.start_dependence?.starts.map(start => (
-                    <Typography key={start.id} variant="body2" sx={{ mt: 0.5 }}>
-                        {start.label}: {start.reaches_target ? 'reaches target' : 'does not reach target'}
-                        {start.output_items_per_period === null ? '; settled rate unavailable' : `; ${formatNumberText(start.output_items_per_period)} items per period`}.
-                    </Typography>
-                ))}
-                <Typography variant="body2" sx={{ mt: 1 }}>These samples do not cover every running inventory, build order, physical belt throughput or in-game recovery.</Typography>
-            </Box>
+
+            <Typography variant="body2" sx={{ mt: 0.5 }} data-hold-status>
+                Modeled output holds: {selected.assessment.holds === true ? 'Yes' : selected.assessment.holds === false ? 'No' : 'unavailable'}.
+            </Typography>
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1, mt: 1, maxWidth: '80ch' }}>
                 {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
@@ -170,27 +155,22 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                     display: 'grid',
                     gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
                     gap: 1,
-                    mt: 2,
+                    mt: density === 'compact' ? 1 : 2,
                 }}
             >
                 <Tile label={CARD_COPY.makes} value={makes.value} sub={makes.sub} />
                 <Tile label={CARD_COPY.wakeUps} value={wakeUps.value} sub={wakeUps.sub} />
-                <Tile label={CARD_COPY.recovers} value={recovers.value} sub={recovers.detail} icon={RECOVERS_ICON[recovers.kind]} />
-                <Tile label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub="" />
+                <Tile label={CARD_COPY.recovers} value={recovers.value} sub={density === 'compact' ? 'Simulator loss trials' : recovers.detail} icon={RECOVERS_ICON[recovers.kind]} />
+                <Tile label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={selected.ranking.matches_belt_choice ? 'Matches the saved belt setting in the selection rule' : 'Requires a different belt setting'} />
             </Box>
         </>
     );
 }
 
-/** The warnings, the Copy button and the steps that put the selected clock into the game */
+/** The warnings and the Copy action, visible whichever context is open */
 function ClockCopy(props: SelectedProps) {
     const warns = props.rateWarning !== null || props.stale;
-    // what each inserter and drill carries and between which ends, as the Wake windows rows say it
     const { selected } = props;
-    const movesOf = useMemo(() => {
-        const moves = new Map(buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]));
-        return (id: string) => moves.get(id) ?? { items: [], route: '' };
-    }, [selected]);
     return (
         <>
             {props.rateWarning && (
@@ -217,17 +197,17 @@ function ClockCopy(props: SelectedProps) {
                 <Typography variant="body2" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
             </Box>}
 
-            <InstallSteps install={props.selected.install} movesOf={movesOf} stale={props.stale} />
         </>
     );
 }
 
 /**
  * The answer at the top of Results: the selected clock by name, why it was picked, its facts, the button that copies
- * it and the steps that put it into the game. While a run has no clock yet, it says so.
+ * it. While a run has no clock yet, it says so.
  */
 export function ResultSummaryCard(props: ResultSummaryCardProps) {
     const { alternatives, selectedIndex, isGenerating } = props;
+    const { density } = useDisplayPreferences();
     const nameRef = useRef<HTMLHeadingElement>(null);
     const selected = alternatives[selectedIndex];
 
@@ -251,7 +231,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     // focus, when the run it starts empties the list of clocks
     const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
     return (
-        <Panel title={CARD_COPY.heading} data-result-card="">
+        <Panel title={CARD_COPY.heading} sx={{ '& > :last-child': { p: density === 'compact' ? 1.5 : 2 } }} data-result-card="" data-build-anchor="selected-clock">
             {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}

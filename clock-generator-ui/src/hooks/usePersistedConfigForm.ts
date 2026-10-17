@@ -201,6 +201,12 @@ interface OpenBuild {
     form: ConfigFormData;
 }
 
+export interface BuildMutationSnapshot {
+    buildId: string;
+    revision: number;
+    form: ConfigFormData;
+}
+
 const newBuildMeta = (id: string, form: ConfigFormData, name: string | null, now: number): BuildMeta => ({
     id,
     name,
@@ -275,6 +281,7 @@ export function usePersistedConfigForm() {
     // read by the handlers and the storage listener, which may run after an await; the id is set with the state
     const idRef = useRef(opened.activeId);
     const formRef = useRef(current.form);
+    const revisionRef = useRef(0);
     const indexRef = useRef(index);
     const conflictRef = useRef(conflict);
     // the text this tab last wrote or loaded for its build, which another tab's save is told from
@@ -283,9 +290,21 @@ export function usePersistedConfigForm() {
     const deletedElsewhereRef = useRef(false);
     // a save failed: the warning shows once, until a save works again
     const storageFullRef = useRef(false);
-    useEffect(() => {
-        formRef.current = current.form;
-    }, [current.form]);
+
+    const captureBuildMutation = useCallback((): BuildMutationSnapshot => ({
+        buildId: idRef.current, revision: revisionRef.current, form: formRef.current,
+    }), []);
+    const matchesBuildMutation = useCallback((expected: BuildMutationSnapshot): boolean =>
+        expected.buildId === idRef.current && expected.revision === revisionRef.current && expected.form === formRef.current, []);
+    const commitBuildReplacement = useCallback((expected: BuildMutationSnapshot, next: ConfigFormData, beforeCommit: () => void): boolean => {
+        if (!matchesBuildMutation(expected)) return false;
+        // This callback runs once in the continuation, never in a replayable React updater.
+        beforeCommit();
+        formRef.current = next;
+        revisionRef.current++;
+        setCurrent({ id: expected.buildId, form: next });
+        return true;
+    }, [matchesBuildMutation]);
 
     const setConflict = useCallback((next: (state: ConflictState) => ConflictState) => {
         const value = next(conflictRef.current);
@@ -326,6 +345,7 @@ export function usePersistedConfigForm() {
         }
         idRef.current = next.id;
         formRef.current = next.form;
+        revisionRef.current++;
         lastTextRef.current = text;
         setCurrent(next);
         setConflict((state) => nextConflict(state, { kind: 'switched' }));
@@ -336,13 +356,14 @@ export function usePersistedConfigForm() {
             return;
         }
         const savedConfig = stored.config;
+        const expected = captureBuildMutation();
         let alive = true;
         askEngine({ kind: 'saved-config', config: savedConfig }).then(
             (problem) => {
                 if (!alive) return;
                 if (problem === null) {
                     // unless the config was replaced (imported or reset) in the meantime
-                    setCurrent((previous) => (previous.form === defaultConfig ? { id: previous.id, form: savedConfig } : previous));
+                    if (expected.form === defaultConfig) commitBuildReplacement(expected, savedConfig, () => {});
                 } else {
                     console.warn('Saved config in localStorage is invalid, using defaults:', problem);
                     setLoadNotice(backUpSavedConfig(pageLocal, stored.text, backupKey(opened.activeId)));
@@ -357,7 +378,7 @@ export function usePersistedConfigForm() {
         return () => {
             alive = false;
         };
-    }, [stored, defaultConfig, opened.activeId]);
+    }, [stored, defaultConfig, opened.activeId, captureBuildMutation, commitBuildReplacement]);
 
     // the tab remembers its build, so a reload stays on it
     useEffect(() => {
@@ -433,10 +454,12 @@ export function usePersistedConfigForm() {
 
     /** Keeps the id: every edit, Undo and the form's own helpers go through it */
     const setConfig = useCallback<Dispatch<SetStateAction<ConfigFormData>>>((action) => {
-        setCurrent((previous) => {
-            const form = typeof action === 'function' ? action(previous.form) : action;
-            return form === previous.form ? previous : { id: previous.id, form };
-        });
+        const previous = formRef.current;
+        const form = typeof action === 'function' ? action(previous) : action;
+        if (form === previous) return;
+        formRef.current = form;
+        revisionRef.current++;
+        setCurrent({ id: idRef.current, form });
     }, []);
 
     // Reset build keeps the build, now empty, in its place: the save writes the default over it
@@ -612,5 +635,6 @@ export function usePersistedConfigForm() {
         closeConflict,
     }), [index.builds, writable, current.id, currentMeta, openBuild, newBuild, duplicateBuild, renameBuild, deleteBuild, addBuild, restore, conflict, loadOtherTabVersion, closeConflict]);
 
-    return { config: current.form, setConfig, resetConfig, isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice, library };
+    return { config: current.form, setConfig, resetConfig, captureBuildMutation, commitBuildReplacement,
+        isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice, library };
 }

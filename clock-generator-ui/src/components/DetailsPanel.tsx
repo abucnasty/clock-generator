@@ -1,5 +1,4 @@
 import { Tab, Tabs } from '@mui/material';
-import { useState } from 'react';
 import type { ClockInsight, SwingBackoffReport } from 'clock-generator/browser';
 import type { FuelViewData, ShiftOptionsView } from '../worker/types';
 import type { GeneratedFor } from '../utils/resultsStaleness';
@@ -13,7 +12,7 @@ import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TabBody } from './TabBody';
 import { tabProps } from '../utils/tabIds';
 
-type DetailsTab = 'insights' | 'fuel' | 'blueprint';
+import type { DetailsTab } from '../utils/buildViewContext';
 
 const DETAILS_COPY = {
     heading: 'Details',
@@ -26,6 +25,8 @@ const DETAILS_COPY = {
 const PREFIX = 'details';
 
 interface DetailsPanelProps {
+    tab: DetailsTab;
+    onTabChange(tab: DetailsTab): void;
     /** The selected clock's findings */
     insights: ClockInsight[];
     shiftOptions: ShiftOptionsView | null;
@@ -45,16 +46,16 @@ interface DetailsPanelProps {
  * (only for a build with fuel inserters) and its blueprint string.
  */
 export function DetailsPanel(props: DetailsPanelProps) {
-    const [tab, setTab] = useState<DetailsTab>('insights');
+    const { tab, onTabChange } = props;
     const { fuelView } = props;
     // the fuel tab is only there for a build with fuel inserters
     const shownTab: DetailsTab = tab === 'fuel' && fuelView === null ? 'insights' : tab;
 
     return (
-        <Panel title={DETAILS_COPY.heading} sx={{ mt: 2, mb: 0 }} data-details="">
+        <Panel title={DETAILS_COPY.heading} level={3} sx={{ mt: 2, mb: 0 }} data-details="" data-build-anchor="details">
             <Tabs
                 value={shownTab}
-                onChange={(_, value: DetailsTab) => setTab(value)}
+                onChange={(_, value: DetailsTab) => onTabChange(value)}
                 // the arrow keys show the tab they move to
                 selectionFollowsFocus
                 aria-label={TABLIST_NAMES.details}

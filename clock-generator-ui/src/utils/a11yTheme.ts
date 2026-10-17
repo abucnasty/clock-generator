@@ -1,5 +1,5 @@
 import type { Theme, ThemeOptions } from '@mui/material/styles';
-import { CONTROL } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
 
 /**
  * The theme's accessibility rules, added to the base theme in `App.tsx`: a visible 2px focus ring in the brand colour
@@ -8,6 +8,7 @@ import { CONTROL } from '../theme/tokens';
  * (2.4.11) is `useStickyHeaderHeight`'s job, which sets the page's `scroll-padding-top`.
  */
 export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
+    const CONTROL = themeTokens(theme).control;
     const ring = { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 };
     // inside the item, so a scroll container or a full-width row does not clip the ring
     const insetRing = { '&.Mui-focusVisible': { outlineOffset: -2 } };
@@ -16,6 +17,8 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
             styleOverrides: {
                 // what MUI does not draw itself: role="button" boxes such as the filter slots, the drag handle
                 ':focus-visible': ring,
+                ':root': { colorScheme: theme.palette.mode },
+                '@media (forced-colors: active)': { ':focus-visible, .MuiButtonBase-root.Mui-focusVisible': { outline: '2px solid Highlight' } },
             },
         },
         MuiButtonBase: {

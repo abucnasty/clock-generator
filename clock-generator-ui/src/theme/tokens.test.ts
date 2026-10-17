@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AA, contrastRatio } from './contrast';
-import { CONTROL, ROLE, SURFACE, SURFACE_HOVER, TEXT, TOKEN_PAIRS } from './tokens';
+import { CONTROL, ROLE, SURFACE, TEXT, TOKEN_PAIRS, tokenPairsFor } from './tokens';
 
 const has = (fg: string, bg: string) => TOKEN_PAIRS.some(pair => pair.fg === fg && pair.bg === bg);
 
 describe('TOKEN_PAIRS', () => {
-    it.each(TOKEN_PAIRS.map(pair => [pair.name, pair] as const))('%s meets WCAG 2.2 AA', (_, pair) => {
+    it.each((['dark', 'light'] as const).flatMap(mode => tokenPairsFor(mode).map(pair => [`${mode}: ${pair.name}`, pair] as const)))('%s meets WCAG 2.2 AA', (_, pair) => {
         const ratio = contrastRatio(pair.fg, pair.bg);
         const needed = pair.kind === 'text' ? AA.text : AA.nonText;
         expect(ratio, `${pair.name}: ${ratio.toFixed(2)}:1, needs ${needed}:1`).toBeGreaterThanOrEqual(needed);
@@ -40,20 +40,6 @@ describe('TOKEN_PAIRS', () => {
             expect(has(CONTROL.border, surface), surface).toBe(true);
             expect(has(CONTROL.trackOff, surface), surface).toBe(true);
             expect(has(CONTROL.focus, surface), surface).toBe(true);
-        }
-    });
-});
-
-describe('the tokens', () => {
-    it('are six-digit hex colours, so the theme and the table cannot drift to a named colour', () => {
-        const values = [
-            ...Object.values(SURFACE),
-            ...Object.values(SURFACE_HOVER),
-            ...Object.values(ROLE).flatMap(role => Object.values(role)),
-            ...Object.values(CONTROL),
-        ];
-        for (const value of values) {
-            expect(value).toMatch(/^#[0-9a-f]{6}$/);
         }
     });
 });

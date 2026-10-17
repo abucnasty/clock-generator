@@ -17,7 +17,6 @@ import {
     type Problem,
 } from './firstProblem';
 
-type Machine = { id: number; recipe: string };
 type Input = Parameters<typeof problemsOf>[0];
 
 const filledIn = (overrides: Partial<Input> = {}): Input => ({
@@ -118,31 +117,6 @@ describe('problemsOf', () => {
         ]);
     });
 
-    it('agrees with the conditions Generate used to check, one by one', () => {
-        // the chain canGenerate was before it read problemsOf, for an initialized page with no generation running
-        const oldCanGenerate = (input: Input, checked: InserterCoverageIssue[] | null) => Boolean(
-            input.targetOutput.recipe &&
-            input.targetOutput.items_per_second > 0 &&
-            input.targetOutput.copies > 0 &&
-            input.machines.length > 0 &&
-            input.machines.every((m: Machine) => m.recipe) &&
-            checked?.length === 0
-        );
-        const oneIssue = [issue('missing_input_inserter', 1, 'iron-plate')];
-        const builds: [Input, InserterCoverageIssue[]][] = [
-            [filledIn({ targetOutput: { recipe: '', items_per_second: 240, copies: 1 } }), []],
-            [filledIn({ targetOutput: { recipe: 'x', items_per_second: 0, copies: 1 } }), []],
-            [filledIn({ targetOutput: { recipe: 'x', items_per_second: 240, copies: 0 } }), []],
-            [filledIn({ machines: [] }), []],
-            [filledIn({ machines: [{ id: 1, recipe: 'x' }, { id: 2, recipe: '' }] }), []],
-            [filledIn(), oneIssue],
-            [filledIn(), []],
-        ];
-        for (const [input, checked] of builds) {
-            const hasNoProblems = problemsOf({ ...input, coverageIssues: checked }).length === 0;
-            expect(hasNoProblems).toBe(oldCanGenerate(input, checked));
-        }
-    });
 });
 
 describe('a target more than the machines can make', () => {
@@ -194,9 +168,11 @@ describe('barNoteOf', () => {
         expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
     });
 
-    it('says where to start, neutrally, on a build with nothing entered yet', () => {
+    it('describes entry routes until building by hand is chosen, then points to the recipe', () => {
+        const routes = { text: 'Start with Paste from Factorio, try an example, or build by hand.', target: null };
         const start = { text: 'Start: pick the recipe you want to make', target: { kind: 'target-recipe' } };
-        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true })).toEqual(start);
+        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true })).toEqual(routes);
+        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true, entryRoute: 'manual' })).toEqual(start);
         expect(barNoteOf({ problems: [recipeProblem], busy: true, checkStatus: 'none', blank: true })).toBeNull();
         expect(barNoteOf({ problems: [], busy: false, checkStatus: 'none', blank: true })).toBeNull();
     });

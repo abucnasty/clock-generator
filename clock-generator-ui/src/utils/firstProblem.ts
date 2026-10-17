@@ -24,7 +24,9 @@ export const PROBLEM_TEXT = {
     missingOutput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
         `${entityLabel('machine', machineId)} has no inserter taking ${itemLabel(item)} out`,
     validationFailed: 'The last check failed. Show why',
-    /** On a build with nothing entered yet: its next step, said neutrally rather than as problems */
+    /** On a build with nothing entered yet, before a manual route has been chosen */
+    routes: 'Start with Paste from Factorio, try an example, or build by hand.',
+    /** After choosing to build by hand: its next step, said neutrally rather than as problems */
     start: 'Start: pick the recipe you want to make',
 } as const;
 
@@ -134,19 +136,22 @@ export function firstProblemOf(input: ProblemsInput): Problem | null {
 /**
  * The one note in the workflow bar, which says where Generate and Check only go: the first problem, else the reason the
  * last check failed. Null while something runs (the buttons then say what it is) or when there is nothing to say. On a
- * `blank` build (nothing entered yet) the problems are only the next step: the note says where to start.
+ * `blank` build (nothing entered yet) the note describes the routes, or where to start after choosing to build by hand.
  */
-export function barNoteOf({ problems, busy, checkStatus, blank = false }: {
+export function barNoteOf({ problems, busy, checkStatus, blank = false, entryRoute = 'routes' }: {
     problems: Problem[];
     busy: boolean;
     checkStatus: CheckStatus;
     blank?: boolean;
+    entryRoute?: 'routes' | 'manual';
 }): Problem | null {
     if (busy) {
         return null;
     }
     if (blank && problems.length > 0) {
-        return { text: PROBLEM_TEXT.start, target: { kind: 'target-recipe' } };
+        return entryRoute === 'manual'
+            ? { text: PROBLEM_TEXT.start, target: { kind: 'target-recipe' } }
+            : { text: PROBLEM_TEXT.routes, target: null };
     }
     if (problems.length > 0) {
         return problems[0];

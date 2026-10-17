@@ -33,10 +33,10 @@ come from here.
 
 ## Current state
 
-- **Phase:** Phase3 complete and owner-approved, merged into feat/ux-rework in [#209](https://github.com/abucnasty/clock-generator/pull/209),4a80bd7. Owner approved upstream0.16 compatibility and factual D4/D5 refinements before D3 baseline; compatibility implementation is next, then Phase4 includingD10.
-- **Branch:** [`feat/ux-rework`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework); the ledger lives here until Phase4 starts. Phase3 origin/local branch retired after exact full-tree merge proof; all phase PRs/evidence remain preserved.
-- **Open checkpoints:** Phase3 owner approval received and merge completed; final master checkpoint remains ahead. Independent impact review of upstream205/206 plus193 is COMPLETE; recommendation is APPROVED for bounded compatibility/D4-D5 refinement; implement before D3 baseline, preserving remaining new-scope boundaries. Sidecar/app and all2.5 installation cases alreadyPASS; no repeat owner ask is implied by this read-only audit.
-- **Phase 4:** D1–D9 plus first-visit routing approved against feat/ux-rework; exact choices in specs/phase4-decisions.md. D8 investigation only; D9 implemented UI-test cleanup is mandatory before feature→master. Phase3 is merged after owner approval. The upstream recommendation and bounded D4/D5 refinements are approved; compatibility is in implementation before D3 baseline. D10 is included. Root has adopted the two-build/three-task D3 protocol; source/candidate reconciliation and execution follow compatibility acceptance.
+- **Phase:** Phase4 implementation and focused acceptance complete. Independent item CODE/UX and all three fresh Sol/high phase personas PASS. [PR #211](https://github.com/abucnasty/clock-generator/pull/211) is the owner review checkpoint; no auto-merge.
+- **Branch:** `feat/ux-rework-p4-review` into `feat/ux-rework`; no Phase4 change has landed in feature or master.
+- **Open checkpoints:** owner PR review/merge; D8 implementation remains a separate proposal needing owner approval. Existing owner game/Sidecar installation acceptance is unchanged.
+- **Phase4 scope:** D1/D2/D4/D5/D6/D7, first-visit refinement and D10 implemented; D3 baseline and bounded same-fixture final repeat complete; D9 actual cleanup implemented and independently reviewed. The custom full-AA harness is removed before PR readiness. [Evidence, screenshots, reviews and limitations](review/phase4/EVIDENCE.md). Exact-head CI status is shown in PR211.
 - **Phase 1:** merged into `feat/ux-rework` (#170) after the end review, its fixes (#168) and the owner's approval
 - **Phase 2:** merged in #203 after the owner installation PASS; explicit3.F carries are addressed in P3.3.2 A+B/3.F. Full fresh phase-end capture, THREE new personas and final affected copy rechecks are complete; all PASS with documented minor carries.
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
@@ -723,3 +723,58 @@ close line 318 (lane field, fixed on p1).
 - 2026-10-16: Independent Sol/high UXround1 COMPLETE PASS on930feb7, C1–C4/UX-016-01 fixed with no new material finding; root read full CODE+UXreports. Complete unchanged reports preserved under review/upstream-016. Current flat native manifest inventories1138 files with historical links/negatives and honest source-only boundaries. Root verified recovered capture files equal executed r5c runtime; syntax checks pass, product outside UXdocs unchanged. Compatibility child PR/exactheadCI now next; no D3/Phase4 product claimed.
 
 - 2026-10-16: Compatibility PR210 MERGED fb680f06a78375582ff46ad9136bd237f035cc19 using required merge commit after CODE+UXround1 PASS and exact185e6c1 CI Unit/UI PASS; generationCI skipped per unchanged nonmaster workflow, inherited full engine generation gate retained. Entire merged tree equals reviewed docshead185e6c1 and productoutsideUXdocs equals930feb7; pinnedmasterc396 ancestry retained. Root source-matched isolated5325 D3baseline first1440 now running from adopted manifest before anyPhase4product. Latest owner warning: no hours of D3fixture/tooling; cap capture troubleshooting10minutes, record real reached/partial/blocked outcomes and use directwalkthrough if necessary.
+
+- 2026-10-16: D3 BASELINE COMPLETE before anyPhase4product: prepared unchanged script/exacttwooriginalinputs at1440x900/720x900; bothserialruns exit0,12taskrecords allvalid/reached, actualcopied+decodedblueprintidentity4/4 and config/result/pick/generationfactsrestored4/4. Rootadoptedactualcandidatepins before720; nofixturechanges/capturerepairs. Baseline records actual warnedA337.5959/297holdsfalse and B216.06138/216holdstrue, 4511/7273pxdesktop and5411/9073pxnarrowtask2traversal, contextreturnConfigure/top. Fullscorecardcapture/phase4-task-audit-EVIDENCE.md +/tmp/ux-phase4-d3-resume/BASELINE-ADOPTED.json. D4clarifiesobservedrate/hold/beltfactlabels withinapprovedfactualscope; D7ownscontext. DispatchResults/header+D4+D5Results/import+D6foundation andD10parallel now; noextraD3prerequisites.
+
+- 2026-10-16: ActualPhase4productauthoringbegun. Sol/high/fastOFF Results/headerbundle author delivered105cbeb: ONE DisplayPreferencesutility/context/button, controlledResultDetailtype and globallyindexedbeltgrouphelper; rootreadsource, requiredpureupdaterstorageeffect, committed/pushed and exactheadown-sourceTypeScriptPASS. FullbundleUIcomposition continues; noitemacceptanceclaimed. Independentparallel Sol/highD10author implementscanonicalengineproof/typedworkerprovider thenpersistedownerAPI beforeAppconsumer. Sol/highcapturewriter developsactualsourceconsumersinparallel. Physical4slotsincludingroot, noextraagents/toolingprerequisites. Allfullitemgates/native/rootrepeat/independentCODE+UX/exactCI/twoformalrounds andthreefreshphaseendpersonas/D9actualcleanup/ownerphasecheckpointretained.
+
+
+## Phase 4 live acceptance — 2026-10-16 continuation
+
+Compatibility PR #210 merged into feature with a merge commit, preserving upstream ancestry, after independent CODE/UX PASS and exact-head CI. Prepared D3 baseline is complete at both widths using the unchanged original two fixtures; no capture repairs or fixture research were needed. Full receipts: `/tmp/ux-phase4-d3-resume/BASELINE-ADOPTED.json`, `capture/phase4-task-audit-EVIDENCE.md`.
+
+| Bundle | Frozen source / state | Acceptance remaining |
+|---|---|---|
+| D1A + D4 + D5 Results/import + D6 foundation | `edf89b4`; UI 1305/81, all gates and independent test/build repeat PASS | Native r2 preserves earlier diagnostics; formal CODE/UX, child CI/merge |
+| D10 repeated-unit conversion | `eaf7eaf`; engine 1075 unit / 147 generation, UI 1304/82, full gates and independent UI repeat PASS | Root-derived real engine plan ready; native, formal CODE/UX, child CI/merge |
+| D1B + D5 Configure | `6899860`; UI 1305/81, all gates and independent repeat PASS | Native, formal CODE/UX, child CI/merge |
+| First visit | `f6f1dbd`; UI 1305/81, all gates and independent repeat PASS | Native, formal CODE/UX, child CI/merge |
+| D2 + D6 themes | `52455d2`; author tree compile/lint/knip/UI 1423/82 PASS; immutable full gates/repeat running | Native both modes/System, formal CODE/UX, child CI/merge |
+| D7 context | Implemented; compile/lint/knip and focused 5 regressions PASS; final default-position correction in progress | Freeze/full gates/repeat/native/reviews/CI |
+| D9 independent cleanup | Fresh author applying independently justified 24 audit groups; product untouched | Identical-product before/after measurements, later Phase4 refresh, full gates/reviews/CI |
+| D8 | Investigation/proposal only | Owner implementation approval remains separate; no rate feature implemented |
+
+All workers use Sol/high, fast off. No Phase4 formal review fix rounds have started. Full four-width phase capture, same-fixture explanatory and Compact D3 repeat, three fresh phase personas, coach/retro and owner phase-to-feature merge checkpoint remain required. No merge to master is authorized.
+
+
+## Owner directions — focused accessibility and review control
+
+2026-10-16: Owner explicitly adopted keyboard-and-colour scope for Phase4 and remaining UX work, replacing comprehensive WCAG2.2AA acceptance. [Active specification](specs/keyboard-colour-profile.md) and common gate supersede old wording. Preserve ordinary functional checks, code+UX reviews, three fresh phase reviewers, D3 repeat and existing accessibility features. Stop further custom compliance-harness expansion.
+
+Owner then explicitly scheduled custom full-AA capture/audit harness deletion immediately AFTER Phase4 finishes, before further phase work. Inventory55 tracked scripts/34879 lines; no files removed yet. No deletion of ordinary Vitest/regression coverage is authorized by that tooling cleanup.
+
+Owner prohibits automatic PR merges: all PRs remain open for owner review/authorization. Prepare the Phase4 review checkpoint without landing into feature/master or auto-merging child PRs. D9 first cleanup CODE/UX round0 PASS; full gates+root repeat1248/81, all412assets unchanged; final provider reconciliation and CI remain open.
+
+
+## Phase 4 review candidate and harness removal timing
+
+The combined review candidate is `41cbd15` on `feat/ux-rework-p4-review` in `/tmp/ux-phase4-review`; all product branches have been integrated locally. Neither feature nor master has been changed by that integration. All combined local gates passed: UI 1,376 cases/86 files, engine 1,075 cases/82 files, generation 147 cases/13 files, lint, unused-code checks, icons and production build. The independent UI test/build repeat also passed. The equivalent pre-D9 build passed 1,433 UI cases/86 files. Receipts: `/tmp/ux-p4-combined-checks-r0/RESULTS.json`, `/tmp/ux-p4-combined-repeat-r0/RESULTS.json`, `/tmp/ux-p4-combined-before-r0/RESULTS.json`.
+
+Owner timing clarified: remove the custom full-AA capture/audit harness in a dedicated final Phase4 cleanup commit **after focused acceptance and required reviews, before marking the Phase4 PR ready for owner review**. Do not postpone removal to after a merge or another phase. Keep ordinary functional/regression tests and product keyboard/colour support. No further custom compliance-harness expansion. All PRs remain open for owner review; no automatic merges.
+
+Native focused acceptance has now verified D10 on the combined production build: keyboard Check found eight repeated units; keyboard conversion retained total 4/s, changed Copies from 0.5 to 4, retained one machine/two inserters and automatically passed Check without generating; keyboard Undo restored eight machines/sixteen inserters and Copies 0.5. Root opened the conversion/Undo focus screenshots. Receipts and actual images: `/tmp/ux-p4-focused-acceptance-r0`. Remaining focused interaction checks, final D3 repeat, independent item reviews and fresh phase personas are still open.
+
+
+## Phase4 closeout and owner review checkpoint
+
+All authored bundles are integrated in the review branch: Results904a71e, Configurec269d85, firstvisit404d0bf, themese528093, D10e29aba3, D7a9ed34b, D94bef645. Combined41cbd15 passed all local functional gates plus the independent UI test/build repeat. The one new UX minor (competing filled Generate/conversion actions) was fixed in f62b3b1, independently delta-reviewed and visually verified at four widths; all UI gates passed again at a2485d6. No blocker/major fix round was required.
+
+Independent CODE state and presentation PASS cover every item and integration seam; item UX PASS; three fresh end personas A/B/C PASS with no blocker/major. Reports and21 actual screenshots are under review/phase4. Sol/high workers, fast off. Native checks verified keyboard conversion/whole-build Undo/internal Check/no Generate, first-visit route/guide, selected-clock/detail paths, actual dirty-form/theme preservation, old-result provenance, named-build isolation/reload and actual page-position restoration, clean entity selection, draft Discard/Save and narrow useful layouts. Ordinary colour/contrast regressions and all full functional checks remain.
+
+D3 uses unchanged original fixtures and adopted pins: both copied and canonical-decoded blueprints are identical to baseline in explanatory and Compact views. The bounded manual repeat has a different observation protocol and one explicitly carried unchanged-copy row; its endpoint positions are not cumulative-scroll metrics, a percentage improvement or a human study. No fixture update or new audit tooling was introduced. D9 final1433→1376 executed cases/86 files; all412 production files equal before/after and independent build; local one-pair2.747s→2.729s is effectively unchanged. Final source/evidence/review reconciliation closes the implementation acceptance; landing still awaits owner approval.
+
+Final cleanup removes55 capture/audit scripts (34,879 lines), shared helpers/self-tests and five harness-only fixtures. Original engine/sample/D3 builds, ordinary UI/engine/generation/contrast tests, runtime accessibility, dependencies and CI remain. Historical Markdown evidence is retained. Active process instructions now use focused acceptance and existing browser capabilities rather than custom capture writers or exhaustive helper matrices. The final delta has separate CODE/UX review and checks.
+
+Remaining nonblocking follow-ups: A-P4-1 confusing raw Standing-still timing versus Moving saved-run/selection-rule copy; A-P3-05/B3E-2/C3E-2 header-menu dismissal moves the page although focus returns. Existing explicitly deferred developer-timeline clipping/shape/copy limitations remain. Draft issue entries are recorded; no issue is filed before owner review. D8 is investigation-only with proposal linked; no rate feature was added.
+
+Retro: parallel source implementation and authoritative shared APIs worked; integration/state ownership received independent review without extra scaffolding. Custom capture classification/hangs delayed acceptance and did not justify more framework repair. Adopted coach recommendations: retire the capture-writer/full-AA protocol, reuse exact unchanged product proof for packaging-only cleanup while retaining exact-head CI/delta checks, and wait for actual settled async destination states before judging snapshots. No review or meaningful functional gate was removed. PR211 remains OPEN for owner review; no automatic merge and no master merge.

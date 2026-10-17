@@ -17,7 +17,8 @@ import {
 } from '@xyflow/react';
 import { Alert, Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typography } from '@mui/material';
 import { Add, Fullscreen } from '@mui/icons-material';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import { useTheme, type Theme } from '@mui/material/styles';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { buildFlowGraph, flowNodeEntity } from '../utils/buildFlowGraph';
@@ -38,8 +39,6 @@ const nodeTypes: NodeTypes = {
 };
 
 /** The edges of a hovered node, and their arrowheads */
-const HIGHLIGHT_COLOR = '#fca300';
-const DIMMED_COLOR = '#555';
 
 /** The canvas's size as one value, so the diagram re-renders only when it changes */
 const canvasSizeSelector = (s: { width: number; height: number }) => `${s.width}x${s.height}`;
@@ -103,11 +102,18 @@ type ConfigFlowDiagramProps = Omit<EntityEditDialogProps, 'open' | 'onClose' | '
     onAddBelt?: () => void;
     onAddChest?: () => void;
     onAddDrill?: () => void;
+    selection: { kind: EntityClickType; id: number } | null;
+    onSelectionChange(selection: { kind: EntityClickType; id: number } | null): void;
+    detailedMode: boolean;
+    onDetailedModeChange(detailed: boolean): void;
     onRequestFullscreen?: () => void;
     height?: number | string;
 };
 
 interface FlowContentProps {
+    selection: { kind: EntityClickType; id: number } | null;
+    detailedMode: boolean;
+    onDetailedModeChange(detailed: boolean): void;
     machines: MachineFormData[];
     inserters: InserterFormData[];
     belts: BeltFormData[];
@@ -125,6 +131,9 @@ interface FlowContentProps {
 }
 
 function FlowContent({
+    selection,
+    detailedMode,
+    onDetailedModeChange: setDetailedMode,
     machines,
     inserters,
     belts,
@@ -140,8 +149,10 @@ function FlowContent({
     onAddDrill,
     onRequestFullscreen,
 }: FlowContentProps) {
+    const tokens = themeTokens(useTheme());
+    const HIGHLIGHT_COLOR = tokens.role.orange.main;
+    const DIMMED_COLOR = tokens.control.border;
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
-    const [detailedMode, setDetailedMode] = useState(true);
     const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set());
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
@@ -167,7 +178,7 @@ function FlowContent({
     const refitUntil = useRef(0);
     const toggleDetailedMode = () => {
         refitUntil.current = Date.now() + REFIT_WINDOW_MS;
-        setDetailedMode(d => !d);
+        setDetailedMode(!detailedMode);
     };
     // declared before the effect below, so it has run when that one first does
     useEffect(() => {
@@ -187,8 +198,11 @@ function FlowContent({
     // hovering or focusing one half of a belt drawn twice outlines the other half
     const twinId = twinNodeId(hoveredNodeId) ?? twinNodeId(focusedNodeId);
     const nodes = useMemo(
-        () => (twinId ? graphNodes.map(node => (node.id === twinId ? { ...node, className: TWIN_CLASS } : node)) : graphNodes),
-        [graphNodes, twinId],
+        () => graphNodes.map(node => {
+            const entity = flowNodeEntity(node);
+            return { ...node, selected: entity.type === selection?.kind && entity.id === selection.id, ...(node.id === twinId ? { className: TWIN_CLASS } : {}) };
+        }),
+        [graphNodes, twinId, selection],
     );
     // the entity behind each node, by node id, for the ends of a connection or an edge
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
@@ -196,7 +210,7 @@ function FlowContent({
 
     const edgesWithSelection = useMemo(() => {
         const anyHovered = hoveredNodeId !== null;
-        if (!anyHovered && selectedEdgeIds.size === 0) return edges;
+        
 
         // Compute highlighted set: direct edges + one hop through connected inserters
         let highlightedEdgeIds: Set<string> | null = null;
@@ -222,14 +236,15 @@ function FlowContent({
         return edges.map(e => {
             const isConnected = highlightedEdgeIds?.has(e.id) ?? false;
             const isSelected = selectedEdgeIds.has(e.id);
+            const normal = { ...e, markerEnd: marker(e, DIMMED_COLOR), style: { ...e.style, stroke: DIMMED_COLOR } };
             if (anyHovered) {
                 return isConnected
                     ? { ...e, selected: isSelected, markerEnd: marker(e, HIGHLIGHT_COLOR), style: { stroke: HIGHLIGHT_COLOR, strokeWidth: 2.5 } }
-                    : { ...e, selected: isSelected, markerEnd: marker(e, DIMMED_COLOR), style: { stroke: DIMMED_COLOR, strokeWidth: 1, opacity: 0.2 } };
+                    : { ...e, selected: isSelected, markerEnd: marker(e, DIMMED_COLOR), style: { stroke: DIMMED_COLOR, strokeWidth: 1, strokeDasharray: '4 3' } };
             }
-            return isSelected ? { ...e, selected: true } : e;
+            return isSelected ? { ...normal, selected: true, markerEnd: marker(e, HIGHLIGHT_COLOR), style: { stroke: HIGHLIGHT_COLOR, strokeWidth: 2.5 } } : normal;
         });
-    }, [edges, selectedEdgeIds, hoveredNodeId, entityOf]);
+    }, [edges, selectedEdgeIds, hoveredNodeId, entityOf, HIGHLIGHT_COLOR, DIMMED_COLOR]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
         setSelectedEdgeIds(prev => {
@@ -380,7 +395,7 @@ function FlowContent({
             fitViewOptions={fitViewOptions}
             proOptions={{ hideAttribution: true }}
         >
-            <Background color="#333" variant={BackgroundVariant.Dots} gap={20} size={1} />
+            <Background color={tokens.control.edge} variant={BackgroundVariant.Dots} gap={20} size={1} />
             <Controls showInteractive={false} fitViewOptions={fitViewOptions} />
             {connectionProblem && <Panel position="bottom-center" style={{ width: 'max-content', maxWidth: 'calc(100% - 24px)' }}>
                 <Alert role="alert" severity="warning" sx={{ overflowWrap: 'anywhere' }} data-geometry-connection-problem>{connectionProblem}</Alert>
@@ -393,7 +408,7 @@ function FlowContent({
                         size="small"
                         selected={detailedMode}
                         onChange={toggleDetailedMode}
-                        sx={{ py: 0.25, bgcolor: SURFACE.panel, textTransform: 'none' }}
+                        sx={{ py: 0.25, bgcolor: (theme: Theme) => themeTokens(theme).surface.panel, textTransform: 'none' }}
                     >
                         Show rates
                     </ToggleButton>
@@ -403,11 +418,11 @@ function FlowContent({
                             onClick={onRequestFullscreen}
                             aria-label="Fullscreen"
                             sx={{
-                                bgcolor: '#232323',
-                                border: '1px solid #555',
+                                bgcolor: tokens.surface.panel,
+                                border: `1px solid ${tokens.control.border}`,
                                 borderRadius: 0,
-                                color: '#ccc',
-                                '&:hover': { bgcolor: '#2d2d2d', borderColor: '#888' },
+                                color: tokens.text.primary,
+                                '&:hover': { bgcolor: tokens.hover.panel, borderColor: tokens.control.border },
                             }}
                         >
                             <Fullscreen fontSize="small" />
@@ -424,10 +439,10 @@ function FlowContent({
                         onClick={(e) => setAddMenuAnchor(e.currentTarget)}
                         sx={{
                             borderRadius: 0,
-                            bgcolor: '#232323',
-                            borderColor: '#555',
-                            color: '#ccc',
-                            '&:hover': { bgcolor: '#2d2d2d', borderColor: '#888' },
+                            bgcolor: tokens.surface.panel,
+                            borderColor: tokens.control.border,
+                            color: tokens.text.primary,
+                            '&:hover': { bgcolor: tokens.hover.panel, borderColor: tokens.control.border },
                         }}
                     >
                         Add Entity
@@ -470,6 +485,10 @@ function FlowContent({
 }
 
 function ConfigFlowDiagramComponent({
+    selection,
+    onSelectionChange,
+    detailedMode,
+    onDetailedModeChange,
     onAddMachine,
     onAddInserter,
     onAddBelt,
@@ -479,11 +498,13 @@ function ConfigFlowDiagramComponent({
     height = 520,
     ...dialogProps
 }: ConfigFlowDiagramProps) {
+    const tokens = themeTokens(useTheme());
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<EntityClickType | null>(null);
     const [selectedId, setSelectedId] = useState<number | null>(null);
 
     const handleNodeSelect = (type: EntityClickType, id: number) => {
+        onSelectionChange({ kind: type, id });
         setSelectedType(type);
         setSelectedId(id);
         setDialogOpen(true);
@@ -493,51 +514,61 @@ function ConfigFlowDiagramComponent({
     const deselectOnDelete = (onDelete?: (index: number) => void) =>
         onDelete && ((index: number) => {
             setSelectedId(null);
+            onSelectionChange(null);
             onDelete(index);
         });
 
     return (
         <>
+            {selection && <Typography variant="body2" sx={{ mb: 0.5 }}>Selected: {entityLabel(selection.kind, selection.id)}. Open it to edit.</Typography>}
             <Box
                 sx={{
                     height,
-                    bgcolor: '#1a1a1a',
+                    bgcolor: tokens.surface.inset,
+                    '--xy-background-color': tokens.surface.inset,
+                    '--xy-edge-stroke': tokens.control.border,
+                    '--xy-node-color': tokens.text.primary,
+                    '--xy-handle-background-color': tokens.control.border,
+                    '--xy-handle-border-color': tokens.surface.inset,
                     borderRadius: 1,
                     overflow: 'hidden',
                     border: '1px solid',
                     borderColor: 'divider',
                     '& .react-flow__controls': {
-                        background: '#232323',
-                        border: '1px solid #555',
+                        background: tokens.surface.panel,
+                        border: `1px solid ${tokens.control.border}`,
                         borderRadius: 1,
                         overflow: 'hidden',
                     },
                     '& .react-flow__controls-button': {
-                        background: '#232323',
-                        borderBottom: '1px solid #555',
-                        color: '#ccc',
-                        '&:hover': { background: '#333' },
-                        '& svg': { fill: '#ccc' },
+                        background: tokens.surface.panel,
+                        borderBottom: `1px solid ${tokens.control.border}`,
+                        color: tokens.text.primary,
+                        '&:hover': { background: tokens.hover.panel },
+                        '& svg': { fill: tokens.text.primary },
                     },
                     '& .react-flow__controls-button:last-child': {
                         borderBottom: 'none',
                     },
-                    // React Flow's CSS removes the focused node's outline; white is far above 3:1 on the canvas, and
-                    // is not the orange that hover and selection use
+                    [`& .react-flow__node.selected > .${FLOW_NODE_BOX_CLASS}`]: { outline: `2px solid ${tokens.role.orange.main}`, outlineOffset: 3 },
+                    // React Flow removes the wrapper's focus outline; restore the resolved mode's focus token.
                     [`& .react-flow__node:focus-visible > .${FLOW_NODE_BOX_CLASS}`]: {
-                        outline: '2px solid #fff',
+                        outline: `2px solid ${tokens.control.focus}`,
                         outlineOffset: 2,
                     },
                     // the other half of a belt or chest drawn twice, while one half is hovered or focused: dashed grey,
-                    // unlike the focus ring and the orange of hover and selection (#b1b1b7 is 8.2:1 on the canvas)
+                    // distinguished from the solid focus and selection outlines
                     [`& .react-flow__node.${TWIN_CLASS}:not(:focus-visible) > .${FLOW_NODE_BOX_CLASS}`]: {
-                        outline: '2px dashed #b1b1b7',
+                        outline: `2px dashed ${tokens.text.secondary}`,
                         outlineOffset: 2,
                     },
                 }}
             >
                 <ReactFlowProvider>
                     <FlowContent
+                        selection={selection}
+                        detailedMode={detailedMode}
+                        onDetailedModeChange={onDetailedModeChange}
                         machines={dialogProps.machines}
                         inserters={dialogProps.inserters}
                         belts={dialogProps.belts}

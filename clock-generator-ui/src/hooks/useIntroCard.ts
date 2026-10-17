@@ -31,5 +31,5 @@ export function useIntroCard(blank: boolean) {
     const show = useCallback(() => setForced(true), []);
     const afterReset = useCallback(() => setBuiltByHand(false), []);
 
-    return { visible: shouldShowIntro({ dismissed, builtByHand, forced, blank }), dismiss, buildByHand, show, afterReset };
+    return { visible: shouldShowIntro({ dismissed, builtByHand, forced, blank }), builtByHand, dismiss, buildByHand, show, afterReset };
 }

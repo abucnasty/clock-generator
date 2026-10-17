@@ -1,25 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import {
     AppBar,
     Box,
     Button,
-    Chip,
     CircularProgress,
     Container,
     CssBaseline,
     Dialog,
     IconButton,
     ThemeProvider,
-    Toolbar,
     Typography,
     Alert,
-    Icon,
 } from '@mui/material';
 import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps, InserterFixOption } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
-import { useConfigForm } from './hooks/useConfigForm';
+import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
 import type { ChestFormData, InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
@@ -28,6 +25,9 @@ import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
 import { useCopyBlueprint, type BlueprintCopyFailure } from './hooks/useCopyBlueprint';
 import { useIntroCard } from './hooks/useIntroCard';
+import { BuildSectionsContext, useBuildViewContext, type BuildContextReady } from './hooks/useBuildViewContext';
+import { serializeConfig } from './hooks/usePersistedConfigForm';
+import { selectBuildEntity, type DetailsTab } from './utils/buildViewContext';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
@@ -49,6 +49,9 @@ import { PanelSection } from './components/Panel';
 import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost, MessageSlot } from './components/Messages';
+import { DisplayPreferencesProvider } from './hooks/useDisplayPreferences';
+import { DisplayPreferencesButton } from './components/DisplayPreferences';
+import type { ResultDetail } from './utils/resultsView';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { StaleCopyDialog } from './components/StaleCopyDialog';
 import { ManualBlueprintDialog } from './components/ManualBlueprintDialog';
@@ -68,7 +71,8 @@ import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
-import { appTheme } from './theme/theme';
+import { createAppTheme } from './theme/theme';
+import { useResolvedColorScheme } from './hooks/useResolvedColorScheme';
 import { nextStepOf } from './utils/nextStep';
 import { needsNoClock } from './utils/installSteps';
 import { itemName, recipeName, type GameNames } from './utils/gameNames';
@@ -79,7 +83,9 @@ import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, removalMessage, removedDeleteLabel, reorderMessage } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
 import type { TargetValues } from './utils/pasteTarget';
-import { configToFormData } from './utils/configForm/configMapping';
+import { configToFormData, formDataToConfig } from './utils/configForm/configMapping';
+import { applyRepeatedUnitConversion } from './utils/configForm/repeatedUnitConversion';
+import { askEngine } from './worker/engineClient';
 import { inserterFixProblem } from './utils/configForm/inserterFix';
 import { hasImportedBeltDrops } from './utils/inserterMetadata';
 import {
@@ -106,16 +112,23 @@ const TOOLS_MENU = {
     developerTools: 'Developer tools',
 };
 
+function DisplayThemeProvider({ children }: { children: ReactNode }) {
+    const mode = useResolvedColorScheme();
+    return <ThemeProvider theme={createAppTheme(mode)}>{children}</ThemeProvider>;
+}
+
 /** The theme, the in-game names every picker and label reads, and the timing the rule editor checks a rule against */
 function PageProviders({ gameNames, searchOnlyRecipes, ruleTiming, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; ruleTiming: RuleTiming; children: ReactNode }) {
     return (
-        <ThemeProvider theme={appTheme}>
-            <GameNamesContext value={gameNames}>
-                <SearchOnlyRecipesContext value={searchOnlyRecipes}>
-                    <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
-                </SearchOnlyRecipesContext>
-            </GameNamesContext>
-        </ThemeProvider>
+        <DisplayPreferencesProvider>
+            <DisplayThemeProvider>
+                <GameNamesContext value={gameNames}>
+                    <SearchOnlyRecipesContext value={searchOnlyRecipes}>
+                        <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+                    </SearchOnlyRecipesContext>
+                </GameNamesContext>
+            </DisplayThemeProvider>
+        </DisplayPreferencesProvider>
     );
 }
 
@@ -153,6 +166,7 @@ function App() {
         validation,
         validate,
         error,
+        errorRecovery,
         initialize,
         runSimulation,
         generatedFor,
@@ -177,6 +191,8 @@ function App() {
         dismissLoadNotice,
         library,
         setConfig,
+        captureBuildMutation,
+        commitBuildReplacement,
         updateTargetOutput,
         duplicateEntity,
         updateInserters,
@@ -222,7 +238,7 @@ function App() {
     // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
     // where to start instead of counting problems
     const blankBuild = isBlankBuild(config);
-    const { visible: introVisible, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(blankBuild);
+    const { visible: introVisible, builtByHand, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(blankBuild);
     const buildEntryRef = useRef<BuildEntryHandle>(null);
     const handleBuildByHand = useCallback(() => {
         // the card goes first: focus then moves to the recipe, which takes its place at the top
@@ -261,12 +277,25 @@ function App() {
     // ⋮ > Terms: the popover hangs from the ⋮ button
     const [termsAnchor, setTermsAnchor] = useState<HTMLElement | null>(null);
 
-    const [configView, setConfigView] = useState<BuildView>('list');
-    // Advanced is closed until opened, and again whenever the build is replaced
-    const [advancedOpen, setAdvancedOpen] = useState(false);
+    const replacementRevisionRef = useRef(0);
+    const [replacedCount, setReplacedCount] = useState(0);
+    const [contextReady, setContextReady] = useState<BuildContextReady | null>(null);
+    const contextFormKey = useMemo(() => serializeConfig(config), [config]);
+    const contextIdentity = useRef({ buildId: library.currentId, formKey: contextFormKey, replacementRevision: replacedCount });
+    useLayoutEffect(() => { contextIdentity.current = { buildId: library.currentId, formKey: contextFormKey, replacementRevision: replacedCount }; }, [library.currentId, contextFormKey, replacedCount]);
+    const { context: buildContext, patch: patchContext, cancelRestore, saveDeparture, resetForReplacement, forgetBuild } = useBuildViewContext({
+        buildId: library.currentId, ready: isInitialized ? contextReady : null, form: config, hasResults: alternatives.length > 0, hasFuel: fuelView !== null, replacementRevision: replacedCount,
+        insightIds: alternatives.flatMap(clock => clock.insights.map(insight => insight.id)),
+    });
+    const { configView, view, resultDetail } = buildContext;
+    const advancedOpen = buildContext.sections.advanced ?? false;
+    const setConfigView = useCallback((configView: BuildView) => patchContext({ configView }), [patchContext]);
+    const setView = useCallback((view: WorkflowView) => patchContext({ view }), [patchContext]);
+    const setResultDetail = useCallback((resultDetail: ResultDetail) => patchContext({ resultDetail }), [patchContext]);
+    const setAdvancedOpen = useCallback((open: boolean) => patchContext({ sections: { ...buildContext.sections, advanced: open } }), [patchContext, buildContext.sections]);
+    const sectionContext = useMemo(() => ({ sections: buildContext.sections, onSectionChange: (key: string, open: boolean) => patchContext({ sections: { ...buildContext.sections, [key]: open } }) }), [buildContext.sections, patchContext]);
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
-    const [view, setView] = useState<WorkflowView>('configure');
 
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverageIssues = useInserterValidation(exportConfig, isInitialized);
@@ -311,7 +340,12 @@ function App() {
     // on load: the clocks kept for the saved build, else the ones shown last (out of date, as they were on screen)
     useEffect(() => {
         if (isConfigLoaded && resultsStoreReady && !resultsRestored) {
-            void restoreResultsFor(configKeyRef.current, 'load').finally(() => setResultsRestored(true));
+            const requested = contextIdentity.current;
+            void restoreResultsFor(configKeyRef.current, 'load').finally(() => {
+                const current = contextIdentity.current;
+                if (current.buildId === requested.buildId && current.formKey === requested.formKey && current.replacementRevision === requested.replacementRevision) setContextReady(requested);
+                setResultsRestored(true);
+            });
         }
     }, [isConfigLoaded, resultsStoreReady, resultsRestored, restoreResultsFor]);
     // an empty Results shows the clocks kept for the build it now has: after an Undo of Import, Paste or Reset, a
@@ -322,7 +356,6 @@ function App() {
     // switch only
     const announce = useAnnounce();
     const switchMessageRef = useRef<string | ((restored: boolean) => void) | null>(null);
-    const replacementRevisionRef = useRef(0);
     const mountedRef = useRef(false);
     useEffect(() => {
         mountedRef.current = true;
@@ -330,22 +363,26 @@ function App() {
     }, []);
     // bumped by every replace of the build, which drops a restore still on its way: the one for the build that is now
     // in the form starts again, even when the form already had it (a switch that set the form before it was handled)
-    const [replacedCount, setReplacedCount] = useState(0);
     useEffect(() => {
+        const requested = contextIdentity.current;
         const switched = switchMessageRef.current;
         const revision = replacementRevisionRef.current;
         const complete = (back: boolean) => {
             // The cache's own render does not cancel its completion. A newer replacement, edit or unmount does.
             if (!mountedRef.current || revision !== replacementRevisionRef.current || configKey !== configKeyRef.current) return;
+            const current = contextIdentity.current;
+            if (current.buildId !== requested.buildId || current.formKey !== requested.formKey || current.replacementRevision !== requested.replacementRevision) return;
+            setContextReady(previous => previous?.buildId === requested.buildId && previous.formKey === requested.formKey && previous.replacementRevision === requested.replacementRevision ? previous : requested);
             if (typeof switched === 'function') switched(back);
             else if (switched !== null) announce(back ? `${switched} ${ANNOUNCEMENTS.itsClocksBack}` : switched);
         };
-        if (isInitialized && resultsEmpty) {
-            void restoreResultsFor(configKey, 'replace', { announce: switched === null }).then(complete);
+        const navigationNeedsCache = contextReady?.buildId !== requested.buildId || contextReady.replacementRevision !== requested.replacementRevision;
+        if (isInitialized && (resultsEmpty || navigationNeedsCache)) {
+            void restoreResultsFor(configKey, 'replace', { announce: switched === null }).then(complete, () => complete(false));
         } else if (switched !== null) {
             complete(false);
         }
-    }, [configKey, isInitialized, resultsEmpty, replacedCount, restoreResultsFor, announce]);
+    }, [configKey, contextFormKey, library.currentId, contextReady, isInitialized, resultsEmpty, replacedCount, restoreResultsFor, announce]);
     useEffect(() => {
         switchMessageRef.current = null;
     });
@@ -457,11 +494,24 @@ function App() {
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
+    const [conversionPending, setConversionPending] = useState(false);
+    const conversionTokenRef = useRef(0);
+    const conversionPendingRef = useRef(false);
+    const conversionRecheckRef = useRef<{
+        token: number; owner: BuildMutationSnapshot; key: string; complete?: (suffix?: string) => void;
+    } | null>(null);
+    const retireConversion = useCallback(() => {
+        conversionTokenRef.current++;
+        conversionPendingRef.current = false;
+        conversionRecheckRef.current = null;
+        setConversionPending(false);
+    }, []);
+    useEffect(() => () => { conversionTokenRef.current++; }, []);
     // both buttons are off while a check or a generation runs
-    const busy = isRunning || validation.status === 'running' || checkingFor !== null;
+    const busy = isRunning || validation.status === 'running' || checkingFor !== null || conversionPending;
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
-    const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
-    const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild });
+    const checking = conversionPending ? 'generate' : validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
+    const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild, entryRoute: builtByHand ? 'manual' : 'routes' });
     // the one filled button of the bar and the card: Generate, or the Copy of the clocks it made
     const primaryAction = nextStepOf({
         problemCount: problems.length,
@@ -478,6 +528,7 @@ function App() {
 
     // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
     const goToTarget = useCallback((target: FocusTarget) => {
+        cancelRestore();
         // shown before the focus moves: a hidden element takes no focus
         flushSync(() => {
             if (needsListView(target)) {
@@ -486,7 +537,7 @@ function App() {
             setView('configure');
         });
         focusProblemTarget(target);
-    }, []);
+    }, [cancelRestore, setConfigView, setView]);
     const handleGoToProblem = useCallback((problem: Problem) => {
         if (problem.target) {
             goToTarget(problem.target);
@@ -502,19 +553,21 @@ function App() {
         }
     }, [focusRequest]);
     const goToCheckError = useCallback(() => {
+        cancelRestore();
         setView('configure');
         setFocusRequest({ target: { kind: 'validation-error' } });
-    }, []);
+    }, [cancelRestore, setView]);
 
     /**
      * What Generate and Search deeper share: go to the first problem, or to the reason the last check failed; or check
      * the build first; then `start` the generation for the build as it was checked
      */
     const runChecked = useCallback((start: (config: Config) => void) => {
+        cancelRestore();
         const config = exportConfig();
         // a check whose worker crashed did not judge the build: Generate checks again instead of going to its error
         const lastCheckCrashed = validation.status === 'invalid' && validation.crashed === true;
-        const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems, lastCheckCrashed });
+        const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null || conversionPendingRef.current, checkStatus, problems, lastCheckCrashed });
         // running the build accepts it: an Undo offered before this press ends here, once (not when the check's own
         // generation starts later)
         if (startsRun(decision)) withdrawUndo();
@@ -546,17 +599,19 @@ function App() {
                 });
                 return;
         }
-    }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, validation, problems, withdrawUndo, goToTarget, goToCheckError, validate, setCheckingFor]);
+    }, [cancelRestore, exportConfig, isInitialized, isRunning, checkingFor, checkStatus, validation, problems, withdrawUndo, goToTarget, goToCheckError, validate, setCheckingFor]);
 
     // stops the generation, or the check Generate started (whose Generate then does not start)
     const handleCancel = useCallback(() => {
+        retireConversion();
         cancel();
         setCheckingFor(null);
-    }, [cancel, setCheckingFor]);
+    }, [cancel, setCheckingFor, retireConversion]);
 
     // checks without moving the page: the result shows as the chip, the alert and the swing plan
     const handleCheckOnly = useCallback(() => {
-        const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        cancelRestore();
+        const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null || conversionPendingRef.current, checkStatus, problems });
         if (startsRun(decision)) withdrawUndo();
         if (decision.kind === 'show-problems') {
             focusBarNote();
@@ -564,22 +619,43 @@ function App() {
             setCheckedForGenerate(false);
             validate(exportConfig());
         }
-    }, [isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, validate, exportConfig]);
+    }, [cancelRestore, isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, validate, exportConfig]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
     useEffect(() => {
+        const conversion = conversionRecheckRef.current;
+        if (conversion) {
+            conversionRecheckRef.current = null;
+            const current = captureBuildMutation();
+            if (conversion.token !== conversionTokenRef.current || current.buildId !== conversion.owner.buildId
+                || current.revision !== conversion.owner.revision || current.form !== conversion.owner.form
+                || configKeyOf(exportConfig()) !== conversion.key) return;
+            setCheckedForGenerate(true); // D10 owns the single deferred announcement and focus.
+            // The accepted action has disappeared; move focus only while this committed owner is current.
+            cancelRestore();
+            focusProblemTarget({ kind: 'target-rate' });
+            // Internal Check intentionally retains whole-build Undo; it never starts Generate.
+            void validate(formDataToConfig(current.form)).then(outcome => {
+                const owner = captureBuildMutation();
+                if (!mountedRef.current || conversion.token !== conversionTokenRef.current || outcome.kind === 'dropped'
+                    || owner.buildId !== current.buildId || owner.revision !== current.revision || owner.form !== current.form) return;
+                conversion.complete?.(outcome.kind === 'valid' ? 'Check passed.' : 'The check failed. Review the reason in Configure.');
+                if (outcome.kind === 'invalid') goToCheckError();
+            });
+            return;
+        }
         if (revalidateOnChangeRef.current) {
             revalidateOnChangeRef.current = false;
             validate(exportConfig());
         }
-    }, [exportConfig, validate]);
+    }, [cancelRestore, exportConfig, validate, captureBuildMutation, goToCheckError]);
 
     const handleGenerate = useCallback(() => runChecked((config) => {
         runSimulation(config, runDebugSteps, runStreamLogs);
         // progress and the clocks arrive there
         setView('results');
-    }), [runChecked, runSimulation, runDebugSteps, runStreamLogs]);
+    }), [runChecked, runSimulation, runDebugSteps, runStreamLogs, setView]);
 
     // Moving stores nothing, Standing `non_moving_belts: true`
     const handleBeltAnswer = useCallback(
@@ -599,7 +675,7 @@ function App() {
             runSimulation(withBeltAnswer(config, answer), runDebugSteps, runStreamLogs);
             setView('results');
         });
-    }, [busy, runChecked, handleBeltAnswer, runSimulation, runDebugSteps, runStreamLogs]);
+    }, [busy, runChecked, handleBeltAnswer, runSimulation, runDebugSteps, runStreamLogs, setView]);
     // the clocks on screen, read for belts that stand still; nothing while they may still change
     const beltAssumption = generatedFor?.beltQuestion ?? null;
     const beltHint = useMemo(
@@ -647,8 +723,8 @@ function App() {
     // the key of the build an action with Undo is about to replace as a whole (Import, Paste, Reset, an example, Delete
     // build, a share link, another tab's version): its clocks are set aside under it, and its Undo brings them back
     const replacedKeyRef = useRef<string | null>(null);
-    const offerUndoOfBuild = useCallback((message: string, options?: Parameters<typeof offerUndo>[1]) => {
-        replacedKeyRef.current = configKeyRef.current;
+    const offerUndoOfBuild = useCallback((message: string, options?: Parameters<typeof offerUndo>[1], sourceKey?: string) => {
+        replacedKeyRef.current = sourceKey ?? configKeyRef.current;
         return offerUndo(message, options);
     }, [offerUndo]);
     const offerUndoOfReplace = useCallback((message: string) => offerUndoOfBuild(message), [offerUndoOfBuild]);
@@ -658,6 +734,10 @@ function App() {
 
     // Shared by the inline and fullscreen diagrams
     const flowDiagramProps = {
+        selection: buildContext.entity,
+        onSelectionChange: (selection: Parameters<typeof selectBuildEntity>[1]) => patchContext({ entity: selectBuildEntity(config, selection), entityConfigKey: contextFormKey }),
+        detailedMode: buildContext.diagramDetailed,
+        onDetailedModeChange: (diagramDetailed: boolean) => patchContext({ diagramDetailed }),
         machines: config.machines,
         inserters: config.inserters,
         belts: config.belts,
@@ -702,20 +782,78 @@ function App() {
 
     // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown. The
     // clocks are set aside for the Undo offered just before, if any
-    const handleBuildReplaced = useCallback(() => {
+    const clearForBuildChange = useCallback(() => {
+        cancelRestore();
+        retireConversion();
         replacementRevisionRef.current++;
         const formKey = replacedKeyRef.current ?? undefined;
         replacedKeyRef.current = null;
         clearResults({ formKey });
         setReplacedCount((count) => count + 1);
-        setView('configure');
-        setAdvancedOpen(false);
-    }, [clearResults, setReplacedCount]);
+    }, [cancelRestore, clearResults, retireConversion]);
+    const handleBuildReplaced = useCallback(() => {
+        resetForReplacement();
+        clearForBuildChange();
+    }, [resetForReplacement, clearForBuildChange]);
+
+    // A conversion capability belongs to the complete current input, including generation-only settings.
+    const checkRecovery = validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
+        && validation.recovery?.sourceConfigKey === configKey ? validation.recovery : undefined;
+    const generationRecovery = errorRecovery?.sourceConfigKey === configKey ? errorRecovery : undefined;
+    const conversionRecovery = checkRecovery ?? generationRecovery;
+    const conversionIsNextStep = view === 'configure' && !busy && conversionRecovery?.conversion.kind === 'available'
+        && !(validation.status === 'invalid' && validation.crashed === true);
+    const handleConvertRepeatedUnit = useCallback(async () => {
+        if (!isInitialized || busy || conversionPendingRef.current || conversionRecovery?.conversion.kind !== 'available'
+            || document.querySelector('[data-edits-build]')) return;
+        const snapshot = captureBuildMutation();
+        const capturedConfig = formDataToConfig(snapshot.form), oldKey = configKeyOf(capturedConfig);
+        if (oldKey !== conversionRecovery.sourceConfigKey) return;
+        const token = ++conversionTokenRef.current;
+        conversionPendingRef.current = true;
+        setConversionPending(true);
+        try {
+            const checked = await askEngine({ kind: 'repeated-unit-conversion', config: capturedConfig });
+            if (!mountedRef.current || token !== conversionTokenRef.current) return;
+            const current = captureBuildMutation();
+            if (current.buildId !== snapshot.buildId || current.revision !== snapshot.revision || current.form !== snapshot.form
+                || document.querySelector('[data-edits-build]')) return;
+            if (checked.kind === 'unavailable') {
+                notify({ severity: 'warning', text: checked.stage === 'check'
+                    ? `One complete unit was identified, but its check failed: ${checked.reason.message} Your build has not changed.`
+                    : `${checked.reason.message} Your build has not changed. Select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate.` });
+                return;
+            }
+            if (checked.plan.sourceConfigKey !== oldKey) throw new Error('The conversion answer does not match this build.');
+            const next = applyRepeatedUnitConversion(snapshot.form, checked.plan);
+            if (!next) throw new Error('The conversion answer could not be applied completely.');
+            let complete: ((suffix?: string) => void) | undefined;
+            const committed = commitBuildReplacement(snapshot, next, () => {
+                complete = offerUndoOfBuild(`Using one complete modeled unit with ${checked.plan.copies} copies. Items per Second is still the total.`,
+                    { deferAnnouncement: true, snapshot: snapshot.form }, oldKey);
+            });
+            if (!committed) return;
+            handleBuildReplaced();
+            const committedToken = conversionTokenRef.current;
+            conversionRecheckRef.current = { token: committedToken, owner: captureBuildMutation(), key: configKeyOf(formDataToConfig(next)), complete };
+        } catch (failure) {
+            const current = captureBuildMutation();
+            if (mountedRef.current && token === conversionTokenRef.current && current.buildId === snapshot.buildId
+                && current.revision === snapshot.revision && current.form === snapshot.form) {
+                notify({ severity: 'error', text: `Could not check the conversion: ${failure instanceof Error ? failure.message : 'The engine did not answer.'} Your build has not changed. Try again, or select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate.` });
+            }
+        } finally {
+            if (mountedRef.current && token === conversionTokenRef.current) {
+                conversionPendingRef.current = false;
+                setConversionPending(false);
+            }
+        }
+    }, [isInitialized, busy, conversionRecovery, captureBuildMutation, commitBuildReplacement, offerUndoOfBuild, handleBuildReplaced, notify]);
     // the same for a switch to another build, which says `message` once it is known whether its clocks come back
     const handleBuildSwitched = useCallback((message: string | ((restored: boolean) => void)) => {
         switchMessageRef.current = message;
-        handleBuildReplaced();
-    }, [handleBuildReplaced]);
+        clearForBuildChange();
+    }, [clearForBuildChange]);
 
     // ---- Your builds
     const titles = useMemo(() => buildTitles(library.builds, recipeLabel), [library.builds, recipeLabel]);
@@ -738,23 +876,30 @@ function App() {
 
     // opening another build ends any Undo offer (the form is replaced, as by an edit), and its clocks go
     const handleOpenBuild = useCallback(async (id: string) => {
+        retireConversion();
+        saveDeparture();
+        cancelRestore();
         if (await library.openBuild(id)) {
             withdrawUndo();
             handleBuildSwitched(openedBuildAnnouncement(titleOf(id)));
         }
-    }, [library, withdrawUndo, handleBuildSwitched, titleOf]);
+    }, [retireConversion, saveDeparture, cancelRestore, library, withdrawUndo, handleBuildSwitched, titleOf]);
     const handleNewBuild = useCallback(() => {
-        library.newBuild();
+        saveDeparture();
+        const added = library.newBuild();
+        forgetBuild(added.id);
         withdrawUndo();
         handleBuildSwitched(NEW_BUILD_ANNOUNCEMENT);
         // blank: the intro card shows again, unless it was closed
         afterReset();
-    }, [library, withdrawUndo, handleBuildSwitched, afterReset]);
+    }, [saveDeparture, forgetBuild, library, withdrawUndo, handleBuildSwitched, afterReset]);
     const handleDuplicateBuild = useCallback(() => {
+        saveDeparture();
         const copy = library.duplicateBuild();
+        forgetBuild(copy.id);
         withdrawUndo();
         handleBuildSwitched(duplicatedAnnouncement(titleOf(copy.id, copy)));
-    }, [library, withdrawUndo, handleBuildSwitched, titleOf]);
+    }, [saveDeparture, forgetBuild, library, withdrawUndo, handleBuildSwitched, titleOf]);
     // a new dialog for each opening, so its field starts from the name
     const [renaming, setRenaming] = useState({ key: 0, open: false });
     const handleRenameBuild = useCallback(() => setRenaming((state) => ({ key: state.key + 1, open: true })), []);
@@ -772,6 +917,9 @@ function App() {
     }, [library, automaticName, closeRename, announce, titleOf]);
     // Delete offers Undo, which brings the build back and opens it
     const handleDeleteBuild = useCallback(async () => {
+        retireConversion();
+        saveDeparture();
+        cancelRestore();
         const deleted = library.currentMeta;
         // an Undo waits for the delete to finish (it first checks the build it opens next), then brings the build back
         // and takes out the blank one made when it was the only build
@@ -783,8 +931,9 @@ function App() {
         });
         deleting = library.deleteBuild();
         await deleting;
-        handleBuildReplaced();
-    }, [library, currentTitle, offerUndoOfBuild, handleBuildReplaced]);
+        forgetBuild(deleted.id);
+        clearForBuildChange();
+    }, [retireConversion, saveDeparture, cancelRestore, forgetBuild, library, currentTitle, offerUndoOfBuild, clearForBuildChange]);
 
     // another tab saved this build: one warning per episode, whose action loads that tab's version (with Undo)
     const conflictStatus = library.conflict.status;
@@ -828,6 +977,7 @@ function App() {
     const handleOpenShared = useCallback(() => {
         const build = shared.accept();
         if (!build) return;
+        saveDeparture();
         const previous = library.currentMeta;
         const replaceId = sharedReplacesBlank ? previous.id : undefined;
         const title = build.name
@@ -839,8 +989,9 @@ function App() {
             revert: (form) => library.restore({ meta: previous, form, removeId: replaceId === undefined ? added.id : undefined }),
         });
         added.id = library.addBuild(configToFormData(build.config), build.name, { replaceId }).id;
+        forgetBuild(added.id);
         handleBuildSwitched((back) => complete?.(back ? ANNOUNCEMENTS.itsClocksBack : undefined));
-    }, [shared, library, sharedReplacesBlank, recipeLabel, offerUndoOfBuild, handleBuildSwitched]);
+    }, [saveDeparture, forgetBuild, shared, library, sharedReplacesBlank, recipeLabel, offerUndoOfBuild, handleBuildSwitched]);
 
     // Generate with the slower searches, checked first as Generate is: for this run only, or, kept on, by turning the
     // switch on in the form (one the check does not read, so it stays current)
@@ -854,60 +1005,60 @@ function App() {
             runSimulation(config, runDebugSteps, runStreamLogs, true);
         }
         setView('results');
-    }), [runChecked, updateOverrides, runSimulation, runDebugSteps, runStreamLogs]);
+    }), [runChecked, updateOverrides, runSimulation, runDebugSteps, runStreamLogs, setView]);
 
     return (
+        <BuildSectionsContext value={sectionContext}>
         <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} ruleTiming={ruleTiming}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
-                    <Toolbar>
-                        <Icon sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 0 }}>
-                            <img src="/big_biter_q5_right.png" alt="" style={{ width: 26, height: 26 }} />
-                        </Icon>
-                        <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0, flexShrink: 1 }}>
-                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
-                        </Typography>
-                        {isInitialized && (
-                            <BuildSwitcher
-                                ref={switcherRef}
-                                builds={switcherBuilds}
-                                currentId={library.currentId}
-                                currentTitle={currentTitle}
-                                onOpen={handleOpenBuild}
-                                onNew={handleNewBuild}
-                                onDuplicate={handleDuplicateBuild}
-                                onRename={handleRenameBuild}
-                                onDelete={handleDeleteBuild}
-                                readOnly={!library.writable}
-                            />
-                        )}
-                        <Box sx={{ flexGrow: 1 }} />
-                        <ConfigImportExport
-                            currentForm={config}
-                            ref={buildEntryRef}
-                            config={exportableConfig}
-                            target={config.target_output}
-                            onImport={handleImportConfig}
-                            onReplaceTarget={replaceTarget}
-                            onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
-                            onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
-                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
-                            onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
-                            onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
-                            onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
-                            onReset={handleReset}
-                            onBuildReplaced={handleBuildReplaced}
-                            onUndoable={offerUndoOfReplace}
-                            onShowIntro={showIntro}
-                            pasteIsNextStep={blankBuild && !introVisible}
-                            buildName={library.currentMeta.name}
-                            buildTitle={currentTitle}
-                            toolsMenuItems={toolsMenuItems}
-                        />
-                    </Toolbar>
                     {isInitialized && (
                         <WorkflowBar
+                            identity={
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center', minWidth: 0 }}>
+                                    <Typography variant="subtitle1" component="h1" sx={{ minWidth: 0, fontWeight: 600 }}>
+                                        Clock Generator
+                                    </Typography>
+                                    <BuildSwitcher
+                                        ref={switcherRef}
+                                        builds={switcherBuilds}
+                                        currentId={library.currentId}
+                                        currentTitle={currentTitle}
+                                        onOpen={handleOpenBuild}
+                                        onNew={handleNewBuild}
+                                        onDuplicate={handleDuplicateBuild}
+                                        onRename={handleRenameBuild}
+                                        onDelete={handleDeleteBuild}
+                                        readOnly={!library.writable}
+                                    />
+                                    <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)} title="View changelog" sx={{ textTransform: 'none' }}>v{__APP_VERSION__}</Button>
+                                    <ConfigImportExport
+                                        currentForm={config}
+                                        ref={buildEntryRef}
+                                        config={exportableConfig}
+                                        target={config.target_output}
+                                        onImport={handleImportConfig}
+                                        onReplaceTarget={replaceTarget}
+                                        onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
+                                        onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
+                                        onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
+                                        onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
+                                        onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
+                                        onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
+                                        onReset={handleReset}
+                                        onBuildReplaced={handleBuildReplaced}
+                                        onUndoable={offerUndoOfReplace}
+                                        onShowIntro={showIntro}
+                                        pasteIsNextStep={blankBuild && !introVisible}
+                                        buildName={library.currentMeta.name}
+                                        buildTitle={currentTitle}
+                                        toolsMenuItems={toolsMenuItems}
+                                    />
+
+                                    <DisplayPreferencesButton />
+                                </Box>
+                            }
                             view={view}
                             onViewChange={setView}
                             isLoading={isRunning}
@@ -915,7 +1066,7 @@ function App() {
                             progressStore={progressStore}
                             onGenerate={handleGenerate}
                             onCheckOnly={handleCheckOnly}
-                            primaryAction={primaryAction}
+                            primaryAction={conversionIsNextStep ? null : primaryAction}
                             busy={busy}
                             checking={checking}
                             checkStatus={checkStatus}
@@ -930,18 +1081,23 @@ function App() {
                             copyLabel={copyLabel}
                             staleFor={staleFor}
                             copied={copy.copied}
-                            onCopy={copy.request}
+                            onCopy={() => { cancelRestore(); copy.request(); }}
                             problems={problems}
                             note={note}
                             startHere={blankBuild && problems.length > 0}
                             onGoToProblem={handleGoToProblem}
-                            running={isRunning || checkingFor !== null}
+                            running={isRunning || checkingFor !== null || conversionPending}
                             onCancel={handleCancel}
                             lastStop={lastStop}
                             restoredId={restoredId}
                             pickGone={pickGone?.label ?? null}
                         />
                     )}
+                    {!isInitialized && <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography component="h1" variant="subtitle1">Clock Generator</Typography>
+                        <Button size="small" color="inherit" onClick={() => setChangelogOpen(true)}>v{__APP_VERSION__}</Button>
+                        <DisplayPreferencesButton />
+                    </Box>}
                     {/* outside the condition: a message can come before the workflow bar is there */}
                     <MessageSlot active={!diagramFullscreen} />
                 </AppBar>
@@ -959,20 +1115,23 @@ function App() {
                     ) : (
                         <>
                         {/* both views stay mounted so switching keeps what was expanded, filtered or scrolled */}
-                        <Box sx={{ display: view === 'configure' ? 'block' : 'none' }}>
+                        <Box data-build-view="configure" data-build-anchor="configure" sx={{ display: view === 'configure' ? 'block' : 'none' }}>
                             {loadNotice && (
                                 <Alert severity="warning" sx={{ mb: 2 }} onClose={dismissLoadNotice}>
                                     {loadNotice}
                                 </Alert>
                             )}
-                            {error && (
+                            {error && !generationRecovery && (
                                 <Alert severity="error" sx={{ mb: 2 }}>
                                     {error}
                                 </Alert>
                             )}
                             <CheckErrorAlert
-                                message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : null}
+                                message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : generationRecovery ? error : null}
                                 crashed={validation.status === 'invalid' && validation.crashed === true}
+                                recovery={conversionRecovery}
+                                conversionPending={conversionPending}
+                                onConvert={handleConvertRepeatedUnit}
                             />
 
                             {introVisible && (
@@ -1057,6 +1216,7 @@ function App() {
                                 ) : (
                                     <Box sx={{ mb: 3 }}>
                                         <ConfigFlowDiagram
+                                            key={`${library.currentId}:${replacedCount}`}
                                             {...flowDiagramProps}
                                             onRequestFullscreen={openDiagramFullscreen}
                                         />
@@ -1090,7 +1250,7 @@ function App() {
                             </BuildPanel>
 
 
-                            <Box sx={{ mb: 2 }}>
+                            <Box data-build-anchor="advanced" sx={{ mb: 2 }}>
                                 <OverridesForm
                                     importedChecks={config.overrides}
                                     lcm={config.overrides?.lcm}
@@ -1117,8 +1277,19 @@ function App() {
 
                         </Box>
 
-                        <Box sx={{ display: view === 'results' ? 'block' : 'none' }}>
+                        <Box data-build-view="results" data-build-anchor="results" sx={{ display: view === 'results' ? 'block' : 'none' }}>
                             <ResultsWorkspace
+                                detailsTab={buildContext.detailsTab}
+                                onDetailsTabChange={(detailsTab: DetailsTab) => patchContext({ detailsTab })}
+                                comparison={buildContext.comparison}
+                                onComparisonChange={comparison => patchContext({ comparison })}
+                                wakeAsTable={buildContext.wakeAsTable}
+                                onWakeAsTableChange={wakeAsTable => patchContext({ wakeAsTable })}
+                                timeline={buildContext.timeline}
+                                onTimelineChange={timeline => patchContext({ timeline })}
+                                detail={resultDetail}
+                                onDetailChange={setResultDetail}
+                                generatedFor={generatedFor}
                                 generationAssumptions={generationAssumptions}
                                 isRunning={isRunning}
                                 error={error}
@@ -1159,7 +1330,7 @@ function App() {
                                 stoppedEarly={stoppedEarly}
                                 pickGone={pickGone}
                                 copied={copy.copied}
-                                onCopy={copy.request}
+                                onCopy={() => { cancelRestore(); copy.request(); }}
                                 copyLabel={copyLabel}
                                 copyIsNextStep={primaryAction === 'copy-page'}
                                 // only when the run asked the belt question; otherwise the card says the belt itself
@@ -1196,14 +1367,6 @@ function App() {
                     <Typography variant="body2" color="text.secondary">
                         Created by abucnasty
                     </Typography>
-                    <Chip
-                        label={`v${__APP_VERSION__}`}
-                        size="small"
-                        variant="outlined"
-                        clickable
-                        onClick={() => setChangelogOpen(true)}
-                        title="View changelog"
-                    />
                     <Button
                         href="https://ko-fi.com/J6D4284EZ5"
                         target="_blank"
@@ -1301,6 +1464,7 @@ function App() {
 
             <MessageHost />
         </PageProviders>
+        </BuildSectionsContext>
     );
 }
 
