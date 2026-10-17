@@ -317,9 +317,22 @@ export function updateChest(prev: ConfigFormData, index: number, updates: Partia
 
 /** The same chest conversion for a dialog draft and the committed form. */
 export function switchedChest(chest: ChestFormData, newType: ChestType): ChestFormData {
-    return newType === ChestType.BUFFER_CHEST
-        ? { type: ChestType.BUFFER_CHEST, id: chest.id, _uuid: chest._uuid, storage_size: 1, item_filter: '' }
-        : { type: ChestType.INFINITY_CHEST, id: chest.id, _uuid: chest._uuid, item_filter: [{ item_name: '', request_count: 1 }] };
+    if (chest.type === newType) return chest;
+    if (chest.type === ChestType.INFINITY_CHEST) {
+        return {
+            type: ChestType.BUFFER_CHEST, id: chest.id, _uuid: chest._uuid,
+            storage_size: chest._chest_settings?.storage_size ?? 1,
+            item_filter: chest.item_filter[0]?.item_name ?? '',
+            _chest_settings: { ...chest._chest_settings, infinity_filters: chest.item_filter.map(filter => ({ ...filter })) },
+        };
+    }
+    const previous = chest._chest_settings?.infinity_filters ?? [];
+    const first = { item_name: chest.item_filter, request_count: previous[0]?.item_name === chest.item_filter ? previous[0].request_count : 1 };
+    return {
+        type: ChestType.INFINITY_CHEST, id: chest.id, _uuid: chest._uuid,
+        item_filter: [first, ...previous.slice(1).map(filter => ({ ...filter }))],
+        _chest_settings: { ...chest._chest_settings, storage_size: chest.storage_size },
+    };
 }
 
 export function switchChestType(prev: ConfigFormData, index: number, newType: ChestType): ConfigFormData {

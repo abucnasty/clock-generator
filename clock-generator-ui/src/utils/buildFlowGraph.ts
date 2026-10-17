@@ -279,7 +279,7 @@ export function buildFlowGraph(
         let iconName: string;
         let filterIcons: string[] | undefined;
         if (isBufferChest(chest)) {
-            iconName = 'iron-chest';
+            iconName = 'steel-chest';
             filterIcons = chest.item_filter ? [chest.item_filter] : undefined;
         } else {
             iconName = 'infinity-chest';

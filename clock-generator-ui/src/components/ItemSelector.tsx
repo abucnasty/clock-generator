@@ -1,3 +1,4 @@
+import { ItemPickerField } from './ItemPickerField';
 import { Autocomplete, Box, TextField, Tooltip, type AutocompleteHighlightChangeReason } from '@mui/material';
 import { useContext, useMemo, useRef, useState } from 'react';
 import { FactorioIcon } from './FactorioIcon';
@@ -91,6 +92,10 @@ export function ItemSelector({
     }
     // For iconOnly mode, use a more compact width
     const effectiveMinWidth = iconOnly && value ? 80 : minWidth;
+
+    if (kind === 'recipe') return <ItemPickerField kind="recipe" label={label} inputAriaLabel={inputAriaLabel ?? label}
+        value={value} options={options} onChange={onChange} inputId={inputId} required={required} errorText={errorText}
+        size={size} iconOnly={iconOnly} allowCustom={freeSolo} sx={{ minWidth: effectiveMinWidth, ...sx }} />;
 
     const autocomplete = (
         <Autocomplete

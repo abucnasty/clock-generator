@@ -24,10 +24,11 @@ interface ChestFilterSlotSelectorProps {
     maxSlots?: number;
     quantityLabel?: string;
     canAddMore?: boolean;
+    showQuantity?: boolean;
 }
 
 export function ChestFilterSlotSelector({ filters, itemNames, onFilterChange, onRemoveFilter,
-    maxSlots = 10, quantityLabel = 'Count', canAddMore = true,
+    maxSlots = 10, quantityLabel = 'Count', canAddMore = true, showQuantity = true,
 }: ChestFilterSlotSelectorProps) {
     const { itemLabel } = useGameNames();
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -49,11 +50,11 @@ export function ChestFilterSlotSelector({ filters, itemNames, onFilterChange, on
         requestAnimationFrame(() => slotRefs.current[Math.min(index, Math.max(0, filters.length - 2))]?.focus());
     };
     return <>
-        <Box role="group" aria-label="Infinity chest filters" sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}>
+        <Box role="group" aria-label="Chest filters" sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}>
             {Array.from({ length: slots }, (_, index) => {
                 const filter = filters[index];
-                const label = filter?.item_name ? `Filter ${index + 1}: ${itemLabel(filter.item_name)} (${filter.quantity})` : `Configure filter ${index + 1}`;
-                return <Tooltip key={index} title={filter?.item_name ? `${itemLabel(filter.item_name)} × ${filter.quantity}. Right-click to clear.` : 'Choose an item'}>
+                const label = filter?.item_name ? `Filter ${index + 1}: ${itemLabel(filter.item_name)}${showQuantity ? ` (${filter.quantity})` : ''}` : `Configure filter ${index + 1}`;
+                return <Tooltip key={index} title={filter?.item_name ? `${itemLabel(filter.item_name)}${showQuantity ? ` × ${filter.quantity}` : ''}. Right-click to clear.` : 'Choose an item'}>
                     <ButtonBase ref={element => { slotRefs.current[index] = element; }} aria-label={label} aria-haspopup="dialog"
                         onClick={event => openSlot(index, event.currentTarget)}
                         onContextMenu={event => { event.preventDefault(); if (filter?.item_name) clear(index); }}
@@ -61,7 +62,7 @@ export function ChestFilterSlotSelector({ filters, itemNames, onFilterChange, on
                         sx={slotStyles(Boolean(anchor) && anchor === slotRefs.current[index])}>
                         {filter?.item_name && <>
                             <FactorioIcon name={filter.item_name} size={26} alt="" />
-                            <Box component="span" aria-hidden sx={{ position: 'absolute', bottom: 0, right: 2, fontSize: 11, fontWeight: 700, lineHeight: 1.1, color: '#fff', textShadow: '0 1px 2px #000, 1px 0 2px #000, -1px 0 2px #000' }}>{filter.quantity}</Box>
+                            {showQuantity && <Box component="span" aria-hidden sx={{ position: 'absolute', bottom: 0, right: 2, fontSize: 11, fontWeight: 700, lineHeight: 1.1, color: '#fff', textShadow: '0 1px 2px #000, 1px 0 2px #000, -1px 0 2px #000' }}>{filter.quantity}</Box>}
                         </>}
                     </ButtonBase>
                 </Tooltip>;
@@ -70,7 +71,7 @@ export function ChestFilterSlotSelector({ filters, itemNames, onFilterChange, on
         {filters.length > maxSlots && <Typography variant="caption" color="text.secondary">+{filters.length - maxSlots} more</Typography>}
         {anchor && active !== null && <FilterItemPicker anchor={anchor} label="Choose a chest filter"
             initialItem={filters[active]?.item_name} initialQuantity={filters[active]?.quantity ?? 1}
-            quantityLabel={quantityLabel} itemNames={itemNames} onClose={close}
+            quantityLabel={showQuantity ? quantityLabel : undefined} itemNames={itemNames} onClose={close}
             onClear={filters[active]?.item_name ? () => clear(active) : undefined}
             onApply={(item, quantity) => { onFilterChange(active, { item_name: item, quantity }); close(); }} />}
 

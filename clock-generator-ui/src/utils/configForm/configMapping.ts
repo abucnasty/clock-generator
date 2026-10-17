@@ -131,7 +131,7 @@ export function formDataToConfig(config: ConfigFormData): Config {
         machines: config.machines.map(toConfig),
         inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => { void _f; return toConfig(ins); }),
         belts: config.belts.map(toConfig),
-        chests: config.chests.map(toConfig),
+        chests: config.chests.map(({ _chest_settings: memory, ...chest }) => { void memory; return toConfig(chest); }),
         ...(config.drills && {
             drills: { ...config.drills, configs: config.drills.configs.map(toConfig) },
         }),

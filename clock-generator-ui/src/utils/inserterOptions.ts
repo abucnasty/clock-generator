@@ -19,7 +19,7 @@ export function entityOptionsOf(machines: MachineFormData[], belts: BeltFormData
         ...belts.map(b => ({ type: TargetType.BELT, id: b.id, label: entityLabel('belt', b.id), icon: b.type, ingredientIcons: b.lanes.map(l => l.ingredient).filter(Boolean) })),
         ...chests.map(c => {
             const items = isBufferChest(c) ? (c.item_filter ? [c.item_filter] : []) : c.item_filter.map(f => f.item_name).filter(Boolean);
-            return { type: TargetType.CHEST, id: c.id, label: entityLabel('chest', c.id), icon: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest', sublabel: items.length ? items.map(labels.item).join(', ') : isBufferChest(c) ? 'No item filter' : 'No filters', ingredientIcons: items.length ? items : undefined };
+            return { type: TargetType.CHEST, id: c.id, label: entityLabel('chest', c.id), icon: isInfinityChest(c) ? 'infinity-chest' : 'steel-chest', sublabel: items.length ? items.map(labels.item).join(', ') : isBufferChest(c) ? 'No item filter' : 'No filters', ingredientIcons: items.length ? items : undefined };
         }),
     ];
 }

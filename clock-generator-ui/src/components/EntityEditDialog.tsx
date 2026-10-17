@@ -338,7 +338,7 @@ function ChestEditSection({
                 >
                     <MenuItem value={ChestType.BUFFER_CHEST}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name="iron-chest" size={20} alt="" />
+                            <FactorioIcon name="steel-chest" size={20} alt="" />
                             Buffer chest
                         </Box>
                     </MenuItem>
@@ -353,14 +353,10 @@ function ChestEditSection({
 
             {isBufferChest(chest) && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    <ItemSelector
-                        value={(chest as BufferChestFormData).item_filter || null}
-                        options={itemNames}
-                        onChange={(newValue) => onUpdate(entityIndex, { item_filter: newValue || '' } as Partial<ChestFormData>)}
-                        label="Item Filter"
-                        size="small"
-                        sx={{ flex: '1 1 200px', minWidth: 'min(200px, 100%)' }}
-                    />
+                    <ChestFilterSlotSelector filters={[{ item_name: chest.item_filter, quantity: 1 }]} itemNames={itemNames}
+                        onFilterChange={(_slot, filter) => onUpdate(entityIndex, { item_filter: filter.item_name })}
+                        onRemoveFilter={() => onUpdate(entityIndex, { item_filter: '' })}
+                        maxSlots={1} canAddMore={false} showQuantity={false} />
                     <TextField
                         label="Storage Size"
                         type="number"
@@ -519,7 +515,7 @@ export function EntityEditDialog({
                 const idx = chests.findIndex(c => c.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const c = chests[idx];
-                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest' };
+                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: isInfinityChest(c) ? 'infinity-chest' : 'steel-chest' };
             }
             case 'inserter': {
                 const idx = inserters.findIndex(i => i.id === entityId);

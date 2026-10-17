@@ -73,7 +73,7 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
 
     const closeFilters = () => setFiltersAnchor(null);
     return <Box ref={barRef} role="region" aria-label="Edit selected inserters" data-bulk-edit=""
-        sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+        sx={{ position: 'sticky', top: 'var(--app-header-height)', zIndex: 2, bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar, border: 1, borderColor: 'divider', p: 1.5, mb: 2, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', '& .MuiButton-root': { minHeight: 40, boxSizing: 'border-box' } }}>
         <Typography variant="body2">{selected.length} {selected.length === 1 ? 'inserter' : 'inserters'} selected</Typography>
         <Button color="inherit" size="small" onClick={onSelectAll} disabled={selected.length === total}>Select all</Button>
         <Button color="inherit" size="small" onClick={onClear}>Clear selection</Button>

@@ -24,7 +24,6 @@ import { AddRow } from './AddRow';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { HelpButton } from './HelpButton';
 import { PanelSection } from './Panel';
-import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
 import { useAnnounce } from '../hooks/useMessages';
@@ -136,7 +135,7 @@ function ChestsFormComponent({
                 >
                     <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
                     {chests.map((chest, index) => (
-                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)} displayLabel={<EntityBadge id={chest.id}><FactorioIcon name={isBufferChest(chest) ? 'buffer-chest' : 'infinity-chest'} size={28} alt="" /></EntityBadge>}>
+                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)} displayLabel={<EntityBadge id={chest.id}><FactorioIcon name={isBufferChest(chest) ? 'steel-chest' : 'infinity-chest'} size={28} alt="" /></EntityBadge>}>
                             {(dragHandle) => (
                         <Box
                             id={`entity-chest-${chest.id}`}
@@ -170,16 +169,10 @@ function ChestsFormComponent({
                                 {/* Buffer Chest fields - item filter and storage size */}
                                 {isBufferChest(chest) && (
                                     <>
-                                        <ItemSelector
-                                            value={chest.item_filter || null}
-                                            options={itemNames}
-                                            onChange={(newValue) => onUpdate(index, { item_filter: newValue || '' })}
-                                            label="Item Filter"
-                                            size="small"
-                                            minWidth={0}
-                                            dropdownMinWidth={300}
-                                            sx={{ minWidth: 0, flex: '1 1 200px' }}
-                                        />
+                                        <ChestFilterSlotSelector filters={[{ item_name: chest.item_filter, quantity: 1 }]} itemNames={itemNames}
+                                            onFilterChange={(_slot, filter) => onUpdate(index, { item_filter: filter.item_name })}
+                                            onRemoveFilter={() => onUpdate(index, { item_filter: '' })}
+                                            maxSlots={1} canAddMore={false} showQuantity={false} />
                                         <TextField
                                             label="Storage Size"
                                             type="number"

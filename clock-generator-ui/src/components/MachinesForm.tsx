@@ -191,11 +191,11 @@ function MachineRow({ compact, machine, index, recipeNames, canDelete, dragHandl
                                 width: '100%',
                                 minWidth: 0,
                                 '@container machine-recipe (max-width: 160px)': {
-                                    '&:has(img):not(:focus-within) .MuiAutocomplete-input': { color: 'transparent' },
+                                    '&:has(img):not(:focus-within) .MuiInputBase-input': { color: 'transparent' },
                                     '&:has(img):not(:focus-within) .MuiInputLabel-root': { visibility: 'hidden' },
                                     '&:has(img):not(:focus-within) .MuiOutlinedInput-notchedOutline legend': { maxWidth: 0 },
                                     '&:has(img):not(:focus-within) .MuiAutocomplete-clearIndicator': { display: 'none' },
-                                    '& .MuiAutocomplete-input': { minWidth: '0 !important' },
+                                    '& .MuiInputBase-input': { minWidth: '0 !important' },
                                 },
                             }}
                             minWidth={0}
