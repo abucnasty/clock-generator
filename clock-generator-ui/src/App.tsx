@@ -969,18 +969,20 @@ function App() {
         saveDeparture();
         cancelRestore();
         const deleted = library.currentMeta;
-        // an Undo waits for the delete to finish (it first checks the build it opens next), then brings the build back
-        // and takes out the blank one made when it was the only build
-        let deleting: Promise<{ madeId: string | null }> | null = null;
-        offerUndoOfBuild(deletedBuildMessage(currentTitle), {
-            revert: (form) => {
-                void deleting?.then(({ madeId }) => library.restore({ meta: deleted, form, removeId: madeId ?? undefined }));
-            },
+        // Only offer Undo and clear this build's results if the checked deletion is still current.
+        let deleting: ReturnType<typeof library.deleteBuild> | null = null;
+        deleting = library.deleteBuild(() => {
+            offerUndoOfBuild(deletedBuildMessage(currentTitle), {
+                revert: (form) => {
+                    void deleting?.then(result => {
+                        if (result) library.restore({ meta: deleted, form, removeId: result.madeId ?? undefined });
+                    });
+                },
+            });
+            forgetBuild(deleted.id);
+            clearForBuildChange();
         });
-        deleting = library.deleteBuild();
         await deleting;
-        forgetBuild(deleted.id);
-        clearForBuildChange();
     }, [retireConversion, saveDeparture, cancelRestore, forgetBuild, library, currentTitle, offerUndoOfBuild, clearForBuildChange]);
 
     // another tab saved this build: one warning per episode, whose action loads that tab's version (with Undo)
@@ -997,9 +999,11 @@ function App() {
                     label: LOAD_OTHER_TAB_LABEL,
                     onClick: () => {
                         loadOtherTabVersion(() => offerUndoOfBuild(LOADED_OTHER_TAB_MESSAGE)).then((loaded) => {
-                            if (loaded) handleBuildReplaced();
-                            // the message and its button are gone: focus goes to the switcher, not the page's top
-                            focusSwitcher();
+                            if (loaded) {
+                                handleBuildReplaced();
+                                // the message and its button are gone: focus goes to the switcher
+                                focusSwitcher();
+                            }
                         });
                     },
                 },

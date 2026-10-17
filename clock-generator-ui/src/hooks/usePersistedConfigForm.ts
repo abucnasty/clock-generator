@@ -223,7 +223,7 @@ export interface BuildLibrary {
     writable: boolean;
     currentId: string;
     currentMeta: BuildMeta;
-    /** Checks and opens a saved build; false (with the load notice set) when it cannot be loaded */
+    /** Checks and opens a saved build; false when invalid or superseded by a newer action */
     openBuild: (id: string) => Promise<boolean>;
     /** Opens a new blank build; gives its row */
     newBuild: () => BuildMeta;
@@ -233,9 +233,10 @@ export interface BuildLibrary {
     renameBuild: (name: string | null) => void;
     /**
      * Removes the open build and opens the most recently opened other one, or a new blank one; gives the removed row,
-     * and the id of the blank build made in its place (which an Undo removes again)
+     * and the id of the blank build made in its place (which an Undo removes again). Null when superseded.
+     * `beforeApply` runs only once the load is checked and still current, just before the deletion.
      */
-    deleteBuild: () => Promise<{ deleted: BuildMeta; madeId: string | null }>;
+    deleteBuild: (beforeApply?: () => void) => Promise<{ deleted: BuildMeta; madeId: string | null } | null>;
     /** Adds a build and opens it, or puts it in the place of `replaceId`; gives its id and the row of the build open before */
     addBuild: (form: ConfigFormData, name: string | null, options?: { replaceId?: string }) => { id: string; previous: BuildMeta };
     /** For an Undo: removes `removeId`, puts `meta` back with `form`, and opens it, with no check (the form was open before) */
@@ -282,6 +283,7 @@ export function usePersistedConfigForm() {
     const idRef = useRef(opened.activeId);
     const formRef = useRef(current.form);
     const revisionRef = useRef(0);
+    const loadIntentRef = useRef(0);
     const indexRef = useRef(index);
     const conflictRef = useRef(conflict);
     // the text this tab last wrote or loaded for its build, which another tab's save is told from
@@ -305,6 +307,12 @@ export function usePersistedConfigForm() {
         setCurrent({ id: expected.buildId, form: next });
         return true;
     }, [matchesBuildMutation]);
+
+    // Two opens can begin on the same form revision. Only the latest intent may publish its answer.
+    const beginLoad = useCallback(() => ({ intent: ++loadIntentRef.current, owner: captureBuildMutation() }), [captureBuildMutation]);
+    const isCurrentLoad = useCallback((load: ReturnType<typeof beginLoad>) =>
+        load.intent === loadIntentRef.current && matchesBuildMutation(load.owner), [matchesBuildMutation]);
+    useEffect(() => () => { loadIntentRef.current++; }, []);
 
     const setConflict = useCallback((next: (state: ConflictState) => ConflictState) => {
         const value = next(conflictRef.current);
@@ -340,6 +348,7 @@ export function usePersistedConfigForm() {
 
     /** Opens a build in this tab: the form and its id change together, and any warning about the build before goes */
     const show = useCallback((next: OpenBuild, text: string | null) => {
+        loadIntentRef.current++;
         if (next.id !== idRef.current) {
             deletedElsewhereRef.current = false;
         }
@@ -356,14 +365,15 @@ export function usePersistedConfigForm() {
             return;
         }
         const savedConfig = stored.config;
-        const expected = captureBuildMutation();
+        const load = beginLoad();
         let alive = true;
         askEngine({ kind: 'saved-config', config: savedConfig }).then(
             (problem) => {
                 if (!alive) return;
+                if (!isCurrentLoad(load)) { setIsLoaded(true); return; }
                 if (problem === null) {
                     // unless the config was replaced (imported or reset) in the meantime
-                    if (expected.form === defaultConfig) commitBuildReplacement(expected, savedConfig, () => {});
+                    if (load.owner.form === defaultConfig) commitBuildReplacement(load.owner, savedConfig, () => {});
                 } else {
                     console.warn('Saved config in localStorage is invalid, using defaults:', problem);
                     setLoadNotice(backUpSavedConfig(pageLocal, stored.text, backupKey(opened.activeId)));
@@ -371,14 +381,16 @@ export function usePersistedConfigForm() {
                 setIsLoaded(true);
             },
             (e) => {
+                if (!alive) return;
+                if (!isCurrentLoad(load)) { setIsLoaded(true); return; }
                 console.warn('Failed to check the config from localStorage:', e);
-                if (alive) setLoadError(e instanceof Error ? e.message : 'Failed to check the saved config');
+                setLoadError(e instanceof Error ? e.message : 'Failed to check the saved config');
             },
         );
         return () => {
             alive = false;
         };
-    }, [stored, defaultConfig, opened.activeId, captureBuildMutation, commitBuildReplacement]);
+    }, [stored, defaultConfig, opened.activeId, beginLoad, isCurrentLoad, commitBuildReplacement]);
 
     // the tab remembers its build, so a reload stays on it
     useEffect(() => {
@@ -470,8 +482,8 @@ export function usePersistedConfigForm() {
 
     const dismissLoadNotice = useCallback(() => setLoadNotice(null), []);
 
-    /** A saved build read and checked as the first load does; null (backed up, with the load notice) when it cannot be */
-    const loadBuild = useCallback(async (id: string): Promise<{ form: ConfigFormData; text: string | null } | null> => {
+    /** Read and check a saved build; stale requests have no visible or storage side effects. */
+    const loadBuild = useCallback(async (id: string, current: () => boolean): Promise<{ form: ConfigFormData; text: string | null } | null> => {
         const text = readItem(buildKey(id));
         if (text === null) {
             // listed but never saved: a new build is saved on its first change
@@ -486,6 +498,7 @@ export function usePersistedConfigForm() {
                 problem = e instanceof Error ? e.message : 'the check failed';
             }
         }
+        if (!current()) return null;
         if (problem !== null || form === null) {
             console.warn('A saved build cannot be loaded:', problem);
             setLoadNotice(backUpSavedConfig(pageLocal, text, backupKey(id)));
@@ -500,12 +513,13 @@ export function usePersistedConfigForm() {
     }, []);
 
     const openBuild = useCallback(async (id: string) => {
-        const loaded = await loadBuild(id);
-        if (loaded === null) return false;
+        const load = beginLoad();
+        const loaded = await loadBuild(id, () => isCurrentLoad(load));
+        if (loaded === null || !isCurrentLoad(load)) return false;
         show({ id, form: loaded.form }, loaded.text);
         commitIndex((saved) => touchBuild(saved, id, Date.now()));
         return true;
-    }, [loadBuild, show, commitIndex]);
+    }, [beginLoad, isCurrentLoad, loadBuild, show, commitIndex]);
 
     const newBuild = useCallback(() => {
         const form = createDefaultConfig();
@@ -541,11 +555,14 @@ export function usePersistedConfigForm() {
         commitIndex((saved) => renameIndexBuild(saved, own.id, name));
     }, [ownMeta, commitIndex]);
 
-    const deleteBuild = useCallback(async () => {
+    const deleteBuild = useCallback(async (beforeApply?: () => void) => {
+        const load = beginLoad();
         const deleted = ownMeta();
         const next = mostRecent(indexRef.current, deleted.id);
         // the next build is checked before anything goes, so the page never shows a build that is no longer saved
-        const loaded = next ? await loadBuild(next.id) : null;
+        const loaded = next ? await loadBuild(next.id, () => isCurrentLoad(load)) : null;
+        if (!isCurrentLoad(load)) return null;
+        beforeApply?.();
         try {
             pageLocal.removeItem(buildKey(deleted.id));
         } catch (e) {
@@ -562,7 +579,7 @@ export function usePersistedConfigForm() {
         show({ id: meta.id, form }, null);
         commitIndex((saved) => upsertBuild(removeBuild(saved, deleted.id), meta));
         return { deleted, madeId: meta.id };
-    }, [ownMeta, loadBuild, show, commitIndex]);
+    }, [beginLoad, isCurrentLoad, ownMeta, loadBuild, show, commitIndex]);
 
     const addBuild = useCallback((form: ConfigFormData, name: string | null, options?: { replaceId?: string }) => {
         const previous = ownMeta();
@@ -589,6 +606,7 @@ export function usePersistedConfigForm() {
     const loadOtherTabVersion = useCallback(async (beforeApply: () => void) => {
         const episode = conflictRef.current;
         if (episode.status === 'none') return false;
+        const load = beginLoad();
         const id = idRef.current;
         const form = readSavedConfig(episode.text);
         let problem: string | null = form === null ? 'It is not a build.' : null;
@@ -599,8 +617,7 @@ export function usePersistedConfigForm() {
                 problem = e instanceof Error ? e.message : 'The check failed.';
             }
         }
-        // another build was opened meanwhile: nothing to load into
-        if (idRef.current !== id) return false;
+        if (!isCurrentLoad(load) || conflictRef.current !== episode) return false;
         if (problem !== null || form === null) {
             setConflict((state) => nextConflict(state, { kind: 'closed' }));
             notify({ severity: 'error', text: otherTabProblemMessage(problem ?? '') });
@@ -610,7 +627,7 @@ export function usePersistedConfigForm() {
         show({ id, form }, episode.text);
         setConflict((state) => nextConflict(state, { kind: 'loaded' }));
         return true;
-    }, [notify, setConflict, show]);
+    }, [beginLoad, isCurrentLoad, notify, setConflict, show]);
 
     const closeConflict = useCallback(() => setConflict((state) => nextConflict(state, { kind: 'closed' })), [setConflict]);
 
