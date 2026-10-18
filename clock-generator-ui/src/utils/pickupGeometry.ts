@@ -9,6 +9,11 @@ export function pickupTypeOf(source: Source): PickupType {
 
 export function withPickupType(source: Source, type: PickupType): Source {
     if (source.type !== 'belt') return source;
+    if (type === 'underground' && source.pickup_merge) {
+        const updated = { ...source, pickup_length: 0.5 as const };
+        delete updated.pickup_merge;
+        return updated;
+    }
     return { ...source, pickup_length: type === 'straight' ? 1 : 0.5 };
 }
 

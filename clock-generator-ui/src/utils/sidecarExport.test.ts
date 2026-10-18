@@ -115,7 +115,7 @@ it('retains supply diagnostics even when geometry is classified', () => {
 });
 
 it('explains supply warnings without claiming that pickup geometry is unknown', () => {
-    expect(pickupCaptureWarningMessage('merge')).toContain('Merge timing is not modeled');
+    expect(pickupCaptureWarningMessage('merge')).toContain('outside the supported turbo two-stream');
     expect(pickupCaptureWarningMessage('supply-unknown')).toContain('Supply entry is unspecified');
     expect(pickupCaptureWarningMessage('merge')).not.toContain('pickup type unspecified');
 });

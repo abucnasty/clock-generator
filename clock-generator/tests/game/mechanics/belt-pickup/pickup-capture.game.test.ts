@@ -116,10 +116,20 @@ for index, entry in ipairs(directions) do
     rear.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
     assert(supply.capture(target).problem == "merge")
     rear.get_transport_line(2).clear()
-    -- Both incoming side lanes also merge, even when they carry different items.
+    -- Two lanes of one turbo side input form the supported merge, including distinct ingredients.
     feed.get_transport_line(1).insert_at_back({name = "copper-plate", count = 4}, 4)
+    local two = supply.capture(target)
+    assert(two.problem == nil and two.profiles == nil)
+    assert(two.merge.lane == 2 and two.merge.outer.ingredient == "copper-plate" and two.merge.inner.ingredient == "iron-plate")
+    assert(two.merge.downstream_tiles == 0 and two.merge.outlet == "closed")
+    -- A third observed rear stream remains unsupported.
+    rear.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
     assert(supply.capture(target).problem == "merge")
-    assert(supply.capture(target).profiles == nil)
+    rear.get_transport_line(2).clear()
+    -- A partial incoming stack is not proof of the calibrated four-item stream.
+    feed.get_transport_line(1).clear()
+    feed.get_transport_line(1).insert_at_back({name = "copper-plate", count = 2}, 2)
+    assert(supply.capture(target).problem == "merge")
 end
 local target = belt("turbo-transport-belt", 260, 160, defines.direction.east)
 belt("turbo-transport-belt", 259, 160, defines.direction.east)

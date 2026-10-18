@@ -17,7 +17,7 @@ up as seldom as possible, and gives you a blueprint of the clock to place.
 - inserters: what each takes from and drops into, its stack size and filters
 - belts and the items on each lane, and chests with what they hold
 - belt pickup reach and preferred lane, including inline pickups downstream of underground entrances and exits where flipping the inserter changes its preferred lane
-- single-stream side-feed entry at straight pickup tiles, with warnings for merges or ambiguous inputs
+- single-stream side-feed entry and supported two-stream turbo merges at straight pickup tiles, with warnings for other merges or ambiguous inputs
 - a suggested target: the product that leaves your selection and how much of it the machines make at most per second
 
 Inserters that take from or drop into something the text does not have are listed in the window with the text, with
@@ -31,3 +31,8 @@ why, and left out of it.
 Side-feed profiles assume a continuously supplied incoming lane at the receiving belt's speed. Supply motion
 (Moving or Backed up) remains a separate setting in the website. A merge warning means the exported clock
 model does not describe the competing streams; resolve that supply before relying on its timing.
+
+Two-stream merge capture supports the two four-item lanes of one perpendicular turbo input feeding a straight
+turbo pickup, with one pickup inserter and the other receiving lane empty. It copies both ingredients and the
+straight downstream length, ending at a closed belt end or a turbo loader into an unfiltered disposal chest.
+Other speeds, stack sizes, extra feeds, upstream merges and unsupported downstream paths keep their warning.

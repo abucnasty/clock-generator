@@ -1,5 +1,5 @@
 import { InserterConfig } from "../../config";
-import { BeltPickupSupplyProfile } from "../../config/schema";
+import { BeltPickupMergeConfig, BeltPickupSupplyProfile } from "../../config/schema";
 import { FactorioDataService, ItemName } from "../../data";
 import { BeltStackSize, Lane } from "../belt";
 import { EntityType } from "../entity-type";
@@ -34,6 +34,7 @@ export interface Inserter extends Entity {
     pickup_length?: 0.5 | 1;
     /** Single-stream entry per receiving lane; omitted profiles retain through supply. */
     pickup_supply?: readonly BeltPickupSupplyProfile[];
+    pickup_merge?: BeltPickupMergeConfig;
     /** Belt availability is independent of geometry; absent only for non-belt sources. */
     belt_supply?: "moving" | "backed_up";
     /** Physical input lane to try first, including when both lanes carry the same item. */
@@ -117,6 +118,10 @@ export class InserterFactory {
             belt.lanes.forEach(lane => {
                 source_provided_items.add(lane.ingredient_name)
             })
+            if (source.pickup_merge) {
+                source_provided_items.add(source.pickup_merge.outer.ingredient);
+                source_provided_items.add(source.pickup_merge.inner.ingredient);
+            }
         }
 
         if (source.type === EntityType.MACHINE) {
@@ -249,6 +254,7 @@ export class InserterFactory {
                 inserter.pickup_supply = [...source.pickup_supply];
             }
             inserter.belt_supply = this.belt_supply;
+            inserter.pickup_merge = source.pickup_merge;
         }
 
         if (drop_spot !== undefined) {

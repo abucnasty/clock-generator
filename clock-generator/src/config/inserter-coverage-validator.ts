@@ -42,7 +42,8 @@ function inserterCoversInputItem(
     const source = inserter.source;
     if (source.type === 'belt') {
         const belt = belts.find((b) => b.id === source.id);
-        return belt !== undefined && beltCoversItem(belt, itemName);
+        return belt !== undefined && (beltCoversItem(belt, itemName)
+            || source.pickup_merge?.inner.ingredient === itemName || source.pickup_merge?.outer.ingredient === itemName);
     }
     if (source.type === 'chest') {
         const chest = chests.find((c) => c.id === source.id);
@@ -277,7 +278,8 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
         if (catalog !== nextCatalog) { cached.clear(); catalog = nextCatalog; }
         const routes = new Map<number, unknown[]>();
         config.inserters.forEach((inserter, index) => {
-            const route = [inserter.id ?? index + 1, inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters];
+            const route = [inserter.id ?? index + 1, inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters,
+                inserter.source.type === 'belt' ? inserter.source.pickup_merge : undefined];
             const ids = new Set<number>();
             if (inserter.source.type === 'machine') ids.add(inserter.source.id);
             if (inserter.sink.type === 'machine') ids.add(inserter.sink.id);

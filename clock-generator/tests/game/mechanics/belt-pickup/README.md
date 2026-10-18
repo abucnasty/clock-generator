@@ -9,7 +9,27 @@ The [side-loaded straight-tile experiment](fixtures/side-loaded-straight/README.
 from single-stream entry. Inner and outer side feeds traverse different parts of the receiving lane. The
 simulator models these profiles; Sidecar 0.11.0 captures local receiving lanes and warns about merges or
 ambiguous inputs. A 24-case matrix checks speeds, directions, two turbo start phases and backed-up controls;
-production comparisons align phase from pre-pickup observations. Multi-stream merge timing remains unsupported.
+production comparisons align phase from pre-pickup observations. Other merge layouts remain unsupported. A subsequent
+[repeated two-stream turbo case](fixtures/side-loaded-straight/README.md#repeated-two-stream-turbo-test) captures
+45 hands and validates a candidate shared-stock replay against all observed queues, stack IDs and positions.
+It includes temporary compression and follower slowdown. The same setup at
+[express speed](fixtures/side-loaded-straight/README.md#repeated-two-stream-express-test) falsifies the candidate's
+entry acceptance rule at tick 19, despite matching every hand count. Express merge support remains deferred.
+
+The [release-17 turbo follow-up](fixtures/side-loaded-straight/README.md#repeated-turbo-test-with-release-at-tick-17)
+also rejects the original entry-shift cap. A revised experimental turbo replay matches both starting phases,
+pause/resume, outlet blocking/release, a north/south reflection, and different items with their streams swapped.
+Each comparison checks all 511 observed transitions. These controls require shared finite stock and
+backpressure in addition to held-item selection. A separate
+[seeded cutoff calibration](fixtures/side-loaded-straight/README.md#turbo-entry-window-cutoff-calibration)
+accepts all integer shifts 89–95 and rejects 96, including outer-absent controls at the boundary. It also
+confirms that compressed followers wait instead of moving upstream. The engine now implements the measured
+turbo two-stream case using shared finite stock and incoming queues, and Sidecar captures its two ingredients
+and downstream geometry. Production comparisons verify all seven repeated-hand controls and all ten cutoff
+cases. A generated gear clock holds all 60 recorded periods; a separate freely running mixed-ingredient build
+confirms starvation of its inner ingredient and the simulator reports that stalled preparation state.
+Other geometries, stack sizes, speeds and sub-unit boundaries remain unverified. Further investigation focuses
+on turbo belts.
 
 The [front underground exit fixture](fixtures/front-underground-exit/README.md) isolates a northbound, head-on
 pickup with backed-up supply. Two ingredient arrangements distinguish lane preference from fixed recipe order;
@@ -66,3 +86,17 @@ while clearing the machine during the earlier ticks too. Observation precedes in
 Offsets are relative to the first observed grab, not arm arrival or a proof about arbitrary phases.
 
 The [build checks](../../builds/README.md) independently measure throughput and recovery using these fixtures.
+
+## Queued at the end of the series
+
+Before the final stack-size check, investigate [direct splitter pickup](fixtures/splitter/README.md), using
+the user-provided scaffold saved there. No game test or screenshot has been run for this queued case. Keep it
+separate from the current turbo merge implementation and resolve that PR before starting the splitter case.
+
+After the current pickup/merge investigations, verify the tick-by-tick predictions of
+[`Belt::amountToDropAtTick`](../../../../src/entities/belt/belt.test.ts) against actual drops with belt stack sizes
+1, 2, 3 and 4. Vary the effective belt stack-size limit without changing researched technologies. Keep turbo
+belt speed, inserter type/quality, hand capacity, geometry and starting lane occupancy fixed so stack size is
+the controlled variable. Record actual hand decrements and deposited stack counts/positions, then compare
+each tick with the function's prediction. Evaluate each stack size separately before changing the simulator;
+other belt speeds remain deferred. This is queued work, not a completed game verification.

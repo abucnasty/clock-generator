@@ -297,5 +297,28 @@
     "png_bytes": 535902,
     "jpeg_bytes": 63962,
     "jpeg_quality": 82
+  },
+  "side-loaded-straight/two-stream-express": {
+    "blueprint": "belt-pickup/fixtures/side-loaded-straight/two-stream-express-scaffold.txt",
+    "image": "belt-pickup/fixtures/side-loaded-straight/two-stream-express-scaffold.jpg",
+    "source_sha256": "90bb52379819bf742d73f6e466327873d063a6be3962b54d72d4c1c48f7f2af1",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 392,
+      "y": 0.025390625
+    },
+    "resolution": {
+      "x": 658,
+      "y": 660
+    },
+    "zoom": 1.5,
+    "width": 658,
+    "height": 660,
+    "png_bytes": 677099,
+    "jpeg_bytes": 79922,
+    "jpeg_quality": 82
   }
 }

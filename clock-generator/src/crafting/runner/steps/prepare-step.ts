@@ -4,6 +4,7 @@ import { EntityState, MachineState, MachineStatus } from "../../../state";
 import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../sequence";
 import { InserterInterceptor } from "../../sequence/interceptors/inserter-interceptor";
 import { RunnerStep, RunnerStepType } from "./runner-step";
+import { simulationStateKey } from "../steady-state";
 
 /**
  * PrepareStep simulates the crafting process until all machines are output blocked
@@ -39,6 +40,8 @@ export class PrepareStep implements RunnerStep {
     public execute(): void {
         const control_logic = this.control_logic;
         const context = this.simulation_context;
+        const mergeStates = context.state_registry.getAllStates().some(state => EntityState.isBelt(state) && state.pickup_merges.size > 0)
+            ? new Set<string>() : undefined;
         
         // Only check for full buffer chests that have both an input and output inserter
         const buffer_chests = context.state_registry
@@ -86,6 +89,11 @@ export class PrepareStep implements RunnerStep {
             
             // Check all machines are output blocked
             if (context.machines.some(it => it.machine_state.status !== MachineStatus.OUTPUT_FULL)) {
+                if (mergeStates) {
+                    const key = simulationStateKey(context);
+                    if (mergeStates.has(key)) throw new Error("Two-stream belt supply repeats before the build is ready. An ingredient may be starved by the competing stream; review the merge or separate the ingredients.");
+                    mergeStates.add(key);
+                }
                 continue;
             }
             

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BeltPickupSupplyProfileSchema } from "../config/schema";
+import { BeltPickupMergeSchema, BeltPickupSupplyProfileSchema } from "../config/schema";
 
 // Lua's table_to_json writes empty tables as {} even when they are arrays.
 const luaArray = <T extends z.ZodTypeAny>(item: T) => z.preprocess(
@@ -22,6 +22,7 @@ const TargetRefSchema = z.object({
     near_lane: z.union([z.literal(1), z.literal(2)]).optional(),
     pickup_length: z.union([z.literal(0.5), z.literal(1)]).optional(),
     pickup_supply: z.union([z.tuple([BeltPickupSupplyProfileSchema]), z.tuple([BeltPickupSupplyProfileSchema, BeltPickupSupplyProfileSchema])]).optional(),
+    pickup_merge: BeltPickupMergeSchema.optional(),
 });
 
 const RecordedInserterSchema = z.object({

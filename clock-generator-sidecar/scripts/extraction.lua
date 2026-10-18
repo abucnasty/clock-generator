@@ -542,7 +542,12 @@ function extraction.extract_all_entities(entities, force)
                 local view = data.source and local_supply[data.source.unit_number]
                 if view then
                     data.source.pickup_supply = view.profiles
+                    data.source.pickup_merge = view.merge
                     data.source.supply_problem = view.problem
+                    if view.merge and data.source.pickup_length ~= 1 then
+                        data.source.pickup_merge = nil
+                        data.source.supply_problem = "merge"
+                    end
                 end
                 table.insert(result.inserters, data)
             end

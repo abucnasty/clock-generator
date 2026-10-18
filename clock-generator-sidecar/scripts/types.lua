@@ -31,6 +31,7 @@
 ---@field near_lane 1|2|nil Preferred pickup lane: nearest beside a belt, mirroring-selected downstream of an underground endpoint
 ---@field pickup_length number|nil Exposed pickup line length in tiles
 ---@field pickup_supply string[]|nil Single-stream entry per physical receiving lane
+---@field pickup_merge table|nil Supported turbo two-stream side merge with finite downstream length
 ---@field supply_problem string|nil Unsupported merge or ambiguous local supply
 ---@field pickup_problem string|nil Why the pickup geometry was omitted
 

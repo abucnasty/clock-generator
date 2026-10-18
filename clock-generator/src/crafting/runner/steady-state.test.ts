@@ -19,7 +19,8 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     BeltDropLogic: ["current_tick"],
     MachineDropLogic: ["current_tick"],
     ChestDropLogic: ["current_tick"],
-    BeltPickupLogic: ["current_tick", "belt_grab_decided"],
+    // Belt position is in the source state; pickup age no longer drives any decision.
+    BeltPickupLogic: ["belt_grab_decided"],
     // what marks a take in the first tick of a window counts only within that tick
     MachinePickupLogic: ["current_tick", "window_opened", "ticks_in_pickup"],
     ChestPickupLogic: ["current_tick"],

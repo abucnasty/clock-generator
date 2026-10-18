@@ -9,18 +9,25 @@ import { SimulationContext } from "../../../../src/crafting/sequence/simulation-
 import { loadConfigFromFile } from "../../../../src/config/loader";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
+import { advanceMergeStock, assessTwoStreamMerge, candidateTurboMergeEntry, observedMergeGrabs } from "./two-stream-merge-replay";
 import { composeProbeSource } from "../../helpers/probe-source";
+import { EntityState, BeltState } from "../../../../src/state";
+import { BeltPickupMerge, MergeStack as SimulatedMergeStack } from "../../../../src/state/belt-pickup-merge";
 
 type Speed = "turbo" | "express" | "fast" | "yellow";
 interface Variant {
     name: string; lane: 1 | 2 | "both"; speed: Speed;
-    backed?: boolean; reflect?: boolean; turn?: number; releaseTick?: number;
+    backed?: boolean; reflect?: boolean; turn?: number; releaseTick?: number; repeatedMerge?: boolean;
+    pauseTick?: number; resumeTick?: number;
+    blockOutletTick?: number; releaseOutletTick?: number;
+    mixed?: "inner-cable" | "outer-cable";
     offsets: number[];
 }
 interface Stack { at: number; count: number; id: number; item: string }
 interface Lane { length: number; stacks: Stack[] | Record<string, never> }
 interface Sample {
-    tick: number; held: number; held_item?: string; lanes: Lane[];
+    downstream: Lane[];
+    tick: number; held: number; held_item?: string; lanes: Lane[]; input_enabled: boolean; outlet_open?: boolean;
     feed: { lanes: (Lane & { count: number; full: boolean })[] };
     inputs: unknown; output: unknown; crafting_progress: number;
 }
@@ -48,9 +55,21 @@ for (const lane of [1, 2, "both"] as const) variants.push({
     offsets: lane === "both" ? [0, 1, 2, 3] : [0, 1, 3, 5],
 });
 
+variants.push({name: "turbo-south-both-repeated-merge", lane: "both", speed: "turbo", repeatedMerge: true, offsets: [0, 1, 2, 3]});
+variants.push({name: "express-south-both-repeated-merge", lane: "both", speed: "express", repeatedMerge: true, offsets: [0, 1, 2, 3]});
+variants.push({name: "turbo-south-both-repeated-merge-release17", lane: "both", speed: "turbo", repeatedMerge: true, releaseTick: 17, offsets: [0, 1, 2, 3]});
+variants.push({name: "turbo-south-both-repeated-merge-pause", lane: "both", speed: "turbo", repeatedMerge: true, pauseTick: 124, resumeTick: 156, offsets: [0, 1, 2, 3]});
+variants.push({name: "turbo-south-both-repeated-merge-outlet", lane: "both", speed: "turbo", repeatedMerge: true, blockOutletTick: 124, releaseOutletTick: 188, offsets: [0, 1, 2, 3]});
+variants.push({name: "turbo-north-both-repeated-merge", lane: "both", speed: "turbo", repeatedMerge: true, reflect: true, offsets: [0, 1, 2, 3]});
+variants.push({name: "turbo-south-both-repeated-merge-mixed", lane: "both", speed: "turbo", repeatedMerge: true, mixed: "inner-cable", offsets: [0, 1, 2, 4]});
+variants.push({name: "turbo-south-both-repeated-merge-mixed-swapped", lane: "both", speed: "turbo", repeatedMerge: true, mixed: "outer-cable", offsets: [0, 1, 2, 4]});
+
 /** Derive variants from the photographed layout: no additional copied blueprints or probes. */
 function makeVariant(text: string, variant: Variant) {
-    interface Entity { entity_number: number; name: string; position: { x: number; y: number }; direction?: number }
+    interface Entity {
+        entity_number: number; name: string; position: { x: number; y: number }; direction?: number;
+        infinity_settings?: {filters: {name: string}[]};
+    }
     const decoded = JSON.parse(zlib.inflateSync(Buffer.from(text.trim().slice(1), "base64")).toString()) as {
         blueprint: { entities: Entity[] };
     };
@@ -74,6 +93,9 @@ function makeVariant(text: string, variant: Variant) {
         entity.position.x += id === 14 || id === 20 ? 2 : 4;
         if (id === 14 || id === 20) entity.direction = 4;
         entities.push(entity);
+    }
+    if (variant.mixed) for (const id of variant.mixed === "inner-cable" ? [15, 21] : [23, 25]) {
+        byId(id).infinity_settings!.filters[0].name = "copper-cable";
     }
     if (variant.backed) {
         expect(byId(10).name).toBe("turbo-loader");
@@ -164,6 +186,57 @@ function checkSimulator(config: Config, samples: Sample[], variant: Variant, fir
     }
 }
 
+/** Actual production pickup mode and supply, seeded once. Only external refill IDs and arm start/drop times
+ * are supplied observations; queue positions, transfer decisions, remaining stock and withdrawals are predicted. */
+function checkMergeSimulator(config: Config, samples: Sample[], receivingLane: number) {
+    const context = SimulationContext.fromConfig(config);
+    const state = context.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
+    const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
+    if (!EntityState.isBelt(source)) throw new Error("expected belt");
+    const merge = source.pickup_merges.get(receivingLane + 1)!;
+    const outerLane = 1 - receivingLane;
+    const initial = samples[0];
+    const convert = (lane: Lane, origin: "outer" | "inner", offset = 0): SimulatedMergeStack[] => stacks(lane)
+        .map(s => ({id: s.id, position: Math.round(s.at * 256) + offset, item: s.item, count: s.count, origin}));
+    merge.restore({tick: initial.tick,
+        stock: [...convert(initial.lanes[receivingLane], "outer"), ...convert(initial.downstream[receivingLane], "outer", -256)],
+        outer: convert(initial.feed.lanes[outerLane], "outer"), inner: convert(initial.feed.lanes[receivingLane], "inner"),
+    });
+    const first = merge.snapshot();
+    const ids = new Map([...first.stock, ...first.outer, ...first.inner].map(stack => [stack.id, stack.id]));
+    const sink = context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id);
+    const mode = InserterPickupMode.create({inserterState: state, sourceState: source, sinkState: sink, tick_provider: context.tick_provider});
+    let active = false;
+    const ordered = <T extends {position: number}>(values: T[]): T[] => [...values].sort((a, b) => a.position - b.position);
+    for (const [index, sample] of samples.slice(1).entries()) {
+        const previous = samples[index];
+        context.tick_provider.setCurrentTick(sample.tick);
+        source.supply.refused.clear();
+        if (sample.outlet_open === false) source.supply.refused.add("iron-plate");
+        BeltState.advancePickups(source, sample.tick);
+        if (sample.held === 0 && previous.held > 0) { state.held_item = null; active = false; }
+        if (sample.held > 0 && previous.held === 0) active = true;
+        if (active && (state.held_item?.quantity ?? 0) < 16) mode.executeForTick();
+        expect(state.held_item?.quantity ?? 0, `production hand at ${sample.tick}`).toBe(sample.held);
+        if (sample.held > 0) expect(state.held_item?.item_name).toBe(sample.held_item);
+        const snapshot = merge.snapshot();
+        for (const origin of ["outer", "inner"] as const) {
+            const actual = convert(sample.feed.lanes[origin === "outer" ? outerLane : receivingLane], origin);
+            expect(snapshot[origin].map(s => [s.position, s.item, s.count]), `production ${origin} queue at ${sample.tick}`)
+                .toEqual(actual.map(s => [s.position, s.item, s.count]));
+            snapshot[origin].forEach((stack, slot) => {
+                if (ids.has(stack.id)) expect(ids.get(stack.id)).toBe(actual[slot].id);
+                else ids.set(stack.id, actual[slot].id); // identity of an external refill only, after position validation
+            });
+        }
+        const predicted = ordered(snapshot.stock).map(s => ({id: ids.get(s.id), position: s.position, item: s.item, count: s.count}));
+        const actual = ordered([...convert(sample.lanes[receivingLane], "outer"), ...convert(sample.downstream[receivingLane], "outer", -256)])
+            .map(s => ({id: s.id, position: s.position, item: s.item, count: s.count}));
+        expect(predicted, `production stock at ${sample.tick}`).toEqual(actual);
+        sink.inventoryState.clear();
+    }
+}
+
 for (const variant of variants) test(`side-entry supply: ${variant.name}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
@@ -172,25 +245,40 @@ for (const variant of variants) test(`side-entry supply: ${variant.name}`, async
     try {
         const made = makeVariant(fs.readFileSync(path.join(fixture, "side-loaded-scaffold.txt"), "utf8"), variant);
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+        const outerItem = variant.mixed === "outer-cable" ? "copper-cable" : "iron-plate";
         config.belts[0].type = `${variant.speed === "yellow" ? "" : variant.speed + "-"}transport-belt` as typeof config.belts[0]["type"];
         config.belts[0].lanes = [
-            { ingredient: variant.reflect ? "iron-plate" : "", stack_size: 4 },
-            { ingredient: variant.reflect ? "" : "iron-plate", stack_size: 4 },
+            { ingredient: variant.reflect ? outerItem : "", stack_size: 4 },
+            { ingredient: variant.reflect ? "" : outerItem, stack_size: 4 },
         ];
         config.overrides!.backed_up_belts = variant.backed ?? false;
         const source = config.inserters[1].source;
         if (source.type !== "belt") throw new Error("expected belt input");
         source.near_lane = variant.reflect ? 2 : 1;
-        if (variant.lane === "both") delete source.pickup_supply;
+        if (variant.lane === "both") {
+            delete source.pickup_supply;
+            if (variant.speed === "turbo") source.pickup_merge = {
+                lane: variant.reflect ? 1 : 2,
+                outer: {ingredient: outerItem, stack_size: 4},
+                inner: {ingredient: variant.mixed === "inner-cable" ? "copper-cable" : "iron-plate", stack_size: 4},
+                downstream_tiles: 3, outlet: variant.backed ? "closed" : "open",
+            };
+        }
         else {
             const profile = variant.lane === (variant.reflect ? 1 : 2) ? "side-inner" : "side-outer";
             source.pickup_supply = variant.reflect ? [profile, "through"] : ["through", profile];
         }
+        if (variant.repeatedMerge) Object.assign(made.options, {
+            lastTick: 512, clearDestination: true, observeDownstream: true,
+            pauseTick: variant.pauseTick, resumeTick: variant.resumeTick,
+            blockOutletTick: variant.blockOutletTick, releaseOutletTick: variant.releaseOutletTick,
+            downstreamTiles: 3,
+        });
         const result = await recordInFactorio({
             factorio: factorio!, save: save!, config, blueprint: made.blueprint,
             lua: composeProbeSource(path.join(fixture, "probe.lua"), made.options),
             out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
-            ticks: 120, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: false,
+            ticks: variant.repeatedMerge ? 540 : 120, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: false,
             game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
         });
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/front-pickup.json"), "utf8")) as {
@@ -199,11 +287,15 @@ for (const variant of variants) test(`side-entry supply: ${variant.name}`, async
         const exported = result.recording.config.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
         const captured = result.recording.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
         const localBelt = result.recording.config.belts.find((belt: { id: number }) => belt.id === exported.source.id)!;
-        expect(localBelt.lanes.map((lane: { ingredient: string }) => lane.ingredient)).toEqual(variant.reflect ? ["iron-plate", ""] : ["", "iron-plate"]);
+        expect(localBelt.lanes.map((lane: { ingredient: string }) => lane.ingredient)).toEqual(variant.reflect ? [outerItem, ""] : ["", outerItem]);
         expect(exported.source).toMatchObject({near_lane: variant.reflect ? 2 : 1, pickup_length: 1});
         if (variant.lane === "both") {
             expect(exported.source.pickup_supply).toBeUndefined();
-            expect(result.recording.config.pickup_warnings).toContainEqual({inserter_id: exported.id ?? result.recording.config.inserters.indexOf(exported) + 1, reason: "merge"});
+            if (variant.speed === "turbo") {
+                expect(exported.source.pickup_merge).toEqual(source.pickup_merge);
+                expect(captured.source.pickup_merge).toEqual(source.pickup_merge);
+                expect(result.recording.config.pickup_warnings).toBeUndefined();
+            } else expect(result.recording.config.pickup_warnings).toContainEqual({inserter_id: exported.id ?? result.recording.config.inserters.indexOf(exported) + 1, reason: "merge"});
         } else {
             expect(exported.source.pickup_supply).toEqual(source.pickup_supply);
             expect(captured.source.pickup_supply).toEqual(source.pickup_supply);
@@ -211,15 +303,101 @@ for (const variant of variants) test(`side-entry supply: ${variant.name}`, async
         }
         const samples = report.samples;
         expect(report.initial.belt_shape).toBe("straight");
-        expect(samples).toHaveLength(96);
+        expect(samples).toHaveLength(variant.repeatedMerge ? 512 : 96);
         expect(samples.slice(0, made.options.releaseTick).every(s => s.held === 0)).toBe(true);
+        if (variant.repeatedMerge) {
+            if (variant.speed === "turbo") checkMergeSimulator(config, samples, variant.reflect ? 0 : 1);
+            const receivingLane = variant.reflect ? 0 : 1;
+            expect(report.initial).toMatchObject({destination_cleared_each_tick: true});
+            for (const sample of samples) {
+                expect(sample.feed.lanes.map(lane => [lane.count, lane.full])).toEqual([[16, true], [16, true]]);
+                expect(sample.lanes.map(lane => lane.length)).toEqual([1, 1]);
+                expect(stacks(sample.lanes[1 - receivingLane])).toEqual([]);
+                expect(stacks(sample.downstream[1 - receivingLane])).toEqual([]);
+                expect(sample.crafting_progress).toBe(0);
+                for (const stack of [...stacks(sample.lanes[receivingLane]), ...stacks(sample.downstream[receivingLane])]) {
+                    expect(stack.count).toBe(4);
+                    expect(variant.mixed ? ["iron-plate", "copper-cable"] : ["iron-plate"]).toContain(stack.item);
+                }
+                if (variant.mixed) {
+                    expect(sample.held === 0 || sample.held_item === outerItem).toBe(true);
+                    for (const [index, lane] of sample.feed.lanes.entries()) {
+                        expect(stacks(lane).every(stack => stack.item === (index === 0 ? outerItem : variant.mixed === "inner-cable" ? "copper-cable" : "iron-plate"))).toBe(true);
+                    }
+                }
+            }
+            const replay = assessTwoStreamMerge(samples, speedPerTick[variant.speed] * 256, undefined, receivingLane);
+            expect(replay.transitions).toBe(511);
+            if (variant.speed === "turbo") {
+                if (variant.releaseTick === 17) {
+                    expect(replay.matchingPrefix).toBe(18);
+                    expect(replay.firstMismatch).toEqual({tick: 20, receivingBefore: [28, 92], predictedReceiving: [60], observedReceiving: [60, 124]});
+                    expect(replay.errors).toContain("refill count at 20, lane 2");
+                } else if (!variant.pauseTick && !variant.blockOutletTick && !variant.mixed) {
+                    expect(replay.errors).toEqual([]);
+                    expect(replay.matchingPrefix).toBe(511);
+                    expect(replay.transfers).toHaveLength(413);
+                    expect(replay.attempts).toBe(610);
+                }
+                const refined = assessTwoStreamMerge(samples, 32, candidateTurboMergeEntry, receivingLane);
+                expect(refined.errors).toEqual([]);
+                expect(refined.matchingPrefix).toBe(511);
+                expect(refined.grabs).toHaveLength(variant.mixed ? 167 : variant.pauseTick ? 171 : 180);
+                expect(refined.transfers).toHaveLength(variant.mixed ? 421 : variant.blockOutletTick ? 386 : variant.pauseTick ? 404 : variant.releaseTick === 17 ? 414 : 413);
+                expect(replay.compressedGaps).toBeGreaterThan(0);
+                if (variant.pauseTick) {
+                    expect(report.initial).toMatchObject({pause_tick: 124, resume_tick: 156});
+                    expect(samples.filter(s => s.tick > 124 && s.tick <= 156).every(s => !s.input_enabled && s.held === 0)).toBe(true);
+                    expect(samples[156].input_enabled).toBe(true);
+                    expect(samples.find(s => s.tick > 156 && s.held > 0)?.tick).toBe(158);
+                }
+                if (variant.blockOutletTick) {
+                    expect(report.initial).toMatchObject({block_outlet_tick: 124, release_outlet_tick: 188});
+                    expect(samples.filter(s => s.tick > 124 && s.tick <= 188).every(s => s.outlet_open === false)).toBe(true);
+                    expect(samples[188].outlet_open).toBe(true);
+                    const stopped = Array.from({length: 12}, (_, index) => -768 + index * 64);
+                    for (const sample of samples.slice(127, 188)) {
+                        expect(stacks(sample.downstream[1]).map(s => s.at * 256 - 256).sort((a, b) => a - b)).toEqual(stopped);
+                    }
+                    // Both streams arrive on tick 132; backpressure holds them at adjacent full spacings.
+                    expect(stacks(samples[131].lanes[1]).map(s => s.at * 256)).toEqual([0, 64, 128, 192]);
+                    expect(refined.attempts).toBe(637);
+                }
+            } else {
+                // Preserve the falsification of the unchanged turbo candidate, not a merge parity claim.
+                expect(replay.matchingPrefix).toBe(17);
+                expect(replay.firstMismatch).toEqual({tick: 19, receivingBefore: [11, 75], predictedReceiving: [51], observedReceiving: [51, 115]});
+                expect(replay.errors).toContain("refill count at 19, lane 2");
+                expect(replay.errors.some(error => error.startsWith("hand at"))).toBe(false);
+                const before = samples[17], after = samples[18];
+                const queued = stacks(before.feed.lanes[1])[0];
+                expect(queued.at).toBe(0);
+                expect(stacks(after.feed.lanes[1]).some(stack => stack.id === queued.id)).toBe(false);
+                expect(stacks(after.lanes[1]).find(stack => stack.id === queued.id)?.at).toBe(115 / 256);
+                // A second counterexample: a nominal entry with just one unit of space to its follower waits.
+                expect(stacks(samples[25].lanes[1]).map(stack => stack.at * 256)).toEqual([3, 68, 132]);
+                expect(stacks(samples[25].feed.lanes[1])[0].id).toBe(stacks(samples[26].feed.lanes[1])[0].id);
+            }
+            const observed = observedMergeGrabs(samples, receivingLane);
+            expect(observed).toHaveLength(variant.mixed ? 167 : variant.pauseTick ? 171 : 180);
+            expect(observed.filter(grab => grab.origin === 1)).toHaveLength(variant.mixed ? 167 : variant.reflect ? 45 : variant.pauseTick ? 129 : variant.speed === "turbo" ? 135 : 119);
+            expect(observed.filter(grab => grab.origin === 2)).toHaveLength(variant.mixed ? 0 : variant.reflect ? 135 : variant.pauseTick ? 42 : variant.speed === "turbo" ? 45 : 61);
+            const hands = samples.filter((sample, index) => sample.held === 16 && samples[index - 1]?.held !== 16);
+            expect(hands).toHaveLength(variant.mixed ? 41 : variant.pauseTick ? 42 : 45);
+            for (let index = 0; index + 4 <= observed.length; index += 4) {
+                const hand = observed.slice(index, index + 4);
+                expect(hand.map(grab => grab.tick - hand[0].tick)).toEqual(variant.offsets);
+                if (variant.speed === "turbo") expect(hand.filter(grab => grab.origin === (variant.reflect ? 1 : 2))).toHaveLength(variant.mixed ? 0 : 1);
+            }
+            if (variant.speed === "express") expect(observed.slice(0, 4).map(grab => grab.origin)).toEqual([1, 1, 2, 2]);
+        }
         const full = samples.find(s => s.held === 16)!;
         expect(full).toBeDefined();
         const hand = samples.filter(s => s.tick <= full.tick);
         const grabs = hand.filter((s, index) => s.held > (hand[index - 1]?.held ?? 0));
         expect(grabs.map(s => s.tick - grabs[0].tick)).toEqual(variant.offsets);
         expect(grabs.map(s => s.held)).toEqual([4, 8, 12, 16]);
-        expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill("iron-plate"));
+        expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill(outerItem));
         for (const sample of hand) {
             expect(sample.lanes.map(lane => lane.length)).toEqual([1, 1]);
             expect(stacks(sample.lanes[variant.reflect ? 1 : 0])).toEqual([]);
@@ -257,5 +435,90 @@ for (const variant of variants) test(`side-entry supply: ${variant.name}`, async
         }
     } finally {
         fs.rmSync(scratch, { recursive: true, force: true });
+    }
+}, 240_000);
+
+// A separate calibration, not natural supply or a repeated-hand test. Each case seeds exact observed
+// positions once, then checks the first native transfer by ID with withdrawals and feeder refill disabled.
+for (const {shift, outerStream} of [
+    ...[89, 90, 91, 92, 93, 94, 95, 96].map(shift => ({shift, outerStream: true})),
+    {shift: 95, outerStream: false}, {shift: 96, outerStream: false},
+]) test(`turbo merge entry window: shift=${shift}, outer=${outerStream}`, async context => {
+    const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
+    context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
+    const fixture = GameFixturePaths.SIDE_LOADED_STRAIGHT;
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "turbo-entry-window-"));
+    try {
+        const made = makeVariant(fs.readFileSync(path.join(fixture, "side-loaded-scaffold.txt"), "utf8"), {
+            name: "entry-window", lane: "both", speed: "turbo", offsets: [],
+        });
+        const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        delete source.pickup_supply;
+        await recordInFactorio({
+            factorio: factorio!, save: save!, config, blueprint: made.blueprint,
+            lua: composeProbeSource(path.join(fixture, "entry-window-probe.lua"), {shift, outerStream}),
+            out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
+            ticks: 6, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: false,
+            game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
+        });
+        interface CalibrationSample { tick: number; held: number; lanes: Lane[]; feed: {lanes: Lane[]} }
+        const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/entry-window.json"), "utf8")) as {
+            initial: CalibrationSample & {seeded_positions: boolean; requested_shift: number; outer_stream: boolean};
+            samples: CalibrationSample[];
+        };
+        expect(report.initial).toMatchObject({tick: 0, seeded_positions: true, requested_shift: shift, outer_stream: outerStream});
+        const before = report.initial, after = report.samples[0];
+        const converted = (lane: Lane, origin: "outer" | "inner"): SimulatedMergeStack[] => stacks(lane)
+            .map(stack => ({id: stack.id, position: stack.at * 256, count: stack.count, item: stack.item, origin}));
+        const production = new BeltPickupMerge({lane: 2,
+            outer: {ingredient: "iron-plate", stack_size: 4}, inner: {ingredient: "iron-plate", stack_size: 4},
+            downstream_tiles: 3, outlet: "open"}, false, {
+            tick: 0, stock: converted(before.lanes[1], "outer"),
+            outer: converted(before.feed.lanes[0], "outer"), inner: converted(before.feed.lanes[1], "inner"),
+        }, false);
+        const receiving = stacks(before.lanes[1]).map(stack => stack.at * 256);
+        expect(receiving).toEqual([shift - 61, shift + 3]);
+        expect(report.samples).toHaveLength(4);
+        expect(after.tick).toBe(1);
+        for (const sample of [before, ...report.samples]) {
+            expect(sample.held).toBe(0);
+            expect(stacks(sample.lanes[0])).toEqual([]);
+            expect(stacks(sample.lanes[1]).every(stack => stack.count === 4 && stack.item === "iron-plate")).toBe(true);
+        }
+        for (const sample of report.samples) {
+            production.advanceTo(sample.tick);
+            const snapshot = production.snapshot();
+            const values = (stock: SimulatedMergeStack[]) => stock.map(s => [s.id, s.position, s.count, s.item]);
+            expect(values(snapshot.stock.filter(s => s.position >= 0))).toEqual(values(converted(sample.lanes[1], "outer")));
+            expect(values(snapshot.outer)).toEqual(values(converted(sample.feed.lanes[0], "outer")));
+            expect(values(snapshot.inner)).toEqual(values(converted(sample.feed.lanes[1], "inner")));
+        }
+        // Check movement of pre-existing stacks through every captured tick, independently of new arrivals.
+        for (const [index, sample] of report.samples.entries()) {
+            const previous = index === 0 ? before : report.samples[index - 1];
+            const stock = stacks(previous.lanes[1]).map(stack => ({id: stack.id, position: stack.at * 256}));
+            const existingIds = new Set(stock.map(stack => stack.id));
+            expect(stacks(sample.lanes[1]).filter(stack => existingIds.has(stack.id)).map(stack => ({id: stack.id, position: stack.at * 256})))
+                .toEqual(advanceMergeStock(stock).filter(stack => stack.position >= 0));
+        }
+        for (const [index, lane] of before.feed.lanes.entries()) {
+            expect(stacks(lane).map(stack => stack.at * 256)).toEqual(index === 0 && !outerStream ? [] : [0, 64, 128, 192]);
+            expect(stacks(lane).every(stack => stack.count === 4 && stack.item === "iron-plate")).toBe(true);
+        }
+        const inner = stacks(before.feed.lanes[1])[0];
+        const accepted = shift < 96;
+        expect(stacks(after.feed.lanes[1]).some(stack => stack.id === inner.id)).toBe(!accepted);
+        const arrived = stacks(after.lanes[1]).find(stack => stack.id === inner.id);
+        expect(arrived?.at).toBe(accepted ? (67 + shift - 32) / 256 : undefined);
+        expect(candidateTurboMergeEntry(receiving, 67)).toBe(accepted ? 67 + shift : undefined);
+        if (outerStream) {
+            const outer = stacks(before.feed.lanes[0])[0];
+            expect(stacks(after.feed.lanes[0]).some(stack => stack.id === outer.id)).toBe(false);
+            expect(stacks(after.lanes[1]).find(stack => stack.id === outer.id)?.at).toBe(156 / 256);
+        } else expect(stacks(after.feed.lanes[0])).toEqual([]);
+    } finally {
+        fs.rmSync(scratch, {recursive: true, force: true});
     }
 }, 240_000);

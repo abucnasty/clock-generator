@@ -12,7 +12,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Added
 - Model a single continuously supplied side feed into a straight pickup tile. Per-lane `source.pickup_supply` profiles distinguish through, inner side and outer side entry without changing reach, preferred lane or backed-up timing.
-- Sidecar 0.11.0 captures the preferred lane and half-tile reach in front of underground entrances, plus local receiving lanes and single-stream side-feed profiles. Its copy window and import preview warn about unsupported merges and ambiguous side feeds.
+- Model two full turbo side streams sharing a straight pickup lane, including different ingredients, persistent queues, temporary compression and finite downstream backpressure. `source.pickup_merge` captures both streams and the outlet geometry; other merge speeds and layouts remain unsupported.
+- Report when a two-stream supply repeats a stalled preparation state, including an inner ingredient starved by a full outer stream, instead of waiting for the simulation timeout.
+- Sidecar 0.11.0 captures the preferred lane and half-tile reach in front of underground entrances, plus local receiving lanes, single-stream side-feed profiles and supported turbo two-stream merges. Its copy window and import preview warn about unsupported merges and ambiguous side feeds.
 
 ## [0.18.0] - 2026-10-18
 

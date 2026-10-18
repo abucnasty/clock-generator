@@ -111,7 +111,7 @@ export function looksLikeSidecarExport(text: string): boolean {
 
 /** Capture warnings describe geometry or local supply independently. */
 export function pickupCaptureWarningMessage(reason: PickupCaptureWarning['reason']): string {
-    if (reason === 'merge') return 'Multiple incoming streams merge on a pickup lane. Merge timing is not modeled; review this supply before generating a clock.';
+    if (reason === 'merge') return 'This merge is outside the supported turbo two-stream side-feed model. Review its speed, streams and downstream path before generating a clock.';
     if (reason === 'supply-unknown') return 'Sidecar could not establish a single, same-speed side feed. Supply entry is unspecified; review the connected inputs before generating a clock.';
     const detail = reason === 'bend' ? 'pickup is on a belt bend'
         : reason === 'splitter' ? 'pickup is on a splitter'

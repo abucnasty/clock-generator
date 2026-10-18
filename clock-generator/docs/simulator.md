@@ -105,7 +105,7 @@ also fill at `0,1,2,3` entirely from lane 1 unmirrored or lane 2 mirrored, leavi
 Their outlet is physically blocked by the front inserter, so these are backed-up measurements.
 
 Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
-Sparse supply, shared upstream withdrawals, merges, bends, other inline pickups, other inserters/qualities/orientations,
+Sparse supply, shared upstream withdrawals, merges outside the turbo side-feed case below, bends, other inline pickups, other inserters/qualities/orientations,
 and arbitrary initial lane phases remain unverified. Calibration with backed-up supply covers turbo belts with different
 items on the lanes, collected one item at a time, plus the same-item front-entrance and front-exit first hands above.
 Other speeds and other same-item backed-up geometries remain unverified.
@@ -118,12 +118,48 @@ or three quarters of a straight tile, respectively. The engine uses the measured
 phase, retaining holes/partial stacks. These profiles are supported only with one-tile straight geometry;
 backed-up supply retains its saturated availability rule rather than the shorter moving span.
 
-Sidecar 0.11.0 captures local receiving lanes and single-stream profiles, preserving empty lane slots. It warns
-when streams merge on one receiving lane or an input could supply items but cannot be classified. Multiple
-feeds need shared stock, collision and backpressure behavior; they remain unsupported. The fixture documents
-24 game cases, including production hand comparisons for 15 moving single streams and two backed-up controls,
-plus the measured boundaries and limits. Phase alignment in these comparisons uses observed pre-pickup stacks;
-ordinary configs still assume an initial phase. First-hand agreement does not establish repeated-hand throughput.
+Two full four-item lanes of one perpendicular **turbo** belt can also feed the same straight pickup lane.
+`source.pickup_merge` describes this supply instead of `pickup_supply`:
+
+```json
+"pickup_merge": {
+  "lane": 2,
+  "outer": { "ingredient": "iron-plate", "stack_size": 4 },
+  "inner": { "ingredient": "copper-cable", "stack_size": 4 },
+  "downstream_tiles": 3,
+  "outlet": "open"
+}
+```
+
+The belt's receiving lane names the outer ingredient; both actual ingredients are supplied by the merge metadata.
+The other receiving lane must be empty, and one pickup inserter is supported. `downstream_tiles` counts straight
+tiles after the pickup, excluding its tile and the drain loader. An `open` outlet drains freely; `closed` is
+a physical belt end. Explicit Backed up supply also closes the outlet. Geometry remains separate from supply motion.
+
+The supply keeps two incoming queues and shared receiving/downstream stock. Each tick, entries check the preceding
+stock at positions 188 (outer) and 67 (inner), in 1/256-tile units. A blocked entry shifts upstream to preserve
+64-unit spacing behind downstream stock; turbo admits shifts **strictly below 96**, within the receiving tile.
+Old stock advances up to 32 units, then arrivals join. A closed downstream end propagates backpressure.
+Arrivals may temporarily compress a follower's gap: it waits or moves less until space opens, never backwards.
+Pickup then uses the existing selection rules: take one reachable stack, and continue collecting only the held item.
+
+Sidecar 0.11.0 captures local physical lanes, single-stream profiles and this supported turbo merge. It follows
+a bounded straight input/output path and exports a closed end or a turbo loader into an unfiltered disposal
+chest. Extra streams, upstream merges, unequal/non-turbo speeds, other stack sizes, downstream junctions or
+competing pickups retain a warning; these are not silently approximated as independent supplies.
+
+Seven repeated-hand game comparisons seed observed stock once and verify all 511 following transitions with
+the production supply and pickup mode: both start phases, pause/resume, outlet blockage/release, reflection,
+and different ingredients in both arrangements. Ten native seeded calibrations check the integer entry cutoff
+and compressed-follower movement. A generated gear clock also holds every one of 60 recorded periods.
+Ordinary configs still assume an initial phase; these results do not prove arbitrary startup phase, sparse
+supply, sub-unit entry precision, different merge layouts, or operating-machine throughput for the mixed-item probe.
+
+Different ingredients in one receiving lane can starve: when the machine stops accepting the outer ingredient,
+pickup no longer opens gaps for the inner stream. The freely running electronic-circuit fixture confirms this
+failure with 16 iron plates, no copper cable and no products over 1,200 recorded ticks. Preparation reports a
+repeating stalled state and suggests reviewing the merge or separating ingredients. Capturing a supported
+merge describes its behavior; it does not guarantee that the build can supply its recipe.
 
 ### A stack inserter on a moving lane
 
