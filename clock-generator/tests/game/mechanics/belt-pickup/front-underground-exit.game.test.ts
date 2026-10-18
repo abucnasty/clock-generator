@@ -8,12 +8,13 @@ import { SimulationContext } from "../../../../src/crafting/sequence/simulation-
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
 import { composeProbeSource } from "../../helpers/probe-source";
-import { flipFrontUndergroundInput, swapElectromagneticIngredientFeeds } from "./belt-pickup-fixtures";
+import { flipFrontUndergroundInput, swapElectromagneticIngredientFeeds, useAccumulatorsOnBothLanes } from "./belt-pickup-fixtures";
 
 interface Sample {
     tick: number;
     held: number;
     held_item?: string;
+    hand: { x: number; y: number };
     lanes: { length: number; stacks: { item: string; count: number; at: number; id: number }[] }[];
     inputs: unknown;
     output: unknown;
@@ -28,10 +29,12 @@ interface Report {
     samples: Sample[];
 }
 
-for (const { label, swapped, mirrored, preferred, items } of [
-    { label: "original lanes", swapped: false, mirrored: true, preferred: 2, items: ["accumulator", "supercapacitor"] },
-    { label: "swapped lanes", swapped: true, mirrored: true, preferred: 2, items: ["supercapacitor", "accumulator"] },
-    { label: "flipped inserter, swapped lanes", swapped: true, mirrored: false, preferred: 1, items: ["supercapacitor", "accumulator"] },
+for (const { label, swapped, sameItem, mirrored, preferred, items } of [
+    { label: "original lanes", swapped: false, sameItem: false, mirrored: true, preferred: 2, items: ["accumulator", "supercapacitor"] },
+    { label: "swapped lanes", swapped: true, sameItem: false, mirrored: true, preferred: 2, items: ["supercapacitor", "accumulator"] },
+    { label: "flipped inserter, swapped lanes", swapped: true, sameItem: false, mirrored: false, preferred: 1, items: ["supercapacitor", "accumulator"] },
+    { label: "same-item lanes, mirrored", swapped: false, sameItem: true, mirrored: true, preferred: 2, items: ["accumulator", "accumulator"] },
+    { label: "same-item lanes, unmirrored", swapped: false, sameItem: true, mirrored: false, preferred: 1, items: ["accumulator", "accumulator"] },
 ] as const) {
     test(`${label}: front underground exit prefers lane ${preferred} and fills its first hand in consecutive ticks`, async context => {
         const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
@@ -44,6 +47,10 @@ for (const { label, swapped, mirrored, preferred, items } of [
             if (swapped) {
                 config.belts.find(belt => belt.id === 2)!.lanes.reverse();
                 blueprint = swapElectromagneticIngredientFeeds(blueprint);
+            }
+            if (sameItem) {
+                for (const lane of config.belts.find(belt => belt.id === 2)!.lanes) lane.ingredient = "accumulator";
+                blueprint = useAccumulatorsOnBothLanes(blueprint);
             }
             if (!mirrored) blueprint = flipFrontUndergroundInput(blueprint);
             const configured = config.inserters[1].source;
@@ -91,6 +98,13 @@ for (const { label, swapped, mirrored, preferred, items } of [
             const offsets = grabs.map(s => s.tick - grabs[0].tick);
             expect(offsets).toEqual([0, 1, 2, 3]);
             expect(grabs.map(s => s.held)).toEqual([4, 8, 12, 16]);
+            if (sameItem) {
+                // Northbound lane 1 is west of center, lane 2 east. No fallback is needed with this blocked outlet.
+                expect(grabs.map(s => s.hand.x < report.initial.belt_position.x ? 1 : 2)).toEqual(Array(4).fill(preferred));
+                expect(hand.every(s => JSON.stringify(s.lanes[2 - preferred]) === JSON.stringify(first.lanes[2 - preferred]))).toBe(true);
+                const exportedBelt = result.recording.config.belts.find(belt => belt.id === exported.source.id)!;
+                expect(exportedBelt.lanes).toEqual(config.belts.find(belt => belt.id === 2)!.lanes);
+            }
             // The first grab removes the selected lane's downstream stack; the other lane stays untouched.
             expect(grabs[0].lanes[2 - preferred]).toEqual(first.lanes[2 - preferred]);
             expect(grabs[0].lanes[preferred - 1].stacks).toEqual([first.lanes[preferred - 1].stacks[0]]);

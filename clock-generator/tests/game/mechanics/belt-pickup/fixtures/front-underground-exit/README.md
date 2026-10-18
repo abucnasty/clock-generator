@@ -63,9 +63,33 @@ The original manual captures used Sidecar 0.9.1, which warned `inline` and omitt
 with the mirrored swapped case. The fixture config supplies the intended preference explicitly; Sidecar now
 captures it automatically.
 
-Other cardinal orientations, underground entrances, moving supply, same-item fallback, the unmirrored inserter
-with the original lane ingredients, and repeated-hand timing remain separate cases.
+Other cardinal orientations, moving supply, the unmirrored inserter with the original different-item lane
+ingredients, and repeated-hand timing remain separate cases. Entrance measurements are documented in their
+[own fixture](../front-underground-entrance/README.md).
 The comparison measures filling offsets after the first grab, not general arm-arrival timing.
+
+## Same item on both lanes
+
+Measured on 2026-10-18 in Factorio 2.1.21 using the same probe, scaffold and initial conditions. The shared
+`useAccumulatorsOnBothLanes` host helper changes only the two supercapacitor feeder filters to accumulators.
+The unmirrored case changes only the input's mirror flag as well. No new blueprint or Lua probe is needed.
+
+| Mirrored | Grab offsets | Hand counts | Selected lanes |
+| --- | --- | --- | --- |
+| No | `0,1,2,3` | `4,8,12,16` accumulators | `1,1,1,1` |
+| Yes | `0,1,2,3` | `4,8,12,16` accumulators | `2,2,2,2` |
+
+All grabs stay on the preferred side of the belt center. The other lane's stack IDs and positions remain
+unchanged through each first full hand. Machine inventories remain empty and crafting progress stays zero.
+The existing backed-up simulator matches, and Sidecar captures/exports the preference, half-tile reach and both
+same-item lanes without warnings. No simulator behavior change is needed.
+
+This fixture is physically backed up: the input inserter occupies the tile immediately beyond the exit, blocking
+straight-through belt continuation. Setting a moving config flag would not make its actual game supply freely
+flowing. A moving front-exit experiment needs a different physical arrangement; it has not been measured here.
+The existing screenshot shows the same geometry with different lane ingredients. Raw same-item captures remain
+under `work/belt-pickup/front-exit-same-item-unmirrored-backed-up-01/` and
+`front-exit-same-item-mirrored-backed-up-01/`.
 
 ## Reproduce
 
@@ -73,12 +97,14 @@ From `clock-generator/`, with `.env` configured:
 
 ```bash
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts -t 'swapped lanes'
+npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts -t 'same-item'
 npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts -t 'front underground exit'
 ```
 
 The first command runs the mirrored and flipped cases with swapped ingredients, checks Sidecar capture, and
 compares each actual simulator hand; it removes its temporary artifacts afterward. Use `-t 'flipped inserter'` for only the new case, or omit `-t`
-for all three cases. The second runs all three measured hand regressions without Factorio. The game test composes
+for all five cases. The same-item command runs both new mirroring states. The unit command runs the measured
+hand regressions without Factorio. The game test composes
 `probe.lua`; the scenario alone cannot be passed directly to `--lua`. Reports contain `initial` setup metadata and
 `samples` with held quantities/items, exposed lane stacks/IDs, machine inventories and crafting progress.
 Raw manual evidence remains local under `work/belt-pickup/front-exit-02/`, `work/belt-pickup/front-exit-03/`,

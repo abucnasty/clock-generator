@@ -10,6 +10,9 @@ pickup with backed-up supply. Two ingredient arrangements distinguish lane prefe
 flipping the inserter with the swapped ingredients changes selection from lane 2 to lane 1. Each first hand is
 compared with an explicit simulator lane preference. Sidecar 0.10.0 exports that preference and half-tile geometry
 for both mirroring states. Other cardinal orientations and moving front-exit supply have not had their actual grabs measured.
+The same-item backed-up exit controls also keep all four grabs on the preferred lane, filling at `0,1,2,3` in
+both mirroring states. The front inserter blocks straight-through continuation, so this layout cannot be
+treated as freely moving supply merely by changing a config override.
 
 The [front underground entrance fixture](fixtures/front-underground-entrance/README.md) measures an unmirrored
 inserter east of an eastbound entrance. It selects lane 1 accumulators with either moving or backed-up supply;
@@ -40,7 +43,7 @@ npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance
 ```
 
 The first two commands run in the simulator. The remaining commands need Factorio and check respectively 12 lane-fallback
-cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, three front exit
+cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, five front exit
 ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
 front entrance moving/backed-up controls. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.

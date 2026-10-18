@@ -100,11 +100,14 @@ The [same-item backed-up controls](../tests/game/mechanics/belt-pickup/fixtures/
 fill at the same offsets while keeping every grab on the preferred lane: `1,1,1,1` unmirrored or `2,2,2,2`
 mirrored. The other lane stays stationary and untouched. The existing backed-up availability rule matches the
 hand counts; half-tile geometry and lane preference remain separate from the supply setting.
+The [same-item front-exit controls](../tests/game/mechanics/belt-pickup/fixtures/front-underground-exit/README.md#same-item-on-both-lanes)
+also fill at `0,1,2,3` entirely from lane 1 unmirrored or lane 2 mirrored, leaving the other lane untouched.
+Their outlet is physically blocked by the front inserter, so these are backed-up measurements.
 
 Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
 Sparse supply, shared upstream withdrawals, merges, bends, other inline pickups, other inserters/qualities/orientations,
 and arbitrary initial lane phases remain unverified. Calibration with backed-up supply covers turbo belts with different
-items on the lanes, collected one item at a time, plus the same-item front-entrance first hands above.
+items on the lanes, collected one item at a time, plus the same-item front-entrance and front-exit first hands above.
 Other speeds and other same-item backed-up geometries remain unverified.
 
 ### A stack inserter on a moving lane
