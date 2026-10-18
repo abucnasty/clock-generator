@@ -1,15 +1,10 @@
 ---------------------------------------------------------------------------------------------------
-Version: 0.12.0
-Date: 2026-10-18
+Version: 0.11.0
   Features:
+    - captures the preferred lane and half-tile pickup length for an inserter centered downstream of an underground entrance and facing back into it: lane 2 when mirrored, lane 1 otherwise
     - captures single-stream inner/outer side-feed supply at straight pickup tiles, separately from reach and lane preference
     - keeps physical receiving lanes local to side-fed pickups, including empty lanes
     - warns when multiple incoming streams merge on a pickup lane or a connected input cannot be classified safely
----------------------------------------------------------------------------------------------------
-Version: 0.11.0
-Date: 2026-10-18
-  Features:
-    - captures the preferred lane and half-tile pickup length for an inserter centered downstream of an underground entrance and facing back into it: lane 2 when mirrored, lane 1 otherwise
 ---------------------------------------------------------------------------------------------------
 Version: 0.10.0
 Date: 2026-10-18

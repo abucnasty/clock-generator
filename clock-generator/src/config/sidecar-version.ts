@@ -6,7 +6,7 @@ import { ImportInput, ImportedMachine, ImportPipeline, ImportStep } from "./impo
  * The newest version of the sidecar mod. The mod has a version of its own (see "Versioning" in the README) and
  * this is bumped with it, when the mod changes: a paste from an older mod is told to update to this version.
  */
-export const LATEST_SIDECAR_VERSION = "0.12.0";
+export const LATEST_SIDECAR_VERSION = "0.11.0";
 
 /** The first version of the sidecar mod that exports the energy consumption of biochambers. */
 export const SIDECAR_VERSION_WITH_ENERGY_CONSUMPTION = "0.6.0";
@@ -98,7 +98,7 @@ const MOVING_PICKUP_FEATURE: SidecarFeature = {
     missing: () => "The exposed belt pickup length was not exported, so moving pickup timing keeps the older always-full assumption. Re-export to model the reachable stacks.",
 };
 const PICKUP_SUPPLY_FEATURE: SidecarFeature = {
-    name: "pickup-supply", since: "0.12.0",
+    name: "pickup-supply", since: "0.11.0",
     appliesTo: MOVING_PICKUP_FEATURE.appliesTo,
     missing: () => "Local side-feed entry and merge warnings were not exported. Re-export belt inputs to capture single-stream supply and identify unsupported merges.",
 };

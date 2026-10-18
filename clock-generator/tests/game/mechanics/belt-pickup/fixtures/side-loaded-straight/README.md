@@ -160,7 +160,7 @@ Initial phase remains an assumption for an ordinary config: blueprint geometry a
 The two single-stream backed-up cases also compare production hand counts. These bounded first-hand checks do
 not establish arbitrary initial phases, sparse supply, shared withdrawals or repeated-hand throughput.
 
-Sidecar 0.12.0 captures local receiving lanes and these profiles at side-fed straight pickup tiles. It keeps both
+Sidecar 0.11.0 captures local receiving lanes and these profiles at side-fed straight pickup tiles. It keeps both
 physical lane slots, including empty lanes, so preference and supply metadata retain the same numbering. This
 local view is separate from the connected network's aggregated lane contents; two upstream lanes joining one
 receiving lane do not become two exported input supplies. Ordinary through/underground capture is unchanged.

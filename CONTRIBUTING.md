@@ -33,3 +33,19 @@ Broad sample sweeps, the full game suite and repeated full test runs can be expe
 `npm run test:typecheck` checks simulator and game test code without running Factorio. Ordinary CI has no Factorio
 installation, so it cannot produce fresh game evidence. Report which checks ran and which were skipped; a skipped
 game test is not game verification.
+
+## Belt pickup experiment release hold
+
+The ongoing belt pickup experiment integrates through `integration/belt-pickup`. Keep its mechanics PRs stacked
+on that branch or on another PR in that stack. Approved layers can be integrated there without publishing;
+`master` remains the release boundary.
+
+Reserve engine/UI **0.19.0** and Sidecar **0.11.0** for the complete experiment. Keep the engine/UI package and
+lock versions synchronized. Update the existing unreleased changelog sections rather than adding a version for
+each mechanics case. Keep Sidecar's `info.json`, newest changelog entry, `LATEST_SIDECAR_VERSION`, feature-version
+checks and documentation aligned at 0.11.0. Published versions and their release notes stay unchanged.
+
+Publishing is on hold until the experiment is complete and the user authorizes the release. Do not merge the
+experiment into `master` or dispatch the release/mod-portal workflows during this hold. At completion, prepare
+one release PR from the integration branch to `master`, finalize both changelog dates/summaries, and run the
+release checks. The existing master-only publishing workflows then produce one release of each product.

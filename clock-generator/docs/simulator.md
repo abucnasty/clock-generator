@@ -118,7 +118,7 @@ or three quarters of a straight tile, respectively. The engine uses the measured
 phase, retaining holes/partial stacks. These profiles are supported only with one-tile straight geometry;
 backed-up supply retains its saturated availability rule rather than the shorter moving span.
 
-Sidecar 0.12.0 captures local receiving lanes and single-stream profiles, preserving empty lane slots. It warns
+Sidecar 0.11.0 captures local receiving lanes and single-stream profiles, preserving empty lane slots. It warns
 when streams merge on one receiving lane or an input could supply items but cannot be classified. Multiple
 feeds need shared stock, collision and backpressure behavior; they remain unsupported. The fixture documents
 24 game cases, including production hand comparisons for 15 moving single streams and two backed-up controls,

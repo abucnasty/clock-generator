@@ -7,7 +7,7 @@ availability. Current general findings and calibration limits live in the
 
 The [side-loaded straight-tile experiment](fixtures/side-loaded-straight/README.md) separates physical reach
 from single-stream entry. Inner and outer side feeds traverse different parts of the receiving lane. The
-simulator models these profiles; Sidecar 0.12.0 captures local receiving lanes and warns about merges or
+simulator models these profiles; Sidecar 0.11.0 captures local receiving lanes and warns about merges or
 ambiguous inputs. A 24-case matrix checks speeds, directions, two turbo start phases and backed-up controls;
 production comparisons align phase from pre-pickup observations. Multi-stream merge timing remains unsupported.
 

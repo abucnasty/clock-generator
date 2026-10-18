@@ -112,5 +112,5 @@ it('asks older belt imports to re-export pickup geometry rather than silently cl
 
 it('asks older belt imports to re-export local supply entry and merge diagnostics', () => {
     const inserters = [{source: {type: 'belt', id: 1, pickup_length: 1}, sink: {type: 'machine', id: 1}}];
-    expect(Option.toNullable(checkSidecarImport('0.11.0', [], undefined, [], inserters))).toContain('Local side-feed entry and merge warnings were not exported');
+    expect(Option.toNullable(checkSidecarImport('0.10.0', [], undefined, [], inserters))).toContain('Local side-feed entry and merge warnings were not exported');
 });
