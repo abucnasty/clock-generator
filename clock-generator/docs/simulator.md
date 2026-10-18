@@ -110,6 +110,13 @@ and arbitrary initial lane phases remain unverified. Calibration with backed-up 
 items on the lanes, collected one item at a time, plus the same-item front-entrance and front-exit first hands above.
 Other speeds and other same-item backed-up geometries remain unverified.
 
+Known gap: [side-loading into a straight pickup tile](../tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight/README.md).
+With a continuously full incoming lane, iron entering the side near the tile's downstream end is grabbed at
+`0,2,4,6`; the straight-through control fills at `0,1,2,3`. Both pickup lines are one tile long. The current
+simulator predicts `0,1,2,3` for both, and Sidecar captures geometry without the stream's entry location or a warning.
+The model needs to distinguish physical pickup length from the part of that length traversed by the supplied
+stream. This paired experiment documents the mismatch; side-loading is not currently modeled.
+
 ### A stack inserter on a moving lane
 
 A stack inserter that drops on a belt that moves is not always done in the 4 ticks of a free lane. Its four stacks go in at the tick it starts, +1, +2 and +4; but when the stacks of another inserter pass its spot just then, or its own stacks do, a stack has to wait for room. The hand then takes 6, 14 or 22 ticks to empty.

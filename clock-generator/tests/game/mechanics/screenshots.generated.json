@@ -251,5 +251,51 @@
     "png_bytes": 1517467,
     "jpeg_bytes": 258829,
     "jpeg_quality": 82
+  },
+  "side-loaded-straight": {
+    "blueprint": "belt-pickup/fixtures/side-loaded-straight/side-loaded-scaffold.txt",
+    "image": "belt-pickup/fixtures/side-loaded-straight/side-loaded-scaffold.jpg",
+    "source_sha256": "4a03cbbe85e7c5c202006f4af55c1b765a2a6ffd96a7e0913f2385c17b037c64",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 392,
+      "y": 0.025390625
+    },
+    "resolution": {
+      "x": 658,
+      "y": 660
+    },
+    "zoom": 1.5,
+    "width": 658,
+    "height": 660,
+    "png_bytes": 674580,
+    "jpeg_bytes": 76535,
+    "jpeg_quality": 82
+  },
+  "side-loaded-straight/control": {
+    "blueprint": "belt-pickup/fixtures/side-loaded-straight/straight-through-scaffold.txt",
+    "image": "belt-pickup/fixtures/side-loaded-straight/straight-through-scaffold.jpg",
+    "source_sha256": "9d965a2cfe9de6d48448cfa698b61577d632c32a277e8b9cbd63ccc8e084f8fd",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 391.974609375,
+      "y": 0.525390625
+    },
+    "resolution": {
+      "x": 660,
+      "y": 516
+    },
+    "zoom": 1.5,
+    "width": 660,
+    "height": 516,
+    "png_bytes": 535902,
+    "jpeg_bytes": 63962,
+    "jpeg_quality": 82
   }
 }

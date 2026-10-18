@@ -6,6 +6,8 @@
   { "id": "same-item/underground-entrance", "blueprint": "belt-pickup/fixtures/same-item/underground-entrance-scaffold.txt", "image": "belt-pickup/fixtures/same-item/underground-entrance-scaffold.jpg" },
   { "id": "same-item/underground-exit", "blueprint": "belt-pickup/fixtures/same-item/underground-exit-scaffold.txt", "image": "belt-pickup/fixtures/same-item/underground-exit-scaffold.jpg" },
   { "id": "front-underground-entrance", "blueprint": "belt-pickup/fixtures/front-underground-entrance/scaffold.txt", "image": "belt-pickup/fixtures/front-underground-entrance/scaffold.jpg" },
+  { "id": "side-loaded-straight", "blueprint": "belt-pickup/fixtures/side-loaded-straight/side-loaded-scaffold.txt", "image": "belt-pickup/fixtures/side-loaded-straight/side-loaded-scaffold.jpg" },
+  { "id": "side-loaded-straight/control", "blueprint": "belt-pickup/fixtures/side-loaded-straight/straight-through-scaffold.txt", "image": "belt-pickup/fixtures/side-loaded-straight/straight-through-scaffold.jpg" },
   { "id": "front-underground-exit", "blueprint": "belt-pickup/fixtures/front-underground-exit/scaffold.txt", "image": "belt-pickup/fixtures/front-underground-exit/scaffold.jpg" },
   { "id": "automation-science", "blueprint": "../../../resources/config-samples/science/automation-science/automation-science-scaffold.txt", "image": "images/automation-science.jpg" },
   { "id": "agriculture-science", "blueprint": "../../../resources/config-samples/science/agriculture-science/agriculture-science-scaffold.txt", "image": "images/agriculture-science.jpg" },
