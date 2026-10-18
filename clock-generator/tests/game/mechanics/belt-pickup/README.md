@@ -5,10 +5,11 @@ The [same-item fixtures](fixtures/same-item/README.md) isolate moving near-lane/
 availability. Current general findings and calibration limits live in the
 [simulator documentation](../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
 
-The [side-loaded straight-tile experiment](fixtures/side-loaded-straight/README.md) identifies an unmodeled
-supply-entry case. A continuously full incoming lane produces `0,2,4,6` grabs when entering the pickup tile from
-the side, while the straight-through control and current simulator give `0,1,2,3`. The pickup tile is straight
-with one-tile exposed lines in both layouts. Its game test preserves this known mismatch explicitly.
+The [side-loaded straight-tile experiment](fixtures/side-loaded-straight/README.md) separates physical reach
+from single-stream entry. Inner and outer side feeds traverse different parts of the receiving lane. The
+simulator models these profiles; Sidecar 0.12.0 captures local receiving lanes and warns about merges or
+ambiguous inputs. A 24-case matrix checks speeds, directions, two turbo start phases and backed-up controls;
+production comparisons align phase from pre-pickup observations. Multi-stream merge timing remains unsupported.
 
 The [front underground exit fixture](fixtures/front-underground-exit/README.md) isolates a northbound, head-on
 pickup with backed-up supply. Two ingredient arrangements distinguish lane preference from fixed recipe order;
@@ -46,13 +47,13 @@ npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.gam
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/side-loaded-straight.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/side-loaded-entry.game.test.ts
 ```
 
 The first two commands run in the simulator. The remaining commands need Factorio and check respectively 12 lane-fallback
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, five front exit
 ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
-front entrance moving/backed-up controls, and the side-loaded tile/control pair. The latter documents a known
-model gap. Their independent replay and simulator comparisons remain
+front entrance moving/backed-up controls, the side-loaded tile/control pair, and the 24-case side-entry matrix. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands

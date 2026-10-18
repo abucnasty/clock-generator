@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
 // Factorio permits require only while parsing control.lua. Load the same Sidecar sources into test-local closures.
-const modules = ["types", "helpers", "suggested-target", "extraction", "export"];
+const modules = ["types", "helpers", "pickup-supply", "suggested-target", "extraction", "export"];
 const captureModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + modules.map(name => {
@@ -97,6 +97,52 @@ assert(unknown.pickup_warnings[1].inserter_id == input.id)
 assert(unknown.pickup_warnings[1].reason == "bend")
 assert(unknown.inserters[input.id].source.pickup_length == nil)
 assert(unknown.inserters[input.id].source.pickup_problem == nil)
+
+-- Supply classifier checks only: these inserted stacks do not measure pickup timing.
+local supply = require("__clock-generator-sidecar__.scripts.pickup-supply")
+for index, entry in ipairs(directions) do
+    local direction, dx, dy = entry[1], entry[2], entry[3]
+    local x, y = 210 + index * 8, 160
+    local target = belt("turbo-transport-belt", x, y, direction)
+    local rear = belt("turbo-transport-belt", x - dx, y - dy, direction)
+    local feed = belt("turbo-transport-belt", x - dy, y + dx, (direction + 12) % 16)
+    assert(target.belt_shape == "straight")
+    feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+    local view = supply.capture(target)
+    assert(view and view.problem == nil)
+    assert(view.profiles[1] == "through" and view.profiles[2] == "side-inner")
+    assert(view.lanes[1].ingredient == nil and view.lanes[2].ingredient == "iron-plate")
+    -- A rear stream and a side stream merging on the same receiving lane are unsupported.
+    rear.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+    assert(supply.capture(target).problem == "merge")
+    rear.get_transport_line(2).clear()
+    -- Both incoming side lanes also merge, even when they carry different items.
+    feed.get_transport_line(1).insert_at_back({name = "copper-plate", count = 4}, 4)
+    assert(supply.capture(target).problem == "merge")
+    assert(supply.capture(target).profiles == nil)
+end
+local target = belt("turbo-transport-belt", 260, 160, defines.direction.east)
+belt("turbo-transport-belt", 259, 160, defines.direction.east)
+local feed = belt("turbo-transport-belt", 260, 161, defines.direction.north)
+feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+assert(supply.capture(target).problem == nil)
+-- A dry adjacent piece can still have an upstream stream. Retain that stream's item/lane mapping.
+feed.get_transport_line(2).clear()
+local upstream = belt("turbo-transport-belt", 260, 162, defines.direction.north)
+upstream.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+local dry_front = supply.capture(target)
+assert(dry_front.problem == nil and dry_front.profiles[2] == "side-inner")
+assert(dry_front.lanes[2].ingredient == "iron-plate")
+-- Empty does not mean unused: this unpowered feeder could populate the other incoming lane later.
+local potential = assert(surface.create_entity{name = "stack-inserter", position = {261, 161},
+    direction = defines.direction.east, force = "player"})
+assert(math.abs(potential.drop_position.x - feed.position.x) < 0.5 and math.abs(potential.drop_position.y - feed.position.y) < 0.5, "empty feeder must target incoming lane")
+assert(supply.capture(target).problem == "supply-unknown")
+potential.destroy()
+feed.destroy()
+feed = belt("express-transport-belt", 260, 161, defines.direction.north)
+feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+assert(supply.capture(target).problem == "supply-unknown")
 `,
         });
         expect(result.recording.inserters.some(inserter => inserter.source.pickup_length === 1)).toBe(true);

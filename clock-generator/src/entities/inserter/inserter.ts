@@ -1,4 +1,5 @@
 import { InserterConfig } from "../../config";
+import { BeltPickupSupplyProfile } from "../../config/schema";
 import { FactorioDataService, ItemName } from "../../data";
 import { BeltStackSize, Lane } from "../belt";
 import { EntityType } from "../entity-type";
@@ -31,6 +32,8 @@ export interface Inserter extends Entity {
     drop?: BeltDropSpot;
     /** Physical exposed length of a belt input, retained for both moving and backed-up supply. */
     pickup_length?: 0.5 | 1;
+    /** Single-stream entry per receiving lane; omitted profiles retain through supply. */
+    pickup_supply?: readonly BeltPickupSupplyProfile[];
     /** Belt availability is independent of geometry; absent only for non-belt sources. */
     belt_supply?: "moving" | "backed_up";
     /** Physical input lane to try first, including when both lanes carry the same item. */
@@ -237,6 +240,14 @@ export class InserterFactory {
                 inserter.near_lane = source.near_lane;
             }
             inserter.pickup_length = source.pickup_length ?? 1;
+            if (source.pickup_supply) {
+                const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(source.id));
+                assertIsBelt(belt);
+                assert(source.pickup_supply.length === belt.lanes.length, "Pickup supply must name every receiving belt lane");
+                assert(inserter.pickup_length === 1 || source.pickup_supply.every(profile => profile === "through"),
+                    "Side-entry supply is supported only on a straight, one-tile pickup");
+                inserter.pickup_supply = [...source.pickup_supply];
+            }
             inserter.belt_supply = this.belt_supply;
         }
 

@@ -48,7 +48,8 @@ local function resolve_target_id(target, result, is_sink)
         id = target_id,
         -- Preferred pickup lane; determined by mirroring for a supported inline underground pickup.
         near_lane = target.near_lane,
-        pickup_length = not is_sink and target.pickup_length or nil
+        pickup_length = not is_sink and target.pickup_length or nil,
+        pickup_supply = not is_sink and target.pickup_supply or nil
     }
 end
 
@@ -188,8 +189,9 @@ function export.to_table(result)
         end
 
         table.insert(output.inserters, inserter_export)
-        if exported.source.type == "belt" and not exported.source.pickup_length then
-            table.insert(pickup_warnings, { inserter_id = exported.id, reason = inserter.source.pickup_problem or "unsupported" })
+        if exported.source.type == "belt" and (not exported.source.pickup_length or inserter.source.supply_problem) then
+            table.insert(pickup_warnings, { inserter_id = exported.id,
+                reason = inserter.source.supply_problem or inserter.source.pickup_problem or "unsupported" })
         end
     end
     if #pickup_warnings > 0 then output.pickup_warnings = pickup_warnings end

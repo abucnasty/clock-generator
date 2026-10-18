@@ -110,12 +110,20 @@ and arbitrary initial lane phases remain unverified. Calibration with backed-up 
 items on the lanes, collected one item at a time, plus the same-item front-entrance and front-exit first hands above.
 Other speeds and other same-item backed-up geometries remain unverified.
 
-Known gap: [side-loading into a straight pickup tile](../tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight/README.md).
-With a continuously full incoming lane, iron entering the side near the tile's downstream end is grabbed at
-`0,2,4,6`; the straight-through control fills at `0,1,2,3`. Both pickup lines are one tile long. The current
-simulator predicts `0,1,2,3` for both, and Sidecar captures geometry without the stream's entry location or a warning.
-The model needs to distinguish physical pickup length from the part of that length traversed by the supplied
-stream. This paired experiment documents the mismatch; side-loading is not currently modeled.
+[Side-loading into a straight pickup tile](../tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight/README.md)
+changes which stacks are available, not the pickup selection rule. A full incoming belt need not fill the pickup
+tile. `source.pickup_supply` names one profile per receiving belt lane: `through` (the default), `side-inner` or
+`side-outer`. A single continuously full, same-speed side stream supplies approximately the downstream quarter
+or three quarters of a straight tile, respectively. The engine uses the measured entry positions and stream
+phase, retaining holes/partial stacks. These profiles are supported only with one-tile straight geometry;
+backed-up supply retains its saturated availability rule rather than the shorter moving span.
+
+Sidecar 0.12.0 captures local receiving lanes and single-stream profiles, preserving empty lane slots. It warns
+when streams merge on one receiving lane or an input could supply items but cannot be classified. Multiple
+feeds need shared stock, collision and backpressure behavior; they remain unsupported. The fixture documents
+24 game cases, including production hand comparisons for 15 moving single streams and two backed-up controls,
+plus the measured boundaries and limits. Phase alignment in these comparisons uses observed pre-pickup stacks;
+ordinary configs still assume an initial phase. First-hand agreement does not establish repeated-hand throughput.
 
 ### A stack inserter on a moving lane
 

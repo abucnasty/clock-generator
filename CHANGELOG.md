@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.19.0] - 2026-10-18
+
+### Added
+- Model a single continuously supplied side feed into a straight pickup tile. Per-lane `source.pickup_supply` profiles distinguish through, inner side and outer side entry without changing reach, preferred lane or backed-up timing.
+- Sidecar 0.12.0 captures local receiving lanes and single-stream entry profiles. Its copy window and import preview warn about unsupported merges and ambiguous side feeds.
+
 ## [0.18.0] - 2026-10-18
 
 ### Fixed

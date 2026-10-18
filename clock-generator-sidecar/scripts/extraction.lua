@@ -6,6 +6,7 @@
 
 require("__clock-generator-sidecar__.scripts.types")
 local helpers = require("__clock-generator-sidecar__.scripts.helpers")
+local pickup_supply = require("__clock-generator-sidecar__.scripts.pickup-supply")
 
 local debug = false
 
@@ -503,6 +504,26 @@ function extraction.extract_all_entities(entities, force)
         end
     end
 
+    -- A side-fed pickup has local receiving lanes, not the upstream network's lane numbering.
+    -- Keep both physical lanes (including an empty one); profiles live on the inserter source.
+    local local_supply = {}
+    for _, entity in pairs(entities) do
+        if entity.type == "inserter" and entity.pickup_target and entity.pickup_target.valid then
+            local target = entity.pickup_target
+            if not local_supply[target.unit_number] and target.type == "transport-belt" then
+                local view = pickup_supply.capture(target)
+                if view then
+                    local_supply[target.unit_number] = view
+                    if view.lanes[1].ingredient or view.lanes[2].ingredient then
+                        table.insert(result.belts, {belt_type = helpers.normalize_belt_type(target.name),
+                            unit_number = target.unit_number, lanes = view.lanes})
+                        result.belt_unit_number_to_id[target.unit_number] = #result.belts
+                    end
+                end
+            end
+        end
+    end
+
     -- Third pass: extract drills (now we have the unit_number mapping)
     for _, entity in pairs(entities) do
         if entity.type == "mining-drill" then
@@ -518,6 +539,11 @@ function extraction.extract_all_entities(entities, force)
         if entity.type == "inserter" then
             local data = extract_inserter_data(entity)
             if data then
+                local view = data.source and local_supply[data.source.unit_number]
+                if view then
+                    data.source.pickup_supply = view.profiles
+                    data.source.supply_problem = view.problem
+                end
                 table.insert(result.inserters, data)
             end
         end

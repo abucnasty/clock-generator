@@ -157,3 +157,15 @@ describe('imported inserter metadata', () => {
         expect(configToFormData(file).inserters[0].stack_size).toBe(stack_size);
     });
 });
+
+
+it('preserves per-lane pickup supply through Sidecar/form/config round trips', () => {
+    const config = structuredClone(imported);
+    const source = config.inserters[1].source;
+    if (source.type !== 'belt') throw new Error('expected belt');
+    source.pickup_length = 1;
+    source.near_lane = 1;
+    source.pickup_supply = ['side-outer'];
+    const roundTrip = formDataToConfig(configToFormData(config));
+    expect(roundTrip.inserters[1].source).toMatchObject({pickup_length: 1, near_lane: 1, pickup_supply: ['side-outer']});
+});

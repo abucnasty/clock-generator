@@ -32,7 +32,9 @@ export class BeltPickupLogic implements InserterTransferLogic {
         let pickup_lanes = sourceEntityState.pickup_lanes.get(inserter_id);
         if (pickup_lanes === undefined) {
             const belt = sourceEntityState.belt;
-            pickup_lanes = belt.lanes.map(lane => new BeltPickupLane(belt.belt_speed, pickup_length, lane.stack_size));
+            pickup_lanes = belt.lanes.map((lane, index) => new BeltPickupLane(
+                belt.belt_speed, pickup_length, lane.stack_size, 0, inserterState.inserter.pickup_supply?.[index],
+            ));
             sourceEntityState.pickup_lanes.set(inserter_id, pickup_lanes);
         }
         this.pickup_lanes = pickup_lanes;

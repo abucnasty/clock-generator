@@ -300,6 +300,9 @@ const InserterBeltDropConfigSchema = z.object({
     position: z.number()
 });
 
+export const BeltPickupSupplyProfileSchema = z.enum(["through", "side-inner", "side-outer"]);
+export type BeltPickupSupplyProfile = z.infer<typeof BeltPickupSupplyProfileSchema>;
+
 const InserterBeltSourceConfigSchema = z.object({
     type: z.literal(TargetType.BELT),
     id: z.number().int().positive(),
@@ -315,6 +318,14 @@ const InserterBeltSourceConfigSchema = z.object({
      * Geometry is independent of the moving/backed-up supply setting (backed_up_belts).
      */
     pickup_length: z.union([z.literal(0.5), z.literal(1)]).default(1),
+    /** Single-stream entry per receiving lane, in the same order as the belt's lanes. Omitted means through.
+     * Side profiles describe a continuously full, same-speed side feed into a straight pickup tile.
+     * They restrict moving supply, not physical reach or backed-up stock.
+     */
+    pickup_supply: z.union([
+        z.tuple([BeltPickupSupplyProfileSchema]),
+        z.tuple([BeltPickupSupplyProfileSchema, BeltPickupSupplyProfileSchema]),
+    ]).optional(),
     /** Refused: only an inserter's sink has a drop spot (see the checks of ConfigSchema) */
     drop: InserterBeltDropConfigSchema.optional()
 });
@@ -596,6 +607,19 @@ export const ConfigSchema = z.object({
     overrides: ConfigOverridesSchema.optional()
 }).superRefine((config, context) => {
     config.inserters.forEach((inserter, index) => {
+        if (inserter.source.type === TargetType.BELT && inserter.source.pickup_supply) {
+            const source = inserter.source;
+            const profiles = inserter.source.pickup_supply;
+            const belt = config.belts.find(belt => belt.id === source.id);
+            if (belt && profiles.length !== belt.lanes.length) {
+                context.addIssue({ code: "custom", path: ["inserters", index, "source", "pickup_supply"],
+                    message: "Pickup supply must name one profile for each receiving belt lane" });
+            }
+            if (source.pickup_length !== 1 && profiles.some(profile => profile !== "through")) {
+                context.addIssue({ code: "custom", path: ["inserters", index, "source", "pickup_supply"],
+                    message: "Side-entry supply is supported only on a straight, one-tile pickup" });
+            }
+        }
         if (inserter.source.type === TargetType.BELT && inserter.source.drop !== undefined) {
             context.addIssue({
                 code: "custom",

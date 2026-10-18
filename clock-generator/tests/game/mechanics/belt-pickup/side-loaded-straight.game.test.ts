@@ -40,13 +40,14 @@ function simulatedOffsets(config: Config, start: number) {
 }
 
 for (const straightThrough of [true, false]) {
-    test(`${straightThrough ? "straight-through control matches" : "side-loading exposes an unsupported supply-entry mismatch in"} the straight-belt model`, async context => {
+    test(`${straightThrough ? "straight-through control matches" : "single side stream matches"} the straight-belt model`, async context => {
         const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
         context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
         const fixture = GameFixturePaths.SIDE_LOADED_STRAIGHT;
         const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "side-loaded-straight-"));
         try {
             const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+            if (straightThrough && config.inserters[1].source.type === "belt") delete config.inserters[1].source.pickup_supply;
             const result = await recordInFactorio({
                 factorio: factorio!, save: save!, config,
                 blueprint: fs.readFileSync(path.join(fixture, `${straightThrough ? "straight-through" : "side-loaded"}-scaffold.txt`), "utf8"),
@@ -81,22 +82,18 @@ for (const straightThrough of [true, false]) {
             expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill("iron-plate"));
             expect(grabs.map(s => s.held)).toEqual([4, 8, 12, 16]);
             expect(offsets).toEqual(straightThrough ? [0, 1, 2, 3] : [0, 2, 4, 6]);
-            const fullTile = [simulatedOffsets(config, 0), simulatedOffsets(config, 1)];
-            expect(fullTile).toEqual([[0, 1, 2, 3], [0, 1, 2, 3]]);
-            if (straightThrough) expect(fullTile).toContainEqual(offsets);
-            else {
-                // This is an explicit known-gap experiment, not a claim that the simulator matches side-loading.
-                expect(fullTile).not.toContainEqual(offsets);
-                const source = config.inserters[1].source;
-                if (source.type !== "belt") throw new Error("expected belt input");
-                source.pickup_length = 0.5;
-                expect([simulatedOffsets(config, 0), simulatedOffsets(config, 1)]).not.toContainEqual(offsets);
-            }
+            const predicted = [simulatedOffsets(config, 0), simulatedOffsets(config, 1)];
+            expect(predicted).toContainEqual(offsets);
             const captured = result.recording.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
             expect(captured.source).toMatchObject({ near_lane: 1, pickup_length: 1 });
             const exported = result.recording.config.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
             expect(exported.source).toMatchObject({ near_lane: 1, pickup_length: 1 });
-            // Current capture sees straight geometry but carries no side-entry information or warning.
+            if (!straightThrough) {
+                expect(captured.source.pickup_supply).toEqual(["through", "side-inner"]);
+                expect(exported.source.pickup_supply).toEqual(["through", "side-inner"]);
+                const belt = result.recording.config.belts.find((belt: { id: number }) => belt.id === exported.source.id);
+                expect(belt!.lanes.map((lane: { ingredient: string }) => lane.ingredient)).toEqual(["", "iron-plate"]);
+            }
             expect(result.recording.config.pickup_warnings).toBeUndefined();
         } finally {
             fs.rmSync(scratch, { recursive: true, force: true });
