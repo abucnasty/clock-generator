@@ -16,4 +16,5 @@ export const GameFixturePaths = {
     FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG: path.join(PICKUP, "front-underground-entrance/same-item-moving.json"),
     SIDE_LOADED_STRAIGHT: path.join(PICKUP, "side-loaded-straight"),
     FRONT_UNDERGROUND_EXIT: path.join(PICKUP, "front-underground-exit"),
+    SPLITTER: path.join(PICKUP, "splitter"),
 };

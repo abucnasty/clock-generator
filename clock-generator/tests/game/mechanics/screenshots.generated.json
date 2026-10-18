@@ -320,5 +320,28 @@
     "png_bytes": 677099,
     "jpeg_bytes": 79922,
     "jpeg_quality": 82
+  },
+  "splitter": {
+    "blueprint": "belt-pickup/fixtures/splitter/scaffold.txt",
+    "image": "belt-pickup/fixtures/splitter/scaffold.jpg",
+    "source_sha256": "a8a9028226a382226d79f2b372138385479c48123d961b2eee2f677ddd631915",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 393.974609375,
+      "y": -0.07421875
+    },
+    "resolution": {
+      "x": 852,
+      "y": 459
+    },
+    "zoom": 1.5,
+    "width": 852,
+    "height": 459,
+    "png_bytes": 644895,
+    "jpeg_bytes": 77445,
+    "jpeg_quality": 82
   }
 }

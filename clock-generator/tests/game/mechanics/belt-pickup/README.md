@@ -7,8 +7,8 @@ availability. Current general findings and calibration limits live in the
 
 The [side-loaded straight-tile experiment](fixtures/side-loaded-straight/README.md) separates physical reach
 from single-stream entry. Inner and outer side feeds traverse different parts of the receiving lane. The
-simulator models these profiles; Sidecar 0.11.0 captures local receiving lanes and warns about merges or
-ambiguous inputs. A 24-case matrix checks speeds, directions, two turbo start phases and backed-up controls;
+simulator models these profiles; Sidecar 0.11.0 captures local receiving lanes and supported turbo merges,
+and warns about other merges or ambiguous inputs. The original 24-case matrix checks speeds, directions, two turbo start phases and backed-up controls;
 production comparisons align phase from pre-pickup observations. Other merge layouts remain unsupported. A subsequent
 [repeated two-stream turbo case](fixtures/side-loaded-straight/README.md#repeated-two-stream-turbo-test) captures
 45 hands and validates a candidate shared-stock replay against all observed queues, stack IDs and positions.
@@ -30,6 +30,13 @@ cases. A generated gear clock holds all 60 recorded periods; a separate freely r
 confirms starvation of its inner ingredient and the simulator reports that stalled preparation state.
 Other geometries, stack sizes, speeds and sub-unit boundaries remain unverified. Further investigation focuses
 on turbo belts.
+
+The [direct turbo splitter baseline](fixtures/splitter/README.md) uses the supplied right-priority output,
+with a draining north output and a locally blocked south pickup port. It records all eight transport lines.
+The first iron hand fills at `0,1,2,3`; the next four hands fill at `0,1,2,4`. First-hand agreement with the
+ordinary belt model does not classify splitter routing. Sidecar's unsupported warning remains; the next
+control swaps only the lane ingredients. Further mechanics work continues on stacked branches without new
+PRs or publishing until requested.
 
 The [front underground exit fixture](fixtures/front-underground-exit/README.md) isolates a northbound, head-on
 pickup with backed-up supply. Two ingredient arrangements distinguish lane preference from fixed recipe order;
@@ -68,12 +75,14 @@ npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/side-loaded-straight.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/side-loaded-entry.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts
 ```
 
 The first two commands run in the simulator. The remaining commands need Factorio and check respectively 12 lane-fallback
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, five front exit
 ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
-front entrance moving/backed-up controls, the side-loaded tile/control pair, and the 24-case side-entry matrix. Their independent replay and simulator comparisons remain
+front entrance moving/backed-up controls, the side-loaded tile/control pair, the expanded 42-case side-entry matrix,
+and one direct splitter baseline. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands
@@ -89,9 +98,8 @@ The [build checks](../../builds/README.md) independently measure throughput and 
 
 ## Queued at the end of the series
 
-Before the final stack-size check, investigate [direct splitter pickup](fixtures/splitter/README.md), using
-the user-provided scaffold saved there. No game test or screenshot has been run for this queued case. Keep it
-separate from the current turbo merge implementation and resolve that PR before starting the splitter case.
+The [direct splitter series](fixtures/splitter/README.md) has begun on a branch stacked above the turbo merge
+implementation. Its first baseline is complete; ingredient-swapped and other controls remain unmeasured.
 
 After the current pickup/merge investigations, verify the tick-by-tick predictions of
 [`Belt::amountToDropAtTick`](../../../../src/entities/belt/belt.test.ts) against actual drops with belt stack sizes

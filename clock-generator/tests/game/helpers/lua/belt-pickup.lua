@@ -2,9 +2,10 @@
 local M = {}
 
 -- Reuse the same observation schema for incoming and downstream pieces.
-function M.lanes(belt)
+-- Ordinary pickups expose two lanes; probes of larger pieces supply their actual transport-line count.
+function M.lanes(belt, line_count)
     local lanes = {}
-    for index = 1, 2 do
+    for index = 1, line_count or 2 do
         local line = belt.get_transport_line(index)
         local lane = {length = line.line_length, stacks = {}}
         for _, detailed in pairs(line.get_detailed_contents()) do
