@@ -17,11 +17,16 @@ export function advanceRightPrioritySplitter(previous: SplitterStack[][], bounda
     for (let lane = 0; lane < 2; lane++) {
         const input = lines[lane];
         if (input[0]?.position < 32) {
-            for (const output of [lines[lane + 6], lines[lane + 4]]) {
-                if (output.length === 0 || output.at(-1)!.position <= 0) {
-                    output.push({...input.shift()!, position: 64});
+            for (const index of [lane + 6, lane + 4]) {
+                const output = lines[index];
+                const offset = index === lane + 6 ? input[0].position + 45 : input[1].position - 19;
+                const entry = Math.max(offset, (output.at(-1)?.position ?? -Infinity) + 64);
+                if (entry < 128) {
+                    output.push({...input.shift()!, position: entry});
                     break;
                 }
+                // Overflow uses the follower's entry window, rather than retrying an isolated head.
+                if (index === lane + 6 && !(input[1]?.position < 96)) break;
             }
         }
         moveLine(input, false);

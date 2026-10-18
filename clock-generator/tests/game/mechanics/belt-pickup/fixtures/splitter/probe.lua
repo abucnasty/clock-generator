@@ -38,7 +38,7 @@ local report = {initial = {
     input_position = input.position, pickup_position = input.pickup_position,
     inserter_direction = input.direction, mirrored = input.mirroring,
     recipe = sink.get_recipe().name, crafting_speed = sink.crafting_speed, machine_active = sink.active,
-    use_filters = input.use_filters, lines = lines(), upstream = pickup.lanes(upstream), downstream = pickup.lanes(downstream)
+    use_filters = input.use_filters, lines = lines(), connections = pickup.connections(splitter, 8), upstream = pickup.lanes(upstream), downstream = pickup.lanes(downstream)
 }, samples = {}}
 input.get_or_create_control_behavior().circuit_enable_disable = false
 capture.each_tick{
@@ -48,7 +48,7 @@ capture.each_tick{
         return {
             tick = tick, held = input.held_stack.valid_for_read and input.held_stack.count or 0,
             held_item = input.held_stack.valid_for_read and input.held_stack.name or nil,
-            hand = input.held_stack_position, lines = lines(),
+            hand = input.held_stack_position, lines = lines(), connections = pickup.connections(splitter, 8),
             upstream = pickup.lanes(upstream), downstream = pickup.lanes(downstream),
             inputs = inventory.get_contents(), output = output.get_contents(), crafting_progress = sink.crafting_progress
         }

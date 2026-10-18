@@ -247,3 +247,43 @@ SPLITTER_CAPTURE_DIR=../work/splitter-support/new-baseline npm run test:game -- 
 Fresh evidence is retained locally in ignored `work/splitter-support/replay-01/original/`. Compact cuts remap
 native IDs consistently to local integers. Sidecar still captures the splitter as unsupported; production
 pickup rules are unchanged.
+
+## Input phase, output admission and overflow calibration
+
+Independent seeded controls use the same blueprint, priority and blocked south pickup port, with all
+inserters disabled and transport stock cleared before exact positions are inserted. These are bounded
+routing calibrations, not natural throughput runs. Actual initial positions are asserted: `insert_at`
+materializes one pending 32-unit turbo step in this setup, so insertion coordinates compensate for it.
+No held items are edited. Each control uses a fresh native session.
+
+The calibrated right-priority candidate now distinguishes ordinary transfer and overflow:
+
+- A north input head at position `p < 32` can transfer to the preferred south output. Its free landing
+  position is `p + 45`. Heads at 0, 19 and 31 land at 45, 64 and 76 respectively; a head at 32 first moves to 0.
+- Existing output stock moves first. A landing shifts upstream to preserve 64-unit stack spacing and must
+  remain below 128. Output position 127 is accepted; a proposed 128 waits when there is no overflow candidate.
+- A blocked preferred output does not imply that an isolated input head diverts. Overflow in these controls
+  requires a follower on that same input line at position `q < 96`; the head's alternate landing uses `q - 19`.
+  A follower at 95 diverts the head to 76, whereas a follower at 96 first advances to 64 and permits diversion
+  on the next tick. A lone final stack stays waiting through the bounded blocked-output controls.
+
+The follower controls support a local queue rule: removing a follower changes routing with the preferred
+output unchanged. No additional remembered-choice state was needed to fit these captures. Insertion-order, other-output-lane saturation and upstream-entry
+controls reproduce the isolated-head wait. An ordinary upstream belt therefore reproduces the behavior too;
+it is not explained solely by inserting directly into the splitter. The tests also record native transport
+line connectivity using the [runtime API](https://lua-api.factorio.com/latest/classes/LuaTransportLine.html).
+Those links identify possible paths, not the selected destination of an individual stack.
+
+The production engine remains unchanged during calibration. The experimental replay must match every internal
+line, item, count, ID and position continuously in each control, as well as the original naturally fed 60-tick
+capture. All 27 independent controls and that baseline passed with the revised replay. Its external feeder observations and measured withdrawals remain explicit boundary conditions.
+These results do not calibrate other input/output priorities, filters, speeds, stack sizes, input ports or
+serial-network arbitration.
+
+```bash
+# From clock-generator/: each named test starts its own Factorio session.
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts -t 'distance 95$'
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts -t 'distance 96$'
+# Full scoped regression after evaluating the independent controls:
+SPLITTER_ENTRY_CAPTURE_DIR=../work/splitter-support/new-entry-run npm run test:game -- tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts
+```
