@@ -30,6 +30,33 @@ function pickup(config: Config) {
 const copy = () => structuredClone(sample);
 
 describe("physical belt lane fallback", () => {
+    for (const { mirrored, preferred, item } of [
+        { mirrored: false, preferred: 1, item: "accumulator" },
+        { mirrored: true, preferred: 2, item: "supercapacitor" },
+    ] as const) it.each([
+        { backedUp: false, start: 0, ticks: [0, 1, 3, 5] },
+        { backedUp: false, start: 1, ticks: [0, 1, 2, 4] },
+        { backedUp: true, start: 0, ticks: [0, 1, 2, 3] },
+    ])(`front underground entrance: mirrored=${mirrored}, lane ${preferred}, backedUp=$backedUp, phase start=$start`, async ({ backedUp, start, ticks }) => {
+        const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE, "config.json"));
+        config.overrides = { ...config.overrides, backed_up_belts: backedUp };
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
+        const input = pickup(config);
+        const observed: number[] = [];
+        for (let tick = 0; tick <= ticks[ticks.length - 1]; tick++) {
+            if (input.take(tick + start)) observed.push(tick);
+        }
+        expect(observed).toEqual(ticks);
+        expect(input.state.held_item).toEqual({ item_name: item, quantity: 16 });
+        // Recipe order stays fixed across both mirroring states; it disagrees with the unmirrored lane 1.
+        delete source.near_lane;
+        const recipeOrdered = pickup(config);
+        recipeOrdered.take(start);
+        expect(recipeOrdered.state.held_item).toEqual({ item_name: "supercapacitor", quantity: 4 });
+    });
+
     it.each([
         { label: "original lanes", swapped: false, preferred: 2, item: "supercapacitor" },
         { label: "swapped lanes", swapped: true, preferred: 2, item: "accumulator" },

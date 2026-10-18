@@ -9,7 +9,15 @@ The [front underground exit fixture](fixtures/front-underground-exit/README.md) 
 pickup with backed-up supply. Two ingredient arrangements distinguish lane preference from fixed recipe order;
 flipping the inserter with the swapped ingredients changes selection from lane 2 to lane 1. Each first hand is
 compared with an explicit simulator lane preference. Sidecar 0.10.0 exports that preference and half-tile geometry
-for both mirroring states. Other cardinal orientations and moving front supply have not had their actual grabs measured.
+for both mirroring states. Other cardinal orientations and moving front-exit supply have not had their actual grabs measured.
+
+The [front underground entrance fixture](fixtures/front-underground-entrance/README.md) measures an unmirrored
+inserter east of an eastbound entrance. It selects lane 1 accumulators with either moving or backed-up supply;
+flipping only its mirroring switches selection to lane 2 supercapacitors in both conditions.
+The first hand fills at `0,1,2,4` with the ingredient drain retained and `0,1,2,3` when that loader is removed.
+The existing model supports these timings with explicit lane preference and half-tile reach; the moving comparison
+allows both stream phases. Mirroring preserves each supply condition's measured timing. Sidecar 0.11.0 exports
+the mirroring-selected preference and half-tile reach for this entrance, verified in all four game cases.
 
 From `clock-generator/`:
 
@@ -20,11 +28,12 @@ npm run test:game -- tests/game/mechanics/belt-pickup/same-item-pickup-fixture.g
 npm run test:game -- tests/game/mechanics/belt-pickup/backed-up-pickup.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/pickup-capture.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts
 ```
 
 The first two commands run in the simulator. The remaining commands need Factorio and check respectively 12 lane-fallback
-cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, and three front exit
-ingredient/mirroring cases with capture assertions. Their independent replay and simulator comparisons remain
+cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, three front exit
+ingredient/mirroring cases with capture assertions, and four front entrance supply/mirroring cases. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands

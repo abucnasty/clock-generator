@@ -16,7 +16,7 @@ up as seldom as possible, and gives you a blueprint of the clock to place.
 - biochambers with their energy consumption bonus, and mining drills with their speed bonus
 - inserters: what each takes from and drops into, its stack size and filters
 - belts and the items on each lane, and chests with what they hold
-- belt pickup reach and preferred lane, including front-facing underground exits where flipping the inserter changes its preferred lane
+- belt pickup reach and preferred lane, including inline pickups downstream of underground entrances and exits where flipping the inserter changes its preferred lane
 - a suggested target: the product that leaves your selection and how much of it the machines make at most per second
 
 Inserters that take from or drop into something the text does not have are listed in the window with the text, with

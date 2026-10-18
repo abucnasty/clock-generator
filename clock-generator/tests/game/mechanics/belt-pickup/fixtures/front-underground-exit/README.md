@@ -55,7 +55,8 @@ The supplied clock target is not a verified default-clock throughput claim for t
 Sidecar 0.10.0 captures `near_lane: 2` for the mirrored inserter and `near_lane: 1` when flipped, along with
 `pickup_length: 0.5`, without an unclassified-pickup warning. The game regressions check both the recorder source
 and the exported config, as well as the observed grabs. Classification requires a centered inserter at the exit's
-open end, facing back into it. Other inline pickups, including underground entrances, remain unclassified.
+open end, facing back into it. Sidecar 0.11.0 also supports the analogous centered downstream pickup from an
+[underground entrance](../front-underground-entrance/README.md). Other unsupported inline pickups remain unclassified.
 
 The original manual captures used Sidecar 0.9.1, which warned `inline` and omitted both settings. Omitting
 `near_lane` makes the simulator select supercapacitors by recipe order in both ingredient arrangements, disagreeing

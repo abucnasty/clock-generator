@@ -20,7 +20,11 @@ The status the game shows for an inserter is decided by its sink before the inse
 ### What an inserter takes off a belt first
 
 With an empty hand, prefer the configured pickup lane's item when the destination can accept it. Beside a belt,
-this is the nearest lane; in front of an underground exit, mirroring selects it. Once a hand contains an item, continue collecting that item until the hand is full or the destination stops accepting it. Explicit filters restrict which items may be collected; they do not override a supplied `near_lane`. Without `near_lane`, item selection keeps the filter/recipe order and matching physical lanes are tried in their config order.
+this is the nearest lane. Centered downstream of an underground entrance or exit and facing back into it,
+mirroring selects lane 2 when mirrored and lane 1 otherwise. Once a hand contains an item, continue collecting
+that item until the hand is full or the destination stops accepting it. Explicit filters restrict which items may
+be collected; they do not override a supplied `near_lane`. Without `near_lane`, item selection keeps the
+filter/recipe order and matching physical lanes are tried in their config order.
 
 ### Picking up from moving belts and underground endpoints
 
@@ -70,11 +74,21 @@ One [front-facing underground exit case](../tests/game/mechanics/belt-pickup/fix
 also matches the existing simulator: a mirrored inserter north of a northbound exit selects lane 2 supercapacitors
 and fills its first backed-up hand at offsets `0,1,2,3`. The config explicitly supplies `near_lane: 2` and
 `pickup_length: 0.5`; neither lane is physically nearer. Sidecar 0.10.0 captures this front-exit preference from
-inserter mirroring and exports half-tile reach. Other inline pickups remain unclassified. Swapping the lane
+inserter mirroring and exports half-tile reach. Other unsupported inline pickups remain unclassified. Swapping the lane
 ingredients changes the selected item to accumulators while retaining lane 2 and
 the same grab offsets, supporting lane preference over fixed recipe order for this orientation. Flipping only
 the inserter with those swapped ingredients selects lane 1 supercapacitors, again at `0,1,2,3`; the simulator matches
-with explicit `near_lane: 1`. Moving front pickups and other cardinal orientations remain unverified.
+with explicit `near_lane: 1`. Moving front-exit pickups and other cardinal orientations remain unverified.
+
+An [inline underground entrance case](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md)
+checks an unmirrored inserter east of an eastbound entrance. It selects lane 1 accumulators with both moving and
+backed-up supply. Its first hand fills at `0,1,2,4` moving and `0,1,2,3` backed up, consistent with half-tile reach
+and the separate supply rules above. The moving comparison allows the two turbo stream phases rather than
+inferring an initial phase from the blueprint. Flipping only the inserter's mirroring changes selection to lane 2
+supercapacitors under both supply conditions, retaining those grab offsets. Sidecar 0.11.0 exports `near_lane: 1`
+unmirrored or `near_lane: 2` mirrored, plus half-tile reach, without warnings in all four game cases. Capture
+keeps supply motion separate from geometry. Classifier rotation checks cover all cardinal directions; actual
+entrance grabs in other orientations, ingredient swaps and repeated hands remain unmeasured.
 
 Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
 Sparse supply, shared upstream withdrawals, merges, bends, other inline pickups, other inserters/qualities/orientations,

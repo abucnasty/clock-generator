@@ -62,23 +62,21 @@ for index, entry in ipairs(directions) do
     local exit = belt("turbo-underground-belt", 130 + index * 6, 100, direction, "output")
     local entrance = belt("turbo-underground-belt", 130 + index * 6, 120, direction, "input")
     for _, mirrored in ipairs{false, true} do
-        local front = {position = {x = exit.position.x + dx, y = exit.position.y + dy},
-            direction = (direction + 8) % 16, mirroring = mirrored}
-        assert(h.get_near_lane(front, exit) == (mirrored and 2 or 1))
-        assert(h.get_pickup_length(front, exit) == 0.5)
-        assert(h.get_pickup_problem(front, exit) == nil)
-        -- Side pickups keep their physical nearest lane regardless of mirroring.
-        assert(h.get_near_lane({position = {x = exit.position.x + dy, y = exit.position.y - dx}, mirroring = mirrored}, exit) == 1)
-        assert(h.get_near_lane({position = {x = exit.position.x - dy, y = exit.position.y + dx}, mirroring = mirrored}, exit) == 2)
-        unclassified({position = {x = exit.position.x - dx, y = exit.position.y - dy},
-            direction = direction, mirroring = mirrored}, exit)
-        unclassified({position = front.position, direction = direction, mirroring = mirrored}, exit)
-        unclassified({position = {x = front.position.x + dy * 0.125, y = front.position.y - dx * 0.125},
-            direction = front.direction, mirroring = mirrored}, exit)
-        unclassified({position = {x = entrance.position.x - dx, y = entrance.position.y - dy},
-            direction = direction, mirroring = mirrored}, entrance)
-        unclassified({position = {x = entrance.position.x + dx, y = entrance.position.y + dy},
-            direction = (direction + 8) % 16, mirroring = mirrored}, entrance)
+        for _, target in ipairs{exit, entrance} do
+            local front = {position = {x = target.position.x + dx, y = target.position.y + dy},
+                direction = (direction + 8) % 16, mirroring = mirrored}
+            assert(h.get_near_lane(front, target) == (mirrored and 2 or 1))
+            assert(h.get_pickup_length(front, target) == 0.5)
+            assert(h.get_pickup_problem(front, target) == nil)
+            -- Side pickups keep their physical nearest lane regardless of endpoint or mirroring.
+            assert(h.get_near_lane({position = {x = target.position.x + dy, y = target.position.y - dx}, mirroring = mirrored}, target) == 1)
+            assert(h.get_near_lane({position = {x = target.position.x - dy, y = target.position.y + dx}, mirroring = mirrored}, target) == 2)
+            unclassified({position = {x = target.position.x - dx, y = target.position.y - dy},
+                direction = direction, mirroring = mirrored}, target)
+            unclassified({position = front.position, direction = direction, mirroring = mirrored}, target)
+            unclassified({position = {x = front.position.x + dy * 0.125, y = front.position.y - dx * 0.125},
+                direction = front.direction, mirroring = mirrored}, target)
+        end
     end
 end
 

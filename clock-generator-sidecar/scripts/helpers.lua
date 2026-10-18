@@ -56,7 +56,7 @@ function helpers.get_target_type(entity)
 end
 
 ---Preferred pickup lane: 1 for the left lane in belt travel direction, 2 for the right one.
----Beside a belt this is the nearest lane; centered in front of an underground exit it depends on mirroring.
+---Beside a belt this is the nearest lane; centered downstream of an underground endpoint it depends on mirroring.
 ---Other inline pickups and unsupported pieces remain unclassified. Recorded in Factorio 2.1.21.
 ---@param inserter LuaEntity
 ---@param belt LuaEntity The belt piece the inserter picks up from
@@ -86,9 +86,10 @@ function helpers.get_near_lane(inserter, belt)
     if left < -0.25 then
         return 2
     end
-    -- At the exit's open end neither lane is nearer. A mirrored hand reaches the right lane first.
+    -- Centered downstream and facing back into either underground endpoint, neither lane is nearer.
+    -- A mirrored hand reaches the right lane first (measured northbound exit and eastbound entrance).
     local facing = run[inserter.direction]
-    if belt.type == "underground-belt" and belt.belt_to_ground_type == "output"
+    if belt.type == "underground-belt"
         and math.abs(left) < 0.01 and dx * direction.x + dy * direction.y > 0.25
         and facing and facing.x == -direction.x and facing.y == -direction.y then
         return inserter.mirroring and 2 or 1

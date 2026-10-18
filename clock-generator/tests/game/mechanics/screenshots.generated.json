@@ -228,5 +228,28 @@
     "png_bytes": 4907090,
     "jpeg_bytes": 744674,
     "jpeg_quality": 82
+  },
+  "front-underground-entrance": {
+    "blueprint": "belt-pickup/fixtures/front-underground-entrance/scaffold.txt",
+    "image": "belt-pickup/fixtures/front-underground-entrance/scaffold.jpg",
+    "source_sha256": "8bae00a42b932425fa2c4f7125a8c834017da62952d5821ccb44b3eb37169410",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 400.474609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1476,
+      "y": 788
+    },
+    "zoom": 1.5,
+    "width": 1476,
+    "height": 788,
+    "png_bytes": 1517467,
+    "jpeg_bytes": 258829,
+    "jpeg_quality": 82
   }
 }

@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.11.0
+Date: 2026-10-18
+  Features:
+    - captures the preferred lane and half-tile pickup length for an inserter centered downstream of an underground entrance and facing back into it: lane 2 when mirrored, lane 1 otherwise
+---------------------------------------------------------------------------------------------------
 Version: 0.10.0
 Date: 2026-10-18
   Features:
