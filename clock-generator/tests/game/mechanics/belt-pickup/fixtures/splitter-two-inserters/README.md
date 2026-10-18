@@ -43,8 +43,11 @@ From `clock-generator/`, with the [game harness configured](../../../../README.m
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'right priority, original$'
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'no priority, original$'
 
-# Includes the two additional ingredient/mirroring controls, also in fresh sessions.
+# Includes all ingredient/mirroring controls, also in fresh sessions.
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts
+
+# Isolate the downstream/input-side mirror flip, retaining swapped ingredients and right priority.
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'swapped-right-unmirrored$'
 
 # Retain exact blueprints, generated Lua, configs, native reports and recordings in a new directory.
 SPLITTER_TWO_CAPTURE_DIR=../work/belt-pickup/turbo-two-new-run npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts
@@ -68,11 +71,14 @@ The original ingredients put iron on 7 and cable on 8; swapping exchanges only t
 | Right priority, original | Iron, line 7 | Cable, line 8 | 2, 3, 4, 5 |
 | Right priority, ingredients swapped | Cable, line 7 | Iron, line 8 | 2, 3, 4, 5 |
 | Right priority, swapped + left mirrored | Iron, line 8 | Iron, line 8 | 2, 3, 4, 5 |
+| Right priority, swapped + right unmirrored | Cable, line 7 | Cable, line 7 | 2, 3, 4, 5 |
 | No output priority, original | Iron, line 7 | Cable, line 8 | 2, 3, 4, 7 |
 
 The left target's ingredient swap and mirror controls reproduce its earlier physical line preference: line 7
-unmirrored, line 8 mirrored. The right target selects line 8 in its original mirrored input-side geometry;
-its other mirroring state has not been isolated here. In every first hand the other output line remains
+unmirrored, line 8 mirrored. Flipping only the right target from mirrored to unmirrored, retaining swapped
+ingredients, changes its first pickup from line 8 iron to line 7 cable. This independently establishes the
+same local preference on the input-side approach; it is not inferred by comparing the two different approaches.
+In every first hand the other output line remains
 untouched. Consumed IDs were last observed on `7,1,7,1` or `8,2,8,2` as appropriate. The trace reconciles
 both splitters and connecting pieces so routing is not mistaken for pickup. It does not prove direct access
 to input lines: routing and consumption may occur between observations.
@@ -98,6 +104,29 @@ for the mirrored-left case. These startup observations do **not** establish stea
 loss without priority. A clock expecting a full hand at tick 5 would nevertheless encounter a partial hand in
 the no-priority case.
 
+## Downstream-only mirroring follow-up
+
+This test differs from the right-priority swapped control only in target #19's `mirror` field, set from `true`
+to `false`. Target #14 remains unmirrored; both output priorities remain right, and both gates release together
+after the same warm-up. Captured blueprints are checked for that single-field difference. Both first hands
+now collect cable, so the machine receives no iron until a later hand. First-hand collection timing is unchanged.
+
+| Hand | Left item and grab ticks | Right item and grab ticks |
+| --- | --- | --- |
+| 1 | Cable: 2,3,4,5 | Cable: 2,3,4,5 |
+| 2 | Cable: 13,14,15,17 | Cable: 13,14,15,17 |
+| 3 | Iron: 25,26,27,29 | Iron: 25,26,27,29 |
+| 4 | Cable: 82,83,84,85 | Cable: 82,83,84,85 |
+
+The first right-hand consumed IDs have prior-observation lines `7,1,7,1`, replacing `8,2,8,2`; its line 8 iron
+stock stays unchanged during the first cable hand. The machine's native `products_finished` counter reaches 21
+at tick 120. As with the upstream-only mirror result, the different startup ingredient order and buffering
+change the observed schedule. This is not a steady-throughput claim or a new routing model.
+
+All five controls passed together in the retained capture
+`work/belt-pickup/turbo-two-splitter-input-mirroring-final-01/`, with one subdirectory per test. Original
+priority/no-priority evidence also remains at the earlier run listed below. No priority is changed at runtime.
+
 ## Simulator impact and remaining scope
 
 No production engine or Sidecar change is made. The selection controls agree with the earlier local preference;
@@ -109,5 +138,5 @@ the comparison config would not verify this build.
 Validated raw evidence belongs under ignored `work/belt-pickup/turbo-two-splitter-final-01/`, one folder per
 independent case. The regression asserts every observed hand's item and exact grab ticks, first-hand stock/ID
 traces, final native product counters, the existing machine-block classification, and both Sidecar warnings.
-Opposite input arrangements, flipping only the downstream target, changing only one splitter's priority,
-filtered routing and both-outlets-blocked supply remain unmeasured. Continue with one controlled change at a time.
+Opposite input arrangements, changing only one splitter's priority, filtered routing and both-outlets-blocked
+supply remain unmeasured. Continue with one controlled change at a time.

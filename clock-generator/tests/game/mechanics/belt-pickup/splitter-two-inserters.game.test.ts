@@ -41,13 +41,19 @@ const measured: Record<string, {items: string[][]; ticks: number[][][]; products
             [[2, 3, 4, 7], [15, 16, 19, 23], [31, 32, 35, 39], [60, 61, 62, 65]],
         ], products: 27,
     },
+    "swapped-right-unmirrored": {
+        items: Array.from({length: 2}, () => ["copper-cable", "copper-cable", "iron-plate", "copper-cable"]),
+        ticks: Array.from({length: 2}, () => [priorityTicks[0], priorityTicks[1], [25, 26, 27, 29], [82, 83, 84, 85]]),
+        products: 21,
+    },
 };
 
-for (const {name, swapped, leftMirrored, priority} of [
-    {name: "original", swapped: false, leftMirrored: false, priority: "right"},
-    {name: "swapped", swapped: true, leftMirrored: false, priority: "right"},
-    {name: "swapped-left-mirrored", swapped: true, leftMirrored: true, priority: "right"},
-    {name: "no-priority", swapped: false, leftMirrored: false, priority: "none"},
+for (const {name, swapped, leftMirrored, rightMirrored, priority} of [
+    {name: "original", swapped: false, leftMirrored: false, rightMirrored: true, priority: "right"},
+    {name: "swapped", swapped: true, leftMirrored: false, rightMirrored: true, priority: "right"},
+    {name: "swapped-left-mirrored", swapped: true, leftMirrored: true, rightMirrored: true, priority: "right"},
+    {name: "no-priority", swapped: false, leftMirrored: false, rightMirrored: true, priority: "none"},
+    {name: "swapped-right-unmirrored", swapped: true, leftMirrored: false, rightMirrored: false, priority: "right"},
 ]) test(`two serial turbo splitters: ${priority === "right" ? `right priority, ${name}` : "no priority, original"}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
@@ -80,13 +86,14 @@ for (const {name, swapped, leftMirrored, priority} of [
             const input = decoded.blueprint.entities.find((e: {entity_number: number}) => e.entity_number === id);
             expect(input.name).toBe("stack-inserter");
             if (id === 14 && leftMirrored) input.mirror = true;
+            if (id === 19) input.mirror = rightMirrored;
             input.control_behavior = {circuit_enabled: true,
                 circuit_condition: {first_signal: {type: "virtual", name: "signal-Z"}, comparator: "<", constant: 0}};
         }
         decoded.blueprint.entities.push({entity_number: 24, name: "constant-combinator", position: {x: -69.5, y: 418.5}});
         decoded.blueprint.wires = [[14, 1, 24, 1], [19, 1, 24, 1]];
         const blueprint = "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64");
-        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {leftMirrored, outputPriority: priority});
+        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {leftMirrored, rightMirrored, outputPriority: priority});
         fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
         fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
         fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
@@ -102,7 +109,7 @@ for (const {name, swapped, leftMirrored, priority} of [
         expect(report.initial).toMatchObject({recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
         expect(report.initial.targets).toMatchObject([
             {inserter_direction: 12, mirrored: leftMirrored, output_priority: priority, input_priority: "none"},
-            {inserter_direction: 4, mirrored: true, output_priority: priority, input_priority: "none"},
+            {inserter_direction: 4, mirrored: rightMirrored, output_priority: priority, input_priority: "none"},
         ]);
         const expected = measured[name];
         {
@@ -125,7 +132,7 @@ for (const {name, swapped, leftMirrored, priority} of [
             expect(report.samples.at(-1)!.products_finished).toBe(expected.products);
         }
         for (let index = 0; index < 2; index++) {
-            const preferredLine = index === 0 && !leftMirrored ? 7 : 8;
+            const preferredLine = (index === 0 ? leftMirrored : rightMirrored) ? 8 : 7;
             const item = (preferredLine === 7) !== swapped ? "iron-plate" : "copper-cable";
             const first = report.initial.state.hands[index];
             expect(first.held).toBe(0);
@@ -153,7 +160,7 @@ for (const {name, swapped, leftMirrored, priority} of [
             }
             expect(trace).toEqual(preferredLine === 7 ? [7, 1, 7, 1] : [8, 2, 8, 2]);
         }
-        if (swapped && !leftMirrored) {
+        if (name === "swapped") {
             // Classify the observed late pause with the existing engine eligibility rule, not a splitter replay.
             const simulation = SimulationContext.fromConfig(config);
             const machine = simulation.state_registry.getAllStates().find(EntityState.isMachine)!;

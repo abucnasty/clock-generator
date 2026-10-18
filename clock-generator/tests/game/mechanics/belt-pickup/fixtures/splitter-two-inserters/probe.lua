@@ -1,6 +1,8 @@
 -- Both original target inserters are gated during natural warm-up and released together.
 -- No item seeding, held-stack editing or destination clearing; observe the operating machine.
 local entities = ...
+local right_mirrored = options.rightMirrored
+if right_mirrored == nil then right_mirrored = true end
 local sink = capture.find_one(entities, function(e) return e.name == "electromagnetic-plant" end, "plant")
 local splitters, inputs, pieces = {}, {}, {}
 for _, entity in pairs(entities) do
@@ -21,7 +23,8 @@ for index, input in ipairs(inputs) do
     assert(splitter.splitter_output_priority == (options.outputPriority or "right") and splitter.splitter_input_priority == "none")
     assert(not splitter.splitter_filter and not input.use_filters)
     assert(input.direction == (index == 1 and defines.direction.west or defines.direction.east))
-    assert(input.mirroring == (index == 2 or (options.leftMirrored or false)))
+    if index == 1 then assert(input.mirroring == (options.leftMirrored or false))
+    else assert(input.mirroring == right_mirrored) end
     assert(input.pickup_position.x == splitter.position.x and input.pickup_position.y == splitter.position.y + 0.5)
     assert(not input.held_stack.valid_for_read, "targets must stay empty during gated warm-up")
     input.inserter_stack_size_override = 16
