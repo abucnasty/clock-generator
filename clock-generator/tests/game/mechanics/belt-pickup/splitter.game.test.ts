@@ -97,7 +97,7 @@ for (const {name, swapped, mirrored, label} of [
             game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
         });
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/splitter-pickup.json"), "utf8")) as {
-            initial: {lines: Line[]}; samples: Sample[];
+            initial: {lines: Line[]; downstream: Line[]}; samples: Sample[];
         };
         expect(report.samples).toHaveLength(60);
         expect(report.initial).toMatchObject({splitter_name: "turbo-splitter", splitter_direction: 4,
