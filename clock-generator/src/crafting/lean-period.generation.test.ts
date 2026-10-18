@@ -3,7 +3,8 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { clockFromWindows, clockVerdictOf, planClockAlternatives, type BlueprintGenerationResult, type SerializableClockWindows } from "./generate-blueprint";
-import { backpressureLossVerdictOf } from "./trial";
+import { backpressureLossOf } from "./trial";
+import { verdictOf } from "./backpressure-loss";
 import { quiet } from "./generate-blueprint-test-helpers";
 
 // Thaeln's cell has a coal inserter that moves 15/8 hands a cycle, which stretches the period of every clock made from
@@ -83,10 +84,20 @@ describe("a clock for a shorter period, on the Thaeln sample", () => {
         expect(per_second).toBeCloseTo(480, 6);
     });
 
-    it("gets back from every backpressure loss, so it is stable", () => {
-        const backpressure_loss = backpressureLossVerdictOf(config, result, quiet);
-        expect(backpressure_loss?.survives).toBe(true);
+    it("names the coal loss that settles into unequal periods, despite keeping the average target rate", () => {
+        const report = backpressureLossOf(config, result.clock_windows, PERIOD, result.stability_check.expected_output_items, quiet);
+        const coal = report.losses.find(outcome => outcome.loss.kind === "supply" && outcome.loss.item === "coal")!;
+        const failures = coal.trials.filter(trial => !trial.recovers);
+        expect(failures).toHaveLength(1);
+        // An unused belt-pickup counter used to delay repeat detection and change later trials' starting states.
+        // The behavior-based key exposes this valid recurring outcome. Recovery still requires each period's
+        // exact output: a 768 average does not make the 764/772 periods pass that existing rule.
+        expect(failures[0]).toMatchObject({cut_at: 84, restore_at: 198, loss_ticks: 786,
+            proven: true, ends_in: [764, 772, 764, 772]});
+        expect(failures[0].ends_in.reduce((sum, amount) => sum + amount, 0) / failures[0].ends_in.length).toBe(768);
+        const backpressure_loss = verdictOf(report);
+        expect(backpressure_loss).toEqual({survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null});
         const verdict = clockVerdictOf({ holds: true, backpressure_loss, items_per_second: 480, wake_ups_per_minute: null, start_dependence: null });
-        expect(verdict).toBe("stable");
+        expect(verdict).toBe("no recovery");
     });
 });

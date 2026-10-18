@@ -44,6 +44,12 @@ The generator tries every clock that holds its expected output, in the simulator
 
 A clock that holds its expected output and does not get back from a loss is not stable. It is listed as a clock with no recovery, with the losses that break it, and it is only selected when no clock of the build survives. On the samples the selection changed for two builds: agricultural science, whose selected clock did not get back from a loss of nutrients, and military science, where from the staged start no clock is stable: two (the selected one is among them) hold their output and are broken by a loss, and the others fall short of it from some starts, because the machine that makes the grenades can stop with its output full and too little iron left to craft again, and then makes half of its grenades and packs in a period. No clock of the metallurgic science sample gets back from a loss of tungsten ore, so that build keeps its clocks under that name; its selected clock holds its output and does not get back from that loss, and comes before the plain 1-swing clock at the same rate, which does not hold at all (see "Wake-ups", two clocks equally near the target).
 
+The saved 336-tick Thaeln lean-coal clock illustrates the exact per-period requirement. With an unused belt
+pickup counter removed from repeat keys, the coal-loss trials can settle into a proven repeating output cycle
+`764,772,764,772` after a partial loss. That averages 768 items per period but does not produce 768 in every
+period, so the existing rule calls it **no recovery**. The regression records this outcome rather than changing
+the trial policy or restoring a counter that does not affect pickup behavior.
+
 One kind of build is left out of this. Where a build has a deadlock risk (see "Two inserters that bring the same item"), its clocks are tried and their verdicts shown, and the verdict does not decide which is selected.
 
 This can cost wake-ups: goal 1 comes first. The clock selected for agricultural science then had 3,950 a minute where the one before had 2,543. Since the rules of issue 152 (2026-10-14, "When a waiting inserter acts") batched swings gets back from every loss on that build and is selected again, at 3,651. That is under review under the staged start: batched swings and fractional swings no longer get back from a loss of nutrients there (a hand short in a late period), and the 2-swing clock is selected; the owner is reviewing the recovery rule.
