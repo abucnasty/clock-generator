@@ -31,4 +31,25 @@ function M.snapshot(input, tick, line_count)
     return sample
 end
 
+-- Internal line links are observations, not an inferred routing decision.
+function M.connections(belt, line_count)
+    local result = {}
+    local function describe(lines)
+        local descriptions = {}
+        for _, line in pairs(lines) do
+            local local_indices = {}
+            for index = 1, line_count do
+                if line.line_equals(belt.get_transport_line(index)) then table.insert(local_indices, index) end
+            end
+            table.insert(descriptions, {owner = line.owner.unit_number, local_indices = local_indices})
+        end
+        return descriptions
+    end
+    for index = 1, line_count do
+        local line = belt.get_transport_line(index)
+        result[index] = {inputs = describe(line.input_lines), outputs = describe(line.output_lines)}
+    end
+    return result
+end
+
 return M
