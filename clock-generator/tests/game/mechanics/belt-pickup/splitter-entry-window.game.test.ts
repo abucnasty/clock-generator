@@ -107,7 +107,8 @@ for (const variant of variants) {
             if (tail !== undefined) expect(Object.values(report.initial.lines[6].stacks))
                 .toMatchObject(expectedStacks(front === undefined ? [tail] : [front, tail]));
             expect(report.samples).toHaveLength(sampleTicks);
-            let predicted = stock(report.initial.lines), previous = report.initial;
+            let predicted = stock(report.initial.lines);
+            let previous: Sample = report.initial;
             for (const sample of report.samples) {
                 predicted = advanceRightPrioritySplitter(predicted, {upstream: receivesUpstream ? stock(previous.upstream) : [[], []]});
                 expect(predicted, `seeded continuous replay at tick ${sample.tick}`).toEqual(stock(sample.lines));
