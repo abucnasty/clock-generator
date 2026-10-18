@@ -42,10 +42,12 @@ classify splitter routing. Sidecar's unsupported warning remains. Further mechan
 PRs or publishing until requested.
 
 The [two-serial-splitter series](fixtures/splitter-two-inserters/README.md) separately measures original,
-ingredient-swapped, upstream-mirrored and downstream-unmirrored pickups, plus an independent no-priority baseline. With right priority,
+ingredient-swapped, upstream-mirrored and downstream-unmirrored pickups, plus independent priority controls. With right priority,
 both original first hands grab at 2,3,4,5; with both output priorities unset they grab at 2,3,4,7. The original
 mirroring and gate timing stay fixed in that comparison. Later partial hands depend on upstream stock and shared
-machine eligibility, so the findings do not assign a constant splitter delay. Flipping each target independently
+machine eligibility, so the findings do not assign a constant splitter delay. Unsetting only upstream priority
+delays only its first hand; unsetting only downstream priority delays only that hand. Native IDs show the next
+matching stack diverted to the north through output at tick 5 while the south pickup is empty. Flipping each target independently
 confirms line 7 unmirrored versus line 8 mirrored for both approaches in this layout. Both pickups remain unsupported.
 
 The [front underground exit fixture](fixtures/front-underground-exit/README.md) isolates a northbound, head-on
@@ -93,7 +95,7 @@ The first two commands run in the simulator. The remaining commands need Factori
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, five front exit
 ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
 front entrance moving/backed-up controls, the side-loaded tile/control pair, the expanded 42-case side-entry matrix,
-three direct single-splitter controls, and five independent two-splitter controls. Their independent replay and simulator comparisons remain
+three direct single-splitter controls, and seven independent two-splitter controls. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands
@@ -113,6 +115,8 @@ The [direct splitter series](fixtures/splitter/README.md) has begun on a branch 
 implementation. Its baseline, ingredient swap and mirroring controls are complete; opposite-port, priority/filter
 and both-outlets-blocked controls remain unmeasured for that single-splitter layout. The two-splitter series
 also compares output priority set versus unset in independent fresh sessions.
+Single-splitter priority isolation is complete for that serial layout; later coupled schedules remain distinct
+from the local first-hand routing result.
 
 After the current pickup/merge investigations, verify the tick-by-tick predictions of
 [`Belt::amountToDropAtTick`](../../../../src/entities/belt/belt.test.ts) against actual drops with belt stack sizes

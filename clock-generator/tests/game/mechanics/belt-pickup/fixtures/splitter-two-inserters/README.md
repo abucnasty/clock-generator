@@ -43,6 +43,10 @@ From `clock-generator/`, with the [game harness configured](../../../../README.m
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'right priority, original$'
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'no priority, original$'
 
+# Independent single-splitter controls; the other splitter retains right priority.
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'upstream priority unset only$'
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'downstream priority unset only$'
+
 # Includes all ingredient/mirroring controls, also in fresh sessions.
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts
 
@@ -55,8 +59,9 @@ npm run screenshots -- --case=splitter-two-inserters
 ```
 
 The priority comparison keeps original ingredients, original mirroring, gate timing and all geometry fixed.
-The no-priority blueprint omits only the `output_priority` fields on splitters #12 and #20. Native metadata
-asserts `right` in the priority test and `none` in the independent no-priority test. Both input priorities remain
+The no-priority blueprint omits only the `output_priority` fields on splitters #12 and #20. The upstream-only
+control omits only #12's field; the downstream-only control omits only #20's. Native metadata asserts each
+splitter's expected priority independently, including the retained `right` setting. Both input priorities remain
 unset and neither splitter has a filter. Each retained variant has its own subdirectory; nonempty run directories
 are refused. The test does not reuse a running world to produce its comparison.
 
@@ -66,13 +71,15 @@ At release, each south output has two stacks per line at 0 and 1/4 tile. Lines 7
 lines; the populated north input lines 1 and 2 have lengths 179/256 tile, and output lines have length 1/2 tile.
 The original ingredients put iron on 7 and cable on 8; swapping exchanges only the four feeder chest filters.
 
-| Independent case | Left first hand | Right first hand | First-hand grab ticks, both targets |
-| --- | --- | --- | --- |
-| Right priority, original | Iron, line 7 | Cable, line 8 | 2, 3, 4, 5 |
-| Right priority, ingredients swapped | Cable, line 7 | Iron, line 8 | 2, 3, 4, 5 |
-| Right priority, swapped + left mirrored | Iron, line 8 | Iron, line 8 | 2, 3, 4, 5 |
-| Right priority, swapped + right unmirrored | Cable, line 7 | Cable, line 7 | 2, 3, 4, 5 |
-| No output priority, original | Iron, line 7 | Cable, line 8 | 2, 3, 4, 7 |
+| Independent case | Left first hand | Right first hand | Left grab ticks | Right grab ticks |
+| --- | --- | --- | --- | --- |
+| Both right, original | Iron, line 7 | Cable, line 8 | 2,3,4,5 | 2,3,4,5 |
+| Both right, ingredients swapped | Cable, line 7 | Iron, line 8 | 2,3,4,5 | 2,3,4,5 |
+| Both right, swapped + left mirrored | Iron, line 8 | Iron, line 8 | 2,3,4,5 | 2,3,4,5 |
+| Both right, swapped + right unmirrored | Cable, line 7 | Cable, line 7 | 2,3,4,5 | 2,3,4,5 |
+| Both unset, original | Iron, line 7 | Cable, line 8 | 2,3,4,7 | 2,3,4,7 |
+| Upstream unset only, original | Iron, line 7 | Cable, line 8 | 2,3,4,7 | 2,3,4,5 |
+| Downstream unset only, original | Iron, line 7 | Cable, line 8 | 2,3,4,5 | 2,3,4,7 |
 
 The left target's ingredient swap and mirror controls reproduce its earlier physical line preference: line 7
 unmirrored, line 8 mirrored. Flipping only the right target from mirrored to unmirrored, retaining swapped
@@ -88,6 +95,37 @@ priority both still hold 12, reaching 16 at tick 7. The next right-priority hand
 Without priority, the left hand grabs at 15,16,17,21 and the right at 15,16,19,23. Turbo speed is unchanged;
 the routing decision changes when reachable replacement stacks arrive. These observations do not define
 a universal splitter delay or establish a complete routing algorithm.
+
+## Isolating the priority-dependent delay
+
+The two new controls retain the original ingredients and mirroring and release both gates at the same tick.
+Each is a separate test with a fresh session, save copy and warm-up. Captured blueprint comparisons show one
+changed field per control: omit upstream #12's `output_priority`, or omit downstream #20's. No other setting
+changes and priorities stay fixed throughout each run.
+
+The delayed first hand follows **the splitter whose priority is unset**. Unsetting upstream priority delays
+only the upstream first hand to tick 7; the downstream first hand still finishes at 5. Unsetting downstream
+priority reverses that result. Thus the downstream first-hand delay in the both-unset test does not require
+the upstream priority to be unset. This conclusion is about the prefilled startup condition, not every later hand.
+
+The native ID trace shows the mechanism in each isolated case. At tick 4 the next matching stack is on the
+affected splitter's input line at position **19/256 tile**. At tick 5 that same stack is on the **north output
+at 1/4 tile**, heading along the drain route rather than replenishing the empty south pickup line. The hand
+holds 12 items during ticks 4–6, then a later stack completes it at tick 7. The observed machine inventories
+are still empty throughout this first collection, excluding a machine insertion-limit block as its cause.
+The unchanged preferred ingredient line also excludes a lane-selection switch in these controls.
+
+This is a local routing/diversion result, not a fixed two-tick surcharge to add to every pickup. Later hands
+influence each other through transport stock and the shared machine. For example, upstream-only unset priority
+gives downstream third/fourth hands at 30,31,32,33 and 60,61,62,63. Downstream-only unset priority gives its
+downstream third hand at 31,32,35,60; its upstream third hand instead collects cable at 25,26,30,31. All complete
+hand sequences are fixed as regression expectations. The native counter is 27 after 120 ticks in both isolated
+cases, as in the other original-ingredient priority controls; no steady-throughput conclusion follows from that.
+
+Both independent filtered commands passed using separate processes and output directories. All seven controls
+also passed together, with validated reports, exact blueprints and generated probes retained under ignored
+`work/belt-pickup/turbo-two-splitter-priority-isolation-final-01/`. The regression additionally tracks the diverted
+native ID into the north output while the pickup line is empty, not just the eventual full-hand tick.
 
 **Later hands depend on both stock and machine eligibility.** Recovered stock can give another `0,1,2,3`
 hand, so `0,1,2,4` is not a fixed rule for every later collection. With ingredients swapped and right priority,
@@ -138,5 +176,6 @@ the comparison config would not verify this build.
 Validated raw evidence belongs under ignored `work/belt-pickup/turbo-two-splitter-final-01/`, one folder per
 independent case. The regression asserts every observed hand's item and exact grab ticks, first-hand stock/ID
 traces, final native product counters, the existing machine-block classification, and both Sidecar warnings.
-Opposite input arrangements, changing only one splitter's priority, filtered routing and both-outlets-blocked
-supply remain unmeasured. Continue with one controlled change at a time.
+Opposite input arrangements, filtered routing and both-outlets-blocked supply remain unmeasured. Priority
+isolation establishes a local first-hand cause, not a complete simulation of splitter scheduling. Continue with
+one controlled change at a time.

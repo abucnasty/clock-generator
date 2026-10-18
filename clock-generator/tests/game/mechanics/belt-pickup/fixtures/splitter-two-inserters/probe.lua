@@ -20,7 +20,8 @@ for index, input in ipairs(inputs) do
     local splitter = splitters[index]
     assert(input.pickup_target == splitter and input.drop_target == sink)
     assert(splitter.name == "turbo-splitter" and splitter.direction == defines.direction.east)
-    assert(splitter.splitter_output_priority == (options.outputPriority or "right") and splitter.splitter_input_priority == "none")
+    local priority = options.outputPriorities and options.outputPriorities[index] or options.outputPriority or "right"
+    assert(splitter.splitter_output_priority == priority and splitter.splitter_input_priority == "none")
     assert(not splitter.splitter_filter and not input.use_filters)
     assert(input.direction == (index == 1 and defines.direction.west or defines.direction.east))
     if index == 1 then assert(input.mirroring == (options.leftMirrored or false))

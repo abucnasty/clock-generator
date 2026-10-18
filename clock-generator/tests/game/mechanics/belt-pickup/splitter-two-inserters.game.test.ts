@@ -46,15 +46,32 @@ const measured: Record<string, {items: string[][]; ticks: number[][][]; products
         ticks: Array.from({length: 2}, () => [priorityTicks[0], priorityTicks[1], [25, 26, 27, 29], [82, 83, 84, 85]]),
         products: 21,
     },
+    "upstream-no-priority": {
+        items: originalItems,
+        ticks: [
+            [[2, 3, 4, 7], [15, 16, 17, 21], [30, 31, 32, 35], [60, 61, 62, 65]],
+            [priorityTicks[0], priorityTicks[1], [30, 31, 32, 33], [60, 61, 62, 63]],
+        ], products: 27,
+    },
+    "downstream-no-priority": {
+        items: [["iron-plate", "copper-cable", "copper-cable", "iron-plate", "copper-cable"], Array(3).fill("copper-cable")],
+        ticks: [
+            [priorityTicks[0], priorityTicks[1], [25, 26, 30, 31], [39, 40, 41, 43], [60, 61, 62, 63]],
+            [[2, 3, 4, 7], [15, 16, 19, 23], [31, 32, 35, 60]],
+        ], products: 27,
+    },
 };
 
-for (const {name, swapped, leftMirrored, rightMirrored, priority} of [
-    {name: "original", swapped: false, leftMirrored: false, rightMirrored: true, priority: "right"},
-    {name: "swapped", swapped: true, leftMirrored: false, rightMirrored: true, priority: "right"},
-    {name: "swapped-left-mirrored", swapped: true, leftMirrored: true, rightMirrored: true, priority: "right"},
-    {name: "no-priority", swapped: false, leftMirrored: false, rightMirrored: true, priority: "none"},
-    {name: "swapped-right-unmirrored", swapped: true, leftMirrored: false, rightMirrored: false, priority: "right"},
-]) test(`two serial turbo splitters: ${priority === "right" ? `right priority, ${name}` : "no priority, original"}`, async context => {
+for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
+    {name: "original", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: []},
+    {name: "swapped", swapped: true, leftMirrored: false, rightMirrored: true, unsetPriorities: []},
+    {name: "swapped-left-mirrored", swapped: true, leftMirrored: true, rightMirrored: true, unsetPriorities: []},
+    {name: "no-priority", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [12, 20]},
+    {name: "swapped-right-unmirrored", swapped: true, leftMirrored: false, rightMirrored: false, unsetPriorities: []},
+    {name: "upstream-no-priority", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [12]},
+    {name: "downstream-no-priority", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [20]},
+]) test(`two serial turbo splitters: ${name.endsWith("-no-priority") ? `${name.replace("-no-priority", "")} priority unset only`
+    : name === "no-priority" ? "no priority, original" : `right priority, ${name}`}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
     const retained = process.env.SPLITTER_TWO_CAPTURE_DIR;
@@ -64,9 +81,10 @@ for (const {name, swapped, leftMirrored, rightMirrored, priority} of [
     try {
         const fixture = GameFixturePaths.SPLITTER_TWO_INSERTERS;
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+        const outputPriorities = [12, 20].map(id => unsetPriorities.includes(id) ? "none" : "right");
         const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
         const decoded = JSON.parse(zlib.inflateSync(Buffer.from(original.slice(1), "base64")).toString());
-        if (priority === "none") for (const id of [12, 20]) {
+        for (const id of unsetPriorities) {
             const splitter = decoded.blueprint.entities.find((e: {entity_number: number}) => e.entity_number === id);
             expect(splitter.name).toBe("turbo-splitter");
             expect(splitter.output_priority).toBe("right");
@@ -93,7 +111,7 @@ for (const {name, swapped, leftMirrored, rightMirrored, priority} of [
         decoded.blueprint.entities.push({entity_number: 24, name: "constant-combinator", position: {x: -69.5, y: 418.5}});
         decoded.blueprint.wires = [[14, 1, 24, 1], [19, 1, 24, 1]];
         const blueprint = "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64");
-        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {leftMirrored, rightMirrored, outputPriority: priority});
+        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {leftMirrored, rightMirrored, outputPriorities});
         fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
         fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
         fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
@@ -108,8 +126,8 @@ for (const {name, swapped, leftMirrored, rightMirrored, priority} of [
         expect(report.samples).toHaveLength(120);
         expect(report.initial).toMatchObject({recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
         expect(report.initial.targets).toMatchObject([
-            {inserter_direction: 12, mirrored: leftMirrored, output_priority: priority, input_priority: "none"},
-            {inserter_direction: 4, mirrored: rightMirrored, output_priority: priority, input_priority: "none"},
+            {inserter_direction: 12, mirrored: leftMirrored, output_priority: outputPriorities[0], input_priority: "none"},
+            {inserter_direction: 4, mirrored: rightMirrored, output_priority: outputPriorities[1], input_priority: "none"},
         ]);
         const expected = measured[name];
         {
@@ -159,6 +177,20 @@ for (const {name, swapped, leftMirrored, rightMirrored, priority} of [
                 trace.push(lost[0].line);
             }
             expect(trace).toEqual(preferredLine === 7 ? [7, 1, 7, 1] : [8, 2, 8, 2]);
+            if (outputPriorities[index] === "none") {
+                // The refill that would finish the hand at tick 5 is instead routed to the draining north port.
+                // Track the same native ID within this run; do not equate IDs between different sessions.
+                const inputLine = preferredLine - 7;
+                const waiting = stacks(report.samples[3].hands[index].lanes[inputLine]).find(s => s.at === 19 / 256)!;
+                expect(waiting).toMatchObject({item, count: 4});
+                expect(stacks(report.samples[4].hands[index].lanes[inputLine + 4]))
+                    .toContainEqual({...waiting, at: 0.25});
+                for (const sample of report.samples.filter(s => s.tick >= 4 && s.tick <= 6)) {
+                    expect(sample.hands[index].held).toBe(12);
+                    expect(stacks(sample.hands[index].lanes[preferredLine - 1])).toEqual([]);
+                }
+                expect(report.samples[6].hands[index].held).toBe(16);
+            }
         }
         if (name === "swapped") {
             // Classify the observed late pause with the existing engine eligibility rule, not a splitter replay.
