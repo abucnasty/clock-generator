@@ -41,6 +41,8 @@ npm run build   # tsc, into dist/
 
 `record` and `verify` build first. Run either without arguments for its options.
 
+The [contributor guide](../CONTRIBUTING.md) maps changes to relevant checks and explains where resources belong.
+
 ## Entries and the Game Data
 
 The package has three entries (`exports` in `package.json`):

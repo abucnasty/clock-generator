@@ -37,16 +37,21 @@ npm run dev          # the site at the address Vite prints
 
 ## Tests
 
+See [Contributing](CONTRIBUTING.md) for resource organization and choosing checks appropriate to a change.
+
 In `clock-generator` (after `npm install`):
 
 ```bash
 npm test                 # the unit tests
 npm run test:generation  # the generation tests: the clocks of whole samples, a few minutes
 npm run test:all         # both
-npm run test:game        # records the sample builds in Factorio; needs a Factorio install (see the engine README)
+npm run test:game -- <file> # selected game checks; requires Factorio (see the game verification guide)
 ```
 
 In `clock-generator-ui`, `npm test` runs the UI's tests.
+
+The [game verification guide](clock-generator/tests/game/README.md) covers setup, mechanic fixtures, clock-build
+checks and retained probe captures.
 
 ## Versioning
 

@@ -42,6 +42,8 @@ npm run test:game -- tests/game/builds/moving-pickup.game.test.ts -t 'straight-b
 `npm run test:game` without a file runs the entire local game suite, serially, and can take many minutes.
 Missing Factorio/save settings cause skips; a skipped test has not verified the game behavior.
 
+For verification appropriate to other changes, see the [contributor guide](../../../CONTRIBUTING.md).
+
 ## Preserve a raw capture
 
 The capture command builds the engine, reads `.env`, composes shared Lua with the scenario, and uses the same
@@ -74,3 +76,20 @@ limits. Add its paths to the internal helper, not `ConfigPaths`. Keep a simulato
 Use shared capture/snapshot functions and explicit scenario callbacks; preserve independently derived expectations.
 Record measured conditions and unverified cases before describing a rule as verified. Clock-rate/recovery checks
 belong in `builds/`, and can reuse the mechanic fixture without copying its scaffolds.
+
+## Maintain an experiment
+
+Read the affected topic and fixture READMEs before changing an experiment. Preserve measured assertions when moving
+files or extracting helpers; changes to expected timing need evidence explaining the new expectation.
+
+Shared Lua under `helpers/lua/` handles observation and bounded capture. Keep filtering, inventory clearing and
+other interventions visible in the scenario. Use `composeProbeSource` to load shared helpers and JSON parameters
+on the host; a scenario source file alone is not directly runnable through `--lua`.
+
+One probe owns `script.on_nth_tick(1, ...)` per run and unregisters it on completion or callback failure. Registering
+another handler for that slot replaces the first. Preserve the recorder's separate `on_tick` handler and distinguish
+probe installation time from the final recording start when comparing samples.
+
+Select affected files and, where useful, individual `-t` cases. File moves alone do not require every clock-recovery
+or scaffold check. Shared capture changes need representative coverage of each consuming scenario; changes to
+mechanic assertions may require the full relevant parameter matrix.
