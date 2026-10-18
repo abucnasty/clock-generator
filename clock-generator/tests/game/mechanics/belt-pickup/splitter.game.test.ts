@@ -10,12 +10,13 @@ import {composeProbeSource} from "../../helpers/probe-source";
 import {Config} from "../../../../src/config";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import {advanceRightPrioritySplitter, SplitterStack} from "./splitter-replay";
 
 interface Stack {id: number; at: number; count: number; item: string}
 interface Line {length: number; stacks: Stack[] | Record<string, never>}
 interface Sample {
     tick: number; held: number; held_item?: string; lines: Line[];
-    downstream: Line[];
+    downstream: Line[]; upstream: Line[];
     inputs: unknown; output: unknown; crafting_progress: number;
 }
 const stacks = (line: Line): Stack[] => Object.values(line.stacks);
@@ -104,9 +105,24 @@ for (const {name, swapped, mirrored, label} of [
             game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
         });
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/splitter-pickup.json"), "utf8")) as {
-            initial: {lines: Line[]; downstream: Line[]}; samples: Sample[];
+            initial: {lines: Line[]; downstream: Line[]; upstream: Line[]}; samples: Sample[];
         };
         expect(report.samples).toHaveLength(60);
+        if (name === "original") {
+            const stock = (lines: Line[]): SplitterStack[][] => lines.map(line => stacks(line).map(stack => ({
+                id: stack.id, position: Math.round(stack.at * 256), item: stack.item, count: stack.count,
+            })));
+            let predicted = stock(report.initial.lines);
+            let previous = {...report.initial, held: 0};
+            for (const sample of report.samples) {
+                predicted = advanceRightPrioritySplitter(predicted, {
+                    upstream: stock(previous.upstream),
+                    take: sample.held > previous.held ? {item: sample.held_item!, count: sample.held - previous.held} : undefined,
+                });
+                expect(predicted, `continuous splitter replay at tick ${sample.tick}`).toEqual(stock(sample.lines));
+                previous = sample;
+            }
+        }
         expect(report.initial).toMatchObject({splitter_name: "turbo-splitter", splitter_direction: 4,
             drain_present: !blockedDrain, output_priority: outputPriority, input_priority: "none", inserter_direction: 12, mirrored, use_filters: false,
             recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});

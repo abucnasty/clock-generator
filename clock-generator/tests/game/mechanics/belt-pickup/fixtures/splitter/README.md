@@ -215,3 +215,35 @@ routing model, so the simulator and Sidecar remain unchanged. The [additional ro
 states there, the other input arrangement, opposite priority and both ingredient filters. Both priority settings
 for the single-consumer blocked-drain control above are complete. No general splitter support is claimed. Continue with turbo
 speed and one controlled change at a time.
+
+## Continuous right-priority replay
+
+The first support increment adds an experimental finite-stock replay in
+[`splitter-replay.ts`](../../splitter-replay.ts), separate from the production simulator. A fresh baseline
+capture on Factorio 2.1.21 matched all eight splitter lines through **all 60 consecutive transitions**,
+including each stack's identity, position, item and count. The replay starts from the initial observation
+once and never replaces its internal stock with later observations.
+
+For the measured north-input, right-priority layout, the candidate moves existing output stock first, routes
+the input head to the preferred south output when it fits (otherwise north), advances the remaining input
+stock, and then applies consumer withdrawals. Turbo movement is 32/256 tile per tick; stacks need 64/256
+spacing. The observed input line is 179/256 tile long. In this capture, routed stacks enter the output at
+64/256 tile. That transfer position and the admission boundary still need independent phase calibration;
+they are not yet general routing rules.
+
+Feeder arrivals come from the previous upstream observation. Withdrawals are the externally measured item
+and amount on each grab tick. These boundary events isolate splitter routing; this comparison does **not**
+predict feeder operation, inserter timing, or downstream backpressure. It cannot by itself enable clock
+generation. Four compact native transition cuts in `right-priority-transitions.json` run offline in CI;
+the native baseline additionally checks the entire continuous replay.
+
+Reproduce from `clock-generator/`:
+
+```bash
+npm test -- tests/game/mechanics/belt-pickup/splitter-replay.test.ts
+SPLITTER_CAPTURE_DIR=../work/splitter-support/new-baseline npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts -t 'output$'
+```
+
+Fresh evidence is retained locally in ignored `work/splitter-support/replay-01/original/`. Compact cuts remap
+native IDs consistently to local integers. Sidecar still captures the splitter as unsupported; production
+pickup rules are unchanged.
