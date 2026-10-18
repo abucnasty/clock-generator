@@ -51,6 +51,16 @@ describe("Belt", () => {
             expect(Belt.amountToDropAtTick(belt_speed, stack_size, 7)).toBe(0)
         })
 
+        // Native two-hand calibration: tests/game/mechanics/belt-drop/fixtures/turbo-stacks/README.md.
+        // Offsets include every empty tick between the first and last deposit.
+        test.each([
+            {stackSize: BeltStackSize.TWO, amounts: [2, 2, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2]},
+            {stackSize: BeltStackSize.THREE, amounts: [3, 3, 3, 0, 3, 0, 3]},
+        ])("turbo native drop trace with stack size $stackSize", ({stackSize, amounts}) => {
+            expect(amounts.map((_, tick) => Belt.amountToDropAtTick(BeltSpeed.TURBO_TRANSPORT_BELT, stackSize, tick)))
+                .toEqual(amounts);
+        });
+
         test("transport-belt with stack size 1", () => {
             const belt_speed = BeltSpeed.TRANSPORT_BELT
             const stack_size = 1

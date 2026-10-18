@@ -5,6 +5,7 @@ ordinary CI runs simulator tests and type-checks this code without producing new
 
 - [Mechanic experiments](mechanics/): isolated game rules, with configs, scaffolds, probes and evidence scope.
 - [Clock builds](builds/README.md): generated-clock throughput and recovery, often reusing ordinary samples.
+- [Belt drops](mechanics/belt-drop/README.md): native deposit timing at effective stack sizes 1–4.
 - [Belt pickup](mechanics/belt-pickup/README.md): moving stacks, lane fallback, backed-up supply and pickup capture.
 - `helpers/`: internal fixture paths, host-side Lua composition and shared Lua observations/capture.
 - General examples and real extracted cells remain under [config-samples](../../resources/config-samples/README.md).
@@ -43,6 +44,31 @@ npm run test:game -- tests/game/builds/moving-pickup.game.test.ts -t 'straight-b
 Missing Factorio/save settings cause skips; a skipped test has not verified the game behavior.
 
 For verification appropriate to other changes, see the [contributor guide](../../../CONTRIBUTING.md).
+
+## Bounded parallel runs
+
+The default game suite remains sequential. Independent controls for the same mechanics question may run in
+two headless processes at once. A local check of the turbo repeated-merge release-17 and outlet controls passed
+both sequentially and concurrently, with distinct live game/RCON ports and write-data directories. The pair
+took 5.17 seconds sequentially and 3.08 seconds concurrently; this single comparison does not establish a
+benefit for larger worker counts or heavier builds.
+
+Start with **two Factorio processes total**, including any launched by other workers. Select exact `-t` cases
+in separate commands; do not enable an unbounded test sweep. The harness assigns ports and copies the save
+and mods into each session's directory. Tests using `mkdtemp` already isolate those directories. For manual
+captures, each worker must have a unique work directory and output path: preparation deletes the work
+directory's `mods` and `script-output`. Never reuse an active session's directory.
+
+Freeze shared fixtures, simulator code, Sidecar and recorder while comparative runs start and execute. One
+coordinator owns common helpers, expectations, Git changes and conclusions; other workers run disjoint
+controls or analyze their evidence. Build once before launching commands that use `dist`; do not run parallel
+builds into the same checkout. Keep screenshots sequential because they use graphical clients and write the
+shared screenshot catalog/provenance. Turn watching off for parallel headless runs.
+
+Port discovery releases its socket before Factorio binds it, so a bind collision is an infrastructure failure,
+not evidence about a mechanic. Check logs and retry that failed run with a fresh directory. Increase neither
+the worker limit nor timeouts automatically when resource contention slows a run. Evaluate all controls
+together before changing the simulator or moving to another mechanics question.
 
 ## Preserve a raw capture
 

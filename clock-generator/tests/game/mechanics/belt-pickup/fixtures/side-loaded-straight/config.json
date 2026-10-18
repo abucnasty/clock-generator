@@ -1,0 +1,75 @@
+{
+  "target_output": {
+    "recipe": "electronic-circuit",
+    "items_per_second": 1,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "electronic-circuit",
+      "productivity": 0,
+      "crafting_speed": 3.125,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_supply": [
+          "through",
+          "side-inner"
+        ]
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "iron-plate",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "id": 1,
+      "type": "infinity-chest",
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    }
+  ],
+  "overrides": {
+    "backed_up_belts": false
+  }
+}

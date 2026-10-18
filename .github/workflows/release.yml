@@ -11,6 +11,8 @@ name: Release
 #   on master before it is released.
 # "Run workflow" (or `gh workflow run release.yml`) deploys the current version to production again, for a run that
 # failed part way.
+# RELEASE_HOLD=true pauses GitHub releases and production deployment, including manual dispatches.
+# Tests and master preview deployments remain enabled during an unreleased merge.
 # Nothing is released or deployed unless the tests pass: the unit and generation tests and the UI build of test.yml.
 #
 # The deployments need three secrets: VERCEL_TOKEN (a token of the Vercel account), VERCEL_ORG_ID and
@@ -40,6 +42,7 @@ jobs:
       generation: true
 
   release:
+    if: vars.RELEASE_HOLD != 'true'
     needs: tests
     runs-on: ubuntu-latest
     permissions:
@@ -84,7 +87,7 @@ jobs:
     # The site players use: only a released version, and only after its release exists
     name: Deploy to production
     needs: release
-    if: needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch'
+    if: vars.RELEASE_HOLD != 'true' && (needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -169,7 +169,7 @@ export class EnableControlFactory {
         const inserter_filtered_items = inserter.filtered_items;
         const inserter_animation = inserter.animation;
         const time_to_transfer = inserter_animation.pickup_to_drop.ticks
-        const belt_item_names = source_state.belt.lanes.map(it => it.ingredient_name)
+        const belt_item_names = [...inserter.source.item_names]
         const transferred_items = belt_item_names.filter(it => inserter_filtered_items.has(it))
         const buffer_multiplier = 2
 

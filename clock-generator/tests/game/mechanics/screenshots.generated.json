@@ -228,5 +228,166 @@
     "png_bytes": 4907090,
     "jpeg_bytes": 744674,
     "jpeg_quality": 82
+  },
+  "front-underground-entrance": {
+    "blueprint": "belt-pickup/fixtures/front-underground-entrance/scaffold.txt",
+    "image": "belt-pickup/fixtures/front-underground-entrance/scaffold.jpg",
+    "source_sha256": "8bae00a42b932425fa2c4f7125a8c834017da62952d5821ccb44b3eb37169410",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 400.474609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1476,
+      "y": 788
+    },
+    "zoom": 1.5,
+    "width": 1476,
+    "height": 788,
+    "png_bytes": 1517467,
+    "jpeg_bytes": 258829,
+    "jpeg_quality": 82
+  },
+  "side-loaded-straight": {
+    "blueprint": "belt-pickup/fixtures/side-loaded-straight/side-loaded-scaffold.txt",
+    "image": "belt-pickup/fixtures/side-loaded-straight/side-loaded-scaffold.jpg",
+    "source_sha256": "4a03cbbe85e7c5c202006f4af55c1b765a2a6ffd96a7e0913f2385c17b037c64",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 392,
+      "y": 0.025390625
+    },
+    "resolution": {
+      "x": 658,
+      "y": 660
+    },
+    "zoom": 1.5,
+    "width": 658,
+    "height": 660,
+    "png_bytes": 674580,
+    "jpeg_bytes": 76535,
+    "jpeg_quality": 82
+  },
+  "side-loaded-straight/control": {
+    "blueprint": "belt-pickup/fixtures/side-loaded-straight/straight-through-scaffold.txt",
+    "image": "belt-pickup/fixtures/side-loaded-straight/straight-through-scaffold.jpg",
+    "source_sha256": "9d965a2cfe9de6d48448cfa698b61577d632c32a277e8b9cbd63ccc8e084f8fd",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 391.974609375,
+      "y": 0.525390625
+    },
+    "resolution": {
+      "x": 660,
+      "y": 516
+    },
+    "zoom": 1.5,
+    "width": 660,
+    "height": 516,
+    "png_bytes": 535902,
+    "jpeg_bytes": 63962,
+    "jpeg_quality": 82
+  },
+  "side-loaded-straight/two-stream-express": {
+    "blueprint": "belt-pickup/fixtures/side-loaded-straight/two-stream-express-scaffold.txt",
+    "image": "belt-pickup/fixtures/side-loaded-straight/two-stream-express-scaffold.jpg",
+    "source_sha256": "90bb52379819bf742d73f6e466327873d063a6be3962b54d72d4c1c48f7f2af1",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 392,
+      "y": 0.025390625
+    },
+    "resolution": {
+      "x": 658,
+      "y": 660
+    },
+    "zoom": 1.5,
+    "width": 658,
+    "height": 660,
+    "png_bytes": 677099,
+    "jpeg_bytes": 79922,
+    "jpeg_quality": 82
+  },
+  "splitter": {
+    "blueprint": "belt-pickup/fixtures/splitter/scaffold.txt",
+    "image": "belt-pickup/fixtures/splitter/scaffold.jpg",
+    "source_sha256": "a8a9028226a382226d79f2b372138385479c48123d961b2eee2f677ddd631915",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 393.974609375,
+      "y": -0.07421875
+    },
+    "resolution": {
+      "x": 852,
+      "y": 459
+    },
+    "zoom": 1.5,
+    "width": 852,
+    "height": 459,
+    "png_bytes": 644895,
+    "jpeg_bytes": 77445,
+    "jpeg_quality": 82
+  },
+  "splitter-two-inserters": {
+    "blueprint": "belt-pickup/fixtures/splitter-two-inserters/scaffold.txt",
+    "image": "belt-pickup/fixtures/splitter-two-inserters/scaffold.jpg",
+    "source_sha256": "6cb37c8c2256ad8dcf9aec0fe29f11b71a2f17359acf62166d5ccfe2b98f5bd8",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 394.474609375,
+      "y": -0.07421875
+    },
+    "resolution": {
+      "x": 900,
+      "y": 459
+    },
+    "zoom": 1.5,
+    "width": 900,
+    "height": 459,
+    "png_bytes": 688459,
+    "jpeg_bytes": 83332,
+    "jpeg_quality": 82
+  },
+  "turbo-belt-drop-stacks": {
+    "blueprint": "belt-drop/fixtures/turbo-stacks/scaffold.txt",
+    "image": "belt-drop/fixtures/turbo-stacks/scaffold.jpg",
+    "source_sha256": "ba3688b3652a64b1c379f915f210b03667cb64fdaa33f5cbc419567b74d308b5",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 391,
+      "y": 0.525390625
+    },
+    "resolution": {
+      "x": 562,
+      "y": 324
+    },
+    "zoom": 1.5,
+    "width": 562,
+    "height": 324,
+    "png_bytes": 268657,
+    "jpeg_bytes": 29725,
+    "jpeg_quality": 82
   }
 }

@@ -44,6 +44,12 @@ describe("judging what a build made after a loss", () => {
         expect(judgeRecovery([704, 704, 608, 624, 608, 624], 704, 2, 8)).toEqual({ recovers: false, recovered_after_bins: null, proven: true, ends_in: [608, 624, 608, 624] });
     });
 
+    it("keeps the per-period recovery requirement when a repeating cycle only meets the average target", () => {
+        expect(judgeRecovery([764, 772, 764, 772], 768, 0, 8)).toEqual({
+            recovers: false, recovered_after_bins: null, proven: true, ends_in: [764, 772, 764, 772],
+        });
+    });
+
     it("holds it to its last periods where no state repeated, and takes fewer periods than that for no recovery", () => {
         expect(judgeRecovery([600, 704, 704, 704], 704, null, 3)).toEqual({ recovers: true, recovered_after_bins: 1, proven: false, ends_in: [704, 704, 704] });
         expect(judgeRecovery([704, 704], 704, null, 3).recovers).toBe(false);

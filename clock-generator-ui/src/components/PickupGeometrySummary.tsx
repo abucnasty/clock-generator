@@ -12,7 +12,7 @@ export function PickupGeometrySummary({ build, onEdit, busy = false, savedRun = 
     if (!geometry.total) return null;
     return <Box data-pickup-summary="" sx={{ my: 1, overflowWrap: 'anywhere' }}>
         <Typography variant="body2">
-            {geometry.backedUp ? 'Backed-up input belts · One stack is available each pickup tick.'
+            {geometry.backedUp ? 'Backed-up input belts · Saturated supply with captured pickup rules.'
                 : savedRun ? `Moving input belts · Pickup type known for ${geometry.known === geometry.total ? `all ${geometry.total}` : `${geometry.known} of ${geometry.total}`} belt-fed ${geometry.total === 1 ? 'inserter' : 'inserters'}.`
                     : 'Moving input belts · Straight belt is the default. Choose Underground belt for an entrance or exit.'}
         </Typography>

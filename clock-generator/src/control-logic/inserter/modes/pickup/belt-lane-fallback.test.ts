@@ -30,6 +30,76 @@ function pickup(config: Config) {
 const copy = () => structuredClone(sample);
 
 describe("physical belt lane fallback", () => {
+    it.each([1, 2] as const)("front underground exit with the same item on both backed-up lanes: preferred=%i", async preferred => {
+        const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
+        for (const lane of config.belts.find(belt => belt.id === 2)!.lanes) lane.ingredient = "accumulator";
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
+        const input = pickup(config);
+        expect(input.state.inserter.belt_supply).toBe("backed_up");
+        expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
+        expect(input.state.held_item).toEqual({ item_name: "accumulator", quantity: 16 });
+    });
+
+    it.each([1, 2] as const)("front underground entrance with the same item on both backed-up lanes: preferred=%i", async preferred => {
+        const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
+        config.overrides = { ...config.overrides, backed_up_belts: true };
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
+        const input = pickup(config);
+        expect(input.state.inserter.belt_supply).toBe("backed_up");
+        expect(input.state.inserter.pickup_length).toBe(0.5);
+        expect(input.source.pickup_lanes.size).toBe(0);
+        expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
+        expect(input.state.held_item).toEqual({ item_name: "accumulator", quantity: 16 });
+    });
+
+    for (const preferred of [1, 2] as const) it.each([0, 1])(`front underground entrance with the same item on both moving lanes: preferred=${preferred}, phase start=%i`, async start => {
+        const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
+        const input = pickup(config);
+        expect([0, 1, 2, 3].map(tick => input.take(tick + start))).toEqual([4, 4, 4, 4]);
+        expect(input.state.held_item).toEqual({ item_name: "accumulator", quantity: 16 });
+        expect(input.lanes[2 - preferred].stateKey(start + 3)).toContain(":0");
+
+        // A different item on the fallback lane cannot finish the accumulator hand.
+        config.belts.find(belt => belt.id === 2)!.lanes[2 - preferred]!.ingredient = "supercapacitor";
+        const mixed = pickup(config);
+        [0, 1, 2, 3].forEach(tick => mixed.take(tick + start));
+        expect(mixed.state.held_item).toEqual({ item_name: "accumulator", quantity: 12 });
+    });
+
+    for (const { mirrored, preferred, item } of [
+        { mirrored: false, preferred: 1, item: "accumulator" },
+        { mirrored: true, preferred: 2, item: "supercapacitor" },
+    ] as const) it.each([
+        { backedUp: false, start: 0, ticks: [0, 1, 3, 5] },
+        { backedUp: false, start: 1, ticks: [0, 1, 2, 4] },
+        { backedUp: true, start: 0, ticks: [0, 1, 2, 3] },
+    ])(`front underground entrance: mirrored=${mirrored}, lane ${preferred}, backedUp=$backedUp, phase start=$start`, async ({ backedUp, start, ticks }) => {
+        const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE, "config.json"));
+        config.overrides = { ...config.overrides, backed_up_belts: backedUp };
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
+        const input = pickup(config);
+        const observed: number[] = [];
+        for (let tick = 0; tick <= ticks[ticks.length - 1]; tick++) {
+            if (input.take(tick + start)) observed.push(tick);
+        }
+        expect(observed).toEqual(ticks);
+        expect(input.state.held_item).toEqual({ item_name: item, quantity: 16 });
+        // Recipe order stays fixed across both mirroring states; it disagrees with the unmirrored lane 1.
+        delete source.near_lane;
+        const recipeOrdered = pickup(config);
+        recipeOrdered.take(start);
+        expect(recipeOrdered.state.held_item).toEqual({ item_name: "supercapacitor", quantity: 4 });
+    });
+
     it.each([
         { label: "original lanes", swapped: false, preferred: 2, item: "supercapacitor" },
         { label: "swapped lanes", swapped: true, preferred: 2, item: "accumulator" },
@@ -120,4 +190,19 @@ describe("physical belt lane fallback", () => {
             expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
         }
     });
+});
+
+
+it.each(['side-inner', 'side-outer'] as const)('keeps %s supply separate from backed-up timing and lane preference', async profile => {
+    const config = await loadConfigFromFile(path.join(GameFixturePaths.SIDE_LOADED_STRAIGHT, 'config.json'));
+    config.overrides = {...config.overrides, backed_up_belts: true};
+    const source = config.inserters[1].source;
+    if (source.type !== 'belt') throw new Error('expected belt');
+    source.pickup_supply = ['through', profile];
+    const input = pickup(config);
+    expect(input.state.inserter.pickup_supply).toEqual(['through', profile]);
+    expect(input.state.inserter.pickup_length).toBe(1);
+    expect(input.state.inserter.near_lane).toBe(1);
+    expect(input.source.pickup_lanes.size).toBe(0);
+    expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
 });

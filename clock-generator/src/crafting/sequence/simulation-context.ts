@@ -9,7 +9,7 @@ import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { MiningProductivity } from "../../entities/drill/mining-productivity";
-import { assertIsMachineState, DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, MachineState, WritableEntityStateRegistry } from "../../state";
+import { assertIsMachineState, BeltState, DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, MachineState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
 import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
@@ -32,7 +32,14 @@ export class SimulationContext {
 
     /** The update of every inserter in a tick, in the order of the list and of `competing_takers_order` */
     public inserterUpdates(): ControlLogic {
-        return new InserterUpdates(this.inserters, this.state_registry, this.competing_takers_order);
+        const updates = new InserterUpdates(this.inserters, this.state_registry, this.competing_takers_order);
+        const belts = this.state_registry.getAllStates().filter(EntityState.isBelt).filter(state => state.pickup_merges.size > 0);
+        if (belts.length === 0) return updates;
+        return {executeForTick: () => {
+            const tick = this.tick_provider.getCurrentTick();
+            for (const state of belts) BeltState.advancePickups(state, tick);
+            updates.executeForTick();
+        }};
     }
 
     public clone(args: Partial<SimulationContext> = {}): SimulationContext {

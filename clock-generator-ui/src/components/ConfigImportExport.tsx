@@ -1,3 +1,4 @@
+import { pickupCaptureWarningMessage } from "../utils/sidecarExport";
 import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
@@ -730,10 +731,7 @@ export function ConfigImportExport({
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             <PickupGeometrySummary build={{ inserters: prospectiveInserters, overrides: currentForm.overrides }} />
                             {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
-                                Captured Inserter {warning.inserter_id}: {warning.reason === 'bend' ? 'pickup is on a belt bend'
-                                    : warning.reason === 'splitter' ? 'pickup is on a splitter'
-                                    : warning.reason === 'inline' ? 'pickup is in line with the belt, rather than beside it'
-                                    : 'pickup geometry is unsupported'}. Sidecar left its pickup type unspecified; this geometry has not been calibrated.
+                                Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
                             </Typography>)}
                             {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                             {pendingImport.fill ? (

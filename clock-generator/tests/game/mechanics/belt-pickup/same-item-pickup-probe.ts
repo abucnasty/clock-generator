@@ -16,8 +16,9 @@ const signature = (lanes: Stack[][]) => JSON.stringify(lanes.map(lane => lane.fi
  * Test the physical rule independently of the simulator. Observe the first grab, phase and remaining stacks of
  * each uninterrupted hand, then predict every later grab and lane snapshot without resynchronizing to the game.
  * This does not claim to predict the arm's arrival, first-grab delay, or interrupted-hand resumption.
+ * Ordinary runs discard the first 60 ticks; a staged first-hand experiment can explicitly include its startup.
  */
-export function assessSameItemPickups(probe: SameItemPickupProbe, speed: number, nearLane: 1 | 2) {
+export function assessSameItemPickups(probe: SameItemPickupProbe, speed: number, nearLane: 1 | 2, minimumFirstGrabTick = 60) {
     const samples = probe.samples;
     const phases = [0, 1].map(lane => {
         const sample = samples.find(sample => stacksOf(sample.lanes[lane]).length > 0);
@@ -64,7 +65,7 @@ export function assessSameItemPickups(probe: SameItemPickupProbe, speed: number,
         if (previous.held === 0) { first = index; grabs = []; }
         if (first === null) continue;
         grabs.push(current.tick - samples[first].tick);
-        if (current.held !== probe.stack_size || samples[first].tick < 60) continue;
+        if (current.held !== probe.stack_size || samples[first].tick < minimumFirstGrabTick) continue;
         if (samples.slice(first - 1, index + 1).some(sample => sample.enabled === false)) continue;
         const predicted = replay(first, index, [nearLane - 1, 2 - nearLane]);
         const legacy = replay(first, index, [0]);

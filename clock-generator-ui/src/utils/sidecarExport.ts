@@ -8,7 +8,7 @@ export type SidecarExportProblem = 'empty' | 'not-json' | 'not-an-export' | 'bui
 
 export interface PickupCaptureWarning {
     inserter_id: number;
-    reason: 'bend' | 'splitter' | 'inline' | 'unsupported';
+    reason: 'bend' | 'splitter' | 'inline' | 'unsupported' | 'merge' | 'supply-unknown';
 }
 
 interface SidecarExport {
@@ -76,7 +76,7 @@ export function readSidecarExport(text: string): SidecarExportRead {
         const warnings = listOf(value.pickup_warnings).filter((warning): warning is PickupCaptureWarning =>
             isObject(warning) && typeof warning.inserter_id === 'number' && Number.isSafeInteger(warning.inserter_id)
             && warning.inserter_id > 0 && warning.inserter_id <= read.inserters.length
-            && typeof warning.reason === 'string' && ['bend', 'splitter', 'inline', 'unsupported'].includes(warning.reason));
+            && typeof warning.reason === 'string' && ['bend', 'splitter', 'inline', 'unsupported', 'merge', 'supply-unknown'].includes(warning.reason));
         if (warnings.length) read.pickupWarnings = warnings;
         const total = read.machines.length + read.drills.length + read.inserters.length + read.belts.length + read.chests.length;
         return total === 0 ? { kind: 'problem', problem: 'no-entities' } : read;
@@ -107,4 +107,15 @@ export function looksLikeSidecarExport(text: string): boolean {
         return false;
     }
     return Array.isArray(parsed.value) || (isObject(parsed.value) && 'machines' in parsed.value && !isBuildFile(parsed.value));
+}
+
+/** Capture warnings describe geometry or local supply independently. */
+export function pickupCaptureWarningMessage(reason: PickupCaptureWarning['reason']): string {
+    if (reason === 'merge') return 'This merge is outside the supported turbo two-stream side-feed model. Review its speed, streams and downstream path before generating a clock.';
+    if (reason === 'supply-unknown') return 'Sidecar could not establish a single, same-speed side feed. Supply entry is unspecified; review the connected inputs before generating a clock.';
+    const detail = reason === 'bend' ? 'pickup is on a belt bend'
+        : reason === 'splitter' ? 'pickup is on a splitter'
+        : reason === 'inline' ? 'pickup is in line with the belt, rather than beside it'
+        : 'pickup geometry is unsupported';
+    return `${detail}. Sidecar left its pickup type unspecified; this geometry has not been calibrated.`;
 }

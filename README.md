@@ -77,5 +77,12 @@ to the mod's folder to `master` publishes a version the Factorio mod portal does
 hand). A release of the generator does not publish the mod. The upload sends only the zip: the long description on
 the mod's portal page is `clock-generator-sidecar/PORTAL.md`, pasted there by hand (Edit) after a release.
 
+For an **unreleased merge to master**, set the repository Actions variable `RELEASE_HOLD` to `true` before
+merging. The release job, production deployment and Sidecar upload all honor it on pushes and manual runs;
+tests and preview deployments continue. Leave upcoming changelog entries undated/unreleased. The variable is a
+publication hold, not a rollback: clearing it makes later publishing runs eligible to release the current
+versions. Once a release is authorized, finalize the changelogs, set the variable to `false`, and dispatch both
+publishing workflows on `master`. Clearing the variable alone starts no workflow. See [Contributing](CONTRIBUTING.md).
+
 The `clock-generator-recorder` mod is a development tool. It keeps its own version by hand and is not published. It
 depends on the sidecar and uses its extraction and export, so it needs the sidecar of this repository beside it.

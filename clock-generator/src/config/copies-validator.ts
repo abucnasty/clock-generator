@@ -100,7 +100,7 @@ function endOfInserter(config: Config, end: InserterConfig['source'], nodes: Map
         const chest = config.chests?.find(it => it.id === end.id);
         return { outside: chest === undefined ? 'chest|unknown' : chestSpec(chest) };
     }
-    return { outside: beltSpec(config.belts.find(it => it.id === end.id), end.near_lane) };
+    return { outside: `${beltSpec(config.belts.find(it => it.id === end.id), end.near_lane)}|${JSON.stringify(end.pickup_merge ?? null)}` };
 }
 
 /** Unit nodes, edges and the components they form */

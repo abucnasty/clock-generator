@@ -20,7 +20,11 @@ The status the game shows for an inserter is decided by its sink before the inse
 ### What an inserter takes off a belt first
 
 With an empty hand, prefer the configured pickup lane's item when the destination can accept it. Beside a belt,
-this is the nearest lane; in front of an underground exit, mirroring selects it. Once a hand contains an item, continue collecting that item until the hand is full or the destination stops accepting it. Explicit filters restrict which items may be collected; they do not override a supplied `near_lane`. Without `near_lane`, item selection keeps the filter/recipe order and matching physical lanes are tried in their config order.
+this is the nearest lane. Centered downstream of an underground entrance or exit and facing back into it,
+mirroring selects lane 2 when mirrored and lane 1 otherwise. Once a hand contains an item, continue collecting
+that item until the hand is full or the destination stops accepting it. Explicit filters restrict which items may
+be collected; they do not override a supplied `near_lane`. Without `near_lane`, item selection keeps the
+filter/recipe order and matching physical lanes are tried in their config order.
 
 ### Picking up from moving belts and underground endpoints
 
@@ -70,16 +74,102 @@ One [front-facing underground exit case](../tests/game/mechanics/belt-pickup/fix
 also matches the existing simulator: a mirrored inserter north of a northbound exit selects lane 2 supercapacitors
 and fills its first backed-up hand at offsets `0,1,2,3`. The config explicitly supplies `near_lane: 2` and
 `pickup_length: 0.5`; neither lane is physically nearer. Sidecar 0.10.0 captures this front-exit preference from
-inserter mirroring and exports half-tile reach. Other inline pickups remain unclassified. Swapping the lane
+inserter mirroring and exports half-tile reach. Other unsupported inline pickups remain unclassified. Swapping the lane
 ingredients changes the selected item to accumulators while retaining lane 2 and
 the same grab offsets, supporting lane preference over fixed recipe order for this orientation. Flipping only
 the inserter with those swapped ingredients selects lane 1 supercapacitors, again at `0,1,2,3`; the simulator matches
-with explicit `near_lane: 1`. Moving front pickups and other cardinal orientations remain unverified.
+with explicit `near_lane: 1`. Moving front-exit pickups and other cardinal orientations remain unverified.
+
+An [inline underground entrance case](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md)
+checks an unmirrored inserter east of an eastbound entrance. It selects lane 1 accumulators with both moving and
+backed-up supply. Its first hand fills at `0,1,2,4` moving and `0,1,2,3` backed up, consistent with half-tile reach
+and the separate supply rules above. The moving comparison allows the two turbo stream phases rather than
+inferring an initial phase from the blueprint. Flipping only the inserter's mirroring changes selection to lane 2
+supercapacitors under both supply conditions, retaining those grab offsets. Sidecar 0.11.0 exports `near_lane: 1`
+unmirrored or `near_lane: 2` mirrored, plus half-tile reach, without warnings in all four game cases. Capture
+keeps supply motion separate from geometry. Classifier rotation checks cover all cardinal directions; actual
+entrance grabs in other orientations, ingredient swaps and repeated hands remain unmeasured.
+
+The entrance's [same-item moving case](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md#same-item-on-both-moving-lanes)
+also follows the existing fallback rule in both mirroring states. With accumulators on both lanes, the preferred
+lane supplies three grabs and the other supplies the fourth: `1,1,1,2` unmirrored or `2,2,2,1` mirrored. Both fill
+at `0,1,2,3` instead of the different-item controls' `0,1,2,4`. The position replay matches both lanes after
+seeding the observed first grab; the simulator supports each measured hand and lane sequence for one turbo phase.
+These first-hand measurements do not calibrate absolute arrival or initial phase.
+The [same-item backed-up controls](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md#same-item-on-backed-up-lanes)
+fill at the same offsets while keeping every grab on the preferred lane: `1,1,1,1` unmirrored or `2,2,2,2`
+mirrored. The other lane stays stationary and untouched. The existing backed-up availability rule matches the
+hand counts; half-tile geometry and lane preference remain separate from the supply setting.
+The [same-item front-exit controls](../tests/game/mechanics/belt-pickup/fixtures/front-underground-exit/README.md#same-item-on-both-lanes)
+also fill at `0,1,2,3` entirely from lane 1 unmirrored or lane 2 mirrored, leaving the other lane untouched.
+Their outlet is physically blocked by the front inserter, so these are backed-up measurements.
 
 Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
-Sparse supply, shared upstream withdrawals, merges, bends, other inline pickups, other inserters/qualities/orientations,
+Sparse supply, shared upstream withdrawals, merges outside the turbo side-feed case below, bends, other inline pickups, other inserters/qualities/orientations,
 and arbitrary initial lane phases remain unverified. Calibration with backed-up supply covers turbo belts with different
-items on the lanes, collected one item at a time; other speeds and same-item lanes with backed-up supply remain unverified.
+items on the lanes, collected one item at a time, plus the same-item front-entrance and front-exit first hands above.
+Other speeds and other same-item backed-up geometries remain unverified.
+
+[Side-loading into a straight pickup tile](../tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight/README.md)
+changes which stacks are available, not the pickup selection rule. A full incoming belt need not fill the pickup
+tile. `source.pickup_supply` names one profile per receiving belt lane: `through` (the default), `side-inner` or
+`side-outer`. A single continuously full, same-speed side stream supplies approximately the downstream quarter
+or three quarters of a straight tile, respectively. The engine uses the measured entry positions and stream
+phase, retaining holes/partial stacks. These profiles are supported only with one-tile straight geometry;
+backed-up supply retains its saturated availability rule rather than the shorter moving span.
+
+Two full four-item lanes of one perpendicular **turbo** belt can also feed the same straight pickup lane.
+`source.pickup_merge` describes this supply instead of `pickup_supply`:
+
+```json
+"pickup_merge": {
+  "lane": 2,
+  "outer": { "ingredient": "iron-plate", "stack_size": 4 },
+  "inner": { "ingredient": "copper-cable", "stack_size": 4 },
+  "downstream_tiles": 3,
+  "outlet": "open"
+}
+```
+
+The belt's receiving lane names the outer ingredient; both actual ingredients are supplied by the merge metadata.
+The other receiving lane must be empty, and one pickup inserter is supported. `downstream_tiles` counts straight
+tiles after the pickup, excluding its tile and the drain loader. An `open` outlet drains freely; `closed` is
+a physical belt end. Explicit Backed up supply also closes the outlet. Geometry remains separate from supply motion.
+
+The supply keeps two incoming queues and shared receiving/downstream stock. Each tick, entries check the preceding
+stock at positions 188 (outer) and 67 (inner), in 1/256-tile units. A blocked entry shifts upstream to preserve
+64-unit spacing behind downstream stock; turbo admits shifts **strictly below 96**, within the receiving tile.
+Old stock advances up to 32 units, then arrivals join. A closed downstream end propagates backpressure.
+Arrivals may temporarily compress a follower's gap: it waits or moves less until space opens, never backwards.
+Pickup then uses the existing selection rules: take one reachable stack, and continue collecting only the held item.
+
+Sidecar 0.11.0 captures local physical lanes, single-stream profiles and this supported turbo merge. It follows
+a bounded straight input/output path and exports a closed end or a turbo loader into an unfiltered disposal
+chest. Extra streams, upstream merges, unequal/non-turbo speeds, other stack sizes, downstream junctions or
+competing pickups retain a warning; these are not silently approximated as independent supplies.
+
+Seven repeated-hand game comparisons seed observed stock once and verify all 511 following transitions with
+the production supply and pickup mode: both start phases, pause/resume, outlet blockage/release, reflection,
+and different ingredients in both arrangements. Ten native seeded calibrations check the integer entry cutoff
+and compressed-follower movement. A generated gear clock also holds every one of 60 recorded periods.
+Ordinary configs still assume an initial phase; these results do not prove arbitrary startup phase, sparse
+supply, sub-unit entry precision, different merge layouts, or operating-machine throughput for the mixed-item probe.
+
+Different ingredients in one receiving lane can starve: when the machine stops accepting the outer ingredient,
+pickup no longer opens gaps for the inner stream. The freely running electronic-circuit fixture confirms this
+failure with 16 iron plates, no copper cable and no products over 1,200 recorded ticks. Preparation reports a
+repeating stalled state and suggests reviewing the merge or separating ingredients. Capturing a supported
+merge describes its behavior; it does not guarantee that the build can supply its recipe.
+
+### Splitter pickups remain unsupported
+
+Keep ingredient selection separate from replenishment: choose an eligible item from reachable stock, try the
+preferred lane first, and keep that item while filling the hand. Recheck machine eligibility on every grab.
+The [splitter controls](../tests/game/mechanics/belt-pickup/fixtures/splitter/routing-controls.md) agree with
+these selection rules, but a splitter's priority, filter, other outlet and other consumers change when stock
+reaches its pickup port. There is no fixed splitter tick surcharge. Closing the final drain does not guarantee
+permanent local saturation when another consumer opens space upstream. Sidecar retains the `splitter` warning;
+ordinary straight-belt geometry or infinite backed-up supply must not be treated as verified splitter routing.
 
 ### A stack inserter on a moving lane
 
@@ -94,6 +184,13 @@ The rule, per lane of a belt, shared by every inserter that drops on it:
 - The belt ends in a sink that takes everything: the lane never backs up.
 
 Evidence: the thaeln-cell09 scaffold (`resources/config-samples/real/thaeln/cell09`, two turbo belts of four pack inserters each), recorded in Factorio 2.1.21 with the recorder of 0.8.0, which samples the hand and the lane of every inserter each tick. With only the tick each hand became full as input, the rule reproduced every stack of every hand: 432 slow drops predicted of 432 in the game, none false, none missed, and the ticks of all four stacks equal in 3,744 of 3,744 hands under the swings-2 clock; and 5,040 of 5,040 hands of Thaeln's own clock, where none is slow. The 4-tick burst, the 2-tick displacement and spacing were fixed from the free lane alone, nothing was fitted to the slow drops.
+
+The separate [free-lane drop calibration](../tests/game/mechanics/belt-drop/fixtures/turbo-stacks/README.md)
+checks turbo belt stack sizes **1, 2, 3 and 4** without changing research. Each drop transfers the selected
+stack size at offsets `0,1,2,4,6,…` until the full hand empties; both full native hands per size match
+`Belt::amountToDropAtTick`, including empty ticks. Stack size 3 uses the existing effective hand of 15 rather
+than the configured maximum of 16. This verifies unobstructed deposition; it does not extend the shared-lane
+collision calibration to those other stack sizes.
 
 What it does not cover: it is checked only with turbo belts and the legendary stack inserter (follow-up F7: other belts, stack sizes and inserters scale the ticks and are not tested), and a sink that backs up is not modelled. A lane that carries stacks of other cells or merges is not either.
 

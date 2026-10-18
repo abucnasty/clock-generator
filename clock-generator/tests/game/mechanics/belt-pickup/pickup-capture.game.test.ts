@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
 // Factorio permits require only while parsing control.lua. Load the same Sidecar sources into test-local closures.
-const modules = ["types", "helpers", "suggested-target", "extraction", "export"];
+const modules = ["types", "helpers", "pickup-supply", "suggested-target", "extraction", "export"];
 const captureModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + modules.map(name => {
@@ -62,23 +62,21 @@ for index, entry in ipairs(directions) do
     local exit = belt("turbo-underground-belt", 130 + index * 6, 100, direction, "output")
     local entrance = belt("turbo-underground-belt", 130 + index * 6, 120, direction, "input")
     for _, mirrored in ipairs{false, true} do
-        local front = {position = {x = exit.position.x + dx, y = exit.position.y + dy},
-            direction = (direction + 8) % 16, mirroring = mirrored}
-        assert(h.get_near_lane(front, exit) == (mirrored and 2 or 1))
-        assert(h.get_pickup_length(front, exit) == 0.5)
-        assert(h.get_pickup_problem(front, exit) == nil)
-        -- Side pickups keep their physical nearest lane regardless of mirroring.
-        assert(h.get_near_lane({position = {x = exit.position.x + dy, y = exit.position.y - dx}, mirroring = mirrored}, exit) == 1)
-        assert(h.get_near_lane({position = {x = exit.position.x - dy, y = exit.position.y + dx}, mirroring = mirrored}, exit) == 2)
-        unclassified({position = {x = exit.position.x - dx, y = exit.position.y - dy},
-            direction = direction, mirroring = mirrored}, exit)
-        unclassified({position = front.position, direction = direction, mirroring = mirrored}, exit)
-        unclassified({position = {x = front.position.x + dy * 0.125, y = front.position.y - dx * 0.125},
-            direction = front.direction, mirroring = mirrored}, exit)
-        unclassified({position = {x = entrance.position.x - dx, y = entrance.position.y - dy},
-            direction = direction, mirroring = mirrored}, entrance)
-        unclassified({position = {x = entrance.position.x + dx, y = entrance.position.y + dy},
-            direction = (direction + 8) % 16, mirroring = mirrored}, entrance)
+        for _, target in ipairs{exit, entrance} do
+            local front = {position = {x = target.position.x + dx, y = target.position.y + dy},
+                direction = (direction + 8) % 16, mirroring = mirrored}
+            assert(h.get_near_lane(front, target) == (mirrored and 2 or 1))
+            assert(h.get_pickup_length(front, target) == 0.5)
+            assert(h.get_pickup_problem(front, target) == nil)
+            -- Side pickups keep their physical nearest lane regardless of endpoint or mirroring.
+            assert(h.get_near_lane({position = {x = target.position.x + dy, y = target.position.y - dx}, mirroring = mirrored}, target) == 1)
+            assert(h.get_near_lane({position = {x = target.position.x - dy, y = target.position.y + dx}, mirroring = mirrored}, target) == 2)
+            unclassified({position = {x = target.position.x - dx, y = target.position.y - dy},
+                direction = direction, mirroring = mirrored}, target)
+            unclassified({position = front.position, direction = direction, mirroring = mirrored}, target)
+            unclassified({position = {x = front.position.x + dy * 0.125, y = front.position.y - dx * 0.125},
+                direction = front.direction, mirroring = mirrored}, target)
+        end
     end
 end
 
@@ -99,6 +97,62 @@ assert(unknown.pickup_warnings[1].inserter_id == input.id)
 assert(unknown.pickup_warnings[1].reason == "bend")
 assert(unknown.inserters[input.id].source.pickup_length == nil)
 assert(unknown.inserters[input.id].source.pickup_problem == nil)
+
+-- Supply classifier checks only: these inserted stacks do not measure pickup timing.
+local supply = require("__clock-generator-sidecar__.scripts.pickup-supply")
+for index, entry in ipairs(directions) do
+    local direction, dx, dy = entry[1], entry[2], entry[3]
+    local x, y = 210 + index * 8, 160
+    local target = belt("turbo-transport-belt", x, y, direction)
+    local rear = belt("turbo-transport-belt", x - dx, y - dy, direction)
+    local feed = belt("turbo-transport-belt", x - dy, y + dx, (direction + 12) % 16)
+    assert(target.belt_shape == "straight")
+    feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+    local view = supply.capture(target)
+    assert(view and view.problem == nil)
+    assert(view.profiles[1] == "through" and view.profiles[2] == "side-inner")
+    assert(view.lanes[1].ingredient == nil and view.lanes[2].ingredient == "iron-plate")
+    -- A rear stream and a side stream merging on the same receiving lane are unsupported.
+    rear.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+    assert(supply.capture(target).problem == "merge")
+    rear.get_transport_line(2).clear()
+    -- Two lanes of one turbo side input form the supported merge, including distinct ingredients.
+    feed.get_transport_line(1).insert_at_back({name = "copper-plate", count = 4}, 4)
+    local two = supply.capture(target)
+    assert(two.problem == nil and two.profiles == nil)
+    assert(two.merge.lane == 2 and two.merge.outer.ingredient == "copper-plate" and two.merge.inner.ingredient == "iron-plate")
+    assert(two.merge.downstream_tiles == 0 and two.merge.outlet == "closed")
+    -- A third observed rear stream remains unsupported.
+    rear.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+    assert(supply.capture(target).problem == "merge")
+    rear.get_transport_line(2).clear()
+    -- A partial incoming stack is not proof of the calibrated four-item stream.
+    feed.get_transport_line(1).clear()
+    feed.get_transport_line(1).insert_at_back({name = "copper-plate", count = 2}, 2)
+    assert(supply.capture(target).problem == "merge")
+end
+local target = belt("turbo-transport-belt", 260, 160, defines.direction.east)
+belt("turbo-transport-belt", 259, 160, defines.direction.east)
+local feed = belt("turbo-transport-belt", 260, 161, defines.direction.north)
+feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+assert(supply.capture(target).problem == nil)
+-- A dry adjacent piece can still have an upstream stream. Retain that stream's item/lane mapping.
+feed.get_transport_line(2).clear()
+local upstream = belt("turbo-transport-belt", 260, 162, defines.direction.north)
+upstream.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+local dry_front = supply.capture(target)
+assert(dry_front.problem == nil and dry_front.profiles[2] == "side-inner")
+assert(dry_front.lanes[2].ingredient == "iron-plate")
+-- Empty does not mean unused: this unpowered feeder could populate the other incoming lane later.
+local potential = assert(surface.create_entity{name = "stack-inserter", position = {261, 161},
+    direction = defines.direction.east, force = "player"})
+assert(math.abs(potential.drop_position.x - feed.position.x) < 0.5 and math.abs(potential.drop_position.y - feed.position.y) < 0.5, "empty feeder must target incoming lane")
+assert(supply.capture(target).problem == "supply-unknown")
+potential.destroy()
+feed.destroy()
+feed = belt("express-transport-belt", 260, 161, defines.direction.north)
+feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+assert(supply.capture(target).problem == "supply-unknown")
 `,
         });
         expect(result.recording.inserters.some(inserter => inserter.source.pickup_length === 1)).toBe(true);

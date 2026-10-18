@@ -33,6 +33,15 @@ describe('pickup type edits and saved assumptions', () => {
             expect(withPickupType(source, 'straight')).toBe(source);
         }
     });
+    it('clears the captured straight-tile merge when selecting underground geometry', () => {
+        const merge: InserterFormData['source'] = {...source, pickup_length: 1, pickup_merge: {
+            lane: 2, outer: {ingredient: 'iron-plate', stack_size: 4}, inner: {ingredient: 'iron-plate', stack_size: 4},
+            downstream_tiles: 3, outlet: 'open',
+        }};
+        expect(withPickupType(merge, 'straight').pickup_merge).toEqual(merge.pickup_merge);
+        expect(withPickupType(merge, 'underground')).not.toHaveProperty('pickup_merge');
+        expect(merge).toHaveProperty('pickup_merge');
+    });
     it('preserves a no-op route but clears geometry when its source changes', () => {
         const inserter: InserterFormData = { id: 1, _uuid: 'input', source: withPickupType(source, 'underground'), sink: { type: 'machine', id: 1 } };
         expect(endpointUpdate(inserter, 'source', { type: 'belt', id: 1 })).toEqual({});
