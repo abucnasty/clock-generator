@@ -10,7 +10,7 @@ try {
 export default defineConfig({
   plugins: [],
   test: {
-    include: ['src/**/*.game.test.ts'],
+    include: ['tests/game/**/*.game.test.ts'],
     exclude: [...configDefaults.exclude, 'dist/*'],
     // the game data from resources/, as the Node entry points read it
     setupFiles: ['src/data/factorio-data-file.ts'],

@@ -52,6 +52,9 @@ jobs:
       - name: Unused files, exports and dependencies
         run: npm run knip
 
+      - name: Type-check simulator and game tests (no Factorio needed)
+        run: npm run test:typecheck
+
       - name: Build
         run: npm run build
 

@@ -30,7 +30,7 @@ const { matchOfSimulatedRecording, simulateRecording } = dist("verification/simu
 const { parseRecording } = dist("verification/recording.js");
 
 const SAMPLES = path.join(ROOT, "resources", "config-samples");
-// as in src/harness/scaffold-recordings.game.test.ts
+// as in tests/game/builds/scaffold-recordings.game.test.ts
 const BUILDS = {
     "agricultural-science": { scaffold: "science/agriculture-science/agriculture-science-scaffold.txt", config: "AGRICULTURAL_SCIENCE", seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }], warmup_ticks: 300, settle_ticks: 4800 },
     "automation-science": { scaffold: "science/automation-science/automation-science-scaffold.txt", config: "AUTOMATION_SCIENCE", seed: [], warmup_ticks: 3600, settle_ticks: 1200 },

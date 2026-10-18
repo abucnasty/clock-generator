@@ -29,33 +29,27 @@ length and nearest lane. Output Inserter 1 takes gears from Machine 1 into Chest
 From `clock-generator/`, with `.env` pointing at Factorio and the staging save:
 
 ```bash
-npm run build
-pickup_sample=resources/config-samples/intermediates/iron-gear-wheel/belted-moving-same-item
-node --env-file=.env dist/record-in-factorio.js \
-  --blueprint="$pickup_sample/underground-exit-scaffold.txt" \
-  --config="$pickup_sample/config.json" --unclocked --warmup=1200 --ticks=1260 \
-  --lua="$pickup_sample/probe.lua" \
-  --out=../work/same-item-pickup/underground-exit-recording.json \
-  --work-dir=../work/same-item-pickup/underground-exit
+npm run probe -- --fixture=same-item --geometry=underground-exit --out=../work/belt-pickup/same-item-run-01
 ```
 
-The normal recording is written to `--out`. The probe writes
-`<work-dir>/script-output/same-item-pickups.json`: 1,200 ticks of held quantity, hand position, and each exposed
-lane's stack positions, quantities and unique IDs. Use the IDs to distinguish a taken stack from one that simply
-moved out of reach. Discard the first 60 ticks to get past any hand left over from warm-up.
-An empty lane's `stacks` is `{}` in Factorio's JSON; read it as an empty list.
+The command composes shared Lua with this scenario and retains `probe.generated.lua`, `blueprint.txt`,
+`config.json`, `recording.json` and `game/script-output/same-item-pickups.json` under the output directory.
+The detailed report contains 1,200 ticks of held quantity/item, hand position, and each exposed lane's stack
+positions, quantities and unique IDs. Use IDs to distinguish a taken stack from one that moved out of reach.
+Discard its first 60 samples to get past any hand left over from warm-up. Empty lane `stacks` may serialize as `{}`.
+The source `probe.lua` depends on host-composed shared helpers; do not pass it directly to `--lua`.
 
 The probe clears the assembler's input and output every tick so its ingredient limit and output blockage cannot
 stall the pickup. This deliberately interrupts production: use the probe to compare grab ticks and lane choices,
-not gear throughput. Omit `--lua` to record normal production or later test a generated clock.
+not gear throughput. Use the separate clock tests below for production and recovery.
 
-Repeat with the entrance scaffold, and with the straight scaffold plus `straight-belt.json`, using separate
-output/work directories. The command captures one starting stream phase. First-grab/arm arrival timing,
+Repeat with `--geometry=underground-entrance` or `--geometry=straight-belt`, using a new output directory.
+The runner selects the matching config automatically. The command captures one starting stream phase. First-grab/arm arrival timing,
 resumption after an interrupted partial hand, yellow/red speeds and backed-up supply are outside this probe's
 verified two-lane scope.
 
 ```bash
-npm run test:game -- src/harness/same-item-pickup-fixture.game.test.ts src/harness/same-item-pickup-clock.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/same-item-pickup-fixture.game.test.ts tests/game/builds/same-item-pickup-clock.game.test.ts
 ```
 
 The twelve game checks validate the captured machine speed, both lanes' contents and stack sizes, pickup geometry,
@@ -73,6 +67,6 @@ scaffold), and test recovery after two ingredient cuts and a filled/restored out
 exact output after a six-period recovery allowance, without resetting the clock or machine. All six passed with
 the fallback implementation: 16 gears per 160 ticks (6/second), with a 26-tick input window on every geometry.
 The underground window was 28 ticks before the correction. See
-[the simulator findings](../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints)
+[the simulator findings](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints)
 for the general rules and measured scope; raw investigation captures and analysis remain local under
 `work/same-item-pickup/investigation/`.

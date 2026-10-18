@@ -1,15 +1,16 @@
+import { GameFixturePaths, REPOSITORY_ROOT } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { expect, test } from "vitest";
-import { recordInFactorio } from "./factorio-harness";
+import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
 // Factorio permits require only while parsing control.lua. Load the same Sidecar sources into test-local closures.
 const modules = ["types", "helpers", "suggested-target", "extraction", "export"];
 const captureModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + modules.map(name => {
-    const source = fs.readFileSync(path.resolve(__dirname, `../../../clock-generator-sidecar/scripts/${name}.lua`), "utf8");
+    const source = fs.readFileSync(path.join(REPOSITORY_ROOT, `clock-generator-sidecar/scripts/${name}.lua`), "utf8");
     return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
@@ -21,7 +22,7 @@ test("Sidecar classifies supported pickups and explains unclassified captures", 
     try {
         const result = await recordInFactorio({
             factorio: factorio!, save: save!,
-            blueprint: fs.readFileSync(path.resolve(__dirname, "../../resources/config-samples/science/electromagnetic-science/belted-moving/straight-belt-scaffold.txt"), "utf8").trim(),
+            blueprint: fs.readFileSync(path.join(GameFixturePaths.DIFFERENT_ITEMS, "straight-belt-scaffold.txt"), "utf8").trim(),
             out: path.join(scratch, "capture.json"), ticks: 60, warmup_ticks: 600, settle_ticks: 0,
             seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
             lua: captureModules + `

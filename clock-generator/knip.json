@@ -10,8 +10,14 @@
     "src/rules-of-the-game.ts",
     "src/**/*.test.ts",
     "scripts/**/*.js",
-    "resources/filter-raw.js"
+    "resources/filter-raw.js",
+    "tests/**/*.test.ts"
   ],
-  "project": ["src/**/*.ts", "scripts/**/*.js", "resources/*.js"],
+  "project": [
+    "src/**/*.ts",
+    "scripts/**/*.js",
+    "resources/*.js",
+    "tests/**/*.{ts,js}"
+  ],
   "ignoreExportsUsedInFile": true
 }

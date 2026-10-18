@@ -18,17 +18,31 @@ allow ten periods to recover; every later complete period must meet the target.
 
 ```bash
 # From clock-generator/, with Factorio and the staging save configured in .env:
-npm run test:game -- src/harness/moving-pickup.game.test.ts
+npm run test:game -- tests/game/builds/moving-pickup.game.test.ts
 ```
 
 ## Backed-up pickup regression
 
 `backed-up-pickup.game.test.ts` removes the ingredient drain before placement and probes accumulators and
-supercapacitors separately on each geometry. `backed-up-probe.lua` clears the machine's input and output each tick
+supercapacitors separately on each geometry. The scenario `backed-up-probe.lua`, composed with shared capture
+helpers, clears the machine's input and output each tick
 so the hand can fill without destination blocking. It records 1,200 ticks of hand counts and exposed lane stacks.
 Filtering is explicitly enabled, other filter slots are cleared, and the held item must match the requested
 ingredient. The untouched lane must stay stationary, the captured reach must match the geometry, and every complete
 hand must match the simulator's `0,1,2,3` grab offsets. These offsets describe filling after the first grab, not arm arrival.
+
+To retain one raw capture, from `clock-generator/` with `.env` configured:
+
+```bash
+npm run probe -- --fixture=backed-up --item=supercapacitor --geometry=underground-entrance --out=../work/belt-pickup/backed-up-run-01
+```
+
+Use `--item=accumulator` for the other ingredient and choose any of the three geometry names. The runner removes
+the ingredient drain, selects the item, sets the matching config and composes the Lua helpers. It retains
+`blueprint.txt`, `config.json`, `probe.generated.lua`, `recording.json`, and
+`game/script-output/backed-up-pickups.json`. The scenario source alone is not directly runnable via `--lua`.
+Sampling covers ticks 101–1300 after probe installation; destination clearing starts during the earlier ticks.
+See the [game verification guide](../../../../README.md) for setup, cleanup and retention rules.
 
 The original local probes left filtering disabled, so their "supercapacitor" labels did not establish far-lane
 behavior. The regression above verifies both actual ingredients.
@@ -38,9 +52,9 @@ retained. All three geometries must hold the target output and recover after the
 the moving cases, without resetting the clock or machine.
 
 ```bash
-npm run test:game -- src/harness/backed-up-pickup.game.test.ts src/harness/moving-pickup.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/backed-up-pickup.game.test.ts tests/game/builds/moving-pickup.game.test.ts
 ```
 
-The [same-item iron-gear fixtures](../../../intermediates/iron-gear-wheel/belted-moving-same-item) test fallback
-between two lanes carrying the same item. See the [general pickup rules](../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
+The [same-item iron-gear fixtures](../same-item) test fallback
+between two lanes carrying the same item. See the [general pickup rules](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
 Original raw probes and clock recordings remain local under `work/belt-pickup-investigation/`.

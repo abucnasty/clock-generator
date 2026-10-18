@@ -1,17 +1,18 @@
+import { SAMPLE_BUILDS_DIR } from "../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterAll, describe, expect, test } from "vitest";
-import { encodeBlueprintFile } from "../blueprints/serde";
-import { ConfigPaths } from "../config/config-paths";
-import { loadConfigFromFile } from "../config/loader";
-import { generateClockAlternatives } from "../crafting/generate-blueprint";
-import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "./factorio-harness";
-import { outputPerPeriod, recipesMaking } from "./recording-output";
-import { matchRecordingToConfig } from "../verification/entity-matching";
-import { wakeUpsOfRecording } from "../verification/recording-wake-ups";
-import { compareRecordings } from "../verification/compare-recordings";
-import { matchOfSimulatedRecording, simulatedWakeUpsByStart, simulateRecording } from "../verification/simulated-recording";
+import { encodeBlueprintFile } from "../../../src/blueprints/serde";
+import { ConfigPaths } from "../../../src/config/config-paths";
+import { loadConfigFromFile } from "../../../src/config/loader";
+import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
+import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
+import { outputPerPeriod, recipesMaking } from "../../../src/harness/recording-output";
+import { matchRecordingToConfig } from "../../../src/verification/entity-matching";
+import { wakeUpsOfRecording } from "../../../src/verification/recording-wake-ups";
+import { compareRecordings } from "../../../src/verification/compare-recordings";
+import { matchOfSimulatedRecording, simulatedWakeUpsByStart, simulateRecording } from "../../../src/verification/simulated-recording";
 
 /**
  * These tests run a headless Factorio through the harness, so they need the game and a save to build in, both named
@@ -30,7 +31,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : !fs.existsSync(SAVE) ? `the save FACTORIO_HARNESS_SAVE names does not exist: ${SAVE}`
     : null;
 
-const SAMPLES = path.resolve(__dirname, "..", "..", "resources", "config-samples");
+const SAMPLES = path.join(SAMPLE_BUILDS_DIR);
 /** Ticks to record: ten minutes of game time, as a build with a loop is checked for in the simulator */
 const RECORDED_TICKS = 36_000;
 /**

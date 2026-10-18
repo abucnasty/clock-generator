@@ -1,8 +1,9 @@
+import { SAMPLE_BUILDS_DIR } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterAll, describe, expect, test } from "vitest";
-import { recordInFactorio } from "./factorio-harness";
+import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
 /** Runs a headless Factorio, so it needs the game and a save to build in; without either it is skipped, not failed */
 const FACTORIO = process.env.FACTORIO_PATH;
@@ -18,7 +19,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
  * Every one of the eight inserters is nearest to the lane of processing units (the game takes them first, 25 periods
  * of 25 in the recording of the cell).
  */
-const SCAFFOLD = path.resolve(__dirname, "..", "..", "resources", "config-samples", "real", "thaeln", "cell09", "thaeln-cell09-scaffold.txt");
+const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "real", "thaeln", "cell09", "thaeln-cell09-scaffold.txt");
 
 let scratch: string | null = null;
 afterAll(() => {

@@ -1,7 +1,7 @@
 # Sample configurations and scaffolds
 
 One folder per build, grouped by what it makes: `science/`, `intermediates/`, `gleba/`, `smelting/`. A folder holds
-the build's config(s) as JSON and, where one exists, its scaffold. `src/config/config-paths.ts` names every config.
+the build's config(s) as JSON and, where one exists, its scaffold. `src/config/config-paths.ts` names the general samples used by sweeps.
 
 A **scaffold** is a blueprint string of exactly one copy of the build without a clock: the machines and inserters the
 config describes, in the ideal environment for a clock to be added to them. That environment is the scaffold's own:
@@ -12,7 +12,7 @@ generated clock, wires it to the inserters of the config, and leaves everything 
 clock the generator made (the combinator described as "Clock for ..." and the combinators wired to it). It refuses a
 build with something on a machine of the config that the config does not have, since no clock would hold it: an
 inserter, whatever is at its other end, a further machine of one of the config's recipes, or a loader.
-`npm run test:game` does this for the builds listed in `src/harness/scaffold-recordings.game.test.ts` and checks
+`npm run test:game` does this for the builds listed in `tests/game/builds/scaffold-recordings.game.test.ts` and checks
 that the selected clock moves the expected output every period. One run records at most 72,000 ticks, 20 minutes of
 game time. A clocked recording is whole periods of its clock, at least the ticks asked for, so a request whose whole
 periods pass the limit is refused with the most that fits (warm-up and settle do not count). A recording is the only thing that settles a
@@ -24,14 +24,8 @@ Conventions:
 - `<build>.json` is the config; variants get a suffix that says what differs (`-chain-always-on`, `-belt-fed`).
 - `<build>-scaffold.txt` is the one-copy scaffold; `-scaffold-full-build.txt` is kept only for reference.
 - Most scaffolds have belts closed at the end, so supply backs up once full. Iron bacteria's creeps (below).
-  The three `science/electromagnetic-science/belted-moving` scaffolds drain their input belt continuously and compare
-  pickup from a straight belt, an underground entrance and an underground exit. Their shared config supplies
-  `pickup_length: 0.5`; moving pickup and its scope are documented in [the simulator rules](../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
-  The [same-item iron-gear fixtures](intermediates/iron-gear-wheel/belted-moving-same-item) compare those three pickup
-  geometries with iron plates on both lanes and include a probe that removes machine blocking. The measured rule
-  prefers the near lane and falls back to the far lane without a fixed switching delay. The simulator implements
-  that rule; the paired game tests compare its grabs, check the default clocks' exact output, and test recovery
-  after ingredient cuts and output blockage on all three geometries.
+  Isolated moving/underground and same-item pickup experiments live under
+  [game mechanic fixtures](../../tests/game/mechanics/belt-pickup/README.md), with their own catalog and probes.
 - The clocked inserters see a steadily supplied belt: full of whole stacks at the rate the build takes them, whenever
   they reach for it. How is the scaffold's business. Enough stack inserters from infinity chests and a closed end do
   it; so does an end that lets a little through on a timer, as the iron bacteria scaffold has to keep its nutrients
@@ -63,7 +57,6 @@ Conventions:
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | science/electromagnetic-science | yes (2026-10-16, 12 legendary beacons) | selected clock exact: 352 in every period of 704 ticks (batched swings, 2 output swings per cycle; 30.0 a second a copy, 330 over 11 copies). Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game | in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests |
 | science/electromagnetic-science-auto | the same scaffold | the same build with the enable control of both output inserters on `AUTO` (`electromagnetic-science-auto.json`); `terminal_swing_count` and `lcm` have no `AUTO` value and are kept. Selected clock exact: 352 in every period after the first; from a staged start (empty machines) the first period makes 288 | in `test:game` |
-| science/electromagnetic-science/belted-moving | three pickup geometries (2026-10-17) | the default with reachable moving stacks delivers 352 packs per 704 ticks in every one of 52 periods on each scaffold; all three recover after either ingredient is cut and output is blocked/restored | `moving-pickup.game.test.ts`; shared half-tile input geometry is conservative for the straight belt; see the simulator rules |
 | everything else | no | | |
 
 ## TODO: scaffold backfill
@@ -71,7 +64,7 @@ Conventions:
 Builds without a scaffold have labels and selections that only the simulator vouches for. Most of them moved on
 2026-10-08 when the belt pickup rules and the long-run stability check changed, so each needs a recording before its
 label is trusted. One copy each, in the build's folder, named `<build>-scaffold.txt`; then add it to
-`src/harness/scaffold-recordings.game.test.ts` with its seeds, if any, and the warm-up and settle it needs.
+`tests/game/builds/scaffold-recordings.game.test.ts` with its seeds, if any, and the warm-up and settle it needs.
 
 In the order they would settle the most:
 1. **science/logistic-science** (shared-inserter, sample, direct-insert): the 1-swing label of the shared-inserter

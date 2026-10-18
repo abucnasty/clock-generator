@@ -1,4 +1,4 @@
-import path from "path";
+import { GameFixturePaths } from "../../tests/game/helpers/fixture-paths";
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { Config } from "../config";
@@ -9,7 +9,7 @@ import { cloneSimulationContextWithInterceptors } from "./sequence/simulation-co
 import { AlwaysEnabledControl } from "../control-logic";
 import { EntityState } from "../state";
 
-const SAMPLE = path.resolve(__dirname, "../../resources/config-samples/science/electromagnetic-science/belted-moving/config.json");
+const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS_CONFIG;
 // The old default from 0.17.0: measured at 480–528 instead of 528 per period on both moving underground endpoints.
 const OLD_WINDOWS = {
     "inserter:1": Array.from({ length: 11 }, (_, k) => ({ start: 1 + 96 * k, end: 37 + 96 * k })),

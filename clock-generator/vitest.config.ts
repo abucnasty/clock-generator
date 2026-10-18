@@ -37,7 +37,7 @@ export default defineConfig({
             {
                 test: {
                     name: 'unit',
-                    include: ['src/**/*.test.ts'],
+                    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
                     exclude: [...exclude, '**/*.generation.test.ts'],
                     setupFiles,
                     // a few tests simulate a build for seconds, longer on the GitHub runner with every core busy

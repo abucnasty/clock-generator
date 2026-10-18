@@ -6,7 +6,7 @@ import * as path from 'path';
 const CONFIG_SAMPLES_DIR = path.resolve(__dirname, '../../resources/config-samples');
 
 /**
- * Paths to all available config sample files.
+ * Named general-build samples used by clock generation and sample sweeps.
  * Use these with `loadConfigFromFile()` to load configurations.
  * 
  * @example
@@ -18,9 +18,6 @@ const CONFIG_SAMPLES_DIR = path.resolve(__dirname, '../../resources/config-sampl
  * ```
  */
 export const ConfigPaths = {
-    /** Same-item moving pickup investigation: both lanes carry iron plates; shared by the two underground endpoints */
-    IRON_GEARS_MOVING_SAME_ITEM: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'iron-gear-wheel', 'belted-moving-same-item', 'config.json'),
-    IRON_GEARS_MOVING_SAME_ITEM_STRAIGHT: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'iron-gear-wheel', 'belted-moving-same-item', 'straight-belt.json'),
     ADVANCED_CIRCUIT: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'advanced-circuit', 'advanced-circuit.json'),
     ADVANCED_CIRCUIT_230: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'advanced-circuit', 'advanced-circuit-230.json'),
     /** One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes for all four engines; 5.5 copies make 240 a second */

@@ -30,9 +30,11 @@
     "test:generation": "vitest run --project generation",
     "test:all": "vitest run",
     "test:game": "vitest run --config vitest.game.config.ts",
-    "test:game:watch": "FACTORIO_HARNESS_WATCH=1 vitest run --config vitest.game.config.ts",
+    "test:game:watch": "FACTORIO_HARNESS_WATCH=1 vitest run --config vitest.game.config.ts tests/game/builds/scaffold-recordings.game.test.ts",
     "knip": "knip",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:typecheck": "tsc -p tsconfig.tests.json",
+    "probe": "npm run build && node scripts/capture-probe.js"
   },
   "keywords": [
     "factorio",

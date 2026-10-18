@@ -1,15 +1,15 @@
+import { GameFixturePaths } from "../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, test } from "vitest";
-import { ConfigPaths } from "../config/config-paths";
-import { loadConfigFromFile } from "../config/loader";
-import { generateClockAlternatives } from "../crafting/generate-blueprint";
-import { encodeBlueprintFile } from "../blueprints/serde";
-import { recordInFactorio } from "./factorio-harness";
-import { outputPerPeriod, recipesMaking } from "./recording-output";
+import { loadConfigFromFile } from "../../../src/config/loader";
+import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
+import { encodeBlueprintFile } from "../../../src/blueprints/serde";
+import { recordInFactorio } from "../../../src/harness/factorio-harness";
+import { outputPerPeriod, recipesMaking } from "../../../src/harness/recording-output";
 
-const SAMPLE = path.dirname(ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM);
+const SAMPLE = GameFixturePaths.SAME_ITEM;
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
 
 // Keep the clock and machine running: cut the shared ingredient twice, and fill/restore its disposal chest.
@@ -59,7 +59,7 @@ describe.sequential("default clocks with same-item lane fallback", () => {
                 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "same-item-clock-"));
                 try {
                     const config = await loadConfigFromFile(name === "straight-belt"
-                        ? ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM_STRAIGHT : ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM);
+                        ? GameFixturePaths.SAME_ITEM_STRAIGHT_CONFIG : GameFixturePaths.SAME_ITEM_CONFIG);
                     const generated = generateClockAlternatives(config, { logger: quiet });
                     const selected = generated.alternatives[generated.selected_index];
                     expect(selected.verdict).toBe("stable");

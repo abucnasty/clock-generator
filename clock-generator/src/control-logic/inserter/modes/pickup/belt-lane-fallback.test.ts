@@ -1,13 +1,13 @@
+import { GameFixturePaths } from "../../../../../tests/game/helpers/fixture-paths";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Config } from "../../../../config";
-import { ConfigPaths } from "../../../../config/config-paths";
 import { loadConfigFromFile } from "../../../../config/loader";
 import { SimulationContext } from "../../../../crafting/sequence/simulation-context";
 import { EntityState } from "../../../../state";
 import { InserterPickupMode } from "./pickup-mode";
 
 let sample: Config;
-beforeAll(async () => { sample = await loadConfigFromFile(ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM); });
+beforeAll(async () => { sample = await loadConfigFromFile(GameFixturePaths.SAME_ITEM_CONFIG); });
 
 function pickup(config: Config) {
     const context = SimulationContext.fromConfig(config);
