@@ -17,7 +17,7 @@
     "src/**/*.ts",
     "scripts/**/*.js",
     "resources/*.js",
-    "tests/**/*.ts"
+    "tests/**/*.{ts,js}"
   ],
   "ignoreExportsUsedInFile": true
 }

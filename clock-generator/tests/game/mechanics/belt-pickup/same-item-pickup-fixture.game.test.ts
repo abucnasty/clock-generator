@@ -1,3 +1,4 @@
+import { composeProbeSource } from "../../helpers/probe-source";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
@@ -68,7 +69,7 @@ describe.sequential("same-item moving pickup fixtures", () => {
                         blueprint: encodeBlueprintFile(blueprint),
                         out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
                         ticks: 1260, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: true,
-                        lua: fs.readFileSync(path.join(SAMPLE, "probe.lua"), "utf8"),
+                        lua: composeProbeSource(path.join(SAMPLE, "probe.lua")),
                         game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
                     });
                     const match = matchRecordingToConfig(result.recording, config);

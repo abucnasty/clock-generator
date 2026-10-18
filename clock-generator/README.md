@@ -30,10 +30,12 @@ npm run build   # tsc, into dist/
 |--------|--------------|
 | `npm run build` | Compiles `src/` into `dist/` |
 | `npm test` | The unit tests |
+| `npm run test:typecheck` | Type-check simulator and game tests without running Factorio |
+| `npm run probe -- --help` | Retained raw mechanic captures using shared Lua helpers |
 | `npm run test:generation` | The generation tests (`*.generation.test.ts`): the clocks of whole samples, a few minutes |
 | `npm run test:all` | Both |
-| `npm run test:game` | Records the sample scaffolds in a headless Factorio; needs Factorio (see below) |
-| `npm run test:game:watch` | The same, with the game open to watch |
+| `npm run test:game -- <file>` | Selected game mechanic or clock-build checks; requires Factorio |
+| `npm run test:game:watch` | Sample scaffold clock checks with the game open to watch |
 | `npm run record` | Records a blueprint in a headless Factorio (see below) |
 | `npm run verify` | Compares a recording with the simulator (see below) |
 
@@ -580,11 +582,15 @@ The save is never written to; Factorio gets a temporary write-data folder (`--wo
 
 ### Recording the Samples: `npm run test:game`
 
-`npm run test:game` records the scaffold builds under `resources/config-samples` the same way and checks that the clock the generator selects moves the expected output in every clock period of ten minutes of game time (`tests/game/builds/scaffold-recordings.game.test.ts`). It needs `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE`, skips with the reason when they are missing, and is not part of `npm test`, since each recording takes about ten seconds in a game of its own.
+Game-backed verification is organized under [`tests/game`](tests/game/README.md): isolated mechanic experiments
+and generated-clock build checks have separate locations. `npm run test:game -- <file>` runs selected local Factorio
+checks, while `npm run test:typecheck` checks their code without Factorio. CI runs simulator unit/generation tests
+and type-checks the game tests; it does not collect new game evidence. Use `npm run probe -- ...` to retain a raw
+pickup capture, with shared helpers composed automatically. The guide lists prerequisites, commands and scope.
 
 Copy `.env.example` to `.env` and set `FACTORIO_PATH` to your Factorio executable or install folder; `vitest.game.config.ts` loads it automatically, so `npm run test:game` picks it up without exporting anything by hand. `FACTORIO_HARNESS_SAVE` already defaults to the staging save committed at `resources/clock_generator_staging.zip`. `.env` is not read by `npm run record` or `npm run verify`, which still take `FACTORIO_PATH`/`FACTORIO_HARNESS_SAVE` from the shell environment or `--factorio=`/`--save=`.
 
-`npm run test:game:watch` runs the same tests with the game also open with graphics, joined as a spectator over the build, to watch them. All builds then run in one game, each built in the place of the one before it, so there is one window and the game with graphics starts once; it closes by itself after the last build. The builds run at `WATCH_SPEED` (in `tests/game/builds/scaffold-recordings.game.test.ts`) instead of the 1000 they run at unwatched, slow enough to follow over a remote connection. That speed is only where the first build starts: whoever watches is an admin of the game, so they can set its speed (`/c game.speed = 16`), pause it or open the editor (`/editor`) for its time controls, and the builds after keep what they set. Close the window early and the builds left run unwatched at full speed. Narrow it to some builds with `npm run test:game:watch -- -t "automation science"`. Without `:watch` every build still gets a game of its own, so it starts from the save as it is.
+`npm run test:game:watch` runs the scaffold-recordings suite with the game also open with graphics, joined as a spectator over the build, to watch them. All builds then run in one game, each built in the place of the one before it, so there is one window and the game with graphics starts once; it closes by itself after the last build. The builds run at `WATCH_SPEED` (in `tests/game/builds/scaffold-recordings.game.test.ts`) instead of the 1000 they run at unwatched, slow enough to follow over a remote connection. That speed is only where the first build starts: whoever watches is an admin of the game, so they can set its speed (`/c game.speed = 16`), pause it or open the editor (`/editor`) for its time controls, and the builds after keep what they set. Close the window early and the builds left run unwatched at full speed. Narrow it to some builds with `npm run test:game:watch -- -t "automation science"`. Without `:watch` every build still gets a game of its own, so it starts from the save as it is.
 
 ### Verifying a Recording
 

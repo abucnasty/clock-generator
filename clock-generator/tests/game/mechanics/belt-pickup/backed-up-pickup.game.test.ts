@@ -1,3 +1,4 @@
+import { composeProbeSource } from "../../helpers/probe-source";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
@@ -79,7 +80,7 @@ describe.sequential("backed-up pickup geometry", () => {
                         factorio: factorio!, save: save!, config, blueprint: makeInputBeltBackedUp(scaffold),
                         out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
                         ticks: 1400, warmup_ticks: 3600, settle_ticks: 0, seed: [], unclocked: true,
-                        lua: fs.readFileSync(path.join(SAMPLE, "backed-up-probe.lua"), "utf8").replace("__ITEM__", item),
+                        lua: composeProbeSource(path.join(SAMPLE, "backed-up-probe.lua"), { item }),
                         game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
                     });
                     const recordedInput = result.recording.inserters.find(inserter => inserter.source.type === "belt" && inserter.sink.type === "machine")!;
