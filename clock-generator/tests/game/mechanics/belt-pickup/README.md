@@ -19,8 +19,9 @@ The existing model supports these timings with explicit lane preference and half
 allows both stream phases. Mirroring preserves each supply condition's measured timing. Sidecar 0.11.0 exports
 the mirroring-selected preference and half-tile reach for this entrance, verified in all four game cases.
 Its [same-item moving variant](fixtures/front-underground-entrance/README.md#same-item-on-both-moving-lanes) checks
-the unmirrored first hand: lane 1 supplies three grabs, then lane 2 supplies the fourth at offset 3. Both lane
-snapshots and the actual simulator support the existing fallback rule; no engine change was needed.
+both mirroring states: the preferred lane supplies three grabs, then the other lane supplies the fourth at
+offset 3. The measured lane sequences are `1,1,1,2` unmirrored and `2,2,2,1` mirrored. Both lane snapshots and
+the actual simulator support the existing fallback rule; no engine change was needed.
 
 From `clock-generator/`:
 
@@ -37,7 +38,7 @@ npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance
 
 The first two commands run in the simulator. The remaining commands need Factorio and check respectively 12 lane-fallback
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, three front exit
-ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and one same-item
+ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and two same-item
 front entrance fallback case. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 

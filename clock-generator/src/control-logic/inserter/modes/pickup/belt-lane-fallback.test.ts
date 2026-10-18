@@ -30,15 +30,18 @@ function pickup(config: Config) {
 const copy = () => structuredClone(sample);
 
 describe("physical belt lane fallback", () => {
-    it.each([0, 1])("front underground entrance with the same item on both moving lanes: phase start=%i", async start => {
+    for (const preferred of [1, 2] as const) it.each([0, 1])(`front underground entrance with the same item on both moving lanes: preferred=${preferred}, phase start=%i`, async start => {
         const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
         const input = pickup(config);
         expect([0, 1, 2, 3].map(tick => input.take(tick + start))).toEqual([4, 4, 4, 4]);
         expect(input.state.held_item).toEqual({ item_name: "accumulator", quantity: 16 });
-        expect(input.lanes[1].stateKey(start + 3)).toContain(":0");
+        expect(input.lanes[2 - preferred].stateKey(start + 3)).toContain(":0");
 
-        // Changing just lane 2 back to another item prevents it from finishing the accumulator hand.
-        config.belts.find(belt => belt.id === 2)!.lanes[1]!.ingredient = "supercapacitor";
+        // A different item on the fallback lane cannot finish the accumulator hand.
+        config.belts.find(belt => belt.id === 2)!.lanes[2 - preferred]!.ingredient = "supercapacitor";
         const mixed = pickup(config);
         [0, 1, 2, 3].forEach(tick => mixed.take(tick + start));
         expect(mixed.state.held_item).toEqual({ item_name: "accumulator", quantity: 12 });

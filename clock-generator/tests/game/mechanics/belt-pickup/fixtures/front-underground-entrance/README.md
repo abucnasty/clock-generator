@@ -70,36 +70,41 @@ prototype is a different approach and is not this fixture.
 
 ## Same item on both moving lanes
 
-The next isolated case uses the unmirrored moving scaffold with accumulators on both lanes. The host helper
+The same-item case uses the moving scaffold with accumulators on both lanes, in both mirroring states. The host helper
 `useAccumulatorsOnBothLanes` changes only the two supercapacitor feeder filters to accumulators; all four feeders,
-both drain loaders, inserter mirroring and geometry stay unchanged. `same-item-moving.json` changes the input config
-to match. The existing `probe.lua` and staging procedure are reused, with no new Lua probe or duplicated blueprint.
+both drain loaders and geometry stay unchanged. The flipped variant then changes only the input inserter's mirror
+flag. `same-item-moving.json` holds the unmirrored config; the flipped test sets its preferred lane to 2.
+The existing `probe.lua` and staging procedure are reused, with no new Lua probe or duplicated blueprint.
 
 Measured in Factorio 2.1.21 on 2026-10-18 under the same conditions as above:
 
-| Grab offset | Hand count | Selected lane |
-| --- | --- | --- |
-| 0 | 4 accumulators | 1 |
-| 1 | 8 accumulators | 1 |
-| 2 | 12 accumulators | 1 |
-| 3 | 16 accumulators | 2 |
+| Grab offset | Hand count | Lane, unmirrored | Lane, mirrored |
+| --- | --- | --- | --- |
+| 0 | 4 accumulators | 1 | 2 |
+| 1 | 8 accumulators | 1 | 2 |
+| 2 | 12 accumulators | 1 | 2 |
+| 3 | 16 accumulators | 2 | 1 |
 
 The hand starts empty and both exposed lanes start with two four-item stacks. Machine inventories remain empty
-and crafting progress stays zero through the first full hand. The hand's position switches from north of the
-belt center to south for the fourth grab. At that point lane 1 is empty and lane 2 loses its upstream stack ID,
-confirming fallback rather than merely observing a faster hand. The different-item moving control filled at
+and crafting progress stays zero through each first full hand. The hand's position crosses the belt center for
+the fourth grab: north to south unmirrored, south to north mirrored. At that point the preferred lane is empty
+and the other lane loses its upstream stack ID, confirming fallback rather than merely observing a faster hand.
+The different-item moving controls filled at
 `0,1,2,4`; the same-item far lane supplies the otherwise missing grab at offset 3.
 
 The existing independent position replay, seeded once with the observed first grab, phases and remaining stacks,
 predicts all subsequent grabs and both lane snapshots without resynchronizing. It records one far-lane grab and
-no differences; restricting it to lane 1 misses this hand. The actual simulator also fills in four consecutive
-grabs under either turbo phase, and one phase matches the measured lane sequence `1,1,1,2`. As above, this does
+no differences for each hand; the legacy lane-1-only replay misses both hands. The actual simulator also fills
+in four consecutive grabs under either turbo phase, and one phase matches the measured lane sequences `1,1,1,2`
+unmirrored and `2,2,2,1` mirrored. As above, this does
 not claim that the initial phase can be inferred from the blueprint. No engine behavior change is needed.
-Sidecar captures lane 1 preference and half-tile reach and exports both without warnings.
+Sidecar captures lane 1 preference unmirrored or lane 2 mirrored, with half-tile reach, and exports both cases
+without warnings. Both same-item lanes remain present in the exported belt config.
 
-This result covers one unmirrored, moving first hand. Mirrored same-item pickup, backed-up same-item supply,
-repeated hands and other orientations remain separate cases. The raw capture is retained locally under
-`work/belt-pickup/front-entrance-same-item-moving-01/`.
+These results cover one moving first hand in each mirroring state. Backed-up same-item supply, repeated hands
+and other orientations remain separate cases. Raw captures are retained locally under
+`work/belt-pickup/front-entrance-same-item-moving-01/` and `front-entrance-same-item-mirrored-moving-01/`.
+The mirrored blueprint was checked to differ from the unmirrored same-item blueprint only in the input mirror flag.
 
 ## Reproduce
 
@@ -108,7 +113,7 @@ From `clock-generator/`, with the [game setup](../../../../README.md#setup):
 ```bash
 # Both mirroring states and supply conditions; no other mechanic cases.
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts
-# Only the unmirrored same-item moving fallback case.
+# Both mirroring states of the same-item moving fallback case.
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
 npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts -t 'front underground entrance'
 npm run screenshots -- --case=front-underground-entrance
@@ -117,6 +122,7 @@ npm run screenshots -- --case=front-underground-entrance
 Use `-t 'moving supply'` or `-t 'backed-up supply'` to narrow the game command; `-t 'mirrored=true'` runs only the
 two flipped cases. The game test composes `probe.lua`, captures hand/lane observations, compares the existing
 simulator and checks Sidecar capture/export without warnings. Temporary test captures are removed afterward.
+For the same-item command, `-t 'mirrored=true'` selects only its flipped case.
 Raw captures with matching configs and the committed probe are retained
 locally under `work/belt-pickup/front-entrance-user-07/` (moving) and `front-entrance-user-08/` (backed up).
 Flipped captures are under `work/belt-pickup/front-entrance-mirrored-moving-01/` and

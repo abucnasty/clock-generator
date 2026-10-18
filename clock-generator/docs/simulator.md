@@ -90,11 +90,12 @@ unmirrored or `near_lane: 2` mirrored, plus half-tile reach, without warnings in
 keeps supply motion separate from geometry. Classifier rotation checks cover all cardinal directions; actual
 entrance grabs in other orientations, ingredient swaps and repeated hands remain unmeasured.
 
-The unmirrored entrance's [same-item moving case](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md#same-item-on-both-moving-lanes)
-also follows the existing fallback rule: with accumulators on both lanes, lane 1 supplies the first three grabs
-and lane 2 supplies the fourth, filling at `0,1,2,3` instead of the different-item control's `0,1,2,4`. The position
-replay matches both lanes after seeding the observed first grab; the simulator supports the measured hand and
-lane sequence for one turbo phase. This first-hand measurement does not calibrate absolute arrival or initial phase.
+The entrance's [same-item moving case](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md#same-item-on-both-moving-lanes)
+also follows the existing fallback rule in both mirroring states. With accumulators on both lanes, the preferred
+lane supplies three grabs and the other supplies the fourth: `1,1,1,2` unmirrored or `2,2,2,1` mirrored. Both fill
+at `0,1,2,3` instead of the different-item controls' `0,1,2,4`. The position replay matches both lanes after
+seeding the observed first grab; the simulator supports each measured hand and lane sequence for one turbo phase.
+These first-hand measurements do not calibrate absolute arrival or initial phase.
 
 Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
 Sparse supply, shared upstream withdrawals, merges, bends, other inline pickups, other inserters/qualities/orientations,

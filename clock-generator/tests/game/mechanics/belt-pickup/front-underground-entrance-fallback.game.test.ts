@@ -10,7 +10,7 @@ import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { EntityState } from "../../../../src/state";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
 import { composeProbeSource } from "../../helpers/probe-source";
-import { useAccumulatorsOnBothLanes } from "./belt-pickup-fixtures";
+import { flipFrontUndergroundInput, useAccumulatorsOnBothLanes } from "./belt-pickup-fixtures";
 import { assessSameItemPickups } from "./same-item-pickup-probe";
 
 interface Stack { id: number; at: number; item: string; count: number }
@@ -43,17 +43,24 @@ function simulatedHand(config: Config, start: number) {
     return { counts, selected };
 }
 
-test("front underground entrance same-item moving supply: lane 2 supplies the fourth grab", async context => {
+for (const { mirrored, preferred, fallback } of [
+    { mirrored: false, preferred: 1, fallback: 2 },
+    { mirrored: true, preferred: 2, fallback: 1 },
+] as const) test(`front underground entrance same-item moving supply: mirrored=${mirrored}, lane ${fallback} supplies the fourth grab`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
     const fixture = GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE;
     const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "front-entrance-fallback-"));
     try {
         const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
+        const original = useAccumulatorsOnBothLanes(fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8"));
         const result = await recordInFactorio({
             factorio: factorio!, save: save!, config,
-            blueprint: useAccumulatorsOnBothLanes(fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8")),
-            lua: composeProbeSource(path.join(fixture, "probe.lua"), { mirrored: false }),
+            blueprint: mirrored ? flipFrontUndergroundInput(original, "entrance") : original,
+            lua: composeProbeSource(path.join(fixture, "probe.lua"), { mirrored }),
             out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
             ticks: 60, warmup_ticks: 0, staged_start: { build_order: "ascending", saturation_ticks: 600 },
             settle_ticks: 0, seed: [], unclocked: true, game_speed: 1000, watch: false,
@@ -65,7 +72,7 @@ test("front underground entrance same-item moving supply: lane 2 supplies the fo
         expect(report.initial).toMatchObject({
             inputs: {}, output: {}, machine_active: true, crafting_speed: 109.475,
             recipe: "electromagnetic-science-pack", belt_direction: 4, endpoint: "input",
-            mirrored: false, inserter_direction: 12, use_filters: false,
+            mirrored, inserter_direction: 12, use_filters: false,
         });
         expect(report.samples).toHaveLength(30);
         const first = report.samples[0];
@@ -86,17 +93,18 @@ test("front underground entrance same-item moving supply: lane 2 supplies the fo
         expect(counts).toEqual([4, 8, 12, 16]);
         // This eastbound geometry puts lane 1 north of the center and lane 2 south of it.
         const selected = grabs.map(s => s.hand.y < report.initial.belt_position.y ? 1 : 2);
-        expect(selected).toEqual([1, 1, 1, 2]);
-        expect(grabs[3].hand.y).toBeGreaterThan(report.initial.belt_position.y);
-        expect(grabs[2].lanes[0].stacks).toEqual({});
-        expect(grabs[3].lanes[0].stacks).toEqual({});
-        const farBefore = grabs[2].lanes[1].stacks as Stack[];
+        expect(selected).toEqual([preferred, preferred, preferred, fallback]);
+        if (fallback === 1) expect(grabs[3].hand.y).toBeLessThan(report.initial.belt_position.y);
+        else expect(grabs[3].hand.y).toBeGreaterThan(report.initial.belt_position.y);
+        expect(grabs[2].lanes[preferred - 1].stacks).toEqual({});
+        expect(grabs[3].lanes[preferred - 1].stacks).toEqual({});
+        const farBefore = grabs[2].lanes[fallback - 1].stacks as Stack[];
         expect(farBefore).toHaveLength(2);
-        expect((grabs[3].lanes[1].stacks as Stack[]).map(s => s.id)).toEqual([farBefore[0].id]);
+        expect((grabs[3].lanes[fallback - 1].stacks as Stack[]).map(s => s.id)).toEqual([farBefore[0].id]);
 
         // Seed only the observed first grab/remaining stacks, then independently replay every later grab
         // and both lane snapshots. The old lane-1-only replay must miss this measured hand.
-        const assessment = assessSameItemPickups({ endpoint: "input", stack_size: 16, samples: report.samples }, 4, 1, 0);
+        const assessment = assessSameItemPickups({ endpoint: "input", stack_size: 16, samples: report.samples }, 4, preferred, 0);
         expect(assessment.hands).toBe(1);
         expect(assessment.hand_patterns).toEqual(new Set(["0,1,2,3"]));
         expect(assessment.far_grabs).toBe(1);
@@ -106,9 +114,9 @@ test("front underground entrance same-item moving supply: lane 2 supplies the fo
         expect([simulatedHand(config, 0), simulatedHand(config, 1)]).toContainEqual({ counts, selected });
 
         const captured = result.recording.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
-        expect(captured.source).toMatchObject({ near_lane: 1, pickup_length: 0.5 });
+        expect(captured.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5 });
         const exported = result.recording.config.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
-        expect(exported.source).toMatchObject({ near_lane: 1, pickup_length: 0.5 });
+        expect(exported.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5 });
         const exportedBelt = result.recording.config.belts.find(belt => belt.id === exported.source.id)!;
         expect(exportedBelt.lanes).toEqual(config.belts.find(belt => belt.id === 2)!.lanes);
         expect(result.recording.config.pickup_warnings).toBeUndefined();
