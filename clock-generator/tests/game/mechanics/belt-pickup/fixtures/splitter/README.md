@@ -287,3 +287,11 @@ npm run test:game -- tests/game/mechanics/belt-pickup/splitter-entry-window.game
 # Full scoped regression after evaluating the independent controls:
 SPLITTER_ENTRY_CAPTURE_DIR=../work/splitter-support/new-entry-run npm run test:game -- tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts
 ```
+
+The [simulator routing kernel](../../../../../../src/state/turbo-splitter-supply.ts) now backs the replay.
+Three additional congestion controls include a stack entering from the ordinary upstream belt: the arrival
+shifts to maintain spacing on the input line, accepts position 178, and stays upstream if the proposed position
+is 179. All **30** independent controls and the naturally supplied baseline match the kernel. Its accepted
+arrival IDs, outgoing stacks, finite withdrawals, snapshots and repeat key prepare it for shared supply
+integration. [Integration gates](../../../../../../docs/turbo-splitter-support.md) remain before enabling
+splitter configs, Sidecar capture or generated clocks.

@@ -115,6 +115,11 @@ The [build checks](../../builds/README.md) independently measure throughput and 
 
 ## Completed queue and remaining scope decision
 
+The [turbo splitter support work](../../../../docs/turbo-splitter-support.md) now develops a finite routing
+kernel and independent entry/overflow calibration on `feature/turbo-splitter-support`. This is a staged
+implementation; the config/capture boundary still blocks splitter generation until feeder, pickup and
+generated-clock integration are verified.
+
 The scheduled splitter controls are complete: ingredient swaps, mirroring, both output ports, alternate input,
 opposite/unset priorities, ingredient filters and blocked-drain supply. See the
 [additional routing findings](fixtures/splitter/routing-controls.md). They establish local selection and

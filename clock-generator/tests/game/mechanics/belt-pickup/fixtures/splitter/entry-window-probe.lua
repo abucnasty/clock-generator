@@ -34,8 +34,8 @@ end
 local upstream = capture.find_one(entities, function(e)
     return e.type == "transport-belt" and e.position.x == splitter.position.x - 1
 end, "upstream belt")
-if options.fromUpstream then
-    local phase = (options.head + 13) % 32
+if options.fromUpstream or options.incoming then
+    local phase = options.incoming or ((options.head + 13) % 32)
     assert(upstream.get_transport_line(1).insert_at((phase + 32) / 256, item, 4), "could not seed upstream head")
 end
 local function snapshot(tick) return {tick = tick, lines = pickup.lanes(splitter, 8),
@@ -44,5 +44,6 @@ local report = {initial = snapshot(0), samples = {}}
 report.initial.seeded_positions = true
 report.initial.requested_head = options.head
 capture.each_tick{
-    first_tick = 1, last_tick = (options.fromUpstream or options.followers) and 10 or 4, report = report, output = "splitter-entry-window.json", sample = snapshot
+    first_tick = 1, last_tick = (options.fromUpstream or options.followers or options.incoming) and 10 or 4,
+    report = report, output = "splitter-entry-window.json", sample = snapshot
 }
