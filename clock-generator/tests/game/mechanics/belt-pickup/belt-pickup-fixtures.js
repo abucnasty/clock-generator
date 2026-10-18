@@ -73,4 +73,23 @@ function backUpFrontUndergroundEntrance(text) {
     return "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded), "utf8")).toString("base64");
 }
 
-module.exports = { makeInputBeltBackedUp, swapElectromagneticIngredientFeeds, flipFrontUndergroundInput, backUpFrontUndergroundEntrance };
+/** Feed accumulators on both lanes, retaining all four feeders, geometry and drains.
+ * @param {string} text
+ */
+function useAccumulatorsOnBothLanes(text) {
+    const decoded = JSON.parse(zlib.inflateSync(Buffer.from(text.trim().slice(1), "base64")).toString());
+    if (!decoded.blueprint?.entities) throw new Error("missing blueprint entities");
+    let changed = 0, retained = 0;
+    for (const entity of decoded.blueprint.entities) {
+        for (const filter of entity.infinity_settings?.filters ?? []) {
+            if (filter.name === "supercapacitor") {
+                filter.name = "accumulator";
+                changed++;
+            } else if (filter.name === "accumulator") retained++;
+        }
+    }
+    if (changed !== 2 || retained !== 2) throw new Error("expected two feeders for each electromagnetic ingredient");
+    return "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded), "utf8")).toString("base64");
+}
+
+module.exports = { makeInputBeltBackedUp, swapElectromagneticIngredientFeeds, flipFrontUndergroundInput, backUpFrontUndergroundEntrance, useAccumulatorsOnBothLanes };

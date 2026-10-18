@@ -1,0 +1,78 @@
+{
+  "target_output": {
+    "recipe": "electromagnetic-science-pack",
+    "items_per_second": 30,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "electromagnetic-science-pack",
+      "productivity": 175,
+      "crafting_speed": 109.475,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 1,
+        "pickup_length": 0.5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 2
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electromagnetic-science-pack",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [],
+  "overrides": {
+    "backed_up_belts": false
+  }
+}

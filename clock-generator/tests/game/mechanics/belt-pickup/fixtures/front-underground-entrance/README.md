@@ -22,7 +22,8 @@ drain is absent. Full lanes alone do not establish that a belt has stopped; the 
 ![Eastbound underground entrance with an unmirrored inserter immediately east of it and a moving ingredient drain](scaffold.jpg)
 
 The screenshot shows the original moving layout. The backed-up variant removes only the lower drain loader on
-the right. This is a layout reference, rather than the probe's initial state or evidence of timing.
+the right. The same-item moving variant keeps this geometry and feeds accumulators from both rows of chests.
+This is a layout reference, rather than the probe's initial state or evidence of timing.
 See the [screenshot guide](../../../../README.md#scaffold-screenshots) for settings and regeneration.
 
 ## Findings
@@ -64,8 +65,41 @@ Supply motion is still a separate config choice and is not inferred from capture
 
 Sidecar 0.10.0 reported `inline` and omitted both fields for these same captures. The fixture retains explicit
 settings for the independent simulator comparison. Swapped ingredients, other cardinal orientations' actual grabs,
-repeated hands, other speeds and same-item fallback remain unverified for this geometry. The earlier upstream-side
+repeated hands and other speeds remain unverified for this geometry. The earlier upstream-side
 prototype is a different approach and is not this fixture.
+
+## Same item on both moving lanes
+
+The next isolated case uses the unmirrored moving scaffold with accumulators on both lanes. The host helper
+`useAccumulatorsOnBothLanes` changes only the two supercapacitor feeder filters to accumulators; all four feeders,
+both drain loaders, inserter mirroring and geometry stay unchanged. `same-item-moving.json` changes the input config
+to match. The existing `probe.lua` and staging procedure are reused, with no new Lua probe or duplicated blueprint.
+
+Measured in Factorio 2.1.21 on 2026-10-18 under the same conditions as above:
+
+| Grab offset | Hand count | Selected lane |
+| --- | --- | --- |
+| 0 | 4 accumulators | 1 |
+| 1 | 8 accumulators | 1 |
+| 2 | 12 accumulators | 1 |
+| 3 | 16 accumulators | 2 |
+
+The hand starts empty and both exposed lanes start with two four-item stacks. Machine inventories remain empty
+and crafting progress stays zero through the first full hand. The hand's position switches from north of the
+belt center to south for the fourth grab. At that point lane 1 is empty and lane 2 loses its upstream stack ID,
+confirming fallback rather than merely observing a faster hand. The different-item moving control filled at
+`0,1,2,4`; the same-item far lane supplies the otherwise missing grab at offset 3.
+
+The existing independent position replay, seeded once with the observed first grab, phases and remaining stacks,
+predicts all subsequent grabs and both lane snapshots without resynchronizing. It records one far-lane grab and
+no differences; restricting it to lane 1 misses this hand. The actual simulator also fills in four consecutive
+grabs under either turbo phase, and one phase matches the measured lane sequence `1,1,1,2`. As above, this does
+not claim that the initial phase can be inferred from the blueprint. No engine behavior change is needed.
+Sidecar captures lane 1 preference and half-tile reach and exports both without warnings.
+
+This result covers one unmirrored, moving first hand. Mirrored same-item pickup, backed-up same-item supply,
+repeated hands and other orientations remain separate cases. The raw capture is retained locally under
+`work/belt-pickup/front-entrance-same-item-moving-01/`.
 
 ## Reproduce
 
@@ -74,6 +108,8 @@ From `clock-generator/`, with the [game setup](../../../../README.md#setup):
 ```bash
 # Both mirroring states and supply conditions; no other mechanic cases.
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts
+# Only the unmirrored same-item moving fallback case.
+npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
 npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts -t 'front underground entrance'
 npm run screenshots -- --case=front-underground-entrance
 ```
@@ -87,3 +123,4 @@ Flipped captures are under `work/belt-pickup/front-entrance-mirrored-moving-01/`
 `front-entrance-mirrored-backed-up-01/`. The flipped blueprint was checked to differ from the supplied scaffold
 only in the input inserter's mirror flag before the optional drain removal.
 These exploratory captures used Sidecar 0.10.0; the game regressions rerun all four cases with 0.11.0 to check capture/export.
+The same-item capture and regression use Sidecar 0.11.0.

@@ -18,6 +18,9 @@ The first hand fills at `0,1,2,4` with the ingredient drain retained and `0,1,2,
 The existing model supports these timings with explicit lane preference and half-tile reach; the moving comparison
 allows both stream phases. Mirroring preserves each supply condition's measured timing. Sidecar 0.11.0 exports
 the mirroring-selected preference and half-tile reach for this entrance, verified in all four game cases.
+Its [same-item moving variant](fixtures/front-underground-entrance/README.md#same-item-on-both-moving-lanes) checks
+the unmirrored first hand: lane 1 supplies three grabs, then lane 2 supplies the fourth at offset 3. Both lane
+snapshots and the actual simulator support the existing fallback rule; no engine change was needed.
 
 From `clock-generator/`:
 
@@ -29,11 +32,13 @@ npm run test:game -- tests/game/mechanics/belt-pickup/backed-up-pickup.game.test
 npm run test:game -- tests/game/mechanics/belt-pickup/pickup-capture.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
 ```
 
 The first two commands run in the simulator. The remaining commands need Factorio and check respectively 12 lane-fallback
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, three front exit
-ingredient/mirroring cases with capture assertions, and four front entrance supply/mirroring cases. Their independent replay and simulator comparisons remain
+ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and one same-item
+front entrance fallback case. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands
