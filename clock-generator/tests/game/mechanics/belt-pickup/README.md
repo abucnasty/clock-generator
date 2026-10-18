@@ -92,6 +92,7 @@ npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance
 npm run test:game -- tests/game/mechanics/belt-pickup/side-loaded-straight.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/side-loaded-entry.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter-routing.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts
 ```
 
@@ -99,7 +100,7 @@ The first two commands run in the simulator. The remaining commands need Factori
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, five front exit
 ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
 front entrance moving/backed-up controls, the side-loaded tile/control pair, the expanded 42-case side-entry matrix,
-six direct single-splitter controls, and eight independent two-splitter controls. Their independent replay and simulator comparisons remain
+six baseline plus six additional routing controls, and eight independent two-splitter controls. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands
@@ -115,16 +116,12 @@ The [build checks](../../builds/README.md) independently measure throughput and 
 
 ## Queued at the end of the series
 
-The [direct splitter series](fixtures/splitter/README.md) has begun on a branch stacked above the turbo merge
-implementation. Its baseline, ingredient swap and mirroring controls are complete; opposite-port, priority/filter
-and opposite-priority controls remain unmeasured for that single-splitter layout. Removing its drain
-with either right priority or no priority gives six hands at one stack per tick, while the unused output
-remains stationary. With the drain retained, unsetting priority instead diverts the fourth replacement stack
-and delays the first hand to tick 7, independently reproducing the serial-layout result. The two-splitter series
-also compares output priority set versus unset in independent fresh sessions.
-Single-splitter priority isolation and a blocked-final-drain control are complete for that serial layout;
-later coupled schedules remain distinct from the local first-hand routing result. Splitter routing remains
-unsupported, including the dynamic backpressure observed after removing the final drain.
+The scheduled splitter controls are complete: ingredient swaps, mirroring, both output ports, alternate input,
+opposite/unset priorities, ingredient filters and blocked-drain supply. See the
+[additional routing findings](fixtures/splitter/routing-controls.md). They establish local selection and
+availability rules but do not calibrate complete splitter arbitration. Splitter support remains warning-only;
+implementing a finite routing model is a separate scope decision. The serial two-consumer tests show why
+removing the final drain cannot stand in for permanent local saturation.
 
 After the current pickup/merge investigations, verify the tick-by-tick predictions of
 [`Belt::amountToDropAtTick`](../../../../src/entities/belt/belt.test.ts) against actual drops with belt stack sizes

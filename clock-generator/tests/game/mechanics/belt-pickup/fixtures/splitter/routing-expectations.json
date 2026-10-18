@@ -1,0 +1,110 @@
+{
+  "left-priority": {
+    "hands": [
+    ],
+    "initial_stock": [
+      [{"item": "iron-plate","count": 4,"at": 0.07421875},{"item": "iron-plate","count": 4,"at": 0.32421875},{"item": "iron-plate","count": 4,"at": 0.57421875}],
+      [{"item": "copper-cable","count": 4,"at": 0.07421875},{"item": "copper-cable","count": 4,"at": 0.32421875},{"item": "copper-cable","count": 4,"at": 0.57421875}],
+      [],
+      [],
+      [{"item": "iron-plate","count": 4,"at": 0.125}],
+      [{"item": "copper-cable","count": 4,"at": 0.125}],
+      [],
+      []
+    ],
+    "first_trace": []
+  },
+  "filter-cable": {
+    "hands": [
+      {"item": "copper-cable","ticks": [2,3,4,5]},
+      {"item": "copper-cable","ticks": [13,14,15,16]},
+      {"item": "copper-cable","ticks": [24,25,26,27]}
+    ],
+    "initial_stock": [
+      [{"item": "iron-plate","count": 4,"at": 0.07421875},{"item": "iron-plate","count": 4,"at": 0.32421875},{"item": "iron-plate","count": 4,"at": 0.57421875}],
+      [{"item": "copper-cable","count": 4,"at": 0},{"item": "copper-cable","count": 4,"at": 0.25},{"item": "copper-cable","count": 4,"at": 0.5}],
+      [],
+      [],
+      [{"item": "iron-plate","count": 4,"at": 0.125}],
+      [],
+      [],
+      [{"item": "copper-cable","count": 4,"at": 0},{"item": "copper-cable","count": 4,"at": 0.25}]
+    ],
+    "first_trace": [8, 2, 8, 2]
+  },
+  "filter-iron": {
+    "hands": [
+      {"item": "iron-plate","ticks": [2,3,4,5]}
+    ],
+    "initial_stock": [
+      [{"item": "iron-plate","count": 4,"at": 0},{"item": "iron-plate","count": 4,"at": 0.25},{"item": "iron-plate","count": 4,"at": 0.5}],
+      [{"item": "copper-cable","count": 4,"at": 0.07421875},{"item": "copper-cable","count": 4,"at": 0.32421875},{"item": "copper-cable","count": 4,"at": 0.57421875}],
+      [],
+      [],
+      [],
+      [{"item": "copper-cable","count": 4,"at": 0.125}],
+      [{"item": "iron-plate","count": 4,"at": 0},{"item": "iron-plate","count": 4,"at": 0.25}],
+      []
+    ],
+    "first_trace": [7, 1, 7, 1]
+  },
+  "south-input": {
+    "hands": [
+      {"item": "iron-plate","ticks": [2,3,4,5]},
+      {"item": "copper-cable","ticks": [13,14,15,17]},
+      {"item": "copper-cable","ticks": [25,26,27,29]},
+      {"item": "copper-cable","ticks": [37,38,39,41]},
+      {"item": "iron-plate","ticks": [49,50,51,53]}
+    ],
+    "initial_stock": [
+      [],
+      [],
+      [{"item": "iron-plate","count": 4,"at": 0.07421875},{"item": "iron-plate","count": 4,"at": 0.32421875},{"item": "iron-plate","count": 4,"at": 0.57421875}],
+      [{"item": "copper-cable","count": 4,"at": 0.07421875},{"item": "copper-cable","count": 4,"at": 0.32421875},{"item": "copper-cable","count": 4,"at": 0.57421875}],
+      [{"item": "iron-plate","count": 4,"at": 0.125}],
+      [{"item": "copper-cable","count": 4,"at": 0.125}],
+      [{"item": "iron-plate","count": 4,"at": 0},{"item": "iron-plate","count": 4,"at": 0.25}],
+      [{"item": "copper-cable","count": 4,"at": 0},{"item": "copper-cable","count": 4,"at": 0.25}]
+    ],
+    "first_trace": [7, 3, 7, 3]
+  },
+  "north-port": {
+    "hands": [
+      {"item": "copper-cable","ticks": [2,3,4,5]},
+      {"item": "copper-cable","ticks": [13,14,15,17]},
+      {"item": "copper-cable","ticks": [25,26,27,29]},
+      {"item": "iron-plate","ticks": [37,38,39,41]}
+    ],
+    "initial_stock": [
+      [],
+      [],
+      [{"item": "copper-cable","count": 4,"at": 0.07421875},{"item": "copper-cable","count": 4,"at": 0.32421875},{"item": "copper-cable","count": 4,"at": 0.57421875}],
+      [{"item": "iron-plate","count": 4,"at": 0.07421875},{"item": "iron-plate","count": 4,"at": 0.32421875},{"item": "iron-plate","count": 4,"at": 0.57421875}],
+      [{"item": "copper-cable","count": 4,"at": 0},{"item": "copper-cable","count": 4,"at": 0.25}],
+      [{"item": "iron-plate","count": 4,"at": 0},{"item": "iron-plate","count": 4,"at": 0.25}],
+      [{"item": "copper-cable","count": 4,"at": 0.125}],
+      [{"item": "iron-plate","count": 4,"at": 0.125}]
+    ],
+    "first_trace": [5, 3, 5, 3]
+  },
+  "north-port-mirrored": {
+    "hands": [
+      {"item": "iron-plate","ticks": [2,3,4,5]},
+      {"item": "copper-cable","ticks": [13,14,15,17]},
+      {"item": "copper-cable","ticks": [25,26,27,29]},
+      {"item": "copper-cable","ticks": [37,38,39,41]},
+      {"item": "iron-plate","ticks": [49,50,51,53]}
+    ],
+    "initial_stock": [
+      [],
+      [],
+      [{"item": "copper-cable","count": 4,"at": 0.07421875},{"item": "copper-cable","count": 4,"at": 0.32421875},{"item": "copper-cable","count": 4,"at": 0.57421875}],
+      [{"item": "iron-plate","count": 4,"at": 0.07421875},{"item": "iron-plate","count": 4,"at": 0.32421875},{"item": "iron-plate","count": 4,"at": 0.57421875}],
+      [{"item": "copper-cable","count": 4,"at": 0},{"item": "copper-cable","count": 4,"at": 0.25}],
+      [{"item": "iron-plate","count": 4,"at": 0},{"item": "iron-plate","count": 4,"at": 0.25}],
+      [{"item": "copper-cable","count": 4,"at": 0.125}],
+      [{"item": "iron-plate","count": 4,"at": 0.125}]
+    ],
+    "first_trace": [6, 4, 6, 4]
+  }
+}

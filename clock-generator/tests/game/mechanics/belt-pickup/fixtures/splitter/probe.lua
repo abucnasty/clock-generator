@@ -8,7 +8,7 @@ local input = capture.find_one(entities, function(e)
 end, "direct splitter pickup")
 local upstream = capture.find_one(entities, function(e)
     return e.type == "transport-belt" and e.position.x == splitter.position.x - 1
-        and e.position.y == splitter.position.y - 0.5
+        and e.position.y == splitter.position.y + ((options.southInput or options.reflected) and 0.5 or -0.5)
 end, "upstream belt")
 local downstream = capture.find_one(entities, function(e)
     return e.type == "underground-belt" and e.belt_to_ground_type == "input"
@@ -16,7 +16,7 @@ end, "drained north output")
 assert(splitter.splitter_output_priority == (options.outputPriority or "right"))
 assert(splitter.name == "turbo-splitter" and splitter.direction == defines.direction.east)
 assert(input.direction == defines.direction.west and input.mirroring == (options.mirrored or false))
-assert(input.pickup_position.x == splitter.position.x and input.pickup_position.y == splitter.position.y + 0.5)
+assert(input.pickup_position.x == splitter.position.x and input.pickup_position.y == splitter.position.y + (options.reflected and -0.5 or 0.5))
 assert(not input.held_stack.valid_for_read, "target must remain gated and empty during warm-up")
 assert(not input.use_filters)
 input.inserter_stack_size_override = 16

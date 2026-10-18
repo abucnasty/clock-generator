@@ -211,7 +211,7 @@ or Sidecar change**. Sidecar still emits the existing
 
 The ingredient swap confirms a physical line preference, and mirroring switches that preference from line 7
 to line 8 without changing the timing limitation. This gives a local selection rule but no general splitter
-routing model, so the simulator and Sidecar remain unchanged. Opposite-port, priority/filter and
-opposite-priority and filtered routing remain unmeasured; both priority settings for the single-consumer
-blocked-drain control above are complete. No general splitter support is claimed. Continue with turbo
+routing model, so the simulator and Sidecar remain unchanged. The [additional routing controls](routing-controls.md) now cover the opposite output port, both mirroring
+states there, the other input arrangement, opposite priority and both ingredient filters. Both priority settings
+for the single-consumer blocked-drain control above are complete. No general splitter support is claimed. Continue with turbo
 speed and one controlled change at a time.
