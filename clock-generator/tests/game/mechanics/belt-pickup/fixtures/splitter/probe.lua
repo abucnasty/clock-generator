@@ -1,5 +1,5 @@
--- Exact supplied layout, with only the target inserter gated during warm-up by the host.
--- Observe the first hand: no transport-line seeding, held-stack edits or repeated destination clearing.
+-- Supplied layout (or ingredient-only swap), with only the target gated during warm-up by the host.
+-- Observe first-hand collection and operating continuation without seeding, held-stack edits or destination clearing.
 local entities = ...
 local sink = capture.find_one(entities, function(e) return e.name == "electromagnetic-plant" end, "plant")
 local splitter = capture.find_one(entities, function(e) return e.type == "splitter" end, "splitter")

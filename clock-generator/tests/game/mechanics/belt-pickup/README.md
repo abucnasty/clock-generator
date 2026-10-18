@@ -33,9 +33,11 @@ on turbo belts.
 
 The [direct turbo splitter baseline](fixtures/splitter/README.md) uses the supplied right-priority output,
 with a draining north output and a locally blocked south pickup port. It records all eight transport lines.
-The first iron hand fills at `0,1,2,3`; the next four hands fill at `0,1,2,4`. First-hand agreement with the
-ordinary belt model does not classify splitter routing. Sidecar's unsupported warning remains; the next
-control swaps only the lane ingredients. Further mechanics work continues on stacked branches without new
+The first iron hand fills at `0,1,2,3`; the next four hands fill at `0,1,2,4`. Swapping only the ingredients
+selects cable from the same physical line 7, with unchanged first-hand timing and later `0,1,2,4` pauses.
+The two arrangements support a physical line preference in this geometry. First-hand agreement with the
+ordinary belt model does not classify splitter routing. Sidecar's unsupported warning remains; mirroring is
+the next unmeasured control. Further mechanics work continues on stacked branches without new
 PRs or publishing until requested.
 
 The [front underground exit fixture](fixtures/front-underground-exit/README.md) isolates a northbound, head-on
@@ -82,7 +84,7 @@ The first two commands run in the simulator. The remaining commands need Factori
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, five front exit
 ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
 front entrance moving/backed-up controls, the side-loaded tile/control pair, the expanded 42-case side-entry matrix,
-and one direct splitter baseline. Their independent replay and simulator comparisons remain
+and two direct splitter ingredient arrangements. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands
@@ -99,7 +101,7 @@ The [build checks](../../builds/README.md) independently measure throughput and 
 ## Queued at the end of the series
 
 The [direct splitter series](fixtures/splitter/README.md) has begun on a branch stacked above the turbo merge
-implementation. Its first baseline is complete; ingredient-swapped and other controls remain unmeasured.
+implementation. Its baseline and ingredient swap are complete; mirroring and other controls remain unmeasured.
 
 After the current pickup/merge investigations, verify the tick-by-tick predictions of
 [`Belt::amountToDropAtTick`](../../../../src/entities/belt/belt.test.ts) against actual drops with belt stack sizes

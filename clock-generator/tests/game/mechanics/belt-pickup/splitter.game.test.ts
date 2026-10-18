@@ -40,18 +40,32 @@ function ordinaryBeltHand(config: Config, backedUp: boolean, item = "iron-plate"
     throw new Error("ordinary belt comparison did not fill");
 }
 
-test("turbo splitter: direct pickup from its right-priority output", async context => {
+for (const swapped of [false, true]) test(`turbo splitter: direct pickup from its right-priority output${swapped ? " (ingredients swapped)" : ""}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
     const retained = process.env.SPLITTER_CAPTURE_DIR;
-    const scratch = retained ? path.resolve(retained) : fs.mkdtempSync(path.join(os.tmpdir(), "splitter-pickup-"));
+    const scratch = retained ? path.resolve(retained, swapped ? "swapped" : "original") : fs.mkdtempSync(path.join(os.tmpdir(), "splitter-pickup-"));
     if (retained && fs.existsSync(scratch) && fs.readdirSync(scratch).length) throw new Error("Choose a new empty SPLITTER_CAPTURE_DIR");
     fs.mkdirSync(scratch, {recursive: true});
     try {
         const fixture = GameFixturePaths.SPLITTER;
+        const preferredItem = swapped ? "copper-cable" : "iron-plate";
+        const otherItem = swapped ? "iron-plate" : "copper-cable";
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
         const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
         const decoded = JSON.parse(zlib.inflateSync(Buffer.from(original.slice(1), "base64")).toString());
+        if (swapped) {
+            const changed = [];
+            for (const entity of decoded.blueprint.entities) {
+                for (const filter of entity.infinity_settings?.filters ?? []) {
+                    expect(["iron-plate", "copper-cable"]).toContain(filter.name);
+                    filter.name = filter.name === "iron-plate" ? "copper-cable" : "iron-plate";
+                    changed.push(entity.entity_number);
+                }
+            }
+            expect(changed).toEqual([1, 5, 6, 10]);
+            config.belts[0].lanes.reverse();
+        }
         const input = decoded.blueprint.entities.find((e: {entity_number: number}) => e.entity_number === 14);
         expect(input).toMatchObject({name: "stack-inserter", direction: 12, position: {x: -71.5, y: 414.5}});
         // Preserve the physical fixture and hold only the target during natural supply warm-up.
@@ -78,19 +92,19 @@ test("turbo splitter: direct pickup from its right-priority output", async conte
             recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
         expect(report.initial).not.toHaveProperty("filter");
         expect(report.initial.lines.map(l => l.length)).toEqual([179 / 256, 179 / 256, 179 / 256, 179 / 256, 0.5, 0.5, 0.5, 0.5]);
-        expect(stacks(report.initial.lines[6]).map(s => [s.at, s.item, s.count])).toEqual([[0, "iron-plate", 4], [0.25, "iron-plate", 4]]);
-        expect(stacks(report.initial.lines[7]).map(s => [s.at, s.item, s.count])).toEqual([[0, "copper-cable", 4], [0.25, "copper-cable", 4]]);
+        expect(stacks(report.initial.lines[6]).map(s => [s.at, s.item, s.count])).toEqual([[0, preferredItem, 4], [0.25, preferredItem, 4]]);
+        expect(stacks(report.initial.lines[7]).map(s => [s.at, s.item, s.count])).toEqual([[0, otherItem, 4], [0.25, otherItem, 4]]);
         const firstFull = report.samples.find(s => s.held === 16)!;
         expect(firstFull.tick).toBe(5);
         const firstHand = report.samples.filter(s => s.tick <= firstFull.tick);
         expect(firstHand.every(s => JSON.stringify(s.inputs) === "{}" && JSON.stringify(s.output) === "{}" && s.crafting_progress === 0)).toBe(true);
         expect(firstHand.every(s => JSON.stringify(s.lines[7]) === JSON.stringify(report.initial.lines[7]))).toBe(true);
         const grabs = firstHand.filter((s, i) => s.held > (firstHand[i - 1]?.held ?? 0));
-        expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill("iron-plate"));
+        expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill(preferredItem));
         const counts = firstHand.filter(s => s.held > 0).map(s => s.held);
         expect(counts).toEqual([4, 8, 12, 16]);
-        expect(ordinaryBeltHand(config, false)).toEqual(counts);
-        expect(ordinaryBeltHand(config, true)).toEqual(counts);
+        expect(ordinaryBeltHand(config, false, preferredItem)).toEqual(counts);
+        expect(ordinaryBeltHand(config, true, preferredItem)).toEqual(counts);
         // Trace the previous observation's location, not a claim that an inserter reaches an input line.
         // The splitter may route a stack and the inserter may consume it between adjacent samples.
         const priorLines = grabs.map(grab => {
@@ -100,7 +114,7 @@ test("turbo splitter: direct pickup from its right-priority output", async conte
             const lost = previous.lines.flatMap((line, index) => stacks(line)
                 .filter(s => !present.has(s.id)).map(stack => ({line: index + 1, stack})));
             expect(lost).toHaveLength(1);
-            expect(lost[0].stack).toMatchObject({item: "iron-plate", count: 4});
+            expect(lost[0].stack).toMatchObject({item: preferredItem, count: 4});
             return lost[0].line;
         });
         expect(priorLines).toEqual([7, 1, 7, 1]);
@@ -114,8 +128,10 @@ test("turbo splitter: direct pickup from its right-priority output", async conte
                 hands.at(-1)!.ticks.push(sample.tick);
             }
         }
-        expect(hands.map(h => h.item)).toEqual(["iron-plate", "copper-cable", "copper-cable", "copper-cable", "iron-plate"]);
-        expect(hands.map(h => h.ticks.map(tick => tick - h.ticks[0]))).toEqual([[0, 1, 2, 3], ...Array(4).fill([0, 1, 2, 4])]);
+        const expectedItems = swapped ? ["copper-cable", "copper-cable", "copper-cable", "iron-plate"]
+            : ["iron-plate", "copper-cable", "copper-cable", "copper-cable", "iron-plate"];
+        expect(hands.map(h => h.item)).toEqual(expectedItems);
+        expect(hands.map(h => h.ticks.map(tick => tick - h.ticks[0]))).toEqual([[0, 1, 2, 3], ...Array(expectedItems.length - 1).fill([0, 1, 2, 4])]);
         const secondHand = report.samples.filter(s => s.tick >= 13 && s.tick <= 17).map(s => s.held);
         expect(secondHand).toEqual([4, 8, 12, 12, 16]);
         // Ordinary saturated one-tile supply predicts a faster isolated cable hand even at the same tick.
