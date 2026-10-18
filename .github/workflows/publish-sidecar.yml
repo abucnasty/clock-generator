@@ -5,6 +5,7 @@ name: Publish sidecar mod
 # ("Run workflow", or `gh workflow run publish-sidecar.yml`) to try a failed upload again. A release of the clock
 # generator does not publish the mod. Nothing is published unless the unit tests and the UI build of test.yml pass:
 # among them are the tests that keep the mod's version, its changelog and the version the generator asks for in step.
+# RELEASE_HOLD=true blocks uploads on push and manual dispatch, while tests remain enabled.
 on:
   push:
     branches:
@@ -23,6 +24,7 @@ jobs:
       generation: false
 
   publish-sidecar:
+    if: vars.RELEASE_HOLD != 'true'
     needs: tests
     runs-on: ubuntu-latest
     # holds the FACTORIO_MOD_API_KEY secret, and can require approval before anything is published
