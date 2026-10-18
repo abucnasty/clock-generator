@@ -6,6 +6,11 @@
 /** Why the text is not an export the paste can use */
 export type SidecarExportProblem = 'empty' | 'not-json' | 'not-an-export' | 'build-file' | 'no-entities';
 
+export interface PickupCaptureWarning {
+    inserter_id: number;
+    reason: 'bend' | 'splitter' | 'inline' | 'unsupported';
+}
+
 interface SidecarExport {
     kind: 'export';
     /** The first exports were a bare array of machines: only the machines are offered */
@@ -18,6 +23,7 @@ interface SidecarExport {
     chests: unknown[];
     sidecarVersion: unknown;
     suggestedTarget: unknown;
+    pickupWarnings?: PickupCaptureWarning[];
 }
 
 type SidecarExportRead = SidecarExport | { kind: 'problem'; problem: SidecarExportProblem };
@@ -67,6 +73,11 @@ export function readSidecarExport(text: string): SidecarExportRead {
             sidecarVersion: value.sidecar_version,
             suggestedTarget: value.suggested_target,
         };
+        const warnings = listOf(value.pickup_warnings).filter((warning): warning is PickupCaptureWarning =>
+            isObject(warning) && typeof warning.inserter_id === 'number' && Number.isSafeInteger(warning.inserter_id)
+            && warning.inserter_id > 0 && warning.inserter_id <= read.inserters.length
+            && typeof warning.reason === 'string' && ['bend', 'splitter', 'inline', 'unsupported'].includes(warning.reason));
+        if (warnings.length) read.pickupWarnings = warnings;
         const total = read.machines.length + read.drills.length + read.inserters.length + read.belts.length + read.chests.length;
         return total === 0 ? { kind: 'problem', problem: 'no-entities' } : read;
     }

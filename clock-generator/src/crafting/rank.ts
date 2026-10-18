@@ -29,8 +29,7 @@ export interface ClockRanking {
     /**
      * False when the clock is not made for the belt the config asks for; such a clock is only selected when no other
      * meets the target rate. It is a clock whose belt-fed inserters go without belt pickup slack though the config
-     * does not say the belts do not move: the simulator's belts do not move, so it looks better there than it is on a
-     * moving belt. True for every clock when the config says the belts do not move (`overrides.non_moving_belts`),
+     * does not say the input belts are backed up: its windows omit the extra margin for late moving pickups. True for every clock when the config says the input belts are backed up (`overrides.backed_up_belts`),
      * and for a clock with a period that is not a whole number of ticks, which never gets the slack.
      */
     matches_belt_choice: boolean;
@@ -51,8 +50,8 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         meets_target_rate: counts_as_holding && Math.abs(rate_off_target) <= TARGET_RATE_TOLERANCE,
         rate_off_target,
         holds_expected_output: clock.verdict !== "unstable",
-        // with belts that do not move every clock goes without the slack, which is the choice
-        matches_belt_choice: config.overrides?.non_moving_belts === true || !clock.result.belt_pickup_slack_left_out,
+        // with backed-up belts every clock goes without the slack, which is the choice
+        matches_belt_choice: config.overrides?.backed_up_belts === true || !clock.result.belt_pickup_slack_left_out,
         wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
         window_count: clock.ranking_window_count,
     };

@@ -2,7 +2,7 @@
 // How many runs of the build it takes to generate every potential clock of a sample, and how many ticks they simulate:
 // the planning runs and every trial of a clock (clock-only checks from each start phase, long runs, loss trials, fuel
 // views). One line: runs, ticks simulated, seconds. For comparing a change of the searches against the build before
-// it: generation must not get slower. [on|off] is "Belts do not move"; SEARCH=1 turns "Search for fewer wake-ups" on.
+// it: generation must not get slower. [on|off] is "Backed-up belts"; SEARCH=1 turns "Search for fewer wake-ups" on.
 // CLOCK_GENERATOR_ROOT names the build to count.
 const [key, belts = "off"] = process.argv.slice(2);
 const { dist, quiet, loadSample } = require("./lib");

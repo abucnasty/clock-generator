@@ -90,7 +90,7 @@ describe("parseConfig", () => {
             const config = await parseConfig(json);
 
             expect(config.inserters).toHaveLength(1);
-            expect(config.inserters[0].source).toEqual({ type: "belt", id: 1 });
+            expect(config.inserters[0].source).toEqual({ type: "belt", id: 1, pickup_length: 1 });
             expect(config.inserters[0].sink).toEqual({ type: "machine", id: 1 });
             expect(config.inserters[0].stack_size).toBe(3);
         });

@@ -4,8 +4,8 @@ import type { ClockAlternativeView } from '../worker/types';
 
 /** What the selection rule is given by the config a generation ran with */
 export interface PickRule {
-    /** The input belts are backed up and standing still: every clock is made without belt slack and counts as made for the belt */
-    nonMovingBelts: boolean;
+    /** The input belts are backed up: every clock is made without belt slack and counts as made for the belt */
+    backedUpBelts: boolean;
     /** "Search for fewer wake-ups": the slower searches ran whether they were needed or not */
     searchedForFewerWakeUps: boolean;
 }
@@ -41,15 +41,15 @@ export const RECOMMENDED_COPY = {
             + 'windows. If none qualifies, the one that runs nearest to the target rate.',
         'A clock made for a moving belt keeps each belt inserter\'s wake window open a few ticks longer (belt slack). '
             + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
-            + 'input belts are backed up and standing still (Configure, Belts), every clock is made without the slack.',
+            + 'input belts are backed up (Configure, Belts), every clock is made without the slack.',
     ],
     runMovingBelts: 'This run assumed moving belts.',
-    runStillBelts: 'This run assumed belts that stand still.',
+    runBackedUpBelts: 'This run assumed backed-up belts.',
     runSearched: 'The slower searches for fewer wake-ups were run.',
     runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered.',
     provisional: 'More clocks are still being made, so this may change. ',
     stopped: 'You stopped this run early, so a better clock may not have been made yet. ',
-    beltStill: ' with belts that stand still',
+    beltBackedUp: ' with backed-up belts',
     beltMoving: ' on a moving belt',
     /**
      * The clocks the pick was compared with: those that hold the rate and recover, or on a build with a deadlock risk
@@ -73,9 +73,9 @@ export const RECOMMENDED_COPY = {
     noneForMovingBelt: (rate: string, deadlock: boolean) => deadlock
         ? `No clock made for a moving belt holds ${rate}/s.`
         : `No clock made for a moving belt holds ${rate}/s and recovers.`,
-    stillOnly: ' This one, made for belts that stand still, does.',
-    stillFewestWakeUps: ' Of those made for belts that stand still, this one has the fewest wake-ups.',
-    stillWakeUpsNotCounted: ' Of those made for belts that stand still, this one has the fewest wake windows; wake-ups '
+    backedUpOnly: ' This one, made for backed-up belts, does.',
+    backedUpFewestWakeUps: ' Of those made for backed-up belts, this one has the fewest wake-ups.',
+    backedUpWakeUpsNotCounted: ' Of those made for backed-up belts, this one has the fewest wake windows; wake-ups '
         + 'could not be counted for them.',
     mayFailOnMovingBelt: ' It may fail on a moving belt.',
     noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and recovers.`,
@@ -103,7 +103,7 @@ const offTargetKey = (rateOffTarget: number) => Math.round(Math.abs(rateOffTarge
 
 export function pickRuleOf(config: Config): PickRule {
     return {
-        nonMovingBelts: config.overrides?.non_moving_belts === true,
+        backedUpBelts: config.overrides?.backed_up_belts === true,
         searchedForFewerWakeUps: config.overrides?.search_for_fewer_wake_ups === true,
     };
 }
@@ -157,13 +157,13 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
     if (!ranking.matches_belt_choice) {
         // only picked when no clock made for the belt meets the rate, so it beat the others made without the slack
         const others = alternatives.filter(other => other !== pick && other.ranking.meets_target_rate);
-        const contest = others.length === 0 ? RECOMMENDED_COPY.stillOnly
-            : ranking.wake_ups_per_minute === null ? RECOMMENDED_COPY.stillWakeUpsNotCounted
-                : RECOMMENDED_COPY.stillFewestWakeUps + tieOf(pick, others, '');
+        const contest = others.length === 0 ? RECOMMENDED_COPY.backedUpOnly
+            : ranking.wake_ups_per_minute === null ? RECOMMENDED_COPY.backedUpWakeUpsNotCounted
+                : RECOMMENDED_COPY.backedUpFewestWakeUps + tieOf(pick, others, '');
         return RECOMMENDED_COPY.noneForMovingBelt(rate, deadlock) + contest + RECOMMENDED_COPY.mayFailOnMovingBelt + recovery;
     }
-    const moving = !rule?.nonMovingBelts && pick.beltLabel.startsWith('moving');
-    const belt = rule?.nonMovingBelts ? RECOMMENDED_COPY.beltStill : moving ? RECOMMENDED_COPY.beltMoving : '';
+    const moving = !rule?.backedUpBelts && pick.beltLabel.startsWith('moving');
+    const belt = rule?.backedUpBelts ? RECOMMENDED_COPY.beltBackedUp : moving ? RECOMMENDED_COPY.beltMoving : '';
     const others = alternatives.filter(other => other !== pick
         && other.ranking.meets_target_rate && other.ranking.matches_belt_choice);
     if (others.length === 0) {
@@ -223,7 +223,7 @@ function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate:
 
 /** The "This run" line of "How clocks are chosen": the belt the clocks were made for, and whether the searches ran */
 export function disclosureRunLine(rule: PickRule | null): string {
-    return `${rule?.nonMovingBelts ? RECOMMENDED_COPY.runStillBelts : RECOMMENDED_COPY.runMovingBelts} `
+    return `${rule?.backedUpBelts ? RECOMMENDED_COPY.runBackedUpBelts : RECOMMENDED_COPY.runMovingBelts} `
         + (rule?.searchedForFewerWakeUps ? RECOMMENDED_COPY.runSearched : RECOMMENDED_COPY.runSearchedWhenNeeded);
 }
 

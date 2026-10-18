@@ -29,6 +29,12 @@ export interface Inserter extends Entity {
     animation: InserterAnimation;
     /** Where it drops on a belt that moves; without it the drop takes the same ticks wherever the belt carries stacks */
     drop?: BeltDropSpot;
+    /** Physical exposed length of a belt input, retained for both moving and backed-up supply. */
+    pickup_length?: 0.5 | 1;
+    /** Belt availability is independent of geometry; absent only for non-belt sources. */
+    belt_supply?: "moving" | "backed_up";
+    /** Physical input lane to try first, including when both lanes carry the same item. */
+    near_lane?: 1 | 2;
 }
 
 /** Of an inserter that drops on a belt: the lane and the tiles along the belt (see InserterConfig) */
@@ -80,6 +86,7 @@ export function nearestLaneFirst(items: Set<ItemName>, lanes: readonly Lane[], n
 export class InserterFactory {
     constructor(
         public readonly entity_registry: EntityRegistry,
+        private readonly belt_supply: "moving" | "backed_up" = "moving",
     ) { }
 
 
@@ -209,9 +216,9 @@ export class InserterFactory {
             { prototype, quality }
         )
 
-        return {
+        const inserter: Inserter = {
             entity_id: EntityId.forInserter(id),
-            metadata: metadata,
+            metadata,
             source: {
                 entity_id: EntityId.forEntity(source.id, source.type),
                 item_names: source_provided_items
@@ -223,8 +230,21 @@ export class InserterFactory {
             filtered_items,
             hand_sizes,
             animation: InserterAnimation.fromMetadata(metadata.animation),
-            ...(drop_spot && { drop: drop_spot })
         }
+
+        if (source.type === EntityType.BELT) {
+            if (source.near_lane !== undefined) {
+                inserter.near_lane = source.near_lane;
+            }
+            inserter.pickup_length = source.pickup_length ?? 1;
+            inserter.belt_supply = this.belt_supply;
+        }
+
+        if (drop_spot !== undefined) {
+            inserter.drop = drop_spot;
+        }
+
+        return inserter;
     }
 
     /**

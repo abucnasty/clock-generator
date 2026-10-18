@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { SimulationContext } from "../sequence";
+import { InserterDropMode, InserterPickupMode } from "../../control-logic/inserter/modes";
 
 /**
  * The fields holding a plain value in what the simulation keeps, by owner (an entity's state by its type, a mode or
@@ -14,9 +15,13 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     // `tick` and the counts of items are left out of its key
     inserter: ["status", "tick", "held_item", "items_picked_up", "items_dropped", "waits_for_sink", "enabled"],
     drill: ["status"],
-    InserterDropMode: ["current_tick"],
+    BeltDropLogic: ["current_tick"],
+    MachineDropLogic: ["current_tick"],
+    ChestDropLogic: ["current_tick"],
+    BeltPickupLogic: ["current_tick", "belt_grab_decided"],
     // what marks a take in the first tick of a window counts only within that tick
-    InserterPickupMode: ["current_tick", "belt_grab_decided", "window_opened", "ticks_in_pickup"],
+    MachinePickupLogic: ["current_tick", "window_opened", "ticks_in_pickup"],
+    ChestPickupLogic: ["current_tick"],
     IdleModeTransitionEvaluator: ["saw_sink_blocked", "window_opens"],
     InserterSwingModeTransitionEvaluator: ["entered_tick", "from"],
 };
@@ -36,7 +41,7 @@ describe("simulationStateKey", () => {
             }
         };
         // between them, every kind of entity
-        for (const path of [ConfigPaths.ELECTRIC_FURNACE, ConfigPaths.LOW_DENSITY_STRUCTURE]) {
+        for (const path of [ConfigPaths.ELECTRIC_FURNACE, ConfigPaths.LOW_DENSITY_STRUCTURE, ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM]) {
             const context = SimulationContext.fromConfig(await loadConfigFromFile(path));
             for (const state of context.state_registry.getAllStates()) {
                 add(state.constructor === Object ? state.entity_id.type : state.constructor.name, plainFields(state));
@@ -44,6 +49,9 @@ describe("simulationStateKey", () => {
             for (const state_machine of [...context.machines, ...context.inserters, ...context.drills]) {
                 for (const [mode, evaluator] of (state_machine as unknown as { graph: Map<object, object> }).graph) {
                     add(mode.constructor.name, plainFields(mode, ["status"]));
+                    if (mode instanceof InserterPickupMode || mode instanceof InserterDropMode) {
+                        add(mode.logic.constructor.name, plainFields(mode.logic));
+                    }
                     add(evaluator.constructor.name, plainFields(evaluator));
                 }
             }

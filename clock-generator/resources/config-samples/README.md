@@ -23,14 +23,21 @@ over-produces.
 Conventions:
 - `<build>.json` is the config; variants get a suffix that says what differs (`-chain-always-on`, `-belt-fed`).
 - `<build>-scaffold.txt` is the one-copy scaffold; `-scaffold-full-build.txt` is kept only for reference.
-- Every scaffold but one has belts that are closed at the end and stand still once full, which is the belt the
-  simulator has. Iron bacteria's creeps (below). A scaffold whose belt moves as the belt of a row of copies does is
-  still to be made: a clock for a moving belt, with belt pickup slack, has never been recorded on one (GOALS.md).
+- Most scaffolds have belts closed at the end, so supply backs up once full. Iron bacteria's creeps (below).
+  The three `science/electromagnetic-science/belted-moving` scaffolds drain their input belt continuously and compare
+  pickup from a straight belt, an underground entrance and an underground exit. Their shared config supplies
+  `pickup_length: 0.5`; moving pickup and its scope are documented in [the simulator rules](../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
+  The [same-item iron-gear fixtures](intermediates/iron-gear-wheel/belted-moving-same-item) compare those three pickup
+  geometries with iron plates on both lanes and include a probe that removes machine blocking. The measured rule
+  prefers the near lane and falls back to the far lane without a fixed switching delay. The simulator implements
+  that rule; the paired game tests compare its grabs, check the default clocks' exact output, and test recovery
+  after ingredient cuts and output blockage on all three geometries.
 - The clocked inserters see a steadily supplied belt: full of whole stacks at the rate the build takes them, whenever
   they reach for it. How is the scaffold's business. Enough stack inserters from infinity chests and a closed end do
   it; so does an end that lets a little through on a timer, as the iron bacteria scaffold has to keep its nutrients
   fresh (32 items in every 61 ticks, and every hand there still fills a stack a tick). An end that drains freely
-  does not: it leaves gaps that confound the inserter timing, which the first agricultural scaffold showed.
+  can expose slower pickups and gaps, as the moving electromagnetic science samples demonstrate; those differences
+  must be measured and represented rather than assumed away.
 - The scaffold is the build its config describes, inserter for inserter. Every recording is checked for it: the stack
   size of each inserter, and which of two items on its belt an inserter takes first (`near_lane` in the config, the
   lane nearest to it in the build). A config that differs is reported before anything else, since a clock made for
@@ -42,20 +49,21 @@ Conventions:
 
 | Build | Scaffold | Recorded | Note |
 |---|---|---|---|
-| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock was the one selected from 2026-10-10; since 2026-10-14 (issue 152) batched swings gets back from every loss and is selected again, and the game tests recorded it that day both ways, 400 in every period | in `test:game`, both ways; with "Belts do not move" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
+| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock was the one selected from 2026-10-10; since 2026-10-14 (issue 152) batched swings gets back from every loss and is selected again, and the game tests recorded it that day both ways, 400 in every period | in `test:game`, both ways; with "Backed-up belts" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
 | intermediates/low-density-structure | yes | selected clock exact. Since 2026-10-11 the selected clock is batched swings with 6 output swings per cycle, 703 wake-ups a minute, where full-hand output swings (1,528) was selected while the ranking put it first on a machine with spare speed; recorded exact the same day, 36,000 ticks | in `test:game` |
 | science/chemical-science, shared foundry | yes | selected clock exact: 256 in each of 102 periods of 352 ticks (1 output swing per cycle, 5.5 copies of 240 a second); the runner-up (2 output swings, 122.1 wake-ups) recorded too, 122.7 in the game; the selected clock's wake-ups are not held (see below) | in `test:game`, wake-ups open |
-| science/utility-science | yes | selected clock exact, with "Belts do not move" off and on: 192 in each of 53 periods | in `test:game`, both ways; a build with a deadlock risk, see "Backpressure loss" and below |
+| science/utility-science | yes | selected clock exact, with "Backed-up belts" off and on: 192 in each of 53 periods | in `test:game`, both ways; a build with a deadlock risk, see "Backpressure loss" and below |
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods. Since 2026-10-12 the selected clock is the one with 2 output swings per cycle, which is stable without a search, so the searches are left out; uneven output swings was selected while they ran for every build, at the same 10.7 wake-ups a minute with 5 windows against 7. Recorded that day both ways: 96 in each of 107 periods, 10.7 wake-ups a minute in the game as in the simulator | in `test:game`, both ways |
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
-| intermediates/advanced-circuit | yes | selected clock exact: 1056 in each of 45 periods of 792 ticks, and 704 in each of 68 of 528 with "Belts do not move" on | in `test:game` with the switch off; see below |
+| intermediates/advanced-circuit | yes | selected clock exact: 1056 in each of 45 periods of 792 ticks, and 704 in each of 68 of 528 with "Backed-up belts" on | in `test:game` with the switch off; see below |
 | intermediates/advanced-circuit, 230 a second | the same scaffold | selected clock exact: 16,192 in each of 2 repeats of 12,672 ticks (23 periods of 550.957), the first clock of this sample that holds, found by the one search of 2026-10-11 | in `test:game`; see below |
 | intermediates/accumulator, 640 a second | yes | the clock 0.9.0 selected made 512 to 544 of 576 a period; the observed windows clock 0.9.1 selected made 576 in each of 58 periods after 3 at 544 while it settled (60,264 ticks). Since even hands (2026-10-14) the selected clock is that: 576 in each of 46 periods after the game test's settling of 7,200 ticks, no difference from the simulator | in `test:game`; see below |
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | science/electromagnetic-science | yes (2026-10-16, 12 legendary beacons) | selected clock exact: 352 in every period of 704 ticks (batched swings, 2 output swings per cycle; 30.0 a second a copy, 330 over 11 copies). Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game | in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests |
 | science/electromagnetic-science-auto | the same scaffold | the same build with the enable control of both output inserters on `AUTO` (`electromagnetic-science-auto.json`); `terminal_swing_count` and `lcm` have no `AUTO` value and are kept. Selected clock exact: 352 in every period after the first; from a staged start (empty machines) the first period makes 288 | in `test:game` |
+| science/electromagnetic-science/belted-moving | three pickup geometries (2026-10-17) | the default with reachable moving stacks delivers 352 packs per 704 ticks in every one of 52 periods on each scaffold; all three recover after either ingredient is cut and output is blocked/restored | `moving-pickup.game.test.ts`; shared half-tile input geometry is conservative for the straight belt; see the simulator rules |
 | everything else | no | | |
 
 ## TODO: scaffold backfill
@@ -104,9 +112,9 @@ What it changed on the samples, against the sweep before it (`gates-off` and `ga
 
 | Sample | Before | Now |
 |---|---|---|
-| Military science | full-hand output swings, 67.5 wake-ups a minute | batched swings without belt pickup slack, 0 wake-ups: the only clock of seven that gets back from a loss of coal. With "Belts do not move" on, batched swings too |
+| Military science | full-hand output swings, 67.5 wake-ups a minute | batched swings without belt pickup slack, 0 wake-ups: the only clock of seven that gets back from a loss of coal. With "Backed-up belts" on, batched swings too |
 | Agricultural science | batched swings, 5 output swings per cycle, 2,543 wake-ups a minute | 2 output swings per cycle, 3,950 (4,127 with the switch on): the 5-swing clock does not get back from a loss of nutrients; the 2- and the 1-swing clock do |
-| Utility science, "Belts do not move" on | batched swings, 0 wake-ups | batched swings, as before: by the trials alone it was uneven output swings (5.4), which deadlocks in the game; the build has a deadlock risk, so the verdict does not decide (below) |
+| Utility science, "Backed-up belts" on | batched swings, 0 wake-ups | batched swings, as before: by the trials alone it was uneven output swings (5.4), which deadlocks in the game; the build has a deadlock risk, so the verdict does not decide (below) |
 | Metallurgic science | full-hand output swings on a subtick clock | the same clock, as one with no recovery: it does not get back from a loss of tungsten ore, and it is the only clock of the build that holds |
 
 Clocks that were not selected and are no longer stable: observed windows on jellynut processing with rocket fuel
@@ -117,7 +125,7 @@ switch off and 23% longer with it on, on a machine that was busy with other work
 
 Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
 
-- **Utility science with "Belts do not move" on moved nothing under uneven output swings**, the clock the trials had
+- **Utility science with "Backed-up belts" on moved nothing under uneven output swings**, the clock the trials had
   moved its selection to: 0 of 192 in each of 53 periods, where the simulator has it stable at 192 from every start
   and back from every loss. It is the deadlock of two inserters that bring the same item (GOALS.md, a rule of the
   game from the user's own testing), and a risk of the build, not of that clock alone. The generator now reads the
@@ -131,7 +139,7 @@ Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
   clock nor any trial for backpressure loss gets the build into it. Under batched swings the game made 192 in each
   of 53 periods. How the build gets there under uneven output swings is not traced, by decision: it is a known risk
   of the build. The recording is `.scratch/recordings/utility-science-backpressure-uneven-output-on.json`.
-- **Agricultural science with "Belts do not move" on**: the 2-swing clock moves its 800 packs in every period. The
+- **Agricultural science with "Backed-up belts" on**: the 2-swing clock moves its 800 packs in every period. The
   four inserters that bring nutrients to the egg biochambers move 979.89 nutrients a period in the game and 980.85 in
   the simulator. It changes no verdict and no selection, so it is left: the game test of the build names those four
   inserters as a known difference (`moved_open`) and holds everything else.
@@ -149,7 +157,7 @@ Known gaps of the trials:
 A diagnostic of 2026-10-10, not a check the generator makes (GOALS.md, "Working Rules": margin comes before
 precision). `scripts/margin-sweep.sh` tries every stable clock with every window a tick shorter at its start, and
 again with every window a tick shorter at its end, each as the generator checks its own clocks; `margin-table.py`
-prints the table. A window of one tick is left as it is. With "Belts do not move" off, without the processing unit
+prints the table. A window of one tick is left as it is. With "Backed-up belts" off, without the processing unit
 sample with a belt export:
 
 - 132 stable clocks on 34 samples; one could not be built again from its windows (fractional swings on biochamber
@@ -182,11 +190,11 @@ v0.6.0): it changed no verdict, and it does not probe the gap it was aimed at. T
 build comes from a start short of ingredients or from the state the game was recorded in, which an unclocked warm-up
 does not reach; what that gap needs is a start state handed to the run (`start_stock`), which stays.
 
-- It fails no clock. With "Belts do not move" off 131 of 132 stable clocks get to their output, the slowest within
+- It fails no clock. With "Backed-up belts" off 131 of 132 stable clocks get to their output, the slowest within
   19 periods, and with it on 106 of 107; the one left over is fractional swings on biochamber fuel, which cannot be
   built again from its windows. The trials cost 3% of the time generating takes.
 - It catches none of the three cases it was held against. The utility science clock that deadlocks in the game
-  (uneven output swings, belts that do not move) is at 192 within 2 periods from all four places. The advanced
+  (uneven output swings, backed-up belts) is at 192 within 2 periods from all four places. The advanced
   circuit clock with windows of 4 ticks is at 704 within 3, and the clock tightened by hand within 6. The nearest
   clock of the sample at 230 a second, which the generator's own check has at 216.9, makes its full 16,192 in the
   second of two repeats of 23 periods from all four places; that is judged on one repeat, and it is not known here
@@ -237,7 +245,7 @@ missing. There were two causes, and one of them was not in the simulator:
   first"). The simulator took the first of its filters, which on the plain build was the processing units where the
   game takes the low density structures. Under batched swings with slack both made 192 a period, with 64 and 128
   items through the two inserters in the game and 96 and 96 in the simulator; under the clock that was selected for
-  belts that do not move the game made 96 where the simulator made 192. With the lanes of that belt swapped in a copy
+  backed-up belts the game made 96 where the simulator made 192. With the lanes of that belt swapped in a copy
   of the scaffold the game took the processing units first, and the simulator matched it as it was. The configs of
   every scaffolded build now name the nearest lane.
 
@@ -251,7 +259,7 @@ Open:
   minute by where the clock starts. The generator's run counts 10.7; the game settled into 26.8. The potential clocks
   list the figure of the generator's own run.
 - With 2 and with 1 output swings per cycle the plain build only holds its rate with belt pickup slack (the 2-swing
-  clock was recorded with it at 192 in each of 53 periods). With "Belts do not move" on they are listed as unstable:
+  clock was recorded with it at 192 in each of 53 periods). With "Backed-up belts" on they are listed as unstable:
   they were the last two clocks of any sample that were made again with the slack there, neither was selected, and
   that fallback was removed on 2026-10-10.
 
@@ -328,7 +336,7 @@ Recorded on 2026-10-10, 36,000 ticks each, wake-ups a minute for one copy:
 | The reporter's, tightened by hand | 704 in each of 68 periods | 355 | 395 (355 or 395 by where the clock starts) |
 | Made by version 0.5.0 | 704 in each of 68 | 464 | 757 (757 to 1,268) |
 | Selected now, batched swings with 3 output swings | 1056 in each of 45 | 400 | 510 |
-| Selected with "Belts do not move" on, 2 output swings | 704 in each of 68 | 389 | 627 |
+| Selected with "Backed-up belts" on, 2 output swings | 704 in each of 68 | 389 | 627 |
 | Evenly spaced windows of one hand (4 ticks) for the belt inserters | 608 and 624 in turn, of 704 | - | 704, at 545 |
 
 The two selected clocks are those the generator makes since the simulator has the tick an inserter takes to wake

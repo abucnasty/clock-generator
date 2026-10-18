@@ -70,7 +70,8 @@ import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
 import { clockTechnicalName, plainClockName } from './utils/clockSummary';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
-import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
+import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
+import { PickupGeometrySummary } from './components/PickupGeometrySummary';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
@@ -283,7 +284,7 @@ function App() {
     const setAdvancedOpen = useCallback((open: boolean) => patchContext({ sections: { ...buildContext.sections, advanced: open } }), [patchContext, buildContext.sections]);
     const sectionContext = useMemo(() => ({ sections: buildContext.sections, onSectionChange: (key: string, open: boolean) => patchContext({ sections: { ...buildContext.sections, [key]: open } }) }), [buildContext.sections, patchContext]);
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
-    const [inserterFocusRequest, setInserterFocusRequest] = useState<{ id: number; filters: boolean } | null>(null);
+    const [inserterFocusRequest, setInserterFocusRequest] = useState<{ id: number; filters: boolean; pickup?: boolean } | null>(null);
     const [beltFocusRequest, setBeltFocusRequest] = useState<{ id: number } | null>(null);
     useEffect(() => {
         if (!beltFocusRequest) return;
@@ -296,6 +297,13 @@ function App() {
         return () => cancelAnimationFrame(frame);
     }, [beltFocusRequest]);
     const finishInserterFocus = useCallback(() => setInserterFocusRequest(null), []);
+    const reviewPickup = useCallback((id: number) => {
+        cancelRestore();
+        setDiagramFullscreen(false);
+        setConfigView('list');
+        setView('configure');
+        setInserterFocusRequest({ id, filters: false, pickup: true });
+    }, [cancelRestore, setConfigView, setView]);
     const handleInserterFix = useCallback((issue: InserterCoverageIssue, fix: InserterFixOption) => {
         if (fixUnavailable(fix, issue)) return;
         setDiagramFullscreen(false);
@@ -686,9 +694,9 @@ function App() {
         setView('results');
     }), [runChecked, runSimulation, runDebugSteps, runStreamLogs, setView]);
 
-    // Moving stores nothing, Standing `non_moving_belts: true`
+    // Moving stores nothing, BackedUp `backed_up_belts: true`
     const handleBeltAnswer = useCallback(
-        (answer: BeltAnswer) => updateOverrides('non_moving_belts', nonMovingBeltsFor(answer)),
+        (answer: BeltAnswer) => updateOverrides('backed_up_belts', backedUpBeltsFor(answer)),
         [updateOverrides]
     );
     // Results' "Generate again": checked first as Generate is, then the answer is set on the form and the clocks are
@@ -705,10 +713,10 @@ function App() {
             setView('results');
         });
     }, [busy, runChecked, handleBeltAnswer, runSimulation, runDebugSteps, runStreamLogs, setView]);
-    // the clocks on screen, read for belts that stand still; nothing while they may still change
+    // the clocks on screen, read for backed-up belts; nothing while they may still change
     const beltAssumption = generatedFor?.beltQuestion ?? null;
     const beltHint = useMemo(
-        () => busy || beltAssumption === null ? null : standingBeltsHint(alternatives, recommendedIndex, beltAssumption.answer),
+        () => busy || beltAssumption === null ? null : backedUpBeltsHint(alternatives, recommendedIndex, beltAssumption.answer),
         [busy, beltAssumption, alternatives, recommendedIndex]
     );
 
@@ -1182,6 +1190,7 @@ function App() {
                             />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
+                                <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
                                 <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
                                     onReview={goToTarget} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} />
@@ -1303,6 +1312,7 @@ function App() {
 
                         <Box data-build-view="results" data-build-anchor="results" sx={{ display: view === 'results' ? 'block' : 'none' }}>
                             <ResultsWorkspace key={library.currentId}
+                                onEditPickup={reviewPickup}
                                 installOpen={installOpen}
                                 onInstallClose={() => setInstallOpen(false)}
                                 onInstall={() => setInstallOpen(true)}

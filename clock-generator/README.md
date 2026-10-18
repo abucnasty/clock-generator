@@ -439,36 +439,43 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
 - `end`: The tick when the entity becomes disabled (inclusive)
 - `period_duration_ticks` (optional): The period length in ticks. If not specified, uses the crafting cycle duration.
 
+For a moving belt input, set `pickup_length` on the inserter's `source`: `1` for the exposed line on a straight
+belt or `0.5` at either underground endpoint. Sidecar 0.9.0 exports this automatically for inserters beside those
+pieces. Omitted `pickup_length` defaults to `1`, including in older configs. Moving supply uses reachable-stack
+timing; `overrides.backed_up_belts: true` selects backed-up supply independently of the physical geometry. See [pickup timing](docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
+
 ### Configuration Overrides
 
 - `terminal_swing_count`: force the output swings per cycle, instead of the count the plan works out
 - `lcm`: override the LCM calculation for the cycle length
-- `non_moving_belts`: the belts the inserters pick up from do not move (default false)
+- `backed_up_belts`: items back up at the input pickups and upstream supply refills the gaps, making one stack available each pickup tick (default false)
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
 - `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
 - `loop_seed_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, as the harness seeds)
 
-`src/config/schema.ts` (`ConfigOverridesSchema`) lists the others.
+`src/config/schema.ts` (`ConfigOverridesSchema`) lists the others. Older files using `non_moving_belts` migrate to
+`backed_up_belts` on import; if both are present, `backed_up_belts` takes precedence. New configs and exports use
+only `backed_up_belts`.
 
 ```json
 "overrides": {
   "terminal_swing_count": 4,
   "lcm": 12,
-  "non_moving_belts": true,
+  "backed_up_belts": true,
   "search_for_fewer_wake_ups": true
 }
 ```
 
 #### The belt a clock is made for
 
-The simulator's belts are always full and do not move. An inserter changes its tick timing when the items on the belt are moving, and more so when the belt has gaps, so a clock that is exact on a non-moving belt can switch an inserter off holding a partial hand on a moving one.
+The simulator assumes saturated input supply. Moving supply times the stacks within reach; backed-up supply makes one stack available each eligible pickup tick. An inserter changes its tick timing when the items on the belt are moving, and more so when the belt has gaps, so a clock that is exact on a backed-up belt can switch an inserter off holding a partial hand on a moving one.
 
 Every potential clock names the belt it is made for:
 
-- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt pickup slack. It is a rule of thumb, not a simulated moving belt: it may work on one build and not on another.
-- **non-moving belt**: the belt inserters get only the windows they need on a full belt that does not move. "Batched swings, non-moving belt" is made this way on purpose; other clocks drop the slack when they do not hold the expected output with it. A clock with a period that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
+- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt pickup slack: extra margin for late pickups on top of the simulated reachable-stack timing. Sparse upstream supply is not simulated.
+- **backed-up belt**: the belt inserters get only the windows they need with backed-up supply at the pickup. "Batched swings, backed-up belt" is made this way on purpose; other clocks drop the slack when they do not hold the expected output with it. A clock with a period that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
 
-By default a non-moving belt clock is only selected for you when no clock for a moving belt holds the target rate. Set `non_moving_belts: true` (the Belts section's "Backed up and standing still" answer in the UI) when your belts are backed up and standing still: each clock is made without the slack, and the one with the fewest wake-ups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a non-moving belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
+By default a backed-up belt clock is only selected for you when no clock for a moving belt holds the target rate. Set `backed_up_belts: true` (the Belts section's "Backed up" answer in the UI) when your belts are backed up: each clock is made without the slack, and the one with the fewest wake-ups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a backed-up belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
 
 #### Searching for fewer wake-ups
 

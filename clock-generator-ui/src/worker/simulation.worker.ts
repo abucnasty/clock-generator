@@ -157,7 +157,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
-        nonMovingBelts: alternative.belt?.kind === 'non_moving' || (alternative.belt === null && config.overrides?.non_moving_belts === true),
+        backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
     }));
     return { signature: run.signature, alternatives };
 }
@@ -320,7 +320,8 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
         inserters: validateEntries(clockGenerator.InserterConfigSchema, pasted.inserters, 'inserter'),
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
-        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined, Array.isArray(pasted.chests) ? pasted.chests : []),
+        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,
+            Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : []),
         suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
     };
 }

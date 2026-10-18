@@ -12,7 +12,7 @@ import type { GeneratedFor } from './resultsStaleness';
  * The shape of what is kept. Bump it whenever `KeptResults` or `ClockAlternativeView` changes shape (a field added,
  * removed or changed): kept results of another version are thrown away when the page opens, never shown.
  */
-export const RESULTS_SCHEMA_VERSION = 2;
+export const RESULTS_SCHEMA_VERSION = 3;
 
 /** The most generations kept, one per build */
 export const MAX_KEPT = 10;

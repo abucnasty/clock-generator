@@ -68,8 +68,8 @@ const short = (id: string, off: number, holds = true, options: ClockOptions = {}
     ...options,
 });
 
-const MOVING: PickRule = { nonMovingBelts: false, searchedForFewerWakeUps: false };
-const STILL: PickRule = { nonMovingBelts: true, searchedForFewerWakeUps: false };
+const MOVING: PickRule = { backedUpBelts: false, searchedForFewerWakeUps: false };
+const BACKED_UP: PickRule = { backedUpBelts: true, searchedForFewerWakeUps: false };
 
 const ids = <T extends { id: string }>(clocks: T[], index: number | null) => index === null ? null : clocks[index].id;
 
@@ -140,46 +140,46 @@ describe('recommendationReason', () => {
         expect(reason(risky)).toBe('Fewest wake-ups among the clocks that hold 240/s on a moving belt.');
     });
 
-    it('says the belts stand still when the build says so', () => {
-        const still = [clock('a', { beltLabel: 'non-moving' }), ...others];
-        expect(reason(still, STILL)).toBe('Fewest wake-ups among the clocks that hold 240/s and recover with belts that stand still.');
+    it('says the belts are backed up when the build says so', () => {
+        const backedUp = [clock('a', { beltLabel: 'backed-up' }), ...others];
+        expect(reason(backedUp, BACKED_UP)).toBe('Fewest wake-ups among the clocks that hold 240/s and recover with backed-up belts.');
     });
 
     it('leaves the belt out when no clocked inserter picks up from a belt', () => {
         expect(reason([clock('a', { beltLabel: '' }), ...others])).toBe('Fewest wake-ups among the clocks that hold 240/s and recover.');
     });
 
-    it('leaves the belt out for a subtick clock, made for a non-moving belt, on a build with moving belts', () => {
-        expect(reason([clock('subtick', { beltLabel: 'non-moving' }), ...others]))
+    it('leaves the belt out for a subtick clock, made for a backed-up belt, on a build with moving belts', () => {
+        expect(reason([clock('subtick', { beltLabel: 'backed-up' }), ...others]))
             .toBe('Fewest wake-ups among the clocks that hold 240/s and recover.');
     });
 
-    describe('a clock made for belts that stand still, picked because none for a moving belt meets the rate', () => {
-        const still = (id: string, options: ClockOptions = {}) =>
-            clock(id, { matches_belt_choice: false, beltLabel: 'non-moving', ...options });
+    describe('a clock made for backed-up belts, picked because none for a moving belt meets the rate', () => {
+        const backedUp = (id: string, options: ClockOptions = {}) =>
+            clock(id, { matches_belt_choice: false, beltLabel: 'backed-up', ...options });
 
         it('says it is the only one when it is', () => {
-            expect(reason([still('slackless'), short('b', 1)]))
-                .toBe('No clock made for a moving belt holds 240/s and recovers. This one, made for belts that stand still, '
+            expect(reason([backedUp('slackless'), short('b', 1)]))
+                .toBe('No clock made for a moving belt holds 240/s and recovers. This one, made for backed-up belts, '
                     + 'does. It may fail on a moving belt.');
         });
 
         it('says it has the fewest wake-ups of those that do', () => {
-            expect(reason([still('a', { wake_ups_per_minute: 30 }), still('b'), short('c', 1)]))
-                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for belts that stand still, '
+            expect(reason([backedUp('a', { wake_ups_per_minute: 30 }), backedUp('b'), short('c', 1)]))
+                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for backed-up belts, '
                     + 'this one has the fewest wake-ups. It may fail on a moving belt.');
         });
 
         it('says what broke a tie on wake-ups', () => {
-            expect(reason([still('a', { window_count: 3 }), still('b')]))
-                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for belts that stand still, '
+            expect(reason([backedUp('a', { window_count: 3 }), backedUp('b')]))
+                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for backed-up belts, '
                     + 'this one has the fewest wake-ups. 1 other clock ties on wake-ups, so the one with fewer wake '
                     + 'windows was picked. It may fail on a moving belt.');
         });
 
         it('adds the recovery note on a build with a deadlock risk', () => {
-            expect(reason([still('a', { deadlock: true, verdict: 'no recovery' })]))
-                .toBe('No clock made for a moving belt holds 240/s. This one, made for belts that stand still, does. It '
+            expect(reason([backedUp('a', { deadlock: true, verdict: 'no recovery' })]))
+                .toBe('No clock made for a moving belt holds 240/s. This one, made for backed-up belts, does. It '
                     + 'may fail on a moving belt. The recovery trials do not decide on this build.');
         });
     });
@@ -245,9 +245,9 @@ describe('recommendationReason', () => {
                 + 'only cut wake-ups.');
     });
 
-    it('leaves the belt out of the tie with belts that stand still', () => {
-        expect(reason([clock('a', { window_count: 3, beltLabel: 'non-moving' }), clock('b', { beltLabel: 'non-moving' })], STILL))
-            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover with belts that stand still. 1 other clock ties on '
+    it('leaves the belt out of the tie with backed-up belts', () => {
+        expect(reason([clock('a', { window_count: 3, beltLabel: 'backed-up' }), clock('b', { beltLabel: 'backed-up' })], BACKED_UP))
+            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover with backed-up belts. 1 other clock ties on '
                 + 'wake-ups, so the one with fewer wake windows was picked.');
     });
 
@@ -316,11 +316,11 @@ describe('RECOMMENDED_COPY', () => {
 describe('disclosureRunLine', () => {
     it('says the belt the clocks were made for and whether the searches ran', () => {
         expect(disclosureRunLine(MOVING)).toBe('This run assumed moving belts. The slower searches were only run if no other clock held the rate and recovered.');
-        expect(disclosureRunLine(STILL)).toBe('This run assumed belts that stand still. The slower searches were only run if no other clock held the rate and recovered.');
-        expect(disclosureRunLine({ nonMovingBelts: false, searchedForFewerWakeUps: true }))
+        expect(disclosureRunLine(BACKED_UP)).toBe('This run assumed backed-up belts. The slower searches were only run if no other clock held the rate and recovered.');
+        expect(disclosureRunLine({ backedUpBelts: false, searchedForFewerWakeUps: true }))
             .toBe('This run assumed moving belts. The slower searches for fewer wake-ups were run.');
-        expect(disclosureRunLine({ nonMovingBelts: true, searchedForFewerWakeUps: true }))
-            .toBe('This run assumed belts that stand still. The slower searches for fewer wake-ups were run.');
+        expect(disclosureRunLine({ backedUpBelts: true, searchedForFewerWakeUps: true }))
+            .toBe('This run assumed backed-up belts. The slower searches for fewer wake-ups were run.');
         expect(disclosureRunLine(null)).toBe(disclosureRunLine(MOVING));
     });
 });
@@ -330,9 +330,9 @@ describe('pickRuleOf', () => {
 
     it('reads the belts and the search mode from the overrides', () => {
         expect(pickRuleOf(config())).toEqual(MOVING);
-        expect(pickRuleOf(config({ non_moving_belts: true }))).toEqual(STILL);
-        expect(pickRuleOf(config({ search_for_fewer_wake_ups: true }))).toEqual({ nonMovingBelts: false, searchedForFewerWakeUps: true });
-        expect(pickRuleOf(config({ non_moving_belts: false, search_for_fewer_wake_ups: false }))).toEqual(MOVING);
+        expect(pickRuleOf(config({ backed_up_belts: true }))).toEqual(BACKED_UP);
+        expect(pickRuleOf(config({ search_for_fewer_wake_ups: true }))).toEqual({ backedUpBelts: false, searchedForFewerWakeUps: true });
+        expect(pickRuleOf(config({ backed_up_belts: false, search_for_fewer_wake_ups: false }))).toEqual(MOVING);
     });
 });
 

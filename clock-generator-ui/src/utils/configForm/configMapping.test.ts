@@ -15,7 +15,7 @@ const imported = {
         { source: { type: 'machine', id: 1 }, sink: { type: 'machine', id: 2 }, stack_size: 16 },
         {
             id: 5,
-            source: { type: 'belt', id: 1, near_lane: 2 },
+            source: { type: 'belt', id: 1, near_lane: 2, pickup_length: 0.5 },
             sink: { type: 'machine', id: 2 },
             stack_size: 16,
             filters: ['iron-plate'],
@@ -53,7 +53,7 @@ describe('canonical repeated-unit form application', () => {
                 { id: i * 2 + 1, source: { type: 'belt', id: 1, near_lane: i < 4 ? 1 : 2 }, sink: { type: 'machine', id: i + 1 },
                     overrides: { enable_control: { mode: 'ALWAYS' } }, filters: [i < 4 ? 'iron-plate' : 'copper-plate'] },
                 { id: i * 2 + 2, source: { type: 'machine', id: i + 1 }, sink: { type: 'belt', id: 2 }, filters: [i < 4 ? 'iron-gear-wheel' : 'copper-cable'] },
-            ]).flat(), chests: [], overrides: { ignored_lcm_ingredients: ['iron-plate', 'copper-plate'], non_moving_belts: false, loop_seed_items: 0 },
+            ]).flat(), chests: [], overrides: { ignored_lcm_ingredients: ['iron-plate', 'copper-plate'], backed_up_belts: false, loop_seed_items: 0 },
         } as Config);
         form.inserters[0]._forced_always = true;
         const before = structuredClone(form), plan = planRepeatedUnitConversion(formDataToConfig(form));

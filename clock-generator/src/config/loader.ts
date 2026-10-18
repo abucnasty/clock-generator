@@ -1,5 +1,5 @@
 import { ChestType } from "../common/entity-types";
-import { Config, ConfigSchema } from "./schema";
+import { ParsedConfig, ConfigSchema } from "./schema";
 import { ConfigValidationError } from "./errors";
 import * as fs from "fs";
 import * as path from "path";
@@ -12,7 +12,7 @@ import * as path from "path";
  * Result of a config parse operation that may fail.
  */
 type ConfigParseResult =
-    | { success: true; config: Config }
+    | { success: true; config: ParsedConfig }
     | { success: false; error: ConfigValidationError };
 
 // ============================================================================
@@ -27,7 +27,7 @@ type ConfigParseResult =
  * @throws {ConfigValidationError} If the configuration does not match the schema
  * @throws {Error} If the string is not JSON
  */
-export async function parseConfig(jsonString: string): Promise<Config> {
+export async function parseConfig(jsonString: string): Promise<ParsedConfig> {
     let parsed: unknown;
     try {
         parsed = JSON.parse(jsonString);
@@ -89,7 +89,7 @@ export async function parseConfigSafe(jsonString: string): Promise<ConfigParseRe
  * const config = await loadConfigFromFile("./config/production.json");
  * ```
  */
-export async function loadConfigFromFile(filePath: string): Promise<Config> {
+export async function loadConfigFromFile(filePath: string): Promise<ParsedConfig> {
     const absolutePath = path.isAbsolute(filePath)
         ? filePath
         : path.resolve(process.cwd(), filePath);

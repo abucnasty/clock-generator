@@ -59,8 +59,8 @@ interface ScaffoldBuild {
     warmup_ticks: number;
     /** Ticks the build runs on the generated clock before the recording starts, so its start-up is left out */
     settle_ticks: number;
-    /** The clock is made for belts that do not move (`overrides.non_moving_belts`), which is what a scaffold has */
-    non_moving_belts?: boolean;
+    /** The clock is made for backed-up belts (`overrides.backed_up_belts`), which is what a scaffold has */
+    backed_up_belts?: boolean;
     /**
      * The build is recorded from the staged start of the harness, as the simulator runs it: the belts are saturated first,
      * then every inserter of the cell and the clock are placed in one tick, with the machines empty but for the egg loop,
@@ -112,13 +112,13 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Since the rules of
     // issue 152 (2026-10-14) batched swings gets back from every loss and is selected; from 2026-10-10 until then the
     // clock with 2 output swings per cycle was, since batched swings did not get back from a loss of nutrients
-    "agricultural science (belts do not move)": {
+    "agricultural science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
         settle_ticks: 4800,
-        non_moving_belts: true,
+        backed_up_belts: true,
         moved_open: {
             inserter_ids: [3, 4, 6, 7],
             why: "under the 2-swing clock the inserters that bring nutrients to the egg biochambers move 979.89 nutrients a period in "
@@ -133,13 +133,13 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         settle_ticks: 1200,
     },
     // its selected clock has no belt pickup slack: full-hand output swings, which the simulator holds stable without it
-    "automation science (belts do not move)": {
+    "automation science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-scaffold.txt"),
         config: ConfigPaths.AUTOMATION_SCIENCE,
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 1200,
-        non_moving_belts: true,
+        backed_up_belts: true,
     },
     "automation science with a belted buffer": {
         scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-belted-buffer-scaffold.txt"),
@@ -219,13 +219,13 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 2400,
     },
-    "utility science (belts do not move)": {
+    "utility science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-scaffold.txt"),
         config: ConfigPaths.UTILITY_SCIENCE,
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 2400,
-        non_moving_belts: true,
+        backed_up_belts: true,
     },
     "utility science with processing units and low density structures on one belt": {
         scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-belted-combined-blue-and-lds-scaffold.txt"),
@@ -234,13 +234,13 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 2400,
     },
-    "utility science with processing units and low density structures on one belt (belts do not move)": {
+    "utility science with processing units and low density structures on one belt (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-belted-combined-blue-and-lds-scaffold.txt"),
         config: ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS,
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 2400,
-        non_moving_belts: true,
+        backed_up_belts: true,
     },
     "low density structure": {
         scaffold: path.join(SAMPLES, "intermediates", "low-density-structure", "low-density-structure-scaffold.txt"),
@@ -314,11 +314,11 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "scaffold-recordings-"));
 
             const loaded = await loadConfigFromFile(build.config);
-            const config = build.non_moving_belts ? { ...loaded, overrides: { ...loaded.overrides, non_moving_belts: true } } : loaded;
+            const config = build.backed_up_belts ? { ...loaded, overrides: { ...loaded.overrides, backed_up_belts: true } } : loaded;
             const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
             const selected = alternatives[selected_index];
-            if (build.non_moving_belts) {
-                expect(selected.belt, `the selected clock (${selected.label}) is made without belt pickup slack`).toEqual({ kind: "non_moving" });
+            if (build.backed_up_belts) {
+                expect(selected.belt, `the selected clock (${selected.label}) is made without belt pickup slack`).toEqual({ kind: "backed_up" });
             }
             // stable, but for a build with a deadlock risk: there a clock that holds its expected output is selected
             // whether it gets back from every backpressure loss or not (GOALS.md, "Two inserters that bring the same item")

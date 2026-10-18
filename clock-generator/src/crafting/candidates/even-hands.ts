@@ -25,8 +25,8 @@ import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
  * and two inserters that take from one machine at the same rate take from it in the same ticks.
  *
  * Only for a build whose inserters all take from machines or chests, and all move a whole number of hands a period:
- * a hand from a belt fills a stack a tick on a belt that does not move (row 11), and on a moving belt that is not
- * modelled (GOALS.md, "Wake-up Lists"). Not for a build with inserters outside the plan (fuel, by-products, loops).
+ * belt pickups fill over several ticks, and these windows are only derived for machine and chest sources.
+ * Not for a build with inserters outside the plan (fuel, by-products, loops).
  */
 export function evenHandsWindows(
     entity_registry: ReadableEntityRegistry,

@@ -3,6 +3,7 @@ import { isValidElement, type ReactNode } from 'react';
 import { Button, FormControlLabel } from '@mui/material';
 import { Option } from 'clock-generator/light';
 import { InserterAssumptions } from './InserterAssumptions';
+import { PickupGeometrySummary } from './PickupGeometrySummary';
 import { ConfigImportExport, type BuildEntryHandle } from './ConfigImportExport';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import type { PastedEntities } from '../worker/types';
@@ -71,6 +72,22 @@ beforeEach(() => {
         pasteIsNextStep: false, buildName: null, buildTitle: 'Test build' };
 });
 afterEach(() => vi.unstubAllGlobals());
+
+it('shows capture diagnostics alongside prospective pickup coverage, only while importing those inserters', async () => {
+    incoming.inserters = [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } }];
+    incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
+    vi.stubGlobal('navigator', { clipboard: { readText: async () => JSON.stringify({
+        machines: incoming.machines, inserters: incoming.inserters, belts: incoming.belts,
+        pickup_warnings: [{ inserter_id: 1, reason: 'bend' }],
+    }) } });
+    await paste();
+    const preview = Render();
+    expect(preview.find(e => e.type === PickupGeometrySummary)?.props.build).toMatchObject({ inserters: [{ source: { type: 'belt' } }] });
+    expect(preview.some(e => JSON.stringify(e.props.children)?.includes('pickup is on a belt bend'))).toBe(true);
+    const selected = preview.find(e => e.type === FormControlLabel && e.props.label === 'Inserters (1)')!;
+    (elements(selected.props.control)[0].props.onChange as () => void)();
+    expect(Render().some(e => JSON.stringify(e.props.children)?.includes('pickup is on a belt bend'))).toBe(false);
+});
 
 describe('Paste acknowledgment bound to the actual preview', () => {
     it('guards Apply until the current mixed preview is deliberately acknowledged, then applies once with one Undo', async () => {

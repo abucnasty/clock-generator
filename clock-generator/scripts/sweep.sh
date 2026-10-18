@@ -1,8 +1,7 @@
 #!/bin/sh
 # scripts/sweep.sh <out dir> [processes, default 6]
 # Every potential clock of every sample, one JSON a sample (see sweep-sample.js). Build first: `npx tsc`.
-# About 2 minutes with 6 processes, and 8 GB at the start: run `free -g` first. NON_MOVING=1 turns "Belts do not
-# move" on. SEARCH=1 turns "Search for fewer wake-ups" on, which runs the four searches for every sample and takes
+# About 2 minutes with 6 processes, and 8 GB at the start: run `free -g` first. BACKED_UP=1 turns "Backed-up belts" on. SEARCH=1 turns "Search for fewer wake-ups" on, which runs the four searches for every sample and takes
 # about 4 minutes: without it they only run where no other clock is stable. START_DEPENDENCE=1 tries every clock from
 # the other starts too (docs/stability.md, "How a clock is started"). PROCESSING_UNITS_BELT_EXPORT is left out,
 # which takes more than 5 minutes by itself: FULL=1 sweeps it too, for the sweep before a pull request.

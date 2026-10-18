@@ -3,7 +3,7 @@ import type { ClockRanking } from 'clock-generator/browser';
 import { formDataToConfig } from './configForm/configMapping';
 import * as edits from './configForm/edits';
 import { createDefaultConfig, type ConfigFormData } from './configForm/formData';
-import { BELT_COPY, beltQuestionOf, beltResultsLine, nonMovingBeltsFor, otherAnswer, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './beltQuestion';
+import { BELT_COPY, beltQuestionOf, beltResultsLine, backedUpBeltsFor, otherAnswer, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './beltQuestion';
 import { configKeyOf, generatedForOf, isStale } from './resultsStaleness';
 
 /** A build as the page holds it: belt 1 feeds inserter 1, which puts into machine 1 */
@@ -50,32 +50,32 @@ describe('beltQuestionOf', () => {
     it('reads the answer from the overrides, asked or not', () => {
         const build = { inserters: [fromBelt(1)], belts: [{ id: 1 }] };
         expect(beltQuestionOf(build).answer).toBe('moving');
-        expect(beltQuestionOf({ ...build, overrides: { non_moving_belts: true } }).answer).toBe('standing');
-        expect(beltQuestionOf({ ...build, overrides: { non_moving_belts: false } }).answer).toBe('moving');
-        expect(beltQuestionOf({ inserters: [], belts: [], overrides: { non_moving_belts: true } }))
-            .toEqual({ ask: false, answer: 'standing' });
+        expect(beltQuestionOf({ ...build, overrides: { backed_up_belts: true } }).answer).toBe('backed_up');
+        expect(beltQuestionOf({ ...build, overrides: { backed_up_belts: false } }).answer).toBe('moving');
+        expect(beltQuestionOf({ inserters: [], belts: [], overrides: { backed_up_belts: true } }))
+            .toEqual({ ask: false, answer: 'backed_up' });
     });
 
     it('gives the same for the form and for its config', () => {
         const moving = form();
-        const standing = edits.updateOverrides(moving, 'non_moving_belts', true);
+        const backedUp = edits.updateOverrides(moving, 'backed_up_belts', true);
         expect(beltQuestionOf(moving)).toEqual({ ask: true, answer: 'moving' });
         expect(beltQuestionOf(formDataToConfig(moving))).toEqual(beltQuestionOf(moving));
-        expect(beltQuestionOf(standing)).toEqual({ ask: true, answer: 'standing' });
-        expect(beltQuestionOf(formDataToConfig(standing))).toEqual(beltQuestionOf(standing));
+        expect(beltQuestionOf(backedUp)).toEqual({ ask: true, answer: 'backed_up' });
+        expect(beltQuestionOf(formDataToConfig(backedUp))).toEqual(beltQuestionOf(backedUp));
     });
 });
 
-describe('nonMovingBeltsFor', () => {
-    it('stores nothing for Moving and true for Standing', () => {
-        expect(nonMovingBeltsFor('moving')).toBeUndefined();
-        expect(nonMovingBeltsFor('standing')).toBe(true);
+describe('backedUpBeltsFor', () => {
+    it('stores nothing for Moving and true for BackedUp', () => {
+        expect(backedUpBeltsFor('moving')).toBeUndefined();
+        expect(backedUpBeltsFor('backed_up')).toBe(true);
     });
 
     it('leaves no overrides when Moving takes back the only one', () => {
-        const standing = edits.updateOverrides(form(), 'non_moving_belts', nonMovingBeltsFor('standing'));
-        expect(beltQuestionOf(standing).answer).toBe('standing');
-        const moving = edits.updateOverrides(standing, 'non_moving_belts', nonMovingBeltsFor('moving'));
+        const backedUp = edits.updateOverrides(form(), 'backed_up_belts', backedUpBeltsFor('backed_up'));
+        expect(beltQuestionOf(backedUp).answer).toBe('backed_up');
+        const moving = edits.updateOverrides(backedUp, 'backed_up_belts', backedUpBeltsFor('moving'));
         expect(moving).not.toHaveProperty('overrides');
         expect(formDataToConfig(moving)).not.toHaveProperty('overrides');
         expect(beltQuestionOf(moving).answer).toBe('moving');
@@ -83,32 +83,32 @@ describe('nonMovingBeltsFor', () => {
 
     it('keeps the other overrides when Moving takes the answer back', () => {
         const withLcm = edits.updateOverrides(form(), 'lcm', 120);
-        const standing = edits.updateOverrides(withLcm, 'non_moving_belts', nonMovingBeltsFor('standing'));
-        const moving = edits.updateOverrides(standing, 'non_moving_belts', nonMovingBeltsFor('moving'));
+        const backedUp = edits.updateOverrides(withLcm, 'backed_up_belts', backedUpBeltsFor('backed_up'));
+        const moving = edits.updateOverrides(backedUp, 'backed_up_belts', backedUpBeltsFor('moving'));
         expect(moving.overrides).toEqual({ lcm: 120 });
     });
 });
 
 describe('withBeltAnswer', () => {
     const setOnForm = (config: ConfigFormData, answer: BeltAnswer) =>
-        edits.updateOverrides(config, 'non_moving_belts', nonMovingBeltsFor(answer));
+        edits.updateOverrides(config, 'backed_up_belts', backedUpBeltsFor(answer));
     const forms: [string, ConfigFormData][] = [
         ['no overrides', form()],
         ['an LCM override', edits.updateOverrides(form(), 'lcm', 120)],
-        ['Standing already', setOnForm(form(), 'standing')],
-        ['Standing beside an LCM override', setOnForm(edits.updateOverrides(form(), 'lcm', 120), 'standing')],
-        ['an imported false', edits.updateOverrides(form(), 'non_moving_belts', false)],
+        ['BackedUp already', setOnForm(form(), 'backed_up')],
+        ['BackedUp beside an LCM override', setOnForm(edits.updateOverrides(form(), 'lcm', 120), 'backed_up')],
+        ['an imported false', edits.updateOverrides(form(), 'backed_up_belts', false)],
     ];
 
     it.each(forms)('gives the key the form has once the answer is set, from %s', (_, start) => {
-        for (const answer of ['moving', 'standing'] as const) {
+        for (const answer of ['moving', 'backed_up'] as const) {
             expect(configKeyOf(withBeltAnswer(formDataToConfig(start), answer)))
                 .toBe(configKeyOf(formDataToConfig(setOnForm(start, answer))));
         }
     });
 
     it('leaves the config it was given alone', () => {
-        const config = formDataToConfig(setOnForm(form(), 'standing'));
+        const config = formDataToConfig(setOnForm(form(), 'backed_up'));
         const before = configKeyOf(config);
         withBeltAnswer(config, 'moving');
         expect(configKeyOf(config)).toBe(before);
@@ -117,43 +117,43 @@ describe('withBeltAnswer', () => {
 
 describe('otherAnswer and beltResultsLine', () => {
     it('gives the other answer', () => {
-        expect(otherAnswer('moving')).toBe('standing');
-        expect(otherAnswer('standing')).toBe('moving');
+        expect(otherAnswer('moving')).toBe('backed_up');
+        expect(otherAnswer('backed_up')).toBe('moving');
     });
 
     it('says which belt setting the run used, with the action for the other answer', () => {
         expect(beltResultsLine('moving')).toEqual({
             text: 'This run used your Moving belt setting.',
-            actionLabel: 'My belts stand still. Generate again',
-            switchTo: 'standing',
+            actionLabel: 'My belts are backed up. Generate again',
+            switchTo: 'backed_up',
         });
-        expect(beltResultsLine('standing')).toEqual({
-            text: 'This run used your Backed up and standing still belt setting.',
+        expect(beltResultsLine('backed_up')).toEqual({
+            text: 'This run used your Backed up belt setting.',
             actionLabel: 'My belts move. Generate again',
             switchTo: 'moving',
         });
         expect(beltResultsLine('moving').actionLabel).toBe(BELT_COPY.actionMoving);
-        expect(beltResultsLine('standing').text).toBe(BELT_COPY.resultsStanding);
+        expect(beltResultsLine('backed_up').text).toBe(BELT_COPY.resultsBackedUp);
     });
 });
 
 describe('generatedForOf and the belt answer', () => {
     it('records the question as the config answered it', () => {
-        const config = formDataToConfig(edits.updateOverrides(form(), 'non_moving_belts', true));
+        const config = formDataToConfig(edits.updateOverrides(form(), 'backed_up_belts', true));
         expect(generatedForOf(config).beltQuestion).toEqual(beltQuestionOf(config));
-        expect(generatedForOf(config).beltQuestion).toEqual({ ask: true, answer: 'standing' });
+        expect(generatedForOf(config).beltQuestion).toEqual({ ask: true, answer: 'backed_up' });
     });
 
     it('makes the results out of date when the answer changes', () => {
         const moving = formDataToConfig(form());
-        const standing = formDataToConfig(edits.updateOverrides(form(), 'non_moving_belts', true));
-        expect(configKeyOf(moving)).not.toBe(configKeyOf(standing));
-        expect(isStale(generatedForOf(moving), configKeyOf(standing))).toBe(true);
+        const backedUp = formDataToConfig(edits.updateOverrides(form(), 'backed_up_belts', true));
+        expect(configKeyOf(moving)).not.toBe(configKeyOf(backedUp));
+        expect(isStale(generatedForOf(moving), configKeyOf(backedUp))).toBe(true);
         expect(isStale(generatedForOf(moving), configKeyOf(moving))).toBe(false);
     });
 });
 
-describe('standingBeltsHint', () => {
+describe('backedUpBeltsHint', () => {
     /** A clock at the target rate made for a moving belt, with 10 wake-ups and 4 windows, unless told otherwise */
     const clock = (ranking: Partial<ClockRanking> = {}) => ({
         ranking: {
@@ -166,43 +166,43 @@ describe('standingBeltsHint', () => {
             ...ranking,
         },
     });
-    const still = (wakeUps: number | null, ranking: Partial<ClockRanking> = {}) =>
+    const backedUp = (wakeUps: number | null, ranking: Partial<ClockRanking> = {}) =>
         clock({ matches_belt_choice: false, wake_ups_per_minute: wakeUps, ...ranking });
 
-    it('says how few wake-ups the build may do with on belts that stand still', () => {
-        const clocks = [clock({ wake_ups_per_minute: 177 }), still(0)];
-        expect(standingBeltsHint(clocks, 0, 'moving'))
-            .toBe('On belts that stand still, this build may do with 0 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
+    it('says how few wake-ups the build may do with on backed-up belts', () => {
+        const clocks = [clock({ wake_ups_per_minute: 177 }), backedUp(0)];
+        expect(backedUpBeltsHint(clocks, 0, 'moving'))
+            .toBe('On backed-up belts, this build may do with 0 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
     });
 
-    it('says nothing on a standing-belt result, or with no pick', () => {
-        const clocks = [clock({ wake_ups_per_minute: 177 }), still(0)];
-        expect(standingBeltsHint(clocks, 0, 'standing')).toBeNull();
-        expect(standingBeltsHint(clocks, null, 'moving')).toBeNull();
-        expect(standingBeltsHint([], 0, 'moving')).toBeNull();
+    it('says nothing on a backed-up belt result, or with no pick', () => {
+        const clocks = [clock({ wake_ups_per_minute: 177 }), backedUp(0)];
+        expect(backedUpBeltsHint(clocks, 0, 'backed_up')).toBeNull();
+        expect(backedUpBeltsHint(clocks, null, 'moving')).toBeNull();
+        expect(backedUpBeltsHint([], 0, 'moving')).toBeNull();
     });
 
-    it('says nothing when the clock for standing belts has as many wake-ups or more, to a thousandth', () => {
-        expect(standingBeltsHint([clock({ wake_ups_per_minute: 12 }), still(12.0004)], 0, 'moving')).toBeNull();
-        expect(standingBeltsHint([clock({ wake_ups_per_minute: 12 }), still(30)], 0, 'moving')).toBeNull();
+    it('says nothing when the clock for backed-up belts has as many wake-ups or more, to a thousandth', () => {
+        expect(backedUpBeltsHint([clock({ wake_ups_per_minute: 12 }), backedUp(12.0004)], 0, 'moving')).toBeNull();
+        expect(backedUpBeltsHint([clock({ wake_ups_per_minute: 12 }), backedUp(30)], 0, 'moving')).toBeNull();
     });
 
-    it('says nothing when the best clock for standing belts does not meet the rate', () => {
-        const clocks = [clock({ wake_ups_per_minute: 177 }), still(0, { meets_target_rate: false, rate_off_target: -10 })];
-        expect(standingBeltsHint(clocks, 0, 'moving')).toBeNull();
+    it('says nothing when the best clock for backed-up belts does not meet the rate', () => {
+        const clocks = [clock({ wake_ups_per_minute: 177 }), backedUp(0, { meets_target_rate: false, rate_off_target: -10 })];
+        expect(backedUpBeltsHint(clocks, 0, 'moving')).toBeNull();
     });
 
     it('says nothing when either wake-up count is missing', () => {
-        expect(standingBeltsHint([clock({ wake_ups_per_minute: null }), still(0)], 0, 'moving')).toBeNull();
-        expect(standingBeltsHint([clock({ wake_ups_per_minute: 177 }), still(null)], 0, 'moving')).toBeNull();
+        expect(backedUpBeltsHint([clock({ wake_ups_per_minute: null }), backedUp(0)], 0, 'moving')).toBeNull();
+        expect(backedUpBeltsHint([clock({ wake_ups_per_minute: 177 }), backedUp(null)], 0, 'moving')).toBeNull();
     });
 
     it('prints the numbers rounded, as the table does', () => {
-        expect(standingBeltsHint([clock({ wake_ups_per_minute: 176.6 }), still(3.2)], 0, 'moving'))
-            .toBe('On belts that stand still, this build may do with 3 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
+        expect(backedUpBeltsHint([clock({ wake_ups_per_minute: 176.6 }), backedUp(3.2)], 0, 'moving'))
+            .toBe('On backed-up belts, this build may do with 3 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
     });
 
     it('says nothing when the difference rounds away', () => {
-        expect(standingBeltsHint([clock({ wake_ups_per_minute: 176.7 }), still(176.6)], 0, 'moving')).toBeNull();
+        expect(backedUpBeltsHint([clock({ wake_ups_per_minute: 176.7 }), backedUp(176.6)], 0, 'moving')).toBeNull();
     });
 });

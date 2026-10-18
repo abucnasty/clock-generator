@@ -11,6 +11,14 @@ afterEach(() => {
 });
 
 describe('readSavedConfig', () => {
+    it.each([false, true])('migrates the former belt setting %s before the form is read or exported', value => {
+        const saved = JSON.stringify({ ...createDefaultConfig(), overrides: { non_moving_belts: value, lcm: 2 } });
+        const form = readSavedConfig(saved)!;
+        expect(form.overrides).toEqual({ backed_up_belts: value, lcm: 2 });
+        expect(formDataToConfig(form).overrides).toEqual(form.overrides);
+        expect(serializeConfig(form)).not.toContain('non_moving_belts');
+    });
+
     it('reads the saved form state with the legacy fields migrated', () => {
         const saved = JSON.stringify({
             target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },

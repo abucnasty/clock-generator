@@ -155,6 +155,8 @@ local function extract_inserter_data(entity)
             }
             if target_type == "belt" then
                 source.near_lane = helpers.get_near_lane(entity, pickup_target)
+                source.pickup_length = helpers.get_pickup_length(entity, pickup_target)
+                source.pickup_problem = helpers.get_pickup_problem(entity, pickup_target)
             end
 
         end

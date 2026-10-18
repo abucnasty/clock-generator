@@ -9,7 +9,7 @@ const risksOf = (config: Config) => sharedItemDeadlockRisks(createEntityRegistry
 
 // Utility science: inserter 1 brings flying robot frames and low density structures off one belt, inserter 2 low
 // density structures and processing units off another, both into the one machine. Recorded in Factorio 2.1.21 on
-// 2026-10-10 under uneven output swings with belts that do not move: the machine held 16 processing units and 16 low
+// 2026-10-10 under uneven output swings with backed-up belts: the machine held 16 processing units and 16 low
 // density structures and no frames, inserter 1 held 12 low density structures, and nothing moved in 53 periods.
 describe("the deadlock risk of two inserters that bring the same item", () => {
     let utility_science: Config;

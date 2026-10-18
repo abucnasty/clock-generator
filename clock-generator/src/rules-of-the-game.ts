@@ -82,7 +82,7 @@ export { beltPickupSlackTicks } from "./crafting/clock";
 
 /**
  * 11. Room for a hand of fuel (GOALS.md "Wake-up Lists"): the same ticks, for an inserter that takes fuel off a belt
- * as well as an ingredient, on a belt that does not move. Cases: `rules-of-the-game.test.ts` (agricultural science,
+ * as well as an ingredient, on a backed-up belt. Cases: `rules-of-the-game.test.ts` (agricultural science,
  * 377 of 400 a period without it).
  */
 export { fuelHandRoomTicks } from "./crafting/clock";

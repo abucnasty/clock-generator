@@ -21,6 +21,7 @@ export interface ImportInput {
     sidecar_version: string | null;
     machines: readonly ImportedMachine[];
     chests?: readonly unknown[];
+    inserters?: readonly unknown[];
 }
 
 export type ImportStep = (input: ImportInput) => Option<string>;

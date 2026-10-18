@@ -30,6 +30,15 @@ function exportAndImport(form: ReturnType<typeof createDefaultConfig>) {
 }
 
 describe('parseFormConfig', () => {
+    it('imports the former belt setting and exports only backed_up_belts', () => {
+        const file = { ...formDataToConfig(createDefaultConfig()), overrides: { non_moving_belts: true } };
+        const imported = parseFormConfig(ConfigSchema, readConfigFile(JSON.stringify(file)));
+        expect(imported.success).toBe(true);
+        const exported = formDataToConfig(configToFormData(imported.data!));
+        expect(exported.overrides).toEqual({ backed_up_belts: true });
+        expect(JSON.stringify(exported)).not.toContain('non_moving_belts');
+    });
+
     it('preserves imported geometry, fuel and explicit overrides, refuses unsupported geometry edits, and keeps mixed-drop drafts recoverable', () => {
         let form = edits.updateTargetOutput(createDefaultConfig(), 'recipe', 'rocket-fuel');
         form.machines[0] = { ...form.machines[0], recipe: 'rocket-fuel-from-jelly', type: 'biochamber', fuel: 'nutrients' };

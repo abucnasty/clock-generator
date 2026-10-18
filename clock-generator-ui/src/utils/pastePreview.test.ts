@@ -109,7 +109,7 @@ describe('atomic selective Paste', () => {
             _chest_settings: { buffer_filter: 'coal', storage_size: 2 } }];
         form.drills = { mining_productivity_level: 12, configs: [{ ...drill(3), _uuid: 'retained-drill' }] };
         form.target_output = { recipe: '', copies: 0, items_per_second: 0 };
-        form.overrides = { non_moving_belts: true };
+        form.overrides = { backed_up_belts: true };
         const before = structuredClone({ form, incoming });
         for (let mask = 0; mask < 32; mask++) {
             const selections = { ...none };

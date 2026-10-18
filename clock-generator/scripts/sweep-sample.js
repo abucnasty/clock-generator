@@ -1,6 +1,6 @@
 // node scripts/sweep-sample.js <out dir> <KEY>
 // Every potential clock of one sample, as <out dir>/<KEY>.json: verdict, rate, wake-ups, belt and windows of each, and
-// which one is selected. NON_MOVING=1 turns "Belts do not move" on, SEARCH=1 "Search for fewer wake-ups", START_DEPENDENCE=1 "Check start dependence". See sweep.sh
+// which one is selected. BACKED_UP=1 turns "Backed-up belts" on, SEARCH=1 "Search for fewer wake-ups", START_DEPENDENCE=1 "Check start dependence". See sweep.sh
 // for all samples.
 const path = require("path"), fs = require("fs");
 const out = path.resolve(process.argv[2]);
@@ -13,7 +13,7 @@ const { describeSharedItem } = dist("crafting/deadlock-risk.js");
     const started = Date.now();
     const row = { key };
     try {
-        const config = await loadSample(key, process.env.NON_MOVING === "1");
+        const config = await loadSample(key, process.env.BACKED_UP === "1");
         const { alternatives, selected_index, skipped_searches, start_dependence_checked } = generateClockAlternatives(config, { logger: quiet });
         row.selected = alternatives[selected_index]?.id;
         // the searches that did not run, since a clock made without one is stable

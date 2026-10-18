@@ -102,3 +102,9 @@ it('asks older sidecar imports with infinity chests to review settings, without 
     expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, chests)).toEqual(Option.none());
     expect(chests[0]).not.toHaveProperty('remove_unfiltered_items');
 });
+
+it('asks older belt imports to re-export pickup geometry rather than silently claiming it is modelled', () => {
+    const inserters = [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } }];
+    expect(Option.toNullable(checkSidecarImport('0.8.0', [], undefined, [], inserters))).toContain('exposed belt pickup length was not exported');
+    expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], inserters)).toEqual(Option.none());
+});

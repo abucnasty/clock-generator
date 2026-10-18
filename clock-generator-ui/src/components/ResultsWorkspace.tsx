@@ -7,6 +7,7 @@ import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewCo
 import { useBuildSection } from '../hooks/useBuildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
 import { InserterAssumptions } from './InserterAssumptions';
+import { PickupGeometrySummary } from './PickupGeometrySummary';
 import type {
     LogMessage,
     DebugSteps,
@@ -34,6 +35,7 @@ import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
 
 interface ResultsWorkspaceProps {
+    onEditPickup?: (id: number) => void;
     installOpen: boolean;
     onInstallClose: () => void;
     onInstall: () => void;
@@ -215,13 +217,14 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Button></Box>}
                 runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">
-                        These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.non_moving_belts ? 'standing-still' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
+                        These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.backed_up_belts ? 'backed-up' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
                         {selected.assumptions?.loopSeeds.length ? ` ${selected.assumptions.loopSeeds.length} modeled loop seed(s).` : ''}
                         {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' Supplied output-drop positions model shared-lane spacing.' : ''}
                         {selected.assumptions?.outputDrops.some(drop => drop.mode === 'free-lane') ? ' Output belts without supplied shared-lane positions use free-lane drop timing.' : ''}
                         {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
                     </Typography>
                     {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
+                    {saved && <PickupGeometrySummary build={saved} savedRun onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
                 </Box>}
             />
 

@@ -11,7 +11,6 @@ import type {
     ConfigValidation,
     FuelLevelSeries,
     FuelPlan,
-    InserterConfigSchema,
     InserterCoverageIssue,
     MachineConfigurationSchema,
     MiningDrillConfigSchema,
@@ -131,7 +130,7 @@ export interface ClockAlternativeView {
      * item to a machine, and what can come of it. Null for a build without one.
      */
     deadlockRisk: string | null;
-    /** The belt the clock is made for: "moving (+4 ticks)" or "non-moving"; empty when no clocked inserter picks up from a belt */
+    /** The belt the clock is made for: "moving (+4 ticks)" or "backed-up"; empty when no clocked inserter picks up from a belt */
     beltLabel: string;
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;
@@ -164,7 +163,7 @@ export interface ClockAlternativeView {
     /** Exact independent inserter clocks exported with this alternative, including measured fuel clocks. */
     inserterClocks?: RecordTimelineRequest['inserter_clocks'];
     /** The belt timing actually used by this alternative, including clocks for the other belt setting. */
-    nonMovingBelts?: boolean;
+    backedUpBelts?: boolean;
 }
 
 export interface ClockModelAssumptions {
@@ -344,7 +343,7 @@ export interface FactorioLookups {
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 export type MiningDrillConfiguration = z.infer<typeof MiningDrillConfigSchema>;
-export type InserterConfiguration = z.infer<typeof InserterConfigSchema>;
+export type InserterConfiguration = Config['inserters'][number];
 export type BeltConfiguration = z.infer<typeof BeltConfigSchema>;
 export type ChestConfiguration = z.infer<typeof ChestConfigSchema>;
 

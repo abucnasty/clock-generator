@@ -3,7 +3,7 @@
 // (GOALS.md, "Working Rules": margin comes before precision), as <out dir>/<KEY>.json. Every window of the clock loses
 // its first tick in one trial and its last tick in another; a window of one tick is left as it is. Each trial is the
 // check the generator makes of its own clocks (clockFromWindows), and so is a third with the windows unchanged, which
-// has to hold for the other two to say anything. Simulator only. NON_MOVING=1 turns "Belts do not move" on.
+// has to hold for the other two to say anything. Simulator only. BACKED_UP=1 turns "Backed-up belts" on.
 // For all samples: scripts/margin-sweep.sh. The table: scripts/margin-table.py.
 const path = require("path"), fs = require("fs");
 const out = path.resolve(process.argv[2]);
@@ -30,7 +30,7 @@ const holds = (config, clock_windows, period) => {
     const started = Date.now();
     const row = { key, clocks: [] };
     try {
-        const config = await loadSample(key, process.env.NON_MOVING === "1");
+        const config = await loadSample(key, process.env.BACKED_UP === "1");
         const generated = Date.now();
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         row.generate_seconds = (Date.now() - generated) / 1000;

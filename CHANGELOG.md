@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.18.0] - 2026-10-18
+
+### Fixed
+- Model moving belt pickups from the stacks within reach, including the shorter exposed length at underground entrances and exits. Try the nearest lane first and fall back to the other lane when it carries the same item. This corrects pickup timing and generated clocks on affected builds.
+
+### Added
+- Choose Straight belt or Underground belt for each belt-fed inserter in either editor. Sidecar 0.9.1 captures supported pickup geometry and identifies bends, splitters and inline pickups it cannot classify. Imports and saved results show pickup coverage and the assumptions used for that run.
+
+### Changed
+- Omitted pickup length defaults to a straight belt in the UI and engine. Underground pickups explicitly use half-tile reach.
+- Use Moving or Backed up consistently for input supply, independently of pickup geometry. The config setting is `overrides.backed_up_belts`; older `non_moving_belts` settings migrate on import. Editing either supply or geometry marks previous results out of date.
+
 ## [0.17.0] - 2026-10-17
 
 ### Added

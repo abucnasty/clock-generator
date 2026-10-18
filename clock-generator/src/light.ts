@@ -30,3 +30,4 @@ export { Option } from "./data-types/option";
 
 export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-value";
 export { fraction } from "./data-types/fraction";
+export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";

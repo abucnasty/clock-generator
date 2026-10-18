@@ -113,7 +113,7 @@ export interface ClockAlternativesPlan {
     tasks: ClockAlternativeTask[];
 }
 
-/** The id of the alternative made without belt pickup slack on purpose: batched swings for a non-moving belt */
+/** The id of the alternative made without belt pickup slack on purpose: batched swings for a backed-up belt */
 const WITHOUT_BELT_PICKUP_SLACK_ID = "planned";
 
 
@@ -165,12 +165,12 @@ function takesFuelOffABelt(config: Config): boolean {
 }
 
 /**
- * For a config whose belts do not move. A clock is then made without belt pickup slack, and some clocks do not hold
+ * For a config whose belts are backed up. A clock is then made without belt pickup slack, and some clocks do not hold
  * the expected output that way, also on the simulator's belt.
  *
  * Such a clock is made again with room for a hand of fuel in the windows of the inserters that take fuel off a belt
  * as well as an ingredient (`withFuelHandRoom`, which gives nothing for a build without one), and that one is kept
- * when it holds. It is still a clock for a belt that does not move: the room is what the fuel needs there. A clock
+ * when it holds. It is still a clock for a backed-up belt: the room is what the fuel needs there. A clock
  * that does not hold either way is offered as it is, without the slack: until 2026-10-10 it was made again with the
  * slack, which no selected clock of any sample needed once the simulator took from the nearest lane of a belt first.
  */
@@ -180,7 +180,7 @@ function withFuelHandRoomWhereNeeded(
 ): BlueprintGenerationResult {
     const result = withoutRoom();
     // the room changes nothing where no clocked inserter picks up from a belt, or in a period of part ticks
-    if (holds(result) || result.belt?.kind !== "non_moving" || !Number.isInteger(result.simulation_duration.ticks)) {
+    if (holds(result) || result.belt?.kind !== "backed_up" || !Number.isInteger(result.simulation_duration.ticks)) {
         return result;
     }
     try {
@@ -196,7 +196,7 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
     const generate = (belt_config: Config, fuel_hand_room: boolean = false) => generateClockWithSwingBackoff(
         { ...belt_config, overrides: { ...belt_config.overrides, derive_clock_windows: false } },
         { ...options, verify_as_built: true, belt_pickup_slack: "always", fuel_hand_room, on_progress_detail: report });
-    const result = config.overrides?.non_moving_belts === true
+    const result = config.overrides?.backed_up_belts === true
         ? withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined)
         : generate(config);
     return {
@@ -219,15 +219,17 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
     if (belt.kind === "moving") {
         const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
         const ticks = first === last ? `${first} more tick${first === 1 ? "" : "s"}` : `${first}–${last} more ticks`;
+        const pickup = " Reachable moving stacks are timed using the pickup geometry (straight belt by default). "
+            + "The remaining slack is margin for late starts and gaps; sparse upstream supply is not simulated.";
         const moving = ` Made for a moving belt: every inserter that picks up from a belt stays enabled ${ticks} after each window `
             + "(belt pickup slack), long enough for one more full hand at one belt stack a tick. On a moving belt, and more so on "
             + "one with gaps, a pickup can come late; the extra ticks let it finish instead of the inserter being switched off "
-            + "holding a partial hand. This is a rule of thumb, not a simulated belt: it may work on one build and not on another.";
+            + `holding a partial hand.${pickup}`;
         return moving;
     }
-    const non_moving = " Made for a non-moving belt: its belt inserters get only the windows they need on a belt that is full and "
-        + "does not move, without belt pickup slack. On a moving belt an inserter can be switched off holding a partial hand.";
-    if (config.overrides?.non_moving_belts === true) {
+    const backed_up = " Made for a backed-up belt: its belt inserters get only the windows they need with backed-up supply at the pickup, "
+        + "without belt pickup slack. On a moving belt an inserter can be switched off holding a partial hand.";
+    if (config.overrides?.backed_up_belts === true) {
         const room = Object.entries(result.fuel_hand_room_ticks);
         const config_ids = config.inserters.map((inserter, index) => inserter.id ?? index + 1);
         const inserter_ids = new Map(config_ids.map(id => [EntityId.forInserter(id).id, id]));
@@ -237,14 +239,14 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
             + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${room[0][1]} more ticks after each window, the ticks a hand of fuel takes to fill: `
             + "the fuel slot asks for a hand in any window, ahead of the hands the window is planned for, and this clock did not hold "
             + "the expected output without the room for it.";
-        return `${non_moving} The config says the belts do not move, so it goes without the slack.${fuel}`;
+        return `${backed_up} The config says the input belts are backed up, so it goes without the slack.${fuel}`;
     }
     if (!Number.isInteger(result.simulation_duration.ticks)) {
-        return `${non_moving} The slack is not given to a clock whose period is not a whole number of ticks.`;
+        return `${backed_up} The slack is not given to a clock whose period is not a whole number of ticks.`;
     }
     const only_selected_when = "it is only selected for you when no clock for a moving belt holds the target rate.";
-    return made_without_slack ? `${non_moving} So ${only_selected_when}`
-        : `${non_moving} This clock did not hold the expected output with the slack, so ${only_selected_when}`;
+    return made_without_slack ? `${backed_up} So ${only_selected_when}`
+        : `${backed_up} This clock did not hold the expected output with the slack, so ${only_selected_when}`;
 }
 
 /**
@@ -260,7 +262,7 @@ function alternativeDefinitions(
     known_stable: (id: string) => boolean | undefined = () => undefined,
 ): AlternativeDefinition[] {
     const definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
-    if (config.overrides?.non_moving_belts !== true || !takesFuelOffABelt(config)) {
+    if (config.overrides?.backed_up_belts !== true || !takesFuelOffABelt(config)) {
         return definitions;
     }
     const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
@@ -342,12 +344,18 @@ function alternativeDefinitionsFor(
         : Array.from({ length: Math.max(swings, context.planned_swings ?? swings) + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i);
 
     return [
-        // with belts that do not move the first run is already made without the slack, unless it only holds with it
-        ...(config.overrides?.non_moving_belts === true ? [] : [{
+        // with backed-up belts the first run is already made without the slack, unless it only holds with it
+        ...(config.overrides?.backed_up_belts === true ? [] : [{
             id: WITHOUT_BELT_PICKUP_SLACK_ID,
-            label: `${BATCHED_SWINGS_LABEL}, non-moving belt`,
+            label: `${BATCHED_SWINGS_LABEL}, backed-up belt`,
             description: BATCHED_SWINGS_DESCRIPTION,
-            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }),
+            run: () => {
+                const result = generateClockWithSwingBackoff(
+                    { ...base_config, overrides: { ...base_config.overrides, backed_up_belts: true } },
+                    { ...quiet, belt_pickup_slack: "never" });
+                // The simulation uses backed-up supply, but this alternative still opts out of the user's moving-belt choice.
+                return { ...result, belt_pickup_slack_left_out: result.belt !== null && Number.isInteger(result.simulation_duration.ticks) };
+            },
         }]),
         {
             id: "fractional",

@@ -1,7 +1,7 @@
 import assert from "../../common/assert"
 import { ControlLogic } from "../control-logic";
 import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator } from "../mode";
-import { InserterDropMode, InserterIdleMode, InserterMode, InserterPickupMode, InserterSwingMode } from "./modes";
+import { InserterDropMode, InserterIdleMode, InserterMode, InserterPickupMode, InserterSwingMode, InserterTransferLogicFactory } from "./modes";
 import { InserterTargetFullMode } from "./modes/target-full-mode";
 import { InserterWaitForSinkMode } from "./modes/wait-for-sink-mode";
 import { EntityId } from "../../entities";
@@ -85,14 +85,15 @@ function createInserterStateMachine(args: {
     } = args;
 
     const idle_mode = new InserterIdleMode();
-    const pickup_mode = InserterPickupMode.create({
+    const transfer_logic = InserterTransferLogicFactory.create({
         inserterState: inserter_state,
         sourceState: source_state,
         sinkState: sink_state,
         tick_provider,
-    })
+    });
+    const pickup_mode = new InserterPickupMode(inserter_state, transfer_logic.pickup);
     const swing_mode = new InserterSwingMode();
-    const drop_mode = new InserterDropMode(inserter_state, sink_state, tick_provider);
+    const drop_mode = new InserterDropMode(transfer_logic.drop);
     const disabled_mode = new InserterDisabledMode();
     const target_full_mode = new InserterTargetFullMode(drop_mode);
     const wait_for_sink_mode = new InserterWaitForSinkMode();

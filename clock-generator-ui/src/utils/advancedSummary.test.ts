@@ -5,7 +5,7 @@ describe('advancedSetCount', () => {
     it('is 0 with no overrides, or only the belt question\'s answer', () => {
         expect(advancedSetCount(undefined)).toBe(0);
         expect(advancedSetCount({})).toBe(0);
-        expect(advancedSetCount({ non_moving_belts: true })).toBe(0);
+        expect(advancedSetCount({ backed_up_belts: true })).toBe(0);
         expect(advancedSetCount({ use_fractional_swings: false, ignored_lcm_ingredients: [] })).toBe(0);
     });
 

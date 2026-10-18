@@ -129,7 +129,7 @@ describe("searchesAreNeeded", () => {
         expect(needed([clock("unstable", { meets_target_rate: false }), clock("no-recovery", { meets_target_rate: false })])).toBe(true);
     });
 
-    // military science: its one stable clock leaves belt pickup slack out, on a config that does not say the belts stand still
+    // military science: its one stable clock leaves belt pickup slack out, on a config that does not say the input belts are backed up
     it("is, when the only clock that meets the target rate is not made for the belt asked", () => {
         expect(needed([clock("slack", { meets_target_rate: false }), clock("no-slack", { matches_belt_choice: false })])).toBe(true);
     });
