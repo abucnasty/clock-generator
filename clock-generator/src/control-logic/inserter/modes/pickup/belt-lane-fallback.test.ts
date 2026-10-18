@@ -1,4 +1,5 @@
 import { GameFixturePaths } from "../../../../../tests/game/helpers/fixture-paths";
+import path from "path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Config } from "../../../../config";
 import { loadConfigFromFile } from "../../../../config/loader";
@@ -29,6 +30,28 @@ function pickup(config: Config) {
 const copy = () => structuredClone(sample);
 
 describe("physical belt lane fallback", () => {
+    it.each([
+        { label: "original lanes", swapped: false, preferred: 2, item: "supercapacitor" },
+        { label: "swapped lanes", swapped: true, preferred: 2, item: "accumulator" },
+        { label: "flipped inserter, swapped lanes", swapped: true, preferred: 1, item: "supercapacitor" },
+    ] as const)("matches the front underground exit's measured first hand: $label", async ({ swapped, preferred, item }) => {
+        const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
+        if (swapped) config.belts.find(belt => belt.id === 2)!.lanes.reverse();
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
+        const input = pickup(config);
+        // Factorio 2.1.21: mirrored selects lane 2; flipping with swapped ingredients selects lane 1.
+        expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
+        expect(input.state.held_item).toEqual({ item_name: item, quantity: 16 });
+
+        // The same recipe order selects supercapacitors in all cases if lane preference is omitted.
+        delete source.near_lane;
+        const recipeOrdered = pickup(config);
+        recipeOrdered.take(0);
+        expect(recipeOrdered.state.held_item).toEqual({ item_name: "supercapacitor", quantity: 4 });
+    });
+
     for (const near of [1, 2] as const) for (const type of ["turbo-transport-belt", "express-transport-belt"] as const) {
         it(`fills an underground hand in four consecutive grabs: ${type}, near lane ${near}`, () => {
             const config = copy();

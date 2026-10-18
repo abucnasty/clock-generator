@@ -1,0 +1,75 @@
+# Front pickup from an underground exit
+
+Question: which exposed lane does an empty inserter collect from, and how does its first hand fill, when it stands
+directly in front of an underground exit, and does flipping the inserter change its lane choice?
+This fixture covers a northbound exit with the inserter directly north of it.
+
+`scaffold.txt` adapts the different-item electromagnetic scaffold. Its upstream ingredient feed is turned north,
+ending in a northbound turbo underground exit. The input inserter stands one tile north of the exit and drops into
+the plant to its north. The base blueprint has `mirror: true`; the flipped case changes only the input inserter to
+`mirror: false`. The probe verifies the actual `mirroring` property against the host-supplied expectation.
+The ingredient drain is removed, so both lanes back up before the cell's inserters are placed in a staged start.
+The base scaffold has accumulators on lane 1 and supercapacitors on lane 2, both in stacks of four.
+The swapped case reverses only the four ingredient feeder filters and the input config lanes, using
+`swapElectromagneticIngredientFeeds` from the shared fixture helpers. The flipped case keeps these swapped
+ingredients and uses `flipFrontUndergroundInput` to change only the input inserter's mirror flag. Output disposal,
+fluids, modules and beacons are retained. Use the powered staging save and research described in the [game guide](../../../../README.md).
+
+## Observation and simulator comparison
+
+Measured on 2026-10-18 in Factorio 2.1.21 with a legendary stack inserter, hand capacity 16, and a plant crafting
+speed of 109.475. The probe clears machine inputs/output once, disables filters and circuit enable control, and
+samples ticks 1–30 through the shared capture and belt snapshot helpers. It does not clear inventories each tick.
+
+In all three cases, the first sample has an empty hand and two full four-item stacks on each half-tile exposed
+line. The first grab at tick 2 removes the selected lane's downstream stack while leaving the other lane untouched.
+
+| Mirrored | Lane 1 | Lane 2 | Selected lane | First game / simulator grab |
+| --- | --- | --- | --- | --- |
+| Yes | Accumulator | Supercapacitor | 2 | 4 supercapacitors |
+| Yes | Supercapacitor | Accumulator | 2 | 4 accumulators |
+| No | Supercapacitor | Accumulator | 1 | 4 supercapacitors |
+
+The recipe stays unchanged throughout; between the last two cases, only the input inserter's mirroring changes.
+All three first hands fill at offsets `0,1,2,3`, to counts `4,8,12,16`. Machine inventories remain empty and crafting progress stays zero through each hand, so ingredient
+blocking or a pre-existing held item cannot explain the choice. Selecting lane 2 after swapping the items
+distinguishes lane preference from fixed recipe order for the mirrored, backed-up orientation. Flipping the
+inserter then switches selection from lane 2 to lane 1 with the same ingredients, confirming that mirroring changes
+the preferred lane in this northbound front-exit setup.
+
+The existing simulator matches these items and grab counts with `source.near_lane: 2` when mirrored,
+`source.near_lane: 1` for the flipped case, `source.pickup_length: 0.5`, and `overrides.backed_up_belts: true`.
+`config.json` holds the original mirrored case; the game test applies each scenario's lane and mirror changes.
+Here `near_lane` selects the observed lane order: neither lane is geometrically nearer to this centered inserter. No engine change was needed.
+The supplied clock target is not a verified default-clock throughput claim for this fixture.
+
+Sidecar 0.10.0 captures `near_lane: 2` for the mirrored inserter and `near_lane: 1` when flipped, along with
+`pickup_length: 0.5`, without an unclassified-pickup warning. The game regressions check both the recorder source
+and the exported config, as well as the observed grabs. Classification requires a centered inserter at the exit's
+open end, facing back into it. Other inline pickups, including underground entrances, remain unclassified.
+
+The original manual captures used Sidecar 0.9.1, which warned `inline` and omitted both settings. Omitting
+`near_lane` makes the simulator select supercapacitors by recipe order in both ingredient arrangements, disagreeing
+with the mirrored swapped case. The fixture config supplies the intended preference explicitly; Sidecar now
+captures it automatically.
+
+Other cardinal orientations, underground entrances, moving supply, same-item fallback, the unmirrored inserter
+with the original lane ingredients, and repeated-hand timing remain separate cases.
+The comparison measures filling offsets after the first grab, not general arm-arrival timing.
+
+## Reproduce
+
+From `clock-generator/`, with `.env` configured:
+
+```bash
+npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts -t 'swapped lanes'
+npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts -t 'front underground exit'
+```
+
+The first command runs the mirrored and flipped cases with swapped ingredients, checks Sidecar capture, and
+compares each actual simulator hand; it removes its temporary artifacts afterward. Use `-t 'flipped inserter'` for only the new case, or omit `-t`
+for all three cases. The second runs all three measured hand regressions without Factorio. The game test composes
+`probe.lua`; the scenario alone cannot be passed directly to `--lua`. Reports contain `initial` setup metadata and
+`samples` with held quantities/items, exposed lane stacks/IDs, machine inventories and crafting progress.
+Raw manual evidence remains local under `work/belt-pickup/front-exit-02/`, `work/belt-pickup/front-exit-03/`,
+`work/belt-pickup/front-exit-swapped-01/`, and `work/belt-pickup/front-exit-flipped-01/` at the repository root.

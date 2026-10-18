@@ -30,13 +30,15 @@ local entities, surface = ...
 local h = require("__clock-generator-sidecar__.scripts.helpers")
 local extraction = require("__clock-generator-sidecar__.scripts.extraction")
 local export = require("__clock-generator-sidecar__.scripts.export")
-local function belt(name, x, y, direction)
-    return assert(surface.create_entity{name = name, position = {x, y}, direction = direction, force = "player"})
+local function belt(name, x, y, direction, endpoint)
+    return assert(surface.create_entity{name = name, position = {x, y}, direction = direction, type = endpoint, force = "player"})
 end
 local straight = belt("turbo-transport-belt", 100, 100, defines.direction.east)
 assert(h.get_pickup_problem({position = {x = 100, y = 99}}, straight) == nil)
 assert(h.get_pickup_length({position = {x = 100, y = 99}}, straight) == 1)
 assert(h.get_pickup_problem({position = {x = straight.position.x - 1, y = straight.position.y}}, straight) == "inline")
+assert(h.get_pickup_problem({position = {x = straight.position.x + 1, y = straight.position.y},
+    direction = defines.direction.west, mirroring = true}, straight) == "inline")
 local splitter = belt("turbo-splitter", 110, 100, defines.direction.east)
 assert(h.get_pickup_problem({position = {x = 110, y = 99}}, splitter) == "splitter")
 assert(h.get_pickup_length({position = {x = 110, y = 99}}, splitter) == nil)
@@ -44,6 +46,41 @@ belt("turbo-transport-belt", 100, 101, defines.direction.north)
 assert(straight.belt_shape ~= "straight", "fixture must form a bend")
 assert(h.get_pickup_problem({position = {x = 100, y = 99}}, straight) == "bend")
 assert(h.get_pickup_length({position = {x = 100, y = 99}}, straight) == nil)
+
+-- Classifier rotation checks, not additional measurements of actual grabs in these orientations.
+local directions = {
+    {defines.direction.north, 0, -1}, {defines.direction.east, 1, 0},
+    {defines.direction.south, 0, 1}, {defines.direction.west, -1, 0}
+}
+local function unclassified(input, target)
+    assert(h.get_near_lane(input, target) == nil)
+    assert(h.get_pickup_length(input, target) == nil)
+    assert(h.get_pickup_problem(input, target) == "inline")
+end
+for index, entry in ipairs(directions) do
+    local direction, dx, dy = entry[1], entry[2], entry[3]
+    local exit = belt("turbo-underground-belt", 130 + index * 6, 100, direction, "output")
+    local entrance = belt("turbo-underground-belt", 130 + index * 6, 120, direction, "input")
+    for _, mirrored in ipairs{false, true} do
+        local front = {position = {x = exit.position.x + dx, y = exit.position.y + dy},
+            direction = (direction + 8) % 16, mirroring = mirrored}
+        assert(h.get_near_lane(front, exit) == (mirrored and 2 or 1))
+        assert(h.get_pickup_length(front, exit) == 0.5)
+        assert(h.get_pickup_problem(front, exit) == nil)
+        -- Side pickups keep their physical nearest lane regardless of mirroring.
+        assert(h.get_near_lane({position = {x = exit.position.x + dy, y = exit.position.y - dx}, mirroring = mirrored}, exit) == 1)
+        assert(h.get_near_lane({position = {x = exit.position.x - dy, y = exit.position.y + dx}, mirroring = mirrored}, exit) == 2)
+        unclassified({position = {x = exit.position.x - dx, y = exit.position.y - dy},
+            direction = direction, mirroring = mirrored}, exit)
+        unclassified({position = front.position, direction = direction, mirroring = mirrored}, exit)
+        unclassified({position = {x = front.position.x + dy * 0.125, y = front.position.y - dx * 0.125},
+            direction = front.direction, mirroring = mirrored}, exit)
+        unclassified({position = {x = entrance.position.x - dx, y = entrance.position.y - dy},
+            direction = direction, mirroring = mirrored}, entrance)
+        unclassified({position = {x = entrance.position.x + dx, y = entrance.position.y + dy},
+            direction = (direction + 8) % 16, mirroring = mirrored}, entrance)
+    end
+end
 
 local captured = extraction.extract_all_entities(entities, game.forces.player)
 local supported = export.to_table(captured)

@@ -304,9 +304,10 @@ const InserterBeltSourceConfigSchema = z.object({
     type: z.literal(TargetType.BELT),
     id: z.number().int().positive(),
     /**
-     * Of a belt an inserter picks up from: the lane nearest to the inserter, by its place in the belt's `lanes`, 1
-     * or 2 (the sidecar lists the left lane in the direction the belt runs first). The inserter takes from that lane
-     * first when its sink takes the items of both, as in the game. Without it the inserter takes its items in the
+     * Preferred pickup lane, by its place in the belt's `lanes`, 1 or 2 (left in travel direction first).
+     * This is the nearest lane beside a belt, or the lane selected by mirroring at a front underground exit.
+     * The inserter takes from that lane first when its sink takes the items of both, as in the game.
+     * Without it the inserter takes its items in the
      * order of its `filters`, or of the sink's ingredients when it has none, which may not be what the build does.
      */
     near_lane: z.union([z.literal(1), z.literal(2)]).optional(),

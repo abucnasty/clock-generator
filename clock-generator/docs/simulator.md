@@ -19,11 +19,12 @@ The status the game shows for an inserter is decided by its sink before the inse
 
 ### What an inserter takes off a belt first
 
-With an empty hand, prefer the nearest lane's item when the destination can accept it. Once a hand contains an item, continue collecting that item until the hand is full or the destination stops accepting it. Explicit filters restrict which items may be collected; they do not override a supplied `near_lane`. Without `near_lane`, item selection keeps the filter/recipe order and matching physical lanes are tried in their config order.
+With an empty hand, prefer the configured pickup lane's item when the destination can accept it. Beside a belt,
+this is the nearest lane; in front of an underground exit, mirroring selects it. Once a hand contains an item, continue collecting that item until the hand is full or the destination stops accepting it. Explicit filters restrict which items may be collected; they do not override a supplied `near_lane`. Without `near_lane`, item selection keeps the filter/recipe order and matching physical lanes are tried in their config order.
 
 ### Picking up from moving belts and underground endpoints
 
-**Take one reachable stack per tick: near lane first, far lane if the near lane has none of the item being collected. Leave a hole and keep the remaining stacks moving at belt speed.**
+**Take one reachable stack per tick: preferred lane first, then the other lane if the preferred lane has none of the item being collected. Leave a hole and keep the remaining stacks moving at belt speed.**
 
 - Saturated lanes have stacks a quarter tile apart. Take the upstream-most reachable stack on the selected lane,
   capped by that lane's stack size and the remaining hand capacity. There is at most one stack total per tick.
@@ -65,8 +66,18 @@ and retain the [different-item electromagnetic checks](../tests/game/mechanics/b
 Regressions with backed-up turbo belts isolate each ingredient and check the default clock's throughput and recovery on all
 three electromagnetic scaffolds. Detailed measurements and reproduction commands live with those fixtures.
 
+One [front-facing underground exit case](../tests/game/mechanics/belt-pickup/fixtures/front-underground-exit/README.md)
+also matches the existing simulator: a mirrored inserter north of a northbound exit selects lane 2 supercapacitors
+and fills its first backed-up hand at offsets `0,1,2,3`. The config explicitly supplies `near_lane: 2` and
+`pickup_length: 0.5`; neither lane is physically nearer. Sidecar 0.10.0 captures this front-exit preference from
+inserter mirroring and exports half-tile reach. Other inline pickups remain unclassified. Swapping the lane
+ingredients changes the selected item to accumulators while retaining lane 2 and
+the same grab offsets, supporting lane preference over fixed recipe order for this orientation. Flipping only
+the inserter with those swapped ingredients selects lane 1 supercapacitors, again at `0,1,2,3`; the simulator matches
+with explicit `near_lane: 1`. Moving front pickups and other cardinal orientations remain unverified.
+
 Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
-Sparse supply, shared upstream withdrawals, merges, bends, inline pickups, other inserters/qualities/orientations,
+Sparse supply, shared upstream withdrawals, merges, bends, other inline pickups, other inserters/qualities/orientations,
 and arbitrary initial lane phases remain unverified. Calibration with backed-up supply covers turbo belts with different
 items on the lanes, collected one item at a time; other speeds and same-item lanes with backed-up supply remain unverified.
 
