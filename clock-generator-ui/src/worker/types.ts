@@ -386,6 +386,7 @@ export type EngineQuery =
         belts: unknown;
         chests: unknown;
         sidecar_version: unknown;
+        pickup_warnings?: unknown;
         suggested_target: unknown;
     };
 

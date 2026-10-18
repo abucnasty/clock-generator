@@ -1,3 +1,4 @@
+import { assertPickupCaptureSupported } from "../../config/pickup-capture";
 import { InserterConfig } from "../../config";
 import { BeltPickupMergeConfig, BeltPickupSupplyProfile } from "../../config/schema";
 import { FactorioDataService, ItemName } from "../../data";
@@ -97,6 +98,7 @@ export class InserterFactory {
     public fromConfig(id: number, config: InserterConfig): Inserter {
         const source = config.source
         const sink = config.sink
+        assertPickupCaptureSupported(id, source);
 
         // the inserter is the legendary stack inserter unless the config names another; its hand is the one that all the
         // research gives its prototype unless the config sets the stack size

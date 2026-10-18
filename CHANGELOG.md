@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.19.0] - Unreleased
 
 ### Added
+- Preserve per-pickup capture status and source identity through import, saved builds and exports. Unclassified or unsupported captures require a new supported capture before generation; explicit model names/format versions prevent future data from silently falling back to straight-belt timing. Manual builds retain their existing defaults.
 - Model a single continuously supplied side feed into a straight pickup tile. Per-lane `source.pickup_supply` profiles distinguish through, inner side and outer side entry without changing reach, preferred lane or backed-up timing.
 - Model two full turbo side streams sharing a straight pickup lane, including different ingredients, persistent queues, temporary compression and finite downstream backpressure. `source.pickup_merge` captures both streams and the outlet geometry; other merge speeds and layouts remain unsupported.
 - Report when a two-stream supply repeats a stalled preparation state, including an inner ingredient starved by a full outer stream, instead of waiting for the simulation timeout.

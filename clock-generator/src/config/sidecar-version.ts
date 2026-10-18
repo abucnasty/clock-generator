@@ -95,7 +95,7 @@ const MOVING_PICKUP_FEATURE: SidecarFeature = {
     appliesTo: input => (input.inserters ?? []).some(inserter => typeof inserter === "object" && inserter !== null
         && "source" in inserter && typeof inserter.source === "object" && inserter.source !== null
         && "type" in inserter.source && inserter.source.type === "belt"),
-    missing: () => "The exposed belt pickup length was not exported, so moving pickup timing keeps the older always-full assumption. Re-export to model the reachable stacks.",
+    missing: () => "Physical belt pickup geometry was not exported. Update Sidecar and recapture these inputs; a straight-belt default does not establish their support.",
 };
 const PICKUP_SUPPLY_FEATURE: SidecarFeature = {
     name: "pickup-supply", since: "0.11.0",
@@ -114,8 +114,15 @@ export const newerSidecarStep: ImportStep = input =>
         : Option.none();
 
 /** What is checked on data pasted from the sidecar mod: what an older mod lacks, else that there is a newer one */
+const pickupCaptureDeclarationStep: ImportStep = input => (input.inserters ?? []).some(inserter =>
+    typeof inserter === "object" && inserter !== null && "source" in inserter
+    && typeof inserter.source === "object" && inserter.source !== null && "type" in inserter.source
+    && inserter.source.type === "belt" && !("pickup_capture" in inserter.source))
+    ? Option.some("Belt pickup classification was not captured. Update Sidecar and recapture these inputs before generation. Updating the mod alone does not update a saved capture.")
+    : Option.none();
+
 export const SIDECAR_IMPORT_PIPELINE: ImportPipeline = ImportPipeline
-    .of(...SIDECAR_FEATURES.map(sidecarFeatureStep))
+    .of(...SIDECAR_FEATURES.map(sidecarFeatureStep), pickupCaptureDeclarationStep)
     .otherwise(newerSidecarStep);
 
 /**

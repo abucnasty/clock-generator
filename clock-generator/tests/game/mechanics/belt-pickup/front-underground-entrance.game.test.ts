@@ -103,7 +103,8 @@ for (const { mirrored, preferred, item } of [
             expect(captured.stack_size).toBe(16);
             expect(captured.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5 });
             const exported = result.recording.config.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
-            expect(exported.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5 });
+            expect(exported.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5,
+                pickup_capture: {status: "supported", model: "belt", model_version: 1, entity_type: "underground-belt"} });
             expect(result.recording.config.pickup_warnings).toBeUndefined();
         } finally {
             fs.rmSync(scratch, { recursive: true, force: true });

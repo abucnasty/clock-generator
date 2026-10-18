@@ -185,6 +185,9 @@ for (const {name, swapped, mirrored, label} of [
         const captureIndex = result.recording.config.inserters.findIndex(i => i.source.type === "belt" && i.sink.type === "machine");
         expect(captureIndex).toBeGreaterThanOrEqual(0);
         const captured = result.recording.config.inserters[captureIndex];
+        expect(captured.source).toMatchObject({pickup_capture: {
+            status: "unsupported", reason: "splitter", entity_type: "splitter", entity_name: "turbo-splitter",
+        }});
         expect(captured.source).not.toHaveProperty("pickup_length");
         expect(captured.source).not.toHaveProperty("near_lane");
         expect(result.recording.config.pickup_warnings).toContainEqual({inserter_id: captureIndex + 1, reason: "splitter"});

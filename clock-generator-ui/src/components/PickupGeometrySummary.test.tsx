@@ -40,6 +40,20 @@ describe('pickup assumption presentation', () => {
         }
         expect(renderToStaticMarkup(<PickupTypeSelect source={{ type: 'machine', id: 1 }} entityLabel="Inserter 3" onChange={() => {}} />)).toBe('');
     });
+    it('keeps an unsupported imported pickup visible in the editor and saved-run summary', () => {
+        const source = {type: 'belt' as const, id: 1, pickup_length: 1 as const,
+            pickup_capture: {status: 'unsupported' as const, entity_type: 'splitter', reason: 'splitter', sidecar_version: '0.11.0'}};
+        const html = renderToStaticMarkup(<PickupTypeSelect source={source} entityLabel="Inserter 3" onChange={() => {}} />);
+        expect(text(html)).toContain('Unverified capture');
+        expect(html).toContain('aria-disabled="true"');
+        expect(html).not.toContain('value="straight"');
+        for (const savedRun of [false, true]) {
+            const summary = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 3, source}], overrides: {backed_up_belts: true}}} savedRun={savedRun} />));
+            expect(summary).toContain('pickup needs a supported capture before generation');
+            expect(summary).toContain('Updating the mod alone does not update this saved capture');
+            expect(summary).not.toContain('Saturated supply with captured pickup rules');
+        }
+    });
     it('selects straight belt when geometry is omitted in either editor', () => {
         for (const compact of [false, true]) {
             const html = renderToStaticMarkup(<PickupTypeSelect source={{ type: 'belt', id: 1 }} compact={compact} entityLabel="Inserter 3" onChange={() => {}} />);

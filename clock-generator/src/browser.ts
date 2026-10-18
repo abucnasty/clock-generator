@@ -297,3 +297,5 @@ export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
 export { deadlockRiskNote } from './crafting/deadlock-risk';
 export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
 export { DEFAULT_LOOP_SEED_ITEMS } from './crafting/runner/cold-start';
+
+export { sidecarPickupInserters } from "./config/pickup-capture";

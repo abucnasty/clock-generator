@@ -1,0 +1,73 @@
+# Pickup capture and configuration boundary
+
+A manually configured belt pickup defaults to straight-belt geometry. An imported pickup is a different claim:
+its capture must explicitly identify a model the current engine supports. A default or a newer version number
+cannot supply facts that the old capture omitted.
+
+## Persistent per-pickup status
+
+Sidecar exports `source.pickup_capture` for each belt-fed inserter. It stays with that source through import,
+file export, saved-build reload, sharing, and recording parsing. Top-level `pickup_warnings` remain for the
+Sidecar copy window and older import previews; they are not the only copy of the classification.
+
+- `supported`: a positive model declaration, currently `model: "belt"` or `"turbo-two-stream"`, with
+  `model_version: 1`, native `entity_type`, and the matching geometry, preferred lane and supply data.
+- `unsupported`: Sidecar identified a geometry or supply outside the engine's calibrated models. Its reason,
+  native entity type/name and exporting Sidecar version remain attached. A splitter remains a splitter.
+- `unclassified`: a legacy export did not record a positive model declaration. Existing geometry fields are
+  retained for inspection, but do not make the capture supported.
+
+For example, a captured splitter source retains:
+
+```json
+{
+  "type": "belt",
+  "id": 1,
+  "pickup_capture": {
+    "status": "unsupported",
+    "entity_type": "splitter",
+    "entity_name": "turbo-splitter",
+    "sidecar_version": "0.11.0",
+    "reason": "splitter"
+  }
+}
+```
+
+Parsing may fill a straight-belt `pickup_length` default for structural compatibility. The persistent capture
+status still blocks simulation/generation: that default is not an assertion about the physical splitter.
+The same check applies to direct engine inputs, not only the UI. Unverified builds can be imported, saved and
+reviewed. Their picker and coverage summary show the unverified state, including with backed-up supply; changing
+a dropdown default cannot clear it. Reconfigure the physical input to a supported layout and capture it again,
+or recapture when that geometry has an implemented model.
+
+A deliberate geometry edit on an already supported pickup becomes a manual configuration and clears its
+capture declaration; it does not fabricate another native capture. Manual configurations and old files with
+no surviving import provenance retain the existing explicit/default geometry rules. Manual assumptions do not
+establish support for an actual splitter or other unsupported source.
+
+## Older mods and saved data
+
+At the Sidecar import boundary, missing model declarations become `unclassified` even if the export names the
+current mod version or contains a pickup length. A legacy warning becomes persistent `unsupported` status;
+`reason: "splitter"` also preserves that known source type. Explicit warnings take precedence over contradictory
+supported markers. This normalization runs before defaults in both full config parsing and the pasted-entity
+worker path.
+
+Updating the mod does not update data already copied or saved. Update Sidecar and **capture again** to obtain
+the newly supported model inputs. A newer generator never automatically promotes an old unsupported capture.
+Saved builds exported before this boundary may already have discarded their warnings and Sidecar version.
+Those files cannot reliably be distinguished from manual configurations, so their physical provenance cannot
+be reconstructed. Review and recapture belt inputs where that distinction matters. Generators older than this
+boundary cannot enforce a protocol they do not understand; keep the generator and Sidecar current.
+
+## Adding support later
+
+A new mechanic needs an explicit model name and its required inputs, a capture implementation, and corresponding
+engine validation. Unknown model names or format versions are rejected rather than stripped and interpreted
+as an existing ordinary-belt model. `sidecar_version` provides provenance and update guidance; it is not a
+model-support flag. Add or increment the model format when interpretation or required inputs change.
+
+Regression coverage includes manual defaults; positive declarations; geometry/supply mismatches; old/current/
+future-version exports; legacy warnings; unknown future model names/versions; direct simulation refusal;
+save/reload and form round trips; editor presentation; and actual Sidecar exports for straight, underground,
+unsupported splitter and supported turbo two-stream pickups. Native timing behavior is unchanged.
