@@ -1,0 +1,232 @@
+{
+  "front-underground-exit": {
+    "blueprint": "belt-pickup/fixtures/front-underground-exit/scaffold.txt",
+    "image": "belt-pickup/fixtures/front-underground-exit/scaffold.jpg",
+    "source_sha256": "7db627b7a5f8fa89726eb5955b054d05c8e4530deecfc7f7aee736f1c77643bb",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 398.529296875,
+      "y": 0.599609375
+    },
+    "resolution": {
+      "x": 1279,
+      "y": 1085
+    },
+    "zoom": 1.5,
+    "width": 1279,
+    "height": 1085,
+    "png_bytes": 1899868,
+    "jpeg_bytes": 278190,
+    "jpeg_quality": 82
+  },
+  "different-items/straight-belt": {
+    "blueprint": "belt-pickup/fixtures/different-items/straight-belt-scaffold.txt",
+    "image": "belt-pickup/fixtures/different-items/straight-belt-scaffold.jpg",
+    "source_sha256": "c8cad07e3a90a3d6a210d34fec727c8fb35486ee02ae67f76a906ee1cd86e7fd",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 399.474609375,
+      "y": 0
+    },
+    "resolution": {
+      "x": 1380,
+      "y": 836
+    },
+    "zoom": 1.5,
+    "width": 1380,
+    "height": 836,
+    "png_bytes": 1565025,
+    "jpeg_bytes": 259183,
+    "jpeg_quality": 82
+  },
+  "different-items/underground-entrance": {
+    "blueprint": "belt-pickup/fixtures/different-items/underground-entrance-scaffold.txt",
+    "image": "belt-pickup/fixtures/different-items/underground-entrance-scaffold.jpg",
+    "source_sha256": "911e6571e9f330d29ce059567d9241e46c0c0314fa1e89ca3f5aad669571f08c",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 399.474609375,
+      "y": 0
+    },
+    "resolution": {
+      "x": 1380,
+      "y": 836
+    },
+    "zoom": 1.5,
+    "width": 1380,
+    "height": 836,
+    "png_bytes": 1564742,
+    "jpeg_bytes": 260429,
+    "jpeg_quality": 82
+  },
+  "different-items/underground-exit": {
+    "blueprint": "belt-pickup/fixtures/different-items/underground-exit-scaffold.txt",
+    "image": "belt-pickup/fixtures/different-items/underground-exit-scaffold.jpg",
+    "source_sha256": "c8fdc6a9f640cc263a91f79428e8c870cfb98dec0250c73c806035286d66122b",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 399.474609375,
+      "y": 0
+    },
+    "resolution": {
+      "x": 1380,
+      "y": 836
+    },
+    "zoom": 1.5,
+    "width": 1380,
+    "height": 836,
+    "png_bytes": 1559452,
+    "jpeg_bytes": 258309,
+    "jpeg_quality": 82
+  },
+  "same-item/straight-belt": {
+    "blueprint": "belt-pickup/fixtures/same-item/straight-belt-scaffold.txt",
+    "image": "belt-pickup/fixtures/same-item/straight-belt-scaffold.jpg",
+    "source_sha256": "0f5aafb70b587929fd8c593248b02497b58c17114a985bfc2703b08efe54ca89",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 400.974609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1524,
+      "y": 610
+    },
+    "zoom": 1.5,
+    "width": 1524,
+    "height": 610,
+    "png_bytes": 1097127,
+    "jpeg_bytes": 149965,
+    "jpeg_quality": 82
+  },
+  "same-item/underground-entrance": {
+    "blueprint": "belt-pickup/fixtures/same-item/underground-entrance-scaffold.txt",
+    "image": "belt-pickup/fixtures/same-item/underground-entrance-scaffold.jpg",
+    "source_sha256": "631e36afb89db653017d591e1db3e3d3e01ed8a849e3b36c6b2536fff30c8d56",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 400.974609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1524,
+      "y": 610
+    },
+    "zoom": 1.5,
+    "width": 1524,
+    "height": 610,
+    "png_bytes": 1130644,
+    "jpeg_bytes": 145400,
+    "jpeg_quality": 82
+  },
+  "same-item/underground-exit": {
+    "blueprint": "belt-pickup/fixtures/same-item/underground-exit-scaffold.txt",
+    "image": "belt-pickup/fixtures/same-item/underground-exit-scaffold.jpg",
+    "source_sha256": "8d0c4cdfbde872280e5e9e482d2951ad300bc44bff00771e18c792f45103686f",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 400.974609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1524,
+      "y": 610
+    },
+    "zoom": 1.5,
+    "width": 1524,
+    "height": 610,
+    "png_bytes": 1137634,
+    "jpeg_bytes": 145949,
+    "jpeg_quality": 82
+  },
+  "automation-science": {
+    "blueprint": "../../../resources/config-samples/science/automation-science/automation-science-scaffold.txt",
+    "image": "images/automation-science.jpg",
+    "source_sha256": "09430a24ecdf4614352813877b45ae935fbfa4391b810ee518e78665a35a96d1",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 397.974609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1236,
+      "y": 788
+    },
+    "zoom": 1.5,
+    "width": 1236,
+    "height": 788,
+    "png_bytes": 1353504,
+    "jpeg_bytes": 218456,
+    "jpeg_quality": 82
+  },
+  "agriculture-science": {
+    "blueprint": "../../../resources/config-samples/science/agriculture-science/agriculture-science-scaffold.txt",
+    "image": "images/agriculture-science.jpg",
+    "source_sha256": "48e71d241d1fccaf699beffaa7bdb946aa76ffef01e2991a587bbe49141d8230",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 403.974609375,
+      "y": -0.07421875
+    },
+    "resolution": {
+      "x": 1812,
+      "y": 1035
+    },
+    "zoom": 1.5,
+    "width": 1812,
+    "height": 1035,
+    "png_bytes": 2594334,
+    "jpeg_bytes": 419116,
+    "jpeg_quality": 82
+  },
+  "thaeln-cell09": {
+    "blueprint": "../../../resources/config-samples/real/thaeln/cell09/thaeln-cell09-scaffold.txt",
+    "image": "images/thaeln-cell09.jpg",
+    "source_sha256": "87b163c39cb94cf8906403b3018abfde3290da8ee69598dce811b2836586af5a",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 404.974609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1664,
+      "y": 1440
+    },
+    "zoom": 1.3081989552577789,
+    "width": 1664,
+    "height": 1440,
+    "png_bytes": 4907090,
+    "jpeg_bytes": 744674,
+    "jpeg_quality": 82
+  }
+}

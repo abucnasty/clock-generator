@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.10.0
+Date: 2026-10-18
+  Features:
+    - captures the preferred lane and half-tile pickup length in front of an underground exit: lane 2 for a mirrored inserter, lane 1 when flipped
+---------------------------------------------------------------------------------------------------
 Version: 0.9.1
 Date: 2026-10-17
   Features:

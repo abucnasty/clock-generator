@@ -55,10 +55,9 @@ function helpers.get_target_type(entity)
     return nil
 end
 
----The lane of a belt that is nearest to an inserter beside it: 1 for the left lane in the direction the belt runs,
----2 for the right one, as get_transport_line numbers them. An inserter takes from the nearest lane first when its
----sink takes the items of both (recorded in Factorio 2.1.21). nil where it was not recorded or does not apply: a
----piece that is neither a straight transport belt nor an underground endpoint, and an inserter in line with the belt.
+---Preferred pickup lane: 1 for the left lane in belt travel direction, 2 for the right one.
+---Beside a belt this is the nearest lane; centered in front of an underground exit it depends on mirroring.
+---Other inline pickups and unsupported pieces remain unclassified. Recorded in Factorio 2.1.21.
 ---@param inserter LuaEntity
 ---@param belt LuaEntity The belt piece the inserter picks up from
 ---@return 1|2|nil
@@ -79,12 +78,20 @@ function helpers.get_near_lane(inserter, belt)
         return nil
     end
     -- how far the inserter is to the left of the belt: left of (x, y) is (y, -x)
-    local left = (inserter.position.x - belt.position.x) * direction.y - (inserter.position.y - belt.position.y) * direction.x
+    local dx, dy = inserter.position.x - belt.position.x, inserter.position.y - belt.position.y
+    local left = dx * direction.y - dy * direction.x
     if left > 0.25 then
         return 1
     end
     if left < -0.25 then
         return 2
+    end
+    -- At the exit's open end neither lane is nearer. A mirrored hand reaches the right lane first.
+    local facing = run[inserter.direction]
+    if belt.type == "underground-belt" and belt.belt_to_ground_type == "output"
+        and math.abs(left) < 0.01 and dx * direction.x + dy * direction.y > 0.25
+        and facing and facing.x == -direction.x and facing.y == -direction.y then
+        return inserter.mirroring and 2 or 1
     end
     return nil
 end

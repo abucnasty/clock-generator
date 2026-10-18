@@ -70,3 +70,22 @@ The underground window was 28 ticks before the correction. See
 [the simulator findings](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints)
 for the general rules and measured scope; raw investigation captures and analysis remain local under
 `work/same-item-pickup/investigation/`.
+
+## Scaffold screenshots
+
+Native Factorio views of the committed base blueprints, with entity info shown. These illustrate the layouts;
+they are not probe samples or evidence of pickup timing. The ingredient drain is present in these base views.
+
+Straight belt:
+
+![Straight-belt scaffold](straight-belt-scaffold.jpg)
+
+Underground entrance:
+
+![Underground-entrance scaffold](underground-entrance-scaffold.jpg)
+
+Underground exit:
+
+![Underground-exit scaffold](underground-exit-scaffold.jpg)
+
+See the [screenshot guide](../../../../README.md#scaffold-screenshots) for capture settings and regeneration.

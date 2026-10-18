@@ -5,6 +5,12 @@ The [same-item fixtures](fixtures/same-item/README.md) isolate moving near-lane/
 availability. Current general findings and calibration limits live in the
 [simulator documentation](../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
 
+The [front underground exit fixture](fixtures/front-underground-exit/README.md) isolates a northbound, head-on
+pickup with backed-up supply. Two ingredient arrangements distinguish lane preference from fixed recipe order;
+flipping the inserter with the swapped ingredients changes selection from lane 2 to lane 1. Each first hand is
+compared with an explicit simulator lane preference. Sidecar 0.10.0 exports that preference and half-tile geometry
+for both mirroring states. Other cardinal orientations and moving front supply have not had their actual grabs measured.
+
 From `clock-generator/`:
 
 ```bash
@@ -13,11 +19,13 @@ npm run test:generation -- src/crafting/moving-belt-pickup.generation.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/same-item-pickup-fixture.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/backed-up-pickup.game.test.ts
 npm run test:game -- tests/game/mechanics/belt-pickup/pickup-capture.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts
 ```
 
-The first two commands run in the simulator. The last three need Factorio and check respectively 12 lane-fallback
-cases, six actual ingredient/geometry cases, and Sidecar classification/export behavior. Their independent replay
-and simulator comparisons remain in the test code, separate from sampling helpers.
+The first two commands run in the simulator. The remaining commands need Factorio and check respectively 12 lane-fallback
+cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, and three front exit
+ingredient/mirroring cases with capture assertions. Their independent replay and simulator comparisons remain
+in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands
 and exposed stack positions/IDs. Both are shared across scenarios through the host composer. Scenarios retain

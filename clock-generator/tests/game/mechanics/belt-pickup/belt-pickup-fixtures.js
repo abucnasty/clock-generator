@@ -17,4 +17,40 @@ function makeInputBeltBackedUp(text) {
     return "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded), "utf8")).toString("base64");
 }
 
-module.exports = { makeInputBeltBackedUp };
+/** Swap only the four electromagnetic ingredient feeders, preserving geometry and inserter controls.
+ * @param {string} text
+ */
+function swapElectromagneticIngredientFeeds(text) {
+    const decoded = JSON.parse(zlib.inflateSync(Buffer.from(text.trim().slice(1), "base64")).toString());
+    if (!decoded.blueprint?.entities) throw new Error("missing blueprint entities");
+    let changed = 0;
+    for (const entity of decoded.blueprint.entities) {
+        for (const filter of entity.infinity_settings?.filters ?? []) {
+            if (filter.name === "accumulator" || filter.name === "supercapacitor") {
+                filter.name = filter.name === "accumulator" ? "supercapacitor" : "accumulator";
+                changed++;
+            }
+        }
+    }
+    if (changed !== 4) throw new Error("expected four electromagnetic ingredient feeder filters");
+    return "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded), "utf8")).toString("base64");
+}
+
+/** Flip only the cell's input inserter in the front underground exit fixture.
+ * @param {string} text
+ */
+function flipFrontUndergroundInput(text) {
+    const decoded = JSON.parse(zlib.inflateSync(Buffer.from(text.trim().slice(1), "base64")).toString());
+    /** @type {{name: string, position: {x: number, y: number}, mirror?: boolean}[] | undefined} */
+    const entities = decoded.blueprint?.entities;
+    if (!entities) throw new Error("missing blueprint entities");
+    const plant = entities.find(entity => entity.name === "electromagnetic-plant");
+    if (!plant) throw new Error("missing electromagnetic plant");
+    const inputs = entities.filter(entity => entity.name === "stack-inserter"
+        && entity.position.x === plant.position.x - 1.5 && entity.position.y === plant.position.y + 2.5);
+    if (inputs.length !== 1) throw new Error("expected one front underground input inserter");
+    inputs[0].mirror = !inputs[0].mirror;
+    return "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded), "utf8")).toString("base64");
+}
+
+module.exports = { makeInputBeltBackedUp, swapElectromagneticIngredientFeeds, flipFrontUndergroundInput };

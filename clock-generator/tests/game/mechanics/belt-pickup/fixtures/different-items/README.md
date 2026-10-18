@@ -55,6 +55,63 @@ the moving cases, without resetting the clock or machine.
 npm run test:game -- tests/game/mechanics/belt-pickup/backed-up-pickup.game.test.ts tests/game/builds/moving-pickup.game.test.ts
 ```
 
+## Mixed-item demand priority and insertion-limit fallback
+
+Measured manually on 2026-10-18 in Factorio 2.1.21, using this straight-belt scaffold with the ingredient drain
+removed. The eastward belt was backed up with four-item stacks on both lanes. The legendary stack inserter stood
+north of the belt, nearest lane 1, with a hand capacity of 16.
+
+A staged start saturated both lanes before placing a fresh, empty input inserter. Filters and circuit enable
+control were disabled. The active plant started with 13 or 14 of the near-lane ingredient, none of the far-lane
+ingredient, no products, and zero crafting progress. Inputs were set once, not cleared every tick: that difference
+in stock was the condition being tested. The simulator's insertion limit is 14 for each ingredient at this plant's crafting speed
+of 109.475. The second case swapped the ingredient feeders and config lanes while preserving the geometry and setup.
+The third case retained those swapped lanes and changed only the initial near-lane stock from 13 to 14.
+
+| Near lane / machine stock | Far lane / machine stock | First game grab | First simulator grab |
+| --- | --- | --- | --- |
+| Accumulator / 13 | Supercapacitor / 0 | 4 accumulators | 4 accumulators |
+| Supercapacitor / 13 | Accumulator / 0 | 4 supercapacitors | 4 supercapacitors |
+| Supercapacitor / 14 | Accumulator / 0 | 4 accumulators | 4 accumulators |
+
+In all three cases, the first game sample still had an empty hand and both exposed lanes full. The first grab was
+observed two ticks after probe installation, with machine stocks unchanged from their initial values. Only item
+choice and grab quantity were compared, not arm-arrival timing.
+
+For both ingredient arrangements, the completely missing far-lane ingredient did not override the near-lane
+preference. Swapping the lanes changed the selected ingredient, consistent with lane preference rather than a fixed
+preference for accumulators. At 14 supercapacitors, the inserter instead collected the missing far-lane ingredient.
+Together, the swapped 13/0 and 14/0 cases support the modeled insertion threshold of 14 for supercapacitors in this
+setup: prefer the near lane while its ingredient is accepted, then fall back to an accepted far-lane ingredient.
+The existing simulator agrees with all three observations, so no simulator change was needed. These cases do not
+establish insertion thresholds for other setups or behavior with moving supply, filters, or front-facing pickups.
+
+The retained scenarios, runners, recordings, detailed samples and simulator comparisons are local under
+`work/belt-pickup/mixed-demand-02/`, `work/belt-pickup/mixed-demand-swapped-01/`, and
+`work/belt-pickup/mixed-demand-limit-01/` at the repository root. These observations are not part of the automated
+game regression suite. Reproduction requires the staged setup and initial
+inventories above; the backed-up capture command earlier in this file clears inputs and therefore does not reproduce
+this demand experiment.
+
 The [same-item iron-gear fixtures](../same-item) test fallback
 between two lanes carrying the same item. See the [general pickup rules](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
 Original raw probes and clock recordings remain local under `work/belt-pickup-investigation/`.
+
+## Scaffold screenshots
+
+Native Factorio views of the committed base blueprints, with entity info shown. These illustrate the layouts;
+they are not probe samples or evidence of pickup timing. The ingredient drain is present in these base views.
+
+Straight belt:
+
+![Straight-belt scaffold](straight-belt-scaffold.jpg)
+
+Underground entrance:
+
+![Underground-entrance scaffold](underground-entrance-scaffold.jpg)
+
+Underground exit:
+
+![Underground-exit scaffold](underground-exit-scaffold.jpg)
+
+See the [screenshot guide](../../../../README.md#scaffold-screenshots) for capture settings and regeneration.
