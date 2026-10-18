@@ -12,7 +12,7 @@ import { FactorioBlueprintFile } from "../blueprints/blueprint";
 import { assessSameItemPickups, SameItemPickupProbe } from "./same-item-pickup-probe";
 import { Config } from "../config";
 import { SimulationContext } from "../crafting/sequence/simulation-context";
-import { InserterPickupMode } from "../control-logic/inserter/modes/pickup-mode";
+import { InserterPickupMode } from "../control-logic/inserter/modes/pickup/pickup-mode";
 
 const SAMPLE = path.dirname(ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM);
 

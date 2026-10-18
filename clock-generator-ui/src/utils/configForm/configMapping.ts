@@ -1,5 +1,6 @@
 import type { Config, RuleSet } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
+import { withDefaultPickupType } from '../pickupGeometry';
 import type {
     BeltLaneFormData,
     ChestFormData,
@@ -130,7 +131,10 @@ export function formDataToConfig(config: ConfigFormData): Config {
     return {
         ...config,
         machines: config.machines.map(toConfig),
-        inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => { void _f; return toConfig(ins); }),
+        inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => {
+            void _f;
+            return toConfig({ ...ins, source: withDefaultPickupType(ins.source) });
+        }),
         belts: config.belts.map(toConfig),
         chests: config.chests.map(({ _chest_settings: memory, ...chest }) => {
             void memory;

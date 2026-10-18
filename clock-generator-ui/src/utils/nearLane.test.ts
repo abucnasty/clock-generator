@@ -51,7 +51,7 @@ describe('withNearLane', () => {
         const update = { source: withNearLane({ type: 'belt', id: config.belts[0].id }, 1) };
         config = edits.updateInserter(config, 0, update);
         const exported = formDataToConfig(config);
-        expect(exported.inserters[0].source).toEqual({ type: 'belt', id: config.belts[0].id, near_lane: 1 });
+        expect(exported.inserters[0].source).toEqual({ type: 'belt', id: config.belts[0].id, near_lane: 1, pickup_length: 1 });
         const imported = configToFormData(JSON.parse(JSON.stringify(exported)) as Config);
         expect(imported.inserters[0].source.near_lane).toBe(1);
 

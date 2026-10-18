@@ -1,7 +1,7 @@
 import { ChestState, EntityState, InserterState, MachineState } from "../../../state";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterMode } from "../modes/inserter-mode";
-import { InserterPickupMode } from "../modes/pickup-mode";
+import { InserterPickupMode } from "../modes/pickup/pickup-mode";
 import { EnableControl } from "../../enable-control";
 import { InserterDisabledMode } from "../modes/disabled-mode";
 import { TickProvider } from "../../current-tick-provider";

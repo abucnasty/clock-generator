@@ -1,18 +1,20 @@
 import type { InserterFormData } from './configForm/formData';
 
-export type PickupType = 'straight' | 'underground' | 'unspecified';
+export type PickupType = 'straight' | 'underground';
 type Source = InserterFormData['source'];
 
 export function pickupTypeOf(source: Source): PickupType {
-    return source.pickup_length === 1 ? 'straight' : source.pickup_length === 0.5 ? 'underground' : 'unspecified';
+    return source.pickup_length === 0.5 ? 'underground' : 'straight';
 }
 
 export function withPickupType(source: Source, type: PickupType): Source {
     if (source.type !== 'belt') return source;
-    const next = { ...source };
-    delete next.pickup_length;
-    if (type !== 'unspecified') next.pickup_length = type === 'straight' ? 1 : 0.5;
-    return next;
+    return { ...source, pickup_length: type === 'straight' ? 1 : 0.5 };
+}
+
+/** Make the UI's straight-belt default explicit for generation and export, including older saved forms. */
+export function withDefaultPickupType(source: Source): Source {
+    return source.type === 'belt' && source.pickup_length === undefined ? withPickupType(source, 'straight') : source;
 }
 
 export interface PickupBuild {

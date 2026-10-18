@@ -8,14 +8,24 @@ import { configKeyOf, generatedForOf, isStale } from './resultsStaleness';
 
 describe('pickup type edits and saved assumptions', () => {
     const source: InserterFormData['source'] = { type: 'belt', id: 1, near_lane: 2 };
-    it('maps geometry to names and explicitly removes an unspecified type', () => {
-        expect(pickupTypeOf(source)).toBe('unspecified');
+    it('defaults to straight belt and lets underground pickups be selected explicitly', () => {
+        expect(pickupTypeOf(source)).toBe('straight');
         const underground = withPickupType(source, 'underground');
         expect(underground).toEqual({ ...source, pickup_length: 0.5 });
         expect(pickupTypeOf(underground)).toBe('underground');
         expect(withPickupType(underground, 'straight')).toEqual({ ...source, pickup_length: 1 });
-        expect(withPickupType(underground, 'unspecified')).toEqual(source);
         expect(source).not.toHaveProperty('pickup_length');
+    });
+    it('passes straight-belt timing to generation and export for new, imported and saved forms without geometry', () => {
+        const form = createDefaultConfig();
+        form.inserters = [{ id: 1, _uuid: 'input', source, sink: { type: 'machine', id: 1 } }];
+        const config = formDataToConfig(form);
+        expect(config.inserters[0].source).toEqual({ ...source, pickup_length: 1 });
+        expect(formDataToConfig(configToFormData(config)).inserters[0].source).toEqual(config.inserters[0].source);
+        const legacyImport = { ...config, inserters: [{ ...config.inserters[0], source }] };
+        expect(formDataToConfig(configToFormData(legacyImport)).inserters[0].source).toEqual(config.inserters[0].source);
+        expect(source).not.toHaveProperty('pickup_length');
+        expect(isStale(generatedForOf(legacyImport), configKeyOf(config))).toBe(true);
     });
     it('does not attach geometry to a machine or chest source', () => {
         for (const type of ['machine', 'chest'] as const) {

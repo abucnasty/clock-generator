@@ -41,12 +41,14 @@ These are offsets from the first grab, not an arm-arrival or wake-up timing rule
 
 Set `source.pickup_length` to `1` or `0.5` and `near_lane` to `1` or `2`. Sidecar captures supported straight and
 underground pickups; in the UI these are **Straight belt** and **Underground belt** under **Picks up from**.
-Choose **Moving** or **Backed up** separately (`overrides.non_moving_belts`). Older configs without pickup length
-retain their always-full supply assumption. Imports/builds identify missing pickup types; saved results retain
+Choose **Moving** or **Backed up** separately (`overrides.non_moving_belts`). In the UI, omitted pickup types default
+to **Straight belt**, and generation and export write its pickup length explicitly. Choose **Underground belt** for
+either endpoint; Sidecar imports preserve captured pickup types. Configs used directly by the engine without pickup
+length retain their always-full supply assumption. Saved results retain
 their run's assumptions. Belt slack remains extra margin for late starts and supply gaps.
 
 The [lane model](../src/state/belt-pickup-lane.ts) stores only holes and partial stacks in an otherwise evenly spaced
-supply. [Pickup mode](../src/control-logic/inserter/modes/pickup-mode.ts) chooses the physical lane. No whole-belt
+supply. [Belt pickup logic](../src/control-logic/inserter/modes/pickup/belt-pickup-logic.ts) chooses the physical lane. No whole-belt
 simulation or extra search dimension is involved.
 
 Calibration: Factorio 2.1.21, legendary stack inserters, four-item belt stacks, turbo/express belts, and pickups
@@ -101,7 +103,7 @@ A hand from a belt is held up by a window that opens on a machine at its output 
 
 The entry for this rule in the shared mechanics docs (factorio-benchmarks, docs/mechanics) is pending.
 
-A hand that an inserter takes from a machine stops filling while the machine it puts into takes nothing of its item, as a hand from a belt does: it keeps what it holds, also through a closed window, and goes on once the machine is under its block. Recorded: such a hand did not grow in 20,701 samples of 20,701 with products to take where the machine it puts into was at its output block, and grew in 11,561 of 11,561 where it was not. It is in the pickup of the inserter (`clock-generator/src/control-logic/inserter/modes/pickup-mode.ts`).
+A hand that an inserter takes from a machine stops filling while the machine it puts into takes nothing of its item, as a hand from a belt does: it keeps what it holds, also through a closed window, and goes on once the machine is under its block. Recorded: such a hand did not grow in 20,701 samples of 20,701 with products to take where the machine it puts into was at its output block, and grew in 11,561 of 11,561 where it was not. It is in the machine pickup logic (`clock-generator/src/control-logic/inserter/modes/pickup/machine-pickup-logic.ts`).
 
 Without these two rules the clock version 0.9.0 selected for the accumulator build of issue 152 (640 a second over 18 copies, `resources/config-samples/intermediates/accumulator/accumulator-640.json`) made 512 to 544 of its 576 a period in the game, in a cycle of seven periods, where the simulator had 576 in every one. The iron and battery inserters of the accumulator plants opened their windows in the tick their output inserter, on its way back from the belt, took the products, and took their hands a tick later than the simulator had them; the battery inserters held 13 of 16 batteries through their closed window where the simulator filled the hand in its last tick. With the two rules the simulator has that clock at 512, and the clock it selects instead made 576 in each of 58 periods in the game, after 3 at 544 while it settled from the scaffold's start.
 

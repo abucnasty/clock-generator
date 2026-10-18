@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { Config } from "../../../config";
-import { ConfigPaths } from "../../../config/config-paths";
-import { loadConfigFromFile } from "../../../config/loader";
-import { SimulationContext } from "../../../crafting/sequence/simulation-context";
-import { EntityState } from "../../../state";
+import { Config } from "../../../../config";
+import { ConfigPaths } from "../../../../config/config-paths";
+import { loadConfigFromFile } from "../../../../config/loader";
+import { SimulationContext } from "../../../../crafting/sequence/simulation-context";
+import { EntityState } from "../../../../state";
 import { InserterPickupMode } from "./pickup-mode";
 
 let sample: Config;

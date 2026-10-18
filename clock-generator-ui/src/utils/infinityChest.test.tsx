@@ -17,7 +17,7 @@ const config: Config = {
     target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
     belts: [{ id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] }],
-    inserters: [{ id: 1, source: { type: 'belt', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 4 }],
+    inserters: [{ id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 4 }],
     chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
 };
 

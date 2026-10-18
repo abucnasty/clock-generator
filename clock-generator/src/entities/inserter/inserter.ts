@@ -214,9 +214,9 @@ export class InserterFactory {
             { prototype, quality }
         )
 
-        return {
+        const inserter: Inserter = {
             entity_id: EntityId.forInserter(id),
-            metadata: metadata,
+            metadata,
             source: {
                 entity_id: EntityId.forEntity(source.id, source.type),
                 item_names: source_provided_items
@@ -228,11 +228,22 @@ export class InserterFactory {
             filtered_items,
             hand_sizes,
             animation: InserterAnimation.fromMetadata(metadata.animation),
-            ...(source.type === EntityType.BELT && source.near_lane !== undefined && { near_lane: source.near_lane }),
-            ...(source.type === EntityType.BELT && source.pickup_length !== undefined && this.moving_belts
-                && { pickup_length: source.pickup_length }),
-            ...(drop_spot && { drop: drop_spot })
         }
+
+        if (source.type === EntityType.BELT) {
+            if (source.near_lane !== undefined) {
+                inserter.near_lane = source.near_lane;
+            }
+            if (this.moving_belts && source.pickup_length !== undefined) {
+                inserter.pickup_length = source.pickup_length;
+            }
+        }
+
+        if (drop_spot !== undefined) {
+            inserter.drop = drop_spot;
+        }
+
+        return inserter;
     }
 
     /**

@@ -224,7 +224,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
                     </Typography>
                     {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
-                    {saved && <PickupGeometrySummary build={saved} onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
+                    {saved && <PickupGeometrySummary build={saved} savedRun onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
                 </Box>}
             />
 

@@ -7,8 +7,15 @@ const build = { inserters: [{ id: 8, source: { type: 'belt', pickup_length: 1 } 
 const text = (html: string) => html.replace(/<style[^>]*>[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, '');
 
 describe('pickup assumption presentation', () => {
-    it('explains incomplete moving timing and provides a specific inserter action', () => {
-        const html = renderToStaticMarkup(<PickupGeometrySummary build={build} onEdit={() => {}} />);
+    it('explains the default and underground opt-in for current and prospective builds', () => {
+        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={build} onEdit={() => {}} />));
+        expect(html).toContain('Straight belt is the default');
+        expect(html).toContain('Choose Underground belt for an entrance or exit');
+        expect(html).not.toContain('missing');
+        expect(html).not.toContain('older full-belt assumption');
+    });
+    it('preserves legacy saved-run assumptions and provides a specific inserter action', () => {
+        const html = renderToStaticMarkup(<PickupGeometrySummary build={build} savedRun onEdit={() => {}} />);
         expect(text(html)).toContain('Pickup type known for 1 of 2 belt-fed inserters');
         expect(text(html)).toContain('older full-belt assumption');
         expect(html).toContain('Set pickup for Inserter 3');
@@ -20,7 +27,7 @@ describe('pickup assumption presentation', () => {
         expect(html).not.toContain('missing');
     });
     it('reports complete geometry without a missing-type action', () => {
-        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={{ inserters: [build.inserters[0]] }} />));
+        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={{ inserters: [build.inserters[0]] }} savedRun />));
         expect(html).toContain('Pickup type known for all 1');
         expect(html).not.toContain('missing');
     });
@@ -32,5 +39,13 @@ describe('pickup assumption presentation', () => {
             expect(text(html)).not.toContain('0.5');
         }
         expect(renderToStaticMarkup(<PickupTypeSelect source={{ type: 'machine', id: 1 }} entityLabel="Inserter 3" onChange={() => {}} />)).toBe('');
+    });
+    it('selects straight belt when geometry is omitted in either editor', () => {
+        for (const compact of [false, true]) {
+            const html = renderToStaticMarkup(<PickupTypeSelect source={{ type: 'belt', id: 1 }} compact={compact} entityLabel="Inserter 3" onChange={() => {}} />);
+            expect(html).toContain('value="straight"');
+            expect(text(html)).toContain('Straight belt');
+            expect(html).not.toContain('Not specified');
+        }
     });
 });

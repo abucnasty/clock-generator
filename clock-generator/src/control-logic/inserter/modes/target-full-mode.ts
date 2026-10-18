@@ -1,5 +1,5 @@
 import { InserterStatus } from "../../../state";
-import { InserterDropMode } from "./drop-mode";
+import { InserterDropMode } from "./drop/drop-mode";
 import { InserterMode } from "./inserter-mode";
 
 /**
