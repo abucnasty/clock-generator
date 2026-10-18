@@ -20,7 +20,7 @@ export const SUMMARY_COPY = {
     recoveryUnavailable: 'Recovery unavailable',
     unstable: 'Does not hold its rate',
     startDependent: 'Depends on how it is started',
-    stillBelts: 'For belts that stand still',
+    stillBelts: 'For backed-up belts',
     fewestWakeUps: 'Fewest wake-ups',
     fewestWakeWindows: 'Fewest wake windows',
     another: (rate: string) => `Another way to make ${rate}/s`,
@@ -41,24 +41,24 @@ export const SUMMARY_COPY = {
     recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
     recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
     beltMoving: 'Moving',
-    beltStill: 'Standing still',
+    beltStill: 'Backed up',
     beltNone: 'No belt',
     beltCellMoving: (slack: string) => `Moving (${slack} belt slack)`,
     beltLineMoving: 'Made for moving belts.',
-    beltLineStill: 'Made for belts that stand still.',
+    beltLineStill: 'Made for backed-up belts.',
     beltLineNone: 'No inserter on the clock picks up from a belt.',
     // how a selected clock differs from the recommended one
     differsRate: (rate: string, target: string) => `This one makes ${rate}/s, not ${target}/s.`,
     differsMoreWakeUps: (n: number) => `It wakes inserters ${n} more ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
     differsFewerWakeUps: (n: number) => `It wakes inserters ${n} fewer ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
-    differsBelt: 'It is made for belts that stand still.',
+    differsBelt: 'It is made for backed-up belts.',
     differsNoRecovery: 'It does not recover after it is starved or jammed.',
     differsUnstable: 'It does not hold its rate.',
     differsNothing: 'It is not the recommended clock.',
     // the compare table
     foldedMakes: (count: number, rate: string) => `All ${count} clocks make ${rate}/s.`,
     worksYes: 'Yes',
-    worksStillBelts: 'Only for belts that stand still',
+    worksStillBelts: 'Only for backed-up belts',
     worksOffTarget: (rate: string) => `Misses the rate (${rate}/s)`,
     worksNoRecovery: 'Does not recover',
     worksUnstable: 'Unstable',
@@ -86,7 +86,7 @@ const isContender = (clock: SummaryClock) => clock.ranking.meets_target_rate && 
 /**
  * The name of a clock by what it is for, against the other clocks of its generation ("Fewest wake-ups"). The first
  * rule that matches wins: a clock off the target rate is named by its rate; one that does not recover, or does not hold
- * its rate, by that; one for belts that stand still (when the build asked for moving ones) by its belt; among the
+ * its rate, by that; one for backed-up belts (when the build asked for moving ones) by its belt; among the
  * others, the one with the fewest wake-ups, else the fewest wake windows; any other by the rate it makes. Tied clocks
  * share a name; the engine's name under it tells them apart. The target is each clock's own, so an edit to the build
  * since never renames a clock.
@@ -169,13 +169,13 @@ function beltKindOf(rule: PickRule | null, beltLabel: string): BeltKind {
     return !rule?.nonMovingBelts && beltLabel.startsWith('moving') ? 'moving' : 'still';
 }
 
-/** The Belt tile's word: "Moving", "Standing still", or "No belt" when no clocked inserter picks up from one */
+/** The Belt tile's word: "Moving", "Backed up", or "No belt" when no clocked inserter picks up from one */
 export function beltValue(rule: PickRule | null, beltLabel: string): string {
     return { moving: SUMMARY_COPY.beltMoving, still: SUMMARY_COPY.beltStill, none: SUMMARY_COPY.beltNone }[beltKindOf(rule, beltLabel)];
 }
 
 /**
- * The full clock table's Belt cell in the belt question's words: "Moving (+4 ticks belt slack)", "Standing still", or
+ * The full clock table's Belt cell in the belt question's words: "Moving (+4 ticks belt slack)", "Backed up", or
  * nothing when no clocked inserter picks up from a belt. The engine's label is "moving (+4 ticks)" or "non-moving".
  */
 export function beltCellText(beltLabel: string): string {
@@ -245,7 +245,7 @@ export function foldedMakes(clocks: Pick<SummaryClock, 'assessment'>[]): string 
  * The compare table's "Works?": "Yes" for a clock that holds the rate and recovers, made for the belt asked for;
  * otherwise what is wrong, the worst first: that it does not hold its rate (the word of the group it is listed under;
  * its rate is in its name and in Makes), the rate it misses, that it needs a restart after a jam, or that it is only for
- * belts that stand still. `kind` picks the icon; the words say it without the colour.
+ * backed-up belts. `kind` picks the icon; the words say it without the colour.
  */
 export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment'>): { kind: 'yes' | 'caution' | 'no'; text: string } {
     if (isStartDependent(clock)) return { kind: 'caution', text: SUMMARY_COPY.worksStartDependent };

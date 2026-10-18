@@ -4,7 +4,7 @@ import type { ClockAlternativeView } from '../worker/types';
 
 /** What the selection rule is given by the config a generation ran with */
 export interface PickRule {
-    /** The input belts are backed up and standing still: every clock is made without belt slack and counts as made for the belt */
+    /** The input belts are backed up: every clock is made without belt slack and counts as made for the belt */
     nonMovingBelts: boolean;
     /** "Search for fewer wake-ups": the slower searches ran whether they were needed or not */
     searchedForFewerWakeUps: boolean;
@@ -41,15 +41,15 @@ export const RECOMMENDED_COPY = {
             + 'windows. If none qualifies, the one that runs nearest to the target rate.',
         'A clock made for a moving belt keeps each belt inserter\'s wake window open a few ticks longer (belt slack). '
             + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
-            + 'input belts are backed up and standing still (Configure, Belts), every clock is made without the slack.',
+            + 'input belts are backed up (Configure, Belts), every clock is made without the slack.',
     ],
     runMovingBelts: 'This run assumed moving belts.',
-    runStillBelts: 'This run assumed belts that stand still.',
+    runStillBelts: 'This run assumed backed-up belts.',
     runSearched: 'The slower searches for fewer wake-ups were run.',
     runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered.',
     provisional: 'More clocks are still being made, so this may change. ',
     stopped: 'You stopped this run early, so a better clock may not have been made yet. ',
-    beltStill: ' with belts that stand still',
+    beltStill: ' with backed-up belts',
     beltMoving: ' on a moving belt',
     /**
      * The clocks the pick was compared with: those that hold the rate and recover, or on a build with a deadlock risk
@@ -73,9 +73,9 @@ export const RECOMMENDED_COPY = {
     noneForMovingBelt: (rate: string, deadlock: boolean) => deadlock
         ? `No clock made for a moving belt holds ${rate}/s.`
         : `No clock made for a moving belt holds ${rate}/s and recovers.`,
-    stillOnly: ' This one, made for belts that stand still, does.',
-    stillFewestWakeUps: ' Of those made for belts that stand still, this one has the fewest wake-ups.',
-    stillWakeUpsNotCounted: ' Of those made for belts that stand still, this one has the fewest wake windows; wake-ups '
+    stillOnly: ' This one, made for backed-up belts, does.',
+    stillFewestWakeUps: ' Of those made for backed-up belts, this one has the fewest wake-ups.',
+    stillWakeUpsNotCounted: ' Of those made for backed-up belts, this one has the fewest wake windows; wake-ups '
         + 'could not be counted for them.',
     mayFailOnMovingBelt: ' It may fail on a moving belt.',
     noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and recovers.`,

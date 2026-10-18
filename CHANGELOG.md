@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.17.2] - 2026-10-17
+
+### Added
+- Set each belt-fed inserter's pickup type to Straight belt or Underground belt in either editor. Imports, builds and saved results show pickup coverage, with direct links to fill missing types.
+- Sidecar 0.9.1 identifies bends, splitters and inline pickups it cannot classify, both in its copy window and the import preview.
+
+### Changed
+- Describe the input supply as Moving or Backed up, independently of pickup type. Saved results retain the assumptions used for that run, and editing either setting marks them out of date.
+
 ## [0.17.1] - 2026-10-17
 
 ### Fixed

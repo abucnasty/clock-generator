@@ -124,11 +124,11 @@ describe('otherAnswer and beltResultsLine', () => {
     it('says which belt setting the run used, with the action for the other answer', () => {
         expect(beltResultsLine('moving')).toEqual({
             text: 'This run used your Moving belt setting.',
-            actionLabel: 'My belts stand still. Generate again',
+            actionLabel: 'My belts are backed up. Generate again',
             switchTo: 'standing',
         });
         expect(beltResultsLine('standing')).toEqual({
-            text: 'This run used your Backed up and standing still belt setting.',
+            text: 'This run used your Backed up belt setting.',
             actionLabel: 'My belts move. Generate again',
             switchTo: 'moving',
         });
@@ -169,10 +169,10 @@ describe('standingBeltsHint', () => {
     const still = (wakeUps: number | null, ranking: Partial<ClockRanking> = {}) =>
         clock({ matches_belt_choice: false, wake_ups_per_minute: wakeUps, ...ranking });
 
-    it('says how few wake-ups the build may do with on belts that stand still', () => {
+    it('says how few wake-ups the build may do with on backed-up belts', () => {
         const clocks = [clock({ wake_ups_per_minute: 177 }), still(0)];
         expect(standingBeltsHint(clocks, 0, 'moving'))
-            .toBe('On belts that stand still, this build may do with 0 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
+            .toBe('On backed-up belts, this build may do with 0 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
     });
 
     it('says nothing on a standing-belt result, or with no pick', () => {
@@ -199,7 +199,7 @@ describe('standingBeltsHint', () => {
 
     it('prints the numbers rounded, as the table does', () => {
         expect(standingBeltsHint([clock({ wake_ups_per_minute: 176.6 }), still(3.2)], 0, 'moving'))
-            .toBe('On belts that stand still, this build may do with 3 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
+            .toBe('On backed-up belts, this build may do with 3 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
     });
 
     it('says nothing when the difference rounds away', () => {

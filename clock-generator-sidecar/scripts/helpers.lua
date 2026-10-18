@@ -100,6 +100,16 @@ function helpers.get_pickup_length(inserter, belt)
     return nil
 end
 
+---Why capture cannot classify a belt pickup. Never infer geometry from an unsupported piece or observed motion.
+function helpers.get_pickup_problem(inserter, belt)
+    if belt.type == "transport-belt" and belt.belt_shape ~= "straight" then return "bend" end
+    if belt.type == "splitter" or belt.type == "lane-splitter" then return "splitter" end
+    if belt.type ~= "transport-belt" and belt.type ~= "underground-belt" then return "unsupported" end
+    if not helpers.get_near_lane(inserter, belt) then return "inline" end
+    if not helpers.get_pickup_length(inserter, belt) then return "unsupported" end
+    return nil
+end
+
 ---Get the primary ingredient and max stack size from a transport line
 ---@param transport_line LuaTransportLine
 ---@param default_stack_size number? The default stack size to use if no items are found (default 1)

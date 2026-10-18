@@ -28,7 +28,7 @@ const OWN_OVERRIDES = ['non_moving_belts', 'search_for_fewer_wake_ups'];
 /** The parts of a config this file names a change in; anything else that changed is "other settings" */
 const NAMED_PARTS = ['target_output', 'machines', 'inserters', 'belts', 'chests', 'drills', 'overrides'];
 
-const beltsText = (config: Config) => (config.overrides?.non_moving_belts === true ? 'standing still' : 'moving');
+const beltsText = (config: Config) => (config.overrides?.non_moving_belts === true ? 'backed up' : 'moving');
 const onOff = (on: boolean) => (on ? 'on' : 'off');
 
 /** "Inserters (5 → 4)" when the count changed, else "Inserter 3" or "Inserters 3, 5" for the ones that changed */

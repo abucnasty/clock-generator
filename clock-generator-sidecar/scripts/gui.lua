@@ -158,7 +158,8 @@ end
 ---@param player LuaPlayer
 ---@param json string
 ---@param left_out {inserter: InserterData, pickup: boolean, target: InserterTargetRef|nil}[] Inserters left out of the JSON
-function gui.create_copy_popup(player, json, left_out)
+---@param pickup_warnings {inserter_id: number, reason: string}[]|nil
+function gui.create_copy_popup(player, json, left_out, pickup_warnings)
     -- Remove any existing copy popup
     local existing = player.gui.screen[gui.COPY_GUI_NAME]
     if existing and existing.valid then
@@ -195,6 +196,19 @@ function gui.create_copy_popup(player, json, left_out)
 
     if #left_out > 0 then
         add_left_out_inserters(frame, left_out)
+    end
+
+    if pickup_warnings then
+        local scroll = frame.add({ type = "scroll-pane", direction = "vertical", horizontal_scroll_policy = "never" })
+        scroll.style.maximal_height = 150
+        for _, warning in ipairs(pickup_warnings) do
+            local label = scroll.add({ type = "label", caption = {
+                "clock-generator-sidecar.pickup-warning", warning.inserter_id,
+                { "clock-generator-sidecar.pickup-" .. warning.reason }
+            } })
+            label.style.single_line = false
+            label.style.maximal_width = 600
+        end
     end
 
     -- Button flow

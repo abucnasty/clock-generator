@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.9.1
+Date: 2026-10-17
+  Features:
+    - explains unclassified belt pickups in the copy window and JSON: bends, splitters, inline pickups and unsupported geometry
+
+---------------------------------------------------------------------------------------------------
 Version: 0.9.0
 Date: 2026-10-17
   Features:

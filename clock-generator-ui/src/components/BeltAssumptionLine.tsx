@@ -4,7 +4,7 @@ import { beltResultsLine, type BeltAnswer, type BeltQuestion } from '../utils/be
 interface BeltAssumptionLineProps {
     /** The belt question as the generation on screen answered it; null before one */
     assumption: BeltQuestion | null;
-    /** What the clocks on screen say of belts that stand still; null when nothing is worth saying, or while busy */
+    /** What the clocks on screen say of backed-up belts; null when nothing is worth saying, or while busy */
     hint: string | null;
     /** A check or a generation runs: the action starts nothing, and stays in the tab order */
     busy: boolean;

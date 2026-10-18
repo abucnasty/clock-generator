@@ -10,6 +10,7 @@ import { removeFilterSlot, setFilterSlot, usesAutomaticFilters } from '../utils/
 import { DROP_ROUTE_READ_ONLY, endpointUpdate, effectiveInserterStackSize, INSERTER_TIMING_ASSUMPTION, inserterTimingLabels, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NearLaneSelect } from './NearLaneSelect';
+import { PickupTypeSelect } from './PickupTypeSelect';
 import { NumberField } from './NumberField';
 import { EntitySelector } from './EntitySelector';
 
@@ -90,6 +91,7 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
         </>}
         <Box sx={row ? { ...PICKER_GROUP_SX, flexWrap: 'wrap' } : { display: 'contents' }}>
             {picker('source', 'Source')}
+            <PickupTypeSelect compact={row} source={value.source} entityLabel={label} onChange={source => onChange({ source })} />
             {!row && <NearLaneSelect compact={row} source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />}
         </Box>
         <Box sx={row ? PICKER_GROUP_SX : { display: 'contents' }}>

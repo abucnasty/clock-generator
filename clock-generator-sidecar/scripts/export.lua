@@ -169,6 +169,8 @@ function export.to_table(result)
         })
     end
     
+    -- Capture diagnostics stay outside the simulator config and refer to exported inserter IDs.
+    local pickup_warnings = {}
     -- Format inserters for clock-generator
     for _, exported in ipairs(export.exported_inserters(result)) do
         local inserter = exported.inserter
@@ -186,7 +188,11 @@ function export.to_table(result)
         end
 
         table.insert(output.inserters, inserter_export)
+        if exported.source.type == "belt" and not exported.source.pickup_length then
+            table.insert(pickup_warnings, { inserter_id = exported.id, reason = inserter.source.pickup_problem or "unsupported" })
+        end
     end
+    if #pickup_warnings > 0 then output.pickup_warnings = pickup_warnings end
     
     -- Format chests for clock-generator
     for i, chest in ipairs(result.chests) do

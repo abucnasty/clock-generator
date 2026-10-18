@@ -51,9 +51,9 @@ const COMPARE_COPY = {
     worksHeading: 'Does it work?',
     beltHelp: 'The belt the clock is made for. Moving: each wake window of an inserter that picks up from a belt stays '
         + 'open the ticks shown longer (belt slack), so a pickup that comes late on a moving belt can finish; a rule of '
-        + 'thumb, not a simulated belt. Standing still: the wake windows fit a belt that is full and does not move, which '
-        + 'is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A '
-        + 'subtick clock is always made for a belt that stands still, and is not ranked behind other clocks for it. Blank '
+        + 'thumb for late pickups. Known pickup types also model which moving stacks are within reach. Backed up: items '
+        + 'stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched off holding a partial hand. A '
+        + 'subtick clock is always made for a backed-up belt, and is not ranked behind other clocks for it. Blank '
         + 'when no clocked inserter picks up from a belt.',
     swingsHelp: 'Total output swings per crafting cycle of each output machine, shared equally across its output inserters. '
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the clock period).',

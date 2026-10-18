@@ -142,7 +142,7 @@ describe('recommendationReason', () => {
 
     it('says the belts stand still when the build says so', () => {
         const still = [clock('a', { beltLabel: 'non-moving' }), ...others];
-        expect(reason(still, STILL)).toBe('Fewest wake-ups among the clocks that hold 240/s and recover with belts that stand still.');
+        expect(reason(still, STILL)).toBe('Fewest wake-ups among the clocks that hold 240/s and recover with backed-up belts.');
     });
 
     it('leaves the belt out when no clocked inserter picks up from a belt', () => {
@@ -154,32 +154,32 @@ describe('recommendationReason', () => {
             .toBe('Fewest wake-ups among the clocks that hold 240/s and recover.');
     });
 
-    describe('a clock made for belts that stand still, picked because none for a moving belt meets the rate', () => {
+    describe('a clock made for backed-up belts, picked because none for a moving belt meets the rate', () => {
         const still = (id: string, options: ClockOptions = {}) =>
             clock(id, { matches_belt_choice: false, beltLabel: 'non-moving', ...options });
 
         it('says it is the only one when it is', () => {
             expect(reason([still('slackless'), short('b', 1)]))
-                .toBe('No clock made for a moving belt holds 240/s and recovers. This one, made for belts that stand still, '
+                .toBe('No clock made for a moving belt holds 240/s and recovers. This one, made for backed-up belts, '
                     + 'does. It may fail on a moving belt.');
         });
 
         it('says it has the fewest wake-ups of those that do', () => {
             expect(reason([still('a', { wake_ups_per_minute: 30 }), still('b'), short('c', 1)]))
-                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for belts that stand still, '
+                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for backed-up belts, '
                     + 'this one has the fewest wake-ups. It may fail on a moving belt.');
         });
 
         it('says what broke a tie on wake-ups', () => {
             expect(reason([still('a', { window_count: 3 }), still('b')]))
-                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for belts that stand still, '
+                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for backed-up belts, '
                     + 'this one has the fewest wake-ups. 1 other clock ties on wake-ups, so the one with fewer wake '
                     + 'windows was picked. It may fail on a moving belt.');
         });
 
         it('adds the recovery note on a build with a deadlock risk', () => {
             expect(reason([still('a', { deadlock: true, verdict: 'no recovery' })]))
-                .toBe('No clock made for a moving belt holds 240/s. This one, made for belts that stand still, does. It '
+                .toBe('No clock made for a moving belt holds 240/s. This one, made for backed-up belts, does. It '
                     + 'may fail on a moving belt. The recovery trials do not decide on this build.');
         });
     });
@@ -245,9 +245,9 @@ describe('recommendationReason', () => {
                 + 'only cut wake-ups.');
     });
 
-    it('leaves the belt out of the tie with belts that stand still', () => {
+    it('leaves the belt out of the tie with backed-up belts', () => {
         expect(reason([clock('a', { window_count: 3, beltLabel: 'non-moving' }), clock('b', { beltLabel: 'non-moving' })], STILL))
-            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover with belts that stand still. 1 other clock ties on '
+            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover with backed-up belts. 1 other clock ties on '
                 + 'wake-ups, so the one with fewer wake windows was picked.');
     });
 
@@ -316,11 +316,11 @@ describe('RECOMMENDED_COPY', () => {
 describe('disclosureRunLine', () => {
     it('says the belt the clocks were made for and whether the searches ran', () => {
         expect(disclosureRunLine(MOVING)).toBe('This run assumed moving belts. The slower searches were only run if no other clock held the rate and recovered.');
-        expect(disclosureRunLine(STILL)).toBe('This run assumed belts that stand still. The slower searches were only run if no other clock held the rate and recovered.');
+        expect(disclosureRunLine(STILL)).toBe('This run assumed backed-up belts. The slower searches were only run if no other clock held the rate and recovered.');
         expect(disclosureRunLine({ nonMovingBelts: false, searchedForFewerWakeUps: true }))
             .toBe('This run assumed moving belts. The slower searches for fewer wake-ups were run.');
         expect(disclosureRunLine({ nonMovingBelts: true, searchedForFewerWakeUps: true }))
-            .toBe('This run assumed belts that stand still. The slower searches for fewer wake-ups were run.');
+            .toBe('This run assumed backed-up belts. The slower searches for fewer wake-ups were run.');
         expect(disclosureRunLine(null)).toBe(disclosureRunLine(MOVING));
     });
 });

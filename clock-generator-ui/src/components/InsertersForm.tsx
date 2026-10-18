@@ -52,7 +52,7 @@ const ROW_GRID_SX = {
     bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
 };
 interface InsertersFormProps {
-    focusRequest?: { id: number; filters: boolean } | null;
+    focusRequest?: { id: number; filters: boolean; pickup?: boolean } | null;
     onFocusHandled?: () => void;
     inserters: InserterFormData[];
     machines: MachineFormData[];
@@ -216,7 +216,8 @@ function InsertersFormComponent({
         if (!focusRequest) return;
         const frame = requestAnimationFrame(() => {
             const row = document.getElementById(`entity-inserter-${focusRequest.id}`);
-            const control = row?.querySelector<HTMLElement>(focusRequest.filters ? 'button[aria-haspopup="dialog"]' : '[role="combobox"]');
+            const control = row?.querySelector<HTMLElement>(focusRequest.pickup ? '[data-pickup-type] [role="combobox"]'
+                : focusRequest.filters ? 'button[aria-haspopup="dialog"]' : '[role="combobox"]');
             control?.focus();
             row?.scrollIntoView({ block: 'center' });
             onFocusHandled?.();

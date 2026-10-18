@@ -82,6 +82,16 @@ describe('readSidecarExport', () => {
 });
 
 describe('looksLikeSidecarExport', () => {
+    it('reads supported capture-note reasons and ignores invalid or out-of-range notes', () => {
+        const read = readSidecarExport(JSON.stringify({ machines: [machine], inserters: [{}, {}], pickup_warnings: [
+            { inserter_id: 1, reason: 'bend' }, { inserter_id: 2, reason: 'inline' },
+            { inserter_id: 3, reason: 'splitter' }, { inserter_id: 0, reason: 'unsupported' },
+            { inserter_id: 1, reason: 'arbitrary text' }, null,
+        ] }));
+        expect(read.kind).toBe('export');
+        if (read.kind === 'export') expect(read.pickupWarnings).toEqual([{ inserter_id: 1, reason: 'bend' }, { inserter_id: 2, reason: 'inline' }]);
+    });
+
     it('is true for an export and for an array', () => {
         expect(looksLikeSidecarExport(JSON.stringify({ machines: [machine] }))).toBe(true);
         expect(looksLikeSidecarExport(JSON.stringify([machine]))).toBe(true);

@@ -39,6 +39,8 @@ import { ExamplesDialog } from './ExamplesDialog';
 import { ImportSimplification } from './ImportSimplification';
 import { importReduction, type ImportReduction } from '../utils/importReduction';
 import { formDataToConfig } from '../utils/configForm/configMapping';
+import { PickupGeometrySummary } from './PickupGeometrySummary';
+import type { PickupCaptureWarning } from '../utils/sidecarExport';
 
 const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
@@ -59,6 +61,7 @@ function crossingText(warning: PasteReferenceWarning): string {
 }
 
 interface PendingImport extends PastedEntities {
+    pickupWarnings?: PickupCaptureWarning[];
     original?: PendingImport;
     reduction?: ImportReduction;
     repeatedSourceKey?: string;
@@ -344,7 +347,7 @@ export function ConfigImportExport({
         const suggestion = Option.toNullable(validated.suggested_target);
         const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source } : null;
         confirmOpenerRef.current = document.activeElement;
-        setPendingImport({ ...validated, miningProductivityLevel: read.miningProductivityLevel, fill });
+        setPendingImport({ ...validated, miningProductivityLevel: read.miningProductivityLevel, fill, pickupWarnings: read.pickupWarnings });
         // everything there is, except a target the player has already set; the first exports had machines only
         setImportSelections({
             target: fill !== null && currentTarget.recipe === '',
@@ -725,6 +728,13 @@ export function ConfigImportExport({
                         }} />}
                     {pendingImport && !pendingImport.reduction && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <PickupGeometrySummary build={{ inserters: prospectiveInserters, overrides: currentForm.overrides }} />
+                            {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
+                                Captured Inserter {warning.inserter_id}: {warning.reason === 'bend' ? 'pickup is on a belt bend'
+                                    : warning.reason === 'splitter' ? 'pickup is on a splitter'
+                                    : warning.reason === 'inline' ? 'pickup is in line with the belt, rather than beside it'
+                                    : 'pickup geometry is unsupported'}. Sidecar left its pickup type unspecified; this geometry has not been calibrated.
+                            </Typography>)}
                             {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                             {pendingImport.fill ? (
                                 <Box>

@@ -116,7 +116,7 @@ describe('plainClockName', () => {
 
     it('names a clock that does not match the belt by its belt, even with the fewest wake-ups', () => {
         const clocks = [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 2, matches_belt_choice: false, beltLabel: 'non-moving' })];
-        expect(nameOf(clocks, 'b')).toBe('For belts that stand still');
+        expect(nameOf(clocks, 'b')).toBe('For backed-up belts');
         expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
     });
 
@@ -221,10 +221,10 @@ describe('beltLine and beltValue', () => {
         expect(beltValue(moving, 'moving (+4 ticks)')).toBe('Moving');
     });
 
-    it('says standing still when the build or the clock says so', () => {
-        expect(beltLine(still, 'moving (+4 ticks)')).toBe('Made for belts that stand still.');
-        expect(beltLine(moving, 'non-moving')).toBe('Made for belts that stand still.');
-        expect(beltValue(moving, 'non-moving')).toBe('Standing still');
+    it('says backed up when the build or the clock says so', () => {
+        expect(beltLine(still, 'moving (+4 ticks)')).toBe('Made for backed-up belts.');
+        expect(beltLine(moving, 'non-moving')).toBe('Made for backed-up belts.');
+        expect(beltValue(moving, 'non-moving')).toBe('Backed up');
     });
 
     it('says there is no belt when no clocked inserter picks up from one', () => {
@@ -241,7 +241,7 @@ describe('beltCellText', () => {
     it('says the belt in the belt question\'s words, with the slack', () => {
         expect(beltCellText('moving (+4 ticks)')).toBe('Moving (+4 ticks belt slack)');
         expect(beltCellText('moving (+2–4 ticks)')).toBe('Moving (+2–4 ticks belt slack)');
-        expect(beltCellText('non-moving')).toBe('Standing still');
+        expect(beltCellText('non-moving')).toBe('Backed up');
         expect(beltCellText('')).toBe('');
     });
 });
@@ -259,7 +259,7 @@ describe('differenceFromRecommended', () => {
         expect(differenceFromRecommended(clock('s', { wake_ups_per_minute: 11 }), recommended))
             .toBe('It wakes inserters 1 more time a minute than the recommended clock.');
         expect(differenceFromRecommended(clock('s', { wake_ups_per_minute: 4, matches_belt_choice: false }), recommended))
-            .toBe('It wakes inserters 6 fewer times a minute than the recommended clock. It is made for belts that stand still.');
+            .toBe('It wakes inserters 6 fewer times a minute than the recommended clock. It is made for backed-up belts.');
         expect(differenceFromRecommended(clock('s', { wake_ups_per_minute: 10.2 }), recommended)).toBe('It is not the recommended clock.');
     });
 
@@ -302,8 +302,8 @@ describe('worksOf', () => {
         expect(worksOf(clock('a'))).toEqual({ kind: 'yes', text: 'Yes' });
     });
 
-    it('says a clock for belts that stand still is only for them', () => {
-        expect(worksOf(clock('a', { matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Only for belts that stand still' });
+    it('says a clock for backed-up belts is only for them', () => {
+        expect(worksOf(clock('a', { matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Only for backed-up belts' });
     });
 
     it('names the rate a clock that holds a rate misses, before whether it recovers', () => {

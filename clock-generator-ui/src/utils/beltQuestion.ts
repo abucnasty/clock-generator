@@ -16,21 +16,21 @@ export interface BeltQuestion {
 export const BELT_COPY = {
     question: 'Your input belts are:',
     moving: 'Moving',
-    movingLine: 'Items keep arriving, so a pickup can come late. Clocks leave a few extra ticks (belt slack) at the end of '
-        + 'each wake window of a belt-fed inserter.',
-    standing: 'Backed up and standing still',
-    standingLine: 'The belts are full and never move. Clocks get no belt slack and can have fewer wake-ups.',
+    movingLine: 'Items continuously pass the pickup. With a known pickup type, timing accounts for the stacks within reach. '
+        + 'Clocks also leave a few extra ticks (belt slack) for late pickups.',
+    standing: 'Backed up',
+    standingLine: 'Items stop between pickups. The belt moves to refill the gaps. Clocks use backed-up timing without belt slack.',
     help: 'Not sure? Leave it on Moving.',
     /** The heading of the question's card under the diagram */
     diagramHeading: 'Belts',
     resultsMoving: 'This run used your Moving belt setting.',
-    actionMoving: 'My belts stand still. Generate again',
-    resultsStanding: 'This run used your Backed up and standing still belt setting.',
+    actionMoving: 'My belts are backed up. Generate again',
+    resultsStanding: 'This run used your Backed up belt setting.',
     actionStanding: 'My belts move. Generate again',
     hint: (standing: number, moving: number) =>
-        `On belts that stand still, this build may do with ${standing} wake-ups a minute instead of ${moving}; fewer is better, as each one costs a little UPS.`,
+        `On backed-up belts, this build may do with ${standing} wake-ups a minute instead of ${moving}; fewer is better, as each one costs a little UPS.`,
     /** Under the Belt column of a clock made without belt slack, in a run for moving belts */
-    onlyIfStanding: 'Only if your input belts stand still',
+    onlyIfStanding: 'Only if your input belts are backed up',
 } as const;
 
 /** The parts of a build the question is asked of: the form, or the config a generation ran with */
@@ -90,7 +90,7 @@ export function beltResultsLine(answer: BeltAnswer): { text: string; actionLabel
 const wakeUpsKey = (wakeUps: number) => Math.round(wakeUps * 1000);
 
 /**
- * On a moving-belt result, what the pick would be on belts that stand still, worked out from the clocks on screen: a
+ * On a moving-belt result, what the pick would be on backed-up belts, worked out from the clocks on screen: a
  * standing-belts run counts every clock as made for the belt. The sentence only when that clock holds the target rate
  * with fewer wake-ups than the pick. "May": a standing-belts run can make its clocks slightly differently.
  */

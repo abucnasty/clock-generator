@@ -39,7 +39,12 @@ one-stack-per-tick rule: the lane refills pickup gaps, but items do not continuo
 
 Set `source.pickup_length` to `1` or `0.5` on the input inserter. Sidecar 0.9.0 exports it and `near_lane` for
 inserters beside these pieces. `overrides.non_moving_belts: true` uses backed-up pickup even with geometry present.
-Older configs without the field keep their always-full pickup assumption; re-export to supply geometry. Pickup
+In the UI, set **Picks up from** to **Straight belt** or **Underground belt**; entrance and exit share one rule.
+Choose **Moving** or **Backed up** separately for the input supply: capture does not infer motion from a snapshot.
+Imports and builds identify missing pickup types, and results show the coverage used by their saved run. Changing
+pickup type or supply marks those results out of date. Sidecar 0.9.1 leaves bends, splitters and inline pickups
+unspecified and explains why in the copy window and import preview; these geometries remain uncalibrated.
+Older configs without the field keep their always-full pickup assumption; re-export or set the type to supply geometry. Pickup
 slack remains margin for late starts and gaps. This adds no whole-belt simulation or search dimension.
 
 Measured in Factorio 2.1.21 on 2026-10-17: single-ingredient probes with the destination emptied each tick separated
