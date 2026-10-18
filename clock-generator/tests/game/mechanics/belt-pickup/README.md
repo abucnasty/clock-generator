@@ -99,7 +99,7 @@ The first two commands run in the simulator. The remaining commands need Factori
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, five front exit
 ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
 front entrance moving/backed-up controls, the side-loaded tile/control pair, the expanded 42-case side-entry matrix,
-four direct single-splitter controls, and eight independent two-splitter controls. Their independent replay and simulator comparisons remain
+six direct single-splitter controls, and eight independent two-splitter controls. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands
@@ -117,8 +117,10 @@ The [build checks](../../builds/README.md) independently measure throughput and 
 
 The [direct splitter series](fixtures/splitter/README.md) has begun on a branch stacked above the turbo merge
 implementation. Its baseline, ingredient swap and mirroring controls are complete; opposite-port, priority/filter
-and priority-free backed-up controls remain unmeasured for that single-splitter layout. Removing its drain
-with right priority retained gives six hands at one stack per tick, while the unused output remains stationary. The two-splitter series
+and opposite-priority controls remain unmeasured for that single-splitter layout. Removing its drain
+with either right priority or no priority gives six hands at one stack per tick, while the unused output
+remains stationary. With the drain retained, unsetting priority instead diverts the fourth replacement stack
+and delays the first hand to tick 7, independently reproducing the serial-layout result. The two-splitter series
 also compares output priority set versus unset in independent fresh sessions.
 Single-splitter priority isolation and a blocked-final-drain control are complete for that serial layout;
 later coupled schedules remain distinct from the local first-hand routing result. Splitter routing remains

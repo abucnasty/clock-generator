@@ -45,7 +45,9 @@ for (const {name, swapped, mirrored, label} of [
     {name: "swapped", swapped: true, mirrored: false, label: " (ingredients swapped)"},
     {name: "swapped-mirrored", swapped: true, mirrored: true, label: " (ingredients swapped, mirrored)"},
     {name: "blocked-drain", swapped: false, mirrored: false, label: " (drain removed)"},
-]) test(`turbo splitter: direct pickup from its right-priority output${label}`, async context => {
+    {name: "no-priority", swapped: false, mirrored: false, label: " (priority unset)"},
+    {name: "no-priority-blocked-drain", swapped: false, mirrored: false, label: " (priority unset, drain removed)"},
+]) test(`turbo splitter: direct pickup from its output${label}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
     const retained = process.env.SPLITTER_CAPTURE_DIR;
@@ -72,7 +74,12 @@ for (const {name, swapped, mirrored, label} of [
             expect(changed).toEqual([1, 5, 6, 10]);
             config.belts[0].lanes.reverse();
         }
-        const blockedDrain = name === "blocked-drain";
+        const blockedDrain = name.endsWith("blocked-drain");
+        const outputPriority = name.startsWith("no-priority") ? "none" : "right";
+        if (outputPriority === "none") {
+            const splitter = decoded.blueprint.entities.find((e: {entity_number: number}) => e.entity_number === 12);
+            delete splitter.output_priority;
+        }
         if (blockedDrain) {
             const drain = decoded.blueprint.entities.find((e: {entity_number: number}) => e.entity_number === 20);
             expect(drain).toMatchObject({name: "turbo-loader", type: "input"});
@@ -87,7 +94,7 @@ for (const {name, swapped, mirrored, label} of [
         decoded.blueprint.entities.push({entity_number: 22, name: "constant-combinator", position: {x: -72.5, y: 416.5}});
         decoded.blueprint.wires = [[14, 1, 22, 1]];
         const blueprint = "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64");
-        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {mirrored, blockedDrain});
+        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {mirrored, blockedDrain, outputPriority});
         fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
         fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
         fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
@@ -101,21 +108,21 @@ for (const {name, swapped, mirrored, label} of [
         };
         expect(report.samples).toHaveLength(60);
         expect(report.initial).toMatchObject({splitter_name: "turbo-splitter", splitter_direction: 4,
-            drain_present: !blockedDrain, output_priority: "right", input_priority: "none", inserter_direction: 12, mirrored, use_filters: false,
+            drain_present: !blockedDrain, output_priority: outputPriority, input_priority: "none", inserter_direction: 12, mirrored, use_filters: false,
             recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
         expect(report.initial).not.toHaveProperty("filter");
         expect(report.initial.lines.map(l => l.length)).toEqual([179 / 256, 179 / 256, 179 / 256, 179 / 256, 0.5, 0.5, 0.5, 0.5]);
         expect(stacks(report.initial.lines[6]).map(s => [s.at, s.item, s.count])).toEqual([[0, line7Item, 4], [0.25, line7Item, 4]]);
         expect(stacks(report.initial.lines[7]).map(s => [s.at, s.item, s.count])).toEqual([[0, line8Item, 4], [0.25, line8Item, 4]]);
         const firstFull = report.samples.find(s => s.held === 16)!;
-        expect(firstFull.tick).toBe(5);
+        expect(firstFull.tick).toBe(outputPriority === "none" && !blockedDrain ? 7 : 5);
         const firstHand = report.samples.filter(s => s.tick <= firstFull.tick);
         expect(firstHand.every(s => JSON.stringify(s.inputs) === "{}" && JSON.stringify(s.output) === "{}" && s.crafting_progress === 0)).toBe(true);
         const untouchedLine = mirrored ? 6 : 7;
         expect(firstHand.every(s => JSON.stringify(s.lines[untouchedLine]) === JSON.stringify(report.initial.lines[untouchedLine]))).toBe(true);
         const grabs = firstHand.filter((s, i) => s.held > (firstHand[i - 1]?.held ?? 0));
         expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill(preferredItem));
-        const counts = firstHand.filter(s => s.held > 0).map(s => s.held);
+        const counts = grabs.map(s => s.held);
         expect(counts).toEqual([4, 8, 12, 16]);
         expect(ordinaryBeltHand(config, false, preferredItem)).toEqual(counts);
         expect(ordinaryBeltHand(config, true, preferredItem)).toEqual(counts);
@@ -142,11 +149,18 @@ for (const {name, swapped, mirrored, label} of [
                 hands.at(-1)!.ticks.push(sample.tick);
             }
         }
-        const expectedItems = blockedDrain ? ["iron-plate", "copper-cable", "copper-cable", "copper-cable", "iron-plate", "copper-cable"]
+        const expectedItems = outputPriority === "none" && !blockedDrain ? ["iron-plate", "copper-cable", "copper-cable", "iron-plate", "copper-cable"]
+            : blockedDrain ? ["iron-plate", "copper-cable", "copper-cable", "copper-cable", "iron-plate", "copper-cable"]
             : swapped && !mirrored ? ["copper-cable", "copper-cable", "copper-cable", "iron-plate"]
             : ["iron-plate", "copper-cable", "copper-cable", "copper-cable", "iron-plate"];
         expect(hands.map(h => h.item)).toEqual(expectedItems);
-        expect(hands.map(h => h.ticks.map(tick => tick - h.ticks[0]))).toEqual(blockedDrain
+        if (outputPriority === "none" && !blockedDrain) {
+            expect(hands.map(h => h.ticks)).toEqual([[2, 3, 4, 7], [15, 16, 17, 21], [29, 30, 33, 37],
+                [45, 46, 47, 51], [59, 60]]);
+            const waiting = stacks(report.samples[3].lines[0]).find(s => s.at === 19 / 256)!;
+            expect(waiting).toMatchObject({item: "iron-plate", count: 4});
+            expect(stacks(report.samples[4].lines[4])).toContainEqual({...waiting, at: 0.25});
+        } else expect(hands.map(h => h.ticks.map(tick => tick - h.ticks[0]))).toEqual(blockedDrain
             ? Array(6).fill([0, 1, 2, 3]) : [[0, 1, 2, 3], ...Array(expectedItems.length - 1).fill([0, 1, 2, 4])]);
         if (blockedDrain) {
             expect(hands.map(h => h.ticks)).toEqual([[2, 3, 4, 5], [13, 14, 15, 16], [24, 25, 26, 27],
@@ -157,12 +171,13 @@ for (const {name, swapped, mirrored, label} of [
                 expect(sample.downstream).toEqual(report.initial.downstream);
             }
         }
-        const secondHand = report.samples.filter(s => s.tick >= 13 && s.tick <= 17).map(s => s.held);
-        expect(secondHand).toEqual(blockedDrain ? [4, 8, 12, 16, 16] : [4, 8, 12, 12, 16]);
+        const secondHand = report.samples.filter(s => s.tick >= hands[1].ticks[0] && s.tick <= hands[1].ticks.at(-1)!).map(s => s.held);
+        expect(secondHand).toEqual(blockedDrain ? [4, 8, 12, 16] : outputPriority === "none"
+            ? [4, 8, 12, 12, 12, 12, 16] : [4, 8, 12, 12, 16]);
         // Ordinary saturated one-tile supply predicts a faster isolated cable hand even at the same tick.
         // This documents the current unsupported geometry, rather than changing the engine to fit one case.
         for (const backedUp of [false, true]) {
-            const predicted = ordinaryBeltHand(config, backedUp, "copper-cable", 13);
+            const predicted = ordinaryBeltHand(config, backedUp, "copper-cable", hands[1].ticks[0]);
             expect(predicted).toEqual([4, 8, 12, 16]);
             if (!blockedDrain) expect(predicted).not.toEqual(secondHand);
             else expect(predicted).toEqual(secondHand.slice(0, 4));

@@ -13,6 +13,7 @@ end, "upstream belt")
 local downstream = capture.find_one(entities, function(e)
     return e.type == "underground-belt" and e.belt_to_ground_type == "input"
 end, "drained north output")
+assert(splitter.splitter_output_priority == (options.outputPriority or "right"))
 assert(splitter.name == "turbo-splitter" and splitter.direction == defines.direction.east)
 assert(input.direction == defines.direction.west and input.mirroring == (options.mirrored or false))
 assert(input.pickup_position.x == splitter.position.x and input.pickup_position.y == splitter.position.y + 0.5)

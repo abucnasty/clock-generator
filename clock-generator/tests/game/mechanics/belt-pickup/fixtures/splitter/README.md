@@ -43,7 +43,7 @@ seeds transport lines nor edits held items nor clears destination inventories. T
 The [probe](probe.lua) composes shared observation/capture helpers. It enumerates all splitter transport lines,
 and observes upstream and downstream lines, stack IDs/counts/positions, held items, and machine inventories.
 [config.json](config.json) is an **ordinary-belt comparison**, not a claim that the simulator supports splitters.
-All four test variants share that setup and probe; the blocked-drain control removes only loader #20. The ingredient-swapped control changes only the four feeder
+All six test variants share that setup and probe; the blocked-drain control removes only loader #20. The ingredient-swapped control changes only the four feeder
 chests' iron/cable filter names and the comparison config's ingredient lanes. Retained captures are separated
 into `original/`, `swapped/`, `swapped-mirrored/` and `blocked-drain/` under `SPLITTER_CAPTURE_DIR`.
 
@@ -173,6 +173,28 @@ metadata and Sidecar warnings. Raw artifacts are under ignored
 `work/belt-pickup/single-splitter-blocked-final/`. Reproduce only this control with
 `npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts -t 'drain removed'`.
 
+## Single-splitter output-priority isolation
+
+Two additional independent controls unset only splitter #12's output priority: one retains the drain, and the
+other derives from the blocked-drain control. Ingredients, mirroring, gate timing and warm-up stay fixed.
+Each uses a fresh copied save. No priority changes during capture.
+
+With the drain retained, first-hand iron grabs are **2,3,4,7**. The next matching stack is on input line 1 at
+19/256 tile on tick 4, then on north output line 5 at 1/4 tile on tick 5 while the south pickup is empty.
+Later hands are cable at 15,16,17,21 and 29,30,33,37; iron at 45,46,47,51; and a partial cable hand at 59,60.
+This reproduces the local diversion seen in the serial fixture without requiring a second consumer.
+
+With the drain removed, unsetting priority changes none of the six observed hand items or grab ticks from the
+right-priority blocked-drain control above. Both north output lanes and the observed underground remain
+stationary throughout. Thus output priority matters when replacement stock can leave through another outlet;
+it is not an unconditional extra pickup delay. This is still a statement about measured local availability,
+not a complete splitter arbitration model. Sidecar continues warning rather than silently treating a splitter
+as an ordinary belt.
+
+Reproduce each independently with `-t 'priority unset\)$'` or `-t 'priority unset, drain removed'` on the game
+command above. All six controls pass; captures are under ignored
+`work/belt-pickup/single-splitter-priority-final/`.
+
 ## Simulator impact and next control
 
 The first `[4,8,12,16]` hand matches both the current ordinary one-tile moving supply and backed-up supply.
@@ -190,6 +212,6 @@ or Sidecar change**. Sidecar still emits the existing
 The ingredient swap confirms a physical line preference, and mirroring switches that preference from line 7
 to line 8 without changing the timing limitation. This gives a local selection rule but no general splitter
 routing model, so the simulator and Sidecar remain unchanged. Opposite-port, priority/filter and
-priority-free backed-up supply and filtered routing remain unmeasured; the right-priority single-consumer
-blocked-drain control above is complete. No general splitter support is claimed. Continue with turbo
+opposite-priority and filtered routing remain unmeasured; both priority settings for the single-consumer
+blocked-drain control above are complete. No general splitter support is claimed. Continue with turbo
 speed and one controlled change at a time.
