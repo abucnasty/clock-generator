@@ -320,7 +320,8 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
         inserters: validateEntries(clockGenerator.InserterConfigSchema, pasted.inserters, 'inserter'),
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
-        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined, Array.isArray(pasted.chests) ? pasted.chests : []),
+        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,
+            Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : []),
         suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
     };
 }

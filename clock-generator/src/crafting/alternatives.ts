@@ -219,10 +219,13 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
     if (belt.kind === "moving") {
         const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
         const ticks = first === last ? `${first} more tick${first === 1 ? "" : "s"}` : `${first}–${last} more ticks`;
+        const pickup = config.inserters.some(i => i.source.type === "belt" && i.source.pickup_length !== undefined)
+            ? " Reachable moving stacks are timed where the pickup geometry is known. The remaining slack is margin for late starts and gaps; sparse upstream supply is not simulated."
+            : " This is a rule of thumb, not a simulated pickup: it may work on one build and not on another. Re-export with the current sidecar to supply pickup geometry.";
         const moving = ` Made for a moving belt: every inserter that picks up from a belt stays enabled ${ticks} after each window `
             + "(belt pickup slack), long enough for one more full hand at one belt stack a tick. On a moving belt, and more so on "
             + "one with gaps, a pickup can come late; the extra ticks let it finish instead of the inserter being switched off "
-            + "holding a partial hand. This is a rule of thumb, not a simulated belt: it may work on one build and not on another.";
+            + `holding a partial hand.${pickup}`;
         return moving;
     }
     const non_moving = " Made for a non-moving belt: its belt inserters get only the windows they need on a belt that is full and "
@@ -347,7 +350,13 @@ function alternativeDefinitionsFor(
             id: WITHOUT_BELT_PICKUP_SLACK_ID,
             label: `${BATCHED_SWINGS_LABEL}, non-moving belt`,
             description: BATCHED_SWINGS_DESCRIPTION,
-            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }),
+            run: () => {
+                const result = generateClockWithSwingBackoff(
+                    { ...base_config, overrides: { ...base_config.overrides, non_moving_belts: true } },
+                    { ...quiet, belt_pickup_slack: "never" });
+                // The simulation uses backed-up supply, but this alternative still opts out of the user's moving-belt choice.
+                return { ...result, belt_pickup_slack_left_out: result.belt !== null && Number.isInteger(result.simulation_duration.ticks) };
+            },
         }]),
         {
             id: "fractional",

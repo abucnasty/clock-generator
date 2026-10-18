@@ -439,6 +439,12 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
 - `end`: The tick when the entity becomes disabled (inclusive)
 - `period_duration_ticks` (optional): The period length in ticks. If not specified, uses the crafting cycle duration.
 
+For a moving belt input, set `pickup_length` on the inserter's `source`: `1` for the exposed line on a straight
+belt or `0.5` at either underground endpoint. Sidecar 0.9.0 exports this automatically for inserters beside those
+pieces. The simulator then takes only reachable stacks as the lane moves; without the field, older configs keep
+the always-full pickup assumption. `overrides.non_moving_belts: true` keeps the backed-up pickup rule even with
+the geometry present. See [pickup timing](docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
+
 ### Configuration Overrides
 
 - `terminal_swing_count`: force the output swings per cycle, instead of the count the plan works out

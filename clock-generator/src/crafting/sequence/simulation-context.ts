@@ -69,7 +69,7 @@ type InserterStateMachineInterceptor = (entity_state: EntityState) => InserterSt
 export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
     const entity_registry = new EntityRegistry();
 
-    const inserter_factory = new InserterFactory(entity_registry);
+    const inserter_factory = new InserterFactory(entity_registry, config.overrides?.non_moving_belts !== true);
 
     config.belts.forEach(beltConfig => {
         entity_registry.add(Belt.fromConfig(beltConfig));

@@ -309,6 +309,11 @@ const InserterBeltSourceConfigSchema = z.object({
      * order of its `filters`, or of the sink's ingredients when it has none, which may not be what the build does.
      */
     near_lane: z.union([z.literal(1), z.literal(2)]).optional(),
+    /** Exposed pickup line in tiles: 1 on a straight belt, 0.5 at either underground endpoint.
+     * With it, moving supply is timed by reachable stacks; non_moving_belts keeps the backed-up pickup rule.
+     * Without it, older configs retain their always-full pickup supply.
+     */
+    pickup_length: z.union([z.literal(0.5), z.literal(1)]).optional(),
     /** Refused: only an inserter's sink has a drop spot (see the checks of ConfigSchema) */
     drop: InserterBeltDropConfigSchema.optional()
 });

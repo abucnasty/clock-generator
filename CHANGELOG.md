@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.17.1] - 2026-10-17
+
+### Fixed
+- Time moving belt pickups by the stacks within reach when the input inserter has `source.pickup_length`, instead of assuming one stack is always available every tick. This accounts for slower underground pickups and changes clock selection on affected builds. Sidecar 0.9.0 exports the exposed length and nearest lane beside straight belts and underground endpoints; older imports retain their previous assumption until re-exported.
+
 ## [0.17.0] - 2026-10-17
 
 ### Added

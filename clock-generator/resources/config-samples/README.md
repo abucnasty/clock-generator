@@ -23,14 +23,16 @@ over-produces.
 Conventions:
 - `<build>.json` is the config; variants get a suffix that says what differs (`-chain-always-on`, `-belt-fed`).
 - `<build>-scaffold.txt` is the one-copy scaffold; `-scaffold-full-build.txt` is kept only for reference.
-- Every scaffold but one has belts that are closed at the end and stand still once full, which is the belt the
-  simulator has. Iron bacteria's creeps (below). A scaffold whose belt moves as the belt of a row of copies does is
-  still to be made: a clock for a moving belt, with belt pickup slack, has never been recorded on one (GOALS.md).
+- Most scaffolds have belts closed at the end, so they stand still once full. Iron bacteria's creeps (below).
+  The three `science/electromagnetic-science/belted-moving` scaffolds drain their input belt continuously and compare
+  pickup from a straight belt, an underground entrance and an underground exit. Their shared config supplies
+  `pickup_length: 0.5`; moving pickup and its scope are documented in [the simulator rules](../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
 - The clocked inserters see a steadily supplied belt: full of whole stacks at the rate the build takes them, whenever
   they reach for it. How is the scaffold's business. Enough stack inserters from infinity chests and a closed end do
   it; so does an end that lets a little through on a timer, as the iron bacteria scaffold has to keep its nutrients
   fresh (32 items in every 61 ticks, and every hand there still fills a stack a tick). An end that drains freely
-  does not: it leaves gaps that confound the inserter timing, which the first agricultural scaffold showed.
+  can expose slower pickups and gaps, as the moving electromagnetic science samples demonstrate; those differences
+  must be measured and represented rather than assumed away.
 - The scaffold is the build its config describes, inserter for inserter. Every recording is checked for it: the stack
   size of each inserter, and which of two items on its belt an inserter takes first (`near_lane` in the config, the
   lane nearest to it in the build). A config that differs is reported before anything else, since a clock made for
@@ -56,6 +58,7 @@ Conventions:
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | science/electromagnetic-science | yes (2026-10-16, 12 legendary beacons) | selected clock exact: 352 in every period of 704 ticks (batched swings, 2 output swings per cycle; 30.0 a second a copy, 330 over 11 copies). Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game | in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests |
 | science/electromagnetic-science-auto | the same scaffold | the same build with the enable control of both output inserters on `AUTO` (`electromagnetic-science-auto.json`); `terminal_swing_count` and `lcm` have no `AUTO` value and are kept. Selected clock exact: 352 in every period after the first; from a staged start (empty machines) the first period makes 288 | in `test:game` |
+| science/electromagnetic-science/belted-moving | three pickup geometries (2026-10-17) | the default with reachable moving stacks delivers 352 packs per 704 ticks in every one of 52 periods on each scaffold; all three recover after either ingredient is cut and output is blocked/restored | `moving-pickup.game.test.ts`; shared half-tile input geometry is conservative for the straight belt; see the simulator rules |
 | everything else | no | | |
 
 ## TODO: scaffold backfill

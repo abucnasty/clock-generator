@@ -47,7 +47,8 @@ local function resolve_target_id(target, result, is_sink)
         type = target.type,
         id = target_id,
         -- of a belt an inserter picks up from: the lane nearest to the inserter
-        near_lane = target.near_lane
+        near_lane = target.near_lane,
+        pickup_length = not is_sink and target.pickup_length or nil
     }
 end
 

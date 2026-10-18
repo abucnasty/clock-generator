@@ -19,6 +19,7 @@ const TargetRefSchema = z.object({
     id: z.number().int(),
     /** Of a belt an inserter picks up from: the lane nearest to the inserter, 1 or 2. Absent in older recordings */
     near_lane: z.union([z.literal(1), z.literal(2)]).optional(),
+    pickup_length: z.union([z.literal(0.5), z.literal(1)]).optional(),
 });
 
 const RecordedInserterSchema = z.object({

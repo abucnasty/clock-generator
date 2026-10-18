@@ -6,7 +6,7 @@ import { ImportInput, ImportedMachine, ImportPipeline, ImportStep } from "./impo
  * The newest version of the sidecar mod. The mod has a version of its own (see "Versioning" in the README) and
  * this is bumped with it, when the mod changes: a paste from an older mod is told to update to this version.
  */
-export const LATEST_SIDECAR_VERSION = "0.8.0";
+export const LATEST_SIDECAR_VERSION = "0.9.0";
 
 /** The first version of the sidecar mod that exports the energy consumption of biochambers. */
 export const SIDECAR_VERSION_WITH_ENERGY_CONSUMPTION = "0.6.0";
@@ -90,7 +90,14 @@ export const INFINITY_CHEST_FEATURE: SidecarFeature = {
     appliesTo: input => (input.chests ?? []).some(chest => typeof chest === "object" && chest !== null && "type" in chest && chest.type === "infinity-chest"),
     missing: () => "Infinity chest filters were read from inventory contents and Remove unfiltered items was not exported. Review those chest settings or re-export with the updated mod.",
 };
-export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE];
+const MOVING_PICKUP_FEATURE: SidecarFeature = {
+    name: "moving-belt-pickup", since: "0.9.0",
+    appliesTo: input => (input.inserters ?? []).some(inserter => typeof inserter === "object" && inserter !== null
+        && "source" in inserter && typeof inserter.source === "object" && inserter.source !== null
+        && "type" in inserter.source && inserter.source.type === "belt"),
+    missing: () => "The exposed belt pickup length was not exported, so moving pickup timing keeps the older always-full assumption. Re-export to model the reachable stacks.",
+};
+export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE];
 
 /** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
 const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";
@@ -116,10 +123,11 @@ export function checkSidecarImport(
     machines: readonly ImportedMachine[],
     pipeline: ImportPipeline = SIDECAR_IMPORT_PIPELINE,
     chests: readonly unknown[] = [],
+    inserters: readonly unknown[] = [],
 ): Option<string> {
     const version = sidecarVersionOf(sidecar_version);
     return Option.map(
-        pipeline.run({ sidecar_version: version, machines, chests }),
+        pipeline.run({ sidecar_version: version, machines, chests, inserters }),
         missing => {
             const update = missing === NOTHING_MISSING_MESSAGE
                 ? `You can update the mod to ${LATEST_SIDECAR_VERSION} when you like.`

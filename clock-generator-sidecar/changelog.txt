@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.9.0
+Date: 2026-10-17
+  Features:
+    - exports the exposed pickup length for inserters beside straight belts and underground endpoints, so moving pickup timing can be simulated
+    - exports the nearest lane at underground entrances and exits as well as straight belts
+---------------------------------------------------------------------------------------------------
 Version: 0.8.0
 Date: 2026-10-17
   Features:

@@ -29,6 +29,8 @@ export interface Inserter extends Entity {
     animation: InserterAnimation;
     /** Where it drops on a belt that moves; without it the drop takes the same ticks wherever the belt carries stacks */
     drop?: BeltDropSpot;
+    /** Exposed length of a moving input lane; absent for the legacy or explicitly backed-up supply. */
+    pickup_length?: 0.5 | 1;
 }
 
 /** Of an inserter that drops on a belt: the lane and the tiles along the belt (see InserterConfig) */
@@ -80,6 +82,7 @@ export function nearestLaneFirst(items: Set<ItemName>, lanes: readonly Lane[], n
 export class InserterFactory {
     constructor(
         public readonly entity_registry: EntityRegistry,
+        private readonly moving_belts = true,
     ) { }
 
 
@@ -223,6 +226,8 @@ export class InserterFactory {
             filtered_items,
             hand_sizes,
             animation: InserterAnimation.fromMetadata(metadata.animation),
+            ...(source.type === EntityType.BELT && source.pickup_length !== undefined && this.moving_belts
+                && { pickup_length: source.pickup_length }),
             ...(drop_spot && { drop: drop_spot })
         }
     }

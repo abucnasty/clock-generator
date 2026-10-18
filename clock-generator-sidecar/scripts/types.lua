@@ -28,6 +28,8 @@
 ---@field type "machine"|"belt"|"chest" The target type
 ---@field unit_number number The unit number of the target entity
 ---@field name string The target entity's name
+---@field near_lane 1|2|nil The lane nearest to a belt pickup
+---@field pickup_length number|nil Exposed pickup line length in tiles
 
 ---@class InfinityFilterData
 ---@field item_name string The item name

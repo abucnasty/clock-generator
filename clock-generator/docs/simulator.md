@@ -4,7 +4,7 @@ This page was split out of GOALS.md on 2026-10-15; GOALS.md holds the goals.
 
 ## Simulator Goals
 
-This project actively runs a simulation of the machines, inserters and mining drills that are in the configuration file. It simulates all their crafts and transfers every tick. Belts and infinity chests are not simulated tick by tick: they are a supply that is always full, which is the environment a scaffold gives the build, and fluids are left out. The status of each simulated entity matches exactly the statuses seen in the game and provides state transition logs in debug mode to provide insights into what each entity is doing and a description for why it wanted to transition to a different state. Any deviation from the game is measured by running "scaffold" tests. These tests are driven by having a "scaffold" blueprint paired with a configuration file. Any scaffold can be tested directly in factorio. The `clock-generator-recorder` can help record and run this scaffold and provide per tick entity statistics to compare against the simulator. This is a verification process that the simulator backing the algorithm is doing the right thing. A scaffold test checks both goals against the game: that every clock period moves exactly the expected output, and that the simulator counts the wake-ups the game shows. It also lays the simulator against the game entity by entity: a run of the same clock in the simulator has to move what the game moved through every inserter and finish what it finished in every machine. For that the simulator writes its run in the format of the recorder, so that one set of functions reads both (`clock-generator/src/verification/compare-recordings.ts`); `npm run verify` makes the same comparison for any recording.
+This project actively runs a simulation of the machines, inserters and mining drills that are in the configuration file. It simulates all their crafts and transfers every tick. Infinity chests and input belts are endless supplies, and fluids are left out. When a belt pickup has exposed-length metadata, its reachable moving stacks are timed each tick by the rule below; older configs keep the always-full pickup assumption. The status of each simulated entity matches exactly the statuses seen in the game and provides state transition logs in debug mode to provide insights into what each entity is doing and a description for why it wanted to transition to a different state. Any deviation from the game is measured by running "scaffold" tests. These tests are driven by having a "scaffold" blueprint paired with a configuration file. Any scaffold can be tested directly in factorio. The `clock-generator-recorder` can help record and run this scaffold and provide per tick entity statistics to compare against the simulator. This is a verification process that the simulator backing the algorithm is doing the right thing. A scaffold test checks both goals against the game: that every clock period moves exactly the expected output, and that the simulator counts the wake-ups the game shows. It also lays the simulator against the game entity by entity: a run of the same clock in the simulator has to move what the game moved through every inserter and finish what it finished in every machine. For that the simulator writes its run in the format of the recorder, so that one set of functions reads both (`clock-generator/src/verification/compare-recordings.ts`); `npm run verify` makes the same comparison for any recording.
 
 ### The status of an inserter
 
@@ -24,6 +24,45 @@ An inserter that takes two items off one belt, one from each lane, takes from th
 Which item comes first decides how an ingredient is split between two inserters that both bring it, and with it whether a clock holds. Under one clock for that build the simulator made 192 of 192 a period with the processing units taken first, where the game, taking the low density structures first, made 96.
 
 The config names the nearest lane with `near_lane` on the belt an inserter picks up from, and the sidecar exports it for an inserter beside a straight piece of belt. Without it the simulator takes the items in the order of the inserter's filters, or of the sink's ingredients, which is a guess. A scaffold test fails when the config and the recorded build disagree on which item comes first, or on the stack size of an inserter.
+
+### Picking up from moving belts and underground endpoints
+
+**Take one reachable stack per tick, leave a hole where it was, and keep the remaining stacks moving at belt speed.**
+On a saturated lane, stacks are a quarter tile apart and the inserter takes the upstream-most reachable stack.
+Stream phase and holes persist across hands, closed windows and changes of inserter control. Only holes and partial
+stacks need storage; the rest of the supply is an evenly spaced train ([implementation](../src/state/belt-pickup-lane.ts)).
+
+A straight belt exposes one tile; **either underground endpoint exposes half a tile**. This one length difference
+explains the observed turbo-belt grabs: `0,1,2,3` on the straight piece, and `0,1,2,4` or `0,1,3,5` underground,
+depending on stream phase. These are offsets from the first grab. Backed-up supply keeps the existing
+one-stack-per-tick rule: the lane refills pickup gaps, but items do not continuously pass out of reach.
+
+Set `source.pickup_length` to `1` or `0.5` on the input inserter. Sidecar 0.9.0 exports it and `near_lane` for
+inserters beside these pieces. `overrides.non_moving_belts: true` uses backed-up pickup even with geometry present.
+Older configs without the field keep their always-full pickup assumption; re-export to supply geometry. Pickup
+slack remains margin for late starts and gaps. This adds no whole-belt simulation or search dimension.
+
+Measured in Factorio 2.1.21 on 2026-10-17: single-ingredient probes with the destination emptied each tick separated
+pickup timing from machine blocking. Given the first grab and stream phase read from the positions, the rule
+predicted every later grab of the uninterrupted hands checked, including turbo hands of 8, 12 and 16 and express
+arrival phases. Backed-up turbo probes returned to consecutive grabs on both lanes.
+
+On [`electromagnetic-science/belted-moving`](../resources/config-samples/science/electromagnetic-science/belted-moving),
+the old default missed its 528-pack target in 30 of 35 periods on each moving underground endpoint. The simulator
+now detects that shortfall. The new default selects **Batched swings: 2 output swings per cycle**: **352 packs per
+704 ticks (30/second), in all 52 measured periods on each of the three scaffolds**. The shared config uses a half-tile
+pickup, conservatively covering the straight piece too; the sidecar exports its actual one-tile geometry.
+
+All six [game regression tests](../src/harness/moving-pickup.game.test.ts) passed: throughput on all three geometries,
+and recovery after each ingredient was withheld and output disposal was blocked/restored, without resetting the
+clock or machine (checked after a six-period recovery allowance). Unit tests cover phase, speed, partial stacks,
+retained holes and rejection of the old clock. Raw investigation files remain local under
+`work/belt-pickup-investigation/`; the regression tests do not depend on them.
+
+Scope: saturated supply at one pickup, measured on legendary stack inserters with stacks of four on turbo and
+express belts. Yellow/red speeds follow the distance rule but are unmeasured here. Sparse supply, shared upstream
+withdrawals, merges, bends, other inserters/qualities/orientations, and an arbitrary game's initial stream phase
+remain unverified. Backed-up pickup retains its existing calibration.
 
 ### A stack inserter on a moving lane
 

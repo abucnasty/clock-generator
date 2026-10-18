@@ -58,12 +58,13 @@ end
 ---The lane of a belt that is nearest to an inserter beside it: 1 for the left lane in the direction the belt runs,
 ---2 for the right one, as get_transport_line numbers them. An inserter takes from the nearest lane first when its
 ---sink takes the items of both (recorded in Factorio 2.1.21). nil where it was not recorded or does not apply: a
----piece that is not a straight transport belt, and an inserter in line with the belt, which is beside neither lane.
+---piece that is neither a straight transport belt nor an underground endpoint, and an inserter in line with the belt.
 ---@param inserter LuaEntity
 ---@param belt LuaEntity The belt piece the inserter picks up from
 ---@return 1|2|nil
 function helpers.get_near_lane(inserter, belt)
-    if not belt or not belt.valid or belt.type ~= "transport-belt" or belt.belt_shape ~= "straight" then
+    if not belt or not belt.valid or not (belt.type == "underground-belt"
+        or (belt.type == "transport-belt" and belt.belt_shape == "straight")) then
         return nil
     end
     -- the direction the belt runs in; y points south
@@ -85,6 +86,17 @@ function helpers.get_near_lane(inserter, belt)
     if left < -0.25 then
         return 2
     end
+    return nil
+end
+
+---Exposed line length at a supported pickup; internal underground transport lines are not pickup space.
+---@param inserter LuaEntity
+---@param belt LuaEntity
+---@return number|nil
+function helpers.get_pickup_length(inserter, belt)
+    if not helpers.get_near_lane(inserter, belt) then return nil end
+    local length = belt.get_transport_line(1).line_length
+    if length == 0.5 or length == 1 then return length end
     return nil
 end
 
