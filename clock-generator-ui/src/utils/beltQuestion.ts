@@ -3,7 +3,7 @@ import type { ClockAlternativeView } from '../worker/types';
 import { recommendedIndexOf } from './recommendedClock';
 
 /** What the player says of the belts their inserters pick up from */
-export type BeltAnswer = 'moving' | 'standing';
+export type BeltAnswer = 'moving' | 'backed_up';
 
 /** Whether the belt question means anything for a build, and its answer as the build stores it */
 export interface BeltQuestion {
@@ -14,47 +14,47 @@ export interface BeltQuestion {
 
 /** Every player-facing string of the belt question, in one place for the glossary */
 export const BELT_COPY = {
-    question: 'Your input belts are:',
+    question: 'At your input pickups, items are:',
     moving: 'Moving',
-    movingLine: 'Items continuously pass the pickup. With a known pickup type, timing accounts for the stacks within reach. '
+    movingLine: 'Items continuously pass the pickup. Timing accounts for the stacks within reach; straight belt is the default pickup type. '
         + 'Clocks also leave a few extra ticks (belt slack) for late pickups.',
-    standing: 'Backed up',
-    standingLine: 'Items stop between pickups. The belt moves to refill the gaps. Clocks use backed-up timing without belt slack.',
+    backedUp: 'Backed up',
+    backedUpLine: 'Items stop between pickups. Upstream supply refills the gaps, so a stack is available each pickup tick. Clocks omit moving-belt slack.',
     help: 'Not sure? Leave it on Moving.',
     /** The heading of the question's card under the diagram */
     diagramHeading: 'Belts',
     resultsMoving: 'This run used your Moving belt setting.',
     actionMoving: 'My belts are backed up. Generate again',
-    resultsStanding: 'This run used your Backed up belt setting.',
-    actionStanding: 'My belts move. Generate again',
-    hint: (standing: number, moving: number) =>
-        `On backed-up belts, this build may do with ${standing} wake-ups a minute instead of ${moving}; fewer is better, as each one costs a little UPS.`,
+    resultsBackedUp: 'This run used your Backed up belt setting.',
+    actionBackedUp: 'My belts move. Generate again',
+    hint: (backedUp: number, moving: number) =>
+        `On backed-up belts, this build may do with ${backedUp} wake-ups a minute instead of ${moving}; fewer is better, as each one costs a little UPS.`,
     /** Under the Belt column of a clock made without belt slack, in a run for moving belts */
-    onlyIfStanding: 'Only if your input belts are backed up',
+    onlyIfBackedUp: 'Designed for backed-up supply',
 } as const;
 
 /** The parts of a build the question is asked of: the form, or the config a generation ran with */
 interface BeltBuild {
     inserters: ReadonlyArray<{ source: { type: string; id: number } }>;
     belts: ReadonlyArray<{ id: number }>;
-    overrides?: { non_moving_belts?: boolean };
+    overrides?: { backed_up_belts?: boolean };
 }
 
 /**
  * Asked when a belt of the build feeds an inserter: only then does a clock get belt slack. The answer is read either
- * way, `non_moving_belts: true` being Standing.
+ * way, `backed_up_belts: true` being Backed up.
  */
 export function beltQuestionOf(build: BeltBuild): BeltQuestion {
     const beltIds = new Set(build.belts.map(belt => belt.id));
     return {
         ask: build.inserters.some(inserter => inserter.source.type === 'belt' && beltIds.has(inserter.source.id)),
-        answer: build.overrides?.non_moving_belts === true ? 'standing' : 'moving',
+        answer: build.overrides?.backed_up_belts === true ? 'backed_up' : 'moving',
     };
 }
 
-/** What `overrides.non_moving_belts` stores for an answer: Moving stores nothing, never `false` */
-export function nonMovingBeltsFor(answer: BeltAnswer): true | undefined {
-    return answer === 'standing' ? true : undefined;
+/** What `overrides.backed_up_belts` stores for an answer: Moving stores nothing, never `false` */
+export function backedUpBeltsFor(answer: BeltAnswer): true | undefined {
+    return answer === 'backed_up' ? true : undefined;
 }
 
 /**
@@ -63,9 +63,9 @@ export function nonMovingBeltsFor(answer: BeltAnswer): true | undefined {
  * with it when it was the only one.
  */
 export function withBeltAnswer(config: Config, answer: BeltAnswer): Config {
-    const overrides: NonNullable<Config['overrides']> = { ...config.overrides, non_moving_belts: nonMovingBeltsFor(answer) };
-    if (overrides.non_moving_belts === undefined) {
-        delete overrides.non_moving_belts;
+    const overrides: NonNullable<Config['overrides']> = { ...config.overrides, backed_up_belts: backedUpBeltsFor(answer) };
+    if (overrides.backed_up_belts === undefined) {
+        delete overrides.backed_up_belts;
     }
     if (Object.keys(overrides).length === 0) {
         const { overrides: _overrides, ...rest } = config;
@@ -76,14 +76,14 @@ export function withBeltAnswer(config: Config, answer: BeltAnswer): Config {
 }
 
 export function otherAnswer(answer: BeltAnswer): BeltAnswer {
-    return answer === 'moving' ? 'standing' : 'moving';
+    return answer === 'moving' ? 'backed_up' : 'moving';
 }
 
 /** The saved run's belt setting, and the action that generates clocks for the other answer */
 export function beltResultsLine(answer: BeltAnswer): { text: string; actionLabel: string; switchTo: BeltAnswer } {
     return answer === 'moving'
         ? { text: BELT_COPY.resultsMoving, actionLabel: BELT_COPY.actionMoving, switchTo: otherAnswer(answer) }
-        : { text: BELT_COPY.resultsStanding, actionLabel: BELT_COPY.actionStanding, switchTo: otherAnswer(answer) };
+        : { text: BELT_COPY.resultsBackedUp, actionLabel: BELT_COPY.actionBackedUp, switchTo: otherAnswer(answer) };
 }
 
 /** Wake-ups as the selection compares them: to a thousandth */
@@ -91,10 +91,10 @@ const wakeUpsKey = (wakeUps: number) => Math.round(wakeUps * 1000);
 
 /**
  * On a moving-belt result, what the pick would be on backed-up belts, worked out from the clocks on screen: a
- * standing-belts run counts every clock as made for the belt. The sentence only when that clock holds the target rate
- * with fewer wake-ups than the pick. "May": a standing-belts run can make its clocks slightly differently.
+ * run for backed-up belts counts every clock as made for the belt. The sentence only when that clock holds the target rate
+ * with fewer wake-ups than the pick. "May": a run for backed-up belts can make its clocks slightly differently.
  */
-export function standingBeltsHint(
+export function backedUpBeltsHint(
     alternatives: Pick<ClockAlternativeView, 'ranking'>[],
     recommendedIndex: number | null,
     used: BeltAnswer,
@@ -103,17 +103,17 @@ export function standingBeltsHint(
     if (used !== 'moving' || !pick) {
         return null;
     }
-    const standingIndex = recommendedIndexOf(alternatives.map(clock => ({ ranking: { ...clock.ranking, matches_belt_choice: true } })));
-    const standing = standingIndex === null ? undefined : alternatives[standingIndex];
-    if (!standing || !standing.ranking.meets_target_rate) {
+    const backedUpIndex = recommendedIndexOf(alternatives.map(clock => ({ ranking: { ...clock.ranking, matches_belt_choice: true } })));
+    const backedUp = backedUpIndex === null ? undefined : alternatives[backedUpIndex];
+    if (!backedUp || !backedUp.ranking.meets_target_rate) {
         return null;
     }
-    const standingWakeUps = standing.ranking.wake_ups_per_minute;
+    const backedUpWakeUps = backedUp.ranking.wake_ups_per_minute;
     const pickWakeUps = pick.ranking.wake_ups_per_minute;
-    if (standingWakeUps === null || pickWakeUps === null || wakeUpsKey(standingWakeUps) >= wakeUpsKey(pickWakeUps)) {
+    if (backedUpWakeUps === null || pickWakeUps === null || wakeUpsKey(backedUpWakeUps) >= wakeUpsKey(pickWakeUps)) {
         return null;
     }
     // printed as the table prints them; a difference that rounds away is not worth a sentence
-    const [fewer, more] = [Math.round(standingWakeUps), Math.round(pickWakeUps)];
+    const [fewer, more] = [Math.round(backedUpWakeUps), Math.round(pickWakeUps)];
     return fewer < more ? BELT_COPY.hint(fewer, more) : null;
 }

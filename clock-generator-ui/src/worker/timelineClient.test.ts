@@ -43,7 +43,7 @@ describe('on-demand recording worker', () => {
     it('keys the saved build, domain, period, windows and independent fuel clocks', async () => {
         const first = requestTimelineRecording(request, new AbortController().signal);
         workers[0].answer({ type: 'answer', requestId: 1, answer: recording }); await first;
-        for (const change of [{ mode: 'plan' }, { period_ticks: 90 }, { config: { overrides: { non_moving_belts: true } } }, { windows: { 'inserter:1': [{ start: 1, end: 8 }] } }, { inserter_clocks: { 'inserter:1': { modulus: 30 } } }]) {
+        for (const change of [{ mode: 'plan' }, { period_ticks: 90 }, { config: { overrides: { backed_up_belts: true } } }, { windows: { 'inserter:1': [{ start: 1, end: 8 }] } }, { inserter_clocks: { 'inserter:1': { modulus: 30 } } }]) {
             const controller = new AbortController(); const pending = requestTimelineRecording({ ...request, ...change } as RecordTimelineRequest, controller.signal);
             controller.abort(); await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
         }

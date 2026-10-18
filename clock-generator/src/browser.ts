@@ -11,6 +11,7 @@
 
 export {
     Config,
+    ParsedConfig,
     ConfigSchema,
     TargetProductionRateConfigSchema,
     MachineConfigurationSchema,

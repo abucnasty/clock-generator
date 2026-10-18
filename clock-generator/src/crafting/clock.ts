@@ -152,22 +152,22 @@ export function shiftRangesForCircuitLatency(ranges: OpenRange[], period: number
 }
 
 /**
- * The belt a clock is made for. The simulator's belts are always full and do not move; an inserter changes its tick
- * timing on a moving belt, and more so on one with gaps (see "Wake-ups, the measure for goal 2" in GOALS.md).
+ * The belt supply a clock is designed for. Moving pickups time reachable stacks; backed-up supply provides a
+ * stack each eligible pickup tick. Moving clocks add slack for late pickups (see "Wake-ups, the measure for goal 2" in GOALS.md).
  */
 export type ClockBelt =
     /** Belt pickup slack lengthened the windows of its belt-fed inserters, by these ticks (each value once, ascending) */
     | { kind: "moving"; slack_ticks: number[] }
-    /** Its belt-fed inserters have the windows they need on a belt that does not move */
-    | { kind: "non_moving" };
+    /** Its belt-fed inserters have the windows they need on a backed-up belt */
+    | { kind: "backed_up" };
 
-/** "moving (+4 ticks)" or "non-moving"; empty when no inserter with windows picks up from a belt */
+/** "moving (+4 ticks)" or "backed-up"; empty when no inserter with windows picks up from a belt */
 export function clockBeltLabel(belt: ClockBelt | null): string {
     if (belt === null) {
         return "";
     }
-    if (belt.kind === "non_moving") {
-        return "non-moving";
+    if (belt.kind === "backed_up") {
+        return "backed-up";
     }
     const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
     return `moving (+${first === last ? first : `${first}–${last}`} tick${last === 1 ? "" : "s"})`;

@@ -22,7 +22,7 @@ describe("an inserter that picks up from a belt with two items", () => {
 
     /** The sample with belt 2 as given and inserter 2 nearest to the lane given, or not told which */
     const build = async (belt_2_lanes: [string, string], near_lane?: 1 | 2): Promise<Config> => {
-        const config = structuredClone(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE));
+        const config: Config = structuredClone(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE));
         config.belts[1].lanes = belt_2_lanes.map(ingredient => ({ ingredient, stack_size: 4 })) as typeof config.belts[1]["lanes"];
         config.inserters[1].filters = ["processing-unit", "low-density-structure"];
         config.inserters[1].source = { type: "belt", id: 2, ...(near_lane === undefined ? {} : { near_lane }) };

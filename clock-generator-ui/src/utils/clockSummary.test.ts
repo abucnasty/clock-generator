@@ -115,7 +115,7 @@ describe('plainClockName', () => {
     });
 
     it('names a clock that does not match the belt by its belt, even with the fewest wake-ups', () => {
-        const clocks = [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 2, matches_belt_choice: false, beltLabel: 'non-moving' })];
+        const clocks = [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 2, matches_belt_choice: false, beltLabel: 'backed-up' })];
         expect(nameOf(clocks, 'b')).toBe('For backed-up belts');
         expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
     });
@@ -213,8 +213,8 @@ describe('makesText and wakeUpsText', () => {
 });
 
 describe('beltLine and beltValue', () => {
-    const moving = { nonMovingBelts: false, searchedForFewerWakeUps: false };
-    const still = { nonMovingBelts: true, searchedForFewerWakeUps: false };
+    const moving = { backedUpBelts: false, searchedForFewerWakeUps: false };
+    const backedUp = { backedUpBelts: true, searchedForFewerWakeUps: false };
 
     it('says moving for a clock made for a moving belt', () => {
         expect(beltLine(moving, 'moving (+4 ticks)')).toBe('Made for moving belts.');
@@ -222,9 +222,9 @@ describe('beltLine and beltValue', () => {
     });
 
     it('says backed up when the build or the clock says so', () => {
-        expect(beltLine(still, 'moving (+4 ticks)')).toBe('Made for backed-up belts.');
-        expect(beltLine(moving, 'non-moving')).toBe('Made for backed-up belts.');
-        expect(beltValue(moving, 'non-moving')).toBe('Backed up');
+        expect(beltLine(backedUp, 'moving (+4 ticks)')).toBe('Made for backed-up belts.');
+        expect(beltLine(moving, 'backed-up')).toBe('Made for backed-up belts.');
+        expect(beltValue(moving, 'backed-up')).toBe('Backed up');
     });
 
     it('says there is no belt when no clocked inserter picks up from one', () => {
@@ -241,7 +241,7 @@ describe('beltCellText', () => {
     it('says the belt in the belt question\'s words, with the slack', () => {
         expect(beltCellText('moving (+4 ticks)')).toBe('Moving (+4 ticks belt slack)');
         expect(beltCellText('moving (+2–4 ticks)')).toBe('Moving (+2–4 ticks belt slack)');
-        expect(beltCellText('non-moving')).toBe('Backed up');
+        expect(beltCellText('backed-up')).toBe('Backed up');
         expect(beltCellText('')).toBe('');
     });
 });
@@ -303,7 +303,7 @@ describe('worksOf', () => {
     });
 
     it('says a clock for backed-up belts is only for them', () => {
-        expect(worksOf(clock('a', { matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Only for backed-up belts' });
+        expect(worksOf(clock('a', { matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Designed for backed-up supply' });
     });
 
     it('names the rate a clock that holds a rate misses, before whether it recovers', () => {

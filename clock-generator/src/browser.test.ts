@@ -73,6 +73,7 @@ describe("the light entry", () => {
             "common/enable-control-types.ts",
             "common/entity-types.ts",
             "config/copies-value.ts",
+            "config/migrate-belt-supply.ts",
             "crafting/rank.ts",
             "data-types/fraction.ts",
             "data-types/map-extended.ts",

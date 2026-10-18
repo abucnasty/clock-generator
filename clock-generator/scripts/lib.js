@@ -15,20 +15,20 @@ if (fs.existsSync(path.join(ROOT, "dist", "data", "factorio-data-file.js"))) {
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 /**
- * The config of a sample by its key in ConfigPaths, or of a config file by its path; `belts_do_not_move` turns
- * `overrides.non_moving_belts` on. SEARCH=1 in the environment turns `overrides.search_for_fewer_wake_ups` on for
+ * The config of a sample by its key in ConfigPaths, or of a config file by its path; `backed_up_belts` turns
+ * `overrides.backed_up_belts` on. SEARCH=1 in the environment turns `overrides.search_for_fewer_wake_ups` on for
  * every script: the four searches then run for every sample, and not only where no other clock is stable.
  * START_DEPENDENCE=1 turns `overrides.check_start_dependence` on: every clock is tried from the other starts too.
  */
-async function loadSample(key, belts_do_not_move = false) {
+async function loadSample(key, backed_up_belts = false) {
     const { ConfigPaths } = dist("config/config-paths.js");
     const { loadConfigFromFile } = dist("config/loader.js");
     if (ConfigPaths[key] === undefined && !key.endsWith(".json")) {
         throw new Error(`No sample ${key}. Samples: ${Object.keys(ConfigPaths).join(", ")}`);
     }
     const config = await loadConfigFromFile(ConfigPaths[key] ?? path.resolve(INVOKED_FROM, key));
-    if (belts_do_not_move) {
-        config.overrides = { ...config.overrides, non_moving_belts: true };
+    if (backed_up_belts) {
+        config.overrides = { ...config.overrides, backed_up_belts: true };
     }
     if (process.env.START_DEPENDENCE === "1") {
         config.overrides = { ...config.overrides, check_start_dependence: true };

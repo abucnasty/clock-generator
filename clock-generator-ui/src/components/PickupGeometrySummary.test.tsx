@@ -22,7 +22,7 @@ describe('pickup assumption presentation', () => {
         expect(html).not.toContain('Set pickup for Inserter 8');
     });
     it('does not imply missing geometry matters for backed-up timing', () => {
-        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={{ ...build, overrides: { non_moving_belts: true } }} />));
+        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={{ ...build, overrides: { backed_up_belts: true } }} />));
         expect(html).toContain('Backed-up input belts');
         expect(html).not.toContain('missing');
     });

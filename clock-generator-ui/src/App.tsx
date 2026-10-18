@@ -70,7 +70,7 @@ import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
 import { clockTechnicalName, plainClockName } from './utils/clockSummary';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
-import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
+import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { entityLabel } from './utils/entityLabel';
@@ -694,9 +694,9 @@ function App() {
         setView('results');
     }), [runChecked, runSimulation, runDebugSteps, runStreamLogs, setView]);
 
-    // Moving stores nothing, Standing `non_moving_belts: true`
+    // Moving stores nothing, BackedUp `backed_up_belts: true`
     const handleBeltAnswer = useCallback(
-        (answer: BeltAnswer) => updateOverrides('non_moving_belts', nonMovingBeltsFor(answer)),
+        (answer: BeltAnswer) => updateOverrides('backed_up_belts', backedUpBeltsFor(answer)),
         [updateOverrides]
     );
     // Results' "Generate again": checked first as Generate is, then the answer is set on the form and the clocks are
@@ -716,7 +716,7 @@ function App() {
     // the clocks on screen, read for backed-up belts; nothing while they may still change
     const beltAssumption = generatedFor?.beltQuestion ?? null;
     const beltHint = useMemo(
-        () => busy || beltAssumption === null ? null : standingBeltsHint(alternatives, recommendedIndex, beltAssumption.answer),
+        () => busy || beltAssumption === null ? null : backedUpBeltsHint(alternatives, recommendedIndex, beltAssumption.answer),
         [busy, beltAssumption, alternatives, recommendedIndex]
     );
 

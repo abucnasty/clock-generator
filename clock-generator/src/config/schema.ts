@@ -11,6 +11,7 @@ import {
 import { MachineStatus } from "../state/entity-status";
 import { MachineType } from "../entities";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
+import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 
 // ============================================================================
 // Machine Configuration
@@ -309,11 +310,10 @@ const InserterBeltSourceConfigSchema = z.object({
      * order of its `filters`, or of the sink's ingredients when it has none, which may not be what the build does.
      */
     near_lane: z.union([z.literal(1), z.literal(2)]).optional(),
-    /** Exposed pickup line in tiles: 1 on a straight belt, 0.5 at either underground endpoint.
-     * With it, moving supply is timed by reachable stacks; non_moving_belts keeps the backed-up pickup rule.
-     * Without it, older configs retain their always-full pickup supply.
+    /** Exposed pickup line in tiles: 1 on a straight belt (default), 0.5 at either underground endpoint.
+     * Geometry is independent of the moving/backed-up supply setting (backed_up_belts).
      */
-    pickup_length: z.union([z.literal(0.5), z.literal(1)]).optional(),
+    pickup_length: z.union([z.literal(0.5), z.literal(1)]).default(1),
     /** Refused: only an inserter's sink has a drop spot (see the checks of ConfigSchema) */
     drop: InserterBeltDropConfigSchema.optional()
 });
@@ -384,7 +384,10 @@ export const InserterConfigSchema = z.object({
     overrides: InserterOverridesConfigSchema.optional()
 });
 
-export type InserterConfig = z.infer<typeof InserterConfigSchema>;
+/** Input may omit pickup length; schema parsing and entity construction both resolve it to 1. */
+export type InserterConfig = Omit<z.infer<typeof InserterConfigSchema>, "source"> & {
+    source: z.input<typeof InserterConfigSchema>["source"];
+};
 
 // ============================================================================
 // Belt Configuration
@@ -490,7 +493,7 @@ export type ChestConfig = z.infer<typeof ChestConfigSchema>;
 // Config Overrides
 // ============================================================================
 
-export const ConfigOverridesSchema = z.object({
+export const ConfigOverridesSchema = z.preprocess(migrateBeltSupplyOverrides, z.object({
     lcm: z.number().int().positive().optional(),
     /**
      * Forces the number of output swings per crafting cycle. Without it the generator picks the count and lowers it
@@ -511,17 +514,17 @@ export const ConfigOverridesSchema = z.object({
      */
     use_fractional_swings: z.boolean().optional(),
     /**
-     * The belts the inserters pick up from do not move: they are full and backed up, as the simulator models them.
+     * Input supply is backed up at the pickup: items stop between grabs and upstream supply refills the gaps,
+     * so one stack is available each eligible pickup tick. Geometry is retained independently of this rule.
      *
      * A clock is made for a moving belt by default: each window of an inserter that picks up from a belt stays open
      * a few ticks longer (belt pickup slack), and a clock without it is only selected when no clock with it holds the
      * target rate. When enabled, a clock is made without the slack and the one with the fewest wake-ups is selected.
-     * A clock that does not hold the expected output without the slack keeps it, and is only selected when no clock
-     * without it holds the target rate.
+     * A clock that does not hold the expected output without the slack is listed as unstable.
      *
      * @default false
      */
-    non_moving_belts: z.boolean().optional(),
+    backed_up_belts: z.boolean().optional(),
     /**
      * Run the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand
      * output swings. They take most of the time of a generation.
@@ -574,7 +577,7 @@ export const ConfigOverridesSchema = z.object({
      * regardless of the clock period.
      */
     ignored_lcm_ingredients: z.array(z.string()).optional()
-});
+}));
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 
@@ -626,4 +629,7 @@ export const ConfigSchema = z.object({
     }
 });
 
-export type Config = z.infer<typeof ConfigSchema>;
+/** Parsed configs have explicit pickup geometry on every belt source. */
+export type ParsedConfig = z.infer<typeof ConfigSchema>;
+/** Public engine inputs also accept inserters whose pickup length uses the straight-belt default. */
+export type Config = Omit<ParsedConfig, "inserters"> & { inserters: InserterConfig[] };

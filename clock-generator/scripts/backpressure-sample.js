@@ -2,7 +2,7 @@
 // Whether each potential clock of one sample that holds its expected output survives backpressure loss (GOALS.md, "Backpressure Loss"), as
 // <out dir>/<KEY>.json: for every loss of the build (each supplied item stops arriving, each output is not taken
 // away) the fixed trials of src/crafting/backpressure-loss.ts, and whether the build is back at its expected output
-// after each. Simulator only: the harness cannot cut a supply. NON_MOVING=1 turns "Belts do not move" on;
+// after each. Simulator only: the harness cannot cut a supply. BACKED_UP=1 turns "Backed-up belts" on;
 // PLACES=0,0.5 cuts at fewer places in the period than the four of LOSS_PLACES, to make the run shorter.
 // For all samples: scripts/backpressure-sweep.sh. The table: scripts/backpressure-table.py.
 const path = require("path"), fs = require("fs");
@@ -17,7 +17,7 @@ const places = process.env.PLACES ? process.env.PLACES.split(",").map(Number) : 
     const started = Date.now();
     const row = { key, clocks: [] };
     try {
-        const config = await loadSample(key, process.env.NON_MOVING === "1");
+        const config = await loadSample(key, process.env.BACKED_UP === "1");
         const generated = Date.now();
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         row.generate_seconds = (Date.now() - generated) / 1000;

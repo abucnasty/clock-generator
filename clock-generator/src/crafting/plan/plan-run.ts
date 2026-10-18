@@ -171,7 +171,7 @@ export interface BlueprintGenerationResult {
     belt_pickup_slack_ticks: Record<string, number>;
     /**
      * The windows of a belt-fed inserter go without the slack that would have lengthened them. False when the config
-     * says the belts do not move (`overrides.non_moving_belts`): then a clock is meant to go without it.
+     * says the input belts are backed up (`overrides.backed_up_belts`): then a clock is meant to go without it.
      */
     belt_pickup_slack_left_out: boolean;
     /**
@@ -1068,15 +1068,15 @@ interface PlannedClock {
 
 /**
  * The windows of the plan with the room a clock gets: belt pickup slack as the option asks ("auto" keeps it unless a
- * clock-only check gets worse, which costs trials; never on belts that do not move), or room for a hand of fuel where
+ * clock-only check gets worse, which costs trials; never on backed-up belts), or room for a hand of fuel where
  * asked for. The belt the clock is made for is read off that.
  */
 export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "belt_pickup_slack" | "fuel_hand_room"> = {}): PlannedClock {
     const { config, logger, unslacked_windows, run: { simulation_context, duration, total_expected_output } } = plan;
     const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
-    // on belts that do not move a clock is made without the slack, whatever the alternative asks for
-    const non_moving_belts = config.overrides?.non_moving_belts === true;
-    const belt_pickup_slack_mode = non_moving_belts ? "never" : options.belt_pickup_slack ?? "auto";
+    // on backed-up belts a clock is made without the slack, whatever the alternative asks for
+    const backed_up_belts = config.overrides?.backed_up_belts === true;
+    const belt_pickup_slack_mode = backed_up_belts ? "never" : options.belt_pickup_slack ?? "auto";
     const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (belt_pickup_slack_mode === "auto"
         && beltPickupSlackHelps(config, unslacked_windows, full_belt_pickup_slack, duration.ticks, total_expected_output, logger));
     const belt_pickup_slack = use_belt_pickup_slack ? full_belt_pickup_slack : new Map<string, number>();
@@ -1091,11 +1091,11 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
     const fuel_hand_room = options.fuel_hand_room && !use_belt_pickup_slack && Number.isInteger(duration.ticks)
         ? new Map(Array.from(fuelHandRoomTicks(simulation_context.entity_registry)).filter(([key]) => (unslacked_windows.get(key)?.length ?? 0) > 0))
         : new Map<string, number>();
-    const belt_pickup_slack_left_out = !non_moving_belts && !use_belt_pickup_slack && Number.isInteger(duration.ticks)
+    const belt_pickup_slack_left_out = !backed_up_belts && !use_belt_pickup_slack && Number.isInteger(duration.ticks)
         && belt_fed_with_windows.length > 0;
     const slack_ticks = Array.from(new Set(Object.values(applied_belt_pickup_slack))).sort((a, b) => a - b);
     const belt: ClockBelt | null = belt_fed_with_windows.length === 0 ? null
-        : slack_ticks.length > 0 ? { kind: "moving", slack_ticks } : { kind: "non_moving" };
+        : slack_ticks.length > 0 ? { kind: "moving", slack_ticks } : { kind: "backed_up" };
     const windows = withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
     return { windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room };
 }

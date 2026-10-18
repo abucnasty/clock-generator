@@ -75,12 +75,24 @@ describe("physical belt lane fallback", () => {
         expect(input.take(1)).toBe(4);
     });
 
-    it("keeps the always-full assumption without geometry and for explicitly backed-up supply", () => {
-        for (const backedUp of [false, true]) {
+    it("defaults omitted geometry to a moving straight-belt pickup", () => {
+        const config = copy();
+        config.inserters[1].source = { type: "belt", id: 1, near_lane: 1 };
+        const input = pickup(config);
+        expect(input.state.inserter.pickup_length).toBe(1);
+        expect(input.state.inserter.belt_supply).toBe("moving");
+        expect(input.source.pickup_lanes.size).toBe(1);
+        expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
+    });
+
+    it("retains geometry while explicitly backed-up supply allows consecutive grabs", () => {
+        for (const length of [1, 0.5] as const) {
             const config = copy();
-            if (backedUp) config.overrides = { non_moving_belts: true };
-            else config.inserters[1].source = { type: "belt", id: 1, near_lane: 1 };
+            config.overrides = { backed_up_belts: true };
+            config.inserters[1].source = { type: "belt", id: 1, near_lane: 1, pickup_length: length };
             const input = pickup(config);
+            expect(input.state.inserter.pickup_length).toBe(length);
+            expect(input.state.inserter.belt_supply).toBe("backed_up");
             expect(input.source.pickup_lanes.size).toBe(0);
             expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
         }

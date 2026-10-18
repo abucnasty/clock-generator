@@ -59,7 +59,7 @@ describe("transitions (belt to machine)", () => {
             filters,
             overrides
         )
-        return {
+        const inserter: Inserter = {
             entity_id: EntityId.forInserter(-1),
             metadata: metadata,
             animation: InserterAnimation.fromMetadata(metadata.animation),
@@ -67,6 +67,12 @@ describe("transitions (belt to machine)", () => {
             sink: sink,
             filtered_items: new Set(filters),
         }
+        // These transition tests use an always-available belt supply, independently of moving-lane timing.
+        if (EntityId.isBelt(source.entity_id)) {
+            inserter.pickup_length = 1;
+            inserter.belt_supply = "backed_up";
+        }
+        return inserter;
     }
 
     const createTestContext = (): TestContext => {

@@ -1,6 +1,6 @@
 // node scripts/alternatives.js <KEY> [on|off] [swings]
 // The potential clocks of a sample, the selected one starred: verdict (with the losses it does not get back from), rate, wake-ups a minute, belt. <on|off> is
-// "Belts do not move" (off by default); [swings] forces the output swings per cycle on every clock. SEARCH=1 turns
+// "Backed-up belts" (off by default); [swings] forces the output swings per cycle on every clock. SEARCH=1 turns
 // "Search for fewer wake-ups" on; START_DEPENDENCE=1 tries every clock from other starts too (start-dependent clocks are named).
 const [key, belts = "off", swings] = process.argv.slice(2);
 const { dist, quiet, loadSample } = require("./lib");

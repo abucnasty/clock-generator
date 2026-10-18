@@ -8,29 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
-## [0.17.4] - 2026-10-18
-
-### Changed
-- Belt-fed inserters in the UI default to Straight belt timing. Choose Underground belt explicitly for either endpoint; imported underground settings are preserved. Generation and exports apply the straight-belt default to older builds without a pickup type.
-
-## [0.17.3] - 2026-10-17
+## [0.18.0] - 2026-10-18
 
 ### Fixed
-- Moving belt pickups try the nearest lane first and fall back to the other lane carrying the same item when no stack is reachable. This models consecutive grabs from both lanes at underground entrances and exits, uses each lane's stack size, and can shorten the generated pickup windows.
-
-## [0.17.2] - 2026-10-17
+- Model moving belt pickups from the stacks within reach, including the shorter exposed length at underground entrances and exits. Try the nearest lane first and fall back to the other lane when it carries the same item. This corrects pickup timing and generated clocks on affected builds.
 
 ### Added
-- Set each belt-fed inserter's pickup type to Straight belt or Underground belt in either editor. Imports, builds and saved results show pickup coverage, with direct links to fill missing types.
-- Sidecar 0.9.1 identifies bends, splitters and inline pickups it cannot classify, both in its copy window and the import preview.
+- Choose Straight belt or Underground belt for each belt-fed inserter in either editor. Sidecar 0.9.1 captures supported pickup geometry and identifies bends, splitters and inline pickups it cannot classify. Imports and saved results show pickup coverage and the assumptions used for that run.
 
 ### Changed
-- Describe the input supply as Moving or Backed up, independently of pickup type. Saved results retain the assumptions used for that run, and editing either setting marks them out of date.
-
-## [0.17.1] - 2026-10-17
-
-### Fixed
-- Time moving belt pickups by the stacks within reach when the input inserter has `source.pickup_length`, instead of assuming one stack is always available every tick. This accounts for slower underground pickups and changes clock selection on affected builds. Sidecar 0.9.0 exports the exposed length and nearest lane beside straight belts and underground endpoints; older imports retain their previous assumption until re-exported.
+- Omitted pickup length defaults to a straight belt in the UI and engine. Underground pickups explicitly use half-tile reach.
+- Use Moving or Backed up consistently for input supply, independently of pickup geometry. The config setting is `overrides.backed_up_belts`; older `non_moving_belts` settings migrate on import. Editing either supply or geometry marks previous results out of date.
 
 ## [0.17.0] - 2026-10-17
 

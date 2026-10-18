@@ -32,7 +32,7 @@ export type CheckStatus = 'none' | 'running' | 'valid' | 'invalid' | 'out-of-dat
 
 // read only by the clock search after the plan, never by the check (`validateConfig`), so turning one does not
 // make a check out of date
-const GENERATION_ONLY_OVERRIDES = ['search_for_fewer_wake_ups', 'non_moving_belts'] as const;
+const GENERATION_ONLY_OVERRIDES = ['search_for_fewer_wake_ups', 'backed_up_belts'] as const;
 
 /**
  * The key a check is for: the config's key without the settings only the clock search reads. A switch turned on and

@@ -9,7 +9,7 @@ import { handSizeFor, Inserter } from "./inserter";
 
 /** The automation science sample with the given fields set on its inserters, one of them or all */
 async function sampleWith(fields: Record<string, unknown>, only_first = false): Promise<Config> {
-    const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    const config: Config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
     config.inserters = config.inserters.map((inserter, index) => {
         if (only_first && index > 0) {
             return inserter;

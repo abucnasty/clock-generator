@@ -19,7 +19,9 @@ export class BeltPickupLogic implements InserterTransferLogic {
     ) {
         this.pickup_lane_order = inserterState.inserter.near_lane === 2 ? [1, 0] : [0, 1];
         const pickup_length = inserterState.inserter.pickup_length;
-        if (pickup_length === undefined) {
+        assert(pickup_length !== undefined, "Belt pickups need pickup geometry");
+        assert(inserterState.inserter.belt_supply !== undefined, "Belt pickups need a supply setting");
+        if (inserterState.inserter.belt_supply === "backed_up") {
             return;
         }
 

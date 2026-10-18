@@ -107,9 +107,9 @@ describe("generateClockForConfig", () => {
         });
 
         // belt pickup slack is not given to a period that is not a whole number of ticks (GOALS.md, the belt a clock is made for)
-        it("names every clock a non-moving belt clock on its clock of 90.947 ticks, the subtick one and the rounded one, and counts none as having left the slack out", () => {
+        it("names every clock a backed-up belt clock on its clock of 90.947 ticks, the subtick one and the rounded one, and counts none as having left the slack out", () => {
             expect(alternatives.length).toBeGreaterThan(0);
-            expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "non_moving" })));
+            expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "backed_up" })));
             expect(alternatives.some(a => a.id.endsWith("-subtick"))).toBe(true);
             expect(alternatives.every(a => a.ranking.matches_belt_choice)).toBe(true);
             expect(alternatives[0].description).toContain("The slack is not given to a clock whose period is not a whole number of ticks");

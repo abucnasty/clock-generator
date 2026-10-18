@@ -44,18 +44,22 @@ describe("moving pickup affects the verdict of the old default clock", () => {
         expect(counts.has(528)).toBe(true);
     });
 
-    it("retains the recorded backed-up behavior when the config says its input belts do not move", () => {
-        expect(outputCounts({ ...config, overrides: { ...config.overrides, non_moving_belts: true } })).toEqual(new Set([528]));
+    it("retains the recorded backed-up behavior when the config says its input belts are backed up", () => {
+        expect(outputCounts({ ...config, overrides: { ...config.overrides, backed_up_belts: true } })).toEqual(new Set([528]));
     });
 
-    it("does not silently invent pickup geometry for legacy configs", () => {
-        const legacy = { ...config, inserters: config.inserters.map(inserter => {
+    it("uses straight-belt timing for omitted geometry, including direct unparsed engine inputs", () => {
+        const omitted = { ...config, inserters: config.inserters.map(inserter => {
             if (inserter.source.type !== "belt") return inserter;
             const { pickup_length: _length, ...source } = inserter.source;
             void _length;
             return { ...inserter, source };
         }) };
-        expect(outputCounts(legacy)).toEqual(new Set([528]));
-        expect(SimulationContext.fromConfig(legacy).inserters.every(i => i.inserter_state.inserter.pickup_length === undefined)).toBe(true);
+        const straight: Config = { ...omitted, inserters: omitted.inserters.map(inserter => inserter.source.type === "belt"
+            ? { ...inserter, source: { ...inserter.source, pickup_length: 1 } } : inserter) };
+        expect(outputCounts(omitted)).toEqual(outputCounts(straight));
+        const input = SimulationContext.fromConfig(omitted).inserters.find(i => i.inserter_state.inserter.source.entity_id.type === "belt")!;
+        expect(input.inserter_state.inserter.pickup_length).toBe(1);
+        expect(input.inserter_state.inserter.belt_supply).toBe("moving");
     });
 });

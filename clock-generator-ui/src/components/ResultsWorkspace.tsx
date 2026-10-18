@@ -217,7 +217,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Button></Box>}
                 runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">
-                        These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.non_moving_belts ? 'backed-up' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
+                        These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.backed_up_belts ? 'backed-up' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
                         {selected.assumptions?.loopSeeds.length ? ` ${selected.assumptions.loopSeeds.length} modeled loop seed(s).` : ''}
                         {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' Supplied output-drop positions model shared-lane spacing.' : ''}
                         {selected.assumptions?.outputDrops.some(drop => drop.mode === 'free-lane') ? ' Output belts without supplied shared-lane positions use free-lane drop timing.' : ''}

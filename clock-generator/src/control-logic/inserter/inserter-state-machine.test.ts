@@ -27,6 +27,8 @@ function run(is_game_clock: boolean) {
         source: { entity_id: belt.entity_id, item_names: new Set(["iron-plate"]) },
         sink: { entity_id: machine.entity_id, item_names: new Set(["iron-plate"]) },
         filtered_items: new Set(["iron-plate"]),
+        pickup_length: 1,
+        belt_supply: "moving",
     };
     const inserter_state = InserterState.createIdle(inserter);
     const sink_state = MachineState.forMachine(machine);

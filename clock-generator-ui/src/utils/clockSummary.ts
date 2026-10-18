@@ -20,7 +20,7 @@ export const SUMMARY_COPY = {
     recoveryUnavailable: 'Recovery unavailable',
     unstable: 'Does not hold its rate',
     startDependent: 'Depends on how it is started',
-    stillBelts: 'For backed-up belts',
+    backedUpBelts: 'For backed-up belts',
     fewestWakeUps: 'Fewest wake-ups',
     fewestWakeWindows: 'Fewest wake windows',
     another: (rate: string) => `Another way to make ${rate}/s`,
@@ -41,11 +41,11 @@ export const SUMMARY_COPY = {
     recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
     recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
     beltMoving: 'Moving',
-    beltStill: 'Backed up',
+    beltBackedUp: 'Backed up',
     beltNone: 'No belt',
     beltCellMoving: (slack: string) => `Moving (${slack} belt slack)`,
     beltLineMoving: 'Made for moving belts.',
-    beltLineStill: 'Made for backed-up belts.',
+    beltLineBackedUp: 'Made for backed-up belts.',
     beltLineNone: 'No inserter on the clock picks up from a belt.',
     // how a selected clock differs from the recommended one
     differsRate: (rate: string, target: string) => `This one makes ${rate}/s, not ${target}/s.`,
@@ -58,7 +58,7 @@ export const SUMMARY_COPY = {
     // the compare table
     foldedMakes: (count: number, rate: string) => `All ${count} clocks make ${rate}/s.`,
     worksYes: 'Yes',
-    worksStillBelts: 'Only for backed-up belts',
+    worksBackedUpBelts: 'Designed for backed-up supply',
     worksOffTarget: (rate: string) => `Misses the rate (${rate}/s)`,
     worksNoRecovery: 'Does not recover',
     worksUnstable: 'Unstable',
@@ -109,7 +109,7 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
         return SUMMARY_COPY.unstable;
     }
     if (!clock.ranking.matches_belt_choice) {
-        return SUMMARY_COPY.stillBelts;
+        return SUMMARY_COPY.backedUpBelts;
     }
     if (isContender(clock)) {
         const contenders = clocks.filter(isContender);
@@ -160,35 +160,35 @@ export function wakeUpsText(clock: Pick<SummaryClock, 'assessment'>): { value: s
         : { value: SUMMARY_COPY.wakeUps(Math.round(perMinute)), sub: SUMMARY_COPY.oneCopy };
 }
 
-type BeltKind = 'moving' | 'still' | 'none';
+type BeltKind = 'moving' | 'backed_up' | 'none';
 
 function beltKindOf(rule: PickRule | null, beltLabel: string): BeltKind {
     if (beltLabel === '') {
         return 'none';
     }
-    return !rule?.nonMovingBelts && beltLabel.startsWith('moving') ? 'moving' : 'still';
+    return !rule?.backedUpBelts && beltLabel.startsWith('moving') ? 'moving' : 'backed_up';
 }
 
 /** The Belt tile's word: "Moving", "Backed up", or "No belt" when no clocked inserter picks up from one */
 export function beltValue(rule: PickRule | null, beltLabel: string): string {
-    return { moving: SUMMARY_COPY.beltMoving, still: SUMMARY_COPY.beltStill, none: SUMMARY_COPY.beltNone }[beltKindOf(rule, beltLabel)];
+    return { moving: SUMMARY_COPY.beltMoving, backed_up: SUMMARY_COPY.beltBackedUp, none: SUMMARY_COPY.beltNone }[beltKindOf(rule, beltLabel)];
 }
 
 /**
  * The full clock table's Belt cell in the belt question's words: "Moving (+4 ticks belt slack)", "Backed up", or
- * nothing when no clocked inserter picks up from a belt. The engine's label is "moving (+4 ticks)" or "non-moving".
+ * nothing when no clocked inserter picks up from a belt. The engine's label is "moving (+4 ticks)" or "backed-up".
  */
 export function beltCellText(beltLabel: string): string {
     if (beltLabel === '') {
         return '';
     }
     const slack = /^moving \((.+)\)$/.exec(beltLabel);
-    return slack ? SUMMARY_COPY.beltCellMoving(slack[1]) : beltLabel.startsWith('moving') ? SUMMARY_COPY.beltMoving : SUMMARY_COPY.beltStill;
+    return slack ? SUMMARY_COPY.beltCellMoving(slack[1]) : beltLabel.startsWith('moving') ? SUMMARY_COPY.beltMoving : SUMMARY_COPY.beltBackedUp;
 }
 
 /** The sentence under the tiles about the belt the clock is made for (2.4 may change its words, not its place) */
 export function beltLine(rule: PickRule | null, beltLabel: string): string {
-    return { moving: SUMMARY_COPY.beltLineMoving, still: SUMMARY_COPY.beltLineStill, none: SUMMARY_COPY.beltLineNone }[beltKindOf(rule, beltLabel)];
+    return { moving: SUMMARY_COPY.beltLineMoving, backed_up: SUMMARY_COPY.beltLineBackedUp, none: SUMMARY_COPY.beltLineNone }[beltKindOf(rule, beltLabel)];
 }
 
 /**
@@ -259,7 +259,7 @@ export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'asses
         return { kind: 'caution', text: recoversOf(clock).kind === 'no' ? SUMMARY_COPY.worksNoRecovery : SUMMARY_COPY.recoveryUnavailable };
     }
     if (!clock.ranking.matches_belt_choice) {
-        return { kind: 'caution', text: SUMMARY_COPY.worksStillBelts };
+        return { kind: 'caution', text: SUMMARY_COPY.worksBackedUpBelts };
     }
     return recoversOf(clock).kind === 'not-tested'
         ? { kind: 'caution', text: SUMMARY_COPY.recoveryUnavailable }

@@ -130,8 +130,8 @@ describe('checkKeyOf', () => {
     it('ignores the switches only the clock search reads', () => {
         const base = checkKeyOf(configOf());
         expect(checkKeyOf(configOf((c) => edits.updateOverrides(c, 'search_for_fewer_wake_ups', true)))).toBe(base);
-        expect(checkKeyOf(configOf((c) => edits.updateOverrides(c, 'non_moving_belts', true)))).toBe(base);
-        const both = configOf((c) => edits.updateOverrides(edits.updateOverrides(c, 'non_moving_belts', true), 'search_for_fewer_wake_ups', true));
+        expect(checkKeyOf(configOf((c) => edits.updateOverrides(c, 'backed_up_belts', true)))).toBe(base);
+        const both = configOf((c) => edits.updateOverrides(edits.updateOverrides(c, 'backed_up_belts', true), 'search_for_fewer_wake_ups', true));
         expect(both.overrides).toBeDefined();
         expect(checkKeyOf(both)).toBe(base);
         expect(configOf().overrides).toBeUndefined();
@@ -156,7 +156,7 @@ describe('checkKeyOf', () => {
     });
 
     it('does not change the config it is given', () => {
-        const config = configOf((c) => edits.updateOverrides(edits.updateOverrides(c, 'lcm', 2), 'non_moving_belts', true));
+        const config = configOf((c) => edits.updateOverrides(edits.updateOverrides(c, 'lcm', 2), 'backed_up_belts', true));
         const before = structuredClone(config);
         checkKeyOf(config);
         expect(config).toEqual(before);

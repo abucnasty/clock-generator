@@ -157,7 +157,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
-        nonMovingBelts: alternative.belt?.kind === 'non_moving' || (alternative.belt === null && config.overrides?.non_moving_belts === true),
+        backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
     }));
     return { signature: run.signature, alternatives };
 }

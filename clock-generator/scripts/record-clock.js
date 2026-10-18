@@ -1,7 +1,7 @@
 // node scripts/record-clock.js <recordings dir> <build> <on|off> [alternative id]
 // Records a potential clock of a scaffolded build in Factorio (the selected one unless an id is given) and checks it
 // as the game tests do: what it moved in every period, the wake-ups against the simulator's, and the simulator laid
-// against the game entity by entity. <on|off> is "Belts do not move". A recording that is already in the directory is
+// against the game entity by entity. <on|off> is "Backed-up belts". A recording that is already in the directory is
 // read instead of made again.
 //
 // To record windows of your own, such as a clock tightened by hand: WINDOWS=<json file> holding
@@ -71,7 +71,7 @@ const RECORDED_TICKS = Number(process.env.TICKS ?? 36000);
     const period = result.simulation_duration.ticks;
     // a fractional period is built as a subtick clock, which counts the whole ticks after which the period repeats
     const clock_ticks = result.subtick ? result.subtick.clock.period_ticks : period;
-    console.log(`${name} (belts do not move: ${belts}): ${selected.id} "${selected.label}", belt ${selected.belt ? clockBeltLabel(selected.belt) : "-"}, `
+    console.log(`${name} (backed-up belts: ${belts}): ${selected.id} "${selected.label}", belt ${selected.belt ? clockBeltLabel(selected.belt) : "-"}, `
         + `${selected.verdict} in the simulator, period ${period}, clock counts ${clock_ticks}`);
 
     const tag = process.env.TAG ? `-${process.env.TAG}` : "";

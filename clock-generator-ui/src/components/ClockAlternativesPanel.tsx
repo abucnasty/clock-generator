@@ -51,7 +51,7 @@ const COMPARE_COPY = {
     worksHeading: 'Does it work?',
     beltHelp: 'The belt the clock is made for. Moving: each wake window of an inserter that picks up from a belt stays '
         + 'open the ticks shown longer (belt slack), so a pickup that comes late on a moving belt can finish; a rule of '
-        + 'thumb for late pickups. Known pickup types also model which moving stacks are within reach. Backed up: items '
+        + 'thumb for late pickups. Pickup geometry models which moving stacks are within reach; straight belt is the default. Backed up: items '
         + 'stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched off holding a partial hand. A '
         + 'subtick clock is always made for a backed-up belt, and is not ranked behind other clocks for it. Blank '
         + 'when no clocked inserter picks up from a belt.',
@@ -250,7 +250,7 @@ export function ClockAlternativesPanel({
                             {/* made without belt slack in a run for moving belts: ranked after those made for them */}
                             {!alternative.ranking.matches_belt_choice && (
                                 <Typography variant="caption" component="div" color="text.secondary" sx={{ whiteSpace: 'normal', maxWidth: '16ch' }}>
-                                    {BELT_COPY.onlyIfStanding}
+                                    {BELT_COPY.onlyIfBackedUp}
                                 </Typography>
                             )}
                         </TableCell>

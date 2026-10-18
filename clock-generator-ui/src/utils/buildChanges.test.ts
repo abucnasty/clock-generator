@@ -52,7 +52,7 @@ describe('buildChangesOf', () => {
     });
 
     it('names the belt answer', () => {
-        expect(changes((config) => edits.updateOverrides(config, 'non_moving_belts', true))).toEqual(['Input belts (moving → backed up)']);
+        expect(changes((config) => edits.updateOverrides(config, 'backed_up_belts', true))).toEqual(['Input belts (moving → backed up)']);
     });
 
     it('names the deeper-search switch', () => {
@@ -72,7 +72,7 @@ describe('buildChangesOf', () => {
     it('lists the changes in the form\'s order, the same each time', () => {
         const edit = (config: ConfigFormData) => edits.updateOverrides(
             edits.updateInserter(edits.updateTargetOutput(edits.addBelt(config), 'items_per_second', 200), 1, { stack_size: 3 }),
-            'non_moving_belts',
+            'backed_up_belts',
             true,
         );
         const expected = ['Items per second (240 → 200)', 'Inserter 2', 'Belts (1 → 2)', 'Input belts (moving → backed up)'];

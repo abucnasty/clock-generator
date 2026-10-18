@@ -48,7 +48,7 @@ describe('pickup type edits and saved assumptions', () => {
         const before = generatedForOf(config);
         restored.inserters[0].source = withPickupType(restored.inserters[0].source, 'underground');
         expect(isStale(before, configKeyOf(formDataToConfig(restored)))).toBe(true);
-        expect(isStale(before, configKeyOf({ ...config, overrides: { non_moving_belts: true } }))).toBe(true);
+        expect(isStale(before, configKeyOf({ ...config, overrides: { backed_up_belts: true } }))).toBe(true);
         expect(isStale(before, configKeyOf(config))).toBe(false);
     });
     it('lists only missing belt pickups with stable inserter IDs, independently of movement', () => {
@@ -56,7 +56,7 @@ describe('pickup type edits and saved assumptions', () => {
             { id: 7, source: withPickupType(source, 'straight') }, { id: 9, source },
             { source: { type: 'machine' } }, { source: { type: 'belt' } },
         ];
-        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], standing: false });
-        expect(pickupGeometryOf({ inserters, overrides: { non_moving_belts: true } }).standing).toBe(true);
+        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], backedUp: false });
+        expect(pickupGeometryOf({ inserters, overrides: { backed_up_belts: true } }).backedUp).toBe(true);
     });
 });
