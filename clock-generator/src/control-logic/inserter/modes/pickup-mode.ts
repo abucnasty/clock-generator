@@ -34,6 +34,7 @@ export class InserterPickupMode implements InserterMode {
         private readonly sinkEntityState: EntityState,
         private readonly tick_provider?: TickProvider,
     ) {
+        this.pickup_lane_order = inserterState.inserter.near_lane === 2 ? [1, 0] : [0, 1];
         const length = inserterState.inserter.pickup_length;
         if (length !== undefined && EntityState.isBelt(sourceEntityState)) {
             const key = inserterState.entity_id.id;
@@ -45,6 +46,7 @@ export class InserterPickupMode implements InserterMode {
     }
 
     private readonly pickup_lanes?: BeltPickupLane[];
+    private readonly pickup_lane_order: number[];
 
     public onEnter(fromMode: InserterMode): void {
         this.current_tick = 0;
@@ -164,11 +166,8 @@ export class InserterPickupMode implements InserterMode {
                 this.belt_grab_decided = true;
                 return;
             }
-            const lane = source.belt.lanes.find(lane => lane.ingredient_name === held_item.item_name);
-            assert(lane, `No belt lane found for item ${held_item.item_name}`);
-            // Pick up at most lane.stack_size items, but cap at remaining capacity
             const remaining_capacity = handSizeFor(inserter_state.inserter, held_item.item_name) - held_item.quantity;
-            const pickup_quantity = this.takeFromLane(source, lane.ingredient_name, Math.min(lane.stack_size, remaining_capacity));
+            const pickup_quantity = this.takeFromBelt(source, held_item.item_name, remaining_capacity);
             
             if (pickup_quantity <= 0) {
                 return;
@@ -187,10 +186,7 @@ export class InserterPickupMode implements InserterMode {
                     this.belt_grab_decided = true;
                     return;
                 }
-                const lane = source.belt.lanes.find(lane => lane.ingredient_name === item_name);
-                assert(lane, `No belt lane found for item ${item_name}`);
-                // Pick up at most lane.stack_size items, but cap at inserter stack size
-                const pickup_quantity = this.takeFromLane(source, item_name, Math.min(lane.stack_size, handSizeFor(inserter_state.inserter, item_name)));
+                const pickup_quantity = this.takeFromBelt(source, item_name, handSizeFor(inserter_state.inserter, item_name));
                 if (pickup_quantity === 0) continue;
                 inserter_state.held_item = { item_name: item_name, quantity: pickup_quantity };
                 inserter_state.items_picked_up += pickup_quantity;
@@ -200,10 +196,22 @@ export class InserterPickupMode implements InserterMode {
         }
     }
 
-    private takeFromLane(source: BeltState, item: ItemName, capacity: number): number {
-        if (!this.pickup_lanes) return capacity;
-        const index = source.belt.lanes.findIndex(lane => lane.ingredient_name === item);
-        return this.pickup_lanes[index].take(this.tick_provider!.getCurrentTick(), capacity);
+    private takeFromBelt(source: BeltState, item: ItemName, capacity: number): number {
+        const tick = this.tick_provider?.getCurrentTick();
+        if (this.pickup_lanes?.some(lane => lane.hasTakenAt(tick!))) return 0;
+        let matching_lane = false;
+        for (const index of this.pickup_lane_order) {
+            const lane = source.belt.lanes[index];
+            if (!lane || lane.ingredient_name !== item) continue;
+            matching_lane = true;
+            const limit = Math.min(lane.stack_size, capacity);
+            const quantity = this.pickup_lanes
+                ? this.pickup_lanes[index].take(tick!, limit) : limit;
+            // Retry the other matching lane only if this one had nothing reachable. One stack total per tick.
+            if (quantity > 0) return quantity;
+        }
+        assert(matching_lane, `No belt lane found for item ${item}`);
+        return 0;
     }
 
     private pickupFromMachine(state: InserterState, source: MachineState): void {

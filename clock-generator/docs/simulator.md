@@ -19,55 +19,47 @@ The status the game shows for an inserter is decided by its sink before the inse
 
 ### What an inserter takes off a belt first
 
-An inserter that takes two items off one belt, one from each lane, takes from the lane nearest to it first whenever its sink takes both, and from the far lane only when the sink takes nothing more of the item on the near one. The order of its filters has no say in it. Recorded on the utility science scaffold in Factorio 2.1.21: the inserter that brings processing units and low density structures took the low density structures first while they were on its near lane, and the processing units first once the two lanes were swapped, with the same filters both times.
-
-Which item comes first decides how an ingredient is split between two inserters that both bring it, and with it whether a clock holds. Under one clock for that build the simulator made 192 of 192 a period with the processing units taken first, where the game, taking the low density structures first, made 96.
-
-The config names the nearest lane with `near_lane` on the belt an inserter picks up from, and the sidecar exports it for an inserter beside a straight piece of belt. Without it the simulator takes the items in the order of the inserter's filters, or of the sink's ingredients, which is a guess. A scaffold test fails when the config and the recorded build disagree on which item comes first, or on the stack size of an inserter.
+With an empty hand, prefer the nearest lane's item when the destination can accept it. Once a hand contains an item, continue collecting that item until the hand is full or the destination stops accepting it. Explicit filters restrict which items may be collected; they do not override a supplied `near_lane`. Without `near_lane`, item selection keeps the filter/recipe order and matching physical lanes are tried in their config order.
 
 ### Picking up from moving belts and underground endpoints
 
-**Take one reachable stack per tick, leave a hole where it was, and keep the remaining stacks moving at belt speed.**
-On a saturated lane, stacks are a quarter tile apart and the inserter takes the upstream-most reachable stack.
-Stream phase and holes persist across hands, closed windows and changes of inserter control. Only holes and partial
-stacks need storage; the rest of the supply is an evenly spaced train ([implementation](../src/state/belt-pickup-lane.ts)).
+**Take one reachable stack per tick: near lane first, far lane if the near lane has none of the item being collected. Leave a hole and keep the remaining stacks moving at belt speed.**
 
-A straight belt exposes one tile; **either underground endpoint exposes half a tile**. This one length difference
-explains the observed turbo-belt grabs: `0,1,2,3` on the straight piece, and `0,1,2,4` or `0,1,3,5` underground,
-depending on stream phase. These are offsets from the first grab. Backed-up supply keeps the existing
-one-stack-per-tick rule: the lane refills pickup gaps, but items do not continuously pass out of reach.
+- Saturated lanes have stacks a quarter tile apart. Take the upstream-most reachable stack on the selected lane,
+  capped by that lane's stack size and the remaining hand capacity. There is at most one stack total per tick.
+- A straight belt exposes **one tile per lane**. Either underground entrance or exit exposes **half a tile per lane**.
+  Switching lanes adds no fixed delay; an underground has less pickup space, rather than a fixed tick penalty.
+- Lane phases, holes and partially taken stacks persist between hands, across closed windows and when inserter
+  controls change. Each lane keeps its own remaining stacks.
+- On **backed-up supply**, items stop between pickups and the belt refills gaps. Keep the existing one-stack-per-tick
+  pickup assumption. Capture does not infer moving/backed-up supply from a snapshot.
 
-Set `source.pickup_length` to `1` or `0.5` on the input inserter. Sidecar 0.9.0 exports it and `near_lane` for
-inserters beside these pieces. `overrides.non_moving_belts: true` uses backed-up pickup even with geometry present.
-In the UI, set **Picks up from** to **Straight belt** or **Underground belt**; entrance and exit share one rule.
-Choose **Moving** or **Backed up** separately for the input supply: capture does not infer motion from a snapshot.
-Imports and builds identify missing pickup types, and results show the coverage used by their saved run. Changing
-pickup type or supply marks those results out of date. Sidecar 0.9.1 leaves bends, splitters and inline pickups
-unspecified and explains why in the copy window and import preview; these geometries remain uncalibrated.
-Older configs without the field keep their always-full pickup assumption; re-export or set the type to supply geometry. Pickup
-slack remains margin for late starts and gaps. This adds no whole-belt simulation or search dimension.
+For example, four grabs from one moving turbo lane can occur at `0,1,2,3` on a straight piece and `0,1,2,4` or
+`0,1,3,5` underground, depending on phase. With the same item in four-item stacks on both saturated lanes, the
+measured 16-item hands filled at `0,1,2,3` on all three geometries: the far lane supplies a grab when needed.
+These are offsets from the first grab, not an arm-arrival or wake-up timing rule.
 
-Measured in Factorio 2.1.21 on 2026-10-17: single-ingredient probes with the destination emptied each tick separated
-pickup timing from machine blocking. Given the first grab and stream phase read from the positions, the rule
-predicted every later grab of the uninterrupted hands checked, including turbo hands of 8, 12 and 16 and express
-arrival phases. Backed-up turbo probes returned to consecutive grabs on both lanes.
+Set `source.pickup_length` to `1` or `0.5` and `near_lane` to `1` or `2`. Sidecar captures supported straight and
+underground pickups; in the UI these are **Straight belt** and **Underground belt** under **Picks up from**.
+Choose **Moving** or **Backed up** separately (`overrides.non_moving_belts`). Older configs without pickup length
+retain their always-full supply assumption. Imports/builds identify missing pickup types; saved results retain
+their run's assumptions. Belt slack remains extra margin for late starts and supply gaps.
 
-On [`electromagnetic-science/belted-moving`](../resources/config-samples/science/electromagnetic-science/belted-moving),
-the old default missed its 528-pack target in 30 of 35 periods on each moving underground endpoint. The simulator
-now detects that shortfall. The new default selects **Batched swings: 2 output swings per cycle**: **352 packs per
-704 ticks (30/second), in all 52 measured periods on each of the three scaffolds**. The shared config uses a half-tile
-pickup, conservatively covering the straight piece too; the sidecar exports its actual one-tile geometry.
+The [lane model](../src/state/belt-pickup-lane.ts) stores only holes and partial stacks in an otherwise evenly spaced
+supply. [Pickup mode](../src/control-logic/inserter/modes/pickup-mode.ts) chooses the physical lane. No whole-belt
+simulation or extra search dimension is involved.
 
-All six [game regression tests](../src/harness/moving-pickup.game.test.ts) passed: throughput on all three geometries,
-and recovery after each ingredient was withheld and output disposal was blocked/restored, without resetting the
-clock or machine (checked after a six-period recovery allowance). Unit tests cover phase, speed, partial stacks,
-retained holes and rejection of the old clock. Raw investigation files remain local under
-`work/belt-pickup-investigation/`; the regression tests do not depend on them.
+Calibration: Factorio 2.1.21, legendary stack inserters, four-item belt stacks, turbo/express belts, and pickups
+from both sides of an eastward belt. Same-item probes checked 5,268 uninterrupted hands across 78 captures,
+including hand sizes 8/12/16, interrupted windows and staggered turbo lanes; subsequent grabs and lane contents
+matched when seeded with the observed first grab, remaining stacks and phases. Game regressions compare actual
+simulator grabs and default-clock throughput/recovery on the [same-item fixtures](../resources/config-samples/intermediates/iron-gear-wheel/belted-moving-same-item),
+and retain the [different-item electromagnetic checks](../resources/config-samples/science/electromagnetic-science/belted-moving).
+Detailed measurements and reproduction commands live with those fixtures.
 
-Scope: saturated supply at one pickup, measured on legendary stack inserters with stacks of four on turbo and
-express belts. Yellow/red speeds follow the distance rule but are unmeasured here. Sparse supply, shared upstream
-withdrawals, merges, bends, other inserters/qualities/orientations, and an arbitrary game's initial stream phase
-remain unverified. Backed-up pickup retains its existing calibration.
+Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
+Sparse supply, shared upstream withdrawals, merges, bends, inline pickups, other inserters/qualities/orientations,
+and arbitrary initial lane phases remain unverified. Backed-up pickup retains its existing calibration.
 
 ### A stack inserter on a moving lane
 

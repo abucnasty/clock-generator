@@ -27,6 +27,11 @@ Conventions:
   The three `science/electromagnetic-science/belted-moving` scaffolds drain their input belt continuously and compare
   pickup from a straight belt, an underground entrance and an underground exit. Their shared config supplies
   `pickup_length: 0.5`; moving pickup and its scope are documented in [the simulator rules](../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
+  The [same-item iron-gear fixtures](intermediates/iron-gear-wheel/belted-moving-same-item) compare those three pickup
+  geometries with iron plates on both lanes and include a probe that removes machine blocking. The measured rule
+  prefers the near lane and falls back to the far lane without a fixed switching delay. The simulator implements
+  that rule; the paired game tests compare its grabs, check the default clocks' exact output, and test recovery
+  after ingredient cuts and output blockage on all three geometries.
 - The clocked inserters see a steadily supplied belt: full of whole stacks at the rate the build takes them, whenever
   they reach for it. How is the scaffold's business. Enough stack inserters from infinity chests and a closed end do
   it; so does an end that lets a little through on a timer, as the iron bacteria scaffold has to keep its nutrients

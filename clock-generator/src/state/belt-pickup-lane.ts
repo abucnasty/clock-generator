@@ -34,6 +34,10 @@ export class BeltPickupLane {
         return 0;
     }
 
+    public hasTakenAt(tick: number): boolean {
+        return this.last_take_tick === tick;
+    }
+
     public stateKey(tick: number): string {
         this.forgetPassed(tick);
         const first = this.firstStack(tick);

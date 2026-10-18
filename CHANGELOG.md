@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.17.3] - 2026-10-17
+
+### Fixed
+- Moving belt pickups try the nearest lane first and fall back to the other lane carrying the same item when no stack is reachable. This models consecutive grabs from both lanes at underground entrances and exits, uses each lane's stack size, and can shorten the generated pickup windows.
+
 ## [0.17.2] - 2026-10-17
 
 ### Added

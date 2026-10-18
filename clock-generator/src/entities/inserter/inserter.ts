@@ -31,6 +31,8 @@ export interface Inserter extends Entity {
     drop?: BeltDropSpot;
     /** Exposed length of a moving input lane; absent for the legacy or explicitly backed-up supply. */
     pickup_length?: 0.5 | 1;
+    /** Physical input lane to try first, including when both lanes carry the same item. */
+    near_lane?: 1 | 2;
 }
 
 /** Of an inserter that drops on a belt: the lane and the tiles along the belt (see InserterConfig) */
@@ -226,6 +228,7 @@ export class InserterFactory {
             filtered_items,
             hand_sizes,
             animation: InserterAnimation.fromMetadata(metadata.animation),
+            ...(source.type === EntityType.BELT && source.near_lane !== undefined && { near_lane: source.near_lane }),
             ...(source.type === EntityType.BELT && source.pickup_length !== undefined && this.moving_belts
                 && { pickup_length: source.pickup_length }),
             ...(drop_spot && { drop: drop_spot })
