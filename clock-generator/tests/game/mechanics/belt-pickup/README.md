@@ -22,6 +22,9 @@ Its [same-item moving variant](fixtures/front-underground-entrance/README.md#sam
 both mirroring states: the preferred lane supplies three grabs, then the other lane supplies the fourth at
 offset 3. The measured lane sequences are `1,1,1,2` unmirrored and `2,2,2,1` mirrored. Both lane snapshots and
 the actual simulator support the existing fallback rule; no engine change was needed.
+The [same-item backed-up controls](fixtures/front-underground-entrance/README.md#same-item-on-backed-up-lanes)
+remove only the ingredient drain loader. Both hands still fill at `0,1,2,3`, but all four grabs stay on the
+preferred lane: `1,1,1,1` unmirrored or `2,2,2,2` mirrored. The unselected lane remains stationary and untouched.
 
 From `clock-generator/`:
 
@@ -38,8 +41,8 @@ npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance
 
 The first two commands run in the simulator. The remaining commands need Factorio and check respectively 12 lane-fallback
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, three front exit
-ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and two same-item
-front entrance fallback case. Their independent replay and simulator comparisons remain
+ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
+front entrance moving/backed-up controls. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands

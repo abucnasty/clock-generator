@@ -30,6 +30,20 @@ function pickup(config: Config) {
 const copy = () => structuredClone(sample);
 
 describe("physical belt lane fallback", () => {
+    it.each([1, 2] as const)("front underground entrance with the same item on both backed-up lanes: preferred=%i", async preferred => {
+        const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
+        config.overrides = { ...config.overrides, backed_up_belts: true };
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt input");
+        source.near_lane = preferred;
+        const input = pickup(config);
+        expect(input.state.inserter.belt_supply).toBe("backed_up");
+        expect(input.state.inserter.pickup_length).toBe(0.5);
+        expect(input.source.pickup_lanes.size).toBe(0);
+        expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
+        expect(input.state.held_item).toEqual({ item_name: "accumulator", quantity: 16 });
+    });
+
     for (const preferred of [1, 2] as const) it.each([0, 1])(`front underground entrance with the same item on both moving lanes: preferred=${preferred}, phase start=%i`, async start => {
         const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
         const source = config.inserters[1].source;

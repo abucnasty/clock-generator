@@ -96,11 +96,16 @@ lane supplies three grabs and the other supplies the fourth: `1,1,1,2` unmirrore
 at `0,1,2,3` instead of the different-item controls' `0,1,2,4`. The position replay matches both lanes after
 seeding the observed first grab; the simulator supports each measured hand and lane sequence for one turbo phase.
 These first-hand measurements do not calibrate absolute arrival or initial phase.
+The [same-item backed-up controls](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md#same-item-on-backed-up-lanes)
+fill at the same offsets while keeping every grab on the preferred lane: `1,1,1,1` unmirrored or `2,2,2,2`
+mirrored. The other lane stays stationary and untouched. The existing backed-up availability rule matches the
+hand counts; half-tile geometry and lane preference remain separate from the supply setting.
 
 Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
 Sparse supply, shared upstream withdrawals, merges, bends, other inline pickups, other inserters/qualities/orientations,
 and arbitrary initial lane phases remain unverified. Calibration with backed-up supply covers turbo belts with different
-items on the lanes, collected one item at a time; other speeds and same-item lanes with backed-up supply remain unverified.
+items on the lanes, collected one item at a time, plus the same-item front-entrance first hands above.
+Other speeds and other same-item backed-up geometries remain unverified.
 
 ### A stack inserter on a moving lane
 

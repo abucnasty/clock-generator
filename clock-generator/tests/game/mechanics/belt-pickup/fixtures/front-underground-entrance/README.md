@@ -101,10 +101,37 @@ not claim that the initial phase can be inferred from the blueprint. No engine b
 Sidecar captures lane 1 preference unmirrored or lane 2 mirrored, with half-tile reach, and exports both cases
 without warnings. Both same-item lanes remain present in the exported belt config.
 
-These results cover one moving first hand in each mirroring state. Backed-up same-item supply, repeated hands
-and other orientations remain separate cases. Raw captures are retained locally under
+These results cover one moving first hand in each mirroring state. Repeated hands and other orientations remain
+separate cases. Raw captures are retained locally under
 `work/belt-pickup/front-entrance-same-item-moving-01/` and `front-entrance-same-item-mirrored-moving-01/`.
 The mirrored blueprint was checked to differ from the unmirrored same-item blueprint only in the input mirror flag.
+
+## Same item on backed-up lanes
+
+The backed-up controls start from each same-item moving variant and remove only the ingredient drain loader,
+using `backUpFrontUndergroundEntrance`. Both transformations were checked against the raw blueprints: exactly
+loader 54 is removed and every remaining entity is unchanged. The config sets `overrides.backed_up_belts: true`;
+the same config fixture, Lua probe, and 600-tick staged fill are reused.
+
+Measured on 2026-10-18 in Factorio 2.1.21 under the same first-hand conditions:
+
+| Mirrored | Grab offsets | Hand counts | Selected lanes |
+| --- | --- | --- | --- |
+| No | `0,1,2,3` | `4,8,12,16` accumulators | `1,1,1,1` |
+| Yes | `0,1,2,3` | `4,8,12,16` accumulators | `2,2,2,2` |
+
+Both lanes begin full and the hand begins empty. Machine inventories remain empty and crafting progress stays
+zero through each first full hand. All four grabs stay on the preferred side of the belt center. The unselected
+lane's stack IDs and positions remain unchanged throughout, confirming that these hands do not fall back.
+The existing backed-up simulator matches the hand counts with half-tile geometry retained; no engine change
+is needed. The moving-stream position replay is used only for moving cases, since it does not model back-pressure.
+Sidecar captures and exports the same mirroring-selected preference and half-tile reach without warnings.
+
+The rule remains simple: try the preferred lane first; use the other matching lane when needed. Moving supply
+needs the fourth grab from the other lane in this fixture. Backed-up supply provides all four grabs from the
+preferred lane, with the same filling offsets. These measurements cover first hands only.
+Raw captures are retained under `work/belt-pickup/front-entrance-same-item-backed-up-01/` and
+`front-entrance-same-item-mirrored-backed-up-01/`.
 
 ## Reproduce
 
@@ -113,7 +140,7 @@ From `clock-generator/`, with the [game setup](../../../../README.md#setup):
 ```bash
 # Both mirroring states and supply conditions; no other mechanic cases.
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts
-# Both mirroring states of the same-item moving fallback case.
+# Same-item supply controls: both mirroring states, moving and backed up.
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
 npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts -t 'front underground entrance'
 npm run screenshots -- --case=front-underground-entrance
@@ -122,11 +149,12 @@ npm run screenshots -- --case=front-underground-entrance
 Use `-t 'moving supply'` or `-t 'backed-up supply'` to narrow the game command; `-t 'mirrored=true'` runs only the
 two flipped cases. The game test composes `probe.lua`, captures hand/lane observations, compares the existing
 simulator and checks Sidecar capture/export without warnings. Temporary test captures are removed afterward.
-For the same-item command, `-t 'mirrored=true'` selects only its flipped case.
+For the same-item command, `-t 'mirrored=true'` selects its two flipped cases, and `-t 'backed-up supply'`
+selects just the two backed-up controls.
 Raw captures with matching configs and the committed probe are retained
 locally under `work/belt-pickup/front-entrance-user-07/` (moving) and `front-entrance-user-08/` (backed up).
 Flipped captures are under `work/belt-pickup/front-entrance-mirrored-moving-01/` and
 `front-entrance-mirrored-backed-up-01/`. The flipped blueprint was checked to differ from the supplied scaffold
 only in the input inserter's mirror flag before the optional drain removal.
 These exploratory captures used Sidecar 0.10.0; the game regressions rerun all four cases with 0.11.0 to check capture/export.
-The same-item capture and regression use Sidecar 0.11.0.
+The same-item captures and regressions use Sidecar 0.11.0.
