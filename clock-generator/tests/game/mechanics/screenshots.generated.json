@@ -366,5 +366,28 @@
     "png_bytes": 688459,
     "jpeg_bytes": 83332,
     "jpeg_quality": 82
+  },
+  "turbo-belt-drop-stacks": {
+    "blueprint": "belt-drop/fixtures/turbo-stacks/scaffold.txt",
+    "image": "belt-drop/fixtures/turbo-stacks/scaffold.jpg",
+    "source_sha256": "ba3688b3652a64b1c379f915f210b03667cb64fdaa33f5cbc419567b74d308b5",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 391,
+      "y": 0.525390625
+    },
+    "resolution": {
+      "x": 562,
+      "y": 324
+    },
+    "zoom": 1.5,
+    "width": 562,
+    "height": 324,
+    "png_bytes": 268657,
+    "jpeg_bytes": 29725,
+    "jpeg_quality": 82
   }
 }

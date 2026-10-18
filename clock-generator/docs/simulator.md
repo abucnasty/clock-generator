@@ -161,6 +161,16 @@ failure with 16 iron plates, no copper cable and no products over 1,200 recorded
 repeating stalled state and suggests reviewing the merge or separating ingredients. Capturing a supported
 merge describes its behavior; it does not guarantee that the build can supply its recipe.
 
+### Splitter pickups remain unsupported
+
+Keep ingredient selection separate from replenishment: choose an eligible item from reachable stock, try the
+preferred lane first, and keep that item while filling the hand. Recheck machine eligibility on every grab.
+The [splitter controls](../tests/game/mechanics/belt-pickup/fixtures/splitter/routing-controls.md) agree with
+these selection rules, but a splitter's priority, filter, other outlet and other consumers change when stock
+reaches its pickup port. There is no fixed splitter tick surcharge. Closing the final drain does not guarantee
+permanent local saturation when another consumer opens space upstream. Sidecar retains the `splitter` warning;
+ordinary straight-belt geometry or infinite backed-up supply must not be treated as verified splitter routing.
+
 ### A stack inserter on a moving lane
 
 A stack inserter that drops on a belt that moves is not always done in the 4 ticks of a free lane. Its four stacks go in at the tick it starts, +1, +2 and +4; but when the stacks of another inserter pass its spot just then, or its own stacks do, a stack has to wait for room. The hand then takes 6, 14 or 22 ticks to empty.
@@ -174,6 +184,13 @@ The rule, per lane of a belt, shared by every inserter that drops on it:
 - The belt ends in a sink that takes everything: the lane never backs up.
 
 Evidence: the thaeln-cell09 scaffold (`resources/config-samples/real/thaeln/cell09`, two turbo belts of four pack inserters each), recorded in Factorio 2.1.21 with the recorder of 0.8.0, which samples the hand and the lane of every inserter each tick. With only the tick each hand became full as input, the rule reproduced every stack of every hand: 432 slow drops predicted of 432 in the game, none false, none missed, and the ticks of all four stacks equal in 3,744 of 3,744 hands under the swings-2 clock; and 5,040 of 5,040 hands of Thaeln's own clock, where none is slow. The 4-tick burst, the 2-tick displacement and spacing were fixed from the free lane alone, nothing was fitted to the slow drops.
+
+The separate [free-lane drop calibration](../tests/game/mechanics/belt-drop/fixtures/turbo-stacks/README.md)
+checks turbo belt stack sizes **1, 2, 3 and 4** without changing research. Each drop transfers the selected
+stack size at offsets `0,1,2,4,6,…` until the full hand empties; both full native hands per size match
+`Belt::amountToDropAtTick`, including empty ticks. Stack size 3 uses the existing effective hand of 15 rather
+than the configured maximum of 16. This verifies unobstructed deposition; it does not extend the shared-lane
+collision calibration to those other stack sizes.
 
 What it does not cover: it is checked only with turbo belts and the legendary stack inserter (follow-up F7: other belts, stack sizes and inserters scale the ticks and are not tested), and a sink that backs up is not modelled. A lane that carries stacks of other cells or merges is not either.
 

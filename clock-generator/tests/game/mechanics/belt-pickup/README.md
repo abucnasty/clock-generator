@@ -38,8 +38,7 @@ selects cable from the same physical line 7, with unchanged first-hand timing an
 Mirroring with those swapped ingredients retained switches selection to iron on line 8, with the same timing
 and an ID trace through the other input line. These three controls establish a mirroring-dependent preference
 for this port: line 7 unmirrored, line 8 mirrored. First-hand agreement with the ordinary belt model does not
-classify splitter routing. Sidecar's unsupported warning remains. Further mechanics work continues on stacked branches without new
-PRs or publishing until requested.
+classify splitter routing. Sidecar's unsupported warning remains. Mechanics work remains stacked under the experiment integration branch; publishing is on hold.
 
 The [two-serial-splitter series](fixtures/splitter-two-inserters/README.md) separately measures original,
 ingredient-swapped, upstream-mirrored and downstream-unmirrored pickups, plus independent priority controls. With right priority,
@@ -114,7 +113,7 @@ Offsets are relative to the first observed grab, not arm arrival or a proof abou
 
 The [build checks](../../builds/README.md) independently measure throughput and recovery using these fixtures.
 
-## Queued at the end of the series
+## Completed queue and remaining scope decision
 
 The scheduled splitter controls are complete: ingredient swaps, mirroring, both output ports, alternate input,
 opposite/unset priorities, ingredient filters and blocked-drain supply. See the
@@ -123,10 +122,8 @@ availability rules but do not calibrate complete splitter arbitration. Splitter 
 implementing a finite routing model is a separate scope decision. The serial two-consumer tests show why
 removing the final drain cannot stand in for permanent local saturation.
 
-After the current pickup/merge investigations, verify the tick-by-tick predictions of
-[`Belt::amountToDropAtTick`](../../../../src/entities/belt/belt.test.ts) against actual drops with belt stack sizes
-1, 2, 3 and 4. Vary the effective belt stack-size limit without changing researched technologies. Keep turbo
-belt speed, inserter type/quality, hand capacity, geometry and starting lane occupancy fixed so stack size is
-the controlled variable. Record actual hand decrements and deposited stack counts/positions, then compare
-each tick with the function's prediction. Evaluate each stack size separately before changing the simulator;
-other belt speeds remain deferred. This is queued work, not a completed game verification.
+The queued [turbo drop calibration](../belt-drop/fixtures/turbo-stacks/README.md) is also complete. It verifies
+`Belt::amountToDropAtTick` for stack sizes 1–4 across two full native hands per size, keeping research unchanged.
+Every deposit and empty tick agrees; stack size 3 confirms the already-modeled 15-item effective hand. The
+source, held items, belt/loader stock and receiving chest conserve all 32 items throughout capture. No
+production timing change is needed. Other belt speeds remain deferred.

@@ -16,6 +16,7 @@ export const GameFixturePaths = {
     FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG: path.join(PICKUP, "front-underground-entrance/same-item-moving.json"),
     SIDE_LOADED_STRAIGHT: path.join(PICKUP, "side-loaded-straight"),
     FRONT_UNDERGROUND_EXIT: path.join(PICKUP, "front-underground-exit"),
+    TURBO_BELT_DROP: path.join(ENGINE_ROOT, "tests/game/mechanics/belt-drop/fixtures/turbo-stacks"),
     SPLITTER: path.join(PICKUP, "splitter"),
     SPLITTER_TWO_INSERTERS: path.join(PICKUP, "splitter-two-inserters"),
 };

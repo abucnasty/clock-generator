@@ -5,6 +5,7 @@ ordinary CI runs simulator tests and type-checks this code without producing new
 
 - [Mechanic experiments](mechanics/): isolated game rules, with configs, scaffolds, probes and evidence scope.
 - [Clock builds](builds/README.md): generated-clock throughput and recovery, often reusing ordinary samples.
+- [Belt drops](mechanics/belt-drop/README.md): native deposit timing at effective stack sizes 1–4.
 - [Belt pickup](mechanics/belt-pickup/README.md): moving stacks, lane fallback, backed-up supply and pickup capture.
 - `helpers/`: internal fixture paths, host-side Lua composition and shared Lua observations/capture.
 - General examples and real extracted cells remain under [config-samples](../../resources/config-samples/README.md).

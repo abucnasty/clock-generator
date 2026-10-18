@@ -14,5 +14,6 @@
   { "id": "splitter-two-inserters", "blueprint": "belt-pickup/fixtures/splitter-two-inserters/scaffold.txt", "image": "belt-pickup/fixtures/splitter-two-inserters/scaffold.jpg" },
   { "id": "automation-science", "blueprint": "../../../resources/config-samples/science/automation-science/automation-science-scaffold.txt", "image": "images/automation-science.jpg" },
   { "id": "agriculture-science", "blueprint": "../../../resources/config-samples/science/agriculture-science/agriculture-science-scaffold.txt", "image": "images/agriculture-science.jpg" },
-  { "id": "thaeln-cell09", "blueprint": "../../../resources/config-samples/real/thaeln/cell09/thaeln-cell09-scaffold.txt", "image": "images/thaeln-cell09.jpg" }
+  { "id": "thaeln-cell09", "blueprint": "../../../resources/config-samples/real/thaeln/cell09/thaeln-cell09-scaffold.txt", "image": "images/thaeln-cell09.jpg" },
+  { "id": "turbo-belt-drop-stacks", "blueprint": "belt-drop/fixtures/turbo-stacks/scaffold.txt", "image": "belt-drop/fixtures/turbo-stacks/scaffold.jpg" }
 ]
