@@ -343,5 +343,28 @@
     "png_bytes": 644895,
     "jpeg_bytes": 77445,
     "jpeg_quality": 82
+  },
+  "splitter-two-inserters": {
+    "blueprint": "belt-pickup/fixtures/splitter-two-inserters/scaffold.txt",
+    "image": "belt-pickup/fixtures/splitter-two-inserters/scaffold.jpg",
+    "source_sha256": "6cb37c8c2256ad8dcf9aec0fe29f11b71a2f17359acf62166d5ccfe2b98f5bd8",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 394.474609375,
+      "y": -0.07421875
+    },
+    "resolution": {
+      "x": 900,
+      "y": 459
+    },
+    "zoom": 1.5,
+    "width": 900,
+    "height": 459,
+    "png_bytes": 688459,
+    "jpeg_bytes": 83332,
+    "jpeg_quality": 82
   }
 }

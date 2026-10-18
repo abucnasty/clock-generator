@@ -17,4 +17,5 @@ export const GameFixturePaths = {
     SIDE_LOADED_STRAIGHT: path.join(PICKUP, "side-loaded-straight"),
     FRONT_UNDERGROUND_EXIT: path.join(PICKUP, "front-underground-exit"),
     SPLITTER: path.join(PICKUP, "splitter"),
+    SPLITTER_TWO_INSERTERS: path.join(PICKUP, "splitter-two-inserters"),
 };

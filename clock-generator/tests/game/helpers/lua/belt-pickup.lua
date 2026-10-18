@@ -19,14 +19,14 @@ function M.lanes(belt, line_count)
     return lanes
 end
 
-function M.snapshot(input, tick)
+function M.snapshot(input, tick, line_count)
     local held, belt = input.held_stack, input.pickup_target
     local sample = {
         tick = tick,
         held = held.valid_for_read and held.count or 0,
         held_item = held.valid_for_read and held.name or nil,
         hand = input.held_stack_position,
-        lanes = M.lanes(belt)
+        lanes = M.lanes(belt, line_count)
     }
     return sample
 end

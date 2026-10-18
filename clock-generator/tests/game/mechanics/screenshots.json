@@ -11,6 +11,7 @@
   { "id": "side-loaded-straight/two-stream-express", "blueprint": "belt-pickup/fixtures/side-loaded-straight/two-stream-express-scaffold.txt", "image": "belt-pickup/fixtures/side-loaded-straight/two-stream-express-scaffold.jpg" },
   { "id": "front-underground-exit", "blueprint": "belt-pickup/fixtures/front-underground-exit/scaffold.txt", "image": "belt-pickup/fixtures/front-underground-exit/scaffold.jpg" },
   { "id": "splitter", "blueprint": "belt-pickup/fixtures/splitter/scaffold.txt", "image": "belt-pickup/fixtures/splitter/scaffold.jpg" },
+  { "id": "splitter-two-inserters", "blueprint": "belt-pickup/fixtures/splitter-two-inserters/scaffold.txt", "image": "belt-pickup/fixtures/splitter-two-inserters/scaffold.jpg" },
   { "id": "automation-science", "blueprint": "../../../resources/config-samples/science/automation-science/automation-science-scaffold.txt", "image": "images/automation-science.jpg" },
   { "id": "agriculture-science", "blueprint": "../../../resources/config-samples/science/agriculture-science/agriculture-science-scaffold.txt", "image": "images/agriculture-science.jpg" },
   { "id": "thaeln-cell09", "blueprint": "../../../resources/config-samples/real/thaeln/cell09/thaeln-cell09-scaffold.txt", "image": "images/thaeln-cell09.jpg" }
