@@ -1,0 +1,12 @@
+[
+  { "id": "different-items/straight-belt", "blueprint": "belt-pickup/fixtures/different-items/straight-belt-scaffold.txt", "image": "belt-pickup/fixtures/different-items/straight-belt-scaffold.jpg" },
+  { "id": "different-items/underground-entrance", "blueprint": "belt-pickup/fixtures/different-items/underground-entrance-scaffold.txt", "image": "belt-pickup/fixtures/different-items/underground-entrance-scaffold.jpg" },
+  { "id": "different-items/underground-exit", "blueprint": "belt-pickup/fixtures/different-items/underground-exit-scaffold.txt", "image": "belt-pickup/fixtures/different-items/underground-exit-scaffold.jpg" },
+  { "id": "same-item/straight-belt", "blueprint": "belt-pickup/fixtures/same-item/straight-belt-scaffold.txt", "image": "belt-pickup/fixtures/same-item/straight-belt-scaffold.jpg" },
+  { "id": "same-item/underground-entrance", "blueprint": "belt-pickup/fixtures/same-item/underground-entrance-scaffold.txt", "image": "belt-pickup/fixtures/same-item/underground-entrance-scaffold.jpg" },
+  { "id": "same-item/underground-exit", "blueprint": "belt-pickup/fixtures/same-item/underground-exit-scaffold.txt", "image": "belt-pickup/fixtures/same-item/underground-exit-scaffold.jpg" },
+  { "id": "front-underground-exit", "blueprint": "belt-pickup/fixtures/front-underground-exit/scaffold.txt", "image": "belt-pickup/fixtures/front-underground-exit/scaffold.jpg" },
+  { "id": "automation-science", "blueprint": "../../../resources/config-samples/science/automation-science/automation-science-scaffold.txt", "image": "images/automation-science.jpg" },
+  { "id": "agriculture-science", "blueprint": "../../../resources/config-samples/science/agriculture-science/agriculture-science-scaffold.txt", "image": "images/agriculture-science.jpg" },
+  { "id": "thaeln-cell09", "blueprint": "../../../resources/config-samples/real/thaeln/cell09/thaeln-cell09-scaffold.txt", "image": "images/thaeln-cell09.jpg" }
+]

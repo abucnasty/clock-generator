@@ -15,6 +15,15 @@ The swapped case reverses only the four ingredient feeder filters and the input 
 ingredients and uses `flipFrontUndergroundInput` to change only the input inserter's mirror flag. Output disposal,
 fluids, modules and beacons are retained. Use the powered staging save and research described in the [game guide](../../../../README.md).
 
+## Scaffold screenshot
+
+![Front-facing underground exit scaffold: northbound feed below a mirrored input inserter](scaffold.jpg)
+
+The committed base scaffold has the mirrored input inserter directly above the northbound exit, with accumulators
+on lane 1 and supercapacitors on lane 2. Ingredient feeders are below the underground entrance. This is a layout
+reference after warm-up, rather than the staged probe's initial state or a timing measurement.
+See the [screenshot guide](../../../../README.md#scaffold-screenshots) for capture settings and regeneration.
+
 ## Observation and simulator comparison
 
 Measured on 2026-10-18 in Factorio 2.1.21 with a legendary stack inserter, hand capacity 16, and a plant crafting

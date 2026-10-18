@@ -126,6 +126,8 @@ export interface HarnessOptions {
      * The run waits for it to join and, once recorded, for its window to be closed.
      */
     watch?: boolean;
+    /** Show FPS and wake-up overlays in the graphical client. Defaults to true; disable for documentation captures. */
+    watch_debug?: boolean;
     timeout_seconds: number;
     log: (message: string) => void;
 }
@@ -566,7 +568,7 @@ class FactorioServer {
  * The game with graphics, joined to the server as a player so the run can be watched. It has a write-data folder and
  * a copy of the mods of its own, next to the server's.
  */
-async function startWatcher(executable: string, work_dir: string, game_port: number): Promise<ChildProcess> {
+async function startWatcher(executable: string, work_dir: string, game_port: number, debug: boolean): Promise<ChildProcess> {
     const data_dir = factorioDataDir(executable);
     const client_dir = path.join(work_dir, "watcher");
     await fs.rm(client_dir, { recursive: true, force: true });
@@ -576,7 +578,7 @@ async function startWatcher(executable: string, work_dir: string, game_port: num
     // What a run is watched for: how fast the game runs, and which inserters and machines it wakes. The first line
     // looks like a comment and is the version of the config: the game resets a config without it, options and all.
     await fs.writeFile(config, `; version=13\n[path]\nread-data=${data_dir}\nwrite-data=${client_dir}\n`
-        + "[debug]\nshow-fps=always\nshow-wakeup-lists=always\n");
+        + (debug ? "[debug]\nshow-fps=always\nshow-wakeup-lists=always\n" : ""));
     await fs.writeFile(path.join(client_dir, "player-data.json"), JSON.stringify({ "service-username": "watcher" }));
     return spawn(executable, [
         "--config", config,
@@ -594,9 +596,9 @@ function isRunning(child: ChildProcess): boolean {
 }
 
 /** What a session starts its game with */
-type SessionOptions = Pick<HarnessOptions, "factorio" | "save" | "work_dir" | "watch" | "timeout_seconds" | "log">;
+type SessionOptions = Pick<HarnessOptions, "factorio" | "save" | "work_dir" | "watch" | "watch_debug" | "timeout_seconds" | "log">;
 /** One build to record in the game of a session */
-type BuildOptions = Omit<HarnessOptions, "factorio" | "save" | "work_dir" | "watch">;
+type BuildOptions = Omit<HarnessOptions, "factorio" | "save" | "work_dir" | "watch" | "watch_debug">;
 
 /** Throws when the build cannot be recorded as asked. Nothing of the game is needed to tell */
 function assertBuildOptions(options: BuildOptions): void {
@@ -650,7 +652,7 @@ export class HarnessSession {
         const server = await FactorioServer.start(executable, files, path.join(work_dir, "mods"));
         const session = new HarnessSession(work_dir, options.work_dir !== undefined, server, options.log);
         try {
-            await session.connect(executable, deadline, options.watch ?? false);
+            await session.connect(executable, deadline, options.watch ?? false, options.watch_debug ?? true);
         } catch (error) {
             await session.close(true);
             throw error;
@@ -658,13 +660,13 @@ export class HarnessSession {
         return session;
     }
 
-    private async connect(executable: string, deadline: number, watch: boolean): Promise<void> {
+    private async connect(executable: string, deadline: number, watch: boolean, debug: boolean): Promise<void> {
         this.rcon = await this.server.waitForRcon(deadline);
         if (!watch) {
             return;
         }
         this.log("Opening the game to watch the run; waiting for it to join");
-        const opened = this.watcher = await startWatcher(executable, this.work_dir, this.server.game_port);
+        const opened = this.watcher = await startWatcher(executable, this.work_dir, this.server.game_port, debug);
         for (;;) {
             this.server.assertRunning();
             if (!isRunning(opened)) {
@@ -715,6 +717,36 @@ export class HarnessSession {
     /** Whether the game opened to watch is still open */
     get watched(): boolean {
         return this.watcher !== null && isRunning(this.watcher);
+    }
+
+    /** Native PNG captured by this session's graphical client, with no GUI. Headless Factorio cannot render it. */
+    async takeScreenshot(options: {
+        path: string; surface: string; position: { x: number; y: number };
+        resolution: { x: number; y: number }; zoom: number; timeout_seconds?: number;
+    }): Promise<string> {
+        if (!this.watched) throw new Error("Screenshots need a graphical client: start the session with watch: true");
+        if (path.basename(options.path) !== options.path || !options.path.endsWith(".png")) {
+            throw new Error("Screenshot path must be a PNG filename without directories");
+        }
+        const file = path.join(this.work_dir, "watcher", "script-output", options.path);
+        await fs.rm(file, { force: true });
+        const { timeout_seconds = 60, ...request } = options;
+        const params = { ...request, show_gui: false, show_entity_info: true, anti_alias: true,
+            hide_clouds: true, hide_fog: true, daytime: 0, force_render: true };
+        await this.command(`/sc game.take_screenshot(helpers.json_to_table(${luaLongString(JSON.stringify(params))}))`);
+        const deadline = Date.now() + timeout_seconds * 1000;
+        for (;;) {
+            this.server.assertRunning();
+            if (!this.watched) throw new Error("Graphical client closed before writing the screenshot");
+            const png = await fs.readFile(file).catch((error: NodeJS.ErrnoException) => {
+                if (error.code !== "ENOENT") throw error;
+                return null;
+            });
+            // Factorio writes asynchronously. Wait for PNG's terminal chunk, not just a newly created file.
+            if (png && png.length >= 12 && png.subarray(-8, -4).toString("ascii") === "IEND") return file;
+            if (Date.now() > deadline) throw new Error(`Timed out waiting for native screenshot ${file}`);
+            await sleep(POLL_INTERVAL_MS);
+        }
     }
 
     /**

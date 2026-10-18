@@ -1,0 +1,14 @@
+# Mechanics experiments
+
+These local game checks isolate a rule or a recording behavior. See the [game guide](../README.md) for setup,
+targeted commands and screenshot regeneration. Screenshots are layout references, rather than timing evidence.
+
+- [Belt pickup](belt-pickup/README.md): exposed reach, moving lane fallback, backed-up supply and front exit mirroring.
+- [Belt lanes](belt-lanes/README.md): physical lanes in recordings and opposite-lane ingredient layouts.
+- [Staged start](staged-start/README.md): saturated belts and fresh cell inserters built in a controlled order.
+- [Clock wiring](clock-wiring/README.md): replacing inserter conditions inherited from a real build.
+
+The [screenshot catalog](screenshots.json) references seven local fixture blueprints and three shared sample
+blueprints. Their [generated provenance](screenshots.generated.json) records source hashes, Factorio version,
+framing and compressed image sizes. Run `npm run screenshots -- --all` from `clock-generator/` to backfill missing
+or stale images, or `--case=<id>` to capture one.

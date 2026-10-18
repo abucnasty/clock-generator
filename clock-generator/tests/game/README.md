@@ -77,6 +77,42 @@ Use shared capture/snapshot functions and explicit scenario callbacks; preserve 
 Record measured conditions and unverified cases before describing a rule as verified. Clock-rate/recovery checks
 belong in `builds/`, and can reuse the mechanic fixture without copying its scaffolds.
 
+## Scaffold screenshots
+
+Mechanic write-ups include native Factorio screenshots compressed to JPEG. These show the layout, rather than
+the probe's exact starting state or evidence of a timing rule. The [catalog](mechanics/screenshots.json) names
+the committed fixture blueprints and shared sample builds used by mechanics tests. No blueprints are duplicated.
+
+From `clock-generator/`, with the same `.env` configuration as game tests:
+
+```bash
+npm run screenshots -- --list
+npm run screenshots -- --case=front-underground-exit
+npm run screenshots -- --all
+```
+
+The default captures only missing or stale images. It compares the blueprint SHA-256, JPEG quality, and capture
+recipe with [generated provenance](mechanics/screenshots.generated.json); a current image skips Factorio entirely.
+Use `--refresh` to force regeneration, or `--work-dir=../work/mechanics-screenshots/run-01` to retain raw output in
+a chosen empty directory. The default work directory is a fresh timestamped folder under that same ignored path.
+
+This requires the graphical Factorio executable and a desktop display: `game.take_screenshot` does nothing in a
+headless process. The script opens its own harness client and closes it when finished, using copies of the save
+and mods. A single server/client pair is reused across the selected images. It does not run test suites, search
+for clocks, or wait for someone to close a game window.
+
+Capture settings: the committed base blueprint, its clock disabled, no seeds, 600 warm-up ticks, entity info on,
+no GUI/debug overlays, noon lighting, no clouds/fog, and antialiasing. Framing uses the actual built entity bounds
+plus two tiles of margin, at up to 48 pixels/tile within 1920×1440. Factorio writes a PNG; Sharp converts it to a
+quality-82 JPEG with 4:4:4 color sampling and MozJPEG compression, without resizing. Only JPEGs and provenance
+belong in the repository. Native PNGs, the minimal harness recordings and logs stay in the ignored run directory.
+
+For a new mechanic scaffold, add its blueprint and JPEG paths to the catalog, capture that case, inspect the image,
+and embed it with a descriptive caption in the fixture/topic README. Local `mechanics/**/*.txt` blueprints must
+have catalog entries; an offline helper test enforces this. Shared sample blueprints can have entries too, with
+their images in `mechanics/images/` and links from each topic using them. Increment `CAPTURE_RECIPE` in the script
+if changing framing or render defaults. Refresh after a Factorio graphics/version change even if blueprints match.
+
 ## Maintain an experiment
 
 Read the affected topic and fixture READMEs before changing an experiment. Preserve measured assertions when moving
