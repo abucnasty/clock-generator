@@ -48,7 +48,11 @@ mirroring and gate timing stay fixed in that comparison. Later partial hands dep
 machine eligibility, so the findings do not assign a constant splitter delay. Unsetting only upstream priority
 delays only its first hand; unsetting only downstream priority delays only that hand. Native IDs show the next
 matching stack diverted to the north through output at tick 5 while the south pickup is empty. Flipping each target independently
-confirms line 7 unmirrored versus line 8 mirrored for both approaches in this layout. Both pickups remain unsupported.
+confirms line 7 unmirrored versus line 8 mirrored for both approaches in this layout. Removing only the final
+drain with both priorities unset restores first hands at 2,3,4,5. Later withdrawals reopen the through route:
+the upstream second cable hand grabs at 13,14,15,18, with a native ID diverted north while its south pickup
+is empty and machine inputs remain eligible. A closed final outlet therefore does not imply permanently
+backed-up local supply. Both pickups remain unsupported.
 
 The [front underground exit fixture](fixtures/front-underground-exit/README.md) isolates a northbound, head-on
 pickup with backed-up supply. Two ingredient arrangements distinguish lane preference from fixed recipe order;
@@ -95,7 +99,7 @@ The first two commands run in the simulator. The remaining commands need Factori
 cases, six actual ingredient/geometry cases, Sidecar classification/export behavior, five front exit
 ingredient/mirroring cases with capture assertions, four front entrance supply/mirroring cases, and four same-item
 front entrance moving/backed-up controls, the side-loaded tile/control pair, the expanded 42-case side-entry matrix,
-three direct single-splitter controls, and seven independent two-splitter controls. Their independent replay and simulator comparisons remain
+three direct single-splitter controls, and eight independent two-splitter controls. Their independent replay and simulator comparisons remain
 in the test code, separate from sampling helpers.
 
 [`helpers/lua/capture.lua`](../../helpers/lua/capture.lua) owns bounded sampling, output and cleanup; [`helpers/lua/belt-pickup.lua`](../../helpers/lua/belt-pickup.lua) observes hands
@@ -115,8 +119,9 @@ The [direct splitter series](fixtures/splitter/README.md) has begun on a branch 
 implementation. Its baseline, ingredient swap and mirroring controls are complete; opposite-port, priority/filter
 and both-outlets-blocked controls remain unmeasured for that single-splitter layout. The two-splitter series
 also compares output priority set versus unset in independent fresh sessions.
-Single-splitter priority isolation is complete for that serial layout; later coupled schedules remain distinct
-from the local first-hand routing result.
+Single-splitter priority isolation and a blocked-final-drain control are complete for that serial layout;
+later coupled schedules remain distinct from the local first-hand routing result. Splitter routing remains
+unsupported, including the dynamic backpressure observed after removing the final drain.
 
 After the current pickup/merge investigations, verify the tick-by-tick predictions of
 [`Belt::amountToDropAtTick`](../../../../src/entities/belt/belt.test.ts) against actual drops with belt stack sizes

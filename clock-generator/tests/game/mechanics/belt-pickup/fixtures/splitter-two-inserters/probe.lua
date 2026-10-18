@@ -4,17 +4,19 @@ local entities = ...
 local right_mirrored = options.rightMirrored
 if right_mirrored == nil then right_mirrored = true end
 local sink = capture.find_one(entities, function(e) return e.name == "electromagnetic-plant" end, "plant")
-local splitters, inputs, pieces = {}, {}, {}
+local splitters, inputs, pieces, drains = {}, {}, {}, {}
 for _, entity in pairs(entities) do
     if entity.type == "splitter" then table.insert(splitters, entity) end
     if entity.type == "inserter" and entity.drop_target == sink then table.insert(inputs, entity) end
     if entity.type == "transport-belt" or entity.type == "underground-belt" then table.insert(pieces, entity) end
+    if entity.type == "loader" and entity.loader_type == "input" then table.insert(drains, entity) end
 end
 local function left_first(a, b) return a.position.x < b.position.x end
 table.sort(splitters, left_first)
 table.sort(inputs, left_first)
 table.sort(pieces, left_first)
 assert(#splitters == 2 and #inputs == 2)
+assert(#drains == (options.blockedDrain and 0 or 1))
 local metadata = {}
 for index, input in ipairs(inputs) do
     local splitter = splitters[index]
@@ -54,6 +56,7 @@ local function snapshot(tick)
     return sample
 end
 local report = {initial = {version = script.active_mods.base, targets = metadata,
+    drain_present = #drains > 0,
     recipe = sink.get_recipe().name, crafting_speed = sink.crafting_speed, machine_active = sink.active,
     state = snapshot(0)}, samples = {}}
 for _, input in ipairs(inputs) do input.get_or_create_control_behavior().circuit_enable_disable = false end

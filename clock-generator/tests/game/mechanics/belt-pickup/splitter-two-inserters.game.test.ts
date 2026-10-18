@@ -8,6 +8,7 @@ import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
+import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
 import {EntityState, MachineState} from "../../../../src/state";
 
 interface Stack {id: number; at: number; count: number; item: string}
@@ -16,7 +17,8 @@ interface Hand {held: number; held_item?: string; lanes: Line[]}
 interface Sample {
     tick: number; hands: Hand[]; pieces: {lines: Line[]}[];
     inputs: {name: string; count: number}[] | Record<string, never>;
-    output: unknown; crafting_progress: number; products_finished: number;
+    output: {name: string; count: number}[] | Record<string, never>;
+    crafting_progress: number; products_finished: number;
 }
 const stacks = (line: Line): Stack[] => Object.values(line.stacks);
 const priorityTicks = [[2, 3, 4, 5], [13, 14, 15, 17], [28, 29, 30, 31], [58, 59, 60, 61]];
@@ -39,6 +41,13 @@ const measured: Record<string, {items: string[][]; ticks: number[][][]; products
         ticks: [
             [[2, 3, 4, 7], [15, 16, 17, 21], [30, 31, 32, 35], [60, 61, 62, 65]],
             [[2, 3, 4, 7], [15, 16, 19, 23], [31, 32, 35, 39], [60, 61, 62, 65]],
+        ], products: 27,
+    },
+    "no-priority-blocked-drain": {
+        items: originalItems,
+        ticks: [
+            [[2, 3, 4, 5], [13, 14, 15, 18], [28, 29, 30, 31], [58, 59, 60, 63]],
+            [[2, 3, 4, 5], [13, 14, 15, 16], [28, 29, 30, 31], [58, 59, 60, 61]],
         ], products: 27,
     },
     "swapped-right-unmirrored": {
@@ -70,7 +79,9 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
     {name: "swapped-right-unmirrored", swapped: true, leftMirrored: false, rightMirrored: false, unsetPriorities: []},
     {name: "upstream-no-priority", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [12]},
     {name: "downstream-no-priority", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [20]},
-]) test(`two serial turbo splitters: ${name.endsWith("-no-priority") ? `${name.replace("-no-priority", "")} priority unset only`
+    {name: "no-priority-blocked-drain", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [12, 20]},
+]) test(`two serial turbo splitters: ${name === "no-priority-blocked-drain" ? "no priority, blocked drain"
+    : name.endsWith("-no-priority") ? `${name.replace("-no-priority", "")} priority unset only`
     : name === "no-priority" ? "no priority, original" : `right priority, ${name}`}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
@@ -80,6 +91,7 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
     fs.mkdirSync(scratch, {recursive: true});
     try {
         const fixture = GameFixturePaths.SPLITTER_TWO_INSERTERS;
+        const blockedDrain = name === "no-priority-blocked-drain";
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
         const outputPriorities = [12, 20].map(id => unsetPriorities.includes(id) ? "none" : "right");
         const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
@@ -89,6 +101,11 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
             expect(splitter.name).toBe("turbo-splitter");
             expect(splitter.output_priority).toBe("right");
             delete splitter.output_priority;
+        }
+        if (blockedDrain) {
+            const drain = decoded.blueprint.entities.find((e: {entity_number: number}) => e.entity_number === 22);
+            expect(drain).toMatchObject({name: "turbo-loader", type: "input"});
+            decoded.blueprint.entities = decoded.blueprint.entities.filter((e: {entity_number: number}) => e.entity_number !== 22);
         }
         if (swapped) {
             const changed = [];
@@ -111,7 +128,7 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
         decoded.blueprint.entities.push({entity_number: 24, name: "constant-combinator", position: {x: -69.5, y: 418.5}});
         decoded.blueprint.wires = [[14, 1, 24, 1], [19, 1, 24, 1]];
         const blueprint = "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64");
-        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {leftMirrored, rightMirrored, outputPriorities});
+        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {leftMirrored, rightMirrored, outputPriorities, blockedDrain});
         fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
         fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
         fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
@@ -129,6 +146,7 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
             {inserter_direction: 12, mirrored: leftMirrored, output_priority: outputPriorities[0], input_priority: "none"},
             {inserter_direction: 4, mirrored: rightMirrored, output_priority: outputPriorities[1], input_priority: "none"},
         ]);
+        expect(report.initial).toMatchObject({drain_present: !blockedDrain});
         const expected = measured[name];
         {
             for (let index = 0; index < 2; index++) {
@@ -177,7 +195,7 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
                 trace.push(lost[0].line);
             }
             expect(trace).toEqual(preferredLine === 7 ? [7, 1, 7, 1] : [8, 2, 8, 2]);
-            if (outputPriorities[index] === "none") {
+            if (outputPriorities[index] === "none" && !blockedDrain) {
                 // The refill that would finish the hand at tick 5 is instead routed to the draining north port.
                 // Track the same native ID within this run; do not equate IDs between different sessions.
                 const inputLine = preferredLine - 7;
@@ -191,6 +209,56 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
                 }
                 expect(report.samples[6].hands[index].held).toBe(16);
             }
+        }
+        if (blockedDrain) {
+            // Backpressure has stopped every observed belt before the gate opens.
+            const initial = report.initial.state;
+            expect(report.samples[0].pieces).toEqual(initial.pieces);
+            for (let index = 0; index < 2; index++) {
+                expect(report.samples[0].hands[index].lanes).toEqual(initial.hands[index].lanes);
+                const northLine = index === 0 ? 4 : 5;
+                for (const sample of report.samples.slice(0, 5)) {
+                    expect(sample.hands[index].lanes[northLine]).toEqual(initial.hands[index].lanes[northLine]);
+                }
+            }
+
+            // Later downstream withdrawals open the through route again. Track an upstream cable stack
+            // into the north output while the south pickup is empty, rather than infer routing from a pause.
+            const waiting = stacks(report.samples[14].hands[0].lanes[1]).find(s => s.at === 0)!;
+            expect(waiting).toMatchObject({item: "copper-cable", count: 4});
+            expect(stacks(report.samples[15].hands[0].lanes[5])).toContainEqual({...waiting, at: 45 / 256});
+            for (const sample of report.samples.slice(14, 17)) {
+                expect(sample.hands[0].held).toBe(12);
+                expect(stacks(sample.hands[0].lanes[7])).toEqual([]);
+            }
+
+            // Compare only collection with the engine's infinite backed-up supply assumption, forcing
+            // the observed item and feeding the previous native inventory before each grab decision.
+            // This is not a replay of the shared splitter network or its arm movements.
+            const candidate = structuredClone(config);
+            candidate.overrides = {...candidate.overrides, backed_up_belts: true};
+            candidate.inserters[1].filters = ["copper-cable"];
+            const simulation = SimulationContext.fromConfig(candidate);
+            const input = simulation.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
+            const machine = simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id);
+            expect(EntityState.isMachine(machine)).toBe(true);
+            if (!EntityState.isMachine(machine)) throw new Error("Expected machine sink");
+            const mode = InserterPickupMode.create({inserterState: input, tick_provider: simulation.tick_provider,
+                sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id), sinkState: machine});
+            const counts: number[] = [];
+            for (let tick = 13; tick <= 18; tick++) {
+                const previous = report.samples[tick - 2];
+                machine.inventoryState.setQuantity(machine.machine.output.outputBlock.item_name, 0);
+                for (const item of [...Object.values(previous.inputs), ...Object.values(previous.output)]) {
+                    machine.inventoryState.setQuantity(item.name, item.count);
+                }
+                expect(MachineState.machineInputIsBlocked(machine, "copper-cable")).toBe(false);
+                simulation.tick_provider.setCurrentTick(tick);
+                mode.executeForTick();
+                counts.push(input.held_item!.quantity);
+            }
+            expect(counts).toEqual([4, 8, 12, 16, 16, 16]);
+            expect(report.samples.slice(12, 18).map(s => s.hands[0].held)).toEqual([4, 8, 12, 12, 12, 16]);
         }
         if (name === "swapped") {
             // Classify the observed late pause with the existing engine eligibility rule, not a splitter replay.

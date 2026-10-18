@@ -25,7 +25,8 @@ ingredient eligibility through the shared machine; upstream withdrawals also aff
 Differences between the two targets alone cannot establish a mirroring rule.
 
 Every test starts its **own Factorio session and copied save**. Both target inserters are gated during 1,200
-natural warm-up ticks, with feeders and drain running, then released in the same game tick. An empty constant
+natural warm-up ticks, with feeders running and the drain retained except in the blocked-drain control, then
+released in the same game tick. An empty constant
 combinator and wires establish the startup gate. Both hands and the machine must be empty at release.
 The probe never seeds belts, edits held items, clears machine inventories, or toggles priority during capture.
 It records 120 ticks of both hands, all eight lines of each splitter, the other belts/underground transport
@@ -46,6 +47,9 @@ npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.gam
 # Independent single-splitter controls; the other splitter retains right priority.
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'upstream priority unset only$'
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'downstream priority unset only$'
+
+# Close only the final outlet, retaining both unset priorities and all startup settings.
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts -t 'no priority, blocked drain$'
 
 # Includes all ingredient/mirroring controls, also in fresh sessions.
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter-two-inserters.game.test.ts
@@ -80,6 +84,7 @@ The original ingredients put iron on 7 and cable on 8; swapping exchanges only t
 | Both unset, original | Iron, line 7 | Cable, line 8 | 2,3,4,7 | 2,3,4,7 |
 | Upstream unset only, original | Iron, line 7 | Cable, line 8 | 2,3,4,7 | 2,3,4,5 |
 | Downstream unset only, original | Iron, line 7 | Cable, line 8 | 2,3,4,5 | 2,3,4,7 |
+| Both unset, final drain removed | Iron, line 7 | Cable, line 8 | 2,3,4,5 | 2,3,4,5 |
 
 The left target's ingredient swap and mirror controls reproduce its earlier physical line preference: line 7
 unmirrored, line 8 mirrored. Flipping only the right target from mirrored to unmirrored, retaining swapped
@@ -142,6 +147,48 @@ for the mirrored-left case. These startup observations do **not** establish stea
 loss without priority. A clock expecting a full hand at tick 5 would nevertheless encounter a partial hand in
 the no-priority case.
 
+## Both priorities unset, final drain removed
+
+This independent control derives from the both-unset moving case by removing **only drain loader #22**.
+The disposal chest remains. Ingredients, mirroring, both unset output priorities, 1,200-tick natural warm-up,
+shared gate release and 120-tick observation window are unchanged. The native probe asserts that the drain is
+absent. At release the two stacks on each south output are still at 0 and 1/4 tile; all observed splitter and
+connecting belt stock stays stationary through tick 1. The screenshot above shows the supplied layout with
+the loader present; this control removes that one loader rather than introducing another scaffold.
+
+| Hand | Left item and grab ticks | Right item and grab ticks |
+| --- | --- | --- |
+| 1 | Iron: 2,3,4,5 | Cable: 2,3,4,5 |
+| 2 | Cable: 13,14,15,18 | Cable: 13,14,15,16 |
+| 3 | Iron: 28,29,30,31 | Cable: 28,29,30,31 |
+| 4 | Cable: 58,59,60,63 | Cable: 58,59,60,61 |
+
+Closing the final drain removes the **initial** delay: both first hands finish at 5 rather than 7 in the
+both-unset moving control. Their corresponding north-output ingredient stock stays unchanged throughout
+that first hand, and the machine inventories are empty, separating initial backpressure from machine limits.
+
+It does not ensure one stack per tick forever. During the upstream second hand, a cable stack on input line 2
+at position 0 on tick 15 appears on north output line 6 at **45/256 tile** on tick 16. The south cable pickup
+line is empty and the hand remains at 12 through tick 17, finishing at 18. Other withdrawals can open space
+in a network even when its final drain is blocked. The tracked diversion establishes that a through route
+has reopened; this capture does not specify the complete routing algorithm or attribute every gap to one consumer.
+
+The regression checks the engine's existing machine-input eligibility rule against the previous native
+inventories on ticks 13–18: cable remains eligible throughout. An isolated collection comparison with ordinary
+`backed_up_belts: true`, the observed cable item and those same inventories fills at 13,14,15,16 instead.
+That comparison deliberately excludes arm movement and splitter routing. It demonstrates why the engine's
+infinite backed-up supply assumption cannot represent this coupled splitter network simply because the last
+loader was removed. No constant delay or new splitter support is added. Sidecar continues warning for both
+unsupported sources. The native product counter is 27 at tick 120; this is not a steady-throughput measurement.
+
+All eight independent controls passed with complete hand sequences, startup stock, within-run ID traces and
+both Sidecar warnings asserted. The seven earlier controls passed in
+`work/belt-pickup/turbo-two-splitter-blocked-drain-final-02/`; the new blocked-drain control passed after the
+comparison included native product inventory in
+`work/belt-pickup/turbo-two-splitter-blocked-drain-final-03/`. These ignored directories retain exact blueprints,
+configs, generated probes and native reports. Comparing the final captures confirms that removing loader #22
+is the only blueprint difference from the both-unset moving control, and their configs are identical.
+
 ## Downstream-only mirroring follow-up
 
 This test differs from the right-priority swapped control only in target #19's `mirror` field, set from `true`
@@ -176,6 +223,7 @@ the comparison config would not verify this build.
 Validated raw evidence belongs under ignored `work/belt-pickup/turbo-two-splitter-final-01/`, one folder per
 independent case. The regression asserts every observed hand's item and exact grab ticks, first-hand stock/ID
 traces, final native product counters, the existing machine-block classification, and both Sidecar warnings.
-Opposite input arrangements, filtered routing and both-outlets-blocked supply remain unmeasured. Priority
+Opposite input arrangements and filtered routing remain unmeasured. Removing the final drain now covers
+initially stationary serial supply, but does not establish permanently saturated local stock. Priority
 isolation establishes a local first-hand cause, not a complete simulation of splitter scheduling. Continue with
 one controlled change at a time.
