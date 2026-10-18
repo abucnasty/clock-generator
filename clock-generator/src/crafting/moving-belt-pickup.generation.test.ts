@@ -1,11 +1,10 @@
-import path from "path";
+import { GameFixturePaths } from "../../tests/game/helpers/fixture-paths";
 import { expect, it } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { generateClockAlternatives } from "./generate-blueprint";
 
 it("selects a moving clock with reachable stacks and keeps backed-up alternatives out of that preference", async () => {
-    const config = await loadConfigFromFile(path.resolve(__dirname,
-        "../../resources/config-samples/science/electromagnetic-science/belted-moving/config.json"));
+    const config = await loadConfigFromFile(GameFixturePaths.DIFFERENT_ITEMS_CONFIG);
     const generated = generateClockAlternatives(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } });
     const selected = generated.alternatives[generated.selected_index];
     expect(selected.verdict).toBe("stable");

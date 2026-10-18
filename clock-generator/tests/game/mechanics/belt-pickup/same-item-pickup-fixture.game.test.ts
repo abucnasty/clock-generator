@@ -1,20 +1,20 @@
+import { GameFixturePaths } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import zlib from "zlib";
 import { describe, expect, test } from "vitest";
-import { ConfigPaths } from "../config/config-paths";
-import { loadConfigFromFile } from "../config/loader";
-import { matchRecordingToConfig } from "../verification/entity-matching";
-import { recordInFactorio } from "./factorio-harness";
-import { encodeBlueprintFile } from "../blueprints/serde";
-import { FactorioBlueprintFile } from "../blueprints/blueprint";
+import { loadConfigFromFile } from "../../../../src/config/loader";
+import { matchRecordingToConfig } from "../../../../src/verification/entity-matching";
+import { recordInFactorio } from "../../../../src/harness/factorio-harness";
+import { encodeBlueprintFile } from "../../../../src/blueprints/serde";
+import { FactorioBlueprintFile } from "../../../../src/blueprints/blueprint";
 import { assessSameItemPickups, SameItemPickupProbe } from "./same-item-pickup-probe";
-import { Config } from "../config";
-import { SimulationContext } from "../crafting/sequence/simulation-context";
-import { InserterPickupMode } from "../control-logic/inserter/modes/pickup/pickup-mode";
+import { Config } from "../../../../src/config";
+import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
+import { InserterPickupMode } from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
 
-const SAMPLE = path.dirname(ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM);
+const SAMPLE = GameFixturePaths.SAME_ITEM;
 
 /** The real simulator's unrestricted hand, compared below with every complete measured hand of this fixture. */
 function simulatedHand(config: Config): string {
@@ -48,7 +48,7 @@ describe.sequential("same-item moving pickup fixtures", () => {
                 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "same-item-pickup-"));
                 try {
                     const config = await loadConfigFromFile(name === "straight-belt"
-                        ? ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM_STRAIGHT : ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM);
+                        ? GameFixturePaths.SAME_ITEM_STRAIGHT_CONFIG : GameFixturePaths.SAME_ITEM_CONFIG);
                     config.belts[0].type = speed === "turbo" ? "turbo-transport-belt" : "express-transport-belt";
                     const source = config.inserters[1].source;
                     if (source.type !== "belt") throw new Error("fixture input must pick up from a belt");

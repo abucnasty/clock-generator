@@ -1,12 +1,13 @@
+import { SAMPLE_BUILDS_DIR } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterAll, describe, expect, test } from "vitest";
-import { encodeBlueprintFile } from "../blueprints/serde";
-import { ConfigPaths } from "../config/config-paths";
-import { loadConfigFromFile } from "../config/loader";
-import { generateClockAlternatives } from "../crafting/generate-blueprint";
-import { recordInFactorio } from "./factorio-harness";
+import { encodeBlueprintFile } from "../../../../src/blueprints/serde";
+import { ConfigPaths } from "../../../../src/config/config-paths";
+import { loadConfigFromFile } from "../../../../src/config/loader";
+import { generateClockAlternatives } from "../../../../src/crafting/generate-blueprint";
+import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 
 /** Runs a headless Factorio, so it needs the game and a save to build in; without either it is skipped, not failed */
 const FACTORIO = process.env.FACTORIO_PATH;
@@ -30,7 +31,7 @@ describe("the recorder samples the belt lane under an inserter", () => {
         context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
         scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "belt-lanes-"));
 
-        const scaffold = path.resolve(__dirname, "..", "..", "resources", "config-samples", "science", "automation-science", "automation-science-scaffold.txt");
+        const scaffold = path.join(SAMPLE_BUILDS_DIR, "science", "automation-science", "automation-science-scaffold.txt");
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         const selected = alternatives[selected_index];

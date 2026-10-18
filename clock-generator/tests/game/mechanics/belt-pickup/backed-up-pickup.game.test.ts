@@ -1,16 +1,17 @@
+import { GameFixturePaths } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, test } from "vitest";
-import { Config } from "../config";
-import { loadConfigFromFile } from "../config/loader";
-import { SimulationContext } from "../crafting/sequence/simulation-context";
-import { InserterPickupMode } from "../control-logic/inserter/modes/pickup/pickup-mode";
-import { EntityState } from "../state";
-import { recordInFactorio } from "./factorio-harness";
+import { Config } from "../../../../src/config";
+import { loadConfigFromFile } from "../../../../src/config/loader";
+import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
+import { InserterPickupMode } from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import { EntityState } from "../../../../src/state";
+import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { makeInputBeltBackedUp } from "./belt-pickup-fixtures";
 
-const SAMPLE = path.resolve(__dirname, "../../resources/config-samples/science/electromagnetic-science/belted-moving");
+const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS;
 interface Stack { at: number; count: number; item: string; id: number }
 interface Sample { tick: number; held: number; held_item?: string; lanes: { length: number; stacks: Stack[] | Record<string, never> }[] }
 interface Probe { endpoint: string; item: string; samples: Sample[] }

@@ -9,9 +9,18 @@
     "outDir": "dist",
     "declaration": true,
     "declarationMap": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "rootDir": "src"
   },
-  "include": ["src/**/*", "src/types/**/*.d.ts"],
-  "exclude": ["node_modules"],
-  "lib": ["es2015"]
+  "include": [
+    "src/**/*",
+    "src/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "src/**/*.test.ts"
+  ],
+  "lib": [
+    "es2015"
+  ]
 }

@@ -1,14 +1,15 @@
+import { SAMPLE_BUILDS_DIR } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import zlib from "zlib";
 import { afterAll, describe, expect, test } from "vitest";
-import { encodeBlueprintFile } from "../blueprints/serde";
-import { ConfigPaths } from "../config/config-paths";
-import { loadConfigFromFile } from "../config/loader";
-import { generateClockAlternatives } from "../crafting/generate-blueprint";
-import { recordInFactorio } from "./factorio-harness";
-import { outputPerPeriod, recipesMaking } from "./recording-output";
+import { encodeBlueprintFile } from "../../../../src/blueprints/serde";
+import { ConfigPaths } from "../../../../src/config/config-paths";
+import { loadConfigFromFile } from "../../../../src/config/loader";
+import { generateClockAlternatives } from "../../../../src/crafting/generate-blueprint";
+import { recordInFactorio } from "../../../../src/harness/factorio-harness";
+import { outputPerPeriod, recipesMaking } from "../../../../src/harness/recording-output";
 
 /** Runs a headless Factorio, so it needs the game and a save to build in; without either it is skipped, not failed */
 const FACTORIO = process.env.FACTORIO_PATH;
@@ -18,7 +19,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : !fs.existsSync(SAVE) ? `the save FACTORIO_HARNESS_SAVE names does not exist: ${SAVE}`
     : null;
 
-const SCAFFOLD = path.resolve(__dirname, "..", "..", "resources", "config-samples", "science", "automation-science", "automation-science-scaffold.txt");
+const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "science", "automation-science", "automation-science-scaffold.txt");
 /** Several clock periods of automation science after the warmup and settling */
 const RECORDED_TICKS = 7_200;
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };

@@ -1,3 +1,4 @@
+import { GameFixturePaths } from "../../../tests/game/helpers/fixture-paths";
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
@@ -41,7 +42,7 @@ describe("simulationStateKey", () => {
             }
         };
         // between them, every kind of entity
-        for (const path of [ConfigPaths.ELECTRIC_FURNACE, ConfigPaths.LOW_DENSITY_STRUCTURE, ConfigPaths.IRON_GEARS_MOVING_SAME_ITEM]) {
+        for (const path of [ConfigPaths.ELECTRIC_FURNACE, ConfigPaths.LOW_DENSITY_STRUCTURE, GameFixturePaths.SAME_ITEM_CONFIG]) {
             const context = SimulationContext.fromConfig(await loadConfigFromFile(path));
             for (const state of context.state_registry.getAllStates()) {
                 add(state.constructor === Object ? state.entity_id.type : state.constructor.name, plainFields(state));

@@ -12,7 +12,7 @@ generated clock, wires it to the inserters of the config, and leaves everything 
 clock the generator made (the combinator described as "Clock for ..." and the combinators wired to it). It refuses a
 build with something on a machine of the config that the config does not have, since no clock would hold it: an
 inserter, whatever is at its other end, a further machine of one of the config's recipes, or a loader.
-`npm run test:game` does this for the builds listed in `src/harness/scaffold-recordings.game.test.ts` and checks
+`npm run test:game` does this for the builds listed in `tests/game/builds/scaffold-recordings.game.test.ts` and checks
 that the selected clock moves the expected output every period. One run records at most 72,000 ticks, 20 minutes of
 game time. A clocked recording is whole periods of its clock, at least the ticks asked for, so a request whose whole
 periods pass the limit is refused with the most that fits (warm-up and settle do not count). A recording is the only thing that settles a
@@ -27,7 +27,7 @@ Conventions:
   The three `science/electromagnetic-science/belted-moving` scaffolds drain their input belt continuously and compare
   pickup from a straight belt, an underground entrance and an underground exit. Their shared config supplies
   `pickup_length: 0.5`; moving pickup and its scope are documented in [the simulator rules](../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
-  The [same-item iron-gear fixtures](intermediates/iron-gear-wheel/belted-moving-same-item) compare those three pickup
+  The [same-item iron-gear fixtures](../../tests/game/mechanics/belt-pickup/fixtures/same-item) compare those three pickup
   geometries with iron plates on both lanes and include a probe that removes machine blocking. The measured rule
   prefers the near lane and falls back to the far lane without a fixed switching delay. The simulator implements
   that rule; the paired game tests compare its grabs, check the default clocks' exact output, and test recovery
@@ -71,7 +71,7 @@ Conventions:
 Builds without a scaffold have labels and selections that only the simulator vouches for. Most of them moved on
 2026-10-08 when the belt pickup rules and the long-run stability check changed, so each needs a recording before its
 label is trusted. One copy each, in the build's folder, named `<build>-scaffold.txt`; then add it to
-`src/harness/scaffold-recordings.game.test.ts` with its seeds, if any, and the warm-up and settle it needs.
+`tests/game/builds/scaffold-recordings.game.test.ts` with its seeds, if any, and the warm-up and settle it needs.
 
 In the order they would settle the most:
 1. **science/logistic-science** (shared-inserter, sample, direct-insert): the 1-swing label of the shared-inserter

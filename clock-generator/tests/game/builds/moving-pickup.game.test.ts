@@ -1,19 +1,20 @@
+import { GameFixturePaths } from "../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { Config } from "../config";
-import { loadConfigFromFile } from "../config/loader";
-import { generateClockAlternatives } from "../crafting/generate-blueprint";
-import { encodeBlueprintFile } from "../blueprints/serde";
-import { GeneratedClock, recordInFactorio } from "./factorio-harness";
-import { outputPerPeriod, recipesMaking } from "./recording-output";
-import { makeInputBeltBackedUp } from "./belt-pickup-fixtures";
+import { Config } from "../../../src/config";
+import { loadConfigFromFile } from "../../../src/config/loader";
+import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
+import { encodeBlueprintFile } from "../../../src/blueprints/serde";
+import { GeneratedClock, recordInFactorio } from "../../../src/harness/factorio-harness";
+import { outputPerPeriod, recipesMaking } from "../../../src/harness/recording-output";
+import { makeInputBeltBackedUp } from "../mechanics/belt-pickup/belt-pickup-fixtures";
 
 const FACTORIO = process.env.FACTORIO_PATH;
 const SAVE = process.env.FACTORIO_HARNESS_SAVE;
 const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set" : !SAVE || !fs.existsSync(SAVE) ? "FACTORIO_HARNESS_SAVE is missing" : null;
-const SAMPLE = path.resolve(__dirname, "../../resources/config-samples/science/electromagnetic-science/belted-moving");
+const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS;
 const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
 // No clock or machine reset: withhold one ingredient, block the disposal end, then withhold the other ingredient.
 // Work on the scratch build only. Clearing belt items during a cut also prevents its underground buffer hiding it.

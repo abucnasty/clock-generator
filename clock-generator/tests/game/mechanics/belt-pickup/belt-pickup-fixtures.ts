@@ -1,7 +1,7 @@
-import assert from "../common/assert";
+import assert from "../../../../src/common/assert";
 import zlib from "zlib";
-import { FactorioBlueprintFile } from "../blueprints/blueprint";
-import { encodeBlueprintFile } from "../blueprints/serde";
+import { FactorioBlueprintFile } from "../../../../src/blueprints/blueprint";
+import { encodeBlueprintFile } from "../../../../src/blueprints/serde";
 
 /** Stop the electromagnetic fixture's ingredient drain so supply really backs up in the game. */
 export function makeInputBeltBackedUp(blueprint: string): string {

@@ -30,7 +30,7 @@ From `clock-generator/`, with `.env` pointing at Factorio and the staging save:
 
 ```bash
 npm run build
-pickup_sample=resources/config-samples/intermediates/iron-gear-wheel/belted-moving-same-item
+pickup_sample=tests/game/mechanics/belt-pickup/fixtures/same-item
 node --env-file=.env dist/record-in-factorio.js \
   --blueprint="$pickup_sample/underground-exit-scaffold.txt" \
   --config="$pickup_sample/config.json" --unclocked --warmup=1200 --ticks=1260 \
@@ -55,7 +55,7 @@ resumption after an interrupted partial hand, yellow/red speeds and backed-up su
 verified two-lane scope.
 
 ```bash
-npm run test:game -- src/harness/same-item-pickup-fixture.game.test.ts src/harness/same-item-pickup-clock.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/same-item-pickup-fixture.game.test.ts tests/game/builds/same-item-pickup-clock.game.test.ts
 ```
 
 The twelve game checks validate the captured machine speed, both lanes' contents and stack sizes, pickup geometry,
@@ -73,6 +73,6 @@ scaffold), and test recovery after two ingredient cuts and a filled/restored out
 exact output after a six-period recovery allowance, without resetting the clock or machine. All six passed with
 the fallback implementation: 16 gears per 160 ticks (6/second), with a 26-tick input window on every geometry.
 The underground window was 28 ticks before the correction. See
-[the simulator findings](../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints)
+[the simulator findings](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints)
 for the general rules and measured scope; raw investigation captures and analysis remain local under
 `work/same-item-pickup/investigation/`.

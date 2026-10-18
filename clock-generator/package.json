@@ -32,7 +32,8 @@
     "test:game": "vitest run --config vitest.game.config.ts",
     "test:game:watch": "FACTORIO_HARNESS_WATCH=1 vitest run --config vitest.game.config.ts",
     "knip": "knip",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:typecheck": "tsc -p tsconfig.tests.json"
   },
   "keywords": [
     "factorio",

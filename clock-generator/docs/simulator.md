@@ -60,8 +60,8 @@ Calibration: Factorio 2.1.21, legendary stack inserters, four-item belt stacks, 
 from both sides of an eastward belt. Same-item probes checked 5,268 uninterrupted hands across 78 captures,
 including hand sizes 8/12/16, interrupted windows and staggered turbo lanes; subsequent grabs and lane contents
 matched when seeded with the observed first grab, remaining stacks and phases. Game regressions compare actual
-simulator grabs and default-clock throughput/recovery on the [same-item fixtures](../resources/config-samples/intermediates/iron-gear-wheel/belted-moving-same-item),
-and retain the [different-item electromagnetic checks](../resources/config-samples/science/electromagnetic-science/belted-moving).
+simulator grabs and default-clock throughput/recovery on the [same-item fixtures](../tests/game/mechanics/belt-pickup/fixtures/same-item),
+and retain the [different-item electromagnetic checks](../tests/game/mechanics/belt-pickup/fixtures/different-items).
 Regressions with backed-up turbo belts isolate each ingredient and check the default clock's throughput and recovery on all
 three electromagnetic scaffolds. Detailed measurements and reproduction commands live with those fixtures.
 

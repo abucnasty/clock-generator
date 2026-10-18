@@ -1,10 +1,11 @@
+import { SAMPLE_BUILDS_DIR } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterAll, describe, expect, test } from "vitest";
-import { ConfigPaths } from "../config/config-paths";
-import { loadConfigFromFile } from "../config/loader";
-import { HarnessSession } from "./factorio-harness";
+import { ConfigPaths } from "../../../../src/config/config-paths";
+import { loadConfigFromFile } from "../../../../src/config/loader";
+import { HarnessSession } from "../../../../src/harness/factorio-harness";
 
 /** Runs a headless Factorio, so it needs the game and a save to build in; without either it is skipped, not failed */
 const FACTORIO = process.env.FACTORIO_PATH;
@@ -28,7 +29,7 @@ describe("a staged start builds the inserters of the cell in one tick, after the
         context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
         scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "staged-start-"));
 
-        const scaffold = path.resolve(__dirname, "..", "..", "resources", "config-samples", "science", "agriculture-science", "agriculture-science-scaffold.txt");
+        const scaffold = path.join(SAMPLE_BUILDS_DIR, "science", "agriculture-science", "agriculture-science-scaffold.txt");
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         const log: string[] = [];
         const session = await HarnessSession.start({ factorio: FACTORIO!, save: SAVE!, work_dir: path.join(scratch, "work"), timeout_seconds: 900, log: message => log.push(message) });

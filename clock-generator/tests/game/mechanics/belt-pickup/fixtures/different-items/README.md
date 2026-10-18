@@ -18,7 +18,7 @@ allow ten periods to recover; every later complete period must meet the target.
 
 ```bash
 # From clock-generator/, with Factorio and the staging save configured in .env:
-npm run test:game -- src/harness/moving-pickup.game.test.ts
+npm run test:game -- tests/game/builds/moving-pickup.game.test.ts
 ```
 
 ## Backed-up pickup regression
@@ -38,9 +38,9 @@ retained. All three geometries must hold the target output and recover after the
 the moving cases, without resetting the clock or machine.
 
 ```bash
-npm run test:game -- src/harness/backed-up-pickup.game.test.ts src/harness/moving-pickup.game.test.ts
+npm run test:game -- tests/game/mechanics/belt-pickup/backed-up-pickup.game.test.ts tests/game/builds/moving-pickup.game.test.ts
 ```
 
-The [same-item iron-gear fixtures](../../../intermediates/iron-gear-wheel/belted-moving-same-item) test fallback
-between two lanes carrying the same item. See the [general pickup rules](../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
+The [same-item iron-gear fixtures](../same-item) test fallback
+between two lanes carrying the same item. See the [general pickup rules](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
 Original raw probes and clock recordings remain local under `work/belt-pickup-investigation/`.
