@@ -34,7 +34,7 @@ npm run screenshots -- --case=splitter
 ```
 
 The test holds only the target inserter with a circuit gate during 1,200 natural warm-up ticks, leaving the
-feeder inserters and northern drain running. A temporary empty constant combinator establishes the circuit
+feeder inserters running; the northern drain is retained except in the explicit blocked-drain control. A temporary empty constant combinator establishes the circuit
 connection; belt geometry, priority and gate timing stay fixed across the controls. Mirroring changes only in
 the explicitly mirrored variant. The probe asserts an empty
 hand and empty, idle machine, then disables that inserter's circuit condition and records 60 ticks. It neither
@@ -43,9 +43,9 @@ seeds transport lines nor edits held items nor clears destination inventories. T
 The [probe](probe.lua) composes shared observation/capture helpers. It enumerates all splitter transport lines,
 and observes upstream and downstream lines, stack IDs/counts/positions, held items, and machine inventories.
 [config.json](config.json) is an **ordinary-belt comparison**, not a claim that the simulator supports splitters.
-All three test variants share that setup and probe. The ingredient-swapped control changes only the four feeder
+All four test variants share that setup and probe; the blocked-drain control removes only loader #20. The ingredient-swapped control changes only the four feeder
 chests' iron/cable filter names and the comparison config's ingredient lanes. Retained captures are separated
-into `original/`, `swapped/` and `swapped-mirrored/` under `SPLITTER_CAPTURE_DIR`.
+into `original/`, `swapped/`, `swapped-mirrored/` and `blocked-drain/` under `SPLITTER_CAPTURE_DIR`.
 
 ## Measured baseline
 
@@ -146,6 +146,33 @@ in separate subdirectories. The regression asserts the untouched other line, con
 all complete hands and Sidecar's unsupported warning in each case. It does not establish other ports, cardinal
 orientations, priorities, filters or supply conditions.
 
+## Single-inserter blocked-drain control
+
+Remove only north drain loader #20 from the original scaffold, retaining right priority, original ingredients,
+unmirrored target, shared startup procedure and natural 1,200-tick warm-up. The native probe asserts that the
+loader is absent. Initial splitter stock is stationary through tick 1. North output lines 5/6 and the observed
+downstream underground stock remain identical to their initial snapshots throughout all 60 ticks.
+
+| Hand | Item | Grab ticks |
+| --- | --- | --- |
+| 1 | Iron | 2,3,4,5 |
+| 2 | Cable | 13,14,15,16 |
+| 3 | Cable | 24,25,26,27 |
+| 4 | Cable | 35,36,37,38 |
+| 5 | Iron | 46,47,48,49 |
+| 6 | Cable | 57,58,59,60 |
+
+Every hand collects one four-item stack per tick. The second hand now agrees with the engine's isolated
+backed-up collection assumption. This does not authorize automatic splitter support: the serial two-inserter
+control shows that downstream withdrawals reopen a through route even without a final drain. The useful rule
+is local stock availability, rather than inferring permanent saturation from a closed final outlet. Right
+priority is retained here; priority-free and filtered splitter routing require their own controls.
+
+All four independent controls passed with exact per-hand expectations, first-hand ID traces, native drain
+metadata and Sidecar warnings. Raw artifacts are under ignored
+`work/belt-pickup/single-splitter-blocked-final/`. Reproduce only this control with
+`npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts -t 'drain removed'`.
+
 ## Simulator impact and next control
 
 The first `[4,8,12,16]` hand matches both the current ordinary one-tile moving supply and backed-up supply.
@@ -163,5 +190,6 @@ or Sidecar change**. Sidecar still emits the existing
 The ingredient swap confirms a physical line preference, and mirroring switches that preference from line 7
 to line 8 without changing the timing limitation. This gives a local selection rule but no general splitter
 routing model, so the simulator and Sidecar remain unchanged. Opposite-port, priority/filter and
-both-outlets-blocked controls remain unmeasured. No general splitter support is claimed. Continue with turbo
+priority-free backed-up supply and filtered routing remain unmeasured; the right-priority single-consumer
+blocked-drain control above is complete. No general splitter support is claimed. Continue with turbo
 speed and one controlled change at a time.

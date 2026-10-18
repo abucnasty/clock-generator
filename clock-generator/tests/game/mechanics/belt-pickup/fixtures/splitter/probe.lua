@@ -24,9 +24,14 @@ local output = sink.get_inventory(defines.inventory.crafter_output)
 assert(inventory.is_empty() and output.is_empty() and sink.crafting_progress == 0,
     "machine must stay empty during gated warm-up: " .. helpers.table_to_json({inputs = inventory.get_contents(),
         output = output.get_contents(), progress = sink.crafting_progress}))
+local drain = {}
+for _, entity in pairs(entities) do
+    if entity.type == "loader" and entity.loader_type == "input" then table.insert(drain, entity) end
+end
+assert(#drain == (options.blockedDrain and 0 or 1))
 local function lines() return pickup.lanes(splitter, splitter.get_max_transport_line_index()) end
 local report = {initial = {
-    version = script.active_mods.base, splitter_name = splitter.name, splitter_position = splitter.position,
+    drain_present = #drain > 0, version = script.active_mods.base, splitter_name = splitter.name, splitter_position = splitter.position,
     splitter_direction = splitter.direction, input_priority = splitter.splitter_input_priority,
     output_priority = splitter.splitter_output_priority, filter = splitter.splitter_filter,
     input_position = input.position, pickup_position = input.pickup_position,
