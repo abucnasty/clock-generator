@@ -40,17 +40,22 @@ function ordinaryBeltHand(config: Config, backedUp: boolean, item = "iron-plate"
     throw new Error("ordinary belt comparison did not fill");
 }
 
-for (const swapped of [false, true]) test(`turbo splitter: direct pickup from its right-priority output${swapped ? " (ingredients swapped)" : ""}`, async context => {
+for (const {name, swapped, mirrored, label} of [
+    {name: "original", swapped: false, mirrored: false, label: ""},
+    {name: "swapped", swapped: true, mirrored: false, label: " (ingredients swapped)"},
+    {name: "swapped-mirrored", swapped: true, mirrored: true, label: " (ingredients swapped, mirrored)"},
+]) test(`turbo splitter: direct pickup from its right-priority output${label}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
     const retained = process.env.SPLITTER_CAPTURE_DIR;
-    const scratch = retained ? path.resolve(retained, swapped ? "swapped" : "original") : fs.mkdtempSync(path.join(os.tmpdir(), "splitter-pickup-"));
+    const scratch = retained ? path.resolve(retained, name) : fs.mkdtempSync(path.join(os.tmpdir(), "splitter-pickup-"));
     if (retained && fs.existsSync(scratch) && fs.readdirSync(scratch).length) throw new Error("Choose a new empty SPLITTER_CAPTURE_DIR");
     fs.mkdirSync(scratch, {recursive: true});
     try {
         const fixture = GameFixturePaths.SPLITTER;
-        const preferredItem = swapped ? "copper-cable" : "iron-plate";
-        const otherItem = swapped ? "iron-plate" : "copper-cable";
+        const line7Item = swapped ? "copper-cable" : "iron-plate";
+        const line8Item = swapped ? "iron-plate" : "copper-cable";
+        const preferredItem = mirrored ? line8Item : line7Item;
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
         const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
         const decoded = JSON.parse(zlib.inflateSync(Buffer.from(original.slice(1), "base64")).toString());
@@ -68,13 +73,14 @@ for (const swapped of [false, true]) test(`turbo splitter: direct pickup from it
         }
         const input = decoded.blueprint.entities.find((e: {entity_number: number}) => e.entity_number === 14);
         expect(input).toMatchObject({name: "stack-inserter", direction: 12, position: {x: -71.5, y: 414.5}});
+        if (mirrored) input.mirror = true;
         // Preserve the physical fixture and hold only the target during natural supply warm-up.
         input.control_behavior = {circuit_enabled: true,
             circuit_condition: {first_signal: {type: "virtual", name: "signal-Z"}, comparator: "<", constant: 0}};
         decoded.blueprint.entities.push({entity_number: 22, name: "constant-combinator", position: {x: -72.5, y: 416.5}});
         decoded.blueprint.wires = [[14, 1, 22, 1]];
         const blueprint = "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64");
-        const lua = composeProbeSource(path.join(fixture, "probe.lua"));
+        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {mirrored});
         fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
         fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
         fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
@@ -88,17 +94,18 @@ for (const swapped of [false, true]) test(`turbo splitter: direct pickup from it
         };
         expect(report.samples).toHaveLength(60);
         expect(report.initial).toMatchObject({splitter_name: "turbo-splitter", splitter_direction: 4,
-            output_priority: "right", input_priority: "none", inserter_direction: 12, mirrored: false, use_filters: false,
+            output_priority: "right", input_priority: "none", inserter_direction: 12, mirrored, use_filters: false,
             recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
         expect(report.initial).not.toHaveProperty("filter");
         expect(report.initial.lines.map(l => l.length)).toEqual([179 / 256, 179 / 256, 179 / 256, 179 / 256, 0.5, 0.5, 0.5, 0.5]);
-        expect(stacks(report.initial.lines[6]).map(s => [s.at, s.item, s.count])).toEqual([[0, preferredItem, 4], [0.25, preferredItem, 4]]);
-        expect(stacks(report.initial.lines[7]).map(s => [s.at, s.item, s.count])).toEqual([[0, otherItem, 4], [0.25, otherItem, 4]]);
+        expect(stacks(report.initial.lines[6]).map(s => [s.at, s.item, s.count])).toEqual([[0, line7Item, 4], [0.25, line7Item, 4]]);
+        expect(stacks(report.initial.lines[7]).map(s => [s.at, s.item, s.count])).toEqual([[0, line8Item, 4], [0.25, line8Item, 4]]);
         const firstFull = report.samples.find(s => s.held === 16)!;
         expect(firstFull.tick).toBe(5);
         const firstHand = report.samples.filter(s => s.tick <= firstFull.tick);
         expect(firstHand.every(s => JSON.stringify(s.inputs) === "{}" && JSON.stringify(s.output) === "{}" && s.crafting_progress === 0)).toBe(true);
-        expect(firstHand.every(s => JSON.stringify(s.lines[7]) === JSON.stringify(report.initial.lines[7]))).toBe(true);
+        const untouchedLine = mirrored ? 6 : 7;
+        expect(firstHand.every(s => JSON.stringify(s.lines[untouchedLine]) === JSON.stringify(report.initial.lines[untouchedLine]))).toBe(true);
         const grabs = firstHand.filter((s, i) => s.held > (firstHand[i - 1]?.held ?? 0));
         expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill(preferredItem));
         const counts = firstHand.filter(s => s.held > 0).map(s => s.held);
@@ -117,7 +124,7 @@ for (const swapped of [false, true]) test(`turbo splitter: direct pickup from it
             expect(lost[0].stack).toMatchObject({item: preferredItem, count: 4});
             return lost[0].line;
         });
-        expect(priorLines).toEqual([7, 1, 7, 1]);
+        expect(priorLines).toEqual(mirrored ? [8, 2, 8, 2] : [7, 1, 7, 1]);
         const hands: {item: string; ticks: number[]}[] = [];
         for (const [index, sample] of report.samples.entries()) {
             const before = report.samples[index - 1]?.held ?? 0;
@@ -128,7 +135,7 @@ for (const swapped of [false, true]) test(`turbo splitter: direct pickup from it
                 hands.at(-1)!.ticks.push(sample.tick);
             }
         }
-        const expectedItems = swapped ? ["copper-cable", "copper-cable", "copper-cable", "iron-plate"]
+        const expectedItems = swapped && !mirrored ? ["copper-cable", "copper-cable", "copper-cable", "iron-plate"]
             : ["iron-plate", "copper-cable", "copper-cable", "copper-cable", "iron-plate"];
         expect(hands.map(h => h.item)).toEqual(expectedItems);
         expect(hands.map(h => h.ticks.map(tick => tick - h.ticks[0]))).toEqual([[0, 1, 2, 3], ...Array(expectedItems.length - 1).fill([0, 1, 2, 4])]);

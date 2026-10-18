@@ -1,4 +1,4 @@
--- Supplied layout (or ingredient-only swap), with only the target gated during warm-up by the host.
+-- Supplied layout with explicit ingredient/mirroring controls; only the target is gated during warm-up.
 -- Observe first-hand collection and operating continuation without seeding, held-stack edits or destination clearing.
 local entities = ...
 local sink = capture.find_one(entities, function(e) return e.name == "electromagnetic-plant" end, "plant")
@@ -14,7 +14,7 @@ local downstream = capture.find_one(entities, function(e)
     return e.type == "underground-belt" and e.belt_to_ground_type == "input"
 end, "drained north output")
 assert(splitter.name == "turbo-splitter" and splitter.direction == defines.direction.east)
-assert(input.direction == defines.direction.west and not input.mirroring)
+assert(input.direction == defines.direction.west and input.mirroring == (options.mirrored or false))
 assert(input.pickup_position.x == splitter.position.x and input.pickup_position.y == splitter.position.y + 0.5)
 assert(not input.held_stack.valid_for_read, "target must remain gated and empty during warm-up")
 assert(not input.use_filters)

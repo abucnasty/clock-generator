@@ -21,7 +21,10 @@ Run from `clock-generator/`, using the Factorio configuration described in the [
 npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts
 
 # Select only the ingredient-swapped control.
-npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts -t 'ingredients swapped'
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts -t 'ingredients swapped\)$'
+
+# Select only the mirrored control with swapped ingredients retained.
+npm run test:game -- tests/game/mechanics/belt-pickup/splitter.game.test.ts -t 'ingredients swapped, mirrored'
 
 # Retain the exact transformed blueprint, generated Lua, config, recording and native report.
 # Choose a new empty directory for each run.
@@ -32,16 +35,17 @@ npm run screenshots -- --case=splitter
 
 The test holds only the target inserter with a circuit gate during 1,200 natural warm-up ticks, leaving the
 feeder inserters and northern drain running. A temporary empty constant combinator establishes the circuit
-connection; belt geometry, priority, mirroring and timing stay fixed across the controls. The probe asserts an empty
+connection; belt geometry, priority and gate timing stay fixed across the controls. Mirroring changes only in
+the explicitly mirrored variant. The probe asserts an empty
 hand and empty, idle machine, then disables that inserter's circuit condition and records 60 ticks. It neither
 seeds transport lines nor edits held items nor clears destination inventories. The machine operates normally.
 
 The [probe](probe.lua) composes shared observation/capture helpers. It enumerates all splitter transport lines,
 and observes upstream and downstream lines, stack IDs/counts/positions, held items, and machine inventories.
 [config.json](config.json) is an **ordinary-belt comparison**, not a claim that the simulator supports splitters.
-The two test variants share that setup and probe. The ingredient-swapped control changes only the four feeder
+All three test variants share that setup and probe. The ingredient-swapped control changes only the four feeder
 chests' iron/cable filter names and the comparison config's ingredient lanes. Retained captures are separated
-into `original/` and `swapped/` under `SPLITTER_CAPTURE_DIR`.
+into `original/`, `swapped/` and `swapped-mirrored/` under `SPLITTER_CAPTURE_DIR`.
 
 ## Measured baseline
 
@@ -102,13 +106,45 @@ stack at 1/4 tile is taken before the blocked-end stack, as in the original arra
 The first choice therefore follows the physical line in these two arrangements, rather than a fixed iron-first,
 cable-first or recipe ordering. Once collecting, the hand continues with its held item. This establishes a
 preference for this unmirrored pickup with both ingredients needed; it does not rank every splitter line or
-prove the same preference for other orientations, filters, priorities or mirroring states.
+prove the same preference for other orientations, filters or priorities. The mirroring follow-up below tests
+the other hand orientation in this exact layout.
 
 The machine operates normally after release, so swapping supply also changes later ingredient buffering and
 the number of hands seen within 60 ticks. Both controls retain the same per-hand pause once initial stock has
 been withdrawn. Validated raw captures and exact derived blueprints are retained under ignored
 `work/belt-pickup/turbo-splitter-ingredient-swap-02/original/` and `.../swapped/`. The native regression checks
 both variants' initial stock, first-hand IDs, all complete hand timings and the existing Sidecar warning.
+
+## Mirrored control with swapped ingredients
+
+Retain the swapped ingredients, then change only target inserter #14's blueprint `mirror` field to `true`.
+The captured blueprint differs from the unmirrored swapped variant in exactly that field. The right-output
+priority, absent input priority/filter, circuit condition, wiring, warm-up, gate release, pickup position,
+inserter direction and splitter geometry are unchanged. Native capture confirms `mirrored=true`.
+
+At release, the physical stock is unchanged: cable occupies line 7 and iron occupies line 8. The first hand
+now takes **iron from line 8**, leaving line 7's cable stock unchanged for the whole hand. Its consumed IDs
+were last observed on lines `8,2,8,2`, compared with `7,1,7,1` before mirroring. These input-line observations
+remain evidence of routing between samples, not proof that the inserter reaches the input lines directly.
+The first initial stack taken is again the one at 1/4 tile; the blocked-end stack is taken on the third grab.
+
+| Hand | Item | Grab ticks | Offsets from first grab |
+| --- | --- | --- | --- |
+| 1 | Iron plate | 2, 3, 4, 5 | 0, 1, 2, 3 |
+| 2 | Copper cable | 13, 14, 15, 17 | 0, 1, 2, 4 |
+| 3 | Copper cable | 25, 26, 27, 29 | 0, 1, 2, 4 |
+| 4 | Copper cable | 37, 38, 39, 41 | 0, 1, 2, 4 |
+| 5 | Iron plate | 49, 50, 51, 53 | 0, 1, 2, 4 |
+
+Together these controls establish a mirroring-dependent first choice for the south port of this eastbound,
+right-priority splitter: **line 7 unmirrored, line 8 mirrored**, when both ingredients are needed. Mirroring
+does not change the observed first-hand or later-hand grab timing. It changes which item the machine receives
+first, so the subsequent recipe buffering and hand sequence follow that choice.
+
+Validated captures are under ignored `work/belt-pickup/turbo-splitter-mirrored-swap-02/`, with all three variants
+in separate subdirectories. The regression asserts the untouched other line, consumed-ID trace, initial stock,
+all complete hands and Sidecar's unsupported warning in each case. It does not establish other ports, cardinal
+orientations, priorities, filters or supply conditions.
 
 ## Simulator impact and next control
 
@@ -124,8 +160,8 @@ It does not yet establish a general splitter timing/routing rule, so the baselin
 or Sidecar change**. Sidecar still emits the existing
 `splitter` warning and omits pickup geometry/preferred lane; normalizing turbo speed does not capture routing.
 
-The ingredient swap confirms that this first choice follows a physical line and leaves the timing limitation
-unchanged. It supplies no new general routing rule to implement, so the simulator and Sidecar remain unchanged.
-Next, flip only the target inserter's mirroring with the swapped ingredients retained to test whether preference
-moves to line 8. Mirroring, opposite-port, priority/filter and both-outlets-blocked controls remain unmeasured.
-No general splitter support is claimed. Continue with turbo speed only.
+The ingredient swap confirms a physical line preference, and mirroring switches that preference from line 7
+to line 8 without changing the timing limitation. This gives a local selection rule but no general splitter
+routing model, so the simulator and Sidecar remain unchanged. Opposite-port, priority/filter and
+both-outlets-blocked controls remain unmeasured. No general splitter support is claimed. Continue with turbo
+speed and one controlled change at a time.
