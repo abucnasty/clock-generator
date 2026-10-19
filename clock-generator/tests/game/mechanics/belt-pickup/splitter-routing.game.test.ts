@@ -72,15 +72,18 @@ for (const speed of BELT_SPEEDS) for (const variant of [
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/splitter-pickup.json"), "utf8")) as {
             initial: {lines: Line[]; output_priority: string; filter?: {name: string; quality: string; comparator: string}; mirrored: boolean}; samples: Sample[];
         };
+        expect(report.initial).toMatchObject({splitter_name: `${speed.prefix}splitter`, splitter_direction: 4,
+            output_priority: variant.priority, input_priority: "none", mirrored: variant.mirrored,
+            inserter_direction: 12, use_filters: false, drain_present: true,
+            recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
+        if (variant.filter) expect(report.initial.filter).toEqual({name: variant.filter, quality: "normal", comparator: "="});
+        else expect(report.initial.filter).toBeUndefined();
         if (speed.name !== "turbo") {
             expect(report.samples).toHaveLength(60);
             verifySplitterSpeedReport(report, fixture, scratch, `${speed.name}/${variant.name}`, result.recording.config, `${speed.prefix}splitter`);
             return;
         }
         expect(report.samples).toHaveLength(60);
-        expect(report.initial).toMatchObject({output_priority: variant.priority, mirrored: variant.mirrored});
-        if (variant.filter) expect(report.initial.filter).toEqual({name: variant.filter, quality: "normal", comparator: "="});
-        else expect(report.initial.filter).toBeUndefined();
         const hands: Hand[] = [];
         for (const [index, sample] of report.samples.entries()) {
             const before = report.samples[index - 1]?.held ?? 0;

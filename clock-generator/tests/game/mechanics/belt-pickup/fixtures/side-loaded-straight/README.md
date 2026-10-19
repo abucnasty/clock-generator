@@ -493,8 +493,8 @@ named `yellow` in the entry-test identifiers. Each capture asserts the actual pr
 incoming stack-four supply, empty unused lanes and native hand counts. Existing single-stream profiles
 are compared with the simulator; slower two-stream merges retain unsupported capture warnings.
 
-The 180 natural entry cases cover backed-up supply, reflection, the other three inner-stream rotations, every distinct
-quarter-tile arrival phase, repeated hands, both mixed-item arrangements, pause/resume and outlet
+The 180 natural entry cases cover backed-up supply, reflection, the other three inner-stream rotations, each tick offset in the
+quarter-tile gate-release cycle, repeated hands, both mixed-item arrangements, pause/resume and outlet
 block/release. Operating-machine controls leave inventories alone; repeated timing controls clear only
 the destination inventories after observing each tick. Removing the ingredient drain supplies the
 backed-up variants. A fixed pause at tick 124 can interrupt a partial hand at slower speeds, so timings

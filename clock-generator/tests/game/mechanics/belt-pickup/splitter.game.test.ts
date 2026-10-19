@@ -110,16 +110,16 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, mirrored, label} of 
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/splitter-pickup.json"), "utf8")) as {
             initial: {lines: Line[]; downstream: Line[]}; samples: Sample[];
         };
+        expect(report.initial).toMatchObject({splitter_name: `${speed.prefix}splitter`, splitter_direction: 4,
+            drain_present: !blockedDrain, output_priority: outputPriority, input_priority: "none", inserter_direction: 12, mirrored, use_filters: false,
+            recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
+        expect(report.initial).not.toHaveProperty("filter");
         if (speed.name !== "turbo") {
             expect(report.samples).toHaveLength(60);
             verifySplitterSpeedReport(report, fixture, scratch, `${speed.name}/${name}`, result.recording.config, `${speed.prefix}splitter`);
             return;
         }
         expect(report.samples).toHaveLength(60);
-        expect(report.initial).toMatchObject({splitter_name: "turbo-splitter", splitter_direction: 4,
-            drain_present: !blockedDrain, output_priority: outputPriority, input_priority: "none", inserter_direction: 12, mirrored, use_filters: false,
-            recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
-        expect(report.initial).not.toHaveProperty("filter");
         expect(report.initial.lines.map(l => l.length)).toEqual([179 / 256, 179 / 256, 179 / 256, 179 / 256, 0.5, 0.5, 0.5, 0.5]);
         expect(stacks(report.initial.lines[6]).map(s => [s.at, s.item, s.count])).toEqual([[0, line7Item, 4], [0.25, line7Item, 4]]);
         expect(stacks(report.initial.lines[7]).map(s => [s.at, s.item, s.count])).toEqual([[0, line8Item, 4], [0.25, line8Item, 4]]);

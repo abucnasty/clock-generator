@@ -144,18 +144,18 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightM
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/splitter-two-pickups.json"), "utf8")) as {
             initial: {targets: unknown[]; state: Sample}; samples: Sample[];
         };
-        if (speed.name !== "turbo") {
-            expect(report.samples).toHaveLength(120);
-            verifySplitterSpeedReport(report, fixture, scratch, `${speed.name}/${name}`, result.recording.config, `${speed.prefix}splitter`);
-            return;
-        }
-        expect(report.samples).toHaveLength(120);
         expect(report.initial).toMatchObject({recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
         expect(report.initial.targets).toMatchObject([
             {inserter_direction: 12, mirrored: leftMirrored, output_priority: outputPriorities[0], input_priority: "none"},
             {inserter_direction: 4, mirrored: rightMirrored, output_priority: outputPriorities[1], input_priority: "none"},
         ]);
         expect(report.initial).toMatchObject({drain_present: !blockedDrain});
+        if (speed.name !== "turbo") {
+            expect(report.samples).toHaveLength(120);
+            verifySplitterSpeedReport(report, fixture, scratch, `${speed.name}/${name}`, result.recording.config, `${speed.prefix}splitter`);
+            return;
+        }
+        expect(report.samples).toHaveLength(120);
         const expected = measured[name];
         {
             for (let index = 0; index < 2; index++) {
