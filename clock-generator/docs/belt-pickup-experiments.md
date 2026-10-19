@@ -27,7 +27,19 @@ Publishing remains on hold. **Splitter implementation is out of scope**; its mea
 
 **Tested** means native measurements are documented for the named scenario; it does not mean every phase,
 orientation or topology is verified, or that the simulator supports it. **Not tested** marks combinations
-without documented native evidence in this investigation. Normal means the standard transport-belt speed.
+without documented native evidence in this investigation. A suffix identifies an unresolved limitation:
+
+- **simulator timing mismatch**: the production simulator predicts different grab ticks from the game.
+- **generator result mismatch**: a generated clock misses its expected output or recovery in the game;
+  the underlying cause is not yet isolated.
+- **experimental merge stock mismatch**: the experimental rule predicts the wrong stock movements or supplying
+  stream, even when grab ticks agree. This is not a production simulator comparison.
+- **no simulator support**: measurements exist, but no supported production model is available for that case.
+
+Remove a mismatch suffix once the corrected model passes the corresponding native regression; the status then
+becomes **Tested**. Remove a support suffix only after support is implemented and verified. Plain **Tested**
+records coverage with no additional disagreement flagged here; it does not imply every model detail was compared.
+Normal means the standard transport-belt speed.
 Offline expectations and classifier-only checks do not count as native timing coverage. The speed backfill uses
 16-item hands and four-item belt stacks. Historical smaller-hand/interrupted-window/staggered-lane controls
 are not an exhaustive cross-speed matrix.
@@ -40,22 +52,24 @@ Front-facing rows cover the measured layouts and both mirroring states.
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
 | Moving, one matching lane — all three geometries | Tested | Tested | Tested | Tested |
-| Moving, same item on both lanes — all three geometries | Tested | Tested | Tested | Tested; entrance counterexample |
-| Backed up, each ingredient isolated — all three geometries | Tested | Tested | Tested; refill counterexamples | Tested; refill counterexamples |
-| Backed up, same item on both lanes — side pickups | Tested | Tested | Tested | Tested; refill counterexamples |
-| Reflected side pickups, same item — moving, base release | Tested | Tested | Tested | Tested; entrance counterexample |
-| Reflected side pickups, same item — backed up | Tested | Tested | Tested | Tested; refill counterexamples |
+| Moving, same item on both lanes — all three geometries | Tested | Tested | Tested | Tested; simulator timing mismatch (entrance) |
+| Backed up, each ingredient isolated — all three geometries | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
+| Backed up, same item on both lanes — side pickups | Tested | Tested | Tested | Tested; simulator timing mismatch (refill) |
+| Reflected side pickups, same item — moving, base release | Tested | Tested | Tested | Tested; simulator timing mismatch (entrance) |
+| Reflected side pickups, same item — backed up | Tested | Tested | Tested | Tested; simulator timing mismatch (refill) |
 | Backed-up straight-belt demand / insertion-limit controls | Tested | Tested | Tested | Tested |
-| Front exit, backed up — different and same items | Tested | Tested | Tested; refill counterexample | Tested; refill counterexample |
-| Over-the-hood exit, moving — different items | Tested | Tested | Tested | Tested (compact layout) |
-| Over-the-hood exit, moving — same item on both lanes | Tested | Tested | Tested | Tested (compact layout) |
-| Over-the-hood exit, backed up — different and same items | Tested | Tested | Tested; finite refill | Tested (compact layout); finite refill |
-| Front entrance, moving — different items | Tested | Tested | Tested | Tested (compact layout) |
-| Front entrance, moving — same item on both lanes | Tested | Tested | Tested | Tested (compact layout) |
-| Front entrance, backed up — different and same items | Tested | Tested | Tested; refill counterexample | Tested; refill counterexample |
+| Front exit, backed up — different and same items | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
+| Over-the-hood exit, moving — different items | Tested | Tested | Tested | Tested |
+| Over-the-hood exit, moving — same item on both lanes | Tested | Tested | Tested | Tested |
+| Over-the-hood exit, backed up — different and same items | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
+| Front entrance, moving — different items | Tested | Tested | Tested | Tested |
+| Front entrance, moving — same item on both lanes | Tested | Tested | Tested | Tested |
+| Front entrance, backed up — different and same items | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
 
 The downstream front-exit fixture places the inserter on the next belt tile, physically blocking continuation.
 The supplied over-the-hood exit is a separate approach: its inserter sits upstream and leaves the downstream route open.
+Its moving stock agrees with the experimental replay, but Sidecar still marks this approach unsupported;
+that capture limitation is separate from a simulator timing mismatch.
 Normal moving front-entrance controls use a paired compact assembler layout: the original plant needs a tunnel
 longer than normal underground range. Equivalent compact controls were also measured at the other speeds.
 Front-entrance phase sweeps verify actual first-grab positions, rather than assuming gate-delay labels imply
@@ -71,15 +85,17 @@ These are 258 first-hand controls; independent lane alignment and repeated throu
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
 | Moving inner-only and outer-only streams, first hand, release 16 | Tested | Tested | Tested | Tested |
-| Moving two-stream merge, first hand, release 16 | Tested | Tested | Tested | Tested |
-| Single-/two-stream first hands, release 17 | Tested | Tested | Tested | Tested |
+| Moving two-stream merge, first hand, release 16 | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
+| Single-stream first hands, release 17 | Tested | Tested | Tested | Tested |
+| Two-stream first hands, release 17 | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
 | Reflected side feeds and rotated inner feed, first hands | Tested | Tested | Tested | Tested |
-| Backed-up inner-only, outer-only and two-stream first hands | Tested | Tested | Tested | Tested |
-| Repeated same-item merge, release 16 | Tested | Tested; routing counterexample | Tested; unsupported | Tested; unsupported |
-| Repeated same-item merge, release 17 | Tested | Tested; unsupported | Tested; unsupported | Tested; unsupported |
-| Repeated merge: pause/resume, outlet block/release and reflection | Tested | Tested; unsupported | Tested; unsupported | Tested; unsupported |
-| Repeated different-item merge, both ingredient arrangements | Tested | Tested; unsupported | Tested; unsupported | Tested; unsupported |
-| Operating mixed-item merge starvation | Tested | Tested | Tested | Tested |
+| Backed-up inner-only and outer-only first hands | Tested | Tested | Tested | Tested |
+| Backed-up two-stream first hands | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
+| Repeated same-item merge, release 16 | Tested | Tested; experimental merge stock mismatch; no simulator support | Tested; no simulator support | Tested; no simulator support |
+| Repeated same-item merge, release 17 | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
+| Repeated merge: pause/resume, outlet block/release and reflection | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
+| Repeated different-item merge, both ingredient arrangements | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
+| Operating mixed-item merge starvation | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
 | Seeded entry-window cutoff and compression controls | Tested | Tested | Tested | Tested |
 
 All four speeds now have repeated native controls. Only the bounded turbo merge is supported by the engine;
@@ -93,15 +109,17 @@ rather than every possible relative phase of independent incoming streams.
 | Single splitter: ingredients, mirroring, ports, filters and priority controls | Tested | Tested | Tested | Tested |
 | Two serial splitters: independent mirroring and priority controls | Tested | Tested | Tested | Tested |
 | Seeded splitter routing / admission boundaries | Tested | Tested | Tested | Tested |
-| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; counterexamples | Tested; counterexamples | Tested; counterexamples |
+| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; generator result mismatch | Tested; generator result mismatch | Tested; generator result mismatch |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
-| Belt drops, stack sizes 1–4 | Tested | Tested | Tested | Tested |
+| Belt drops onto an empty tile, first hand, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 
 The 39 added ordinary clock checks are complete: 29 meet both target and recovery, eight miss baseline targets,
 and two meet baseline but fail exact recovery. Slower merge-clock generation is blocked by the intentionally
 turbo-only supported merge schema and remains **Not tested**. Splitter backfills restore observation-only probes;
-the production routing kernel and splitter implementation remain out of scope.
+the production routing kernel and splitter implementation remain out of scope. All splitter rows record native
+research only, with no supported simulator comparison. The belt-drop row covers the first hand on an empty
+receiving tile; the normal-speed occupied-tile limitation is described below.
 
 ## Tick-pattern matrix
 
