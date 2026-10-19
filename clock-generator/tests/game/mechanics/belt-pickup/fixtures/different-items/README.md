@@ -1,5 +1,53 @@
 # Moving input pickup: different items on the two lanes
 
+## Four-speed backfill
+
+The 72 controls cover all four speeds, three pickup geometries, moving/backed-up supply and isolated
+near/far ingredients or the same ingredient on both lanes. Fresh staged inserters stay circuit-gated for
+64 ticks while the naturally fed lanes fill. Each capture then records repeated hands through tick1300,
+without placing belt stock or editing held items. Slower layouts shorten long ingredient tunnels while
+retaining the pickup and plant positions; actual speed, reach, initial stock and supply motion are asserted.
+
+The production pickup model matches56 controls. The remaining16 are recorded counterexamples:
+
+- Fast backed-up single-lane supplies deplete, even on a straight belt. Later hands include `0,1,4,8`.
+- Normal backed-up supplies also deplete, including same-item two-lane supply. Single-lane hands eventually
+  reach `0,8,16,24`; two lanes help but do not guarantee consecutive grabs.
+- Normal moving entrance pickup with the same item on both lanes has a first hand `0,1,3,4` where the
+  point-based lane model predicts `0,1,2,3`. At the delayed tick the hand is visibly travelling between lanes.
+  Later hands agree with the independent stock replay. This observation does not yet establish a general
+  arm-travel rule.
+
+[Compact measured expectations](speed-expectations.json) retain actual hand patterns, counts, simulator
+mismatch counts/first differences and independent-replay results. A passing regression preserves these known
+limitations; it does not claim simulator parity for the16 counterexamples. Comparing every depleted hand to
+fresh full stock would also be invalid: the production comparison instead seeds observed full stock once and
+retains its holes between hands, supplying only observed arm-arrival/drop boundaries.
+
+The earlier three manual ingredient-demand controls are now automated at all four speeds. All12 pass:
+eligible near stock13 wins even when far stock is zero; swapping ingredients preserves physical preference;
+near stock14 reaches the measured insertion limit and selection switches to the far ingredient. Machine
+inventory is staged once and remains untouched during these demand captures.
+
+From `clock-generator/`, choose one case and a fresh retained directory:
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-run npm run test:game -- tests/game/mechanics/belt-pickup/belt-speed-coverage.game.test.ts -t '^express-straight-belt-moving-accumulator$'
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-demand npm run test:game -- tests/game/mechanics/belt-pickup/ingredient-demand.game.test.ts
+```
+
+Use `BELT_SPEED_REPLAY_DIR` instead of `BELT_SPEED_CAPTURE_DIR` to check existing reports without launching
+Factorio. Each case retains its exact blueprint/config, recorder output and compact findings. Updating a
+baseline requires intentional discovery with `BELT_SPEED_DISCOVERY=1`, review of the native reports and a
+normal regression replay afterward. Full raw data stays in ignored `work/` directories.
+
+Evidence: `work/belt-speed-coverage/ordinary-gated-04/` and `ordinary-gated-05/` contain the72 staged controls;
+`demand-01/` contains the12 demand controls. Earlier express captures remain in `ordinary-01/`. Incorrect
+setup/gate smoke runs are excluded from these findings. Absolute arm-arrival timing is not independently
+calibrated by the production comparison.
+
+## Original experiment
+
 These scaffolds compare a straight belt, underground entrance and underground exit, with accumulators on lane 1
 and supercapacitors on lane 2. The input inserter's nearest lane is 1. The belt drains continuously at its far end.
 `config.json` uses a half-tile pickup, conservatively covering all three geometries; Sidecar captures the straight
@@ -88,7 +136,7 @@ establish insertion thresholds for other setups or behavior with moving supply, 
 
 The retained scenarios, runners, recordings, detailed samples and simulator comparisons are local under
 `work/belt-pickup/mixed-demand-02/`, `work/belt-pickup/mixed-demand-swapped-01/`, and
-`work/belt-pickup/mixed-demand-limit-01/` at the repository root. These observations are not part of the automated
+`work/belt-pickup/mixed-demand-limit-01/` at the repository root. The original observations were manual; the four-speed controls above now automate this setup. They were not part of the original automated
 game regression suite. Reproduction requires the staged setup and initial
 inventories above; the backed-up capture command earlier in this file clears inputs and therefore does not reproduce
 this demand experiment.
