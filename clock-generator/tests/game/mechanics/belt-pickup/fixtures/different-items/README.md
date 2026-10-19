@@ -178,3 +178,54 @@ Underground exit:
 ![Underground-exit scaffold](underground-exit-scaffold.jpg)
 
 See the [screenshot guide](../../../../README.md#scaffold-screenshots) for capture settings and regeneration.
+
+## Moving release-phase coverage
+
+`ordinary-phase.game.test.ts` shifts the gate release after the same 600-tick staged saturation, keeping layout,
+source stock, filters, mirroring and destination clearing fixed. The [phase probe](phase-probe.lua) verifies the
+actual transport speed/prototypes and paired ingredient tunnels, keeps the target circuit-disabled and empty
+through release, and records native stacks and hand positions. It clears machine inventories after observation;
+these are isolated first-hand collection controls, not operating throughput measurements.
+
+| Speed | Distinct quarter-spacing phases | Geometries × lane contents | First-hand controls |
+| --- | --- | --- | --- |
+| Turbo | 2 | 3 × 3 | 18 |
+| Express | 8 | 3 × 3 | 72 |
+| Fast | 4 | 3 × 3 | 36 |
+| Normal | 8 | 3 × 3 | 72 |
+
+The geometries are straight, underground entrance and underground exit. Contents are matching near lane,
+matching far lane, or the same item on both lanes. The 36 release-at-64 controls reuse the earlier captures;
+162 positive release shifts and an independent normal entrance repeat were captured separately. An offline
+coverage assertion verifies all **198 actual first-grab phase/scenario combinations**, including each lane's
+observed position modulo 64, rather than inferring coverage from release labels. All first grabs occurred two
+ticks after release. Lane alignment remains that of the supplied scaffold; arbitrary independently shifted lanes
+and sub-grid placements are separate questions.
+
+One case family exposes a simulator gap:
+
+| Geometry and contents | Moving | Actual first-grab phases (units of 1/256 tile, modulo 64) | Native grab offsets | Total pickup ticks | Current model offsets |
+| --- | --- | --- | --- | --- | --- |
+| Normal underground entrance, both lanes same item | true | 56,48,40,32 | 0,1,3,4 | 5 | 0,1,2,3 |
+| Same setup, remaining phases | true | 24,16,8,0 | 0,1,2,3 | 4 | 0,1,2,3 |
+
+The first row corresponds to gate delays 0–3, and includes the independently repeated delay 0 result. Matching
+far-lane stock exists while the hand moves between lanes during the extra tick. This points to a hand-movement
+constraint requiring further investigation; it is not a calibrated universal lane-switch delay. The other 194
+phase/scenario combinations agree with the phase-seeded production pickup mode and independent stock replay.
+
+The [compact baseline](phase-expectations.json) preserves native patterns and the four explicit model/replay
+counterexamples. Native first-grab time conditions the comparison; the simulator is seeded once from gated stock,
+without fitting later grabs or resynchronizing lane stock. A future model fix should update the comparison results,
+not rewrite measured native timing. The 199 replay checks (198 controls plus the coverage assertion) pass.
+
+```bash
+# Fresh native evidence for a selected phase; never reuse a populated capture directory.
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-phase npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-phase.game.test.ts -t '^normal-underground-entrance-moving-same-item-phase-1$'
+
+# Recheck all retained evidence without launching Factorio.
+ORDINARY_PHASE_BASELINE_DIR=../work/belt-speed-coverage/ordinary-gated-05 ORDINARY_PHASE_REPLAY_DIR=../work/belt-speed-coverage/ordinary-phase-02 npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-phase.game.test.ts
+```
+
+Raw reports remain ignored under the two paths above. Failed setup pilots are excluded from findings. No production
+simulator change or publication is included in this phase sweep.
