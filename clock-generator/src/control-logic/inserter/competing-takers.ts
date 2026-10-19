@@ -1,6 +1,6 @@
 import { ControlLogic } from "../control-logic";
 import { handSizeFor } from "../../entities";
-import { EntityState, MachineState, ReadableEntityStateRegistry } from "../../state";
+import { EntityState, LiveQuantity, MachineState, ReadableEntityStateRegistry } from "../../state";
 import { InserterStateMachine } from "./inserter-state-machine";
 
 /**
@@ -41,7 +41,7 @@ export function orderIsOpen(quantity: number, has_taker_history: boolean, bigges
 export class InserterUpdates implements ControlLogic {
     /** Competing takers whose ranked order differs from their original places in the list. */
     private readonly groups: {
-        machine: MachineState; item: string; biggest_hand: number; places: number[];
+        machine: MachineState; item: string; stock: LiveQuantity; biggest_hand: number; places: number[];
         original: InserterStateMachine[]; ranked: InserterStateMachine[]; open: boolean;
     }[] = [];
     private readonly updates: InserterStateMachine[];
@@ -73,7 +73,8 @@ export class InserterUpdates implements ControlLogic {
             if (ranked.every((member, index) => member === members[index])) continue;
             const item = machine.machine.output.item_name;
             const biggest_hand = Math.max(...places.map(place => handSizeFor(inserters[place].inserter_state.inserter, item)));
-            this.groups.push({ machine, item, biggest_hand, places, original: members, ranked, open: false });
+            const stock = new LiveQuantity(machine.inventoryState, item);
+            this.groups.push({ machine, item, stock, biggest_hand, places, original: members, ranked, open: false });
         }
     }
 
@@ -81,7 +82,7 @@ export class InserterUpdates implements ControlLogic {
         // Decide every group's order before any inserter can change a machine's stock this tick.
         for (const group of this.groups) {
             const {machine, item, biggest_hand} = group;
-            const quantity = machine.inventoryState.getQuantity(item);
+            const quantity = group.stock.get();
             const open = orderIsOpen(quantity,
                 quantity > 0 && quantity < biggest_hand && machine.lastOutputTaker.has(item), biggest_hand);
             if (open !== group.open) {

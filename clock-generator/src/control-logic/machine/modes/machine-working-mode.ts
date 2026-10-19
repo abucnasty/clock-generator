@@ -1,4 +1,4 @@
-import { InventoryItem, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
+import { InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
 import { ENERGY_BUFFER_TICKS, MachineOutput, amountIgnoredByProductivity } from "../../../entities";
 import { MachineMode } from "./machine-mode";
 
@@ -17,9 +17,54 @@ const PROGRESS_EPSILON = 1e-9;
 export class MachineWorkingMode implements MachineMode {
     public readonly status = MachineStatus.WORKING;
 
+    /**
+     * What the per-tick questions read without going through the machine's object tree: values of the machine, which
+     * never changes, and live inventory reads resolved on first use (the state's inventories are filled by its
+     * factory). One object, so the simulation state stays the plain fields alone.
+     */
+    private readonly hot: {
+        crafts_per_tick: number;
+        output_amount: number;
+        output_stack_size: number;
+        amount_per_bonus: number;
+        bonus_per_craft: number;
+        by_products: readonly { output: MachineOutput; max_stack_size: number; amount_per_craft: number }[];
+        /** Energy a tick of work takes, in MJ; 0 without a fuel slot */
+        energy_per_tick: number;
+        output_quantity: LiveQuantity | null;
+        fuel_quantity: LiveQuantity | null;
+        /** What canStartCraft asks, in recipe order: the held quantity against a craft's need */
+        craft_needs: { quantity: LiveQuantity; required: number }[] | null;
+        /** What a craft takes out, in `machine.inputs` order */
+        craft_takes: { inventory: WritableInventoryState; item_name: string; amount_per_craft: number }[] | null;
+        by_product_quantities: LiveQuantity[] | null;
+    };
+
     constructor(
         private readonly state: MachineState
-    ) { }
+    ) {
+        const machine = state.machine;
+        const output = machine.output.ingredient;
+        this.hot = {
+            crafts_per_tick: machine.crafting_rate.crafts_per_tick,
+            output_amount: output.amount,
+            output_stack_size: output.item.stack_size,
+            amount_per_bonus: output.amount - amountIgnoredByProductivity(output),
+            bonus_per_craft: machine.bonus_productivity_rate.bonus_per_craft,
+            by_products: machine.outputs.slice(1).map(by_product => ({
+                output: by_product,
+                max_stack_size: by_product.outputBlock.max_stack_size,
+                amount_per_craft: by_product.amount_per_craft.toDecimal(),
+            })),
+            energy_per_tick: machine.fuel_slot === undefined ? 0
+                : machine.fuel_slot.energy_per_craft_mj * machine.crafting_rate.crafts_per_tick,
+            output_quantity: null,
+            fuel_quantity: null,
+            craft_needs: null,
+            craft_takes: null,
+            by_product_quantities: null,
+        };
+    }
 
     public onEnter(fromMode: MachineMode): void { }
 
@@ -27,7 +72,7 @@ export class MachineWorkingMode implements MachineMode {
 
     public executeForTick(): void {
         const powered_share = this.poweredShareOfTick();
-        let budget = this.state.machine.crafting_rate.crafts_per_tick * powered_share;
+        let budget = this.hot.crafts_per_tick * powered_share;
         let worked = false;
 
         this.releaseHeldProducts();
@@ -48,7 +93,7 @@ export class MachineWorkingMode implements MachineMode {
             this.advanceBonusProgress(step);
 
             if (progress >= 1 - PROGRESS_EPSILON) {
-                this.state.pendingOutput += this.state.machine.output.ingredient.amount;
+                this.state.pendingOutput += this.hot.output_amount;
                 this.releaseHeldProducts();
                 this.addByProducts();
                 this.state.craftCount += 1;
@@ -63,6 +108,11 @@ export class MachineWorkingMode implements MachineMode {
 
     private get inventory_state(): WritableInventoryState {
         return this.state.inventoryState;
+    }
+
+    private outputQuantity(): number {
+        const quantity = this.hot.output_quantity ??= new LiveQuantity(this.inventory_state, this.state.machine.output.ingredient.name);
+        return quantity.get();
     }
 
     public get output_item(): Readonly<InventoryItem> {
@@ -81,7 +131,7 @@ export class MachineWorkingMode implements MachineMode {
 
     /** Held products go to the output a craft's amount at a time, or what is left of them */
     private nextHeldAmount(): number {
-        return Math.min(this.state.pendingOutput, this.state.machine.output.ingredient.amount);
+        return Math.min(this.state.pendingOutput, this.hot.output_amount);
     }
 
     /**
@@ -90,10 +140,8 @@ export class MachineWorkingMode implements MachineMode {
      */
     private releaseHeldProducts(): void {
         // a full bar pays the amount less what the recipe ignores for productivity: 1 of the 2 pentapod eggs
-        const output = this.state.machine.output.ingredient;
-        const amount_per_bonus = output.amount - amountIgnoredByProductivity(output);
         while (this.state.bonusProgress.progress >= 1 - PROGRESS_EPSILON) {
-            this.state.pendingOutput += amount_per_bonus;
+            this.state.pendingOutput += this.hot.amount_per_bonus;
             this.state.productsFinished += 1;
             this.state.bonusProgress.progress = Math.max(0, this.state.bonusProgress.progress - 1);
         }
@@ -116,7 +164,7 @@ export class MachineWorkingMode implements MachineMode {
      */
     public outputFullReason(): string | null {
         const output_item = this.output_item;
-        const amount_per_craft = this.state.machine.output.ingredient.amount;
+        const amount_per_craft = this.hot.output_amount;
         if (this.holdsProducts()) {
             return `machine holds ${output_item.item_name} of a finished craft that does not fit under max stack size of ${this.state.machine.output.outputBlock.max_stack_size}`;
         }
@@ -155,13 +203,12 @@ export class MachineWorkingMode implements MachineMode {
         if (this.isCraftInProgress() && buffer > PROGRESS_EPSILON) {
             return false;
         }
-        return buffer < this.energyPerTick() - PROGRESS_EPSILON;
+        return buffer < this.hot.energy_per_tick - PROGRESS_EPSILON;
     }
 
     /** Energy the machine holds to work with, plus the burning item and the items waiting in the fuel slot, in MJ */
     private availableFuelEnergy(): number {
-        const slot = this.state.machine.fuel_slot;
-        if (!slot) {
+        if (!this.state.machine.fuel_slot) {
             return Infinity;
         }
         return this.energyBuffer() + this.fuelEnergy();
@@ -170,13 +217,8 @@ export class MachineWorkingMode implements MachineMode {
     /** Energy in the burning item plus the items waiting in the fuel slot, in MJ */
     private fuelEnergy(): number {
         const slot = this.state.machine.fuel_slot!;
-        return this.state.fuelProgress.energy_remaining_mj
-            + this.state.fuelInventory.getQuantity(slot.fuel.item_name) * slot.fuel.fuel_value_mj;
-    }
-
-    /** Energy a tick of work takes, in MJ */
-    private energyPerTick(): number {
-        return this.state.machine.fuel_slot!.energy_per_craft_mj * this.state.machine.crafting_rate.crafts_per_tick;
+        const fuel = this.hot.fuel_quantity ??= new LiveQuantity(this.state.fuelInventory, slot.fuel.item_name);
+        return this.state.fuelProgress.energy_remaining_mj + fuel.get() * slot.fuel.fuel_value_mj;
     }
 
     private energyBuffer(): number {
@@ -188,7 +230,7 @@ export class MachineWorkingMode implements MachineMode {
         if (!this.state.machine.fuel_slot) {
             return 1;
         }
-        return Math.min(1, this.energyBuffer() / this.energyPerTick());
+        return Math.min(1, this.energyBuffer() / this.hot.energy_per_tick);
     }
 
     /**
@@ -200,7 +242,7 @@ export class MachineWorkingMode implements MachineMode {
         if (!this.state.machine.fuel_slot) {
             return;
         }
-        const energy_per_tick = this.energyPerTick();
+        const energy_per_tick = this.hot.energy_per_tick;
         let buffer = this.energyBuffer();
         if (worked) {
             buffer -= Math.min(buffer, energy_per_tick);
@@ -236,11 +278,12 @@ export class MachineWorkingMode implements MachineMode {
     }
 
     private canStartCraft(): boolean {
-        const recipe = this.state.machine.metadata.recipe;
-        for (const ingredient of recipe.raw.ingredients) {
-            const available = MachineState.ingredientQuantity(this.state, ingredient.name);
-            const required = recipe.inputsPerCraft.get(ingredient.name)!.amount;
-            if (available < required) {
+        const needs = this.hot.craft_needs ??= this.state.machine.metadata.recipe.raw.ingredients.map(ingredient => ({
+            quantity: new LiveQuantity(MachineState.ingredientInventory(this.state, ingredient.name), ingredient.name),
+            required: this.state.machine.metadata.recipe.inputsPerCraft.get(ingredient.name)!.amount,
+        }));
+        for (let index = 0; index < needs.length; index++) {
+            if (needs[index].quantity.get() < needs[index].required) {
                 return false;
             }
         }
@@ -249,40 +292,44 @@ export class MachineWorkingMode implements MachineMode {
 
     /** By-products block the machine only once their stack is full */
     public byProductsHaveSpace(): boolean {
-        return this.byProducts.every(output => {
-            const quantity = this.inventory_state.getQuantity(output.item_name);
-            const max_stack_size = output.outputBlock.max_stack_size;
-            return quantity < max_stack_size && quantity + this.wholeItemsMadeByNextCraft(output) <= max_stack_size;
-        });
+        const by_products = this.hot.by_products;
+        if (by_products.length === 0) {
+            return true;
+        }
+        const quantities = this.hot.by_product_quantities ??= by_products.map(by_product =>
+            new LiveQuantity(this.inventory_state, by_product.output.item_name));
+        for (let index = 0; index < by_products.length; index++) {
+            const quantity = quantities[index].get();
+            const max_stack_size = by_products[index].max_stack_size;
+            if (quantity >= max_stack_size || quantity + this.wholeItemsMadeByNextCraft(by_products[index]) > max_stack_size) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    private get byProducts(): readonly MachineOutput[] {
-        return this.state.machine.outputs.slice(1);
+    private carryOf(by_product: { output: MachineOutput }): number {
+        return this.state.byProductCarry.get(by_product.output.item_name) ?? 0;
     }
 
-    private carryOf(output: MachineOutput): number {
-        return this.state.byProductCarry.get(output.item_name) ?? 0;
-    }
-
-    private wholeItemsMadeByNextCraft(output: MachineOutput): number {
-        return Math.floor(this.carryOf(output) + output.amount_per_craft.toDecimal() + PROGRESS_EPSILON);
+    private wholeItemsMadeByNextCraft(by_product: { output: MachineOutput; amount_per_craft: number }): number {
+        return Math.floor(this.carryOf(by_product) + by_product.amount_per_craft + PROGRESS_EPSILON);
     }
 
     /** A by-product is made at its expected amount: fractions carry over until they add up to a whole item */
     private addByProducts(): void {
-        for (const output of this.byProducts) {
-            const total = this.carryOf(output) + output.amount_per_craft.toDecimal();
+        for (const by_product of this.hot.by_products) {
+            const total = this.carryOf(by_product) + by_product.amount_per_craft;
             const whole = Math.floor(total + PROGRESS_EPSILON);
             if (whole > 0) {
-                this.inventory_state.addQuantity(output.item_name, whole);
+                this.inventory_state.addQuantity(by_product.output.item_name, whole);
             }
-            this.state.byProductCarry.set(output.item_name, Math.max(0, total - whole));
+            this.state.byProductCarry.set(by_product.output.item_name, Math.max(0, total - whole));
         }
     }
 
     private hasOutputSpaceFor(amount: number): boolean {
-        const output = this.state.machine.output.ingredient;
-        return this.inventory_state.getQuantity(output.name) + amount <= output.item.stack_size;
+        return this.outputQuantity() + amount <= this.hot.output_stack_size;
     }
 
     /**
@@ -290,11 +337,10 @@ export class MachineWorkingMode implements MachineMode {
      * start of the next tick, not on the tick it fills, and is held when its product does not fit.
      */
     private advanceBonusProgress(craft_progress: number): void {
-        const bonus_per_craft = this.state.machine.bonus_productivity_rate.bonus_per_craft;
-        if (bonus_per_craft <= 0) {
+        if (this.hot.bonus_per_craft <= 0) {
             return;
         }
-        this.state.bonusProgress.progress += craft_progress * bonus_per_craft;
+        this.state.bonusProgress.progress += craft_progress * this.hot.bonus_per_craft;
     }
 
     private addOutput(amount: number): void {
@@ -304,11 +350,13 @@ export class MachineWorkingMode implements MachineMode {
 
     private consumeInputsForCraft(): void {
         this.state.craftsStarted += 1;
-        this.state.machine.inputs.forEach(input => {
-            MachineState.ingredientInventory(this.state, input.ingredient.name).removeQuantity(
-                input.ingredient.name,
-                input.consumption_rate.amount_per_craft
-            );
-        })
+        const takes = this.hot.craft_takes ??= Array.from(this.state.machine.inputs.values(), input => ({
+            inventory: MachineState.ingredientInventory(this.state, input.ingredient.name),
+            item_name: input.ingredient.name,
+            amount_per_craft: input.consumption_rate.amount_per_craft,
+        }));
+        for (let index = 0; index < takes.length; index++) {
+            takes[index].inventory.removeQuantity(takes[index].item_name, takes[index].amount_per_craft);
+        }
     }
 }

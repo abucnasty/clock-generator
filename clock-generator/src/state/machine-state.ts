@@ -1,4 +1,4 @@
-import { InventoryState, WritableInventoryState } from "./inventory-state";
+import { InventoryState, LiveQuantity, WritableInventoryState } from "./inventory-state";
 import { FuelProgressState, ProgressState } from "./progress-state";
 import { EntityId, Machine } from "../entities";
 import { EntityState } from "./entity-state";
@@ -98,6 +98,28 @@ export class MachineState implements EntityState {
     public toString(): string {
         return `MachineState(${this.entity_id},recipe=${this.machine.metadata.recipe.name},status=${this.status})`;
     }
+}
+
+/**
+ * Live inventory records the per-tick questions read without a map lookup, fetched on first use. Caches only: they
+ * mirror what the inventories already hold, and a clone starts over with its own. Kept under a symbol so serialized
+ * states and state keys do not see them. A view is only built once every record it needs has its slot (zero counts);
+ * until then the questions fall back to `getQuantity`, which answers a missing slot with 0.
+ */
+const HOT_VIEWS = Symbol("machine-state hot views");
+
+interface HotViews {
+    output: { quantity: LiveQuantity; blocked_at: number } | null;
+    fuel: { quantity: LiveQuantity; limit: number } | null;
+    /** One per ingredient, in `machine.inputs` order, against its insertion limit (see takesNothing) */
+    inputs: { quantity: LiveQuantity; limit: number }[] | null;
+    /** The same views by ingredient name (see machineInputIsBlocked) */
+    inputs_by_name: Map<string, { quantity: LiveQuantity; limit: number }> | null;
+}
+
+function hotViewsOf(machineState: MachineState): HotViews {
+    type WithViews = MachineState & { [HOT_VIEWS]?: HotViews };
+    return (machineState as WithViews)[HOT_VIEWS] ??= { output: null, fuel: null, inputs: null, inputs_by_name: null };
 }
 
 function forMachine(machine: Machine): MachineState {
@@ -220,7 +242,15 @@ function waitsForOutput(machineState: MachineState, itemName: string, inserter_i
 
 function fuelIsBelowLimit(machineState: MachineState): boolean {
     const slot = machineState.machine.fuel_slot;
-    return slot !== undefined && machineState.fuelInventory.getQuantity(slot.fuel.item_name) < slot.automated_insertion_limit;
+    if (slot === undefined) {
+        return false;
+    }
+    const views = hotViewsOf(machineState);
+    const view = views.fuel ??= {
+        quantity: new LiveQuantity(machineState.fuelInventory, slot.fuel.item_name),
+        limit: slot.automated_insertion_limit,
+    };
+    return view.quantity.get() < view.limit;
 }
 
 /**
@@ -275,10 +305,26 @@ function machineInputIsBlocked(machineState: MachineState, ingredientName: strin
         return true;
     }
 
-    const input = machine.inputs.getOrThrow(ingredientName);
-    const currentQuantity = ingredientQuantity(machineState, input.ingredient.name);
+    const view = inputViewsOf(machineState).by_name.get(ingredientName);
+    if (view === undefined) {
+        const input = machine.inputs.getOrThrow(ingredientName);
+        return ingredientQuantity(machineState, input.ingredient.name) >= input.automated_insertion_limit.quantity;
+    }
+    return view.quantity.get() >= view.limit;
+}
 
-    return currentQuantity >= input.automated_insertion_limit.quantity;
+/** The ingredient quantities and insertion limits of the per-tick questions, set up once */
+function inputViewsOf(machineState: MachineState): { list: { quantity: LiveQuantity; limit: number }[]; by_name: Map<string, { quantity: LiveQuantity; limit: number }> } {
+    const views = hotViewsOf(machineState);
+    if (views.inputs === null) {
+        const entries = Array.from(machineState.machine.inputs.values(), input => [input.ingredient.name, {
+            quantity: new LiveQuantity(ingredientInventory(machineState, input.ingredient.name), input.ingredient.name),
+            limit: input.automated_insertion_limit.quantity,
+        }] as const);
+        views.inputs = entries.map(([, view]) => view);
+        views.inputs_by_name = new Map(entries);
+    }
+    return { list: views.inputs, by_name: views.inputs_by_name! };
 }
 
 /**
@@ -297,8 +343,9 @@ function takesNothing(machineState: MachineState): boolean {
     if (machineIsOutputBlocked(machineState)) {
         return true;
     }
-    for (const input of machine.inputs.values()) {
-        if (ingredientQuantity(machineState, input.ingredient.name) < input.automated_insertion_limit.quantity) {
+    const list = inputViewsOf(machineState).list;
+    for (let index = 0; index < list.length; index++) {
+        if (list[index].quantity.get() < list[index].limit) {
             return false;
         }
     }
@@ -306,12 +353,12 @@ function takesNothing(machineState: MachineState): boolean {
 }
 
 function machineIsOutputBlocked(machineState: MachineState): boolean {
-    const machine = machineState.machine;
-
-    const outputBlock = machine.output.outputBlock;
-    const currentQuantity = machineState.inventoryState.getQuantity(outputBlock.item_name);
-
-    return currentQuantity >= outputBlock.ingredients_blocked_at
+    const views = hotViewsOf(machineState);
+    const view = views.output ??= {
+        quantity: new LiveQuantity(machineState.inventoryState, machineState.machine.output.outputBlock.item_name),
+        blocked_at: machineState.machine.output.outputBlock.ingredients_blocked_at,
+    };
+    return view.quantity.get() >= view.blocked_at;
 }
 
 
