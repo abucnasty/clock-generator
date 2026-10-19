@@ -89,7 +89,19 @@ jobs:
         run: npm run build
 
       - name: Generation tests
-        run: npm run test:generation -- --reporter=default
+        run: >-
+          npm run test:generation -- --reporter=default
+          --reporter=json --outputFile.json=../work/test-results/generation.json
+          --reporter=junit --outputFile.junit=../work/test-results/generation.xml
+
+      - name: Generation timing report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generation-test-results
+          path: work/test-results/generation.*
+          if-no-files-found: ignore
+          retention-days: 14
 
   ui:
     name: UI build

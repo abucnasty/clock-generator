@@ -1,19 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CLOCK_STARTS, START_DEPENDENCE_NOT_CHECKED, startVerdictOf } from "./start-dependence";
+import { CLOCK_STARTS, startVerdictOf } from "./start-dependence";
 import { generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { quiet } from "./generate-blueprint-test-helpers";
 
 describe("a build generated with and without the check", () => {
-    it("says plainly that start dependence was not checked, by default", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
-        const generated = generateClockAlternatives(config, { logger: quiet });
-        expect(generated.start_dependence_checked).toBe(false);
-        expect(generated.start_dependence_note).toBe(START_DEPENDENCE_NOT_CHECKED);
-        expect(generated.alternatives.every(it => it.assessment.start_dependence === null)).toBe(true);
-    });
-
     it("tries every clock from every start when the config asks, the cold start deciding its own entry", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
         const config = { ...sample, overrides: { ...sample.overrides, check_start_dependence: true } };

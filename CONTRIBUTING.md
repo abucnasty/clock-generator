@@ -34,6 +34,29 @@ Broad sample sweeps, the full game suite and repeated full test runs can be expe
 installation, so it cannot produce fresh game evidence. Report which checks ran and which were skipped; a skipped
 game test is not game verification.
 
+## Generation test runtime
+
+Group assertions about the same unmodified build under a shared `beforeAll`, so one generation serves them.
+Keep changed configs, explicit searches and start-dependence overrides as independent generations. Share
+results only within that test run; persisted generation caches can hide regressions.
+
+Prioritize reducing repeated generation and simulation work; adding workers is not a substitute, especially
+on CI runners with limited CPU capacity. Preserve every case, phase, clock offset and recovery check.
+CI uploads `generation-test-results` with JSON test outcomes and a JUnit report, including when assertions fail.
+Use the JUnit suite durations to include shared `beforeAll` work; individual test durations alone omit it.
+
+For a local timing comparison, run the same affected cases before and after, with the same Node version,
+worker count and machine load. Save a fresh report for each run, for example from `clock-generator/`:
+
+```bash
+npm run test:generation -- src/crafting/automation-science.generation.test.ts \
+  --maxWorkers=1 --reporter=default --reporter=json \
+  --outputFile=../work/test-results/generation-after.json
+```
+
+Compare elapsed time and CPU time as well as test names and outcomes. Use a single worker to isolate work
+reduction from scheduling changes; do not report a faster test from a less busy machine as a code speedup.
+
 ## Belt pickup experiment release hold
 
 The belt pickup experiment was developed on `integration/belt-pickup` and its stacked mechanics PRs.
