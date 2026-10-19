@@ -17,7 +17,7 @@
  * the build has stopped leaves the machines part empty or part full, which one that runs its course never does.
  * One run makes the trials of a loss one after the other.
  */
-import { CompositeControlLogic, TickControlLogic } from "../control-logic";
+import { SimulationTick } from "./runner/simulation-tick";
 import { ItemName } from "../data";
 import { Chest, Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { EntityState, InserterState } from "../state";
@@ -277,12 +277,7 @@ export function runLossTrials(
     let part_of_the_way_planned = loss.kind === "none";
 
     // a tick as the simulate step runs it
-    const control_logic = new CompositeControlLogic([
-        new TickControlLogic(context.tick_provider),
-        ...context.drills,
-        context.inserterUpdates(),
-        ...context.machines,
-    ]);
+    const control_logic = new SimulationTick(context);
     const now = () => context.tick_provider.getCurrentTick();
     const start_tick = now();
     const step = () => control_logic.executeForTick();
