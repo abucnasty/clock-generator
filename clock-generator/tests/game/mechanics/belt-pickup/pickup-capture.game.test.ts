@@ -76,8 +76,18 @@ for index, entry in ipairs(directions) do
             -- Side pickups keep their physical nearest lane regardless of endpoint or mirroring.
             assert(h.get_near_lane({position = {x = target.position.x + dy, y = target.position.y - dx}, mirroring = mirrored}, target) == 1)
             assert(h.get_near_lane({position = {x = target.position.x - dy, y = target.position.y + dx}, mirroring = mirrored}, target) == 2)
-            unclassified({position = {x = target.position.x - dx, y = target.position.y - dy},
-                direction = direction, mirroring = mirrored}, target)
+            local upstream = {position = {x = target.position.x - dx, y = target.position.y - dy},
+                direction = direction, mirroring = mirrored}
+            if endpoint == "exit" then
+                assert(h.get_near_lane(upstream, target) == (mirrored and 2 or 1))
+                assert(h.get_pickup_layout(upstream, target) == "over-hood-exit")
+                assert(h.get_pickup_length(upstream, target) == 0.5 and h.get_pickup_problem(upstream, target) == nil)
+                unclassified({position = upstream.position, direction = (direction + 8) % 16, mirroring = mirrored}, target)
+                unclassified({position = {x = upstream.position.x + dy * 0.125, y = upstream.position.y - dx * 0.125},
+                    direction = direction, mirroring = mirrored}, target)
+            else
+                unclassified(upstream, target)
+            end
             unclassified({position = front.position, direction = direction, mirroring = mirrored}, target)
             unclassified({position = {x = front.position.x + dy * 0.125, y = front.position.y - dx * 0.125},
                 direction = front.direction, mirroring = mirrored}, target)

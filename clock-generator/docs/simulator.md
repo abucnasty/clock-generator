@@ -82,7 +82,9 @@ One [front-facing underground exit case](../tests/game/mechanics/belt-pickup/fix
 also matches the existing simulator: a mirrored inserter north of a northbound exit selects lane 2 supercapacitors
 and fills its first backed-up hand at offsets `0,1,2,3`. The config explicitly supplies `near_lane: 2` and
 `pickup_length: 0.5`; neither lane is physically nearer. Sidecar 0.10.0 captures this front-exit preference from
-inserter mirroring and exports half-tile reach. Other unsupported inline pickups remain unclassified. Swapping the lane
+inserter mirroring and exports half-tile reach. Sidecar 0.11.0 also captures an inserter upstream of an exit and facing with belt travel as
+`pickup_layout: "over-hood-exit"`, with half-tile reach and lane 1 unmirrored / lane 2 mirrored.
+Other unsupported inline pickups remain unclassified. Swapping the lane
 ingredients changes the selected item to accumulators while retaining lane 2 and
 the same grab offsets, supporting lane preference over fixed recipe order for this orientation. Flipping only
 the inserter with those swapped ingredients selects lane 1 supercapacitors, again at `0,1,2,3`; the simulator matches
