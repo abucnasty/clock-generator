@@ -20,12 +20,14 @@ The compact layout is tested at every speed, making the speed comparison indepen
 | Exact plant geometry | 12 tested | 12 tested | 12 tested | Skipped: tunnel exceeds range |
 | Compact geometry | 12 tested | 12 tested | 12 tested | 12 tested |
 
-Each set of 12 covers both mirroring states × moving/backed-up supply × original/swapped/same-item lanes:
-**84 native first-hand controls**. All 36 shared plant/compact variants agree in first-grab timing, lane sequence,
-phase and replay results; only recipe/item/hardware metadata differs. Two earlier setup pilots are retained
-separately and do not add matrix coverage.
+Each base set of 12 covers both mirroring states × moving/backed-up supply × original/swapped/same-item lanes:
+**84 native first-hand controls**. An additional **174 moving controls** shift gate release through the remaining
+aligned arrival phases: **258 controls total**, comprising 216 moving and 42 backed-up first hands. Both native
+lanes cover all **2/8/4/8 phases** at turbo/express/fast/normal in each of the 42 layout/mirroring/content groups;
+no extra delays were needed to obtain distinct first-grab phases. Plant and compact controls agree wherever both
+layouts apply. Two earlier setup pilots are retained separately and do not add matrix coverage.
 
-The target stays circuit-disabled through tick64 after **1,600 ticks of natural supply saturation**. No held or
+The target stays circuit-disabled through tick64 plus the selected release delay after **1,600 ticks of natural supply saturation**. No held or
 belt stock is seeded, and machine inventories are cleared only once before observations. Guards check actual
 pickup/drop targets, mirrored state, legendary hand16, recipe/hardware, ingredient pairs and tier prototypes,
 two full four-item exposed stacks per lane, and native moving phase versus jammed stock. Compact output source
@@ -35,7 +37,8 @@ stub; pairing checks deliberately cover the three ingredient pairs, not every de
 ## Measured first hands
 
 Offsets begin with the first grab; total ticks include both first and last grab ticks. These are the measured
-aligned-lane phase at gate64, not every starting phase or an absolute arm-arrival model.
+aligned-lane phase at gate64. The additional phase sweep produces the moving families below; neither table
+claims an absolute arm-arrival model.
 
 | Speed | Moving | Different items: offsets | Total pickup ticks | Same item: offsets / total |
 | --- | --- | --- | --- | --- |
@@ -53,32 +56,55 @@ fallback. Moving same-item sequences are `PPFP` at turbo/express, `PPPF` at fast
 backed-up sequences are `PPPP` at turbo/express and `PPPF` at fast/normal (`P` preferred, `F` fallback).
 All exposed lines are half a tile; source internal lines3/4 remain empty in these captures.
 
-The independent moving-stock replay agrees on all **42 moving first hands**; the experimental finite jammed
+Across all aligned arrival phases, different-item hands have these measured families (`k` varies with phase):
+
+| Speed | Moving | Different items: offsets | Total pickup ticks | Same item: offsets / total |
+| --- | --- | --- | --- | --- |
+| Turbo | true | `0,1,k,k+2`, k = 2–3 | 5–6 | `0,1,2,3` / 4 |
+| Express | true | `0,1,k,k+d`, k = 2–4, d = 2–3 | 5–8 | `0,1,2,3` / 4 |
+| Fast | true | `0,1,k,k+4`, k = 2–5 | 7–10 | `0,1,2,3` / 4 |
+| Normal | true | `0,1,k,k+8`, k = 2–9 | 11–18 | `0,1,2,3` / 4 |
+
+These families match the front-entrance controls. Across phases, same-item lane sequences are `PPFP`/`PPPF`
+at turbo and `PPFP`/`PPPF`/`PPFF` at other speeds. Every observed first grab occurs two ticks after release;
+that observation is separate from the replay, which starts from native stock and first-grab timing.
+
+The independent moving-stock replay agrees on all **216 moving first hands**; the experimental finite jammed
 queue agrees on all **42 backed-up first hands**. Both condition on observed first grab/stock and do not prove
 absolute approach timing. The engine's simpler backed-up approximation still lacks the fast/normal finite-refill
 waits. No simulator or Sidecar implementation changes are included here.
 
 Sidecar retains **unsupported / inline**, warning for the captured input and omitting `near_lane`/`pickup_length`.
-The [frozen baseline](expectations.json) keeps native timing, physical lane selection and replay results separate
-from that support boundary. These are isolated first hands; repeated operating throughput, interruptions,
-independent lane alignment and a full gate-release phase sweep remain untested for this orientation.
+The [base expectations](expectations.json) and [shifted-phase expectations](phase-expectations.json) keep native
+timing, physical lane selection and replay results separate from that support boundary. Portable tests assert
+actual first-grab phase coverage in both lanes, preventing duplicate phases from silently shrinking coverage.
+These are isolated first hands; repeated operating throughput, interruptions and independently offset lanes
+remain untested for this orientation.
 
 ## Evidence and reproduction
 
-Final evidence is retained locally under `work/belt-speed-coverage/over-hood-base-02/`; `over-hood-base-01/`
+Final base evidence is retained locally under `work/belt-speed-coverage/over-hood-base-02/`, with 174 shifted
+controls under `work/belt-speed-coverage/over-hood-phase-01/`; `over-hood-base-01/`
 contains the two setup pilots, and `inline-exit-pilot-01/` the original ungated orientation pilot. The first native
 matrix pass had 12 host-assertion failures in express moving cases: an incoming stack entered the exposed
 window and was grabbed in the same tick, while the prior visible tail remained. The observer now tracks both
 endpoints' real IDs. An independent audit confirms all **336 grabs** (including 170 incoming-stack witnesses).
-All 84 retained controls pass without recapturing native data or changing measured behavior.
+All 84 retained base controls pass without recapturing native data or changing measured behavior. The combined
+258-control replay passes with frozen expectations; an independent audit confirms all **1,032 grabs** have one
+chosen-lane ID withdrawal and none from the opposite lane.
 
 ```bash
 # Native matrix; use a fresh retained directory.
 BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/over-hood-new npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts
 
-# Frozen evidence replay: no Factorio process starts.
-OVER_HOOD_REPLAY_DIR=../work/belt-speed-coverage/over-hood-base-02 npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts
+# Native shifted phases only; use another fresh directory.
+OVER_HOOD_PHASES=1 BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/over-hood-phases-new npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts -t 'release-'
+
+# Combined frozen evidence replay: no Factorio process starts.
+OVER_HOOD_PHASES=1 OVER_HOOD_REPLAY_DIR=../work/belt-speed-coverage/over-hood-base-02 OVER_HOOD_PHASE_REPLAY_DIR=../work/belt-speed-coverage/over-hood-phase-01 npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts
 ```
+
+In replay mode, a missing root for any selected case fails explicitly instead of starting Factorio.
 
 Both layout screenshots are registered but remain uncaptured while the user's graphical instance occupies one
 process slot. The screenshot helper needs a headless server plus its own graphical client.

@@ -1,6 +1,9 @@
 -- First-hand control: gate only the measured input; never seed/mutate belt or held stock.
 local entities, surface = ...
 local compact = options.compact
+local release_delay = options.release_delay or 0
+assert(release_delay >= 0 and release_delay <= 8)
+local gate_tick = 64 + release_delay
 local machine = capture.find_one(entities, function(e) return e.name == (compact and "assembling-machine-3" or "electromagnetic-plant") end, "destination")
 local input = capture.find_one(entities, function(e) return e.type == "inserter"
     and e.position.x == machine.position.x + (compact and 2 or 2.5)
@@ -45,9 +48,9 @@ local report = {version = script.active_mods.base, input = identity(input), mirr
     quality = input.quality.name, hand_capacity = input.inserter_stack_size_override,
     belt = identity(belt), speed = belt.prototype.belt_speed, recipe = machine.get_recipe().name,
     machine = identity(machine), machine_quality = machine.quality.name, crafting_speed = machine.crafting_speed, backed = options.backed,
-    ingredient_drains = ingredient_drains, samples = {}}
+    ingredient_drains = ingredient_drains, release_delay = release_delay, samples = {}}
 capture.each_tick{
-    first_tick = 1, last_tick = 128, report = report, output = "over-the-hood-exit.json",
+    first_tick = 1, last_tick = 128 + release_delay, report = report, output = "over-the-hood-exit.json",
     sample = function(tick)
         assert(input.pickup_target == belt and input.drop_target == machine, "unexpected input targets")
         if output then
@@ -64,7 +67,7 @@ capture.each_tick{
             inputs = inventory.get_contents(), output = output_inventory.get_contents(), crafting_progress = machine.crafting_progress}
     end,
     after_tick = function(tick)
-        if tick == 64 then
+        if tick == gate_tick then
             local pairs = {}
             for _, entity in ipairs(entities) do
                 if entity.type == "underground-belt" and entity.position.y == belt.position.y then

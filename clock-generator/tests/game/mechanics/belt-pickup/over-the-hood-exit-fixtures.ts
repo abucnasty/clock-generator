@@ -51,3 +51,18 @@ export function overTheHoodExitAtSpeed(text: string, speed: FixtureBeltSpeed, op
     }
     return blueprintAtSpeed(encodeBlueprintFile(decoded), speed);
 }
+
+/** Optional aligned-lane phase sweep; the ordinary 84-case command stays unchanged. */
+export function overTheHoodReleaseDelays(speed: FixtureBeltSpeed, compact: boolean, backed: boolean, phases = false) {
+    if (!phases || backed || (!compact && speed.name === "normal")) return [0];
+    const cycle = speed.name === "turbo" ? 2 : speed.name === "fast" ? 4 : 8;
+    return Array.from({length: cycle}, (_, delay) => delay);
+}
+
+/** Any requested replay must stay offline, even when only the other case family's root was supplied. */
+export function overTheHoodReplayRoot(releaseDelay: number, baseRoot?: string, phaseRoot?: string) {
+    if (baseRoot === undefined && phaseRoot === undefined) return undefined;
+    const root = releaseDelay ? phaseRoot : baseRoot;
+    if (!root?.trim()) throw new Error(`Replay requested but ${releaseDelay ? "OVER_HOOD_PHASE_REPLAY_DIR" : "OVER_HOOD_REPLAY_DIR"} is missing; set both roots or filter to the supplied case family`);
+    return root;
+}

@@ -9,7 +9,7 @@ import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {assessSameItemPickups} from "./same-item-pickup-probe";
 import {replayJammedPickups} from "./jammed-pickup-replay";
-import {overTheHoodExitAtSpeed} from "./over-the-hood-exit-fixtures";
+import {overTheHoodExitAtSpeed, overTheHoodReleaseDelays, overTheHoodReplayRoot} from "./over-the-hood-exit-fixtures";
 
 interface Identity {name: string; type: string; direction: number; position: {x: number; y: number}; endpoint?: string}
 interface Stack {at: number; count: number; item: string; id: number}
@@ -20,7 +20,7 @@ interface Sample {
 }
 interface Report {
     input: Identity; machine: Identity; belt: Identity; neighbour: Identity; samples: Sample[];
-    machine_quality: string; crafting_speed: number; quality: string; hand_capacity: number; mirrored: boolean; speed: number; recipe: string; ingredient_drains: number;
+    release_delay?: number; machine_quality: string; crafting_speed: number; quality: string; hand_capacity: number; mirrored: boolean; speed: number; recipe: string; ingredient_drains: number;
     ingredient_pairs: {position: {x: number; y: number}; partner: {x: number; y: number}}[];
 }
 const stock = (line: Line) => Object.values(line.stacks);
@@ -28,12 +28,15 @@ const phase = (line: Line) => ((Math.round(stock(line)[0].at * 256) % 64) + 64) 
 const laneOf = (sample: Sample, beltY: number): 1 | 2 => sample.hand.y < beltY ? 1 : 2;
 
 for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const mirrored of [false, true])
-    for (const backed of [false, true]) for (const content of ["original", "swapped", "same-item"] as const) {
-        const name = `${speed.name}-${compact ? "compact" : "plant"}-${mirrored ? "mirrored" : "unmirrored"}-${backed ? "backed" : "moving"}-${content}`;
+    for (const backed of [false, true]) for (const content of ["original", "swapped", "same-item"] as const)
+        for (const releaseDelay of overTheHoodReleaseDelays(speed, compact, backed, process.env.OVER_HOOD_PHASES === "1")) {
+        const baseName = `${speed.name}-${compact ? "compact" : "plant"}-${mirrored ? "mirrored" : "unmirrored"}-${backed ? "backed" : "moving"}-${content}`;
+        const name = baseName + (releaseDelay ? `-release-${releaseDelay}` : "");
+        const gateTick = 64 + releaseDelay;
         test(name, async context => {
             context.skip(!compact && speed.name === "normal", "Original seven-tile source tunnel exceeds normal range; use matched compact controls");
             const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
-            const replayRoot = process.env.OVER_HOOD_REPLAY_DIR;
+            const replayRoot = overTheHoodReplayRoot(releaseDelay, process.env.OVER_HOOD_REPLAY_DIR, process.env.OVER_HOOD_PHASE_REPLAY_DIR);
             context.skip(!replayRoot && (!factorio || !save || !fs.existsSync(save)), "Factorio harness is not configured");
             const fixture = GameFixturePaths.OVER_THE_HOOD_UNDERGROUND_EXIT;
             const capture = replayRoot ? {directory: path.resolve(replayRoot, name), cleanup() {}} : speedCapture(name);
@@ -56,9 +59,9 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
                     }
                     fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint);
                     await recordInFactorio({factorio: factorio!, save: save!, config, blueprint,
-                        lua: composeProbeSource(path.join(fixture, "probe.lua"), {compact, mirrored, backed, speed: speed.units / 32, prefix: speed.prefix}),
+                        lua: composeProbeSource(path.join(fixture, "probe.lua"), {compact, mirrored, backed, speed: speed.units / 32, prefix: speed.prefix, release_delay: releaseDelay}),
                         out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
-                        ticks: 150, warmup_ticks: 0, staged_start: {build_order: "ascending", saturation_ticks: 1600},
+                        ticks: 150 + releaseDelay, warmup_ticks: 0, staged_start: {build_order: "ascending", saturation_ticks: 1600},
                         settle_ticks: 0, seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 180, log() {}});
                 }
                 const report = JSON.parse(fs.readFileSync(path.join(capture.directory, "game/script-output/over-the-hood-exit.json"), "utf8")) as Report;
@@ -77,10 +80,11 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
                 const maxDistance = speed.name === "normal" ? 5 : speed.name === "fast" ? 7 : speed.name === "express" ? 9 : 11;
                 expect(report.ingredient_pairs.every(pair => pair.position.y === pair.partner.y
                     && Math.abs(pair.position.x - pair.partner.x) <= maxDistance)).toBe(true);
-                expect(report.samples).toHaveLength(128);
+                expect(report.release_delay ?? 0).toBe(releaseDelay);
+                expect(report.samples).toHaveLength(128 + releaseDelay);
                 expect(report.samples.every(sample => JSON.stringify(sample.lines.map(line => line.length)) === "[0.5,0.5,1,1]")).toBe(true);
-                expect(report.samples.slice(0, 64).every(sample => sample.held === 0 && !sample.enabled && sample.circuit_disabled)).toBe(true);
-                const seed = report.samples[63];
+                expect(report.samples.slice(0, gateTick).every(sample => sample.held === 0 && !sample.enabled && sample.circuit_disabled)).toBe(true);
+                const seed = report.samples[gateTick - 1];
                 const ingredients = content === "same-item" ? ["accumulator", "accumulator"]
                     : content === "swapped" ? ["supercapacitor", "accumulator"] : ["accumulator", "supercapacitor"];
                 const items = ingredients.map(item => compact ? item === "accumulator" ? "iron-plate" : "copper-cable" : item);
@@ -89,6 +93,8 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
                     expect(stock(seed.lines[lane])).toHaveLength(2);
                     expect(stock(seed.lines[lane]).every(stack => stack.count === 4 && stack.item === items[lane])).toBe(true);
                     if (backed) expect(stock(seed.lines[lane]).map(stack => Math.round(stack.at * 256))).toEqual([0, 64]);
+                    expect(phase(seed.lines[lane])).toBe(backed ? 0
+                        : (phase(report.samples[63].lines[lane]) - releaseDelay * speed.units * 8 + 512) % 64);
                     for (let index = 57; index < 64; index++) {
                         const previous = phase(report.samples[index - 1].lines[lane]);
                         expect(phase(report.samples[index].lines[lane])).toBe(backed ? previous : (previous - speed.units * 8 + 64) % 64);
@@ -125,8 +131,8 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
                 for (let lane = 0; lane < 2; lane++) expect(stock(previousFirst.lines[lane])).toHaveLength(2);
                 const samples = hand.map(sample => ({...sample, lanes: sample.lines.slice(0, 2)}));
                 const moving = backed ? undefined : assessSameItemPickups({endpoint: "output", stack_size: 16, samples},
-                    speed.units, preferred, 65, content === "same-item" ? undefined : preferred);
-                const jammed = backed ? replayJammedPickups({item, belt_speed: speed.units / 32, stack_size: 16, samples}, 64, preferred) : undefined;
+                    speed.units, preferred, gateTick + 1, content === "same-item" ? undefined : preferred);
+                const jammed = backed ? replayJammedPickups({item, belt_speed: speed.units / 32, stack_size: 16, samples}, gateTick, preferred) : undefined;
                 if (moving) expect(moving.hands).toBe(1);
                 const recording = JSON.parse(fs.readFileSync(path.join(capture.directory, "recording.json"), "utf8")) as {config: Config & {pickup_warnings?: unknown[]}};
                 const exported = recording.config.inserters.find(inserter => inserter.source.type === "belt" && inserter.sink.type === "machine")!;
@@ -142,7 +148,7 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
                     moving_differences: moving?.differences ?? [], jammed_differences: jammed?.differences ?? []};
                 fs.writeFileSync(path.join(capture.directory, "findings.json"), JSON.stringify(summary, null, 2) + "\n");
                 if (process.env.OVER_HOOD_DISCOVERY !== "1") {
-                    const expected = JSON.parse(fs.readFileSync(path.join(fixture, "expectations.json"), "utf8"));
+                    const expected = JSON.parse(fs.readFileSync(path.join(fixture, releaseDelay ? "phase-expectations.json" : "expectations.json"), "utf8"));
                     expect(summary).toEqual(expected[name]);
                 }
             } finally {capture.cleanup();}

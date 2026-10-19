@@ -62,9 +62,10 @@ longer than normal underground range. Equivalent compact controls were also meas
 Front-entrance phase sweeps verify actual first-grab positions, rather than assuming gate-delay labels imply
 distinct phases. Other cardinal orientations and arbitrary lane-to-lane phase offsets remain separate dimensions.
 The separate [over-the-hood exit](../tests/game/mechanics/belt-pickup/fixtures/over-the-hood-underground-exit/README.md)
-has 48 compact controls across all four speeds and 36 original-plant counterparts at turbo/express/fast. Both
-mirroring states, moving/backed-up supply, ingredient swaps and same-item lanes are measured at the base release;
-normal's original seven-tile tunnel exceeds its range. This is first-hand coverage, not a full phase sweep.
+has 84 baseline controls: 48 compact cases across all four speeds and 36 original-plant counterparts at
+turbo/express/fast. Another 174 moving controls cover the observed aligned arrival phases at both mirroring
+states with original/swapped/same-item lanes. Normal's original seven-tile tunnel exceeds its range.
+These are 258 first-hand controls; independent lane alignment and repeated throughput remain separate questions.
 
 ### Side-entry and merge controls
 
@@ -128,14 +129,14 @@ the destination. **Moving = false** denotes backed-up supply.
 | Underground, fast / normal | false | Each ingredient isolated | First hand `0,1,2,5` / `0,1,2,9` | 6 / 10 | Finite refill already affects first hand |
 | Side straight, normal | false | One matching lane | First `0,1,2,3`; later `0,8,16,24` | 4, then 25 | Initial stock masks later depletion |
 | Underground, fast / normal | false | Same item on both lanes | First `0,1,2,3` | 4 | Other lane helps; normal later hands can still wait |
-| Front entrance, turbo | true | Different items | `0,1,k,k+2`, `k = 2..3` | 5–6 | Both observed arrival phases |
-| Front entrance, express | true | Different items | `0,1,k,k+d`, `k = 2..4`, `d = 2..3` | 5–8 | Eight observed arrival phases |
-| Front entrance, fast | true | Different items | `0,1,k,k+4`, `k = 2..5` | 7–10 | Four observed arrival phases |
-| Front entrance, normal (compact) | true | Different items | `0,1,k,k+8`, `k = 2..9` | 11–18 | Eight observed arrival phases |
-| Front entrance, all speeds | true | Same item on both lanes | `0,1,2,3` | 4 | Every measured phase; distinct from the side-entrance counterexample |
+| Front entrance / over-hood exit, turbo | true | Different items | `0,1,k,k+2`, `k = 2..3` | 5–6 | Both observed arrival phases |
+| Front entrance / over-hood exit, express | true | Different items | `0,1,k,k+d`, `k = 2..4`, `d = 2..3` | 5–8 | Eight observed arrival phases |
+| Front entrance / over-hood exit, fast | true | Different items | `0,1,k,k+4`, `k = 2..5` | 7–10 | Four observed arrival phases |
+| Front entrance / over-hood exit, normal (compact) | true | Different items | `0,1,k,k+8`, `k = 2..9` | 11–18 | Eight observed arrival phases |
+| Front entrance / over-hood exit, all speeds | true | Same item on both lanes | `0,1,2,3` | 4 | Every measured phase; distinct from the side-entrance counterexample |
 
 These are representative patterns, not an exhaustive list of repeated-hand states. The fixture baselines retain
-all observed patterns and known simulator differences. In the tested downstream front-exit and front-entrance layouts, **unmirrored prefers
+all observed patterns and known simulator differences. In these tested front and over-the-hood layouts, **unmirrored prefers
 lane 1; mirrored prefers lane 2**, preserved by ingredient swaps. Fast/normal backed-up front controls can use
 fallback even on the first hand; the turbo rule that all four grabs stay on the preferred lane is not universal.
 Continuous moving supply is blocked in the downstream front-exit fixture; over-the-hood exit pickups are a separate case.
@@ -143,25 +144,15 @@ Continuous moving supply is blocked in the downstream front-exit fixture; over-t
 ### Over-the-hood underground exits
 
 The inserter sits upstream of the exit and reaches across its hood, leaving the downstream route open.
-These base-release patterns agree between the compact and original layouts where both can be paired.
+Its moving phase sweeps follow the same half-tile pattern families as the front entrance in the matrix above.
+Both observed lanes cover 2/8/4/8 arrival phases at turbo/express/fast/normal for every measured layout,
+mirroring state and ingredient arrangement. Fast/normal backed-up first hands use same-item fallback for their
+fourth grab, consistent with the finite-refill controls.
 
-| Speed | Moving | Lane contents | Measured offsets | Total pickup ticks |
-| --- | --- | --- | --- | --- |
-| Turbo | true | Different items | `0,1,3,5` | 6 |
-| Express | true | Different items | `0,1,3,6` | 7 |
-| Fast | true | Different items | `0,1,2,6` | 7 |
-| Normal | true | Different items | `0,1,4,12` | 13 |
-| Turbo/express | false | Different items | `0,1,2,3` | 4 |
-| Fast | false | Different items | `0,1,2,5` | 6 |
-| Normal | false | Different items | `0,1,2,9` | 10 |
-| All four | true | Same item on both lanes | `0,1,2,3` | 4 |
-| All four | false | Same item on both lanes | `0,1,2,3` | 4 |
-
-Unmirrored prefers lane 1 and mirrored lane 2, preserved by ingredient swaps. Same-item lanes allow fallback;
-fast/normal backed-up first hands use the other lane for their fourth grab. Independent moving-stock and
-experimental jammed-queue replays agree for all 84 first hands, conditioned on native arrival. Sidecar still
-classifies this approach as **unsupported / inline** and omits pickup geometry. Simulator/capture fixes remain
-separate; these results do not establish repeated-hand, full-phase or generated-clock support.
+Independent moving-stock replays agree with all **216 moving first hands**; the experimental jammed-queue
+replay agrees with all **42 backed-up first hands**, conditioned on native arrival. Sidecar still classifies
+this approach as **unsupported / inline** and omits pickup geometry. Simulator/capture fixes remain separate;
+these results do not establish independent lane alignment, repeated-hand or generated-clock support.
 
 ### Side-loading onto a straight tile
 
@@ -278,7 +269,7 @@ production implementation or proof about absolute arm arrival. See the [fixture 
 **Front controls.** The 228 first-hand captures verify lane preference across ingredients, mirroring, speeds
 and observed entrance phases. Normal moving entrance coverage uses the paired compact destination. The
 downstream front-exit fixture blocks continuous flow; the over-the-hood exit is documented separately.
-Its 84 base controls reproduce the lane preference and finite-stock rules while preserving the current
+Its 258 controls reproduce the lane preference and finite-stock rules across observed aligned phases while preserving the current
 unsupported capture warning; no production simulator or Sidecar change is included.
 
 **Generated clocks.** Collection replay after observed arm arrival does not establish

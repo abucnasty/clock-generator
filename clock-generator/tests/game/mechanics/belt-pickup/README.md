@@ -31,9 +31,10 @@ have their own fixture: the inserter sits upstream and leaves the downstream rou
 paired compact assembler because the original plant's tunnel exceeds normal underground range. Only the bounded
 turbo two-stream merge is implemented. Slower native captures do not enable configuration support. The shelved
 splitter kernel remains archived; current splitter probes observe the game and preserve unsupported warnings.
-The over-the-hood matrix has 48 compact first-hand controls at all four speeds and 36 original-plant counterparts
-at the three speeds that can pair its longer tunnel. Both mirrors, moving/backed-up supply and original/swapped/same-item
-lanes pass; full phase sweeps and repeated hands remain unverified for this approach. Sidecar still warns unsupported/inline.
+The over-the-hood matrix has 84 baseline first hands and 174 delayed moving controls, covering both mirrors,
+moving/backed-up supply, original/swapped/same-item lanes and all observed aligned arrival phases. Compact controls
+cover all four speeds, with original-plant counterparts at the three speeds that can pair its longer tunnel.
+Independent lane alignment and repeated hands remain unverified. Sidecar still warns unsupported/inline.
 
 ## Run a targeted check
 
