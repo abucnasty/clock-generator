@@ -46,7 +46,7 @@ pickup can take longer after initial stock is consumed. Backed-up first hands do
 ![Diagrams of side pickups from a straight belt, underground entrance and underground exit above their measured timelines, with grab offsets and totals from 4 to 25 ticks](images/side-pickup-timing.svg)
 
 The normal moving side-entrance same-item control takes **5 ticks** in the game; the current simulator predicts
-**4**. The backed-up refill mismatches remain recorded in the coverage matrix as well. Green dots always show
+**4**. Ordinary backed-up refill now follows the finite-stock model. Green dots always show
 the game observation, including when the simulator disagrees.
 
 ## Front-facing and over-the-hood pickups

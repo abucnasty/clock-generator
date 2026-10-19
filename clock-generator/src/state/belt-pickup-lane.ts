@@ -1,5 +1,6 @@
 import { BeltPickupSupplyProfile } from "../config/schema";
 import { BeltSpeed } from "../entities/belt";
+import { BeltPickupStock } from "./belt-pickup-stock";
 
 /**
  * One continuously supplied moving stream at a pickup. Internally distances use 1/256 tile units:
@@ -7,7 +8,7 @@ import { BeltSpeed } from "../entities/belt";
  * exposed line; a single side stream spans its measured free-flow entry boundary. Holes and partial
  * stacks persist, and at most one stack can be taken per tick. Merges/backpressure need a shared supply model.
  */
-export class BeltPickupLane {
+export class BeltPickupLane implements BeltPickupStock {
     private readonly speed: number;
     private readonly length: number;
     private readonly phase: number;

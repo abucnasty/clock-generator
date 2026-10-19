@@ -16,6 +16,8 @@ import {compareContinuousSimulator} from "./ordinary-pickup-comparison";
 import {makeInputBeltBackedUp, useAccumulatorsOnBothLanes} from "./belt-pickup-fixtures";
 import {assessSameItemPickups, SameItemPickupProbe} from "./same-item-pickup-probe";
 
+import {JammedPickupReport, replayJammedPickups} from "./jammed-pickup-replay";
+
 /** Compare hand collection, allowing the explicitly uncalibrated initial lane phases. */
 function simulatorPatterns(config: Config) {
     const patterns = new Set<string>();
@@ -79,7 +81,7 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
                     game_speed: 1000, watch: false, timeout_seconds: 180, log() {}});
                 }
                 const report = JSON.parse(fs.readFileSync(path.join(capture.directory, "game/script-output/backed-up-pickups.json"), "utf8")) as
-                    SameItemPickupProbe & {belt: string; belt_speed: number; item: string};
+                    SameItemPickupProbe & JammedPickupReport & {belt: string; belt_speed: number; item: string};
                 expect(report.belt_speed).toBe(speed.units / 32);
                 const recording = JSON.parse(fs.readFileSync(path.join(capture.directory, "recording.json"), "utf8")) as
                     {config: Config & {pickup_warnings?: unknown[]}};
@@ -104,6 +106,7 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
                 if (assessment) {
                     expect(assessment.hands).toBeGreaterThan(20);
                 }
+                if (backed) expect(replayJammedPickups(report).differences).toEqual([]);
                 const patterns = new Set<string>();
                 let grabs: number[] = [];
                 let completedHands = 0;

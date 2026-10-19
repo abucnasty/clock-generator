@@ -12,7 +12,7 @@ export interface InserterPickupLogicArgs {
     inserterState: InserterState;
     sourceState: EntityState;
     sinkState: EntityState;
-    /** Required for moving belt pickups; also lets machine output takers share turns. */
+    /** Required for timed belt stock; also lets machine output takers share turns. */
     tick_provider?: TickProvider;
 }
 

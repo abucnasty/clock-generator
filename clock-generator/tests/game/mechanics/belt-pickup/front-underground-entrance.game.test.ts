@@ -117,8 +117,7 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
             const otherLane = 2 - preferred;
             if (backedUp) {
                 expect(hand.every(s => JSON.stringify(s.lanes[otherLane]) === JSON.stringify(first.lanes[otherLane]))).toBe(true);
-                if (speed.units >= 3) expect(simulatedHand(config, 0, item)).toEqual(counts);
-                else expect(simulatedHand(config, 0, item)).not.toEqual(counts); // Known finite-refill limitation: measured, not modeled.
+                expect(simulatedHand(config, 0, item)).toEqual(counts);
             } else {
                 expect(grabs[0].lanes[otherLane]).not.toEqual(first.lanes[otherLane]);
                 // The engine does not infer the initial stream phase from a blueprint. Check phase-compatible

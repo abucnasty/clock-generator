@@ -133,9 +133,7 @@ for (const speed of BELT_SPEEDS) for (const { label, swapped, sameItem, mirrored
                 predicted.push(input.held_item?.quantity ?? 0);
             }
             const measured = hand.filter(sample => sample.tick >= grabs[0].tick).map(sample => sample.held);
-            // Keep the known backed-up finite-refill limitation visible; this suite does not implement it.
-            if (!sameItem && speed.units < 3) expect(predicted).not.toEqual(measured);
-            else expect(predicted).toEqual(measured);
+            expect(predicted).toEqual(measured);
             fs.writeFileSync(path.join(scratch, "simulator-comparison.json"), JSON.stringify({predicted, measured,
                 matches: JSON.stringify(predicted) === JSON.stringify(measured)}, null, 2));
 

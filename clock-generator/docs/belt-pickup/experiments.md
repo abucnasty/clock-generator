@@ -22,8 +22,8 @@ Publishing remains on hold. **Splitters are out of scope.**
   holes, partial stacks and lane phase persist across hands and circuit windows. Underground pickups have
   less reach, rather than a fixed tick penalty.
 - Geometry and supply motion are separate. Omitted `pickup_length` defaults to **1**; undergrounds use **0.5**.
-  Moving is the default. The engine approximates backed-up supply as one available stack per tick;
-  fast/normal measurements expose finite refill that this approximation does not yet model.
+  Moving is the default. Ordinary backed-up supply retains finite stock, stops stacks at the endpoint and
+  refills holes at belt speed. Side-fed backed-up replenishment remains a separate calibration.
 - Replenishment depends on topology. A full incoming belt need not fill the pickup tile, and closing a final
   outlet does not guarantee permanent local saturation when other consumers can reopen a route.
 
@@ -57,10 +57,10 @@ underground exit. “All three geometries” refers to those variants, with the 
 | --- | --- | --- | --- | --- |
 | Moving, one matching lane — all three geometries | Tested | Tested | Tested | Tested |
 | Moving, same item on both lanes — all three geometries | Tested | Tested | Tested | Tested; simulator timing mismatch (entrance) |
-| Backed up, each ingredient isolated — all three geometries | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
-| Backed up, same item on both lanes — side pickups | Tested | Tested | Tested | Tested; simulator timing mismatch (refill) |
+| Backed up, each ingredient isolated — all three geometries | Tested | Tested | Tested | Tested |
+| Backed up, same item on both lanes — side pickups | Tested | Tested | Tested | Tested |
 | Reflected side pickups, same item — moving, initial belt phase | Tested | Tested | Tested | Tested; simulator timing mismatch (entrance) |
-| Reflected side pickups, same item — backed up | Tested | Tested | Tested | Tested; simulator timing mismatch (refill) |
+| Reflected side pickups, same item — backed up | Tested | Tested | Tested | Tested |
 | Backed-up straight-belt demand / insertion-limit controls | Tested | Tested | Tested | Tested |
 
 ### Front-facing and over-the-hood pickups
@@ -69,13 +69,13 @@ These rows cover the measured front approaches and both mirroring states.
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
-| Front exit, backed up — different and same items | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
+| Front exit, backed up — different and same items | Tested | Tested | Tested | Tested |
 | Over-the-hood exit, moving — different items | Tested | Tested | Tested | Tested |
 | Over-the-hood exit, moving — same item on both lanes | Tested | Tested | Tested | Tested |
 | Over-the-hood exit, backed up — different and same items | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
 | Front entrance, moving — different items | Tested | Tested | Tested | Tested |
 | Front entrance, moving — same item on both lanes | Tested | Tested | Tested | Tested |
-| Front entrance, backed up — different and same items | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
+| Front entrance, backed up — different and same items | Tested | Tested | Tested | Tested |
 
 The downstream front-exit fixture places the inserter on the next belt tile, physically blocking continuation.
 The supplied over-the-hood exit is a separate approach: its inserter sits upstream and leaves the downstream route open.
@@ -251,21 +251,21 @@ calibration; an empty-belt formula is not a general finite-output-lane model.
 The former 528/1,056 clock missed 30/35 native periods underground. Same-item fallback also reduced the gear
 clock's underground input window from 28 to 26 ticks; all six turbo/express checks held **16 gears / 160 ticks = 6/s**.
 
-**Four-speed collection.** Of 72 naturally supplied repeated-hand controls, 56 match production held counts.
-Fifteen fast/normal backed-up cases expose finite refill; one normal moving side-entrance case exposes arm
+**Four-speed collection.** Of 72 naturally supplied repeated-hand controls, 71 match production held counts.
+The finite-stock model resolves the fifteen fast/normal backed-up discrepancies; one normal moving side-entrance case still exposes arm
 travel. The 198-combination observed-phase sweep reproduces the latter at four phases; the other 194 agree.
 A further 24 reflected same-item controls reproduce every original pattern set and difference count with lane 2
-preferred: 20 match production held counts, and the same four normal-speed cases remain counterexamples.
-Held-count agreement alone does not establish backed-up lane/stock fidelity, which the current model omits.
+preferred: 23 match production held counts, with the normal moving entrance still a counterexample.
+The backed-up stock comparison below also checks lane positions, counts and items.
 Twelve automated demand controls preserve the existing rule: eligible near stock 13 wins over absent far stock;
 at near stock 14, selection switches to the far ingredient. No demand-ranking rule was needed.
 
-**Candidate backed-up rule.** Advance a jammed queue at actual belt speed, stop its head at the endpoint,
+**Implemented ordinary backed-up rule.** Advance a jammed queue at actual belt speed, stop its head at the endpoint,
 maintain quarter-tile spacing, and withdraw the upstream-most reachable matching stack. Preserve holes across
-hands. Seeded once at the closed gate, a test-only replay matches all exposed stock and held counts across
+hands. Seeded once at the closed gate, the production queue matches all exposed stock and held counts across
 **59,328 transitions / 4,568 hand starts** in 48 side-pickup captures, including both physical near sides. Native arm-arrival/drop boundaries remain
-inputs. Ten portable clips preserve refill evidence and five preserve arm-travel evidence; neither is a
-production implementation or proof about absolute arm arrival. See the [fixture report](../../tests/game/mechanics/belt-pickup/fixtures/different-items/README.md).
+inputs. Ten portable clips exercise the production pickup logic and preserve refill evidence; five separate clips
+preserve the unresolved arm-travel evidence. Neither comparison proves absolute arm arrival. See the [fixture report](../../tests/game/mechanics/belt-pickup/fixtures/different-items/README.md).
 
 **Front controls.** The 228 first-hand captures verify lane preference across ingredients, mirroring, speeds
 and observed entrance phases. Normal moving entrance coverage uses the paired compact destination. The

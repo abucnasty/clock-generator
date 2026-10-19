@@ -10,12 +10,15 @@ import { InserterPickupMode, InserterWaitForSinkMode } from "../modes"
 import { InserterDisabledMode } from "../modes/disabled-mode"
 import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";
+import { MutableTickProvider } from "../../current-tick-provider";
+import { BeltSpeed } from "../../../entities/belt";
 
 
 /** A belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
 function withSupplyGate(belt: BeltState): BeltState {
     // assigned after the mock is made, which would wrap the sets of the gate otherwise
     belt.supply = new SupplyGate();
+    belt.pickup_lanes = new Map();
     return belt;
 }
 
@@ -67,7 +70,7 @@ describe("transitions (belt to machine)", () => {
             sink: sink,
             filtered_items: new Set(filters),
         }
-        // These transition tests use an always-available belt supply, independently of moving-lane timing.
+        // These transition tests start with a fully backed-up ordinary belt.
         if (EntityId.isBelt(source.entity_id)) {
             inserter.pickup_length = 1;
             inserter.belt_supply = "backed_up";
@@ -353,6 +356,7 @@ describe("transitions (belt to machine)", () => {
             const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 belt: {
+                    belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 }
                     ]
@@ -377,25 +381,31 @@ describe("transitions (belt to machine)", () => {
                 filters: ["iron-plate"]
             }));
 
+            const ticks = new MutableTickProvider();
             const pickup_mode = InserterPickupMode.create({
+                tick_provider: ticks,
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
             });
 
             // First pickup: 0 + 4 = 4
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(4);
 
             // Second pickup: 4 + 4 = 8
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(8);
 
             // Third pickup: 8 + 4 = 12 (should reach stack size)
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(12);
 
             // Fourth pickup: should not exceed stack size of 12
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(12);
             expect(inserterState.held_item?.quantity).toBeLessThanOrEqual(stack_size);
@@ -405,6 +415,7 @@ describe("transitions (belt to machine)", () => {
             const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 belt: {
+                    belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 }
                     ]
@@ -428,27 +439,34 @@ describe("transitions (belt to machine)", () => {
                 filters: ["iron-plate"]
             }));
 
+            const ticks = new MutableTickProvider();
             const pickup_mode = InserterPickupMode.create({
+                tick_provider: ticks,
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
             });
 
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(4);
 
             // the machine's output reaches the block: the hand waits with what it holds
             const block = mockSink.machine.output.outputBlock;
             mockSink.inventoryState.addQuantity(block.item_name, block.held_limit);
+            ticks.incrementTick();
             pickup_mode.executeForTick();
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(4);
 
             // the output drops under the block and the inserter comes back from waiting: one tick to decide, then the next stack
             mockSink.inventoryState.removeQuantity(block.item_name, 1);
             pickup_mode.onEnter(new InserterWaitForSinkMode());
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(4);
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(8);
 
@@ -456,12 +474,14 @@ describe("transitions (belt to machine)", () => {
             // that had woken the inserter, and the next stack lands in the tick they are taken. Recorded in Factorio
             // 2.1.21: 248 hands of 248 went on in that tick, 843 of 843 a tick later without a craft the tick before.
             mockSink.inventoryState.addQuantity(block.item_name, 1);
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(8);
             mockSink.outputBlockedAfterLastTick = true;
             mockSink.finishedCraftInLastTick = true;
             mockSink.inventoryState.removeQuantity(block.item_name, 1);
             pickup_mode.onEnter(new InserterWaitForSinkMode());
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(12);
         })
@@ -497,6 +517,7 @@ describe("transitions (belt to machine)", () => {
             const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 belt: {
+                    belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 }
                     ]
@@ -521,21 +542,26 @@ describe("transitions (belt to machine)", () => {
                 filters: ["iron-plate"]
             }));
 
+            const ticks = new MutableTickProvider();
             const pickup_mode = InserterPickupMode.create({
+                tick_provider: ticks,
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
             });
 
             // First pickup
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(4);
 
             // Second pickup
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(8);
 
             // Third pickup
+            ticks.incrementTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(10);
             expect(inserterState.held_item?.quantity).toBeLessThanOrEqual(stack_size);
@@ -546,6 +572,7 @@ describe("transitions (belt to machine)", () => {
                 entity_id: EntityId.forBelt(-1),
                 inventoryState: mock<any>(),
                 belt: {
+                    belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 },
                         { ingredient_name: "copper-cable", stack_size: 4 },
@@ -575,12 +602,15 @@ describe("transitions (belt to machine)", () => {
                 filters: ["iron-plate", "copper-cable"]
             }));
 
+            const ticks = new MutableTickProvider();
             const pickup_mode = InserterPickupMode.create({
+                tick_provider: ticks,
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
             });
 
+            ticks.incrementTick();
             pickup_mode.executeForTick();
 
             expect(inserterState.held_item?.item_name).toBe("copper-cable");

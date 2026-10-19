@@ -5,6 +5,8 @@ import { BeltState, EntityState, InserterState, InserterStatus } from "../../../
 import { TickProvider } from "../../../current-tick-provider";
 import { actsInTheTickTheBlockIsLifted } from "../../waiting-inserter";
 import { BeltPickupLane } from "../../../../state/belt-pickup-lane";
+import { BackedUpPickupLane } from "../../../../state/backed-up-pickup-lane";
+import { BeltPickupStock } from "../../../../state/belt-pickup-stock";
 import { BeltPickupMerge } from "../../../../state/belt-pickup-merge";
 import { InserterTransferLogic } from "../transfer-logic";
 import { canPickupItemForSink, recordPickup } from "../transfer-helpers";
@@ -33,26 +35,26 @@ export class BeltPickupLogic implements InserterTransferLogic {
             this.merge = supply;
             return;
         }
-        if (inserterState.inserter.belt_supply === "backed_up") {
-            return;
-        }
-
-        assert(tick_provider !== undefined, "Moving belt pickups need the simulation tick provider");
+        // Side-fed backed-up stock has a different replenishment boundary. Keep its existing approximation
+        // until that separate calibration is promoted; this queue models ordinary through supply only.
+        if (inserterState.inserter.belt_supply === "backed_up"
+            && inserterState.inserter.pickup_supply?.some(profile => profile !== "through")) return;
+        assert(tick_provider !== undefined, "Belt pickups need the simulation tick provider");
 
         // Keep this inserter's lane gaps and partial stacks when its control is replaced.
         const inserter_id = inserterState.entity_id.id;
         let pickup_lanes = sourceEntityState.pickup_lanes.get(inserter_id);
         if (pickup_lanes === undefined) {
             const belt = sourceEntityState.belt;
-            pickup_lanes = belt.lanes.map((lane, index) => new BeltPickupLane(
-                belt.belt_speed, pickup_length, lane.stack_size, 0, inserterState.inserter.pickup_supply?.[index],
-            ));
+            pickup_lanes = belt.lanes.map((lane, index) => inserterState.inserter.belt_supply === "backed_up"
+                ? new BackedUpPickupLane(belt.belt_speed, pickup_length, lane.stack_size)
+                : new BeltPickupLane(belt.belt_speed, pickup_length, lane.stack_size, 0, inserterState.inserter.pickup_supply?.[index]));
             sourceEntityState.pickup_lanes.set(inserter_id, pickup_lanes);
         }
         this.pickup_lanes = pickup_lanes;
     }
 
-    private readonly pickup_lanes?: BeltPickupLane[];
+    private readonly pickup_lanes?: BeltPickupStock[];
     private readonly merge?: BeltPickupMerge;
     private readonly pickup_lane_order: number[];
 
