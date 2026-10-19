@@ -141,13 +141,15 @@ and the same item on both lanes. Stock is supplied naturally; neither held items
 The probe asserts the pickup's actual speed, checks its underground partner where pairing is required, records
 all transport lines at both endpoints, and keeps the exact transformed blueprint with each retained capture.
 
-The original plant requires a tunnel too long for normal moving supply. The test therefore also derives a compact
+The original plant requires a tunnel too long for normal moving supply. The original capture therefore derived a compact
 control by replacing the 4×4 electromagnetic plant with a 3×3 assembling machine making electronic circuits,
 shifting its center half a tile west/north while keeping the entrance and pickup inserter in place. Iron plates and
 copper cable replace the two original ingredients; same-item controls feed iron on both lanes. Its paired exit is
 five tiles after the observed entrance, within normal range. Both drains are retained for moving supply; only the
 ingredient drain is removed for backed-up supply. The compact control is measured at every speed, including turbo,
-so this layout change is checked against the original rather than assumed equivalent.
+so that layout change was checked against the original rather than assumed equivalent.
+The compact results in this section and its full phase sweep refer to that earlier derived layout; the user-supplied
+replacement and its separately repeated controls are described below.
 
 For express/fast original-plant controls, the paired exit moves to the first free tile beyond the plant and the
 remaining path becomes ordinary belts. Normal original-plant backed-up controls have an unmatched, naturally
@@ -251,13 +253,34 @@ BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-entrance-new \
 
 Test-name filters `-t 'express'` or `-t 'compact'` select one speed or the compact destination controls.
 
-The [compact normal scaffold](compact-normal-scaffold.txt) stores the measured assembler control, with a
-short underground pair that the normal tier can connect. Its test checks that the blueprint stays identical
-to the deterministic transform used by the native captures. Capture its own illustration with
-`npm run screenshots -- --case=front-underground-entrance/compact-normal`; the original plant image above
-does not show this smaller destination.
+### Supplied compact replacement
 
-![Compact normal-belt front entrance control with an assembling machine and a five-tile underground pair](compact-normal-scaffold.jpg)
+The [compact normal scaffold](compact-normal-scaffold.txt) is the exact user-supplied replacement from
+2026-10-19. It is authoritative: compact variants now derive directly from it, changing only transport tier,
+ingredient arrangement, mirroring, optional drain removal and gate release. The assembler's modules and
+geometry are preserved. The original electromagnetic-plant scaffold is unchanged.
+
+The replacement fixes the former compact output inserter's disconnected pickup: its pickup target is now the
+assembler, and its drop target feeds a connected product belt. Native guards check both targets in every compact
+first-hand run. The release-0 recapture covers all four tiers, both mirroring states, moving/backed-up supply and
+different/same items: **32 controls**. Their first-hand timing and observed release-0 phases match the historical
+controls. The prior complete phase sweep remains historical evidence; shifted releases and ingredient swaps
+have not been recaptured on this replacement. These first-hand simulator configurations do not calibrate the
+replacement's module-boosted crafting throughput (native crafting speed is 50).
+
+The independent natural-output smoke makes no inventory or held-item edits and clears no inventories. Over
+600 ticks it crafts **53 circuits**, observes the output inserter carrying circuits, deposits the first stack at
+tick **310**, and observes circuits on the next belt at tick **326**. Passing evidence is retained locally under
+`work/belt-speed-coverage/compact-user-replacement-02/`.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/compact-output-new npm run test:game -- tests/game/mechanics/belt-pickup/compact-front-output.game.test.ts
+```
+
+The existing `compact-normal-scaffold.jpg` shows the **previous layout** and is intentionally not embedded here.
+Its screenshot metadata still records that older source hash. Refresh with
+`npm run screenshots -- --case=front-underground-entrance/compact-normal` when two Factorio process slots are
+available; the helper launches a headless server and graphical client.
 
 Run only the additional phase controls with fresh retained evidence:
 

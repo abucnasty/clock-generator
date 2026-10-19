@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { BELT_SPEEDS, blueprintAtSpeed, configAtSpeed, speedCapture } from "../../helpers/belt-speed-fixtures";
-import { compactFrontUndergroundRouting, connectFrontPickupGate, frontPickupPhases, frontPickupReleaseDelays } from "./front-speed-fixtures";
+import { compactFrontEntranceAtSpeed, compactFrontUndergroundRouting, connectFrontPickupGate, frontPickupPhases, frontPickupReleaseDelays } from "./front-speed-fixtures";
 import { expect, test } from "vitest";
 import { Config } from "../../../../src/config";
 import { loadConfigFromFile } from "../../../../src/config/loader";
@@ -62,6 +62,7 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
         configAtSpeed(config, speed);
         if (compactDestination) {
             config.target_output.recipe = "electronic-circuit";
+            config.belts.find(belt => belt.id === 1)!.lanes[0].ingredient = "electronic-circuit";
             config.machines[0] = {...config.machines[0], recipe: "electronic-circuit", productivity: 0, crafting_speed: 1.25};
             for (const lane of config.belts.find(belt => belt.id === 2)!.lanes) lane.ingredient = "iron-plate";
         }
@@ -72,7 +73,9 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
         const original = useAccumulatorsOnBothLanes(fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8"));
         const mirroredBlueprint = mirrored ? flipFrontUndergroundInput(original, "entrance") : original;
         const supplyBlueprint = backedUp ? backUpFrontUndergroundEntrance(mirroredBlueprint) : mirroredBlueprint;
-        const routedBlueprint = blueprintAtSpeed(compactFrontUndergroundRouting(supplyBlueprint, "entrance", speed, compactDestination), speed);
+        const routedBlueprint = compactDestination
+            ? compactFrontEntranceAtSpeed(fs.readFileSync(path.join(fixture, "compact-normal-scaffold.txt"), "utf8"), speed, {mirrored, backedUp, sameItem: true})
+            : blueprintAtSpeed(compactFrontUndergroundRouting(supplyBlueprint, "entrance", speed), speed);
         const blueprint = releaseDelay ? connectFrontPickupGate(routedBlueprint) : routedBlueprint;
         fs.writeFileSync(path.join(scratch, "scaffold.txt"), blueprint);
         const result = await recordInFactorio({

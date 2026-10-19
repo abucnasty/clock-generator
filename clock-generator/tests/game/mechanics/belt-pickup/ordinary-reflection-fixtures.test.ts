@@ -2,10 +2,10 @@ import fs from "fs";
 import path from "path";
 import zlib from "zlib";
 import {expect, test} from "vitest";
-import {BELT_SPEEDS, blueprintAtSpeed} from "../../helpers/belt-speed-fixtures";
+import {BELT_SPEEDS} from "../../helpers/belt-speed-fixtures";
 import {ordinaryAtSpeed} from "./ordinary-speed-fixtures";
 import {reflectOrdinaryPickup} from "./ordinary-reflection-fixtures";
-import {compactFrontUndergroundRouting} from "./front-speed-fixtures";
+import {compactFrontEntranceAtSpeed} from "./front-speed-fixtures";
 
 const decode = (text: string) => JSON.parse(zlib.inflateSync(Buffer.from(text.trim().slice(1), "base64")).toString());
 for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "underground-entrance", "underground-exit"])
@@ -32,10 +32,16 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
 
     });
 
-test("the documented compact normal scaffold is the measured deterministic transform", () => {
-    const directory = path.join(__dirname, "fixtures/front-underground-entrance");
-    const original = fs.readFileSync(path.join(directory, "scaffold.txt"), "utf8");
+test("compact controls retain the supplied assembler, connected output and modules", () => {
+    const supplied = fs.readFileSync(path.join(__dirname, "fixtures/front-underground-entrance/compact-normal-scaffold.txt"), "utf8");
     const normal = BELT_SPEEDS.find(speed => speed.name === "normal")!;
-    const derived = blueprintAtSpeed(compactFrontUndergroundRouting(original, "entrance", normal, true), normal);
-    expect(fs.readFileSync(path.join(directory, "compact-normal-scaffold.txt"), "utf8").trim()).toBe(derived);
+    expect(decode(compactFrontEntranceAtSpeed(supplied, normal))).toEqual(decode(supplied));
+    const entities = decode(supplied).blueprint.entities;
+    const machine = entities.find((entity: {name: string}) => entity.name === "assembling-machine-3");
+    const output = entities.find((entity: {entity_number: number}) => entity.entity_number === 19);
+    expect(machine.items).toHaveLength(1);
+    expect(output.position).toEqual({x: machine.position.x + 1, y: machine.position.y - 2});
+    expect(output.direction).toBe(8);
+    expect(entities.some((entity: {name: string; position: {x: number; y: number}}) => entity.name === "transport-belt"
+        && entity.position.x === output.position.x && entity.position.y === output.position.y - 1)).toBe(true);
 });

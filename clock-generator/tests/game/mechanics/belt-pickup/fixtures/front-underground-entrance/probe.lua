@@ -9,6 +9,11 @@ local input = capture.find_one(entities, function(e)
         and math.abs(e.position.x - sink.position.x + (options.compact_destination and 2 or 2.5)) < 0.01
 end, "plant input")
 local belt = assert(surface.find_entities_filtered{position = input.pickup_position, type = "underground-belt"}[1])
+local output
+if options.compact_destination then
+    output = capture.find_one(entities, function(e) return e.type == "inserter"
+        and e.position.x == sink.position.x + 1 and e.position.y == sink.position.y - 2 end, "compact output")
+end
 assert(belt.belt_to_ground_type == "input" and belt.direction == defines.direction.east)
 assert(input.mirroring == mirrored and input.direction == defines.direction.west)
 assert(input.position.x == belt.position.x + 1 and input.position.y == belt.position.y)
@@ -42,6 +47,11 @@ capture.each_tick{
     sample = function(tick)
         -- A newly placed inserter resolves pickup_target on its first game tick.
         if input.pickup_target then assert(input.pickup_target == belt, "unexpected pickup target") end
+        if output then
+            assert(output.pickup_target == sink, "compact output must pick up from its assembler")
+            assert(output.drop_target and output.drop_target.valid and output.drop_target.type == "transport-belt",
+                "compact output must drop onto the connected output belt")
+        end
         local held = input.held_stack
         local sample = {tick = tick, held = held.valid_for_read and held.count or 0,
             held_item = held.valid_for_read and held.name or nil, hand = input.held_stack_position,
