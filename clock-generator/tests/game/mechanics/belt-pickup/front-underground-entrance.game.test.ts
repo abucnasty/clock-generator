@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { BELT_SPEEDS, blueprintAtSpeed, configAtSpeed, speedCapture } from "../../helpers/belt-speed-fixtures";
-import { compactFrontUndergroundRouting } from "./front-speed-fixtures";
+import { compactFrontUndergroundRouting, connectFrontPickupGate, frontPickupPhases, frontPickupReleaseDelays } from "./front-speed-fixtures";
 import { assessSameItemPickups } from "./same-item-pickup-probe";
 import { expect, test } from "vitest";
 import { Config } from "../../../../src/config";
@@ -41,15 +41,15 @@ function simulatedHand(config: Config, start: number, item: string) {
 for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS) for (const swapped of [false, true]) for (const { mirrored, preferred, item: originalItem } of [
     { mirrored: false, preferred: 1, item: "accumulator" },
     { mirrored: true, preferred: 2, item: "supercapacitor" },
-] as const) for (const backedUp of [false, true]) {
-    test(`${speed.name} ${compactDestination ? "compact" : "original plant"} front underground entrance ${swapped ? "swapped" : "original"}, ${backedUp ? "backed-up" : "moving"} supply: mirrored=${mirrored} selects lane ${preferred}`, async context => {
+] as const) for (const backedUp of [false, true]) for (const releaseDelay of frontPickupReleaseDelays(speed, compactDestination, backedUp)) {
+    test(`${speed.name} ${compactDestination ? "compact" : "original plant"} front underground entrance ${swapped ? "swapped" : "original"}, ${backedUp ? "backed-up" : "moving"} supply release ${releaseDelay}: mirrored=${mirrored} selects lane ${preferred}`, async context => {
         const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
         context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
         context.skip(speed.name === "normal" && !backedUp && !compactDestination, "The original plant requires a tunnel longer than normal underground range; use the compact destination control");
         const selectedItem = swapped ? (originalItem === "accumulator" ? "supercapacitor" : "accumulator") : originalItem;
         const item = compactDestination ? (selectedItem === "accumulator" ? "iron-plate" : "copper-cable") : selectedItem;
         const fixture = GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE;
-        const capture = speedCapture(`front-entrance-${compactDestination ? "compact" : "plant"}-${speed.name}-${backedUp}-${mirrored}-${swapped}`);
+        const capture = speedCapture(`front-entrance-${compactDestination ? "compact" : "plant"}-${speed.name}-${backedUp}-${mirrored}-${swapped}-release-${releaseDelay}`);
         const scratch = capture.directory;
         try {
             const config = await loadConfigFromFile(path.join(fixture, "config.json"));
@@ -68,12 +68,13 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
             const original = swapped ? swapElectromagneticIngredientFeeds(originalSource) : originalSource;
             const mirroredBlueprint = mirrored ? flipFrontUndergroundInput(original, "entrance") : original;
             const supplyBlueprint = backedUp ? backUpFrontUndergroundEntrance(mirroredBlueprint) : mirroredBlueprint;
-            const blueprint = blueprintAtSpeed(compactFrontUndergroundRouting(supplyBlueprint, "entrance", speed, compactDestination), speed);
+            const routedBlueprint = blueprintAtSpeed(compactFrontUndergroundRouting(supplyBlueprint, "entrance", speed, compactDestination), speed);
+            const blueprint = releaseDelay ? connectFrontPickupGate(routedBlueprint) : routedBlueprint;
             fs.writeFileSync(path.join(scratch, "scaffold.txt"), blueprint);
             const result = await recordInFactorio({
                 factorio: factorio!, save: save!, config,
                 blueprint,
-                lua: composeProbeSource(path.join(fixture, "probe.lua"), { mirrored, speed: speed.units / 32, compact_destination: compactDestination, require_pair: compactDestination || speed.name !== "normal" }),
+                lua: composeProbeSource(path.join(fixture, "probe.lua"), { mirrored, speed: speed.units / 32, compact_destination: compactDestination, release_delay: releaseDelay, require_pair: compactDestination || speed.name !== "normal" }),
                 out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
                 // Let back-pressure reach the entrance through the long underground and downstream belts.
                 ticks: 60, warmup_ticks: 0, staged_start: { build_order: "ascending", saturation_ticks: 600 },
@@ -89,6 +90,7 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
                 mirrored, inserter_direction: 12, use_filters: false,
             });
             expect(report.samples).toHaveLength(30);
+            expect(report.samples.filter(sample => sample.tick <= releaseDelay).every(sample => sample.held === 0)).toBe(true);
             const first = report.samples[0];
             expect(first.held).toBe(0);
             for (const [index, item] of (swapped ? ["supercapacitor", "accumulator"] : ["accumulator", "supercapacitor"]).entries()) {
@@ -101,10 +103,13 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
             const hand = report.samples.filter(s => s.tick <= full!.tick);
             expect(hand.every(s => JSON.stringify(s.inputs) === "{}" && JSON.stringify(s.output) === "{}" && s.crafting_progress === 0)).toBe(true);
             const grabs = hand.filter((s, index) => s.held > (hand[index - 1]?.held ?? 0));
+            expect(grabs[0].tick).toBeGreaterThan(releaseDelay);
             expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill(item));
             expect(grabs.map(s => s.held)).toEqual([4, 8, 12, 16]);
             const offsets = grabs.map(s => s.tick - grabs[0].tick);
-            fs.writeFileSync(path.join(scratch, "observed.json"), JSON.stringify({speed: speed.name, compactDestination, backedUp, mirrored, swapped, item, offsets}, null, 2));
+            const lanePhase = Math.round(grabs[0].lanes[2 - preferred].stacks[0].at * 256) % 64;
+            if (compactDestination && !backedUp) expect(lanePhase).toBe(frontPickupPhases[speed.name][releaseDelay]);
+            fs.writeFileSync(path.join(scratch, "observed.json"), JSON.stringify({speed: speed.name, compactDestination, backedUp, mirrored, swapped, releaseDelay, item, offsets, lanePhase}, null, 2));
             const counts = hand.filter(s => s.tick >= grabs[0].tick).map(s => s.held);
             const otherLane = 2 - preferred;
             if (backedUp) {

@@ -116,6 +116,13 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
                 const report = JSON.parse(fs.readFileSync(path.join(capture.directory, "game/script-output/backed-up-pickups.json"), "utf8")) as
                     SameItemPickupProbe & {belt: string; belt_speed: number; item: string};
                 expect(report.belt_speed).toBe(speed.units / 32);
+                const recording = JSON.parse(fs.readFileSync(path.join(capture.directory, "recording.json"), "utf8")) as
+                    {config: Config & {pickup_warnings?: unknown[]}};
+                const exported = recording.config.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
+                expect(exported.source).toMatchObject({pickup_length: length, near_lane: 1,
+                    pickup_capture: {status: "supported", model: "belt", model_version: 1,
+                        entity_name: `${speed.prefix}${geometry === "straight-belt" ? "transport-belt" : "underground-belt"}`}});
+                expect(recording.config.pickup_warnings).toBeUndefined();
                 expect(report.item).toBe(wanted);
                 expect(report.samples).toHaveLength(1300);
                 expect(report.samples.slice(0, 64).every(s => s.held === 0)).toBe(true);

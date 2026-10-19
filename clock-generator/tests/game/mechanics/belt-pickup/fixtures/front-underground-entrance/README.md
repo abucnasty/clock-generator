@@ -155,6 +155,8 @@ saturated entrance; the compact normal control also checks the same backed-up re
 Original-plant normal moving variants are explicitly skipped, with the compact control providing their speed coverage.
 These transformations are shared in [front-speed-fixtures.ts](../../front-speed-fixtures.ts).
 
+The following table uses release delay 0; moving timings change with arrival phase.
+
 | Speed | Moving | Different-item grab offsets | Total pickup ticks | Same-item grab offsets |
 | --- | --- | --- | --- | --- |
 | Turbo | true | `0,1,2,4` | 5 | `0,1,2,3` |
@@ -177,9 +179,41 @@ This sweep measures 60 different-item and 30 same-item first hands across the or
 The six skipped original-plant normal moving combinations are covered by paired compact controls, rather than
 mislabelled as moving while their supply is blocked. Captures are local under
 `work/belt-speed-coverage/front-final-entrance-02/front-entrance-*`; compact normal smoke evidence is also in
-`front-compact-smoke-02/`. These are first-hand speed controls; repeated hands, exhaustive release phases and
-other cardinal orientations remain separate coverage dimensions. No generated-clock or new simulator behavior
+`front-compact-smoke-02/`. These are first-hand speed controls; repeated hands and other cardinal orientations remain separate coverage dimensions.
+The additional compact moving phase sweep is described below. No generated-clock or new simulator behavior
 is claimed by this sweep.
+
+### Moving supply phases
+
+The compact control also sweeps all distinct quarter-tile arrival phases: 2 turbo, 8 express, 4 fast and 8 normal.
+Each phase is observed with both mirroring states, original/swapped different ingredients, and the same item on
+both lanes. An empty constant combinator supplies a real circuit network; a false `Z < 0` condition holds only
+the measured inserter until the requested release, while feeders and transport stock remain untouched. Captures
+assert no grabs before release and retain the actual unselected-lane phase at the first grab.
+
+| Speed | Moving | Different-item patterns over all phases | Total pickup ticks | Same-item pattern / total |
+| --- | --- | --- | --- | --- |
+| Turbo | true | `0,1,k,k+2`, `k = 2..3` | 5–6 | `0,1,2,3` / 4 |
+| Express | true | `0,1,k,k+d`, `k = 2..4`, `d = 2..3` | 5–8 | `0,1,2,3` / 4 |
+| Fast | true | `0,1,k,k+4`, `k = 2..5` | 7–10 | `0,1,2,3` / 4 |
+| Normal | true | `0,1,k,k+8`, `k = 2..9` | 11–18 | `0,1,2,3` / 4 |
+
+All listed combinations were measured. Mirroring and ingredient swaps preserve these pattern sets. Same-item
+hands fill in four consecutive grabs at every measured phase. Their lane sequence varies: turbo uses `PPPF` or
+`PPFP`; the other speeds also use `PPFF`, where `P` is the mirroring-selected preferred lane and `F` the other lane.
+The existing engine and independently seeded position replay match every measured moving first hand.
+
+This adds 114 native controls beyond the first sweep. Express delays 0 and 1 both first grab at tick 3 and observe
+the same phase; delay 8 supplies the otherwise missing phase. The other speeds need delays `0..1`, `0..3`, and
+`0..7` respectively. Coverage is checked against observed positions, rather than inferred from the delay labels.
+Each of the six ingredient/mirroring variants observes all 2/8/4/8 phases; this does not claim every arbitrary
+lane-to-lane phase offset, repeated-hand timing or other orientation.
+
+Phase captures are local under `work/belt-speed-coverage/front-phase-final-01/` and
+`front-phase-express-8-01/`. Their observed-phase audit is `front-phase-coverage-01.json`. The front suite now
+covers 228 native first-hand controls, including the 24 exit controls; six original-plant normal moving variants
+remain explicitly skipped in favor of their paired compact controls. Setup attempts with an incorrectly connected
+gate are excluded from these counts.
 
 ## Reproduce
 
@@ -216,3 +250,11 @@ BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-entrance-new \
 ```
 
 Test-name filters `-t 'express'` or `-t 'compact'` select one speed or the compact destination controls.
+
+Run only the additional phase controls with fresh retained evidence:
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-phases-new \
+  npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts \
+  tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts -t 'release [1-8]:'
+```

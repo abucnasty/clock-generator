@@ -4,11 +4,11 @@
 
 The 72 controls cover all four speeds, three pickup geometries, moving/backed-up supply and isolated
 near/far ingredients or the same ingredient on both lanes. Fresh staged inserters stay circuit-gated for
-64 ticks while the naturally fed lanes fill. Each capture then records repeated hands through tick1300,
+64 ticks while the naturally fed lanes fill. Each capture then records repeated hands through tick 1300,
 without placing belt stock or editing held items. Slower layouts shorten long ingredient tunnels while
 retaining the pickup and plant positions; actual speed, reach, initial stock and supply motion are asserted.
 
-The production pickup model matches56 controls. The remaining16 are recorded counterexamples:
+The production pickup model matches 56 controls. The remaining 16 are recorded counterexamples:
 
 - Fast backed-up single-lane supplies deplete, even on a straight belt. Later hands include `0,1,4,8`.
 - Normal backed-up supplies also deplete, including same-item two-lane supply. Single-lane hands eventually
@@ -20,11 +20,26 @@ The production pickup model matches56 controls. The remaining16 are recorded cou
 
 [Compact measured expectations](speed-expectations.json) retain actual hand patterns, counts, simulator
 mismatch counts/first differences and independent-replay results. A passing regression preserves these known
-limitations; it does not claim simulator parity for the16 counterexamples. Comparing every depleted hand to
+limitations; it does not claim simulator parity for the 16 counterexamples. Comparing every depleted hand to
 fresh full stock would also be invalid: the production comparison instead seeds observed full stock once and
 retains its holes between hands, supplying only observed arm-arrival/drop boundaries.
 
-The earlier three manual ingredient-demand controls are now automated at all four speeds. All12 pass:
+A test-only [jammed-queue replay](../../jammed-pickup-replay.ts) explains all 36 backed-up controls:
+seed the fully compressed lanes once at tick 64, advance stacks by the actual belt speed, clamp the head at
+position zero and followers to quarter-tile spacing, then withdraw the upstream-most reachable matching stack.
+Holes persist between hands; no instantaneous refill is assumed. Across 3,316 hand starts (including final
+partial hands) and 44,496 consecutive transitions, held quantities and both exposed lanes' positions, counts
+and items agree exactly. Native arm-arrival/drop boundaries remain inputs, so this is not an absolute arm-timing
+model or a production change.
+
+Ten short [native clips](jammed-pickup-clips.json) retain all four speeds and full-/half-tile reach plus normal
+same-item fallback. They run offline with:
+
+```bash
+npm test -- tests/game/mechanics/belt-pickup/jammed-pickup-replay.test.ts
+```
+
+The earlier three manual ingredient-demand controls are now automated at all four speeds. All 12 pass:
 eligible near stock13 wins even when far stock is zero; swapping ingredients preserves physical preference;
 near stock14 reaches the measured insertion limit and selection switches to the far ingredient. Machine
 inventory is staged once and remains untouched during these demand captures.
@@ -41,7 +56,7 @@ Factorio. Each case retains its exact blueprint/config, recorder output and comp
 baseline requires intentional discovery with `BELT_SPEED_DISCOVERY=1`, review of the native reports and a
 normal regression replay afterward. Full raw data stays in ignored `work/` directories.
 
-Evidence: `work/belt-speed-coverage/ordinary-gated-04/` and `ordinary-gated-05/` contain the72 staged controls;
+Evidence: `work/belt-speed-coverage/ordinary-gated-04/` and `ordinary-gated-05/` contain the 72 staged controls;
 `demand-01/` contains the12 demand controls. Earlier express captures remain in `ordinary-01/`. Incorrect
 setup/gate smoke runs are excluded from these findings. Absolute arm-arrival timing is not independently
 calibrated by the production comparison.
