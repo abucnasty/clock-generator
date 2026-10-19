@@ -1,12 +1,18 @@
 import { Mode } from "./mode";
 import { ModePlugin } from "./mode-plugin";
 import { ModeProvider } from "./mode-provider";
-import { ModeTransition, Transition } from "./mode-transition";
+import { Transition } from "./mode-transition";
 import { ModeTransitionEvaluator } from "./mode-transition-evaluator";
 
 export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
     
     private current: M;
+    /** The evaluator of `current`, looked up when the mode changes rather than every tick */
+    private current_evaluator: ModeTransitionEvaluator<M> | undefined;
+    /** The evaluator of the mode the last transition entered */
+    private entered_evaluator: ModeTransitionEvaluator<M> | undefined;
+    /** The plugins that do something every tick; most only watch transitions */
+    private readonly tick_plugins: ModePlugin<M>[];
 
     constructor(
         initial_mode: M,
@@ -14,6 +20,8 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
         private readonly plugins: ModePlugin<M>[] = []
     ) {
         this.current = initial_mode;
+        this.current_evaluator = graph.get(initial_mode);
+        this.tick_plugins = plugins.filter(plugin => plugin.executeForTick);
     }
 
     public get current_mode(): M {
@@ -25,9 +33,16 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
     }
 
     public executeForTick(): void {
-        this.current = this.evaluateTransition()
-        this.current.executeForTick();
-        this.executePlugins();
+        const next = this.evaluateTransition();
+        if (next !== this.current) {
+            this.current = next;
+            this.current_evaluator = this.entered_evaluator ?? this.modeEvaluatorForMode(next);
+        }
+        next.executeForTick();
+        const tick_plugins = this.tick_plugins;
+        for (let index = 0; index < tick_plugins.length; index++) {
+            tick_plugins[index].executeForTick!();
+        }
     }
 
     public forceTransitionTo(mode: M): void {
@@ -36,17 +51,17 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
             reason: "forced transition",
         };
         this.current = this.executeTransition(this.current, transition);
+        this.current_evaluator = this.modeEvaluatorForMode(this.current);
     }
 
     private evaluateTransition(): M {
-        const modeEvaluator = this.modeEvaluatorForMode(this.current);
-        const mode_transition = modeEvaluator.evaluateTransition()
-        const nextMode = ModeTransition.fold(
-            mode_transition, 
-            () => this.current,
-            (transition) => this.executeTransition(this.current, transition)
-        );
-        return nextMode
+        const modeEvaluator = this.current_evaluator ?? this.modeEvaluatorForMode(this.current);
+        const mode_transition = modeEvaluator.evaluateTransition();
+        // as ModeTransition.fold, without its closures
+        if (mode_transition instanceof Transition) {
+            return this.executeTransition(this.current, mode_transition);
+        }
+        return this.current;
     }
 
     private executeTransition(fromMode: M, transition: Transition<M>): M {
@@ -54,33 +69,22 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
             return fromMode;
         }
 
+        const toMode = transition.toMode;
         this.notifiyPlugins(fromMode, transition);
-        this.notifyOnExit(fromMode, transition.toMode);
-        this.notifyOnEnter(fromMode, transition.toMode);
+        fromMode.onExit(toMode);
+        (fromMode === this.current && this.current_evaluator !== undefined ? this.current_evaluator : this.modeEvaluatorForMode(fromMode)).onExit(toMode);
+        toMode.onEnter(fromMode);
+        const to_evaluator = this.modeEvaluatorForMode(toMode);
+        to_evaluator.onEnter(fromMode);
+        this.entered_evaluator = to_evaluator;
 
-        return transition.toMode;
+        return toMode;
     }
 
     private notifiyPlugins(fromMode: M, transition: Transition<M>): void {
         for (const plugin of this.plugins) {
             plugin.onTransition(fromMode, transition);
         }
-    }
-
-    private executePlugins() {
-        for (const plugin of this.plugins) {
-            plugin.executeForTick?.();
-        }
-    }
-
-    private notifyOnEnter(fromMode: M, toMode: M): void {
-        toMode.onEnter(fromMode);
-        this.modeEvaluatorForMode(toMode).onEnter(fromMode);
-    }
-
-    private notifyOnExit(fromMode: M, toMode: M): void {
-        fromMode.onExit(toMode);
-        this.modeEvaluatorForMode(fromMode).onExit(toMode);
     }
 
     private modeEvaluatorForMode(mode: M): ModeTransitionEvaluator<M> {
@@ -93,6 +97,9 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
 
     public addPlugin(plugin: ModePlugin<M>): void {
         this.plugins.push(plugin);
+        if (plugin.executeForTick) {
+            this.tick_plugins.push(plugin);
+        }
     }
 
     public getPlugins(): ModePlugin<M>[] {
