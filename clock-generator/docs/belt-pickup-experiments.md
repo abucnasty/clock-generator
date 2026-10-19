@@ -47,7 +47,6 @@ Front-facing rows cover the measured layouts and both mirroring states.
 | Reflected side pickups, same item — backed up | Tested | Tested | Tested | Tested; refill counterexamples |
 | Backed-up straight-belt demand / insertion-limit controls | Tested | Tested | Tested | Tested |
 | Front exit, backed up — different and same items | Tested | Tested | Tested; refill counterexample | Tested; refill counterexample |
-| Front exit, continuous moving supply | Blocked in this fixture | Blocked in this fixture | Blocked in this fixture | Blocked in this fixture |
 | Over-the-hood exit, moving — different items | Tested | Tested | Tested | Tested (compact layout) |
 | Over-the-hood exit, moving — same item on both lanes | Tested | Tested | Tested | Tested (compact layout) |
 | Over-the-hood exit, backed up — different and same items | Tested | Tested | Tested; finite refill | Tested (compact layout); finite refill |
