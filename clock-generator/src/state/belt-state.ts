@@ -13,6 +13,8 @@ export interface BeltState extends EntityState {
     supply: SupplyGate
     /** The stacks on each lane (in the order of the belt's `lanes`) that inserters with a drop spot put down on it */
     lane_traffic: LaneTraffic[]
+    /** Unspecified output spots are independent local tiles; retain each inserter's own traffic between hands. */
+    drop_lanes: Map<string, LaneTraffic[]>
     /** Reachable input lanes per pickup; kept when the runner replaces an inserter's control. */
     pickup_lanes: Map<string, BeltPickupStock[]>
     pickup_merges: Map<number, BeltPickupMerge>
@@ -25,7 +27,8 @@ function fromBelt(belt: Belt): BeltState {
         belt: belt,
         inventoryState: BeltInventoryState.fromBelt(belt),
         supply: new SupplyGate(),
-        lane_traffic: belt.lanes.map(() => new LaneTraffic()),
+        lane_traffic: belt.lanes.map(() => new LaneTraffic(belt.belt_speed)),
+        drop_lanes: new Map(),
         pickup_lanes: new Map(),
         pickup_merges: new Map(),
     }
@@ -35,6 +38,7 @@ function fromBelt(belt: Belt): BeltState {
 function stateKey(state: BeltState, tick: number): string {
     advancePickups(state, tick);
     return state.lane_traffic.map(it => it.stateKey(tick)).join("|")
+        + ";" + [...state.drop_lanes].map(([id, lanes]) => `${id}:${lanes.map(lane => lane.stateKey(tick)).join("|")}`).join(";")
         + ";" + [...state.pickup_lanes].map(([id, lanes]) => `${id}:${lanes.map(lane => lane.stateKey(tick)).join("|")}`).join(";")
         + ";" + [...state.pickup_merges].map(([lane, merge]) => `${lane}:${merge.stateKey(tick)}`).join(";")
 }

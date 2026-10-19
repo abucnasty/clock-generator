@@ -94,7 +94,7 @@ test("distinguishes withheld supply, machine refusal and the existing first-grab
     expect(state.held_item).toBeNull();
 });
 
-test("output diagnostics distinguish a refused outlet from a wait for drop cadence", () => {
+test("output diagnostics distinguish a refused outlet from a wait for output space", () => {
     const {context, state, source} = setup();
     state.held_item = {item_name: "iron-plate", quantity: 16};
     state.inventoryState.setQuantity("iron-plate", 16);
@@ -108,7 +108,25 @@ test("output diagnostics distinguish a refused outlet from a wait for drop caden
         drop.executeForTick();
     }
     expect(trace.events.filter(event => event.type === "wait").map(event => [event.tick, event.reason]))
-        .toEqual([[0, "supply_refused"], [4, "drop_cadence"]]);
+        .toEqual([[0, "supply_refused"], [4, "output_space"]]);
     expect(trace.events.filter(event => event.type === "drop").map(event => event.quantity)).toEqual([4, 4, 4]);
     expect(BeltState.stateKey(source, 4)).toBeDefined();
+});
+
+test("replacing a drop control preserves output stock through a partial hand and the next hand", () => {
+    const {context, state, source} = setup();
+    const trace = context.traceInserter(2);
+    for (let tick = 0; tick <= 12; tick++) {
+        if (tick === 0 || tick === 5) {
+            state.held_item = {item_name: "iron-plate", quantity: 16};
+            state.inventoryState.setQuantity("iron-plate", 16);
+        }
+        context.tick_provider.setCurrentTick(tick);
+        const replacement = new BeltDropLogic(state, source, context.tick_provider);
+        replacement.onEnter();
+        if (state.held_item) replacement.executeForTick();
+    }
+    expect(trace.events.filter(event => event.type === "drop").map(event => event.tick))
+        .toEqual([0, 1, 2, 4, 6, 8, 10, 12]);
+    expect(state.items_dropped).toBe(32);
 });

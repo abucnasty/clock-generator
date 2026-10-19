@@ -1,4 +1,4 @@
--- Two natural full hands from a seeded chest (15 items at stack size 3, otherwise 16). Never edit the hand or transport lines.
+-- Two natural full hands from a seeded chest (15 items at stack size 3, otherwise 16). Never edit the hand. Optional occupied-output controls seed transport stock once.
 local entities = ...
 local input = capture.find_one(entities, function(e) return e.type == "inserter" end, "drop inserter")
 local source, sink = input.pickup_target, capture.find_one(entities, function(e)
@@ -27,7 +27,8 @@ table.sort(pieces, function(a,b) return a.position.x < b.position.x end)
 assert(#pieces == 4)
 local function snapshot(tick)
     local sample = {tick = tick, held = input.held_stack.valid_for_read and input.held_stack.count or 0,
-        source = source.get_item_count("iron-plate"), sink = sink.get_item_count("iron-plate"), pieces = {}}
+        source = source.get_item_count("iron-plate"), sink = sink.get_item_count("iron-plate"),
+        seeded_sink = options.seedPosition and sink.get_item_count("copper-plate") or nil, pieces = {}}
     for index, piece in ipairs(pieces) do
         sample.pieces[index] = {name = piece.name, lines = pickup.lanes(piece, piece.get_max_transport_line_index())}
     end
@@ -41,4 +42,14 @@ local report = {initial = {version = script.active_mods.base, stack_size = force
     hand_capacity = input.inserter_stack_size_override, research_unchanged = research() == before, state = snapshot(0)}, samples = {}}
 input.get_or_create_control_behavior().circuit_enable_disable = false
 capture.each_tick{first_tick = 1, last_tick = ticks, report = report, output = "belt-drop-stacks.json", sample = snapshot,
-    after_tick = function(tick) if tick == ticks then assert(research() == before) end end}
+    after_tick = function(tick)
+        if tick == 5 and options.seedPosition then
+            assert(input.held_stack.valid_for_read and input.held_stack.count == 16, "seed before the first natural drop")
+            assert(input.drop_target == pieces[1], "seed the receiving tile")
+            assert(pieces[1].get_transport_line(2).insert_at(options.seedPosition / 256,
+                {name = "copper-plate", count = options.stackSize}, options.stackSize), "could not seed occupied output")
+            -- Retain actual post-insertion stock; a requested coordinate is not proof of native phase.
+            report.seed = {tick = tick, requested_position = options.seedPosition, state = snapshot(tick)}
+        end
+        if tick == ticks then assert(research() == before) end
+    end}

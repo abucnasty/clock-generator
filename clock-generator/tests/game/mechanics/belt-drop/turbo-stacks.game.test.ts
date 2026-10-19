@@ -9,6 +9,8 @@ import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {BELT_SPEEDS, blueprintAtSpeed} from "../../helpers/belt-speed-fixtures";
 
+import {compareOutputStock, outputClip, OutputReport} from "./output-stock-comparison";
+
 interface Stack {id: number; at: number; count: number; item: string}
 interface Line {length: number; stacks: Stack[] | Record<string, never>}
 interface Sample {tick: number; held: number; source: number; sink: number; pieces: {name: string; lines: Line[]}[]}
@@ -34,7 +36,7 @@ for (const speed of BELT_SPEEDS) for (const stackSize of [1, 2, 3, 4] as BeltSta
             ticks: 360, warmup_ticks: 120, settle_ticks: 0, seed: [], unclocked: true,
             game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
         });
-        const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/belt-drop-stacks.json"), "utf8")) as {
+        const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/belt-drop-stacks.json"), "utf8")) as OutputReport & {
             initial: {state: Sample}; samples: Sample[];
         };
         expect(report.initial.state.pieces.map(piece => piece.name)).toEqual([
@@ -42,6 +44,7 @@ for (const speed of BELT_SPEEDS) for (const stackSize of [1, 2, 3, 4] as BeltSta
         ]);
         expect(report.initial).toMatchObject({stack_size: stackSize, hand_capacity: 16, research_unchanged: true});
         expect(report.samples).toHaveLength(360);
+        expect(compareOutputStock(outputClip(report, speed.name, String(stackSize)))).toEqual([]);
         expect(stock(report.initial.state)).toEqual([]);
         const hands: {tick: number; amount: number}[][] = [];
         const pickups: number[] = [];

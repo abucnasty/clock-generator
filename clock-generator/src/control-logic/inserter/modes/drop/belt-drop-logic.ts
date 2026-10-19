@@ -1,6 +1,7 @@
 import assert from "../../../../common/assert";
 import { ItemName } from "../../../../data";
-import { Belt, BeltStackSize, Lane } from "../../../../entities/belt";
+import { LaneTraffic } from "../../../../state/lane-traffic";
+import { Belt, Lane } from "../../../../entities/belt";
 import { BeltDropSpot } from "../../../../entities/inserter";
 import { BeltState, InserterState } from "../../../../state";
 import { TickProvider } from "../../../current-tick-provider";
@@ -8,7 +9,7 @@ import { InserterTransferLogic } from "../transfer-logic";
 import { removeFromHand } from "../transfer-helpers";
 
 export class BeltDropLogic implements InserterTransferLogic {
-    private current_tick = 0;
+    private readonly local_traffic?: LaneTraffic[];
 
     constructor(
         private readonly inserter_state: InserterState,
@@ -18,19 +19,26 @@ export class BeltDropLogic implements InserterTransferLogic {
         const drop = inserter_state.inserter.drop;
         if (drop !== undefined) {
             sink_entity_state.lane_traffic[drop.lane - 1].registerSpot(this.spotTicks(sink_entity_state, drop));
+        } else {
+            const key = inserter_state.entity_id.id;
+            let traffic = sink_entity_state.drop_lanes.get(key);
+            if (!traffic) {
+                traffic = sink_entity_state.belt.lanes.map(() => new LaneTraffic(sink_entity_state.belt.belt_speed));
+                sink_entity_state.drop_lanes.set(key, traffic);
+            }
+            this.local_traffic = traffic;
+            this.local_traffic.forEach(lane => lane.registerSpot(this.spotTicks(sink_entity_state, {lane: 1, position: 0.5})));
         }
     }
 
-    public onEnter(): void {
-        this.current_tick = 0;
-    }
+    public onEnter(): void {}
 
     public stateKey(): string {
-        return String(this.current_tick);
+        return "";
     }
 
     public executeForTick(): void {
-        // A refused supply freezes the drop schedule until the belt accepts the held item again.
+        // A refused supply holds the hand; freely moving stock retains its own history.
         const held_item_name = this.inserter_state.held_item?.item_name;
         this.inserter_state.trace?.record({type: "drop_attempt", item: held_item_name});
         if (held_item_name !== undefined && this.sink_entity_state.supply.refused.has(held_item_name)) {
@@ -38,7 +46,6 @@ export class BeltDropLogic implements InserterTransferLogic {
             return;
         }
         this.dropOffToBelt(this.sink_entity_state, this.inserter_state);
-        this.current_tick += 1;
     }
 
     /**
@@ -73,12 +80,11 @@ export class BeltDropLogic implements InserterTransferLogic {
             return;
         }
         const lane = this.selectLaneForDrop(belt.lanes, held_item.item_name);
-        const amount_to_drop = Belt.amountToDropAtTick(belt.belt_speed, lane.stack_size as BeltStackSize, this.current_tick);
-
-        if (amount_to_drop > 0) {
-            removeFromHand(inserter_state, amount_to_drop);
+        const traffic = this.local_traffic![belt.lanes.indexOf(lane)];
+        if (traffic.tryPlace(this.tick_provider.getCurrentTick(), this.spotTicks(belt_state, {lane: 1, position: 0.5}))) {
+            removeFromHand(inserter_state, lane.stack_size);
         } else {
-            inserter_state.trace?.record({type: "wait", phase: "drop", reason: "drop_cadence", item: held_item.item_name});
+            inserter_state.trace?.record({type: "wait", phase: "drop", reason: "output_space", item: held_item.item_name});
         }
     }
 
@@ -98,6 +104,6 @@ export class BeltDropLogic implements InserterTransferLogic {
 
     /** Ticks a stack takes to travel from the origin of the belt's positions to the spot */
     private spotTicks(belt_state: BeltState, drop: BeltDropSpot): number {
-        return Math.round(Belt.ticksPerTile(belt_state.belt.belt_speed).toDecimal() * drop.position);
+        return Belt.ticksPerTile(belt_state.belt.belt_speed).toDecimal() * drop.position;
     }
 }
