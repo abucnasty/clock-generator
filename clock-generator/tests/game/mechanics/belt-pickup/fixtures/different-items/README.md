@@ -8,20 +8,18 @@ near/far ingredients or the same ingredient on both lanes. Fresh staged inserter
 without placing belt stock or editing held items. Slower layouts shorten long ingredient tunnels while
 retaining the pickup and plant positions; actual speed, reach, initial stock and supply motion are asserted.
 
-Production held-count comparisons now match 71 controls. The finite-stock queue resolves the original fifteen
+Production held-count comparisons now match all 72 controls. The finite-stock queue resolves the original fifteen
 backed-up discrepancies and also matches their exposed stock. The measured behaviors are:
 
 - Fast backed-up single-lane supplies deplete, even on a straight belt. Later hands include `0,1,4,8`.
 - Normal backed-up supplies also deplete, including same-item two-lane supply. Single-lane hands eventually
   reach `0,8,16,24`; two lanes help but do not guarantee consecutive grabs.
 - Normal moving entrance pickup with the same item on both lanes has a first hand `0,1,3,4` where the
-  point-based lane model predicts `0,1,2,3`. At the delayed tick the hand is visibly travelling between lanes.
-  Later hands agree with the independent stock replay. This observation does not yet establish a general
-  arm-travel rule.
+  stock-only reference predicts `0,1,2,3`. At the delayed tick the hand is visibly travelling between lanes.
+  The production radial-reach model now reproduces that delay without a universal lane-switch penalty.
 
 [Compact measured expectations](speed-expectations.json) retain actual hand patterns, counts, simulator
-mismatch counts/first differences and independent-replay results. A passing regression preserves the
-remaining arm-travel limitation; it does not claim absolute arm-arrival or generated-clock parity. Comparing every depleted hand to
+mismatch counts/first differences and independent-replay results. Production collection now agrees; it does not claim absolute arm-arrival or generated-clock parity. Comparing every depleted hand to
 fresh full stock would also be invalid: the production comparison instead seeds observed full stock once and
 retains its holes between hands, supplying only observed arm-arrival/drop boundaries.
 
@@ -203,26 +201,26 @@ observed position modulo 64, rather than inferring coverage from release labels.
 ticks after release. Lane alignment remains that of the supplied scaffold; arbitrary independently shifted lanes
 and sub-grid placements are separate questions.
 
-One case family exposes a simulator gap:
+The normal side-entrance family explains why collection needs arm reach:
 
-| Geometry and contents | Moving | Actual first-grab phases (units of 1/256 tile, modulo 64) | Native grab offsets | Total pickup ticks | Current model offsets |
+| Geometry and contents | Moving | Actual first-grab phases (units of 1/256 tile, modulo 64) | Native grab offsets | Total pickup ticks | Production offsets |
 | --- | --- | --- | --- | --- | --- |
-| Normal underground entrance, both lanes same item | true | 56,48,40,32 | 0,1,3,4 | 5 | 0,1,2,3 |
+| Normal underground entrance, both lanes same item | true | 56,48,40,32 | 0,1,3,4 | 5 | 0,1,3,4 |
 | Same setup, remaining phases | true | 24,16,8,0 | 0,1,2,3 | 4 | 0,1,2,3 |
 
 The first row corresponds to gate delays 0–3, and includes the independently repeated delay 0 result. Matching
-far-lane stock exists while the hand moves between lanes during the extra tick. This points to a hand-movement
-constraint requiring further investigation; it is not a calibrated universal lane-switch delay. The other 194
-phase/scenario combinations agree with the phase-seeded production pickup mode and independent stock replay.
+far-lane stock exists while the hand moves between lanes during the extra tick. The production model extends/retracts toward the selected stack and checks radial collection reach. It now
+matches all 198 phase/scenario combinations. The stock-only reference replay deliberately retains its four
+counterexamples, demonstrating why stack availability alone cannot establish pickup timing.
 
 Five small [native arm-travel clips](arm-travel-clips.json) preserve the delayed phases and one agreeing control,
-including hand coordinates and stack IDs. They run without Factorio using
-`npm test -- tests/game/mechanics/belt-pickup/arm-travel-clips.test.ts`.
+including hand coordinates and stack IDs. Production tests check held quantities, both lanes and control
+replacement with `npm test -- src/state/belt-pickup-arm.test.ts`. The separate stock-only reference test retains
+the earlier discrepancy as evidence.
 
-The [compact baseline](phase-expectations.json) preserves native patterns and the four explicit model/replay
+The [compact baseline](phase-expectations.json) preserves native patterns, corrected production comparisons and four stock-only reference
 counterexamples. Native first-grab time conditions the comparison; the simulator is seeded once from gated stock,
-without fitting later grabs or resynchronizing lane stock. A future model fix should update the comparison results,
-not rewrite measured native timing. The 199 replay checks (198 controls plus the coverage assertion) pass.
+without fitting later grabs or resynchronizing lane stock. Only production comparison results changed; measured native timing remains unchanged. The 199 replay checks (198 controls plus the coverage assertion) pass.
 
 ```bash
 # Fresh native evidence for a selected phase; never reuse a populated capture directory.
@@ -249,8 +247,7 @@ measurements separate from model agreement:
 
 - Moving stock replay agrees in 11/12 captures. Normal underground entrance again takes `0,1,3,4` on the first
   hand instead of `0,1,2,3`; this is the same observed arm-travel gap on the opposite physical near side.
-- Production held quantities agree in 23/24 captures. The remaining mismatch is the normal moving entrance's
-  two delayed held-count ticks.
+- Production held quantities now agree in all 24 captures, including the normal moving entrance's delayed ticks.
 - The production finite backed-up queue matches both lane snapshots and held quantities in all 12 backed-up
   captures: 1,252 hand starts and 14,832 transitions. Combined with the earlier 36 ordinary backed-up controls,
   that is **48 captures / 4,568 hand starts / 59,328 transitions**. Starts include final unfinished hands; this is
@@ -265,4 +262,16 @@ BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-reflected npm run test:ga
 
 # Recheck the retained 24 controls without starting Factorio.
 BELT_SPEED_REFLECTED_REPLAY_DIR=../work/belt-speed-coverage/ordinary-reflected-01 npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
+```
+
+## Arm-reach regression
+
+`ordinary-arm-travel.game.test.ts` captures all eight normal side-entrance phases from both physical near sides.
+All 16 fresh controls agree with production held counts. The probe records actual prototype extension/rotation
+speeds and native hand coordinates; it never moves the arm or inserts stock. Four phases take `0,1,3,4`, four
+`0,1,2,3`, on either side. Initial stock and native first arrival condition the comparison; later stock is not
+fitted back into the simulator. These are collection controls, rather than absolute startup or clock checks.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-pickup-parity/new-arm-phases npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-arm-travel.game.test.ts
 ```

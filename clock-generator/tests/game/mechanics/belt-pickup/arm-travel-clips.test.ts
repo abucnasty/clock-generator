@@ -19,8 +19,9 @@ function reportOf(clip: Clip): SameItemPickupProbe {
     }))};
 }
 
-// These clips preserve an observed model gap, rather than treating a point-based lane switch as game parity.
-for (const clip of fixture.clips) test(`native normal entrance arm travel after release delay ${clip.release_delay}`, () => {
+// The stock-only reference preserves why availability alone misses arm travel. Production coverage lives in
+// src/state/belt-pickup-arm.test.ts and predicts the native held quantities and lane stock.
+for (const clip of fixture.clips) test(`stock-only reference for native normal entrance arm travel after release delay ${clip.release_delay}`, () => {
     const assessment = assessSameItemPickups(reportOf(clip), 1, 1, 65);
     expect(assessment.hands).toBe(1);
     if (clip.release_delay === 4) {

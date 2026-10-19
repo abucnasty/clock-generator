@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.19.0] - Unreleased
 
 ### Fixed
+- Account for arm extension between ordinary belt grabs. This fixes the extra tick in affected normal-speed same-item underground-entrance pickups without adding a universal lane-switch delay.
 - Preserve finite stock and belt-speed refill for ordinary backed-up pickups, including underground reach and same-item lane fallback. Slower belts can run out of reachable stacks during or between hands instead of supplying a stack every tick.
 
 ### Added

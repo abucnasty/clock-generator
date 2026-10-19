@@ -22,6 +22,15 @@ export class BackedUpPickupLane implements BeltPickupStock {
         this.stock = Array.from({length: Math.ceil(this.length / 64) + 1}, (_, index) => ({position: index * 64, count: stack_size}));
     }
 
+    public peek(tick: number): {position: number; count: number} | undefined {
+        this.advanceTo(tick);
+        for (let index = this.stock.length - 1; index >= 0; index--) {
+            const stack = this.stock[index];
+            if (stack.position < this.length) return {...stack};
+        }
+        return undefined;
+    }
+
     public take(tick: number, capacity: number): number {
         this.advanceTo(tick);
         if (this.last_take_tick === tick || capacity <= 0) return 0;

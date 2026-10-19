@@ -191,12 +191,8 @@
       "0,1,7,8"
     ],
     "hands": 78,
-    "quantity_difference_count": 2,
-    "quantity_first_difference": {
-      "tick": 68,
-      "actual": 8,
-      "predicted": 12
-    },
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
     "moving_replay_difference_count": 1,
     "moving_replay_first_difference": {
       "tick": 66,

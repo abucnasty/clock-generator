@@ -16,7 +16,7 @@ type InserterTraceChange =
     | {type: "mode"; from: InserterStatus; to: InserterStatus}
     | {type: "wait"; phase: "pickup" | "drop"; reason: "destination_refused" | "supply_withheld"
         | "pickup_decision" | "no_reachable_stack" | "already_collected_this_tick" | "no_eligible_item"
-        | "supply_refused" | "drop_cadence" | "output_space"; item?: string};
+        | "supply_refused" | "drop_cadence" | "output_space" | "arm_travel"; item?: string};
 
 export type InserterTraceEvent = Readonly<InserterTraceChange & {tick: number}>;
 

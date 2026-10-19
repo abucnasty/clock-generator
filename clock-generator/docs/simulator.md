@@ -37,7 +37,7 @@ hypotheses and generated-clock checks behind these scoped rules.
   capped by that lane's stack size and the remaining hand capacity. There is at most one stack total per tick.
 - A straight belt exposes **one tile per lane**. Either underground entrance or exit exposes **half a tile per lane**.
   The model assigns no fixed lane-switch delay; an underground has less pickup space, rather than a fixed tick
-  penalty. The normal-speed side-entrance counterexample below shows that actual arm travel can matter.
+  penalty. Collection also checks the calibrated arm-extension reach below.
 - Lane phases, holes and partially taken stacks persist between hands, across closed windows and when inserter
   controls change. Each lane keeps its own remaining stacks.
 - On **backed-up supply**, items stop between pickups and the belt refills gaps. A stack is available each
@@ -119,8 +119,16 @@ The historical timing examples above describe turbo fixtures.
 
 The production [backed-up queue](../src/state/backed-up-pickup-lane.ts) matches held quantities and exposed stock
 in all 48 ordinary backed-up captures, including both physical near sides, after a single full-stock seed.
-Native arm-arrival/drop boundaries remain inputs to that comparison. Normal moving side-entrance same-item
-pickup can still lose a tick while the arm travels between lanes; that separate counterexample remains unresolved.
+Native arm-arrival/drop boundaries remain inputs to that comparison. The legendary stack inserter also retains
+its radial collection reach between grabs. Advance it toward the selected stack by the prototype's extension
+speed (0.25 tile per tick at legendary); collect when within one more extension step. The physical layout
+places each stack relative to the pivot. Keep reach while a partial hand waits or controls change; discard its
+history from repeat detection once the hand is empty/full, since the next hand initializes its own reach.
+
+This matches all 198 side-pickup arrival phases and all 96 ordinary/reflected repeated-hand controls, including
+the normal moving entrance's four delayed phases. Sixteen fresh controls check all eight normal entrance
+phases from both physical near sides. This collection constraint is calibrated for ordinary through supply and
+legendary stack inserters; side-fed supply and other prototypes/qualities remain separate calibrations.
 Capture geometry and collection replay alone do not establish absolute arrival or generated-clock parity.
 
 Scope remains one controlled pickup supply. Sparse supply, shared upstream withdrawals, merges outside the turbo
