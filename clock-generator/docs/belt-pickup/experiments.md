@@ -17,7 +17,7 @@ Publishing remains on hold. **Splitters are out of scope.**
   ingredient. A missing ingredient on the other lane does not automatically override eligible preferred stock.
 - Take at most **one reachable stack per tick**. Use the upstream-most matching stack on the preferred lane,
   falling back to the other lane for the same item when needed. No universal lane-switch delay was found;
-  one normal-speed side-entrance layout exposes an arm-travel delay missing from the point-based model.
+  the calibrated arm-reach model accounts for position-dependent delays between grabs.
 - Straight belts expose **one tile per lane**; underground endpoints expose **half a tile**. Moving stacks,
   holes, partial stacks and lane phase persist across hands and circuit windows. Underground pickups have
   less reach, rather than a fixed tick penalty.
@@ -56,10 +56,10 @@ underground exit. “All three geometries” refers to those variants, with the 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
 | Moving, one matching lane — all three geometries | Tested | Tested | Tested | Tested |
-| Moving, same item on both lanes — all three geometries | Tested | Tested | Tested | Tested; simulator timing mismatch (entrance) |
+| Moving, same item on both lanes — all three geometries | Tested | Tested | Tested | Tested |
 | Backed up, each ingredient isolated — all three geometries | Tested | Tested | Tested | Tested |
 | Backed up, same item on both lanes — side pickups | Tested | Tested | Tested | Tested |
-| Reflected side pickups, same item — moving, initial belt phase | Tested | Tested | Tested | Tested; simulator timing mismatch (entrance) |
+| Reflected side pickups, same item — moving, initial belt phase | Tested | Tested | Tested | Tested |
 | Reflected side pickups, same item — backed up | Tested | Tested | Tested | Tested |
 | Backed-up straight-belt demand / insertion-limit controls | Tested | Tested | Tested | Tested |
 
@@ -251,11 +251,10 @@ calibration; an empty-belt formula is not a general finite-output-lane model.
 The former 528/1,056 clock missed 30/35 native periods underground. Same-item fallback also reduced the gear
 clock's underground input window from 28 to 26 ticks; all six turbo/express checks held **16 gears / 160 ticks = 6/s**.
 
-**Four-speed collection.** Of 72 naturally supplied repeated-hand controls, 71 match production held counts.
-The finite-stock model resolves the fifteen fast/normal backed-up discrepancies; one normal moving side-entrance case still exposes arm
-travel. The 198-combination observed-phase sweep reproduces the latter at four phases; the other 194 agree.
-A further 24 reflected same-item controls reproduce every original pattern set and difference count with lane 2
-preferred: 23 match production held counts, with the normal moving entrance still a counterexample.
+**Four-speed collection.** All 72 naturally supplied repeated-hand controls and 24 reflected same-item controls
+now match production held counts. The finite-stock model resolves refill discrepancies; the radial collection
+model resolves the normal side-entrance delay. All 198 observed arrival-phase controls match production too.
+Sixteen fresh normal entrance controls verify all eight phases from both physical near sides.
 The backed-up stock comparison below also checks lane positions, counts and items.
 Twelve automated demand controls preserve the existing rule: eligible near stock 13 wins over absent far stock;
 at near stock 14, selection switches to the far ingredient. No demand-ranking rule was needed.
@@ -265,7 +264,15 @@ maintain quarter-tile spacing, and withdraw the upstream-most reachable matching
 hands. Seeded once at the closed gate, the production queue matches all exposed stock and held counts across
 **59,328 transitions / 4,568 hand starts** in 48 side-pickup captures, including both physical near sides. Native arm-arrival/drop boundaries remain
 inputs. Ten portable clips exercise the production pickup logic and preserve refill evidence; five separate clips
-preserve the unresolved arm-travel evidence. Neither comparison proves absolute arm arrival. See the [fixture report](../../tests/game/mechanics/belt-pickup/fixtures/different-items/README.md).
+preserve the arm-travel evidence and exercise production reach and stock. Neither comparison proves absolute arm arrival. See the [fixture report](../../tests/game/mechanics/belt-pickup/fixtures/different-items/README.md).
+
+**Arm reach.** In the calibrated legendary stack-inserter model, extend or retract toward the selected stack
+at 0.25 tile per tick; collect when it is within one further extension step, then snap collection reach to that
+stack. Four normal entrance phases need an extra tick to cross to the far lane; the other four do not. Layout
+places those stacks relative to the pivot. Keep partial-hand reach through control replacement and pauses,
+and include it in repeat detection only while it can affect another grab. This models collection after arrival,
+not the complete swing or rendered hand coordinates. The stock-only reference replay intentionally retains
+its former four counterexamples; production comparisons are separate.
 
 **Front controls.** The 228 first-hand captures verify lane preference across ingredients, mirroring, speeds
 and observed entrance phases. Normal moving entrance coverage uses the paired compact destination. The

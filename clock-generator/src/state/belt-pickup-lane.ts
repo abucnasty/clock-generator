@@ -26,20 +26,43 @@ export class BeltPickupLane implements BeltPickupStock {
     }
 
     public take(tick: number, capacity: number): number {
+        if (this.last_take_tick === tick || capacity <= 0) return 0;
+        const stack = this.candidate(tick);
+        if (!stack) return 0;
+        const taken = Math.min(stack.count, capacity);
+        this.remaining.set(stack.id, stack.count - taken);
+        this.last_take_tick = tick;
+        return taken;
+    }
+
+    /** Observe the next reachable stack without removing it; the arm may need another tick to reach it. */
+    public peek(tick: number): {position: number; count: number} | undefined {
+        const stack = this.candidate(tick);
+        return stack && {position: stack.position, count: stack.count};
+    }
+
+    public snapshot(tick: number): readonly (readonly [position: number, count: number])[] {
         this.forgetPassed(tick);
-        if (this.last_take_tick === tick) return 0;
-        const first = this.firstStack(tick);
-        const last = Math.ceil((tick * this.speed - this.phase + this.length) / 64) - 1;
-        for (let id = last; id >= first; id--) {
-            const available = this.remaining.get(id) ?? this.stack_size;
-            if (available === 0) continue;
-            const taken = Math.min(available, capacity);
-            if (taken <= 0) return 0;
-            this.remaining.set(id, available - taken);
-            this.last_take_tick = tick;
-            return taken;
+        const stock: [number, number][] = [];
+        for (let id = this.firstStack(tick); id <= this.lastStack(tick); id++) {
+            const count = this.remaining.get(id) ?? this.stack_size;
+            if (count > 0) stock.push([this.phase + id * 64 - tick * this.speed, count]);
         }
-        return 0;
+        return stock;
+    }
+
+    private candidate(tick: number): {id: number; position: number; count: number} | undefined {
+        this.forgetPassed(tick);
+        const first = this.firstStack(tick);
+        for (let id = this.lastStack(tick); id >= first; id--) {
+            const count = this.remaining.get(id) ?? this.stack_size;
+            if (count > 0) return {id, position: this.phase + id * 64 - tick * this.speed, count};
+        }
+        return undefined;
+    }
+
+    private lastStack(tick: number): number {
+        return Math.ceil((tick * this.speed - this.phase + this.length) / 64) - 1;
     }
 
     public hasTakenAt(tick: number): boolean {

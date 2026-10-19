@@ -13,7 +13,7 @@ const signature = (lanes: Stack[][]) => JSON.stringify(lanes.map(lane => lane.fi
     .map(stack => [stack.at, stack.count]).sort(([a], [b]) => a - b)));
 
 /**
- * Test the physical rule independently of the simulator. Observe the first grab, phase and remaining stacks of
+ * Stock-only reference, independent of the simulator; it deliberately omits radial arm reach. Observe the first grab, phase and remaining stacks of
  * each uninterrupted hand, then predict every later grab and lane snapshot without resynchronizing to the game.
  * This does not claim to predict the arm's arrival, first-grab delay, or interrupted-hand resumption.
  * Ordinary runs discard the first 60 ticks; a staged first-hand experiment can explicitly include its startup.

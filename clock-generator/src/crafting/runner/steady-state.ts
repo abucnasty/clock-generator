@@ -12,7 +12,7 @@ function ownStateKey(state: EntityState, tick: number): string {
         return MachineState.stateKey(state);
     }
     if (EntityState.isInserter(state)) {
-        return InserterState.stateKey(state);
+        return InserterState.stateKey(state, tick);
     }
     if (EntityState.isDrill(state)) {
         return DrillState.stateKey(state);

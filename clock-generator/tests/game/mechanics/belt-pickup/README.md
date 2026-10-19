@@ -24,7 +24,8 @@ retain the setup, corrections, screenshots and reproduction commands. **Publishi
 All four belt speeds now have side-pickup, front-entrance, backed-up front-exit, over-the-hood exit, side-entry
 and drop measurements. Passing a capture regression can preserve a **known simulator counterexample**.
 The production finite-stock queue now matches ordinary backed-up collection and exposed stock at all four speeds.
-Normal moving side-entrance fallback still exposes arm travel; side-fed refill remains a separate calibration.
+The radial collection model also matches normal moving side-entrance fallback, including all eight phases from
+both physical near sides. Side-fed refill remains a separate calibration.
 
 The downstream front-exit fixture blocks belt continuation at the inserter's tile. Over-the-hood exit pickups
 have their own fixture: the inserter sits upstream and leaves the downstream route open. Normal moving front-entrance controls use a

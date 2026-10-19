@@ -700,7 +700,7 @@
         <circle cx="486" cy="1062" r="6" fill="#00796b" />
         <text x="1095" y="1067" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">4</text>
       </g>
-      <text x="20" y="1118" font-size="13" fill="#203047" font-weight="normal">Normal moving side-entrance first hand: the game takes 5 ticks; the current model predicts 4. Other limits are in the matrix.</text>
+      <text x="20" y="1118" font-size="13" fill="#203047" font-weight="normal">Normal moving side-entrance first hand: 5 ticks in the delayed phases, 4 in the others. The arm model now matches both.</text>
       <text x="20" y="1141" font-size="13" fill="#526176" font-weight="normal">Collection only: excludes waiting before the first grab, travel to/from the destination and the drop. Measured examples, not universal constants.</text>
     </g>
   </g>

@@ -1,8 +1,9 @@
 import { ItemName } from "../data";
-import { Inserter } from "../entities";
+import { handSizeFor, Inserter } from "../entities";
 import { EntityState } from "./entity-state";
 import { InventoryState } from "./inventory-state";
 import { InserterStatus } from "./entity-status";
+import { BeltPickupArm } from "./belt-pickup-arm";
 import { InserterTrace } from "./inserter-trace";
 
 
@@ -31,6 +32,8 @@ export const InserterHandContents = {
 export interface InserterState extends EntityState, InserterStatusState {
     /** Opt-in observer, kept across control replacement but not copied into an independent state clone. */
     trace?: InserterTrace;
+    /** Physical collection reach retained across control replacement, independently of diagnostic history. */
+    pickup_arm?: BeltPickupArm;
     inserter: Inserter;
     held_item: InserterHandContents | null;
     /** Items the inserter has picked up so far */
@@ -68,6 +71,7 @@ function clone(state: InserterState): InserterState {
         inserter: state.inserter,
         status: state.status,
         tick: state.tick,
+        pickup_arm: state.pickup_arm?.clone(),
         held_item: state.held_item ? { ...state.held_item } : null,
         items_picked_up: state.items_picked_up,
         items_dropped: state.items_dropped,
@@ -80,8 +84,12 @@ function clone(state: InserterState): InserterState {
  * What drives the inserter's next ticks besides its inventory (see simulationStateKey). The counts of items only grow,
  * and `tick` is never updated, so relative to the current tick it would never repeat either.
  */
-function stateKey(state: InserterState): string {
-    return [state.status, state.waits_for_sink, state.enabled, JSON.stringify(state.held_item)].join(";");
+function stateKey(state: InserterState, tick: number): string {
+    // A new hand initializes its own collection reach. Old reach cannot affect an empty/full hand's future,
+    // and retaining it here would delay repeat detection despite identical physical outcomes.
+    const held = state.held_item;
+    const arm = held && held.quantity < handSizeFor(state.inserter, held.item_name) ? state.pickup_arm?.stateKey(tick) : undefined;
+    return [state.status, state.waits_for_sink, state.enabled, JSON.stringify(held), arm].join(";");
 }
 
 export const InserterState = {

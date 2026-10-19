@@ -3,7 +3,7 @@
 local entities, surface = ...
 local plant = capture.find_one(entities, function(e) return e.name == "electromagnetic-plant" end, "plant")
 local input = capture.find_one(entities, function(e) return e.type == "inserter"
-    and e.position.x == plant.position.x - 1.5 and e.position.y == plant.position.y + 2.5 end, "phase target")
+    and e.position.x == plant.position.x - 1.5 and e.position.y == plant.position.y + (options.reflected and -2.5 or 2.5) end, "phase target")
 assert(not input.held_stack.valid_for_read, "staged target must start empty")
 input.inserter_stack_size_override = 16
 for slot = 1, input.filter_slot_count do input.set_filter(slot, nil) end
@@ -22,6 +22,8 @@ for _, entity in pairs(entities) do
     end
 end
 local report = {version = script.active_mods.base, item = options.item, belt = belt.name,
+    inserter_position = input.position, belt_position = belt.position, quality = input.quality.name,
+    rotation_speed = input.prototype.get_inserter_rotation_speed(input.quality), extension_speed = input.prototype.get_inserter_extension_speed(input.quality),
     belt_speed = belt.prototype.belt_speed, stack_size = 16, gate_tick = options.gateTick,
     endpoint = belt.type == "underground-belt" and belt.belt_to_ground_type or "straight", samples = {}}
 capture.each_tick{

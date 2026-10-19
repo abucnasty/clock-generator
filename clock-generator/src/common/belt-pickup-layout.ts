@@ -25,3 +25,14 @@ export function pickupLayoutProblem(source: {pickup_layout?: BeltPickupLayout; p
     if (length !== pickupLengthForLayout(source.pickup_layout)) return "Pickup layout and exposed length disagree.";
     return null;
 }
+
+/** Distance from the inserter pivot to a stack, in 1/256-tile units. Position increases upstream. */
+export function pickupTargetRadius(layout: BeltPickupLayout, preferred_lane: 1 | 2, lane: number, position: number): number {
+    if (layout.startsWith("side-")) {
+        const downstream_end = layout === "side-entrance" ? 0 : 128;
+        const pivot_to_lane = 256 + (lane === preferred_lane ? -60 : 60);
+        return Math.hypot(downstream_end - position, pivot_to_lane);
+    }
+    const downstream_end = layout === "front-entrance" ? -256 : layout === "front-exit" ? -128 : 384;
+    return Math.hypot(downstream_end - position, 60);
+}
