@@ -72,50 +72,39 @@ function clockPosition(tick: number, period: number): number {
     return snapped >= period ? 0 : snapped;
 }
 
-/** Longest whole-tick period whose answers clockLookup keeps in a table */
-const MAX_TABLED_PERIOD = 1 << 20;
-
 /**
- * Whether a clock enables at a tick: inRange(clockPosition(tick, period)). For a whole-tick period, the position of a
- * whole tick is its remainder, so each answer is worked out once and kept in a table; other ticks and periods are
- * worked out every time.
+ * The merged windows of a clock period. An ask is answered for the whole run of ticks that answer alike (a window, or
+ * the gap to the next one), so the clock sleeps between boundaries instead of being worked out every tick, the way the
+ * game sleeps an inserter until something wakes it. One binary search pays for the whole run; the answers match
+ * ranges.some(r => r.contains(position)) ask for ask.
  */
-function clockLookup(period: number, inRange: (position: number) => boolean): (tick: number) => boolean {
-    if (!Number.isInteger(period) || period <= 0 || period > MAX_TABLED_PERIOD) {
-        return tick => inRange(clockPosition(tick, period));
-    }
-    // 0: not worked out yet, 1: disabled, 2: enabled
-    let table: Uint8Array | null = null;
-    return tick => {
-        if (!Number.isInteger(tick) || tick < 0) {
-            return inRange(clockPosition(tick, period));
-        }
-        table ??= new Uint8Array(period);
-        const position = tick % period;
-        const known = table[position];
-        if (known !== 0) {
-            return known === 2;
-        }
-        const enabled = inRange(position);
-        table[position] = enabled ? 2 : 1;
-        return enabled;
-    };
-}
+class ClockWindows {
+    private readonly starts: number[] = [];
+    private readonly ends: number[] = [];
+    /** Whole-tick periods map a whole tick to its remainder, which runs are counted in */
+    private readonly whole_ticks: boolean;
+    private run_answer = false;
+    private run_start = 0;
+    private run_end = 0;
+    private readonly asked = new LastTwoTicks();
+    private readonly answerAt = (tick: number) => this.inRange(clockPosition(tick, this.period));
 
-/** Same answer as ranges.some(r => r.contains(position)), by binary search over the merged ranges */
-function rangeLookup(ranges: ReadonlyArray<OpenRange>): (position: number) => boolean {
-    const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
-    const starts: number[] = [];
-    const ends: number[] = [];
-    for (const range of sorted) {
-        if (ends.length > 0 && range.start_inclusive <= ends[ends.length - 1]) {
-            ends[ends.length - 1] = Math.max(ends[ends.length - 1], range.end_inclusive);
-        } else {
-            starts.push(range.start_inclusive);
-            ends.push(range.end_inclusive);
+    constructor(private readonly period: number, ranges: ReadonlyArray<OpenRange>) {
+        const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
+        for (const range of sorted) {
+            if (this.ends.length > 0 && range.start_inclusive <= this.ends[this.ends.length - 1]) {
+                this.ends[this.ends.length - 1] = Math.max(this.ends[this.ends.length - 1], range.end_inclusive);
+            } else {
+                this.starts.push(range.start_inclusive);
+                this.ends.push(range.end_inclusive);
+            }
         }
+        this.whole_ticks = Number.isInteger(period) && period > 0;
     }
-    return (position) => {
+
+    public inRange(position: number): boolean {
+        const starts = this.starts;
+        const ends = this.ends;
         let low = 0;
         let high = starts.length - 1;
         while (low <= high) {
@@ -129,7 +118,47 @@ function rangeLookup(ranges: ReadonlyArray<OpenRange>): (position: number) => bo
             }
         }
         return false;
-    };
+    }
+
+    public ask(tick: number): boolean {
+        if (tick >= this.run_start && tick < this.run_end) {
+            return this.run_answer;
+        }
+        if (!this.whole_ticks || !Number.isInteger(tick) || tick < 0) {
+            // a fractional period or an odd tick: worked out as the game's integer clock would snap it
+            return this.asked.get(tick, this.answerAt);
+        }
+        const period = this.period;
+        const starts = this.starts;
+        const ends = this.ends;
+        const position = tick % period;
+        let low = 0;
+        let high = starts.length - 1;
+        let next = starts.length;
+        let answer = false;
+        let change = Number.POSITIVE_INFINITY;
+        while (low <= high) {
+            const mid = (low + high) >> 1;
+            if (position < starts[mid]) {
+                next = mid;
+                high = mid - 1;
+            } else if (position > ends[mid]) {
+                low = mid + 1;
+            } else {
+                answer = true;
+                change = Math.min(ends[mid] + 1, period);
+                break;
+            }
+        }
+        if (!answer && starts.length > 0) {
+            // the gap runs to the next window, through the period boundary when none is left in this period
+            change = next < starts.length ? starts[next] : period + starts[0];
+        }
+        this.run_answer = answer;
+        this.run_start = tick;
+        this.run_end = tick + (change - position);
+        return answer;
+    }
 }
 
 class EnableControlLambda implements EnableControl {
@@ -158,9 +187,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         );
     }
     private offset = 0;
-    private readonly inRange: (position: number) => boolean;
-    private readonly asked = new LastTwoTicks();
-    private readonly enabledAt: (tick: number) => boolean;
+    private readonly windows: ClockWindows;
 
     constructor(
         public readonly periodDuration: Duration,
@@ -168,8 +195,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         public readonly tickProvider: TickProvider,
         public readonly is_game_clock: boolean = false,
     ) {
-        this.inRange = rangeLookup(enabledRanges);
-        this.enabledAt = clockLookup(periodDuration.ticks, this.inRange);
+        this.windows = new ClockWindows(periodDuration.ticks, enabledRanges);
     }
 
     public isEnabled(): boolean {
@@ -178,7 +204,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
 
     public isEnabledIn(ticks: number): boolean {
         // the tick of the clock: the tick provider's, moved by the offset of the last reset
-        return this.asked.get(this.tickProvider.getCurrentTick() + this.offset + ticks, this.enabledAt);
+        return this.windows.ask(this.tickProvider.getCurrentTick() + this.offset + ticks);
     }
 
     public getOffset(): number {
@@ -191,17 +217,14 @@ class ClockedEnableControl implements EnableControl, Resettable {
 }
 
 class PeriodicEnableControl implements EnableControl {
-    private readonly inRange: (position: number) => boolean;
-    private readonly asked = new LastTwoTicks();
-    private readonly enabledAt: (tick: number) => boolean;
+    private readonly windows: ClockWindows;
 
     constructor(
         public readonly periodDuration: Duration,
         public readonly enabledRanges: ReadonlyArray<OpenRange>,
         public readonly tickProvider: TickProvider
     ) {
-        this.inRange = rangeLookup(enabledRanges);
-        this.enabledAt = clockLookup(periodDuration.ticks, this.inRange);
+        this.windows = new ClockWindows(periodDuration.ticks, enabledRanges);
     }
 
     public isEnabled(): boolean {
@@ -209,7 +232,7 @@ class PeriodicEnableControl implements EnableControl {
     }
 
     public isEnabledIn(ticks: number): boolean {
-        return this.asked.get(this.tickProvider.getCurrentTick() + ticks, this.enabledAt);
+        return this.windows.ask(this.tickProvider.getCurrentTick() + ticks);
     }
 }
 
