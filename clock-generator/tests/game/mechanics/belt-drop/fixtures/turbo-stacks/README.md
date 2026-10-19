@@ -1,4 +1,4 @@
-# Turbo belt drop timing at stack sizes 1–4
+# Belt drop timing at all four speeds and stack sizes 1–4
 
 Question: does `Belt::amountToDropAtTick` predict actual deposits at each effective belt stack size, without
 changing researched technologies?
@@ -19,7 +19,7 @@ quality-82, 562×324 JPEG (about 29 KiB from a 262 KiB PNG). It illustrates geom
 The [probe](probe.lua) changes only `force.belt_stack_size_bonus` to `stackSize - 1`, using the writable
 [LuaForce runtime property](https://lua-api.factorio.com/2.1.21/classes/LuaForce.html#belt_stack_size_bonus).
 It compares the complete researched/level state of all technologies before and after that change and at the
-end of capture. The inserter's configured hand override remains 16. All four tests use the identical blueprint,
+end of capture. The inserter's configured hand override remains 16. The four turbo controls use the identical blueprint,
 source quantity, geometry, direction, mirroring, warm-up and gate timing, each in its own fresh session/save.
 Factorio version: **2.1.21**. The engine config is intentionally absent: this isolated chest-to-belt question
 compares the exported `Belt` function directly, not a generated clock or a synthetic crafting machine.
@@ -47,10 +47,34 @@ effect, not a different deposit cadence. Two full hands deliver 30 items; the fi
 held through tick 120, waiting for a full hand. Other sizes deliver all 32. Source + hand + every belt/loader
 stack + receiving chest always totals 32, including that partial hand.
 
-No production simulator or Sidecar change is needed. Offline regression expectations for stack sizes 2 and 3
-are added beside the existing belt function tests, derived from these native traces. This validates turbo
-straight-belt drops into initially empty receiving tiles under the measured geometry, not obstructed drops,
-other belt speeds, unusual hand overrides or every orientation.
+The original turbo measurements needed no production timing change. The speed backfill below identifies a
+second-hand normal-belt constraint that an empty-belt timing function alone cannot predict.
+
+## Four-speed backfill
+
+The same layout is transformed consistently to express, fast or normal belts and loaders. Each speed/stack-size
+combination runs in a separate save, with identical warm-up, gate release, hand override and finite source stock.
+The probe now retains 360 ticks so even two normal-belt hands reach the chest. It verifies unchanged research,
+the actual transport prototypes, every stack decrement and movement, and conservation of all 32 items.
+[Native timing baselines](speed-expectations.json) contain both hands for all 16 combinations.
+
+| Speed | Stack 1: first-hand offsets | Stack 2 | Stack 3 (15-item hand) | Stack 4 |
+| --- | --- | --- | --- | --- |
+| Turbo | 0,1,2,4,6,…,28 | 0,1,2,4,6,8,10,12 | 0,1,2,4,6 | 0,1,2,4 |
+| Express | 0,1,2,5,8,10,13,16,18,21,24,26,29,32,34,37 | 0,1,2,5,8,10,13,16 | 0,1,2,5,8 | 0,1,2,5 |
+| Fast | 0,1,4,8,…,56 | 0,1,4,8,12,16,20,24 | 0,1,4,8,12 | 0,1,4,8 |
+| Normal | 0,1,8,16,…,112 | 0,1,8,16,24,32,40,48 | 0,1,8,16,24 | 0,1,8,16 |
+
+All first hands start depositing at native tick 6. Every first-hand deposit and empty tick matches
+`Belt.amountToDropAtTick`. Turbo, express and fast second hands have the same relative offsets as their first.
+**Normal second hands instead use 0,8,16,…:** preceding stock still occupies the receiving tile, so the initial
+two-stack burst is unavailable. Their first deposits occur at tick 126, 62, 38 and 30 for stack sizes 1–4;
+the corresponding second-hand durations are 121, 57, 33 and 25 ticks. This is finite receiving-space behavior,
+not a stack-size research change. The regression preserves these native second hands separately instead of
+claiming the empty-belt function predicts a nonempty tile.
+
+Raw captures are retained locally under ignored `work/belt-speed-coverage/drop-01/` and `drop-02/`;
+the committed timing baseline is portable. No splitter implementation or release publication is involved.
 
 ## Reproduce
 
@@ -58,7 +82,7 @@ From `clock-generator/`, with the [game harness configured](../../../../README.m
 
 ```bash
 # Select one stack size at a time during investigation.
-BELT_DROP_CAPTURE_DIR=../work/belt-drop/new-run npm run test:game -- tests/game/mechanics/belt-drop/turbo-stacks.game.test.ts -t 'stack size 3$'
+BELT_DROP_CAPTURE_DIR=../work/belt-drop/new-run npm run test:game -- tests/game/mechanics/belt-drop/turbo-stacks.game.test.ts -t '^express belt drops: stack size 3$'
 
 # Affected native regression and offline checks.
 npm run test:game -- tests/game/mechanics/belt-drop/turbo-stacks.game.test.ts
@@ -66,9 +90,9 @@ npm test -- src/entities/belt/belt.test.ts src/entities/inserter/inserter-hand-s
 npm run screenshots -- --case=turbo-belt-drop-stacks
 ```
 
-The retained run directory must be empty for the selected size. Each size gets its own subdirectory containing
+The retained run directory must be empty for each selected speed/size. Each gets its own subdirectory containing
 the exact blueprint, composed probe, ordinary recorder output and `game/script-output/belt-drop-stacks.json`.
-The report has a pre-release snapshot and 120 native tick samples of the hand, both chest quantities, and every
+The report has a pre-release snapshot and 360 native tick samples of the hand, both chest quantities, and every
 transport line's stack ID, position, item and count. The shared capture/snapshot helpers only observe; assertions
 and production comparisons live in the game test. All four finalized controls passed in
 ignored `work/belt-drop/turbo-final-02/`.

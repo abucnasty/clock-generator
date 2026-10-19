@@ -33,8 +33,12 @@ local function snapshot(tick)
     end
     return sample
 end
+for _, piece in ipairs(pieces) do
+    assert(piece.name == (options.beltPrefix or "turbo-") .. (piece.type == "loader" and "loader" or "transport-belt"))
+end
+local ticks = options.ticks or 120
 local report = {initial = {version = script.active_mods.base, stack_size = force.belt_stack_size_bonus + 1,
     hand_capacity = input.inserter_stack_size_override, research_unchanged = research() == before, state = snapshot(0)}, samples = {}}
 input.get_or_create_control_behavior().circuit_enable_disable = false
-capture.each_tick{first_tick = 1, last_tick = 120, report = report, output = "belt-drop-stacks.json", sample = snapshot,
-    after_tick = function(tick) if tick == 120 then assert(research() == before) end end}
+capture.each_tick{first_tick = 1, last_tick = ticks, report = report, output = "belt-drop-stacks.json", sample = snapshot,
+    after_tick = function(tick) if tick == ticks then assert(research() == before) end end}
