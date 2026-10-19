@@ -393,7 +393,30 @@
   "front-underground-entrance/compact-normal": {
     "blueprint": "belt-pickup/fixtures/front-underground-entrance/compact-normal-scaffold.txt",
     "image": "belt-pickup/fixtures/front-underground-entrance/compact-normal-scaffold.jpg",
-    "source_sha256": "369ed9b16b062d3300c9ef5e3206fcbc824a8d11690f563c8ea8a07f4f43c623",
+    "source_sha256": "bd6648d29edd6b8bbccd6c34aea825f6f561741f7edfbb6d831ba05aa77bd96e",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 400.474609375,
+      "y": -0.099609375
+    },
+    "resolution": {
+      "x": 1476,
+      "y": 557
+    },
+    "zoom": 1.5,
+    "width": 1476,
+    "height": 557,
+    "png_bytes": 1040212,
+    "jpeg_bytes": 168178,
+    "jpeg_quality": 82
+  },
+  "over-the-hood-underground-exit": {
+    "blueprint": "belt-pickup/fixtures/over-the-hood-underground-exit/scaffold.txt",
+    "image": "belt-pickup/fixtures/over-the-hood-underground-exit/scaffold.jpg",
+    "source_sha256": "648fbd4e261cee3f8d1bbf14d75ce0f55a578265254f3da303333f8ff82f367c",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
     "warmup_ticks": 600,
@@ -409,8 +432,31 @@
     "zoom": 1.5,
     "width": 1476,
     "height": 788,
-    "png_bytes": 1481963,
-    "jpeg_bytes": 256766,
+    "png_bytes": 1520408,
+    "jpeg_bytes": 259753,
+    "jpeg_quality": 82
+  },
+  "over-the-hood-underground-exit/compact-normal": {
+    "blueprint": "belt-pickup/fixtures/over-the-hood-underground-exit/compact-normal-scaffold.txt",
+    "image": "belt-pickup/fixtures/over-the-hood-underground-exit/compact-normal-scaffold.jpg",
+    "source_sha256": "4032f0a7481cf98d05d20bad0eaf37de4d600e8bf00fe848b220eddb0a1a0617",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 400.474609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1476,
+      "y": 788
+    },
+    "zoom": 1.5,
+    "width": 1476,
+    "height": 788,
+    "png_bytes": 1493565,
+    "jpeg_bytes": 256331,
     "jpeg_quality": 82
   }
 }

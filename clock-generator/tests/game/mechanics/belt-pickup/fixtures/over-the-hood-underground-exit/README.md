@@ -106,5 +106,14 @@ OVER_HOOD_PHASES=1 OVER_HOOD_REPLAY_DIR=../work/belt-speed-coverage/over-hood-ba
 
 In replay mode, a missing root for any selected case fails explicitly instead of starting Factorio.
 
-Both layout screenshots are registered but remain uncaptured while the user's graphical instance occupies one
-process slot. The screenshot helper needs a headless server plus its own graphical client.
+## Layout illustrations
+
+![Supplied turbo layout with the inserter reaching over the exit hood](scaffold.jpg)
+
+![Compact normal layout preserving the over-the-hood exit pickup and using a paired five-tile tunnel](compact-normal-scaffold.jpg)
+
+These native Factorio screenshots show the baseline layouts after 600 warm-up ticks, with the clock disabled.
+They illustrate geometry rather than the probe's exact starting stock. Refresh either registered case with
+`npm run screenshots -- --case=over-the-hood-underground-exit` or
+`npm run screenshots -- --case=over-the-hood-underground-exit/compact-normal`; the helper requires two free
+Factorio process slots and compresses the native PNGs to JPEG without resizing.

@@ -276,8 +276,9 @@ tick **310**, and observes circuits on the next belt at tick **326**. Passing ev
 BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/compact-output-new npm run test:game -- tests/game/mechanics/belt-pickup/compact-front-output.game.test.ts
 ```
 
-The existing `compact-normal-scaffold.jpg` shows the **previous layout** and is intentionally not embedded here.
-Its screenshot metadata still records that older source hash. Refresh with
+![Supplied compact normal-belt entrance scaffold with its connected circuit output](compact-normal-scaffold.jpg)
+
+The native JPEG matches the supplied replacement, including the connected output inserter. Refresh with
 `npm run screenshots -- --case=front-underground-entrance/compact-normal` when two Factorio process slots are
 available; the helper launches a headless server and graphical client.
 
