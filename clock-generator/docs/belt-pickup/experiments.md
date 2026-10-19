@@ -124,16 +124,17 @@ independent incoming streams; exact gate ticks remain in the fixture instruction
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
-| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; no verified moving default for undergrounds | Tested | Tested; generator result mismatch for backed-up undergrounds |
+| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; no verified moving default for undergrounds | Tested | Tested |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
 The post-fix recapture covers **48 ordinary clocks** across all four speeds: **46 meet exact baseline and recovery output**.
-Of those, 44 are correctly marked stable; both normal backed-up underground clocks work in the game but are
-conservatively rejected by the simulator. The two express moving underground defaults require backed-up supply
-and miss the target under moving supply. The original 39 recordings remain separate historical evidence.
+Of those, 44 are correctly marked stable. Both normal backed-up underground clocks pass the warm run, but
+fully jammed cold-start controls alternate 144/208 items at offset 1287, matching their unstable verdict.
+The two express moving underground defaults require backed-up supply and miss the target under moving supply.
+The original 39 recordings remain separate historical evidence.
 Slower merge clocks remain **Not tested** under the turbo-only supported schema. The belt-drop rows also compare
 finite receiving stock, including the normal-speed second hand.
 
@@ -304,14 +305,16 @@ with two overlapping detailed recorder periods. Electromagnetic targets scale wi
 | Fast undergrounds | false | Stable | 176 / 704 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | false | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
-| Normal undergrounds | false | Unstable; predicts 144 per period | 176 / 1,408 ticks | 176 throughout | Conservative simulator mismatch |
+| Normal undergrounds | false | Unstable | 176 / 1,408 ticks | Warm: 176; fully jammed cold offset 1287: 144/208 | Correctly rejects startup-sensitive clock |
 | Normal undergrounds | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical recovery alternation resolved |
 
 All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-four
-ordinary defaults are correctly marked stable; two more work natively but are rejected, and two select a
-fallback for a different supply condition. The [build report](../../tests/game/builds/README.md) links the current
-controls and preserves the original 39-run summaries. Independent startup and over-the-hood generated-clock
-checks remain separate verification gates; a collection replay conditioned on hand arrival does not close them.
+ordinary defaults are correctly marked stable; two are startup-sensitive, and two select a fallback for a
+different supply condition. Four additional cold-start controls cover both normal undergrounds at offsets
+0 and 1287, matching all 16 output periods each. A full lane can still move: these controls verify stationary
+initial stock and empty machines/hands before comparing the simulator. The [build report](../../tests/game/builds/README.md)
+links current controls and preserves the original 39-run summaries. Broader startup timing and over-the-hood
+generated clocks remain separate verification gates; warm throughput alone does not establish them.
 
 **Side supply and capture.** Single streams enter at **67 inner / 188 outer** units. The bounded turbo merge
 requires finite incoming/receiving/downstream queues, compressed gaps and backpressure; seven repeated controls

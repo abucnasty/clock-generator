@@ -82,6 +82,16 @@ export async function pickupClockConfig(variant: ClockCase): Promise<Config> {
     return config;
 }
 
+export function pickupClockScaffold(variant: ClockCase): string {
+    const fixture = variant.family === "electromagnetic" ? GameFixturePaths.DIFFERENT_ITEMS : GameFixturePaths.SAME_ITEM;
+    let blueprint = fs.readFileSync(path.join(fixture, `${variant.geometry}-scaffold.txt`), "utf8");
+    if (variant.family === "electromagnetic") {
+        if (variant.backed) blueprint = makeInputBeltBackedUp(blueprint);
+        return ordinaryAtSpeed(blueprint, variant.speed, false);
+    }
+    return gearAtSpeed(blueprint, variant.speed, variant.backed);
+}
+
 async function prepare(variant: ClockCase): Promise<Prepared> {
     const key = `${variant.family}-${variant.speed.name}-${variant.backed}-${variant.geometry}`;
     const cached = generated.get(key);
@@ -124,12 +134,7 @@ export async function capturePickupClockSpeed(variant: ClockCase) {
         if (prepared.selection) fs.writeFileSync(path.join(capture.directory, "generation-selection.json"), JSON.stringify(prepared.selection) + "\n");
         if (process.env.BELT_CLOCK_GENERATION_ONLY === "1") return;
         const {config, clock, period, expected} = prepared;
-        const fixture = variant.family === "electromagnetic" ? GameFixturePaths.DIFFERENT_ITEMS : GameFixturePaths.SAME_ITEM;
-        let blueprint = fs.readFileSync(path.join(fixture, `${variant.geometry}-scaffold.txt`), "utf8");
-        if (variant.family === "electromagnetic") {
-            if (variant.backed) blueprint = makeInputBeltBackedUp(blueprint);
-            blueprint = ordinaryAtSpeed(blueprint, variant.speed, false);
-        } else blueprint = gearAtSpeed(blueprint, variant.speed, variant.backed);
+        const blueprint = pickupClockScaffold(variant);
         fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint.trim() + "\n");
         const settle = 142 * period;
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))

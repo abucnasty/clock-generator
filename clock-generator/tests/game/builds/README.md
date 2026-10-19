@@ -100,21 +100,41 @@ counts match overlapping detailed recordings and the native hardware assertions.
 | Result | Cases | Interpretation |
 | --- | --- | --- |
 | Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply |
-| Native target and recovery pass, generator says unstable | 2 | Normal backed-up underground entrance/exit; a conservative simulator mismatch remains |
+| Warm target and recovery pass, generator says unstable | 2 | Normal backed-up underground entrance/exit fail a fully jammed cold start at offset 1287; the rejection is correct |
 | Moving target missed, selected clock requires backed-up supply | 2 | Express moving underground entrance/exit; no verified moving default |
 
 The six historical false-stable counterexamples involving fast undergrounds, normal straight pickups and
 normal moving underground recovery now pass with regenerated clocks. Both normal backed-up underground
-defaults also work natively, but their simulated rejection still needs a separate fix. No failing captured
-default is marked stable for its actual supply. These checks do not close independent startup timing,
+defaults pass the warm run, but the cold-start controls below confirm their startup sensitivity. No failing captured
+default is marked stable for its actual supply. These checks do not close broader startup timing,
 over-the-hood operating clocks or slower two-stream support.
 
 The portable `belt-pickup-clock.generation.test.ts` checks the selected periods, verdicts and supply against
-these native controls. It explicitly retains both conservative rejections; those assertions are not a claim
-that their simulator discrepancy is fixed. Fresh generation also saves the selected rate, required supply
+these native controls. Four additional comparisons reproduce the cold-start counts below, including the correct
+unstable rejections. Fresh generation also saves the selected rate, required supply
 and alternative id in `generation-selection.json` when that metadata is available in its cache.
 
 To replay the original 39 controls, set
 `BELT_CLOCK_EXPECTATIONS=tests/game/builds/pickup-clock-speed-controls.json` with their retained recording
 directory. Current captures use the parity controls by default. Always retain failed captures for diagnosis;
 the passing measurement test alone does not certify a clock that a control records below target.
+
+
+### Fully backed-up cold starts
+
+[pickup-clock-startup-controls.json](pickup-clock-startup-controls.json) records the normal underground
+entrance/exit with new empty machines/hands and verified stationary `[0,64]` stock on both half-tile lanes.
+At offset 0, all 16 periods produce 176 items. Rotating the same windows by 1287 ticks makes both game and
+simulator alternate 144/208 for all 16 periods. The mean is 176, but exact per-period output fails, so the
+unstable verdict is justified.
+
+The staged harness's default saturation check establishes fullness, which can still occur while stock moves.
+These fixtures wait for 1,200 saturation ticks and additionally assert stationary stock before the first grab;
+that wait is a fixture setup, not a general timing rule. Earlier short-saturation pilots are not used as evidence
+for a fully backed-up start. Counts begin at cold placement and include the first period; no observed arm arrivals
+or later stock are fed back into the simulator.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-clock-startup-new \
+  npm run test:game -- tests/game/builds/pickup-clock-startup.game.test.ts
+```
