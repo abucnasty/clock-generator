@@ -1,5 +1,10 @@
 # Belt pickup experiments
 
+Start with the [consolidated experiment record](../../../../docs/belt-pickup-experiments.md) for the complete
+series, simulator impacts, counterexamples, coverage limits and all 30 shelved splitter calibrations. This
+index links the detailed fixtures and commands available on master. Splitter implementation remains out of
+scope, and publishing remains on hold.
+
 The [same-item fixtures](fixtures/same-item/README.md) isolate moving near-lane/far-lane fallback. The
 [different-item fixtures](fixtures/different-items/README.md) compare straight and underground reach and backed-up
 availability. Current general findings and calibration limits live in the
@@ -38,7 +43,8 @@ selects cable from the same physical line 7, with unchanged first-hand timing an
 Mirroring with those swapped ingredients retained switches selection to iron on line 8, with the same timing
 and an ID trace through the other input line. These three controls establish a mirroring-dependent preference
 for this port: line 7 unmirrored, line 8 mirrored. First-hand agreement with the ordinary belt model does not
-classify splitter routing. Sidecar's unsupported warning remains. Mechanics work remains stacked under the experiment integration branch; publishing is on hold.
+classify splitter routing. Sidecar's unsupported warning remains. Accepted mechanics changes are merged
+unreleased; the later finite splitter routing implementation remains shelved.
 
 The [two-serial-splitter series](fixtures/splitter-two-inserters/README.md) separately measures original,
 ingredient-swapped, upstream-mirrored and downstream-unmirrored pickups, plus independent priority controls. With right priority,
@@ -113,13 +119,14 @@ Offsets are relative to the first observed grab, not arm arrival or a proof abou
 
 The [build checks](../../builds/README.md) independently measure throughput and recovery using these fixtures.
 
-## Completed queue and remaining scope decision
+## Completed queue and scope boundary
 
 The scheduled splitter controls are complete: ingredient swaps, mirroring, both output ports, alternate input,
 opposite/unset priorities, ingredient filters and blocked-drain supply. See the
 [additional routing findings](fixtures/splitter/routing-controls.md). They establish local selection and
-availability rules but do not calibrate complete splitter arbitration. Splitter support remains warning-only;
-implementing a finite routing model is a separate scope decision. The serial two-consumer tests show why
+availability rules but do not calibrate complete splitter arbitration. Splitter support remains warning-only
+by explicit scope decision. The later [seeded calibrations and archived kernel](../../../../docs/belt-pickup-experiments.md#shelved-splitter-calibrations)
+are documented for reference; their implementation is absent from master. The serial two-consumer tests show why
 removing the final drain cannot stand in for permanent local saturation.
 
 The queued [turbo drop calibration](../belt-drop/fixtures/turbo-stacks/README.md) is also complete. It verifies

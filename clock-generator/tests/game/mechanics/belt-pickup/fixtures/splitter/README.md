@@ -1,5 +1,9 @@
 # Direct turbo splitter pickup — priority-port controls
 
+The [consolidated record](../../../../../../docs/belt-pickup-experiments.md#shelved-splitter-calibrations)
+also preserves the later 30 seeded routing calibrations and their archived experimental kernel. Those sources
+remain off master. Splitter implementation is out of scope; this fixture continues checking unsupported capture.
+
 The supplied [scaffold](scaffold.txt) has one north input to an eastbound turbo splitter, right-output priority,
 and no splitter filter or input priority. Four legendary stack inserters maintain four-item iron/cable stacks.
 A legendary, unmirrored stack inserter stands immediately east of the south output and feeds electronic circuits

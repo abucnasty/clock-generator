@@ -58,8 +58,10 @@ The ordinary-belt model cannot predict splitter arbitration, output filtering or
 ports/consumers. The serial blocked-drain case also disproves treating every closed-outlet network as infinite
 backed-up supply. These controls justify retaining Sidecar's `splitter` warning and omitting geometry/preferred
 lane, rather than assigning a fixed delay or silently claiming support. All scheduled splitter controls are
-now measured; a complete splitter simulation would be a separate expansion of scope requiring a finite routing
-model and additional arbitration calibration.
+now measured. Later [finite-routing calibrations](../../../../../../docs/belt-pickup-experiments.md#shelved-splitter-calibrations)
+are preserved in the consolidated record, but splitter implementation was explicitly excluded from scope.
+The experimental kernel remains archived off master; neither these controls nor that research enable capture
+or generator support.
 
 ## Reproduce and evidence
 
