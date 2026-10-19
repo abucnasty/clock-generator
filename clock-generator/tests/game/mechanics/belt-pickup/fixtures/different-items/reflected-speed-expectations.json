@@ -150,12 +150,8 @@
       "0,1,5,8"
     ],
     "hands": 79,
-    "quantity_difference_count": 446,
-    "quantity_first_difference": {
-      "tick": 113,
-      "actual": 12,
-      "predicted": 16
-    },
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
     "moving_replay_difference_count": 0,
     "moving_replay_first_difference": null,
     "jammed_replay_difference_count": 0,
@@ -181,12 +177,8 @@
       "0,1,4,8"
     ],
     "hands": 78,
-    "quantity_difference_count": 455,
-    "quantity_first_difference": {
-      "tick": 90,
-      "actual": 8,
-      "predicted": 12
-    },
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
     "moving_replay_difference_count": 0,
     "moving_replay_first_difference": null,
     "jammed_replay_difference_count": 0,
@@ -232,12 +224,8 @@
       "0,1,4,8"
     ],
     "hands": 78,
-    "quantity_difference_count": 455,
-    "quantity_first_difference": {
-      "tick": 90,
-      "actual": 8,
-      "predicted": 12
-    },
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
     "moving_replay_difference_count": 0,
     "moving_replay_first_difference": null,
     "jammed_replay_difference_count": 0,

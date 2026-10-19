@@ -8,8 +8,8 @@ near/far ingredients or the same ingredient on both lanes. Fresh staged inserter
 without placing belt stock or editing held items. Slower layouts shorten long ingredient tunnels while
 retaining the pickup and plant positions; actual speed, reach, initial stock and supply motion are asserted.
 
-Production held-count comparisons match 56 controls. This does not establish backed-up lane/stock fidelity:
-the production backed-up approximation does not track either. The remaining 16 are held-count counterexamples:
+Production held-count comparisons now match 71 controls. The finite-stock queue resolves the original fifteen
+backed-up discrepancies and also matches their exposed stock. The measured behaviors are:
 
 - Fast backed-up single-lane supplies deplete, even on a straight belt. Later hands include `0,1,4,8`.
 - Normal backed-up supplies also deplete, including same-item two-lane supply. Single-lane hands eventually
@@ -20,24 +20,24 @@ the production backed-up approximation does not track either. The remaining 16 a
   arm-travel rule.
 
 [Compact measured expectations](speed-expectations.json) retain actual hand patterns, counts, simulator
-mismatch counts/first differences and independent-replay results. A passing regression preserves these known
-limitations; it does not claim simulator parity for the 16 counterexamples. Comparing every depleted hand to
+mismatch counts/first differences and independent-replay results. A passing regression preserves the
+remaining arm-travel limitation; it does not claim absolute arm-arrival or generated-clock parity. Comparing every depleted hand to
 fresh full stock would also be invalid: the production comparison instead seeds observed full stock once and
 retains its holes between hands, supplying only observed arm-arrival/drop boundaries.
 
-A test-only [jammed-queue replay](../../jammed-pickup-replay.ts) explains all 36 backed-up controls:
+The [production queue replay](../../jammed-pickup-replay.ts) matches all 36 backed-up controls:
 seed the fully compressed lanes once at tick 64, advance stacks by the actual belt speed, clamp the head at
 position zero and followers to quarter-tile spacing, then withdraw the upstream-most reachable matching stack.
 Holes persist between hands; no instantaneous refill is assumed. Across 3,316 hand starts (including final
 partial hands) and 44,496 consecutive transitions, held quantities and both exposed lanes' positions, counts
 and items agree exactly. Native arm-arrival/drop boundaries remain inputs, so this is not an absolute arm-timing
-model or a production change.
+model. The replay uses the same bounded queue as the generator.
 
 Ten short [native clips](jammed-pickup-clips.json) retain all four speeds and full-/half-tile reach plus normal
 same-item fallback. They run offline with:
 
 ```bash
-npm test -- tests/game/mechanics/belt-pickup/jammed-pickup-replay.test.ts
+npm test -- src/state/backed-up-pickup-lane.test.ts tests/game/mechanics/belt-pickup/jammed-pickup-replay.test.ts
 ```
 
 The earlier three manual ingredient-demand controls are now automated at all four speeds. All 12 pass:
@@ -249,12 +249,12 @@ measurements separate from model agreement:
 
 - Moving stock replay agrees in 11/12 captures. Normal underground entrance again takes `0,1,3,4` on the first
   hand instead of `0,1,2,3`; this is the same observed arm-travel gap on the opposite physical near side.
-- Production held quantities agree in 20/24 captures. The three normal backed-up layouts expose finite refill;
-  the remaining mismatch is the normal moving entrance's two delayed held-count ticks.
-- The experimental finite jammed queue matches both lane snapshots and held quantities in all 12 backed-up
+- Production held quantities agree in 23/24 captures. The remaining mismatch is the normal moving entrance's
+  two delayed held-count ticks.
+- The production finite backed-up queue matches both lane snapshots and held quantities in all 12 backed-up
   captures: 1,252 hand starts and 14,832 transitions. Combined with the earlier 36 ordinary backed-up controls,
   that is **48 captures / 4,568 hand starts / 59,328 transitions**. Starts include final unfinished hands; this is
-  observation-conditioned replay, not a production simulator fix or proof of absolute arm-arrival timing.
+  observation-conditioned production replay, rather than proof of absolute arm-arrival timing.
 
 Raw evidence is retained locally in `work/belt-speed-coverage/ordinary-reflected-01/`. These controls use aligned
 lanes and one gate release; they do not backfill every reflected release phase or historical interrupted window.

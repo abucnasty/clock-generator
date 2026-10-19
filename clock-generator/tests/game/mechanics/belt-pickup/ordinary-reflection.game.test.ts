@@ -102,6 +102,7 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
                 if (moving) expect(moving.hands).toBe(hands);
                 if (jammed) {
                     expect(jammed.samples).toBe(1236);
+                    expect(jammed.differences).toEqual([]);
                 }
                 const summary = {patterns: [...patterns].sort(), hands, quantity_difference_count: quantityDifferences.length,
                     quantity_first_difference: quantityDifferences[0] ?? null,

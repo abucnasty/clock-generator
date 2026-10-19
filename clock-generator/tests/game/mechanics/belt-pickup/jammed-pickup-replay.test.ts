@@ -19,7 +19,7 @@ function reportOf(clip: Clip): JammedPickupReport {
     }))};
 }
 
-for (const clip of fixture.clips) test(`experimental jammed queue matches native stock and held counts: ${clip.name}`, () => {
+for (const clip of fixture.clips) test(`production backed-up queue matches native stock and held counts: ${clip.name}`, () => {
     const result = replayJammedPickups(reportOf(clip), fixture.seed_tick);
     expect(result.samples).toBe(fixture.last_tick - fixture.seed_tick);
     expect(result.hands).toBeGreaterThanOrEqual(4);

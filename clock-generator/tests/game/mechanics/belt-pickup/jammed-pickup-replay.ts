@@ -1,23 +1,23 @@
-/** Experimental observation replay only; this is not the generator's backed-up supply model. */
+import {BeltSpeed} from "../../../../src/entities/belt";
+import {BackedUpPickupLane} from "../../../../src/state/backed-up-pickup-lane";
 interface ObservedStack {at: number; count: number; item: string}
 interface ObservedLane {length: number; stacks: ObservedStack[] | Record<string, never>}
 interface JammedSample {tick: number; held: number; held_item?: string; lanes: ObservedLane[]}
 export interface JammedPickupReport {
     item: string; belt_speed: number; stack_size: number; samples: JammedSample[];
 }
-interface QueueStack {position: number; count: number; item: string}
 
 /**
  * Seed two fully jammed trains once at the closed gate. Advance them continuously, including between hands.
  * Native arm arrival/drop boundaries are inputs; later stock and held quantities are independently predicted.
- * A finite look-ahead train extends past the maximum possible travel during the observed interval.
+ * Uses the production bounded queue; no later observed stock is fed back into that queue.
  */
 export function replayJammedPickups(report: JammedPickupReport, seedTick = 64, preferredLane: 1 | 2 = 1) {
     const samples = report.samples.filter(sample => sample.tick >= seedTick);
     if (!samples.length || samples[0].tick !== seedTick) throw new Error("Missing closed-gate seed sample");
     if (samples[0].held) throw new Error("Closed-gate seed must have an empty hand");
-    const speed = report.belt_speed * 256;
-    const lookAhead = Math.ceil((samples[samples.length - 1].tick - seedTick) * speed / 64) + 16;
+    const speed = report.belt_speed * 480 as BeltSpeed;
+    const laneItems: string[] = [];
     const queues = samples[0].lanes.map(lane => {
         const stock = Array.isArray(lane.stacks) ? lane.stacks : [];
         const expected = Array.from({length: lane.length * 4}, (_, index) => index * 64);
@@ -27,20 +27,16 @@ export function replayJammedPickups(report: JammedPickupReport, seedTick = 64, p
         if (!stock.length || stock.some(stack => stack.count !== 4 || stack.item !== stock[0].item)) {
             throw new Error("Replay assumes one item per lane in full four-item stacks");
         }
-        return Array.from({length: lookAhead}, (_, index): QueueStack => ({position: index * 64, count: 4, item: stock[0].item}));
+        laneItems.push(stock[0].item);
+        return new BackedUpPickupLane(speed, lane.length, 4);
     });
-    const visible = (lane: number) => queues[lane].filter(stack => stack.position < samples[0].lanes[lane].length * 256)
-        .map(stack => [stack.position, stack.count, stack.item]);
+    const visible = (lane: number, tick: number) => queues[lane].snapshot(tick)
+        .map(([position, count]) => [position, count, laneItems[lane]]);
     let held = 0, attempting = false, hands = 0;
     const differences: {tick: number; actual: number; predicted: number; lane_mismatches: number}[] = [];
     for (let index = 1; index < samples.length; index++) {
         const previous = samples[index - 1], current = samples[index];
         if (current.tick !== previous.tick + 1) throw new Error("Replay needs consecutive native samples");
-        for (const lane of queues) {
-            for (let stack = 0; stack < lane.length; stack++) {
-                lane[stack].position = Math.max(lane[stack].position - speed, stack ? lane[stack - 1].position + 64 : 0);
-            }
-        }
         if (current.held < previous.held) {
             held = Math.max(0, held - previous.held + current.held);
             attempting = false;
@@ -51,14 +47,10 @@ export function replayJammedPickups(report: JammedPickupReport, seedTick = 64, p
         }
         if (attempting && held < report.stack_size) {
             for (const lane of [preferredLane - 1, 2 - preferredLane]) {
-                const available = queues[lane].filter(stack => stack.item === report.item
-                    && stack.position < current.lanes[lane].length * 256);
-                const stack = available[available.length - 1];
-                if (!stack) continue;
-                const quantity = Math.min(stack.count, report.stack_size - held);
-                stack.count -= quantity;
+                if (laneItems[lane] !== report.item) continue;
+                const quantity = queues[lane].take(current.tick, report.stack_size - held);
+                if (!quantity) continue;
                 held += quantity;
-                if (!stack.count) queues[lane].splice(queues[lane].indexOf(stack), 1);
                 break;
             }
         }
@@ -66,7 +58,7 @@ export function replayJammedPickups(report: JammedPickupReport, seedTick = 64, p
         for (const [lane, observed] of current.lanes.entries()) {
             const stock = Array.isArray(observed.stacks) ? observed.stacks : [];
             const actual = stock.map(stack => [Math.round(stack.at * 256), stack.count, stack.item]);
-            if (JSON.stringify(visible(lane)) !== JSON.stringify(actual)) laneMismatches++;
+            if (JSON.stringify(visible(lane, current.tick)) !== JSON.stringify(actual)) laneMismatches++;
         }
         if (held !== current.held || laneMismatches) differences.push({tick: current.tick, actual: current.held,
             predicted: held, lane_mismatches: laneMismatches});

@@ -1,0 +1,87 @@
+import fs from "fs";
+import path from "path";
+import {beforeAll, expect, test} from "vitest";
+import {BackedUpPickupLane} from "./backed-up-pickup-lane";
+import {BeltSpeed} from "../entities/belt";
+import {Config} from "../config";
+import {loadConfigFromFile} from "../config/loader";
+import {SimulationContext} from "../crafting/sequence/simulation-context";
+import {InserterPickupMode} from "../control-logic/inserter/modes/pickup/pickup-mode";
+import {EntityState} from "./entity-state";
+import {GameFixturePaths} from "../../tests/game/helpers/fixture-paths";
+
+interface Clip {
+    name: string; item: string; belt_speed: number; stack_size: number; lane_length: number;
+    lane_items: string[]; frames: [number, [number, number][], [number, number][]][];
+}
+const fixture = JSON.parse(fs.readFileSync(path.join(GameFixturePaths.DIFFERENT_ITEMS,
+    "jammed-pickup-clips.json"), "utf8")) as {seed_tick: number; last_tick: number; clips: Clip[]};
+let config: Config;
+beforeAll(async () => {config = await loadConfigFromFile(path.join(GameFixturePaths.DIFFERENT_ITEMS, "config.json"));});
+
+// Collection and stock are independently predicted. Native arm arrival and drop boundaries remain inputs.
+for (const clip of fixture.clips) test(`production backed-up stock matches native clip: ${clip.name}`, () => {
+    const copy = structuredClone(config);
+    copy.overrides = {...copy.overrides, backed_up_belts: true};
+    const input = copy.inserters.find(i => i.source.type === "belt")!;
+    if (input.source.type !== "belt") throw Error("Expected a belt source");
+    input.source.pickup_length = clip.lane_length as 0.5 | 1;
+    input.filters = [clip.item];
+    const belt = copy.belts.find(b => b.id === input.source.id)!;
+    const types = {"0.125": "turbo-transport-belt", "0.09375": "express-transport-belt",
+        "0.0625": "fast-transport-belt", "0.03125": "transport-belt"} as const;
+    belt.type = types[String(clip.belt_speed) as keyof typeof types];
+    belt.lanes.forEach((lane, index) => {lane.ingredient = clip.lane_items[index];});
+    const context = SimulationContext.fromConfig(copy);
+    const state = context.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
+    const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
+    if (!EntityState.isBelt(source)) throw Error("Expected a belt");
+    const createMode = () => InserterPickupMode.create({inserterState: state, sourceState: source,
+        sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
+        tick_provider: context.tick_provider});
+    let mode = createMode();
+    const lanes = source.pickup_lanes.get(state.entity_id.id)!;
+    let collecting = false;
+    for (let index = 0; index < clip.frames.length; index++) {
+        const tick = fixture.seed_tick + index;
+        context.tick_provider.setCurrentTick(tick);
+        const [actual, ...stock] = clip.frames[index], previous = clip.frames[index - 1]?.[0] ?? 0;
+        if (actual < previous) {
+            state.held_item = null;
+            state.inventoryState.clear();
+            collecting = false;
+        }
+        if (actual > previous && previous === 0) {
+            collecting = true;
+            mode = createMode(); // Replacing a control must not refill its source.
+        }
+        if (collecting && (state.held_item?.quantity ?? 0) < clip.stack_size) mode.executeForTick();
+        expect(state.held_item?.quantity ?? 0, `held at ${tick}`).toBe(actual);
+        lanes.forEach((lane, laneIndex) => {
+            expect(lane).toBeInstanceOf(BackedUpPickupLane);
+            expect((lane as BackedUpPickupLane).snapshot(tick), `lane ${laneIndex + 1} at ${tick}`).toEqual(stock[laneIndex]);
+        });
+    }
+});
+
+test("refill after a long pause is equivalent to advancing each tick and does not grow the stored train", () => {
+    const skipped = new BackedUpPickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
+    const stepped = new BackedUpPickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
+    for (const lane of [skipped, stepped]) {
+        expect([0, 1, 2, 3].map(tick => lane.take(tick, 4))).toEqual([4, 4, 4, 0]);
+    }
+    for (let tick = 4; tick <= 100; tick++) stepped.snapshot(tick);
+    expect(skipped.stateKey(100)).toEqual(stepped.stateKey(100));
+    expect(skipped.snapshot(1_000_000_000)).toEqual([[0, 4], [64, 4]]);
+    expect(skipped.stateKey(1_000_000_000).length).toBeLessThan(80);
+});
+
+test("partial stacks remain until consumed and one lane cannot give two stacks in the same tick", () => {
+    const lane = new BackedUpPickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
+    expect(lane.take(0, 2)).toBe(2);
+    expect(lane.snapshot(0)).toEqual([[0, 4], [64, 2]]);
+    expect(lane.take(0, 4)).toBe(0);
+    expect(lane.take(1, 4)).toBe(2);
+    expect(lane.take(2, 4)).toBe(4);
+    expect(() => lane.snapshot(1)).toThrow("backwards in time");
+});

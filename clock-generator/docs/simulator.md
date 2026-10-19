@@ -4,7 +4,7 @@ This page was split out of GOALS.md on 2026-10-15; GOALS.md holds the goals.
 
 ## Simulator Goals
 
-This project actively runs a simulation of the machines, inserters and mining drills that are in the configuration file. It simulates all their crafts and transfers every tick. Infinity chests and input belts are endless supplies, and fluids are left out. Moving belt pickups time reachable stacks each tick by the rule below. Omitted pickup length defaults to one tile; explicitly backed-up supply uses its separate one-stack-per-tick rule. The simulator models each entity's game statuses and is checked against recordings and provides state transition logs in debug mode to provide insights into what each entity is doing and a description for why it wanted to transition to a different state. Any deviation from the game is measured by running "scaffold" tests. These tests are driven by having a "scaffold" blueprint paired with a configuration file. Any scaffold can be tested directly in factorio. The `clock-generator-recorder` can help record and run this scaffold and provide per tick entity statistics to compare against the simulator. This is a verification process that the simulator backing the algorithm is doing the right thing. A scaffold test checks both goals against the game: that every clock period moves exactly the expected output, and that the simulator counts the wake-ups the game shows. It also lays the simulator against the game entity by entity: a run of the same clock in the simulator has to move what the game moved through every inserter and finish what it finished in every machine. For that the simulator writes its run in the format of the recorder, so that one set of functions reads both (`clock-generator/src/verification/compare-recordings.ts`); `npm run verify` makes the same comparison for any recording.
+This project actively runs a simulation of the machines, inserters and mining drills that are in the configuration file. It simulates all their crafts and transfers every tick. Infinity chests and input belts are endless supplies, and fluids are left out. Moving belt pickups time reachable stacks each tick by the rule below. Omitted pickup length defaults to one tile; ordinary backed-up supply retains finite stock and refills gaps at belt speed. The simulator models each entity's game statuses and is checked against recordings and provides state transition logs in debug mode to provide insights into what each entity is doing and a description for why it wanted to transition to a different state. Any deviation from the game is measured by running "scaffold" tests. These tests are driven by having a "scaffold" blueprint paired with a configuration file. Any scaffold can be tested directly in factorio. The `clock-generator-recorder` can help record and run this scaffold and provide per tick entity statistics to compare against the simulator. This is a verification process that the simulator backing the algorithm is doing the right thing. A scaffold test checks both goals against the game: that every clock period moves exactly the expected output, and that the simulator counts the wake-ups the game shows. It also lays the simulator against the game entity by entity: a run of the same clock in the simulator has to move what the game moved through every inserter and finish what it finished in every machine. For that the simulator writes its run in the format of the recorder, so that one set of functions reads both (`clock-generator/src/verification/compare-recordings.ts`); `npm run verify` makes the same comparison for any recording.
 
 ### The status of an inserter
 
@@ -41,8 +41,9 @@ hypotheses and generated-clock checks behind these scoped rules.
 - Lane phases, holes and partially taken stacks persist between hands, across closed windows and when inserter
   controls change. Each lane keeps its own remaining stacks.
 - On **backed-up supply**, items stop between pickups and the belt refills gaps. A stack is available each
-  pickup tick on straight belts and either underground endpoint in the measured turbo setup. Geometry is retained;
-  the explicit supply setting selects this availability rule. Capture does not infer supply motion from a snapshot.
+  pickup tick in the measured turbo first hands, but slower belts can exhaust reachable stock. Ordinary through
+  supply uses a bounded queue: stop the head at the endpoint, retain quarter-tile spacing, and refill gaps at belt
+  speed. Holes and partial stacks persist across hands; geometry still limits reach. Capture does not infer supply motion from a snapshot.
 
 For example, four grabs from one moving turbo lane can occur at `0,1,2,3` on a straight piece and `0,1,2,4` or
 `0,1,3,5` underground, depending on phase. With the same item in four-item stacks on both saturated lanes, the
@@ -56,7 +57,7 @@ Sidecar captures supported pickup geometry; the UI calls these **Straight belt**
 
 Supply is a separate choice: **Moving** by default, or **Backed up** with `overrides.backed_up_belts: true`.
 The simulator retains the pickup length in both cases. Moving supply models reachable stacks, holes and partial
-stacks; backed-up supply uses one available stack per tick. Choosing **Backed up** also omits moving-belt clock slack.
+stacks; ordinary backed-up supply additionally stops and compresses stacks at its closed endpoint. Choosing **Backed up** also omits moving-belt clock slack.
 Older `non_moving_belts` config settings migrate to `backed_up_belts` on import. New configs and exports use only
 `backed_up_belts`; if both keys are present, the new key takes precedence. Saved results retain their run's assumptions. Older underground configs must set `pickup_length: 0.5` explicitly;
 geometry cannot be recovered from an omitted field. Belt slack remains extra margin for late starts and supply gaps.
@@ -113,11 +114,11 @@ front-entrance moving/backed-up controls and front-exit backed-up controls at tu
 speeds. Normal moving front-entrance controls use a paired compact destination to respect underground range.
 The historical timing examples above describe turbo fixtures.
 
-Two measured limits remain in the production model. Fast/normal backed-up supplies can deplete between grabs
-or repeated hands; the one-stack-per-tick approximation is optimistic. A test-only finite jammed-queue replay
-matches all 48 ordinary backed-up captures, including both physical near sides, after a single stock seed. Separately, normal moving side-entrance
-same-item pickup can lose a tick while the arm travels between lanes. These are explicit counterexample
-regressions, not implemented simulator support. Capture geometry alone does not establish timing parity.
+The production [backed-up queue](../src/state/backed-up-pickup-lane.ts) matches held quantities and exposed stock
+in all 48 ordinary backed-up captures, including both physical near sides, after a single full-stock seed.
+Native arm-arrival/drop boundaries remain inputs to that comparison. Normal moving side-entrance same-item
+pickup can still lose a tick while the arm travels between lanes; that separate counterexample remains unresolved.
+Capture geometry and collection replay alone do not establish absolute arrival or generated-clock parity.
 
 Scope remains one controlled pickup supply. Sparse supply, shared upstream withdrawals, merges outside the turbo
 side-feed case below, bends, other inserters/qualities/orientations and arbitrary relative lane phases remain

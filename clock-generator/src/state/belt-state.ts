@@ -3,7 +3,7 @@ import { BeltInventoryState } from "./belt-inventory-state"
 import { EntityState } from "./entity-state"
 import { LaneTraffic } from "./lane-traffic"
 import { SupplyGate } from "./supply-gate"
-import { BeltPickupLane } from "./belt-pickup-lane"
+import { BeltPickupStock } from "./belt-pickup-stock"
 import { BeltPickupMerge } from "./belt-pickup-merge"
 
 export interface BeltState extends EntityState {
@@ -14,7 +14,7 @@ export interface BeltState extends EntityState {
     /** The stacks on each lane (in the order of the belt's `lanes`) that inserters with a drop spot put down on it */
     lane_traffic: LaneTraffic[]
     /** Reachable input lanes per pickup; kept when the runner replaces an inserter's control. */
-    pickup_lanes: Map<string, BeltPickupLane[]>
+    pickup_lanes: Map<string, BeltPickupStock[]>
     pickup_merges: Map<number, BeltPickupMerge>
 }
 
