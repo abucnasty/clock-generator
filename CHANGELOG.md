@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.19.0] - Unreleased
 
 ### Fixed
+- Avoid repeating recovery verification for identical clocks, including schedules whose inserter windows differ only in object ordering. Keep distinct supply assumptions and failure findings separate.
 - Check independently phased moving input lanes during clock verification and recovery. Clocks that meet their target only while both lanes stay aligned are no longer marked stable.
 - Replenish backed-up single-stream side feeds through finite incoming queues at the actual belt speed. Repeated hands on slower belts no longer draw from unlimited reachable stock.
 - Retain output-belt stock between hands at all four speeds. Inserters now wait for actual receiving space, including the slower second hand on normal belts and temporary compressed gaps.
@@ -25,6 +26,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Model two full turbo side streams sharing a straight pickup lane, including different ingredients, persistent queues, temporary compression and finite downstream backpressure. `source.pickup_merge` captures both streams and the outlet geometry; other merge speeds and layouts remain unsupported.
 - Report when a two-stream supply repeats a stalled preparation state, including an inner ingredient starved by a full outer stream, instead of waiting for the simulation timeout.
 - Sidecar 0.11.0 captures the preferred lane and half-tile reach in front of underground entrances, plus local receiving lanes, single-stream side-feed profiles and supported turbo two-stream merges. Its copy window and import preview warn about unsupported merges and ambiguous side feeds.
+
+### Changed
+- Check the one-swing alternative early so a fully verified clock can be inspected while the remaining alternatives continue. Final ranking and recovery requirements are unchanged.
 
 ## [0.18.0] - 2026-10-18
 

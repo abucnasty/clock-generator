@@ -36,6 +36,10 @@ game test is not game verification.
 
 ## Generation test runtime
 
+See [clock candidate strategies](clock-generator/docs/clock-candidates.md) for the purpose and removal evidence of
+each strategy. Duplicate verification is shared within a generation; input-starvation and output-blockage recovery
+remain required. A matching window count alone is not evidence that two candidates have the same behavior.
+
 Group assertions about the same unmodified build under a shared `beforeAll`, so one generation serves them.
 Keep changed configs, explicit searches and start-dependence overrides as independent generations. Share
 results only within that test run; persisted generation caches can hide regressions.

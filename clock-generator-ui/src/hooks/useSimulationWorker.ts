@@ -14,6 +14,7 @@ import { plainClockName } from '../utils/clockSummary';
 import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
 import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
 import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
+import { orderAlternativeTasks } from '../worker/alternativeQueue';
 import type { GenerationAssumptions, RepeatedUnitsRecovery } from '../worker/types';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
@@ -120,10 +121,6 @@ interface UseSimulationWorkerResult {
 }
 
 const PRIMARY_STEP = 'Batched swings';
-// the slowest alternatives start first so they overlap the most
-const SLOW_TASKS = ['full-hand', 'uneven-output', 'derived', 'fractional'];
-const slowestFirst = (tasks: ClockAlternativeTask[]) => [...tasks].sort((a, b) =>
-    Number(SLOW_TASKS.includes(b.id)) - Number(SLOW_TASKS.includes(a.id)));
 
 export interface GenerationProgressStore {
     get: () => GenerationProgress | null;
@@ -435,7 +432,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             const searches = generation.waiting;
             generation.waiting = [];
             if (searchesAreNeeded(generation.runs, it => it.ranking)) {
-                generation.queue = slowestFirst(searches);
+                generation.queue = orderAlternativeTasks(searches);
             } else {
                 generation.skipped = searches;
             }
@@ -453,7 +450,11 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 streamLogs: generation.streamLogs,
                 context: generation.context!,
                 taskId: task.id,
-                assessedSignatures: generation.assessedSignatures,
+                // Only an earlier display entry may replace this task. A faster later task must not hide an
+                // earlier alias with an empty run, regardless of worker completion order.
+                assessedSignatures: [...new Set([...generation.assessedSignatures,
+                    ...generation.runs.slice(0, 1 + generation.tasks.findIndex(candidate => candidate.id === task.id))
+                        .flatMap(run => run?.alternatives.length ? [run.signature] : [])])],
             } satisfies WorkerRequest);
         }
         if (generation.running.size > 0 || generation.queue.length > 0 || generation.primaryPending) {
@@ -516,7 +517,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 generation.tasks = response.tasks;
                 generation.runs = [null, ...response.tasks.map(() => null)];
                 generation.waiting = response.tasks.filter(task => task.only_when_needed);
-                generation.queue = slowestFirst(response.tasks.filter(task => !task.only_when_needed));
+                generation.queue = orderAlternativeTasks(response.tasks.filter(task => !task.only_when_needed));
                 generation.primaryPending = true;
                 generation.assessedSignatures = [response.primarySignature];
                 // the planning worker goes on with the primary alternative

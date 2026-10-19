@@ -15,6 +15,7 @@ import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, 
 import { windowsOfInsertersFeedingTheOutputMachine } from "./candidates/output-feeders";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
+import { canonicalVerificationJson } from "./verification-signature";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -626,4 +627,30 @@ export function backpressureLossVerdictOf(
         logger.log(`Backpressure loss could not be tried: ${error instanceof Error ? error.message : error}`);
         return null;
     }
+}
+
+/**
+ * Identity of a candidate's verification, not its planning strategy or export object order.
+ * Recovery forces the actual output swing count and turns off window derivation. All physical config, including
+ * supply, geometry, seeds, entity order and overrides, stays in the key, along with the observed clock-only check.
+ */
+export function clockVerificationSignature(config: Config, result: BlueprintGenerationResult): string {
+    const period = result.simulation_duration.ticks;
+    const windows = new Map(Object.entries(result.clock_windows).map(([id, ranges]) =>
+        [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const verification_config = buildAsBuiltConfig({ ...config, overrides: { ...config.overrides,
+        derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } }, windows, period);
+    const fully_controlled = verification_config.inserters.every(inserter => inserter.overrides?.enable_control?.mode !== "AUTO")
+        && (verification_config.drills?.configs.every(drill => drill.overrides?.enable_control?.mode !== "AUTO") ?? true);
+    // At a forced whole swing count, fractional mode changes only the AUTO swing distribution. Clocked/always/never
+    // controls do not use that distribution. Keep the flag when any own-clock fuel inserter still needs AUTO.
+    verification_config.overrides!.use_fractional_swings = fully_controlled && Number.isInteger(result.used_terminal_swing_count)
+        ? false : config.overrides?.use_fractional_swings === true;
+    return canonicalVerificationJson({ config: verification_config, period, windows: result.clock_windows,
+        belt_kind: result.belt?.kind ?? null, belt_pickup_slack_left_out: result.belt_pickup_slack_left_out,
+        expected_output: result.stability_check.expected_output_items,
+        base_cycle_ticks: result.crafting_cycle_plan.total_duration.ticks,
+        transfer_plan: result.serializable_transfer_plan,
+        inserter_clocks: result.unplanned_inserter_clocks,
+        check: result.stability_check.as_built ?? result.stability_check });
 }

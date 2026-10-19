@@ -87,6 +87,47 @@ function planSelection(clocks: ClockAlternativeView[], pending = false) {
 }
 
 describe('selection after generation', () => {
+    it.each([false, true])('keeps the first display alias when duplicate workers finish in either order (later first: %s)', async laterFirst => {
+        await initialize();
+        Render().runSimulation(config, debug, false);
+        const planner = workers[0];
+        const {runId} = planner.requests('plan').at(-1)!;
+        sendPlanned(planner, {runId, context: {} as ClockAlternativeContext, assumptions: {startDependenceRequested: false},
+            tasks: [{id: 'first', label: 'First', only_when_needed: false},
+                {id: 'second', label: 'Second', only_when_needed: false}]}, null);
+        const finish = (taskId: string) => {
+            const worker = workers.find(worker => worker.requests('task').some(request => request.taskId === taskId))!;
+            worker.send({type: 'task-completed', runId, taskId,
+                run: {signature: 'same-clock', alternatives: [selectionClock(taskId, 1)]}});
+        };
+        finish(laterFirst ? 'second' : 'first');
+        expect(Render().isRunning).toBe(true);
+        finish(laterFirst ? 'first' : 'second');
+        expect(Render().isRunning).toBe(false);
+        expect(Render().alternatives.map(alternative => alternative.id)).toEqual(['first']);
+    });
+    it.each([false, true])('shares completed assessments without hiding an earlier display alias (later task first: %s)', async laterFirst => {
+        vi.stubGlobal('navigator', { hardwareConcurrency: 2 });
+        await initialize();
+        Render().runSimulation(config, debug, false);
+        const planner = workers[0];
+        const {runId} = planner.requests('plan').at(-1)!;
+        const laterId = laterFirst ? 'fractional' : 'second';
+        sendPlanned(planner, {runId, context: {} as ClockAlternativeContext, assumptions: {startDependenceRequested: false},
+            tasks: [{id: 'first', label: 'First', only_when_needed: false},
+                {id: laterId, label: 'Later', only_when_needed: false}]}, null);
+        const firstRequest = planner.requests('task').at(-1)!;
+        expect(firstRequest.taskId).toBe(laterFirst ? laterId : 'first');
+        planner.send({type: 'task-completed', runId, taskId: firstRequest.taskId,
+            run: {signature: 'same-clock', alternatives: [selectionClock(firstRequest.taskId, 1)]}});
+        const nextRequest = planner.requests('task').at(-1)!;
+        if (laterFirst) expect(nextRequest.assessedSignatures).not.toContain('same-clock');
+        else expect(nextRequest.assessedSignatures).toContain('same-clock');
+        planner.send({type: 'task-completed', runId, taskId: nextRequest.taskId,
+            run: {signature: 'same-clock', alternatives: laterFirst ? [selectionClock('first', 1)] : []}});
+        expect(Render().isRunning).toBe(false);
+        expect(Render().alternatives.map(alternative => alternative.id)).toEqual(['first']);
+    });
     it.each(['same build', 'different build', 'deeper search'])('selects the new recommendation instead of a reused clock id for %s', async kind => {
         await initialize();
         const recommended = selectionClock('recommended', 1), other = selectionClock('other', 10);
@@ -215,6 +256,42 @@ async function failReplacement() {
 }
 
 describe('tasks alongside the primary alternative', () => {
+    it('offers a checked one-swing clock early on one worker and keeps the remaining verification and final ranking', async () => {
+        vi.stubGlobal('navigator', { hardwareConcurrency: 2 });
+        await initialize();
+        expect(workers).toHaveLength(1);
+        Render().runSimulation(config, debug, false);
+        const worker = workers[0];
+        const { runId } = worker.requests('plan').at(-1)!;
+        sendPlanned(worker, { runId, context: {} as ClockAlternativeContext,
+            assumptions: { startDependenceRequested: false }, tasks: [
+                { id: 'fractional', label: 'Fractional', only_when_needed: false },
+                { id: 'swings-2', label: 'Two swings', only_when_needed: false },
+                { id: 'swings-1', label: 'One swing', only_when_needed: false },
+            ] }, null);
+        expect(worker.requests('task').at(-1)?.taskId).toBe('swings-1');
+        expect(Render().alternatives).toEqual([]);
+
+        worker.send({ type: 'task-completed', runId, taskId: 'swings-1',
+            run: { signature: 'one', alternatives: [selectionClock('swings-1', 10)] } });
+        expect(Render().alternatives.map(a => a.id)).toEqual(['swings-1']);
+        expect(Render().isRunning).toBe(true);
+        expect(Render().generationAssumptions?.complete).toBe(false);
+        expect(Render().pendingAlternatives).toEqual(['Fractional', 'Two swings']);
+        expect(worker.requests('task').at(-1)?.taskId).toBe('fractional');
+
+        worker.send({ type: 'task-completed', runId, taskId: 'fractional',
+            run: { signature: 'fractional', alternatives: [selectionClock('fractional', 1)] } });
+        worker.send({ type: 'task-completed', runId, taskId: 'swings-2',
+            run: { signature: 'two', alternatives: [selectionClock('swings-2', 5)] } });
+        const complete = Render();
+        expect(complete.isRunning).toBe(false);
+        expect(complete.pendingAlternatives).toEqual([]);
+        expect(complete.alternatives.map(a => a.id)).toEqual(['fractional', 'swings-2', 'swings-1']);
+        expect(complete.alternatives[complete.selectedAlternativeIndex].id).toBe('fractional');
+        expect(complete.generationAssumptions?.complete).toBe(true);
+    });
+
     it.each(['task', 'primary'] as const)('reports both kinds of work and finishes after both (%s completes first)', async first => {
         await initialize();
         Render().runSimulation(config, debug, false);
