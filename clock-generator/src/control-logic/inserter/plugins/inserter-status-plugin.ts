@@ -10,5 +10,6 @@ export class InserterStatusPlugin implements ModePlugin<InserterMode> {
 
     onTransition(fromMode: InserterMode, transition: Transition<InserterMode>): void {
         this.inserter_state.status = transition.toMode.status;
+        this.inserter_state.trace?.record({type: "mode", from: fromMode.status, to: transition.toMode.status});
     }
 }

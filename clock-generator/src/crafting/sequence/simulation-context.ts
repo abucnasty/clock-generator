@@ -13,6 +13,7 @@ import { assertIsMachineState, BeltState, DrillState, DrillStatus, EntityState, 
 import { TargetProductionRate } from "../target-production-rate";
 import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
+import { InserterTrace, InserterTraceOptions } from "../../state/inserter-trace";
 
 export class SimulationContext {
 
@@ -29,6 +30,15 @@ export class SimulationContext {
         /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide */
         public competing_takers_order: TakerOrder = DEFAULT_TAKER_ORDER,
     ) {}
+
+    /** Observe one inserter without changing generation or simulation state. Ticks use this context's provider. */
+    public traceInserter(id: number, options: InserterTraceOptions = {}): InserterTrace {
+        const state = this.inserters.find(inserter => inserter.entity_id.number === id)?.inserter_state;
+        if (!state) throw new Error(`Cannot trace unknown inserter ${id}`);
+        const trace = new InserterTrace(() => this.tick_provider.getCurrentTick(), options);
+        state.trace = trace;
+        return trace;
+    }
 
     /** The update of every inserter in a tick, in the order of the list and of `competing_takers_order` */
     public inserterUpdates(): ControlLogic {

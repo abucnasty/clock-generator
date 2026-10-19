@@ -3,6 +3,7 @@ import { Inserter } from "../entities";
 import { EntityState } from "./entity-state";
 import { InventoryState } from "./inventory-state";
 import { InserterStatus } from "./entity-status";
+import { InserterTrace } from "./inserter-trace";
 
 
 type InserterStatusState = {
@@ -28,6 +29,8 @@ export const InserterHandContents = {
 }
 
 export interface InserterState extends EntityState, InserterStatusState {
+    /** Opt-in observer, kept across control replacement but not copied into an independent state clone. */
+    trace?: InserterTrace;
     inserter: Inserter;
     held_item: InserterHandContents | null;
     /** Items the inserter has picked up so far */

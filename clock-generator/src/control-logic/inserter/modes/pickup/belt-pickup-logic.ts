@@ -94,19 +94,23 @@ export class BeltPickupLogic implements InserterTransferLogic {
         }
 
         const held_item = inserter_state.held_item
+        inserter_state.trace?.record({type: "pickup_attempt", item: held_item?.item_name});
 
         if (held_item) {
             // As in the game, a hand filling from a belt stops at every grab while the machine cannot take its item
             // (output at the block, or the ingredient at its insertion limit), and goes on once it can again
             if (!canPickupItemForSink(this.sinkEntityState, held_item.item_name)) {
+                inserter_state.trace?.record({type: "wait", phase: "pickup", reason: "destination_refused", item: held_item.item_name});
                 return;
             }
             // the item has stopped arriving (a run that cuts a supply): the hand keeps what it holds
             if (source.supply.withheld.has(held_item.item_name)) {
+                inserter_state.trace?.record({type: "wait", phase: "pickup", reason: "supply_withheld", item: held_item.item_name});
                 return;
             }
             if (!this.belt_grab_decided) {
                 this.belt_grab_decided = true;
+                inserter_state.trace?.record({type: "wait", phase: "pickup", reason: "pickup_decision", item: held_item.item_name});
                 return;
             }
             const remaining_capacity = handSizeFor(inserter_state.inserter, held_item.item_name) - held_item.quantity;
@@ -123,28 +127,45 @@ export class BeltPickupLogic implements InserterTransferLogic {
         }
 
         const items = this.merge ? this.mergeItems() : inserter_state.inserter.filtered_items;
+        let has_items = false;
         for (const item_name of items) {
-            if (canPickupItemForSink(this.sinkEntityState, item_name) && !source.supply.withheld.has(item_name)) {
-                if (!this.belt_grab_decided) {
-                    this.belt_grab_decided = true;
-                    return;
-                }
-                const pickup_quantity = this.takeFromBelt(source, item_name, handSizeFor(inserter_state.inserter, item_name));
-                if (pickup_quantity === 0) continue;
-                inserter_state.held_item = { item_name: item_name, quantity: pickup_quantity };
-                recordPickup(this.inserterState, item_name, pickup_quantity);
+            has_items = true;
+            if (!canPickupItemForSink(this.sinkEntityState, item_name)) {
+                inserter_state.trace?.record({type: "wait", phase: "pickup", reason: "destination_refused", item: item_name});
+                continue;
+            }
+            if (source.supply.withheld.has(item_name)) {
+                inserter_state.trace?.record({type: "wait", phase: "pickup", reason: "supply_withheld", item: item_name});
+                continue;
+            }
+            if (!this.belt_grab_decided) {
+                this.belt_grab_decided = true;
+                inserter_state.trace?.record({type: "wait", phase: "pickup", reason: "pickup_decision", item: item_name});
                 return;
             }
+            const pickup_quantity = this.takeFromBelt(source, item_name, handSizeFor(inserter_state.inserter, item_name));
+            if (pickup_quantity === 0) continue;
+            inserter_state.held_item = { item_name: item_name, quantity: pickup_quantity };
+            recordPickup(this.inserterState, item_name, pickup_quantity);
+            return;
         }
+        if (!has_items) inserter_state.trace?.record({type: "wait", phase: "pickup", reason: "no_eligible_item"});
     }
 
     private takeFromBelt(source: BeltState, item: ItemName, capacity: number): number {
         const tick = this.tick_provider?.getCurrentTick();
         if (this.merge) {
             BeltState.advancePickups(source, tick!);
-            return this.merge.take(tick!, item, capacity);
+            const quantity = this.merge.take(tick!, item, capacity);
+            if (quantity > 0) this.inserterState.trace?.record({type: "pickup_lane", item, lane: this.merge.config.lane, fallback: false});
+            else this.inserterState.trace?.record({type: "wait", phase: "pickup",
+                reason: this.merge.hasTakenAt(tick!) ? "already_collected_this_tick" : "no_reachable_stack", item});
+            return quantity;
         }
-        if (this.pickup_lanes?.some(lane => lane.hasTakenAt(tick!))) return 0;
+        if (this.pickup_lanes?.some(lane => lane.hasTakenAt(tick!))) {
+            this.inserterState.trace?.record({type: "wait", phase: "pickup", reason: "already_collected_this_tick", item});
+            return 0;
+        }
         let matching_lane = false;
         for (const index of this.pickup_lane_order) {
             const lane = source.belt.lanes[index];
@@ -154,9 +175,13 @@ export class BeltPickupLogic implements InserterTransferLogic {
             const quantity = this.pickup_lanes
                 ? this.pickup_lanes[index].take(tick!, limit) : limit;
             // Retry the other matching lane only if this one had nothing reachable. One stack total per tick.
-            if (quantity > 0) return quantity;
+            if (quantity > 0) {
+                this.inserterState.trace?.record({type: "pickup_lane", item, lane: index + 1, fallback: index !== this.pickup_lane_order[0]});
+                return quantity;
+            }
         }
         assert(matching_lane, `No belt lane found for item ${item}`);
+        this.inserterState.trace?.record({type: "wait", phase: "pickup", reason: "no_reachable_stack", item});
         return 0;
     }
 
