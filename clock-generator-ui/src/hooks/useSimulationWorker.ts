@@ -314,6 +314,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     const reportProgress = useCallback((generation: Generation) => {
         const running = Array.from(generation.running.values(), task => task.label);
+        if (generation.primaryPending) {
+            running.unshift(PRIMARY_STEP);
+        }
         progressStore.set({
             step: generation.context ? running.join(', ') : PRIMARY_STEP,
             detail: generation.detail,
