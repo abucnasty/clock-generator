@@ -12,12 +12,14 @@ Publishing remains on hold. **Splitter implementation is out of scope**; its mea
 - Collect an ingredient the destination accepts, preferring the configured lane. Keep collecting the held
   ingredient. A missing ingredient on the other lane does not automatically override eligible preferred stock.
 - Take at most **one reachable stack per tick**. Use the upstream-most matching stack on the preferred lane,
-  falling back to the other lane for the same item when needed. Switching lanes adds no fixed delay.
+  falling back to the other lane for the same item when needed. No universal lane-switch delay was found;
+  one normal-speed side-entrance layout exposes an arm-travel delay missing from the point-based model.
 - Straight belts expose **one tile per lane**; underground endpoints expose **half a tile**. Moving stacks,
   holes, partial stacks and lane phase persist across hands and circuit windows. Underground pickups have
   less reach, rather than a fixed tick penalty.
 - Geometry and supply motion are separate. Omitted `pickup_length` defaults to **1**; undergrounds use **0.5**.
-  Moving is the default. Explicit backed-up supply uses the calibrated one-stack-per-tick availability rule.
+  Moving is the default. The engine approximates backed-up supply as one available stack per tick;
+  fast/normal measurements expose finite refill that this approximation does not yet model.
 - Replenishment depends on topology. A full incoming belt need not fill the pickup tile, and closing a final
   outlet does not guarantee permanent local saturation when other consumers can reopen a route.
 
@@ -26,7 +28,9 @@ Publishing remains on hold. **Splitter implementation is out of scope**; its mea
 **Tested** means native measurements are documented for the named scenario; it does not mean every phase,
 orientation or topology is verified, or that the simulator supports it. **Not tested** marks combinations
 without documented native evidence in this investigation. Normal means the standard transport-belt speed.
-Offline expectations and classifier-only checks do not count as native timing coverage.
+Offline expectations and classifier-only checks do not count as native timing coverage. The speed backfill uses
+16-item hands and four-item belt stacks. Historical smaller-hand/interrupted-window/staggered-lane controls
+are not an exhaustive cross-speed matrix.
 
 ### Straight and underground pickups
 
@@ -35,18 +39,24 @@ Front-facing rows cover the measured layouts and both mirroring states.
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
-| Moving, one matching lane — all three geometries | Tested | Not tested | Not tested | Not tested |
-| Moving, same item on both lanes — all three geometries | Tested | Tested | Not tested | Not tested |
-| Backed up, each ingredient isolated — all three geometries | Tested | Not tested | Not tested | Not tested |
-| Backed up, same item on both lanes — side pickups | Not tested | Not tested | Not tested | Not tested |
-| Straight-belt ingredient-demand / insertion-limit controls | Tested (manual) | Not tested | Not tested | Not tested |
-| Front exit, backed up — different and same items | Tested | Not tested | Not tested | Not tested |
+| Moving, one matching lane — all three geometries | Tested | Tested | Tested | Tested |
+| Moving, same item on both lanes — all three geometries | Tested | Tested | Tested | Tested; entrance counterexample |
+| Backed up, each ingredient isolated — all three geometries | Tested | Tested | Tested; refill counterexamples | Tested; refill counterexamples |
+| Backed up, same item on both lanes — side pickups | Tested | Tested | Tested | Tested; refill counterexamples |
+| Reflected side pickups, same item — moving, base release | Tested | Tested | Tested | Tested; entrance counterexample |
+| Reflected side pickups, same item — backed up | Tested | Tested | Tested | Tested; refill counterexamples |
+| Backed-up straight-belt demand / insertion-limit controls | Tested | Tested | Tested | Tested |
+| Front exit, backed up — different and same items | Tested | Tested | Tested; refill counterexample | Tested; refill counterexample |
 | Front exit, moving | Not tested | Not tested | Not tested | Not tested |
-| Front entrance, moving — different items | Tested | Not tested | Not tested | Not tested |
-| Front entrance, moving — same item on both lanes | Tested | Not tested | Not tested | Not tested |
-| Front entrance, backed up — different and same items | Tested | Not tested | Not tested | Not tested |
+| Front entrance, moving — different items | Tested | Tested | Tested | Tested (compact layout) |
+| Front entrance, moving — same item on both lanes | Tested | Tested | Tested | Tested (compact layout) |
+| Front entrance, backed up — different and same items | Tested | Tested | Tested; refill counterexample | Tested; refill counterexample |
 
-The current front-exit fixture physically blocks continuation; moving coverage needs a suitable new layout.
+The front-exit fixture physically blocks continuation; moving coverage awaits the user-supplied layout.
+Normal moving front-entrance controls use a paired compact assembler layout: the original plant needs a tunnel
+longer than normal underground range. Equivalent compact controls were also measured at the other speeds.
+Front-entrance phase sweeps verify actual first-grab positions, rather than assuming gate-delay labels imply
+distinct phases. Other cardinal orientations and arbitrary lane-to-lane phase offsets remain separate dimensions.
 
 ### Side-entry and merge controls
 
@@ -54,60 +64,73 @@ The current front-exit fixture physically blocks continuation; moving coverage n
 | --- | --- | --- | --- | --- |
 | Moving inner-only and outer-only streams, first hand, release 16 | Tested | Tested | Tested | Tested |
 | Moving two-stream merge, first hand, release 16 | Tested | Tested | Tested | Tested |
-| Single-/two-stream first hands, release 17 | Tested | Not tested | Not tested | Not tested |
-| Reflected side feeds and rotated inner feed, first hands | Tested | Not tested | Not tested | Not tested |
-| Backed-up inner-only, outer-only and two-stream first hands | Tested | Not tested | Not tested | Not tested |
-| Repeated same-item merge, release 16 | Tested | Tested (routing counterexample) | Not tested | Not tested |
-| Repeated same-item merge, release 17 | Tested | Not tested | Not tested | Not tested |
-| Repeated merge: pause/resume, outlet block/release and reflection | Tested | Not tested | Not tested | Not tested |
-| Repeated different-item merge, both ingredient arrangements | Tested | Not tested | Not tested | Not tested |
-| Operating mixed-item merge starvation | Tested | Not tested | Not tested | Not tested |
-| Seeded entry-window cutoff and compression controls | Tested | Not tested | Not tested | Not tested |
+| Single-/two-stream first hands, release 17 | Tested | Tested | Tested | Tested |
+| Reflected side feeds and rotated inner feed, first hands | Tested | Tested | Tested | Tested |
+| Backed-up inner-only, outer-only and two-stream first hands | Tested | Tested | Tested | Tested |
+| Repeated same-item merge, release 16 | Tested | Tested; routing counterexample | Tested; unsupported | Tested; unsupported |
+| Repeated same-item merge, release 17 | Tested | Tested; unsupported | Tested; unsupported | Tested; unsupported |
+| Repeated merge: pause/resume, outlet block/release and reflection | Tested | Tested; unsupported | Tested; unsupported | Tested; unsupported |
+| Repeated different-item merge, both ingredient arrangements | Tested | Tested; unsupported | Tested; unsupported | Tested; unsupported |
+| Operating mixed-item merge starvation | Tested | Tested | Tested | Tested |
+| Seeded entry-window cutoff and compression controls | Tested | Tested | Tested | Tested |
 
-First-hand merge measurements at fast/normal speeds do not establish repeated routing behavior. Express's
-repeated control is measured but remains unsupported because the turbo routing rule fails there.
+All four speeds now have repeated native controls. Only the bounded turbo merge is supported by the engine;
+measured slower behavior does not establish a correct routing model. Release sweeps cover the tested gate delays,
+rather than every possible relative phase of independent incoming streams.
 
 ### Splitter research, generated clocks and drops
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
-| Single splitter: ingredients, mirroring, ports, filters and priority controls | Tested | Not tested | Not tested | Not tested |
-| Two serial splitters: independent mirroring and priority controls | Tested | Not tested | Not tested | Not tested |
-| Shelved splitter replay and 30 seeded routing calibrations | Tested (archived) | Not tested | Not tested | Not tested |
-| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Not tested | Not tested | Not tested |
-| Same-item gear clocks, all three geometries: throughput and recovery | Tested | Not tested | Not tested | Not tested |
+| Single splitter: ingredients, mirroring, ports, filters and priority controls | Tested | Tested | Tested | Tested |
+| Two serial splitters: independent mirroring and priority controls | Tested | Tested | Tested | Tested |
+| Seeded splitter routing / admission boundaries | Tested | Tested | Tested | Tested |
+| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; counterexamples | Tested; counterexamples | Tested; counterexamples |
+| Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
-| Belt drops, stack sizes 1–4 | Tested | Not tested | Not tested | Not tested |
+| Belt drops, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 
-Splitter implementation remains out of scope.
+The 39 added ordinary clock checks are complete: 29 meet both target and recovery, eight miss baseline targets,
+and two meet baseline but fail exact recovery. Slower merge-clock generation is blocked by the intentionally
+turbo-only supported merge schema and remains **Not tested**. Splitter backfills restore observation-only probes;
+the production routing kernel and splitter implementation remain out of scope.
 
 ## Tick-pattern matrix
 
 Unless stated otherwise, these are **grab offsets from the first grab of a hand**, with four-item belt stacks
 and a 16-item inserter hand. Each number is one stack pickup: `0,1,2,4` means the fourth grab waits one tick.
-Measurements primarily use Factorio **2.1.21**, legendary stack inserters and turbo belts. Patterns describe
-these measured conditions, rather than every startup phase or an absolute arm-arrival time.
+Measurements use Factorio **2.1.21** and legendary stack inserters; speeds are identified below. Patterns
+describe the measured conditions, rather than every startup phase or an absolute arm-arrival time.
 
 Total pickup ticks counts both the first and last grab ticks: `0,1,2,3` takes **4 ticks** and `0,1,2,4`
-takes **5 ticks**. It excludes waiting before the first grab and arm travel. **Moving = false** denotes backed-up supply.
+takes **5 ticks**. It includes waits between grabs, but excludes waiting before the first grab and travel to/from
+the destination. **Moving = false** denotes backed-up supply.
 
 ### Straight and underground pickups
 
-| Scenario | Moving | Lane contents | Measured offsets | Total pickup ticks | Lane behavior |
+| Scenario / speed | Moving | Lane contents | Measured offsets | Total pickup ticks | Interpretation |
 | --- | --- | --- | --- | --- | --- |
-| Straight belt, side pickup | true | One matching lane | `0,1,2,3` in the measured phase | 4 | Preferred matching lane |
-| Underground entrance or exit, side pickup | true | One matching lane | `0,1,2,4` or `0,1,3,5`, depending on phase | 5 or 6, respectively | Half-tile reach exposes gaps |
-| All three geometries, side pickup | true | Same item on both lanes | `0,1,2,3` | 4 | Other lane fills preferred-lane gaps |
-| All three geometries, side pickup | false | Each ingredient isolated | `0,1,2,3` | 4 | Other lane stays untouched |
-| Front underground exit | false | Different items or same item | `0,1,2,3` | 4 | All four from the preferred lane |
-| Front underground entrance | true | Different items | `0,1,2,4` | 5 | Preferred lane supplies the held item |
-| Front underground entrance | true | Same item | `0,1,2,3` | 4 | Lane sequence `1,1,1,2` unmirrored; `2,2,2,1` mirrored |
-| Front underground entrance | false | Different items or same item | `0,1,2,3` | 4 | All four from the preferred lane |
+| Straight, turbo/express | true | One matching lane | `0,1,2,3` in the measured phase | 4 | Later phases/holes remain explicit state |
+| Side underground, turbo | true | One matching lane | `0,1,2,4` or `0,1,3,5` | 5 or 6 | Half-tile reach |
+| Side underground, express | true | One matching lane | `0,1,2,5`, `0,1,3,5` or `0,1,3,6` | 6 or 7 | Representative repeated patterns |
+| Side pickup, fast / normal | true | One matching lane | Depleted hands include `0,1,4,8` / `0,8,16,24` | 9 / 25 | Belt-speed refill limits collection |
+| Side pickup, turbo/express/fast | true | Same item on both lanes | `0,1,2,3` in measured controls | 4 | Fallback fills preferred-lane gaps |
+| Side entrance, normal | true | Same item on both lanes | First hand `0,1,3,4` | 5 | Observed arm travel; model predicts 4 ticks |
+| All geometries, turbo/express | false | Each ingredient isolated | `0,1,2,3` | 4 | Measured full-supply controls |
+| Underground, fast / normal | false | Each ingredient isolated | First hand `0,1,2,5` / `0,1,2,9` | 6 / 10 | Finite refill already affects first hand |
+| Side straight, normal | false | One matching lane | First `0,1,2,3`; later `0,8,16,24` | 4, then 25 | Initial stock masks later depletion |
+| Underground, fast / normal | false | Same item on both lanes | First `0,1,2,3` | 4 | Other lane helps; normal later hands can still wait |
+| Front entrance, turbo | true | Different items | `0,1,k,k+2`, `k = 2..3` | 5–6 | Both observed arrival phases |
+| Front entrance, express | true | Different items | `0,1,k,k+d`, `k = 2..4`, `d = 2..3` | 5–8 | Eight observed arrival phases |
+| Front entrance, fast | true | Different items | `0,1,k,k+4`, `k = 2..5` | 7–10 | Four observed arrival phases |
+| Front entrance, normal (compact) | true | Different items | `0,1,k,k+8`, `k = 2..9` | 11–18 | Eight observed arrival phases |
+| Front entrance, all speeds | true | Same item on both lanes | `0,1,2,3` | 4 | Every measured phase; distinct from the side-entrance counterexample |
 
-In the tested front-facing entrance and exit layouts, **unmirrored prefers lane 1; mirrored prefers lane 2**.
-Ingredient swaps distinguish lane preference from recipe order. The front-exit inserter blocks continuation,
-so its controls are backed up; moving front-exit grabs remain unmeasured. Classifier rotation tests do not
-establish native pickup timing in every cardinal orientation.
+These are representative patterns, not an exhaustive list of repeated-hand states. The fixture baselines retain
+all observed patterns and known simulator differences. In the tested front-facing layouts, **unmirrored prefers
+lane 1; mirrored prefers lane 2**, preserved by ingredient swaps. Fast/normal backed-up front controls can use
+fallback even on the first hand; the turbo rule that all four grabs stay on the preferred lane is not universal.
+Moving front-exit grabs remain unmeasured.
 
 ### Side-loading onto a straight tile
 
@@ -124,8 +147,8 @@ Gate releases 16 and 17 deliberately change initial phase.
 | Turbo two-stream merge, different items, either arrangement | true | 16 | `0,1,2,4` for complete hands | 5 | Outer stream dominates in the inventory-clearing probe |
 | Express two-stream merge, same item | true | 16 | `0,1,2,3` across 45 hands | 4 | Same hand timing conceals different routing; unsupported |
 
-Earlier single-stream speed controls measured the following at gate release 16. Further investigation focused
-on turbo; these first hands do not establish two-stream support at the other speeds.
+Single-stream first hands at gate release 16 are below. Repeated controls have since been captured at every
+speed; the first-hand patterns alone do not establish two-stream routing support.
 
 | Incoming speed | Moving | Stream | Measured offsets | Total pickup ticks |
 | --- | --- | --- | --- | --- |
@@ -136,13 +159,20 @@ on turbo; these first hands do not establish two-stream support at the other spe
 | Transport | true | Outer only | `0,1,2,4` | 5 |
 | Transport | true | Inner only | `0,4,12,20` | 21 |
 
+With the incoming head seeded at position zero, the inner-entry shift cutoff is **strictly less than
+`64 + speed`**, using 1/256-tile units: last accepted / first rejected is **95/96 turbo, 87/88 express, 79/80 fast, 71/72 normal**.
+This local boundary is not a complete merge rule: express still has an upstream-clearance counterexample.
+The equivalent observed landing limit is below 131 units; arbitrary incoming head phases remain uncalibrated.
+Backed-up fast/normal single-stream repeated hands also expose finite refill. Operating mixed-item controls
+starve at every speed and with either ingredient arrangement; inventory-clearing probes cannot prove throughput.
+
 ### Direct splitter pickups — unsupported research
 
 These are natural captures with an operating machine. The single-splitter layout has a south pickup port and
 north drain; the serial layout has two splitters and two consumers feeding one machine. Priority controls are
 independent tests with ingredients, mirroring and gate timing unchanged.
 
-Here **Moving = false** describes the locally blocked pickup ports. Other outputs can still drain or route
+The table below records the original **turbo** controls. Here **Moving = false** describes the locally blocked pickup ports. Other outputs can still drain or route
 stock after withdrawals, so this does **not** imply the simulator's saturated backed-up availability rule.
 Totals below refer to the first hand; later behavior is listed separately.
 
@@ -164,9 +194,18 @@ For reference, a first hand at capture ticks `2,3,4,7` is offsets **`0,1,2,5`**.
 at ticks `2,3,4,5`. A later serial wait at `58,59,60,88` comes from the shared machine's insertion limit,
 not absent stock. These observations reject a universal splitter delay or a blanket backed-up approximation.
 
+The all-speed observation backfill preserves the priority distinction. For one splitter with an open drain:
+
+| Speed | Moving | Right-priority first-hand offsets | Total pickup ticks | Unset-priority first-hand offsets | Total pickup ticks |
+| --- | --- | --- | --- | --- | --- |
+| Turbo | false | `0,1,2,3` | 4 | `0,1,2,5` | 6 |
+| Express | false | `0,1,3,6` | 7 | `0,1,3,8` | 9 |
+| Fast | false | `0,1,3,7` | 8 | `0,1,3,11` | 12 |
+| Normal | false | `0,1,2,10` | 11 | `0,1,2,18` | 19 |
+
 ### Related belt-drop calibration
 
-These are **deposit offsets**, not pickups. A finite 32-item source feeds a turbo belt; only the belt-stack
+These are **deposit offsets**, not pickups. The original turbo table is below. A finite 32-item source feeds the belt; only the belt-stack
 bonus changes, with researched technologies checked unchanged.
 
 | Belt stack size | Effective full hand | First-hand deposit offsets | Next hand's first deposit, relative to the first hand's start |
@@ -176,71 +215,92 @@ bonus changes, with researched technologies checked unchanged.
 | 3 | 15 | `0,1,2,4,6` | 14 |
 | 4 | 16 | `0,1,2,4` | 12 |
 
-Every deposit and empty tick matches `Belt::amountToDropAtTick`; all 32 items are conserved. Stack size 3
-leaves two items held after depositing 30. No production timing change was needed; other speeds remain deferred.
+The four-speed backfill covers all **16 speed/stack-size combinations** and conserves all 32 items every tick.
+Every first hand matches `Belt::amountToDropAtTick`. Stack size 3 leaves two items held after depositing 30.
+At normal speed, the second hand can encounter three stacks left on the receiving tile: its deposit offsets become
+`0,8,16,…`, losing the initial two-tick burst. This occupied-tile case is retained separately from the empty-belt
+calibration; an empty-belt formula is not a general finite-output-lane model.
 
 ## Simulator impact and verification
 
-**Reach and fallback.** The original full-supply assumption selected 528 electromagnetic packs / 1,056 ticks,
-missing the target in 30/35 native periods on each underground. Reachable-stack timing selected **352 packs /
-704 ticks = 30 packs/s**, verified on straight, entrance and exit scaffolds. Current regressions cover at least
-60 complete periods, ingredient cuts and output blockage for moving and backed-up supply. Same-item fallback
-was checked across **78 captures / 5,268 uninterrupted hands**; six generated gear-clock checks held
-**16 gears / 160 ticks = 6/s**, with a 26-tick input window instead of the former underground 28.
+**Reach and fallback.** Replacing the always-full underground assumption selected **352 electromagnetic packs /
+704 ticks = 30/s**, verified on all three turbo scaffolds with at least 60 periods and recovery interventions.
+The former 528/1,056 clock missed 30/35 native periods underground. Same-item fallback also reduced the gear
+clock's underground input window from 28 to 26 ticks; all six turbo/express checks held **16 gears / 160 ticks = 6/s**.
 
-**Ingredient eligibility.** Manual straight-belt controls preferred a near ingredient stocked at 13 even when
-the far ingredient was absent. Swapping ingredients preserved that choice; at the measured insertion limit of
-14, selection switched to the far ingredient. Existing eligibility rules agreed; no demand-ranking rule was added.
+**Four-speed collection.** Of 72 naturally supplied repeated-hand controls, 56 match production held counts.
+Fifteen fast/normal backed-up cases expose finite refill; one normal moving side-entrance case exposes arm
+travel. The 198-combination observed-phase sweep reproduces the latter at four phases; the other 194 agree.
+A further 24 reflected same-item controls reproduce every original pattern set and difference count with lane 2
+preferred: 20 match production held counts, and the same four normal-speed cases remain counterexamples.
+Held-count agreement alone does not establish backed-up lane/stock fidelity, which the current model omits.
+Twelve automated demand controls preserve the existing rule: eligible near stock 13 wins over absent far stock;
+at near stock 14, selection switches to the far ingredient. No demand-ranking rule was needed.
 
-**Side-entry supply.** Single-stream profiles use measured entry positions **67 inner / 188 outer**, in
-1/256-tile units. The supported turbo merge keeps finite incoming, receiving and downstream queues, preserving
-backpressure and compressed gaps. Seven repeated controls cover both release phases, pause/resume, outlet
-blocking/release, reflection and both mixed-item arrangements; each matches **511 consecutive transitions**.
-Ten seeded controls establish entry shifts **89–95 accepted, 96 rejected**. The original 64-unit cap was
-falsified by release 17. Followers can slow or wait, never move upstream. A generated gear clock held 60/60 periods.
+**Candidate backed-up rule.** Advance a jammed queue at actual belt speed, stop its head at the endpoint,
+maintain quarter-tile spacing, and withdraw the upstream-most reachable matching stack. Preserve holes across
+hands. Seeded once at the closed gate, a test-only replay matches all exposed stock and held counts across
+**59,328 transitions / 4,568 hand starts** in 48 ordinary captures, including both physical near sides. Native arm-arrival/drop boundaries remain
+inputs. Ten portable clips preserve refill evidence and five preserve arm-travel evidence; neither is a
+production implementation or proof about absolute arm arrival. See the [fixture report](../tests/game/mechanics/belt-pickup/fixtures/different-items/README.md).
 
-**Mixed-merge starvation.** An operating machine without inventory clearing ended 1,200 ticks with 16 iron,
-zero cable and zero products: no longer accepting outer iron stopped opening inner-stream gaps. Preparation
-now reports the repeating stalled state. Supported topology does not guarantee that a recipe can be supplied.
+**Front controls.** The 228 first-hand captures verify lane preference across ingredients, mirroring, speeds
+and observed entrance phases. Normal moving entrance coverage uses the paired compact destination; moving
+front-exit coverage remains open.
 
-**Capture compatibility.** Sidecar captures front-underground lane preference, geometry and supported supply
-profiles. Saved `pickup_capture` metadata distinguishes supported, unsupported and legacy unclassified inputs;
-unknown model versions are refused. Updating the engine or mod does not promote an old unsupported capture:
-recapture is required. Manual configs retain the straight-belt default. See the [capture boundary](pickup-capture.md).
+**Generated clocks.** Collection replay after observed arm arrival does not establish
+clock throughput or a reliable stability verdict. Electromagnetic targets scale with belt speed: 22.5/s express,
+15/s fast and 7.5/s normal; gear targets stay at 6/s. The measured limitations are:
+
+| Clock / speed | Moving | Generator verdict | Expected per period | Native baseline | Recovery finding |
+| --- | --- | --- | --- | --- | --- |
+| Express undergrounds | true | No recovery | 528 / 1,408 ticks | 432 or 448 | Shortfall persists |
+| Fast undergrounds | false | Stable | 880 / 3,520 ticks | 704 | Shortfall persists |
+| Normal straight | true | Stable | 704 / 5,632 ticks | 576 or 608 | Shortfall persists |
+| Normal straight | false | Stable | 880 / 7,040 ticks | 624 or 656 | Shortfall persists |
+| Normal undergrounds | false | Stable | 880 / 7,040 ticks | 528 | Shortfall persists |
+| Normal undergrounds | true | Stable | 176 / 1,408 ticks | 176 | 160/192 after output blockage; both ingredient recoveries return 176 |
+
+Every added clock has at least 60 untouched periods; compact counts match two overlapping detailed recorder
+periods and native hardware metadata is audited separately. All 21 added gear cases hold 16 gears / 160 ticks
+through all interventions. Eight electromagnetic cases meet baseline/recovery targets; ten show the limits
+above, including eight marked **Stable** by the generator. Express straight/backed-up, fast moving and fast
+backed-up straight controls meet their targets. Causes remain unresolved: input phase/refill,
+output stock history and machine/clock timing must be distinguished. The [build report](../tests/game/builds/README.md)
+retains the final comparisons. Mean-rate recovery is insufficient when exact output is required every period.
+
+**Side supply and capture.** Single streams enter at **67 inner / 188 outer** units. The bounded turbo merge
+requires finite incoming/receiving/downstream queues, compressed gaps and backpressure; seven repeated controls
+match all 511 transitions each, and its generated gear clock held 60/60 periods. Release 17 rejected the earlier
+64-unit shift cap. Operating mixed-item layouts starve because refusing outer stock stops opening inner gaps;
+supported topology does not guarantee recipe supply. Sidecar's saved support/model metadata distinguishes
+supported, unsupported and legacy inputs. Updating software never promotes an old unsupported capture;
+recapture is required. See the [capture boundary](pickup-capture.md).
 
 ## Shelved splitter calibrations
 
-A later finite-routing investigation matched a naturally supplied baseline through **60 consecutive
-transitions** and **30 independent seeded native controls**, checking all eight transport lines and each
-stack's identity, position, item and count. Seeded controls disabled consumers and asserted initial positions;
-they calibrate local routing, not natural clock throughput. Observed feeder arrivals and withdrawals remain
-explicit boundary inputs in the baseline replay.
+The archived turbo routing candidate matched **60 natural transitions and 30 seeded controls**, checking all
+eight lines and stack identities, positions, items and counts. Observed feeder arrivals/withdrawals remain
+boundary inputs; seeded consumers are disabled. This is local routing evidence, not clock verification.
 
-For the tested north-input, right-priority turbo layout, distances are in 1/256 tile units:
+| Boundary | Original turbo finding | Four-speed observation backfill |
+| --- | --- | --- |
+| Geometry/spacing | Input 179, output 128, normal spacing 64 units | Unchanged |
+| Preferred entry | Head `p < 32` lands at `p + 45`, shifted behind stock | Landing `p + 77 - speed` in tested crossings |
+| Output admission | 127 accepted; 128 waits | Unchanged |
+| Blocked preferred output | Isolated head waits; follower `q < 96` can overflow at `q - 19` | Still requires follower/stock state |
+| Follower/output-tail cutoff | 95 accepted; 96 first waits | Last accepted 95/87/79/71 for turbo/express/fast/normal |
+| Upstream admission | Shifted tail 178 fits; 179 waits upstream | Unchanged; normal decision can take two ticks |
 
-| Boundary | Calibrated finding |
-| --- | --- |
-| Movement and spacing | 32 units/tick, normal spacing 64; input length 179, output length 128 |
-| Preferred entry | Input head `p < 32` lands at `p + 45`, shifted behind output stock if needed |
-| Output admission | Position 127 fits; proposed 128 waits |
-| Blocked preferred output | An isolated head waits; follower-dependent overflow was required |
-| Overflow window | Follower `q < 96` permits alternate free landing `q - 19`; 95 admits, 96 first waits |
-| Upstream admission | Respect input-tail spacing; shifted position 178 fits, 179 remains upstream |
+The controls reject constant entry at 64, unconditional diversion and admission without tail spacing. They do
+not establish general memoryless arbitration. The backfill adds 60 slower natural controls, 146 seeded controls
+and eight boundary repeats, retaining explicit unsupported capture status.
 
-The controls varied input phase, output congestion, follower spacing, insertion order, other-lane saturation
-and ordinary upstream arrivals. They rejected constant entry at 64, an assumed cutoff at 77, unconditional
-diversion when blocked, and admission without tail spacing. No extra remembered-choice state was needed to
-fit these captures; that does not establish general memoryless splitter routing.
-
-The work remains frozen at
-[`7a1b4e2e`](https://github.com/abucnasty/clock-generator/commit/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a):
-[all 30 calibration variants](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts),
-[probe](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/tests/game/mechanics/belt-pickup/fixtures/splitter/entry-window-probe.lua),
-[experimental kernel](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/src/state/turbo-splitter-supply.ts)
-and [compact native cuts](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/tests/game/mechanics/belt-pickup/fixtures/splitter/right-priority-transitions.json).
-Sub-PRs #239, #241 and #242 merged only into the shelved feature; #240 was closed. Eleven replay tests and five
-kernel tests passed there, but **no generated splitter clock was verified**. These sources are absent from
-master and require a separate archived checkout to reproduce. They do not enable configuration or capture support.
+The original [30 controls](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts)
+and [experimental kernel](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/src/state/turbo-splitter-supply.ts)
+remain at archived commit `7a1b4e2e`. Eleven replay and five kernel tests passed there, but **no generated
+splitter clock was verified**. Observation probes are backfilled here; the production kernel remains absent
+from master. **Splitter implementation and capture support remain out of scope.**
 
 ## Evidence limits
 
@@ -250,8 +310,8 @@ Inventory-clearing probes do not establish crafting throughput; seeded controls 
 Matching hand counts does not prove routing, as the express merge counterexample demonstrated.
 
 Supported merge scope remains the bounded turbo, four-item-stack, single-consumer straight layout. Express
-and other uncalibrated merges, sparse/arbitrary-phase supply, broader orientations and competing-consumer
-networks remain unverified. Early disabled-filter probes and a mixed-machine run with a closed gate were
+and other slower merges remain unsupported despite native measurements. Sparse or independently phased supply,
+broader orientations and competing-consumer networks remain unverified. Early disabled-filter probes and a mixed-machine run with a closed gate were
 excluded from the corresponding findings. Detailed fixture reports retain those corrections and reproduction
 instructions. Full raw captures stay in ignored `work/` directories; fixture images use the shared native
 screenshot-to-JPEG script.

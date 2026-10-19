@@ -36,7 +36,8 @@ hypotheses, generated-clock checks and shelved splitter calibrations behind thes
 - Saturated lanes have stacks a quarter tile apart. Take the upstream-most reachable stack on the selected lane,
   capped by that lane's stack size and the remaining hand capacity. There is at most one stack total per tick.
 - A straight belt exposes **one tile per lane**. Either underground entrance or exit exposes **half a tile per lane**.
-  Switching lanes adds no fixed delay; an underground has less pickup space, rather than a fixed tick penalty.
+  The model assigns no fixed lane-switch delay; an underground has less pickup space, rather than a fixed tick
+  penalty. The normal-speed side-entrance counterexample below shows that actual arm travel can matter.
 - Lane phases, holes and partially taken stacks persist between hands, across closed windows and when inserter
   controls change. Each lane keeps its own remaining stacks.
 - On **backed-up supply**, items stop between pickups and the belt refills gaps. A stack is available each
@@ -91,7 +92,7 @@ inferring an initial phase from the blueprint. Flipping only the inserter's mirr
 supercapacitors under both supply conditions, retaining those grab offsets. Sidecar 0.11.0 exports `near_lane: 1`
 unmirrored or `near_lane: 2` mirrored, plus half-tile reach, without warnings in all four game cases. Capture
 keeps supply motion separate from geometry. Classifier rotation checks cover all cardinal directions; actual
-entrance grabs in other orientations, ingredient swaps and repeated hands remain unmeasured.
+entrance grabs in other orientations and repeated hands remain unmeasured here; the backfill below adds ingredient swaps and speed/phase controls.
 
 The entrance's [same-item moving case](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md#same-item-on-both-moving-lanes)
 also follows the existing fallback rule in both mirroring states. With accumulators on both lanes, the preferred
@@ -107,11 +108,20 @@ The [same-item front-exit controls](../tests/game/mechanics/belt-pickup/fixtures
 also fill at `0,1,2,3` entirely from lane 1 unmirrored or lane 2 mirrored, leaving the other lane untouched.
 Their outlet is physically blocked by the front inserter, so these are backed-up measurements.
 
-Scope: one saturated pickup supply. Yellow/red speeds follow the distance rule but remain unmeasured here.
-Sparse supply, shared upstream withdrawals, merges outside the turbo side-feed case below, bends, other inline pickups, other inserters/qualities/orientations,
-and arbitrary initial lane phases remain unverified. Calibration with backed-up supply covers turbo belts with different
-items on the lanes, collected one item at a time, plus the same-item front-entrance and front-exit first hands above.
-Other speeds and other same-item backed-up geometries remain unverified.
+The [four-speed backfill](belt-pickup-experiments.md#belt-speed-coverage) now measures ordinary side pickups,
+front-entrance moving/backed-up controls and front-exit backed-up controls at turbo, express, fast and normal
+speeds. Normal moving front-entrance controls use a paired compact destination to respect underground range.
+The historical timing examples above describe turbo fixtures.
+
+Two measured limits remain in the production model. Fast/normal backed-up supplies can deplete between grabs
+or repeated hands; the one-stack-per-tick approximation is optimistic. A test-only finite jammed-queue replay
+matches all 48 ordinary backed-up captures, including both physical near sides, after a single stock seed. Separately, normal moving side-entrance
+same-item pickup can lose a tick while the arm travels between lanes. These are explicit counterexample
+regressions, not implemented simulator support. Capture geometry alone does not establish timing parity.
+
+Scope remains one controlled pickup supply. Sparse supply, shared upstream withdrawals, merges outside the turbo
+side-feed case below, bends, other inserters/qualities/orientations and arbitrary relative lane phases remain
+unverified. Moving front-exit supply awaits a suitable fixture.
 
 [Side-loading into a straight pickup tile](../tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight/README.md)
 changes which stacks are available, not the pickup selection rule. A full incoming belt need not fill the pickup
