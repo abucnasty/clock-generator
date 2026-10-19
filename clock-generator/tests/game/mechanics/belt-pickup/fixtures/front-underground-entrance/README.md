@@ -148,8 +148,7 @@ copper cable replace the two original ingredients; same-item controls feed iron 
 five tiles after the observed entrance, within normal range. Both drains are retained for moving supply; only the
 ingredient drain is removed for backed-up supply. The compact control is measured at every speed, including turbo,
 so that layout change was checked against the original rather than assumed equivalent.
-The compact results in this section and its full phase sweep refer to that earlier derived layout; the user-supplied
-replacement and its separately repeated controls are described below.
+The user-supplied replacement below repeats the same compact control matrix, including every phase-sweep release.
 
 For express/fast original-plant controls, the paired exit moves to the first free tile beyond the plant and the
 remaining path becomes ordinary belts. Normal original-plant backed-up controls have an unmatched, naturally
@@ -262,16 +261,16 @@ geometry are preserved. The original electromagnetic-plant scaffold is unchanged
 
 The replacement fixes the former compact output inserter's disconnected pickup: its pickup target is now the
 assembler, and its drop target feeds a connected product belt. Native guards check both targets in every compact
-first-hand run. The release-0 recapture covers all four tiers, both mirroring states, moving/backed-up supply and
-different/same items: **32 controls**. Their first-hand timing and observed release-0 phases match the historical
-controls. The prior complete phase sweep remains historical evidence; shifted releases and ingredient swaps
-have not been recaptured on this replacement. These first-hand simulator configurations do not calibrate the
-replacement's module-boosted crafting throughput (native crafting speed is 50).
+first-hand run. The replacement passes **162 pickup controls** across all four tiers, both mirroring states,
+moving/backed-up supply, original/swapped ingredients and same-item lanes, including every phase-sweep release.
+Its first-hand timing and observed arrival phases match the earlier compact controls. These first-hand simulator
+configurations do not calibrate the replacement's module-boosted crafting throughput (native crafting speed is 50).
 
 The independent natural-output smoke makes no inventory or held-item edits and clears no inventories. Over
 600 ticks it crafts **53 circuits**, observes the output inserter carrying circuits, deposits the first stack at
 tick **310**, and observes circuits on the next belt at tick **326**. Passing evidence is retained locally under
-`work/belt-speed-coverage/compact-user-replacement-02/`.
+`work/belt-speed-coverage/compact-user-replacement-02/` (32 base controls and output smoke) and
+`work/belt-speed-coverage/compact-user-replacement-phases-01/` (130 phase/swap controls).
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/compact-output-new npm run test:game -- tests/game/mechanics/belt-pickup/compact-front-output.game.test.ts
