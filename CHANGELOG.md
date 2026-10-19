@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.19.0] - Unreleased
 
 ### Fixed
+- Check independently phased moving input lanes during clock verification and recovery. Clocks that meet their target only while both lanes stay aligned are no longer marked stable.
 - Replenish backed-up single-stream side feeds through finite incoming queues at the actual belt speed. Repeated hands on slower belts no longer draw from unlimited reachable stock.
 - Retain output-belt stock between hands at all four speeds. Inserters now wait for actual receiving space, including the slower second hand on normal belts and temporary compressed gaps.
 - Account for arm extension between ordinary belt grabs. This fixes the extra tick in affected normal-speed same-item underground-entrance pickups without adding a universal lane-switch delay.

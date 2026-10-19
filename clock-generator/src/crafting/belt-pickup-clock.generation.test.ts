@@ -26,6 +26,9 @@ interface StartupControl {
 }
 const startupControls = JSON.parse(fs.readFileSync(path.join(__dirname,
     "../../tests/game/builds/pickup-clock-startup-controls.json"), "utf8")) as Record<string, StartupControl>;
+const movingPhases = JSON.parse(fs.readFileSync(path.join(__dirname,
+    "../../tests/game/builds/pickup-clock-moving-phase-controls.json"), "utf8")) as
+    {cases: Record<string, {phases: Record<string, [number, number]>; bins: number[]}>};
 
 // The native controls witness the selected default, including its failures. A different default must be
 // rechecked in the game; matching the requested rate in the simulator alone does not replace that evidence.
@@ -38,7 +41,7 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         const selected = result.alternatives[result.selected_index];
         const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
         expect(period).toBe(native.period);
-        expect(selected.verdict).toBe(native.generationVerdict);
+        expect(selected.verdict).toBe(movingPhases.cases[variant.name] ? "unstable" : native.generationVerdict);
         expect(config.target_output.items_per_second * period / 60).toBe(native.expected);
 
         const meetsTarget = native.baseline.every(items => items === native.expected)
@@ -67,6 +70,13 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
                 });
                 expect(items, `native cold-start output at offset ${phase.offset}`).toEqual(phase.items_per_period);
             }
+        } else if (movingPhases.cases[variant.name]) {
+            // These warm native runs still pass. The stronger verifier finds another modeled cold
+            // lane-phase start; this is not a claim that the retained game run failed.
+            expect(meetsTarget).toBe(true);
+            expect(selected.assessment.holds).toBe(false);
+            expect(selected.result.stability_check.as_built?.failed_pickup_phases)
+                .toEqual(movingPhases.cases[variant.name].phases);
         } else if (meetsTarget) {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);

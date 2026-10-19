@@ -6,7 +6,7 @@ import { validateCopies } from "../../config/copies-validator";
 import { DebugPluginFactory } from "../sequence/debug/debug-plugin-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
 import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
-import { cloneSimulationContextWithInterceptors, createEntityRegistryFromConfig, SimulationContext } from "../sequence/simulation-context";
+import { cloneSimulationContextWithInterceptors, createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
 import { Duration, OpenRange } from "../../data-types";
 import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { TargetProductionRate } from "../target-production-rate";
@@ -336,6 +336,8 @@ export interface RunOptions {
      * see what the simulator makes of it (see simulateClockOnly).
      */
     start_stock?: Record<string, MachineStartStock>;
+    /** Initial lane phases for a simulation trial; transient stock state, separate from saved config geometry. */
+    moving_pickup_phases?: MovingPickupPhases;
     /**
      * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
      * once it is back (see backpressure-loss.ts). For a run on clock windows alone; nothing is cut in any other run.
@@ -485,6 +487,7 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     // Initialize simulation context
     const simulation_context = SimulationContext.fromConfig(config);
     simulation_context.competing_takers_order = options.competing_takers_order ?? DEFAULT_TAKER_ORDER;
+    if (options.moving_pickup_phases) simulation_context.initializeMovingPickupPhases(options.moving_pickup_phases);
 
     simulation_context.machines
         .map(it => it.machine_state.machine)

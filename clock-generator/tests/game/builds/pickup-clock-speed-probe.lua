@@ -56,6 +56,12 @@ script.on_nth_tick(1, function()
         if tick >= first * period and tick < first * period + (options.trace_ticks or 64) then
             local snapshot = pickup.snapshot(input, tick)
             snapshot.clock = value
+            local inventory = machine.get_inventory(defines.inventory.crafter_input)
+            snapshot.machine = {inputs = {}, crafting_progress = machine.crafting_progress, bonus_progress = machine.bonus_progress}
+            for _, ingredient in ipairs(ingredients) do snapshot.machine.inputs[ingredient] = inventory.get_item_count(ingredient) end
+            if options.product then
+                snapshot.machine.output = machine.get_inventory(defines.inventory.crafter_output).get_item_count(options.product)
+            end
             table.insert(report.pickups, snapshot)
             break
         end

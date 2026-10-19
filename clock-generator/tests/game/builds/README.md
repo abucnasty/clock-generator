@@ -99,8 +99,9 @@ counts match overlapping detailed recordings and the native hardware assertions.
 
 | Result | Cases | Interpretation |
 | --- | --- | --- |
-| Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply |
+| Stable, exact baseline and recovery | 42 | The selected clock works under its configured supply |
 | Warm target and recovery pass, generator says unstable | 2 | Normal backed-up underground entrance/exit fail a fully jammed cold start at offset 1287; the rejection is correct |
+| Warm target and recovery pass, additional modeled lane phases fail | 2 | Normal moving underground entrance/exit alternate 192/160 at another modeled cold start; that failing start is not yet native-verified |
 | Moving target missed, selected clock requires backed-up supply | 2 | Express moving underground entrance/exit; no verified moving default |
 
 The six historical false-stable counterexamples involving fast undergrounds, normal straight pickups and
@@ -108,6 +109,12 @@ normal moving underground recovery now pass with regenerated clocks. Both normal
 defaults pass the warm run, but the cold-start controls below confirm their startup sensitivity. No failing captured
 ordinary default is marked stable for its actual supply. These checks do not close broader startup timing,
 over-the-hood operating clocks or slower two-stream support.
+
+The lane-phase audit leaves all 48 exported clocks unchanged. Two additional normal moving underground
+verdicts become unstable, with the modeled failing starts retained separately in
+[pickup-clock-moving-phase-controls.json](pickup-clock-moving-phase-controls.json). The measured warm
+runs still hold 176, including a separate two-tick ingredient-restoration perturbation; those observations
+do not establish the modeled failing cold phase. Keep this distinction from a native counterexample explicit.
 
 The portable `belt-pickup-clock.generation.test.ts` checks the selected periods, verdicts and supply against
 these native controls. Four additional comparisons reproduce the cold-start counts below, including the correct
@@ -166,9 +173,26 @@ shifts by half a stack interval. The clock was marked stable, but native output 
 among four 64-item periods instead of 64 every 640 ticks. The existing pickup kernel reproduces this pattern
 with different initial lane phases. A common clock shift alone does not check that state.
 
-This test work records the disagreement; it does not change simulator timing or certify the failing clock.
-Keep the phase-verification correction in a separate PR. A passing capture/replay means the recorded
-observations match expectations, including any shortfalls recorded there.
+The matching express trace is retained in [over-hood-express-lane-phase-control.json](over-hood-express-lane-phase-control.json).
+The old mirrored express clock repeats six 112-item periods and one 96-item period after recovery. Separate
+lane phases reproduce that seven-period cycle in the existing simulator too, under its own loss protocol.
+Native observer ticks have a different origin from the exported clock, so the comparison uses relative lane
+phase and cycle rotation; it does not claim the same initial inventory, first failing period or loss transient.
+
+Clock verification now varies ordinary moving lanes independently in both steady-output and recovery checks.
+The historical summaries preserve the original clocks and verdicts. A passing capture/replay means the recorded
+observations match expectations, including any shortfalls recorded there; it does not certify a failing clock.
+
+[over-hood-phase-generation-controls.json](over-hood-phase-generation-controls.json) pins all 32 audited
+selections and hashes their exact exported blueprint/schedule. Only three clocks change; their fresh native
+counts are in [over-hood-phase-clock-controls.json](over-hood-phase-clock-controls.json). The turbo replacements
+produce 32 / 320 ticks at both mirroring states. The mirrored replacement has one short period six periods
+after the final restoration, then 18 uninterrupted target periods: it recovers after seven periods, within the
+40-period simulator recovery limit. The changed fast candidate remains unstable and misses target natively.
+Express keeps the same exported clock and native evidence but now receives the correct no-recovery verdict.
+The portable `over-hood-clock.generation.test.ts` checks these selections, exact clock hashes and the final
+untouched final native recovery windows for clocks marked stable (at least eight periods for moving supply,
+five for backed-up supply, whose assessment starts later).
 
 Raw evidence is retained locally under `work/belt-pickup-parity/over-hood-different-native-02-{unmirrored,mirrored}/`
 and `over-hood-same-native-01-{unmirrored,mirrored}/`. The bounded shorter-loss trace is in
@@ -182,5 +206,5 @@ BELT_SPEED_CAPTURE_DIR=../work/over-hood-clock-new \
 ```
 
 Use the generation cache and replay variables above with a fresh capture directory. Optional
-`BELT_CLOCK_TRACE_PICKUPS=1` retains 64 ticks of native held/stock snapshots before the first disturbance
+`BELT_CLOCK_TRACE_PICKUPS=1` retains 64 ticks of native held/stock and machine-inventory snapshots before the first disturbance
 and after each restoration; it does not feed observations into the simulator.

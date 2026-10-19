@@ -126,15 +126,18 @@ independent incoming streams; exact gate ticks remain in the fixture instruction
 | --- | --- | --- | --- | --- |
 | Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; no verified moving default for undergrounds | Tested | Tested |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
-| Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested; generator result mismatch | Tested; generator result mismatch | Tested | Tested |
+| Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested | Tested; no verified moving default when mirrored | Tested | Tested |
 | Over-the-hood same-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
 | Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
 The post-fix recapture covers **48 ordinary clocks** across all four speeds: **46 meet exact baseline and recovery output**.
-Of those, 44 are correctly marked stable. Both normal backed-up underground clocks pass the warm run, but
+Of those, 42 remain marked stable after the lane-phase audit. Both normal backed-up underground clocks pass the warm run, but
 fully jammed cold-start controls alternate 144/208 items at offset 1287, matching their unstable verdict.
+The normal moving undergrounds now also receive unstable verdicts: independent modeled lane phases can
+alternate 192/160, while their measured warm runs still hold 176. Those additional failing cold starts have
+not been reproduced natively; a two-tick ingredient-restoration perturbation still holds target in both layouts.
 The two express moving underground defaults require backed-up supply and miss the target under moving supply.
 The original 39 recordings remain separate historical evidence.
 Slower merge clocks remain **Not tested** under the turbo-only supported schema. The belt-drop rows also compare
@@ -318,19 +321,25 @@ initial stock and empty machines/hands before comparing the simulator. The [buil
 links current controls and preserves the original 39-run summaries. Broader startup timing remains a separate
 verification gate; warm throughput alone does not establish it.
 
-**Over-the-hood clock recovery.** A mixed-item turbo default produces 64 circuits per 640 ticks before an
+**Over-the-hood clock recovery.** The earlier mixed-item turbo default produced 64 circuits per 640 ticks before an
 interruption, in both mirroring states. After one ingredient is interrupted, recovery repeatedly contains
 one 48-item period among four 64-item periods, despite the generator's stable verdict.
 The [bounded native trace](../../tests/game/builds/over-hood-lane-phase-control.json) shows the interrupted
 lane shift by half a stack interval while the other lane keeps its phase. The existing pickup kernel reproduces
-this output pattern with separate lane phases; clock verification currently initializes both alike.
-The mirrored express default similarly recovers to 96/112 rather than 112 items per 1,120 ticks.
+this output pattern with separate lane phases. The mirrored express default similarly recovers to 96/112
+rather than 112 items per 1,120 ticks. Clock verification now varies lane phases for both output and recovery.
 The [32 operating controls](../../tests/game/builds/over-hood-clock-controls.json) cover all four speeds, both
 mirroring states and supplies, and same/different ingredients: 21 meet exact baseline and recovery output,
 including all 16 same-item cases; eight already receive unstable/no-recovery verdicts; these three receive
-false stable verdicts. Two fast moving mixed-item baselines already contain zero-output periods, so their
-recovery counts are retained without certifying recovery. This is a clock-verification gap, not a different
-lane-preference rule. Its simulator correction remains a separate release gate.
+false stable verdicts in that historical capture. Two fast moving mixed-item baselines already contain zero-output
+periods, so their recovery counts are retained without certifying recovery.
+
+The [replacement controls](../../tests/game/builds/over-hood-phase-clock-controls.json) verify the new turbo
+clock at **32 circuits / 320 ticks** in both mirroring states. Unmirrored recovery holds target throughout the
+assessed windows; mirrored recovery takes seven periods after the final interruption, then holds 32 for the
+remaining 18 periods. That transient differs from the old clock's persistent shortfall. Express keeps its
+original clock but is now marked **no recovery**. A changed fast candidate remains unstable and misses
+native target periods. This fixes the three false-stable verdicts without changing the pickup timing rule.
 
 **Side supply and capture.** Single streams enter at **67 inner / 188 outer** units. The bounded turbo merge
 requires finite incoming/receiving/downstream queues, compressed gaps and backpressure; seven repeated controls

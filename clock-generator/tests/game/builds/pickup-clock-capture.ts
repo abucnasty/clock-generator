@@ -102,7 +102,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
                 lua: composeProbeSource(path.join(__dirname, "pickup-clock-speed-probe.lua"), {
                     period, settle: 10 * period, lastPeriod: lastPeriod + 14, ...scenario.probe,
                     ...(scenario.outagePeriods !== undefined && {interventions: plannedInterventions}),
-                    speed: scenario.speed.units / 32, reach,
+                    speed: scenario.speed.units / 32, reach, product: config.target_output.recipe,
                 }), game_speed: 1000, watch: false, timeout_seconds: 900, log() {},
             })).recording;
         assertPickupClockHardware(recording, config, blueprint);
