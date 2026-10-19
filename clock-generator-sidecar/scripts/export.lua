@@ -43,6 +43,18 @@ local function resolve_target_id(target, result, is_sink)
         target_id = 1
     end
     
+    local pickup_capture
+    if not is_sink and target.type == "belt" then
+        local problem = target.supply_problem or target.pickup_problem
+        if not target.pickup_length or not target.entity_type then problem = problem or "unsupported" end
+        pickup_capture = {
+            status = problem and "unsupported" or "supported",
+            entity_type = target.entity_type, entity_name = target.name,
+            sidecar_version = script.active_mods["clock-generator-sidecar"], reason = problem,
+            model = not problem and (target.pickup_merge and "turbo-two-stream" or "belt") or nil,
+            model_version = not problem and 1 or nil,
+        }
+    end
     return {
         type = target.type,
         id = target_id,
@@ -50,7 +62,8 @@ local function resolve_target_id(target, result, is_sink)
         near_lane = target.near_lane,
         pickup_length = not is_sink and target.pickup_length or nil,
         pickup_supply = not is_sink and target.pickup_supply or nil,
-        pickup_merge = not is_sink and target.pickup_merge or nil
+        pickup_merge = not is_sink and target.pickup_merge or nil,
+        pickup_capture = pickup_capture
     }
 end
 

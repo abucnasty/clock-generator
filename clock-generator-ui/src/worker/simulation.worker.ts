@@ -317,7 +317,7 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
     return {
         machines,
         drills: validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill'),
-        inserters: validateEntries(clockGenerator.InserterConfigSchema, pasted.inserters, 'inserter'),
+        inserters: validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter'),
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
         guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,

@@ -161,6 +161,14 @@ failure with 16 iron plates, no copper cable and no products over 1,200 recorded
 repeating stalled state and suggests reviewing the merge or separating ingredients. Capturing a supported
 merge describes its behavior; it does not guarantee that the build can supply its recipe.
 
+### Captured pickup provenance
+
+[Pickup capture status](pickup-capture.md) is saved on each imported source. Only an explicit supported model
+with matching geometry/lane/supply data can drive generation. Unsupported and legacy unclassified pickups
+remain unverified after save/reload or version updates; update Sidecar and recapture when support is available.
+Manual configurations keep the straight-belt default. A newer engine does not reinterpret an old unsupported
+capture as a supported source.
+
 ### Splitter pickups remain unsupported
 
 Keep ingredient selection separate from replenishment: choose an eligible item from reachable stock, try the

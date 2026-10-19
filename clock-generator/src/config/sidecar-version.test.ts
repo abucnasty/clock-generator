@@ -105,12 +105,19 @@ it('asks older sidecar imports with infinity chests to review settings, without 
 
 it('asks older belt imports to re-export pickup geometry rather than silently claiming it is modelled', () => {
     const inserters = [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } }];
-    expect(Option.toNullable(checkSidecarImport('0.8.0', [], undefined, [], inserters))).toContain('exposed belt pickup length was not exported');
-    expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], inserters)).toEqual(Option.none());
+    expect(Option.toNullable(checkSidecarImport('0.8.0', [], undefined, [], inserters))).toContain('Physical belt pickup geometry was not exported');
+    expect(Option.toNullable(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], inserters))).toContain('classification was not captured');
 });
 
 
 it('asks older belt imports to re-export local supply entry and merge diagnostics', () => {
     const inserters = [{source: {type: 'belt', id: 1, pickup_length: 1}, sink: {type: 'machine', id: 1}}];
     expect(Option.toNullable(checkSidecarImport('0.10.0', [], undefined, [], inserters))).toContain('Local side-feed entry and merge warnings were not exported');
+});
+
+
+it('accepts an explicit current capture declaration without asking for a mod update', () => {
+    const inserters = [{source: {type: 'belt', id: 1, pickup_length: 1, near_lane: 1,
+        pickup_capture: {status: 'supported', model: 'belt', model_version: 1, entity_type: 'transport-belt'}}}];
+    expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], inserters)).toEqual(Option.none());
 });

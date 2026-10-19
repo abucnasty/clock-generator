@@ -27,6 +27,29 @@ describe('pickup type edits and saved assumptions', () => {
         expect(source).not.toHaveProperty('pickup_length');
         expect(isStale(generatedForOf(legacyImport), configKeyOf(config))).toBe(true);
     });
+    it('retains unsupported pickup identity across import, save and reload, independently of default geometry', () => {
+        const form = createDefaultConfig();
+        const capture = {status: 'unsupported' as const, entity_type: 'splitter', entity_name: 'turbo-splitter',
+            sidecar_version: '0.11.0', reason: 'splitter'};
+        form.inserters = [{id: 1, _uuid: 'input', source: {...source, pickup_capture: capture}, sink: {type: 'machine', id: 1}}];
+        const config = formDataToConfig(form);
+        const restored = configToFormData(JSON.parse(JSON.stringify(config)));
+        expect(restored.inserters[0].source.pickup_capture).toEqual(capture);
+        expect(pickupTypeOf(restored.inserters[0].source)).toBe('unverified');
+        expect(withPickupType(restored.inserters[0].source, 'straight')).toBe(restored.inserters[0].source);
+        expect(withPickupType(restored.inserters[0].source, 'underground')).toBe(restored.inserters[0].source);
+        const geometry = pickupGeometryOf({...config, overrides: {backed_up_belts: true}});
+        expect(geometry.known).toBe(0);
+        expect(geometry.unverified).toEqual([1]);
+    });
+    it('makes a deliberate geometry change a manual assumption without fabricating a fresh capture', () => {
+        const captured: InserterFormData['source'] = {...source, pickup_length: 1, pickup_capture: {
+            status: 'supported', model: 'belt', model_version: 1, entity_type: 'transport-belt', sidecar_version: '0.11.0',
+        }};
+        expect(withPickupType(captured, 'straight').pickup_capture).toEqual(captured.pickup_capture);
+        expect(withPickupType(captured, 'underground')).not.toHaveProperty('pickup_capture');
+        expect(captured.pickup_capture?.status).toBe('supported');
+    });
     it('does not attach geometry to a machine or chest source', () => {
         for (const type of ['machine', 'chest'] as const) {
             const source = { type, id: 2 };
@@ -65,7 +88,7 @@ describe('pickup type edits and saved assumptions', () => {
             { id: 7, source: withPickupType(source, 'straight') }, { id: 9, source },
             { source: { type: 'machine' } }, { source: { type: 'belt' } },
         ];
-        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], backedUp: false });
+        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], unverified: [], backedUp: false });
         expect(pickupGeometryOf({ inserters, overrides: { backed_up_belts: true } }).backedUp).toBe(true);
     });
 });

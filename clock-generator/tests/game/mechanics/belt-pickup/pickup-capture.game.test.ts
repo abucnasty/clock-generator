@@ -88,6 +88,9 @@ for _, entry in ipairs(export.exported_inserters(captured)) do
     if entry.source.type == "belt" then input = entry end
 end
 assert(input and input.source.pickup_length == 1)
+local provenance = supported.inserters[input.id].source.pickup_capture
+assert(provenance.status == "supported" and provenance.model == "belt" and provenance.model_version == 1)
+assert(provenance.entity_type == "transport-belt" and provenance.sidecar_version == script.active_mods["clock-generator-sidecar"])
 -- Exercise the export boundary with an unclassified capture: geometry must stay absent and IDs match the JSON.
 input.inserter.source.pickup_length = nil
 input.inserter.source.pickup_problem = "bend"
@@ -97,6 +100,10 @@ assert(unknown.pickup_warnings[1].inserter_id == input.id)
 assert(unknown.pickup_warnings[1].reason == "bend")
 assert(unknown.inserters[input.id].source.pickup_length == nil)
 assert(unknown.inserters[input.id].source.pickup_problem == nil)
+assert(unknown.inserters[input.id].source.pickup_capture.status == "unsupported")
+assert(unknown.inserters[input.id].source.pickup_capture.reason == "bend")
+assert(unknown.inserters[input.id].source.pickup_capture.entity_type == "transport-belt")
+assert(unknown.inserters[input.id].source.pickup_capture.model == nil)
 
 -- Supply classifier checks only: these inserted stacks do not measure pickup timing.
 local supply = require("__clock-generator-sidecar__.scripts.pickup-supply")

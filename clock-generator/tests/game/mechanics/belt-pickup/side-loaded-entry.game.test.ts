@@ -292,6 +292,8 @@ for (const variant of variants) test(`side-entry supply: ${variant.name}`, async
         if (variant.lane === "both") {
             expect(exported.source.pickup_supply).toBeUndefined();
             if (variant.speed === "turbo") {
+                expect(exported.source.pickup_capture).toMatchObject({status: "supported", model: "turbo-two-stream",
+                    model_version: 1, entity_type: "transport-belt"});
                 expect(exported.source.pickup_merge).toEqual(source.pickup_merge);
                 expect(captured.source.pickup_merge).toEqual(source.pickup_merge);
                 expect(result.recording.config.pickup_warnings).toBeUndefined();

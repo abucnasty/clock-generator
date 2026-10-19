@@ -36,3 +36,10 @@ Two-stream merge capture supports the two four-item lanes of one perpendicular t
 turbo pickup, with one pickup inserter and the other receiving lane empty. It copies both ingredients and the
 straight downstream length, ending at a closed belt end or a turbo loader into an unfiltered disposal chest.
 Other speeds, stack sizes, extra feeds, upstream merges and unsupported downstream paths keep their warning.
+
+### Pickup capture compatibility
+
+Belt-fed inserters include a persistent supported/unsupported classification, native source identity and a
+versioned model declaration where supported. The generator retains this information when saving a build.
+Old or unsupported captures require a fresh supported capture before generation; updating the mod alone
+does not update copied JSON or a saved build. Splitter routing remains unsupported.

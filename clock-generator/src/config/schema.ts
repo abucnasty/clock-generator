@@ -1,3 +1,4 @@
+import { BeltPickupCaptureSchema, normalizePickupCaptureConfig, pickupCaptureProblem } from "./pickup-capture";
 import { z } from "zod";
 import { MiningDrillType, BeltType, BeltStrategy, ChestType } from "../common/entity-types";
 import {
@@ -338,6 +339,8 @@ const InserterBeltSourceConfigSchema = z.object({
         z.tuple([BeltPickupSupplyProfileSchema, BeltPickupSupplyProfileSchema]),
     ]).optional(),
     pickup_merge: BeltPickupMergeSchema.optional(),
+    /** Persistent capture provenance; absent on manual configurations. */
+    pickup_capture: BeltPickupCaptureSchema.optional(),
     /** Refused: only an inserter's sink has a drop spot (see the checks of ConfigSchema) */
     drop: InserterBeltDropConfigSchema.optional()
 });
@@ -609,7 +612,7 @@ export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 // Root Config
 // ============================================================================
 
-export const ConfigSchema = z.object({
+export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object({
     target_output: TargetProductionRateConfigSchema,
     machines: z.array(MachineConfigurationSchema),
     drills: DrillsConfigSchema.optional(),
@@ -619,6 +622,10 @@ export const ConfigSchema = z.object({
     overrides: ConfigOverridesSchema.optional()
 }).superRefine((config, context) => {
     config.inserters.forEach((inserter, index) => {
+        if (inserter.source.type === TargetType.BELT && inserter.source.pickup_capture?.status === "supported") {
+            const problem = pickupCaptureProblem(inserter.source);
+            if (problem) context.addIssue({code: "custom", path: ["inserters", index, "source", "pickup_capture"], message: problem});
+        }
         if (inserter.source.type === TargetType.BELT && inserter.source.pickup_merge) {
             const source = inserter.source, merge = source.pickup_merge!;
             const belt = config.belts.find(belt => belt.id === source.id);
@@ -676,7 +683,7 @@ export const ConfigSchema = z.object({
                 "give every inserter that drops on a belt a `drop` (lane and position), or none"
         });
     }
-});
+}));
 
 /** Parsed configs have explicit pickup geometry on every belt source. */
 export type ParsedConfig = z.infer<typeof ConfigSchema>;

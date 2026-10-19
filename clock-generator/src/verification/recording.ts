@@ -1,3 +1,4 @@
+import { BeltPickupCaptureSchema } from "../config/pickup-capture";
 import { z } from "zod";
 import { BeltPickupMergeSchema, BeltPickupSupplyProfileSchema } from "../config/schema";
 
@@ -23,6 +24,7 @@ const TargetRefSchema = z.object({
     pickup_length: z.union([z.literal(0.5), z.literal(1)]).optional(),
     pickup_supply: z.union([z.tuple([BeltPickupSupplyProfileSchema]), z.tuple([BeltPickupSupplyProfileSchema, BeltPickupSupplyProfileSchema])]).optional(),
     pickup_merge: BeltPickupMergeSchema.optional(),
+    pickup_capture: BeltPickupCaptureSchema.optional(),
 });
 
 const RecordedInserterSchema = z.object({

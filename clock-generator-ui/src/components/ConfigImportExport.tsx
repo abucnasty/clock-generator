@@ -337,6 +337,7 @@ export function ConfigImportExport({
                 belts: read.belts,
                 chests: read.chests,
                 sidecar_version: read.sidecarVersion,
+                pickup_warnings: read.pickupWarnings,
                 suggested_target: read.suggestedTarget,
             });
         } catch (error) {
