@@ -18,17 +18,23 @@ import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
 
 type Family = "electromagnetic" | "same-item";
 interface ClockCase {family: Family; speed: FixtureBeltSpeed; backed: boolean; geometry: string; name: string}
-interface Prepared {config: Config; clock: GeneratedClock; period: number; expected: number; generationSeconds: number; generationVerdict: string}
+interface Prepared {
+    config: Config;
+    clock: GeneratedClock;
+    period: number;
+    expected: number;
+    generationSeconds: number;
+    generationVerdict: string;
+    selection?: {id: string; holds: boolean; rate: number; supply: "moving" | "backed_up" | null};
+}
 const generated = new Map<string, Prepared>();
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 export function pickupClockSpeedCases(family: Family): ClockCase[] {
     return BELT_SPEEDS.flatMap(speed => [false, true].flatMap(backed =>
-        // Existing turbo moving/recovery evidence remains the baseline. Gear backed-up was missing.
-        speed.name === "turbo" && !(family === "same-item" && backed) ? [] :
-            ["straight-belt", "underground-entrance", "underground-exit"].map(geometry => ({
-                family, speed, backed, geometry, name: `${family}-${speed.name}-${geometry}-${backed ? "backed" : "moving"}`,
-            }))));
+        ["straight-belt", "underground-entrance", "underground-exit"].map(geometry => ({
+            family, speed, backed, geometry, name: `${family}-${speed.name}-${geometry}-${backed ? "backed" : "moving"}`,
+        }))));
 }
 
 function gearAtSpeed(text: string, speed: FixtureBeltSpeed, backed: boolean) {
@@ -62,10 +68,7 @@ function gearAtSpeed(text: string, speed: FixtureBeltSpeed, backed: boolean) {
     return blueprintAtSpeed(encodeBlueprintFile(decoded as unknown as FactorioBlueprintFile), speed);
 }
 
-async function prepare(variant: ClockCase): Promise<Prepared> {
-    const key = `${variant.family}-${variant.speed.name}-${variant.backed}-${variant.geometry === "straight-belt" ? "straight" : "half"}`;
-    const cached = generated.get(key);
-    if (cached) return cached;
+export async function pickupClockConfig(variant: ClockCase): Promise<Config> {
     const config = await loadConfigFromFile(variant.family === "electromagnetic"
         ? path.join(GameFixturePaths.DIFFERENT_ITEMS, "config.json")
         : variant.geometry === "straight-belt" ? GameFixturePaths.SAME_ITEM_STRAIGHT_CONFIG : GameFixturePaths.SAME_ITEM_CONFIG);
@@ -76,15 +79,39 @@ async function prepare(variant: ClockCase): Promise<Prepared> {
         inserter.source.pickup_length = variant.geometry === "straight-belt" ? 1 : 0.5;
         inserter.source.pickup_layout = variant.geometry === "straight-belt" ? "side-straight" : variant.geometry === "underground-entrance" ? "side-entrance" : "side-exit";
     }
+    return config;
+}
+
+export function pickupClockScaffold(variant: ClockCase): string {
+    const fixture = variant.family === "electromagnetic" ? GameFixturePaths.DIFFERENT_ITEMS : GameFixturePaths.SAME_ITEM;
+    let blueprint = fs.readFileSync(path.join(fixture, `${variant.geometry}-scaffold.txt`), "utf8");
+    if (variant.family === "electromagnetic") {
+        if (variant.backed) blueprint = makeInputBeltBackedUp(blueprint);
+        return ordinaryAtSpeed(blueprint, variant.speed, false);
+    }
+    return gearAtSpeed(blueprint, variant.speed, variant.backed);
+}
+
+async function prepare(variant: ClockCase): Promise<Prepared> {
+    const key = `${variant.family}-${variant.speed.name}-${variant.backed}-${variant.geometry}`;
+    const cached = generated.get(key);
+    if (cached) return cached;
+    const config = await pickupClockConfig(variant);
     const started = performance.now();
     const alternatives = generateClockAlternatives(config, {logger: quiet});
     const selected = alternatives.alternatives[alternatives.selected_index];
-    expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
+    // A generation-only preflight checks the target. Native captures also retain below-target candidates:
+    // their output is evidence of a shortfall, rather than a reason to skip the game measurement entirely.
+    if (process.env.BELT_CLOCK_GENERATION_ONLY === "1" && process.env.BELT_CLOCK_CALIBRATE !== "1") {
+        expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
+    }
     const exported = selected.result.subtick ?? selected.result;
     const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
     const prepared = {config, period, expected: config.target_output.items_per_second * period / 60,
         clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule},
-        generationSeconds: (performance.now() - started) / 1000, generationVerdict: selected.verdict};
+        generationSeconds: (performance.now() - started) / 1000, generationVerdict: selected.verdict,
+        selection: {id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
+            supply: selected.belt?.kind ?? null}};
     generated.set(key, prepared);
     return prepared;
 }
@@ -104,14 +131,10 @@ export async function capturePickupClockSpeed(variant: ClockCase) {
             fs.writeFileSync(generationPath, JSON.stringify(prepared) + "\n");
         }
         fs.writeFileSync(path.join(capture.directory, "generated-clock.json"), JSON.stringify(prepared) + "\n");
+        if (prepared.selection) fs.writeFileSync(path.join(capture.directory, "generation-selection.json"), JSON.stringify(prepared.selection) + "\n");
         if (process.env.BELT_CLOCK_GENERATION_ONLY === "1") return;
         const {config, clock, period, expected} = prepared;
-        const fixture = variant.family === "electromagnetic" ? GameFixturePaths.DIFFERENT_ITEMS : GameFixturePaths.SAME_ITEM;
-        let blueprint = fs.readFileSync(path.join(fixture, `${variant.geometry}-scaffold.txt`), "utf8");
-        if (variant.family === "electromagnetic") {
-            if (variant.backed) blueprint = makeInputBeltBackedUp(blueprint);
-            blueprint = ordinaryAtSpeed(blueprint, variant.speed, false);
-        } else blueprint = gearAtSpeed(blueprint, variant.speed, variant.backed);
+        const blueprint = pickupClockScaffold(variant);
         fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint.trim() + "\n");
         const settle = 142 * period;
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
@@ -148,6 +171,8 @@ export async function capturePickupClockSpeed(variant: ClockCase) {
             const after = periods.filter(value => value.start >= start + (release + (variant.backed ? 10 : 6)) * period
                 && value.end <= start + next * period);
             expect(during.length).toBeGreaterThan(0);
+            expect(during.some(value => value.items < Math.min(...baseline.map(value => value.items))),
+                `disturbance at period ${cut} reduced output below the baseline`).toBe(true);
             expect(after.length).toBeGreaterThan(1);
             return {cut, during: during.map(value => value.items), recovered: after.map(value => value.items)};
         });
@@ -155,7 +180,10 @@ export async function capturePickupClockSpeed(variant: ClockCase) {
             baseline: baseline.map(value => value.items), recovery};
         fs.writeFileSync(path.join(capture.directory, "summary.json"), JSON.stringify(summary) + "\n");
         if (process.env.BELT_CLOCK_CALIBRATE !== "1") {
-            const expectedSummaries = JSON.parse(fs.readFileSync(path.join(__dirname, "pickup-clock-speed-controls.json"), "utf8"));
+            const expectations = process.env.BELT_CLOCK_EXPECTATIONS
+                ? path.resolve(process.env.BELT_CLOCK_EXPECTATIONS)
+                : path.join(__dirname, "pickup-clock-parity-controls.json");
+            const expectedSummaries = JSON.parse(fs.readFileSync(expectations, "utf8"));
             expect(summary).toEqual(expectedSummaries[variant.name]);
         }
     } finally {capture.cleanup();}

@@ -12,6 +12,16 @@ function M.find_one(entities, predicate, description)
     return assert(found, "missing " .. description)
 end
 
+function M.clock_value(clock)
+    for _, connector in ipairs({defines.wire_connector_id.combinator_output_green,
+        defines.wire_connector_id.combinator_output_red, defines.wire_connector_id.combinator_input_green,
+        defines.wire_connector_id.combinator_input_red}) do
+        local network = clock.get_circuit_network(connector)
+        if network then return network.get_signal{type = "virtual", name = "signal-clock"} end
+    end
+    error("generated clock has no readable network")
+end
+
 function M.each_tick(options)
     assert(options.first_tick >= 1 and options.last_tick >= options.first_tick, "invalid capture window")
     local started = game.tick

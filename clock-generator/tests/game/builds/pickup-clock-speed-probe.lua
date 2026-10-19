@@ -15,20 +15,11 @@ local report = {starts = starts, initial = {speed = belt.prototype.belt_speed, r
 local clock = capture.find_one(entities, function(entity)
     return entity.type == "decider-combinator" and string.sub(entity.combinator_description or "", 1, 9) == "Clock for"
 end, "generated clock")
-local function clock_value()
-    for _, connector in ipairs({defines.wire_connector_id.combinator_output_green,
-        defines.wire_connector_id.combinator_output_red, defines.wire_connector_id.combinator_input_green,
-        defines.wire_connector_id.combinator_input_red}) do
-        local network = clock.get_circuit_network(connector)
-        if network then return network.get_signal{type = "virtual", name = "signal-clock"} end
-    end
-    error("generated clock has no readable network")
-end
 local output = capture.find_one(entities, function(entity)
     return entity.type == "inserter" and entity.pickup_target == machine
 end, "output inserter")
 local function held() return output.held_stack.valid_for_read and output.held_stack.count or 0 end
-local previous_clock, previous_held, current = clock_value(), held(), nil
+local previous_clock, previous_held, current = capture.clock_value(clock), held(), nil
 local loader, loader_spec, loader_index, disposal
 if options.family == "electromagnetic" then
     loader = capture.find_one(entities, function(entity)
@@ -45,7 +36,7 @@ end
 local blocked, restored = false, false
 script.on_nth_tick(1, function()
     local tick = game.tick - starts
-    local value, count = clock_value(), held()
+    local value, count = capture.clock_value(clock), held()
     if value < previous_clock and game.tick >= starts then
         if current then
             current["end"] = game.tick

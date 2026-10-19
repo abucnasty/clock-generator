@@ -22,10 +22,10 @@ suite; it is not a generic visual mode for every mechanic test.
 
 ## Pickup speed backfill
 
-The `speed coverage:` cases add express, fast and normal electromagnetic/gear clocks across all three
-ordinary pickup geometries and both moving/backed-up supply. Three turbo backed-up gear cases fill the
-remaining turbo gap. Existing turbo throughput/recovery captures remain separate regressions.
-Electromagnetic targets scale with speed: 22.5/s express, 15/s fast and 7.5/s normal; gear remains 6/s.
+The `speed coverage:` runner covers all four belt speeds, all three ordinary pickup geometries, both
+moving/backed-up supplies and the electromagnetic/gear families: 48 configurations. Its original backfill
+covered 39 of these; turbo is now included in the same uninterrupted capture procedure as the slower tiers.
+Electromagnetic targets scale with speed: 30/s turbo, 22.5/s express, 15/s fast and 7.5/s normal; gear remains 6/s.
 The original pickup and machine positions stay fixed. Slower underground runs are split where needed
 to remain within native connection range; backed-up variants remove only the ingredient drain.
 
@@ -33,6 +33,7 @@ Each new case measures one continuous clock run. After ten settling periods, at 
 periods precede the ingredient/output disturbances. Ingredient cuts are at periods 66–68 and 104–106;
 output disposal is blocked at 84–88. Machine inventories and clock state remain untouched. Recovery is
 assessed after six additional periods for moving supply and ten for backed-up supply.
+Each disturbance must reduce output below the lowest baseline period before its recovery is assessed.
 
 Long default clocks can exceed the recorder's 72,000 detailed-tick limit even for 60 periods. The shared
 Lua probe therefore aggregates actual output-inserter held-count decreases at native clock wraps during
@@ -40,7 +41,7 @@ settling, retaining complete-period counts through all interventions. The record
 two detailed periods, which must match overlapping compact aggregates exactly. This preserves the limit
 and avoids resetting the build or retaining millions of redundant samples.
 
-`pickup-clock-speed-controls.json` records native period summaries separately from the generator's
+The historical `pickup-clock-speed-controls.json` records native period summaries separately from the generator's
 verdict. A measured throughput/recovery counterexample is not a claim that the selected clock is safe.
 Express moving half-tile generation already reports `no recovery`; the backfill preserves that verdict.
 Unsupported sources are not overridden to generate clocks.
@@ -74,6 +75,66 @@ BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/build-new \
 
 `BELT_CLOCK_GENERATION_DIR` optionally caches the generated clock/config for each named case; use one
 fresh directory for a fixed code revision. `BELT_CLOCK_GENERATION_ONLY=1` prepares clocks without
-Factorio. `BELT_CLOCK_CALIBRATE=1` records candidate native summaries rather than comparing committed
+Factorio and checks the selected rate against the target, unless calibration is enabled.
+`BELT_CLOCK_CALIBRATE=1` records candidate native summaries rather than comparing committed
 measurements; review the actual reports before updating expectations. `BELT_CLOCK_REPLAY_DIR` can
 validate retained recordings and compact reports offline, without another native run.
+
+Native runs also capture selected clocks whose simulated rate is below the requested rate. Keep those
+shortfalls explicit: collecting their output does not certify the clock. Check the selected alternative's
+required supply as well as its verdict; a backed-up fallback selected for moving input is a different
+operating condition. Cache entries keep underground entrances and exits separate because their layout can
+affect arm travel.
+
+`BELT_CLOCK_EXPECTATIONS` selects another summary JSON file when verifying a later simulator revision.
+The original `pickup-clock-speed-controls.json` remains the historical experiment evidence; do not overwrite
+its observations with new clock results. Always pair a replay with the summaries of the same retained run.
+
+## Post-fix ordinary clock verification
+
+The current default expectations are [pickup-clock-parity-controls.json](pickup-clock-parity-controls.json),
+captured after the finite-stock, collection-reach and occupied-output changes on engine commit `4f2d4e35`.
+All 48 configurations have 63 untouched baseline periods and three effective disturbances; their compact
+counts match overlapping detailed recordings and the native hardware assertions.
+
+| Result | Cases | Interpretation |
+| --- | --- | --- |
+| Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply |
+| Warm target and recovery pass, generator says unstable | 2 | Normal backed-up underground entrance/exit fail a fully jammed cold start at offset 1287; the rejection is correct |
+| Moving target missed, selected clock requires backed-up supply | 2 | Express moving underground entrance/exit; no verified moving default |
+
+The six historical false-stable counterexamples involving fast undergrounds, normal straight pickups and
+normal moving underground recovery now pass with regenerated clocks. Both normal backed-up underground
+defaults pass the warm run, but the cold-start controls below confirm their startup sensitivity. No failing captured
+default is marked stable for its actual supply. These checks do not close broader startup timing,
+over-the-hood operating clocks or slower two-stream support.
+
+The portable `belt-pickup-clock.generation.test.ts` checks the selected periods, verdicts and supply against
+these native controls. Four additional comparisons reproduce the cold-start counts below, including the correct
+unstable rejections. Fresh generation also saves the selected rate, required supply
+and alternative id in `generation-selection.json` when that metadata is available in its cache.
+
+To replay the original 39 controls, set
+`BELT_CLOCK_EXPECTATIONS=tests/game/builds/pickup-clock-speed-controls.json` with their retained recording
+directory. Current captures use the parity controls by default. Always retain failed captures for diagnosis;
+the passing measurement test alone does not certify a clock that a control records below target.
+
+
+### Fully backed-up cold starts
+
+[pickup-clock-startup-controls.json](pickup-clock-startup-controls.json) records the normal underground
+entrance/exit with new empty machines/hands and verified stationary `[0,64]` stock on both half-tile lanes.
+At offset 0, all 16 periods produce 176 items. Rotating the same windows by 1287 ticks makes both game and
+simulator alternate 144/208 for all 16 periods. The mean is 176, but exact per-period output fails, so the
+unstable verdict is justified.
+
+The staged harness's default saturation check establishes fullness, which can still occur while stock moves.
+These fixtures wait for 1,200 saturation ticks and additionally assert stationary stock before the first grab;
+that wait is a fixture setup, not a general timing rule. Earlier short-saturation pilots are not used as evidence
+for a fully backed-up start. Counts begin at cold placement and include the first period; no observed arm arrivals
+or later stock are fed back into the simulator.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-clock-startup-new \
+  npm run test:game -- tests/game/builds/pickup-clock-startup.game.test.ts
+```
