@@ -28,13 +28,17 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
     ) {
         super(initialMode, transitionGraph, plugins);
         this.entity_id = inserter_state.entity_id;
+        this.ticking_control = enable_control && 'executeForTick' in enable_control ? enable_control as unknown as ControlLogic : undefined;
     }
+
+    /** The enable control when it is also a ControlLogic, as FractionalSwingEnableControl is, to run each tick */
+    private readonly ticking_control: ControlLogic | undefined;
 
     public override executeForTick(): void {
         // If the enable control implements ControlLogic, execute it each tick
         // This allows controls like FractionalSwingEnableControl to track state transitions
-        if (this.enable_control && 'executeForTick' in this.enable_control) {
-            (this.enable_control as ControlLogic).executeForTick();
+        if (this.ticking_control) {
+            this.ticking_control.executeForTick();
         }
         super.executeForTick();
         this.inserter_state.enabled = this.shownEnabled();

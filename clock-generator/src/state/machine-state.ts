@@ -196,9 +196,13 @@ function takesTurnForOutput(machineState: MachineState, itemName: string, insert
     }
     // with enough for this hand, what is left over is there for the next inserter in the same tick
     const takes_it_all = quantity < room_in_hand;
-    const another_waits = Array.from(machineState.outputWaiters.get(itemName)!).some(([id, asked]) => id !== inserter_id && asked >= tick - 1);
-    if (takes_it_all && another_waits && machineState.lastOutputTaker.get(itemName) === inserter_id) {
-        return false;
+    if (takes_it_all && machineState.lastOutputTaker.get(itemName) === inserter_id) {
+        for (const [id, asked] of machineState.outputWaiters.get(itemName)!) {
+            if (id !== inserter_id && asked >= tick - 1) {
+                // another inserter waits for it
+                return false;
+            }
+        }
     }
     if (quantity > 0) {
         machineState.lastOutputTaker.set(itemName, inserter_id);

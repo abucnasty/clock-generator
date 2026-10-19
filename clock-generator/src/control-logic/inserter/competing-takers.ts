@@ -40,7 +40,7 @@ export function orderIsOpen(quantity: number, has_taker_history: boolean, bigges
  */
 export class InserterUpdates implements ControlLogic {
     /** The inserters that take from one machine, with the places they have in the list, for every machine with more than one */
-    private readonly groups: { machine: MachineState; places: number[]; ranked: InserterStateMachine[] }[] = [];
+    private readonly groups: { machine: MachineState; item: string; biggest_hand: number; places: number[]; ranked: InserterStateMachine[] }[] = [];
 
     constructor(
         private readonly inserters: readonly InserterStateMachine[],
@@ -63,15 +63,15 @@ export class InserterUpdates implements ControlLogic {
             const members = places.map(place => inserters[place]);
             const key = new Map(members.map(it => [it, draw === null ? it.inserter_state.entity_id.number : draw()] as const));
             const sign = order === "descending" ? -1 : 1;
-            this.groups.push({ machine, places, ranked: [...members].sort((a, b) => sign * (key.get(a)! - key.get(b)!)) });
+            const item = machine.machine.output.item_name;
+            const biggest_hand = Math.max(...places.map(place => handSizeFor(inserters[place].inserter_state.inserter, item)));
+            this.groups.push({ machine, item, biggest_hand, places, ranked: [...members].sort((a, b) => sign * (key.get(a)! - key.get(b)!)) });
         }
     }
 
     public executeForTick(): void {
         let updates = this.inserters;
-        for (const { machine, places, ranked } of this.groups) {
-            const item = machine.machine.output.item_name;
-            const biggest_hand = Math.max(...places.map(place => handSizeFor(this.inserters[place].inserter_state.inserter, item)));
+        for (const { machine, item, biggest_hand, places, ranked } of this.groups) {
             if (!orderIsOpen(machine.inventoryState.getQuantity(item), machine.lastOutputTaker.get(item) !== undefined, biggest_hand)) {
                 continue;
             }
