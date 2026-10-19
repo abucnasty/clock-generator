@@ -342,10 +342,12 @@ function alternativeDefinitionsFor(
     // output inserter takes hands, so longer cycles can work too
     const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
         : Array.from({ length: Math.max(swings, context.planned_swings ?? swings) + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i);
+    // Supply still matters for always-enabled and fuel pickups, even when the clock has no belt windows.
+    const offer_backed_up_belt = config.overrides?.backed_up_belts !== true
+        && config.inserters.some(inserter => inserter.source.type === "belt");
 
     return [
-        // with backed-up belts the first run is already made without the slack, unless it only holds with it
-        ...(config.overrides?.backed_up_belts === true ? [] : [{
+        ...(offer_backed_up_belt ? [{
             id: WITHOUT_BELT_PICKUP_SLACK_ID,
             label: `${BATCHED_SWINGS_LABEL}, backed-up belt`,
             description: BATCHED_SWINGS_DESCRIPTION,
@@ -356,7 +358,7 @@ function alternativeDefinitionsFor(
                 // The simulation uses backed-up supply, but this alternative still opts out of the user's moving-belt choice.
                 return { ...result, belt_pickup_slack_left_out: result.belt !== null && Number.isInteger(result.simulation_duration.ticks) };
             },
-        }]),
+        }] : []),
         {
             id: "fractional",
             label: fractional ? "Without fractional swings" : "Fractional swings",

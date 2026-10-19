@@ -76,6 +76,55 @@ describe("the order competing inserters are updated in", () => {
         expect(new Set(orders).size).toBeGreaterThan(1);
     });
 
+    it("keeps the seeded choices of later groups when earlier groups need no reordering", () => {
+        expect(order({seed: 1}, 4)).toEqual([7, 5, 25, 22]);
+        expect(order({seed: 5}, 4)).toEqual([5, 7, 22, 25]);
+    });
+
+    it("restores the original order when a reused updater's turn rule closes", () => {
+        const updates = new InserterUpdates(context.inserters, context.state_registry);
+        const tick = (held: number, history: boolean) => {
+            for (const id of [3, 10]) {
+                const state = foundry(id);
+                state.inventoryState.setQuantity("low-density-structure", held);
+                state.lastOutputTaker.clear();
+                if (history) state.lastOutputTaker.set("low-density-structure", "inserter:5");
+            }
+            updated.length = 0;
+            updates.executeForTick();
+            return updated.filter(id => [5, 7, 22, 25].includes(id));
+        };
+        expect(tick(16, true)).toEqual([7, 5, 25, 22]);
+        expect(tick(16, true)).toEqual([7, 5, 25, 22]);
+        expect(tick(15, true)).toEqual([5, 7, 22, 25]);
+        expect(tick(4, false)).toEqual([7, 5, 25, 22]);
+        expect(tick(0, false)).toEqual([5, 7, 22, 25]);
+    });
+
+    it("uses the stock at the start of the tick for every group's order", () => {
+        for (const id of [3, 10]) {
+            foundry(id).inventoryState.setQuantity("low-density-structure", id === 3 ? 16 : 0);
+            foundry(id).lastOutputTaker.clear();
+        }
+        const trigger = vi.mocked(context.inserters.find(it => it.inserter_state.entity_id.number === 7)!.executeForTick);
+        const original = trigger.getMockImplementation()!;
+        trigger.mockImplementation(() => {
+            updated.push(7);
+            foundry(10).inventoryState.setQuantity("low-density-structure", 16);
+        });
+        try {
+            const updates = new InserterUpdates(context.inserters, context.state_registry);
+            updated.length = 0;
+            updates.executeForTick();
+            expect(updated.filter(id => [5, 7, 22, 25].includes(id))).toEqual([7, 5, 22, 25]);
+            updated.length = 0;
+            updates.executeForTick();
+            expect(updated.filter(id => [5, 7, 22, 25].includes(id))).toEqual([7, 5, 25, 22]);
+        } finally {
+            trigger.mockImplementation(original);
+        }
+    });
+
     it("keeps each foundry's inserters in the places they have in the list", () => {
         const drawn = order({ seed: 3 }, 4);
         expect([drawn[0], drawn[1]].sort((a, b) => a - b)).toEqual([5, 7]);
