@@ -102,6 +102,15 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
         }
     }
 
+    /** Takes these plugins off, for a run whose observations nobody reads any more */
+    public removePlugins(plugins: ReadonlySet<ModePlugin<M>>): void {
+        for (const list of [this.plugins, this.tick_plugins]) {
+            const kept = list.filter(plugin => !plugins.has(plugin));
+            list.length = 0;
+            list.push(...kept);
+        }
+    }
+
     public getPlugins(): ModePlugin<M>[] {
         return [...this.plugins];
     }
