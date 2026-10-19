@@ -15,6 +15,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Preserve finite stock and belt-speed refill for ordinary backed-up pickups, including underground reach and same-item lane fallback. Slower belts can run out of reachable stacks during or between hands instead of supplying a stack every tick.
 
 ### Added
+- Capture supported over-the-hood underground-exit pickups in Sidecar, including mirroring-selected lane preference. Older unsupported captures require recapture.
 - Identify underground pickup layouts explicitly: side entrance/exit, front entrance/exit, or over the exit hood. Manual underground configs require a layout choice; older Sidecar underground captures require recapture. Straight side pickups remain the default.
 - Preserve per-pickup capture status and source identity through import, saved builds and exports. Unclassified or unsupported captures require a new supported capture before generation; explicit model names/format versions prevent future data from silently falling back to straight-belt timing. Manual builds retain their existing defaults.
 - Model a single continuously supplied side feed into a straight pickup tile. Per-lane `source.pickup_supply` profiles distinguish through, inner side and outer side entry without changing reach, preferred lane or backed-up timing.

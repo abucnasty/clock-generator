@@ -72,15 +72,16 @@ These rows cover the measured front approaches and both mirroring states.
 | Front exit, backed up — different and same items | Tested | Tested | Tested | Tested |
 | Over-the-hood exit, moving — different items | Tested | Tested | Tested | Tested |
 | Over-the-hood exit, moving — same item on both lanes | Tested | Tested | Tested | Tested |
-| Over-the-hood exit, backed up — different and same items | Tested | Tested | Tested; simulator timing mismatch (refill) | Tested; simulator timing mismatch (refill) |
+| Over-the-hood exit, backed up — different and same items | Tested | Tested | Tested | Tested |
 | Front entrance, moving — different items | Tested | Tested | Tested | Tested |
 | Front entrance, moving — same item on both lanes | Tested | Tested | Tested | Tested |
 | Front entrance, backed up — different and same items | Tested | Tested | Tested | Tested |
 
 The downstream front-exit fixture places the inserter on the next belt tile, physically blocking continuation.
 The supplied over-the-hood exit is a separate approach: its inserter sits upstream and leaves the downstream route open.
-Its moving stock agrees with the experimental replay, but Sidecar still marks this approach unsupported;
-that capture limitation is separate from a simulator timing mismatch.
+Production collection and exposed stock agree with all 258 first-hand controls. Sidecar now captures
+`over-hood-exit`, half-tile reach and mirroring-selected preference with model format 2. Old unsupported
+captures remain unsupported and require recapture.
 Normal moving front-entrance controls use a paired compact assembler layout: the original plant needs a tunnel
 longer than normal underground range. Equivalent compact controls were also measured at the other speeds.
 Front-entrance phase sweeps verify actual first-grab positions, rather than assuming gate-delay labels imply
@@ -184,10 +185,11 @@ Both observed lanes cover 2/8/4/8 arrival phases at turbo/express/fast/normal fo
 mirroring state and ingredient arrangement. Fast/normal backed-up first hands use same-item fallback for their
 fourth grab, consistent with the finite-refill controls.
 
-Independent moving-stock replays agree with all **216 moving first hands**; the experimental jammed-queue
-replay agrees with all **42 backed-up first hands**, conditioned on native arrival. Sidecar still classifies
-this approach as **unsupported / inline** and omits pickup geometry. Simulator/capture fixes remain separate;
-these results do not establish independent lane alignment, repeated-hand or generated-clock support.
+Independent moving-stock replays agree with all **216 moving first hands**; the production backed-up queue
+agrees with all **42 backed-up first hands**, conditioned on native arrival. Production pickup-mode comparisons
+also match held items, quantities and exposed stock for all 258 controls. Sidecar captures the explicit
+over-the-hood layout. These results do not establish independent lane alignment, repeated operating throughput
+or generated-clock parity; those remain later verification gates.
 
 ### Side-loading onto a straight tile
 
@@ -277,8 +279,8 @@ its former four counterexamples; production comparisons are separate.
 **Front controls.** The 228 first-hand captures verify lane preference across ingredients, mirroring, speeds
 and observed entrance phases. Normal moving entrance coverage uses the paired compact destination. The
 downstream front-exit fixture blocks continuous flow; the over-the-hood exit is documented separately.
-Its 258 controls reproduce the lane preference and finite-stock rules across observed aligned phases while preserving the current
-unsupported capture warning; no production simulator or Sidecar change is included.
+Its 258 controls reproduce the lane preference and finite-stock rules across observed aligned phases.
+The production model matches collection and stock, and Sidecar now exports a supported explicit layout.
 
 **Generated clocks.** Collection replay after observed arm arrival does not establish
 clock throughput or a reliable stability verdict. Electromagnetic targets scale with belt speed: 22.5/s express,

@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.0
   Features:
+    - captures an inserter upstream of an underground exit and facing with belt travel as an over-the-hood pickup: lane 1 unmirrored, lane 2 mirrored, half-tile reach
     - captures the physical side/front pickup layout in model format 2, separately from exposed length and supply motion; older underground captures need recapture
     - exports persistent pickup classification, native source identity and versioned supported model declarations, so old unsupported captures can be retained and distinguished from manual belt settings
     - captures the preferred lane and half-tile pickup length for an inserter centered downstream of an underground entrance and facing back into it: lane 2 when mirrored, lane 1 otherwise

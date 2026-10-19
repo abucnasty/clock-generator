@@ -74,7 +74,10 @@ queue agrees on all **42 backed-up first hands**. Both condition on observed fir
 absolute approach timing. The engine's simpler backed-up approximation still lacks the fast/normal finite-refill
 waits. No simulator or Sidecar implementation changes are included here.
 
-Sidecar retains **unsupported / inline**, warning for the captured input and omitting `near_lane`/`pickup_length`.
+New Sidecar captures export **supported / belt model 2**, `pickup_layout: "over-hood-exit"`, half-tile reach and
+lane 1 unmirrored / lane 2 mirrored. Old captures keep their original **unsupported / inline** marker and require
+recapture. Production pickup-mode comparisons now match held items, quantities and both exposed lanes in all
+258 retained first hands; later observations are never fed back into the model.
 The [base expectations](expectations.json) and [shifted-phase expectations](phase-expectations.json) keep native
 timing, physical lane selection and replay results separate from that support boundary. Portable tests assert
 actual first-grab phase coverage in both lanes, preventing duplicate phases from silently shrinking coverage.
@@ -105,6 +108,22 @@ OVER_HOOD_PHASES=1 OVER_HOOD_REPLAY_DIR=../work/belt-speed-coverage/over-hood-ba
 ```
 
 In replay mode, a missing root for any selected case fails explicitly instead of starting Factorio.
+
+## Portable production regressions
+
+The [48 compact native clips](pickup-clips.json) retain the freshly captured first hands across all four
+speeds, both mirroring states, moving/backed-up supply and original/swapped/same-item ingredients. They start
+from observed full stock at tick 64 and supply only the native first-arrival boundary. Production predicts
+later held items/quantities and exposed stock through the shared ordinary-pickup comparator.
+
+```bash
+npm test -- src/control-logic/inserter/modes/pickup/over-hood-exit.test.ts
+```
+
+Fresh capture validation additionally checks Sidecar model format 2 and its explicit layout; replaying older
+reports preserves their original unsupported metadata. Classifier rotation checks cover all cardinal directions;
+actual pickup timing here remains the measured eastbound orientation. Independent startup, repeated operating
+throughput and generated-clock recovery remain final parity gates before release.
 
 ## Layout illustrations
 

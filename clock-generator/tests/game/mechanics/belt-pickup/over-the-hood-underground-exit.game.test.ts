@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {expect, test} from "vitest";
+import {compareContinuousSimulator} from "./ordinary-pickup-comparison";
 import {Config} from "../../../../src/config";
 import {loadConfigFromFile} from "../../../../src/config/loader";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
@@ -43,20 +44,24 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
             try {
                 const source = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8");
                 const blueprint = overTheHoodExitAtSpeed(source, speed, {compactDestination: compact, mirrored, backedUp: backed, content, gated: true});
+                const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
+                configAtSpeed(config, speed);
+                config.overrides = {...config.overrides, backed_up_belts: backed};
+                const lanes = config.belts.find(belt => belt.id === 2)!.lanes;
+                if (content === "swapped") lanes.reverse();
+                if (content === "same-item") lanes.forEach(lane => {lane.ingredient = "accumulator";});
+                if (compact) {
+                    config.target_output.recipe = "electronic-circuit";
+                    config.machines[0] = {...config.machines[0], recipe: "electronic-circuit", productivity: 0, crafting_speed: 70.765625};
+                    config.belts.find(belt => belt.id === 1)!.lanes[0].ingredient = "electronic-circuit";
+                    lanes.forEach(lane => {lane.ingredient = lane.ingredient === "accumulator" ? "iron-plate" : "copper-cable";});
+                }
+                const configured = config.inserters.find(inserter => inserter.source.type === "belt")!.source;
+                if (configured.type !== "belt") throw Error("Expected belt");
+                configured.pickup_layout = "over-hood-exit";
+                configured.near_lane = mirrored ? 2 : 1;
                 if (replayRoot) expect(fs.readFileSync(path.join(capture.directory, "scaffold.txt"), "utf8")).toBe(blueprint);
                 else {
-                    const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
-                    configAtSpeed(config, speed);
-                    config.overrides = {...config.overrides, backed_up_belts: backed};
-                    const lanes = config.belts.find(belt => belt.id === 2)!.lanes;
-                    if (content === "swapped") lanes.reverse();
-                    if (content === "same-item") lanes.forEach(lane => {lane.ingredient = "accumulator";});
-                    if (compact) {
-                        config.target_output.recipe = "electronic-circuit";
-                        config.machines[0] = {...config.machines[0], recipe: "electronic-circuit", productivity: 0, crafting_speed: 70.765625};
-                        config.belts.find(belt => belt.id === 1)!.lanes[0].ingredient = "electronic-circuit";
-                        lanes.forEach(lane => {lane.ingredient = lane.ingredient === "accumulator" ? "iron-plate" : "copper-cable";});
-                    }
                     fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint);
                     await recordInFactorio({factorio: factorio!, save: save!, config, blueprint,
                         lua: composeProbeSource(path.join(fixture, "probe.lua"), {compact, mirrored, backed, speed: speed.units / 32, prefix: speed.prefix, release_delay: releaseDelay}),
@@ -136,11 +141,19 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
                 if (moving) expect(moving.hands).toBe(1);
                 const recording = JSON.parse(fs.readFileSync(path.join(capture.directory, "recording.json"), "utf8")) as {config: Config & {pickup_warnings?: unknown[]}};
                 const exported = recording.config.inserters.find(inserter => inserter.source.type === "belt" && inserter.sink.type === "machine")!;
-                expect(exported.source).toMatchObject({pickup_capture: {status: "unsupported", reason: "inline",
-                    entity_type: "underground-belt", entity_name: `${speed.prefix}underground-belt`}});
-                expect(exported.source).not.toHaveProperty("near_lane");
-                expect(exported.source).not.toHaveProperty("pickup_length");
-                expect(recording.config.pickup_warnings).toContainEqual({inserter_id: recording.config.inserters.indexOf(exported) + 1, reason: "inline"});
+                if (replayRoot) {
+                    // Original captures remain historical unsupported evidence; updating the mod cannot upgrade them.
+                    expect(exported.source).toMatchObject({pickup_capture: {status: "unsupported", reason: "inline",
+                        entity_type: "underground-belt", entity_name: `${speed.prefix}underground-belt`}});
+                    expect(exported.source).not.toHaveProperty("near_lane");
+                    expect(exported.source).not.toHaveProperty("pickup_length");
+                    expect(recording.config.pickup_warnings).toContainEqual({inserter_id: recording.config.inserters.indexOf(exported) + 1, reason: "inline"});
+                } else {
+                    expect(exported.source).toMatchObject({near_lane: preferred, pickup_length: 0.5, pickup_layout: "over-hood-exit",
+                        pickup_capture: {status: "supported", model: "belt", model_version: 2, entity_type: "underground-belt"}});
+                    expect(recording.config.pickup_warnings).toBeUndefined();
+                }
+                expect(compareContinuousSimulator(config, {endpoint: "output", stack_size: 16, samples}, speed)).toEqual([]);
                 const summary = {crafting_speed: report.crafting_speed,
                     internal_stock_seen: report.samples.some(sample => sample.lines.slice(2).some(line => stock(line).length > 0)), first_grab: grabs[0].tick, item, preferred, selected,
                     offsets: grabs.map(sample => sample.tick - grabs[0].tick),

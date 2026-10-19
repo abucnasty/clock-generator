@@ -22,7 +22,8 @@ cannot supply facts that the old capture omitted.
 Layout supplies `pickup_length` when length is omitted; an explicit conflicting length is rejected. Manual
 half-tile configs without a layout must choose one. The UI offers these choices for each belt-fed inserter.
 An old Sidecar underground capture becomes unclassified and requires recapture; selecting a default cannot
-supply the missing physical fact. Sidecar's over-the-hood classifier remains separate work.
+supply the missing physical fact. Sidecar recognizes the centered upstream exit approach when the inserter faces with belt travel, using
+mirroring for lane preference. Other unsupported inline approaches stay unclassified.
 The [glossary](glossary.md) illustrates each approach. This field records geometry; adding it does not itself
 resolve the outstanding arm-travel or generated-clock discrepancies.
 
