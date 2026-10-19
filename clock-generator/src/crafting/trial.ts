@@ -14,6 +14,7 @@ import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, s
 import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, planRun, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { windowsOfInsertersFeedingTheOutputMachine } from "./candidates/output-feeders";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
+import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -33,7 +34,8 @@ export interface ClockAssessment {
     /**
      * The clock-only check (the build driven only by the exported clock windows) reaches the expected output, from
      * the modeled cold start: full input supplies, empty machines, buffers and hands, clock phase 0, and the configured
-     * one-time self-ingredient seed (default 200). Rates are assessed after model warm-up and checks.
+     * one-time self-ingredient seed (default 200), with sampled clock offsets and moving-lane phases.
+     * Rates are assessed after model warm-up and checks.
      */
     holds: boolean;
     /**
@@ -77,14 +79,18 @@ export function clockVerdictOf(assessment: ClockAssessment): ClockVerdict {
 }
 
 export interface AsBuiltStabilityCheck {
-    /** The clock windows alone, without the plan's inventory conditions, move the expected output from every start phase tried and over the long run */
+    /** Clock windows alone reach expected output from the sampled clock/lane phases and over the long run. */
     holds: boolean;
-    /** Output of the first failing start phase, or of the unshifted clock when all pass */
+    /** Output of the first failing stock/clock start, or of the unshifted clock when all pass. */
     actual_output_items: number;
     /** Number of clock start phases simulated (stops at the first failure) */
     start_phases_checked: number;
     /** Clock offset of the first failing start phase */
     failed_start_offset?: number;
+    /** Additional ordinary moving-lane stock starts checked, one pickup at a time. */
+    pickup_phase_starts_checked?: number;
+    /** Lane phases of the first failing stock start, by inserter id, in 1/32-tile units. */
+    failed_pickup_phases?: Record<string, readonly [number, number]>;
     /** Periods after which the reported run repeats, when the simulation found the repeat; see SimulationStabilityCheck */
     repeat_periods?: number;
     /** Output items of the reported run over its repeat_periods periods; set when repeat_periods is more than 1 */
@@ -349,7 +355,8 @@ export function startDependenceOf(
  * The clock-only check of a clock: the build driven only by the decider windows, first with the clock as planned and
  * then with the whole clock shifted to other start offsets relative to the machines' initial state, and, when the
  * unshifted run holds, over a long run (`longRunOfFreeRunningBuild`), which counts the wake-ups. Stops at the first
- * start phase that fails. Fractional periods are only checked unshifted.
+ * start phase that fails. Moving lane phases are also varied per pickup, without enumerating joint starts across
+ * different pickups. Fractional periods are only checked unshifted.
  */
 export function runAsBuiltCheck(
     config: Config,
@@ -372,6 +379,19 @@ export function runAsBuiltCheck(
     };
     report?.(1, total);
     let stock: StockRecording | undefined;
+    if (check.holds) for (const phases of movingPickupPhaseStarts(config)) {
+        const shifted = runClockOnBuild(config, decider_windows, period, logger,
+            {moving_pickup_phases: phases, factorio_states: false});
+        check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
+        if (!shifted.stability_check.holds) {
+            check.holds = false;
+            check.actual_output_items = shifted.stability_check.actual_output_items;
+            check.failed_pickup_phases = Object.fromEntries(phases);
+            check.repeat_periods = shifted.stability_check.repeat_periods;
+            check.repeat_output_items = shifted.stability_check.repeat_output_items;
+            break;
+        }
+    }
     if (check.holds) {
         // no long run when none is asked for (a quick trial of a search)
         const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks) : null;

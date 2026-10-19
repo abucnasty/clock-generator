@@ -14,6 +14,11 @@ import { TargetProductionRate } from "../target-production-rate";
 import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
 import { InserterTrace, InserterTraceOptions } from "../../state/inserter-trace";
+import assert from "../../common/assert";
+import { BeltPickupLane } from "../../state/belt-pickup-lane";
+
+/** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
+export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
 
 export class SimulationContext {
 
@@ -38,6 +43,28 @@ export class SimulationContext {
         const trace = new InserterTrace(() => this.tick_provider.getCurrentTick(), options);
         state.trace = trace;
         return trace;
+    }
+
+    /** Seed a new trial's stock before any tick, independently of its clock and machine inventory. */
+    public initializeMovingPickupPhases(phases: MovingPickupPhases): void {
+        assert(this.tick_provider.getCurrentTick() === 0, "Pickup phases must be initialized before simulation starts");
+        for (const [id, lane_phases] of phases) {
+            const control = this.inserters.find(inserter => inserter.entity_id.id === id);
+            assert(control !== undefined, `Cannot initialize pickup phases for unknown ${id}`);
+            const inserter = control.inserter_state.inserter;
+            const source = this.state_registry.getStateByEntityIdOrThrow(inserter.source.entity_id);
+            assert(EntityState.isBelt(source) && inserter.belt_supply === "moving" && !inserter.pickup_merge,
+                `Pickup phases need independent moving lanes: ${id}`);
+            const length = inserter.pickup_length;
+            assert(length !== undefined, `Pickup phases need pickup geometry: ${id}`);
+            assert(lane_phases.every(phase => Number.isInteger(phase) && phase >= 0 && phase < 8),
+                "Pickup phases must be integers from 0 through 7 (1/32-tile units)");
+            const lanes = source.pickup_lanes.get(id);
+            assert(lanes !== undefined, `Pickup lanes have not been initialized for ${id}`);
+            // Transfer logic already holds this array. Keep its identity when seeding the trial.
+            lanes.splice(0, lanes.length, ...source.belt.lanes.map((lane, index) => new BeltPickupLane(
+                source.belt.belt_speed, length, lane.stack_size, lane_phases[index], inserter.pickup_supply?.[index] ?? "through")));
+        }
     }
 
     /** The update of every inserter in a tick, in the order of the list and of `competing_takers_order` */
