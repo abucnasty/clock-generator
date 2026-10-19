@@ -63,8 +63,8 @@ The original manual captures used Sidecar 0.9.1, which warned `inline` and omitt
 with the mirrored swapped case. The fixture config supplies the intended preference explicitly; Sidecar now
 captures it automatically.
 
-Other cardinal orientations, moving supply, the unmirrored inserter with the original different-item lane
-ingredients, and repeated-hand timing remain separate cases. Entrance measurements are documented in their
+Other cardinal orientations, moving supply and repeated-hand timing remain separate cases. The four-speed sweep
+below also covers the unmirrored inserter with the original different-item ingredients. Entrance measurements are documented in their
 [own fixture](../front-underground-entrance/README.md).
 The comparison measures filling offsets after the first grab, not general arm-arrival timing.
 
@@ -91,6 +91,41 @@ The existing screenshot shows the same geometry with different lane ingredients.
 under `work/belt-pickup/front-exit-same-item-unmirrored-backed-up-01/` and
 `front-exit-same-item-mirrored-backed-up-01/`.
 
+## Four-speed controls
+
+The 2026-10-18 Factorio 2.1.21 sweep measures all four speeds, both mirroring states, original and swapped
+ingredients, and the same item on both lanes: 24 independent first-hand captures. Each starts naturally saturated,
+with two four-item stacks on each exposed half-tile line and an empty inserter. The probe asserts the actual belt
+speed and underground partner, records every transport line at both endpoints, and retains the exact derived blueprint.
+For normal speed, the upstream entrance moves one tile toward the observed exit and its former tile becomes a belt;
+this reduces the tunnel from six to five tiles without moving the pickup, inserter, plant or ingredient feeders.
+
+| Speed | Moving | Different-item grab offsets | Total pickup ticks | Same-item grab offsets | Same-item lane sequence |
+| --- | --- | --- | --- | --- | --- |
+| Turbo | false | `0,1,2,3` | 4 | `0,1,2,3` | Preferred four times |
+| Express | false | `0,1,2,3` | 4 | `0,1,2,3` | Preferred four times |
+| Fast | false | `0,1,2,5` | 6 | `0,1,2,3` | Preferred three times, then fallback |
+| Normal | false | `0,1,2,9` | 10 | `0,1,2,3` | Preferred three times, then fallback |
+
+The different-item patterns are unchanged by swapping ingredients or mirroring; mirroring still selects lane 1
+unmirrored and lane 2 mirrored. These measurements expose a limitation in the current backed-up simulator:
+continuous availability at every tick is too optimistic for a single matching lane on fast and normal undergrounds.
+Same-item hand counts still match, but its preferred-lane-only explanation does not: the fourth native grab falls back.
+The regressions assert these measured results and record the known model disagreement; they do not implement a fix.
+
+This is finite refill, rather than incomplete saturation. In a representative fast capture, the selected exposed
+line starts with stack IDs at positions 0 and 64 units (1/256 tile), while the paired underground's hidden line
+starts with its head at 0 and follower at 64. The upstream exposed stack is grabbed at tick 2, the hidden head
+arrives and is grabbed at tick 3, and the remaining exposed stack is grabbed at tick 4. The hidden follower advances
+48, 32, 16, 0 over ticks 3–6 and can be grabbed only at tick 7. The equivalent normal capture waits until tick 11.
+The untouched other lane stays stationary in different-item controls. A candidate first-hand fourth offset is
+`1 + floor(64 / belt_speed_in_256ths_per_tick)` for this saturated geometry; it is not a complete repeated-hand model.
+
+All 24 controls were captured twice. Final pairing/speed-checked evidence is local under
+`work/belt-speed-coverage/front-final-entrance-02/front-exit-*`; the earlier sweep is `front-exit-01/`.
+These are first-hand observations, not repeated-hand, complete phase, or generated-clock verification. Moving
+front-exit supply still awaits the user's new scaffold; no moving exit result is claimed.
+
 ## Reproduce
 
 From `clock-generator/`, with `.env` configured:
@@ -103,9 +138,18 @@ npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts -
 
 The first command runs the mirrored and flipped cases with swapped ingredients, checks Sidecar capture, and
 compares each actual simulator hand; it removes its temporary artifacts afterward. Use `-t 'flipped inserter'` for only the new case, or omit `-t`
-for all five cases. The same-item command runs both new mirroring states. The unit command runs the measured
+for all 24 speed/ingredient/mirroring cases. The same-item command runs both mirroring states at all four speeds. The unit command runs the measured
 hand regressions without Factorio. The game test composes
 `probe.lua`; the scenario alone cannot be passed directly to `--lua`. Reports contain `initial` setup metadata and
 `samples` with held quantities/items, exposed lane stacks/IDs, machine inventories and crafting progress.
 Raw manual evidence remains local under `work/belt-pickup/front-exit-02/`, `work/belt-pickup/front-exit-03/`,
 `work/belt-pickup/front-exit-swapped-01/`, and `work/belt-pickup/front-exit-flipped-01/` at the repository root.
+
+To retain fresh captures instead of deleting temporary artifacts:
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-exit-new \
+  npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts
+```
+
+Use a new output directory for every run; existing captures are never overwritten.
