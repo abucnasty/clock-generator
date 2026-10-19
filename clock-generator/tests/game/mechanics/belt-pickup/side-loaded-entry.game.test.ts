@@ -15,6 +15,8 @@ import { speedCapture } from "../../helpers/belt-speed-fixtures";
 import { EntityState, BeltState } from "../../../../src/state";
 import { BeltPickupMerge, MergeStack as SimulatedMergeStack } from "../../../../src/state/belt-pickup-merge";
 
+import {compareSingleSideFeed, SingleSideClip} from "./single-side-feed-comparison";
+
 type Speed = "turbo" | "express" | "fast" | "yellow";
 interface Variant {
     name: string; extended?: boolean; lane: 1 | 2 | "both"; speed: Speed;
@@ -135,7 +137,6 @@ function checkExtendedCapture(config: Config, samples: Sample[], variant: Varian
         grabs[0].tick, samples.find(sample => sample.held === 16)!.tick, false) : undefined;
     const summary = {
         firstGrab: grabs[0]?.tick, grabs: grabs.length, unknownOrigins: grabs.filter(grab => grab.origin === undefined).length,
-        ...(simulatorMismatches ? {simulatorMismatchCount: simulatorMismatches.length, firstSimulatorMismatches: simulatorMismatches.slice(0, 10)} : {}),
         origins: [1, 2].map(origin => grabs.filter(grab => grab.origin === origin).length),
         patterns: [...new Set(complete.map(value => JSON.stringify(value)))].map(value => JSON.parse(value)),
         completeHands: complete.length, partialGrabs: hand.length,
@@ -144,6 +145,16 @@ function checkExtendedCapture(config: Config, samples: Sample[], variant: Varian
         endHeld: samples.at(-1)!.held,
         ...(variant.operating ? {endInputs: samples.at(-1)!.inputs, endOutput: samples.at(-1)!.output} : {}),
     };
+    if (simulatorMismatches) expect(simulatorMismatches).toEqual([]);
+    if (variant.lane !== "both" && variant.backed && variant.repeatedMerge && !variant.reflect) {
+        const origin = variant.lane === 1 ? "outer" : "inner";
+        const positions = (lane: Lane): [number, number][] => stacks(lane).map(stack =>
+            [Math.round(stack.at * 256), stack.count] as [number, number]).sort((a, b) => a[0] - b[0]);
+        const clip: SingleSideClip = {name: variant.name, speed: variant.speed, origin,
+            frames: samples.map(sample => [sample.held, sample.input_enabled, positions(sample.lanes[1]),
+                positions(sample.feed.lanes[origin === "outer" ? 0 : 1])])};
+        expect(compareSingleSideFeed(config, clip)).toEqual([]);
+    }
     expect(summary.firstGrab).toBeGreaterThan(variant.releaseTick ?? 16);
     expect(summary.completeHands).toBeGreaterThan(0);
     for (const sample of samples) {

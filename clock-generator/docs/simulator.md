@@ -143,7 +143,13 @@ tile. `source.pickup_supply` names one profile per receiving belt lane: `through
 `side-outer`. A single continuously full, same-speed side stream supplies approximately the downstream quarter
 or three quarters of a straight tile, respectively. The engine uses the measured entry positions and stream
 phase, retaining holes/partial stacks. These profiles are supported only with one-tile straight geometry;
-backed-up supply retains its saturated availability rule rather than the shorter moving span.
+backed-up supply keeps a finite receiving queue and a full incoming side queue. In the calibrated jammed phase,
+an inner feed initially supplies three exposed packets and an outer feed four. Withdrawals leave holes; the
+incoming head advances at belt speed and can wait at the entry boundary. Refill does not reset between hands
+or control replacements. The side-feed and two-stream models share the same traffic code, with only one stream
+enabled for a single feed. Eight portable repeated-hand clips compare held quantities and both queues for
+4,096 ticks across all speeds; native arm-start/drop boundaries are supplied. Sidecar already captures the
+profile needed for this rule, so the capture format is unchanged.
 
 Two full four-item lanes of one perpendicular **turbo** belt can also feed the same straight pickup lane.
 `source.pickup_merge` describes this supply instead of `pickup_supply`:

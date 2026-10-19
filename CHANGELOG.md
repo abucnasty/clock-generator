@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.19.0] - Unreleased
 
 ### Fixed
+- Replenish backed-up single-stream side feeds through finite incoming queues at the actual belt speed. Repeated hands on slower belts no longer draw from unlimited reachable stock.
 - Retain output-belt stock between hands at all four speeds. Inserters now wait for actual receiving space, including the slower second hand on normal belts and temporary compressed gaps.
 - Account for arm extension between ordinary belt grabs. This fixes the extra tick in affected normal-speed same-item underground-entrance pickups without adding a universal lane-switch delay.
 - Preserve finite stock and belt-speed refill for ordinary backed-up pickups, including underground reach and same-item lane fallback. Slower belts can run out of reachable stacks during or between hands instead of supplying a stack every tick.

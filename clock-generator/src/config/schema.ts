@@ -335,7 +335,7 @@ const InserterBeltSourceConfigSchema = z.object({
     pickup_layout: z.enum(BELT_PICKUP_LAYOUTS).optional(),
     /** Single-stream entry per receiving lane, in the same order as the belt's lanes. Omitted means through.
      * Side profiles describe a continuously full, same-speed side feed into a straight pickup tile.
-     * They restrict moving supply, not physical reach or backed-up stock.
+     * They select the entry boundary and refill queue independently of physical reach or the supply setting.
      */
     pickup_supply: z.union([
         z.tuple([BeltPickupSupplyProfileSchema]),
@@ -352,8 +352,8 @@ const InserterBeltSinkConfigSchema = z.object({
     type: z.literal(TargetType.BELT),
     id: z.number().int().positive(),
     /**
-     * Where the inserter drops on the belt. Without it the drop takes the same ticks wherever the belt carries
-     * stacks. It is all or none per belt: when any inserter that drops on a belt has it, every one must.
+     * Where the inserter drops on a shared lane. Omitted positions use independent local output tiles with
+     * retained stock. It is all or none per belt: when any inserter that drops on a belt has it, every one must.
      */
     drop: InserterBeltDropConfigSchema.optional()
 });
