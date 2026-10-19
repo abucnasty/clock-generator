@@ -26,6 +26,12 @@ export interface ReadableInventoryState {
     recordOf(itemName: string): InventoryItem | null;
     /** Moves whenever records may have detached: on `clear` and `resetItem` */
     readonly structure_generation: number;
+    /**
+     * Moves on every write (`addQuantity`, `removeQuantity`, `setQuantity`, `clear`, `resetItem`): an answer worked
+     * out from this inventory's quantities stands until it moves. The game sleeps its inserters on the same idea,
+     * waking them when a machine consumes or gains something.
+     */
+    readonly mutation_generation: number;
 }
 
 export interface WritableInventoryState extends ReadableInventoryState {
@@ -126,6 +132,7 @@ export class InventoryState implements WritableInventoryState {
     }
 
     public structure_generation = 0;
+    public mutation_generation = 0;
 
     public getQuantity(itemName: string): number {
         const record = this.inventory.get(itemName);
@@ -136,6 +143,7 @@ export class InventoryState implements WritableInventoryState {
         if (amount < 0) {
             throw new Error(`Cannot add negative amount: ${amount}`);
         }
+        this.mutation_generation++;
         const record = this.inventory.get(itemName);
         if (record === undefined) {
             this.inventory.set(itemName, { item_name: itemName, quantity: amount });
@@ -153,6 +161,7 @@ export class InventoryState implements WritableInventoryState {
         if (current < amount) {
             throw new Error(`Insufficient inventory: have ${current}, need ${amount} of ${itemName}`);
         }
+        this.mutation_generation++;
         if (record === undefined) {
             this.inventory.set(itemName, { item_name: itemName, quantity: current - amount });
         } else {
@@ -164,6 +173,7 @@ export class InventoryState implements WritableInventoryState {
         if (amount < 0) {
             throw new Error(`Cannot set negative amount: ${amount}`);
         }
+        this.mutation_generation++;
         const record = this.inventory.get(itemName);
         if (record === undefined) {
             this.inventory.set(itemName, { item_name: itemName, quantity: amount });
@@ -190,11 +200,13 @@ export class InventoryState implements WritableInventoryState {
     public clear(): void {
         this.inventory.clear();
         this.structure_generation++;
+        this.mutation_generation++;
     }
 
     public resetItem(itemName: string): void {
         this.inventory.delete(itemName);
         this.structure_generation++;
+        this.mutation_generation++;
     }
 
     public getTotalQuantity(): number {

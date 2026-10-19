@@ -13,6 +13,7 @@ export class MachineState implements EntityState {
     public static machineIsOutputBlocked = machineIsOutputBlocked
     public static takesNothing = takesNothing
     public static machineAcceptsItem = machineAcceptsItem
+    public static inputBlockedAskOf = inputBlockedAskOf
     public static insertItem = insertItem
     public static insertableQuantity = insertableQuantity
     public static ingredientInventory = ingredientInventory
@@ -108,6 +109,17 @@ export class MachineState implements EntityState {
  */
 const HOT_VIEWS = Symbol("machine-state hot views");
 
+/**
+ * An answer worked out from the machine's inventories, standing until one of them is written: the same idea the game
+ * sleeps its inserters on, waking them when a machine consumes or gains something.
+ */
+interface UntilWritten {
+    inv: number;
+    fuel: number;
+    self: number;
+    answer: boolean;
+}
+
 interface HotViews {
     output: { quantity: LiveQuantity; blocked_at: number } | null;
     fuel: { quantity: LiveQuantity; limit: number } | null;
@@ -115,11 +127,34 @@ interface HotViews {
     inputs: { quantity: LiveQuantity; limit: number }[] | null;
     /** The same views by ingredient name (see machineInputIsBlocked) */
     inputs_by_name: Map<string, { quantity: LiveQuantity; limit: number }> | null;
+    takes_nothing: UntilWritten | null;
 }
 
 function hotViewsOf(machineState: MachineState): HotViews {
     type WithViews = MachineState & { [HOT_VIEWS]?: HotViews };
-    return (machineState as WithViews)[HOT_VIEWS] ??= { output: null, fuel: null, inputs: null, inputs_by_name: null };
+    return (machineState as WithViews)[HOT_VIEWS] ??= { output: null, fuel: null, inputs: null, inputs_by_name: null, takes_nothing: null };
+}
+
+/** Whether the memo still stands, i.e. none of the machine's inventories was written since it was taken */
+function stands(memo: UntilWritten | null, machineState: MachineState): memo is UntilWritten {
+    return memo !== null
+        && memo.inv === machineState.inventoryState.mutation_generation
+        && memo.fuel === machineState.fuelInventory.mutation_generation
+        && memo.self === machineState.selfIngredients.mutation_generation;
+}
+
+function take(memo: UntilWritten | null, machineState: MachineState, answer: boolean): UntilWritten {
+    const inv = machineState.inventoryState.mutation_generation;
+    const fuel = machineState.fuelInventory.mutation_generation;
+    const self = machineState.selfIngredients.mutation_generation;
+    if (memo === null) {
+        return { inv, fuel, self, answer };
+    }
+    memo.inv = inv;
+    memo.fuel = fuel;
+    memo.self = self;
+    memo.answer = answer;
+    return memo;
 }
 
 function forMachine(machine: Machine): MachineState {
@@ -313,6 +348,42 @@ function machineInputIsBlocked(machineState: MachineState, ingredientName: strin
     return view.quantity.get() >= view.limit;
 }
 
+/**
+ * The per-tick form of `machineInputIsBlocked` for one item: the classification of the item, which never changes, is
+ * done once, and the ask reads the live views. The answers match `machineInputIsBlocked` ask for ask.
+ */
+function inputBlockedAskOf(machineState: MachineState, ingredientName: string): () => boolean {
+    const machine = machineState.machine;
+    if (!machineAcceptsItem(machineState, ingredientName)) {
+        return () => true;
+    }
+    const fuel = isFuel(machine, ingredientName);
+    const memoized = (blocked: () => boolean): () => boolean => {
+        let memo: UntilWritten | null = null;
+        return () => {
+            if (stands(memo, machineState)) {
+                return memo.answer;
+            }
+            memo = take(memo, machineState, blocked());
+            return memo.answer;
+        };
+    };
+    if (fuel && !machine.inputs.has(ingredientName)) {
+        // fuel goes in its own slot, which neither a full output nor a full ingredient blocks
+        return memoized(() => !fuelIsBelowLimit(machineState));
+    }
+    const view = inputViewsOf(machineState).by_name.get(ingredientName);
+    if (view === undefined) {
+        // an input the views do not know (never the case for a config-built machine): ask the long way
+        return () => machineInputIsBlocked(machineState, ingredientName);
+    }
+    if (fuel) {
+        return memoized(() => fuelIsBelowLimit(machineState) ? false
+            : machineIsOutputBlocked(machineState) || view.quantity.get() >= view.limit);
+    }
+    return memoized(() => machineIsOutputBlocked(machineState) || view.quantity.get() >= view.limit);
+}
+
 /** The ingredient quantities and insertion limits of the per-tick questions, set up once */
 function inputViewsOf(machineState: MachineState): { list: { quantity: LiveQuantity; limit: number }[]; by_name: Map<string, { quantity: LiveQuantity; limit: number }> } {
     const views = hotViewsOf(machineState);
@@ -334,22 +405,27 @@ function inputViewsOf(machineState: MachineState): { list: { quantity: LiveQuant
  * the machine still takes anything, an inserter that has nothing it takes shows as waiting for source items.
  */
 function takesNothing(machineState: MachineState): boolean {
+    const views = hotViewsOf(machineState);
+    if (stands(views.takes_nothing, machineState)) {
+        return views.takes_nothing.answer;
+    }
     const machine = machineState.machine;
     // asked for every waiting inserter every tick: the same answer as machineInputIsBlocked for each item it takes,
     // without asking item by item
+    let answer = true;
     if (machine.fuel_slot && fuelIsBelowLimit(machineState)) {
-        return false;
-    }
-    if (machineIsOutputBlocked(machineState)) {
-        return true;
-    }
-    const list = inputViewsOf(machineState).list;
-    for (let index = 0; index < list.length; index++) {
-        if (list[index].quantity.get() < list[index].limit) {
-            return false;
+        answer = false;
+    } else if (!machineIsOutputBlocked(machineState)) {
+        const list = inputViewsOf(machineState).list;
+        for (let index = 0; index < list.length; index++) {
+            if (list[index].quantity.get() < list[index].limit) {
+                answer = false;
+                break;
+            }
         }
     }
-    return true;
+    views.takes_nothing = take(views.takes_nothing, machineState, answer);
+    return answer;
 }
 
 function machineIsOutputBlocked(machineState: MachineState): boolean {

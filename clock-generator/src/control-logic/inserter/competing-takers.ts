@@ -80,19 +80,21 @@ export class InserterUpdates implements ControlLogic {
 
     public executeForTick(): void {
         // Decide every group's order before any inserter can change a machine's stock this tick.
-        for (const group of this.groups) {
-            const {machine, item, biggest_hand} = group;
+        const groups = this.groups;
+        for (let at = 0; at < groups.length; at++) {
+            const group = groups[at];
             const quantity = group.stock.get();
             const open = orderIsOpen(quantity,
-                quantity > 0 && quantity < biggest_hand && machine.lastOutputTaker.has(item), biggest_hand);
+                quantity > 0 && quantity < group.biggest_hand && group.machine.lastOutputTaker.has(group.item), group.biggest_hand);
             if (open !== group.open) {
                 const members = open ? group.ranked : group.original;
                 for (let index = 0; index < group.places.length; index++) this.updates[group.places[index]] = members[index];
                 group.open = open;
             }
         }
-        for (const inserter of this.updates) {
-            inserter.executeForTick();
+        const updates = this.updates;
+        for (let index = 0; index < updates.length; index++) {
+            updates[index].executeForTick();
         }
     }
 }
