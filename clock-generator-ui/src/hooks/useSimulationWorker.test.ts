@@ -215,7 +215,7 @@ async function failReplacement() {
 }
 
 describe('tasks alongside the primary alternative', () => {
-    it('runs the tasks while the planning worker assesses the primary clock, and finishes once it is in', async () => {
+    it.each(['task', 'primary'] as const)('reports both kinds of work and finishes after both (%s completes first)', async first => {
         await initialize();
         Render().runSimulation(config, debug, false);
         const planner = workers[0];
@@ -227,9 +227,15 @@ describe('tasks alongside the primary alternative', () => {
         const runner = workers.find(w => w.requests('task').some(task => task.runId === runId))!;
         const task = runner.requests('task').find(it => it.runId === runId)!;
         expect(task.assessedSignatures).toEqual(['primary-clock']);
-        runner.send({ type: 'task-completed', runId, taskId: task.taskId, run: null });
+        expect(Render().progressStore.get()?.step).toBe('Batched swings, One');
+        const finishTask = () => runner.send({ type: 'task-completed', runId, taskId: task.taskId, run: null });
+        const finishPrimary = () => planner.send({ type: 'primary-completed', runId,
+            primary: { signature: 'primary-clock', alternatives: [selectionClock('primary', 1)] } });
+        const [finishFirst, finishLast] = first === 'task' ? [finishTask, finishPrimary] : [finishPrimary, finishTask];
+        finishFirst();
         expect(Render().isRunning).toBe(true);
-        planner.send({ type: 'primary-completed', runId, primary: { signature: 'primary-clock', alternatives: [selectionClock('primary', 1)] } });
+        expect(Render().progressStore.get()?.step).toBe(first === 'task' ? 'Batched swings' : 'One');
+        finishLast();
         const done = Render();
         expect(done.isRunning).toBe(false);
         expect(done.alternatives.map(it => it.id)).toEqual(['primary']);
