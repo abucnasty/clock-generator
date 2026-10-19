@@ -23,7 +23,7 @@ Publishing remains on hold. **Splitters are out of scope.**
   less reach, rather than a fixed tick penalty.
 - Geometry and supply motion are separate. Omitted `pickup_length` defaults to **1**; undergrounds use **0.5**.
   Moving is the default. Ordinary backed-up supply retains finite stock, stops stacks at the endpoint and
-  refills holes at belt speed. Side-fed backed-up replenishment remains a separate calibration.
+  refills holes at belt speed. Side-fed backed-up supply also retains its finite receiving and incoming queues.
 - Replenishment depends on topology. A full incoming belt need not fill the pickup tile, and closing a final
   outlet does not guarantee permanent local saturation when other consumers can reopen a route.
 
@@ -105,6 +105,7 @@ and two-stream supply.
 | Two-stream first hands, shifted belt phase | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
 | Reflected side feeds and rotated inner feed, first hands | Tested | Tested | Tested | Tested |
 | Backed-up inner-only and outer-only first hands | Tested | Tested | Tested | Tested |
+| Repeated single-stream moving and backed-up hands | Tested | Tested | Tested | Tested |
 | Backed-up two-stream first hands | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
 | Repeated same-item merge, initial belt phase | Tested | Tested; experimental merge stock mismatch; no simulator support | Tested; no simulator support | Tested; no simulator support |
 | Repeated same-item merge, shifted belt phase | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
@@ -225,7 +226,9 @@ With the incoming head seeded at position zero, the inner-entry shift cutoff is 
 `64 + speed`**, using 1/256-tile units: last accepted / first rejected is **95/96 turbo, 87/88 express, 79/80 fast, 71/72 normal**.
 This local boundary is not a complete merge rule: express still has an upstream-clearance counterexample.
 The equivalent observed landing limit is below 131 units; arbitrary incoming head phases remain uncalibrated.
-Backed-up fast/normal single-stream repeated hands also expose finite refill. Operating mixed-item controls
+Backed-up single-stream repeated hands now match the finite receiving/incoming queue model at all four speeds,
+including the fast/normal cases that exhausted the old unlimited-stock approximation. Eight portable clips
+compare both queues and held quantities over 4,096 ticks, conditioned on native arm starts/drops. Operating mixed-item controls
 starve at every speed and with either ingredient arrangement; inventory-clearing probes cannot prove throughput.
 
 ### Related belt-drop calibration

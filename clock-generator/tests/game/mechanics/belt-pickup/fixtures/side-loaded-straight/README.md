@@ -525,14 +525,20 @@ inner ingredient in a partial hand, waiting to reach 16. The machine holds 16 ou
 and receives none of that partial inner hand. Inner reachability alone therefore does not guarantee a
 working mixed-stream clock.
 
-Repeated single-stream moving pickups match the existing supply profiles at all four speeds. The
-backed-up shortcut has a measured limitation: fast and normal streams deplete their initial receiving
-stock. Fast outer/inner first diverge from the simulator at ticks 42/32; normal outer/inner diverge at
-31/30. Native normal hands eventually require `0,8,16,24`. The regression summaries retain the exact
-mismatch counts and first differences as known model gaps; passing these captures does not claim
-simulator agreement for those four cases.
+Repeated single-stream moving pickups match the supply profiles at all four speeds. Backed-up single-stream
+pickups now use finite receiving and incoming queues, rather than unlimited availability. Inner feeds begin
+with three exposed packets in the calibrated jammed phase and outer feeds four. Incoming stock advances at
+belt speed and stops at its entry boundary when blocked. Fast/normal repeated hands therefore wait when
+reachable stock is exhausted; native normal hands can require `0,8,16,24`.
 
-`speed-controls.json` stores compact native summaries: complete-hand start ticks, distinct item/lane/tick
+[Eight portable backed-up clips](single-backed-clips.json) compare production held quantities and both queues
+for 4,096 ticks at all speeds, including replacement of the pickup control. Native arm starts and drops are
+supplied boundaries. Fresh independent runs passed all eight cases; moving profiles, reflection, rotations,
+phases, pauses and outlet controls remain covered by replaying the 180 retained natural-entry cases.
+The two-stream turbo and single-stream finite queues share one transport implementation. Sidecar's existing
+single-stream profile supplies the necessary facts; no new capture format is needed for this correction.
+
+`speed-controls.json` stores compact native summaries (simulator comparisons are asserted separately): complete-hand start ticks, distinct item/lane/tick
 patterns, stream counts and partial final hands. An origin of 0 means initial receiving stock could not
 be attributed to an incoming lane by observation. The entry-sweep test asserts the measured boundaries and positions directly, separately from natural supply. Four boundary-sweep sessions cover 544 seeded cases in total. They reset transport stock for each
 four-tick case, disable all inserters and assert actual seeded positions; they do not measure throughput.

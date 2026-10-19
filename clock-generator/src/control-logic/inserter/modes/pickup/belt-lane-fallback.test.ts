@@ -193,7 +193,7 @@ describe("physical belt lane fallback", () => {
 });
 
 
-it.each(['side-inner', 'side-outer'] as const)('keeps %s supply separate from backed-up timing and lane preference', async profile => {
+it.each(['side-inner', 'side-outer'] as const)('retains geometry and lane preference while replenishing backed-up %s supply', async profile => {
     const config = await loadConfigFromFile(path.join(GameFixturePaths.SIDE_LOADED_STRAIGHT, 'config.json'));
     config.overrides = {...config.overrides, backed_up_belts: true};
     const source = config.inserters[1].source;
@@ -203,6 +203,8 @@ it.each(['side-inner', 'side-outer'] as const)('keeps %s supply separate from ba
     expect(input.state.inserter.pickup_supply).toEqual(['through', profile]);
     expect(input.state.inserter.pickup_length).toBe(1);
     expect(input.state.inserter.near_lane).toBe(1);
-    expect(input.source.pickup_lanes.size).toBe(0);
+    expect(input.source.pickup_lanes.size).toBe(1);
+    expect(input.source.pickup_lanes.get(input.state.entity_id.id)![1].snapshot(0).length)
+        .toBe(profile === "side-inner" ? 3 : 4);
     expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
 });
