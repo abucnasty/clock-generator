@@ -61,3 +61,16 @@ export const TickProvider = {
     mutable: MutableTickProvider.create,
     offset: OffsetTickProvider.create,
 };
+/**
+ * Counts ticks from a start that can be moved, as an offset of -1 * start from the base does: the ticks of a recorded
+ * run count from where it starts. Read every tick by every entity, so without the closures of OffsetTickProvider.
+ */
+export class RelativeTickProvider implements TickProvider {
+    public start = 0;
+
+    constructor(private readonly base: MutableTickProvider) { }
+
+    public getCurrentTick(): number {
+        return this.base.getCurrentTick() + -1 * this.start;
+    }
+}

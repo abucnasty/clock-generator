@@ -14,7 +14,7 @@ import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
-import { ResettableRegistry, TickProvider } from "../../control-logic";
+import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
 import { EntityTransferCountMap, outputInsertersOf, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
@@ -482,15 +482,14 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
         .map(it => it.machine_state.machine)
         .forEach(machine => Machine.printMachineFacts(machine, logger));
 
-    const relative_tick = { start: 0 };
+    const relative_tick_provider = new RelativeTickProvider(simulation_context.tick_provider);
+    const relative_tick = relative_tick_provider;
 
-    const relative_tick_provider = TickProvider.offset({
-        base: simulation_context.tick_provider,
-        offset: () => -1 * relative_tick.start
-    });
-
-    // Configure plugins
-    configureDebugPlugins(simulation_context, relative_tick_provider, debug);
+    // Configure plugins. Debugging is only switched on for the steps debug_steps names (see withDebugFor): without
+    // any, the debug plugins would log nothing and only cost time every tick.
+    if (Object.values(options.debug_steps ?? {}).some(Boolean)) {
+        configureDebugPlugins(simulation_context, relative_tick_provider, debug);
+    }
     const inventory_transfer_history = configureInventoryTransferPlugins(simulation_context, relative_tick_provider);
     const state_transition_history = configureStateTransitionPlugins(simulation_context, relative_tick_provider, options.factorio_states ?? true);
     inventory_transfer_history.recording = false;
