@@ -8,7 +8,8 @@ near/far ingredients or the same ingredient on both lanes. Fresh staged inserter
 without placing belt stock or editing held items. Slower layouts shorten long ingredient tunnels while
 retaining the pickup and plant positions; actual speed, reach, initial stock and supply motion are asserted.
 
-The production pickup model matches 56 controls. The remaining 16 are recorded counterexamples:
+Production held-count comparisons match 56 controls. This does not establish backed-up lane/stock fidelity:
+the production backed-up approximation does not track either. The remaining 16 are held-count counterexamples:
 
 - Fast backed-up single-lane supplies deplete, even on a straight belt. Later hands include `0,1,4,8`.
 - Normal backed-up supplies also deplete, including same-item two-lane supply. Single-lane hands eventually
@@ -214,6 +215,10 @@ far-lane stock exists while the hand moves between lanes during the extra tick. 
 constraint requiring further investigation; it is not a calibrated universal lane-switch delay. The other 194
 phase/scenario combinations agree with the phase-seeded production pickup mode and independent stock replay.
 
+Five small [native arm-travel clips](arm-travel-clips.json) preserve the delayed phases and one agreeing control,
+including hand coordinates and stack IDs. They run without Factorio using
+`npm test -- tests/game/mechanics/belt-pickup/arm-travel-clips.test.ts`.
+
 The [compact baseline](phase-expectations.json) preserves native patterns and the four explicit model/replay
 counterexamples. Native first-grab time conditions the comparison; the simulator is seeded once from gated stock,
 without fitting later grabs or resynchronizing lane stock. A future model fix should update the comparison results,
@@ -229,3 +234,35 @@ ORDINARY_PHASE_BASELINE_DIR=../work/belt-speed-coverage/ordinary-gated-05 ORDINA
 
 Raw reports remain ignored under the two paths above. Failed setup pilots are excluded from findings. No production
 simulator change or publication is included in this phase sweep.
+
+## Reflected same-item controls
+
+`ordinary-reflection.game.test.ts` reflects the entire speed-routed cell, preserving feeder contents, inserter
+mirroring, gate release 64 and circuit connections. The input now sits north of the plant and its physical near
+supply is **lane 2**. The native probe checks ingredient tunnel pairing and transport tiers; gated observations
+verify full four-item stacks and actual moving or backed-up stock. Sidecar exports `near_lane: 2` at both reaches.
+
+All **24 native controls** passed at four speeds × three side-pickup geometries × moving/backed-up supply,
+covering **2,485 complete hands**. Every control has the same native pattern set, hand count and model-difference
+count as its original lane-1 counterpart. The [frozen baseline](reflected-speed-expectations.json) keeps these
+measurements separate from model agreement:
+
+- Moving stock replay agrees in 11/12 captures. Normal underground entrance again takes `0,1,3,4` on the first
+  hand instead of `0,1,2,3`; this is the same observed arm-travel gap on the opposite physical near side.
+- Production held quantities agree in 20/24 captures. The three normal backed-up layouts expose finite refill;
+  the remaining mismatch is the normal moving entrance's two delayed held-count ticks.
+- The experimental finite jammed queue matches both lane snapshots and held quantities in all 12 backed-up
+  captures: 1,252 hand starts and 14,832 transitions. Combined with the earlier 36 ordinary backed-up controls,
+  that is **48 captures / 4,568 hand starts / 59,328 transitions**. Starts include final unfinished hands; this is
+  observation-conditioned replay, not a production simulator fix or proof of absolute arm-arrival timing.
+
+Raw evidence is retained locally in `work/belt-speed-coverage/ordinary-reflected-01/`. These controls use aligned
+lanes and one gate release; they do not backfill every reflected release phase or historical interrupted window.
+
+```bash
+# New native capture (fresh directory required).
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-reflected npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
+
+# Recheck the retained 24 controls without starting Factorio.
+BELT_SPEED_REFLECTED_REPLAY_DIR=../work/belt-speed-coverage/ordinary-reflected-01 npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
+```

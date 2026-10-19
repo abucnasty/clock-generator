@@ -251,6 +251,14 @@ BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-entrance-new \
 
 Test-name filters `-t 'express'` or `-t 'compact'` select one speed or the compact destination controls.
 
+The [compact normal scaffold](compact-normal-scaffold.txt) stores the measured assembler control, with a
+short underground pair that the normal tier can connect. Its test checks that the blueprint stays identical
+to the deterministic transform used by the native captures. Capture its own illustration with
+`npm run screenshots -- --case=front-underground-entrance/compact-normal`; the original plant image above
+does not show this smaller destination.
+
+![Compact normal-belt front entrance control with an assembling machine and a five-tile underground pair](compact-normal-scaffold.jpg)
+
 Run only the additional phase controls with fresh retained evidence:
 
 ```bash

@@ -389,5 +389,28 @@
     "png_bytes": 268657,
     "jpeg_bytes": 29725,
     "jpeg_quality": 82
+  },
+  "front-underground-entrance/compact-normal": {
+    "blueprint": "belt-pickup/fixtures/front-underground-entrance/compact-normal-scaffold.txt",
+    "image": "belt-pickup/fixtures/front-underground-entrance/compact-normal-scaffold.jpg",
+    "source_sha256": "369ed9b16b062d3300c9ef5e3206fcbc824a8d11690f563c8ea8a07f4f43c623",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 400.474609375,
+      "y": 0.5
+    },
+    "resolution": {
+      "x": 1476,
+      "y": 788
+    },
+    "zoom": 1.5,
+    "width": 1476,
+    "height": 788,
+    "png_bytes": 1481963,
+    "jpeg_bytes": 256766,
+    "jpeg_quality": 82
   }
 }

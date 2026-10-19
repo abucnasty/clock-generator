@@ -1,10 +1,11 @@
--- The host removes the ingredient drain. Filtering and destination clearing define this experiment.
+-- The host retains/removes the ingredient drain to select motion. Filtering and destination clearing isolate pickup.
 local entities, surface = ...
 local wanted = assert(options.item, "backed-up probe needs an item")
 local plant = capture.find_one(entities, function(entity) return entity.name == "electromagnetic-plant" end, "plant")
 local input = capture.find_one(entities, function(entity)
     if options.gated then return entity.type == "inserter"
-        and entity.position.x == plant.position.x - 1.5 and entity.position.y == plant.position.y + 2.5 end
+        and entity.position.x == plant.position.x - 1.5
+        and entity.position.y == plant.position.y + (options.reflected and -2.5 or 2.5) end
     return entity.type == "inserter" and entity.pickup_target and entity.pickup_target.valid
         and entity.drop_target and entity.drop_target.valid and entity.drop_target.name == "electromagnetic-plant"
 end, "belt input inserter")
@@ -21,6 +22,14 @@ if options.gated then
 end
 local belt = input.pickup_target or surface.find_entities_filtered{position = input.pickup_position,
     type = {"transport-belt", "underground-belt"}}[1]
+if options.speed then
+    assert(belt and belt.prototype.belt_speed == options.speed, "unexpected pickup speed")
+    for _, entity in pairs(entities) do
+        if entity.type == "transport-belt" or entity.type == "underground-belt" or entity.type == "loader" then
+            assert(entity.name == options.beltPrefix .. entity.type, "mixed transport speed")
+        end
+    end
+end
 local sink = plant
 local report = {
     item = wanted, belt = belt.name, belt_speed = belt.prototype.belt_speed, stack_size = 16,
@@ -30,7 +39,17 @@ capture.each_tick{
     first_tick = options.gated and 1 or 101, last_tick = 1300, report = report, output = "backed-up-pickups.json",
     sample = function(tick) return pickup.snapshot(input, tick) end,
     after_tick = function(tick)
-        if options.gated and tick == 64 then input.get_or_create_control_behavior().circuit_enable_disable = false end
+        if options.gated and tick == 64 then
+            if options.speed then
+                for _, entity in pairs(entities) do
+                    if entity.type == "underground-belt" and entity.position.y == belt.position.y then
+                        assert(entity.underground_belt_neighbour and entity.underground_belt_neighbour.valid,
+                            "unpaired ingredient underground: " .. helpers.table_to_json(entity.position))
+                    end
+                end
+            end
+            input.get_or_create_control_behavior().circuit_enable_disable = false
+        end
         sink.get_inventory(defines.inventory.crafter_input).clear()
         sink.get_inventory(defines.inventory.crafter_output).clear()
     end
