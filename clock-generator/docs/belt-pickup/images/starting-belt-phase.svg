@@ -1,19 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="740" viewBox="0 0 1120 740" role="img" aria-labelledby="title desc">
   <title id="title">Phase A versus phase B: same belt, different item positions</title>
   <desc id="desc">Turbo side-underground example. Phase A has stacks 32 and 96 units from the downstream end at the first attempt; phase B has stacks at 0 and 64. Distances use 256 units per tile and quarter-tile spacing. After two updates and the first two grabs, A can take the next stack at position 96; B must wait because its next stack is at excluded boundary 128. Native grab patterns are A: 0,1,2,4 and B: 0,1,3,5. Diagrams reconstruct the spacing and observed phase, rather than being game screenshots.</desc>
+  <style>
+    /* Transparent canvas; light colors below remain the fallback for static renderers. */
+    @media (prefers-color-scheme: dark) {
+      [fill="#00796b"] { fill: #56d4b0; }
+      [fill="#1565c0"] { fill: #79b8ff; }
+      [fill="#203047"] { fill: #e6edf3; }
+      [fill="#526176"] { fill: #b3c0d0; }
+      [fill="#b6c0cd"] { fill: #48566b; }
+      [fill="#bd4c0b"] { fill: #ffab70; }
+      [fill="#eaf3ff"] { fill: #182c44; }
+      [fill="#fff2e7"] { fill: #36271d; }
+      [stroke="#00796b"] { stroke: #56d4b0; }
+      [stroke="#1565c0"] { stroke: #79b8ff; }
+      [stroke="#65758a"] { stroke: #8c9caf; }
+      [stroke="#8292a7"] { stroke: #91a4b8; }
+      [stroke="#a7b4c3"] { stroke: #8c9caf; }
+      [stroke="#bd4c0b"] { stroke: #ffab70; }
+      [stroke="#ccd5df"] { stroke: #40516a; }
+    }
+  </style>
   <defs>
     <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
       <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
     </marker>
   </defs>
   <g font-family="Arial, Helvetica, sans-serif">
-    <rect x="0" y="0" width="1120" height="740" rx="0" fill="#ffffff" stroke="none" />
     <text x="20" y="30" font-size="22" fill="#203047" font-weight="bold">Phase A vs phase B: same belt, different item positions</text>
     <text x="20" y="55" font-size="15" fill="#203047" font-weight="normal">Turbo underground side pickup • same speed, reach and item • four-item stacks • sixteen-item hand</text>
     <text x="20" y="80" font-size="14" fill="#203047" font-weight="normal">Phase = where the repeating train of stacks is when pickup starts. Shift the timing; the layout stays the same.</text>
     <text x="20" y="104" font-size="13" fill="#203047" font-weight="normal">● Matching stack     ◌ Hole left by a grab     Orange stack = still outside reach     Blue arrow = belt direction</text>
     <g transform="translate(15 125)" data-phase-units="32" data-offsets="0,1,2,4" data-total="5">
-      <rect x="0" y="0" width="535" height="525" rx="10" fill="#f4f7fb" stroke="#ccd5df" />
+      <rect x="0" y="0" width="535" height="525" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="30" font-size="19" fill="#203047" font-weight="bold">Phase A — 5 pickup ticks</text>
       <text x="18" y="59" font-size="14" fill="#203047" font-weight="normal">First attempt: two matching stacks are in reach.</text>
       <rect x="48" y="115" width="112" height="56" rx="3" fill="#b6c0cd" stroke="#65758a" />
@@ -54,7 +73,7 @@
       <text x="18" y="494" font-size="14" fill="#203047" font-weight="bold">Grabs: 0, 1, 2, 4   →   5 ticks, counting first and last.</text>
     </g>
     <g transform="translate(565 125)" data-phase-units="0" data-offsets="0,1,3,5" data-total="6">
-      <rect x="0" y="0" width="535" height="525" rx="10" fill="#f4f7fb" stroke="#ccd5df" />
+      <rect x="0" y="0" width="535" height="525" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="30" font-size="19" fill="#203047" font-weight="bold">Phase B — 6 pickup ticks</text>
       <text x="18" y="59" font-size="14" fill="#203047" font-weight="normal">First attempt: two matching stacks are in reach.</text>
       <rect x="48" y="115" width="112" height="56" rx="3" fill="#b6c0cd" stroke="#65758a" />

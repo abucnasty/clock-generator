@@ -1,6 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="885" viewBox="0 0 1120 885" role="img" aria-labelledby="title desc">
   <title id="title">Six belt pickup approaches</title>
   <desc id="desc">All belts point right. Inserter location distinguishes side, front-facing and over-the-hood approaches.</desc>
+  <style>
+    /* Transparent canvas; light colors below remain the fallback for static renderers. */
+    @media (prefers-color-scheme: dark) {
+      [fill="#1565c0"] { fill: #79b8ff; }
+      [fill="#203047"] { fill: #e6edf3; }
+      [fill="#526176"] { fill: #b3c0d0; }
+      [fill="#aeb8c5"] { fill: #48566b; }
+      [fill="#bd4c0b"] { fill: #ffab70; }
+      [fill="#eaf3ff"] { fill: #182c44; }
+      [fill="#fff2e7"] { fill: #36271d; }
+      [stroke="#00796b"] { stroke: #56d4b0; }
+      [stroke="#1565c0"] { stroke: #79b8ff; }
+      [stroke="#65758a"] { stroke: #8c9caf; }
+      [stroke="#7c9ebd"] { stroke: #67819b; }
+      [stroke="#91a8bf"] { stroke: #6f859d; }
+      [stroke="#bd4c0b"] { stroke: #ffab70; }
+      [stroke="#ccd5df"] { stroke: #40516a; }
+    }
+  </style>
   <defs>
     <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
       <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
@@ -10,10 +29,9 @@
     </marker>
   </defs>
   <g font-family="Arial, Helvetica, sans-serif">
-    <rect x="0" y="0" width="1120" height="885" rx="0" fill="#f4f7fb" stroke="none" />
     <text x="20" y="27" font-size="16" fill="#203047" font-weight="normal">Top view • blue = belt flow • orange = inserter reach • gray = hood • dashed blue = tunnel</text>
     <g transform="translate(15 50)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">1. Straight belt — side pickups</text>
       <rect x="70" y="101" width="380" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
       <path d="M75 133.0 L445 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
@@ -28,7 +46,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Both lanes are exposed across the whole tile.</text>
     </g>
     <g transform="translate(565 50)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">2. Underground entrance — side pickups</text>
       <rect x="70" y="101" width="155" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
       <path d="M75 133.0 L220 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
@@ -47,7 +65,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The gray half is the hood.</text>
     </g>
     <g transform="translate(15 325)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">3. Underground exit — side pickups</text>
       <path d="M70 133 L225 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
       <rect x="289" y="101" width="161" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
@@ -66,7 +84,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The gray half is the hood.</text>
     </g>
     <g transform="translate(565 325)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">4. Front-facing underground entrance</text>
       <rect x="70" y="101" width="155" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
       <path d="M75 133.0 L220 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
@@ -85,7 +103,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The underground connection passes beneath it.</text>
     </g>
     <g transform="translate(15 600)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">5. Front-facing underground exit</text>
       <path d="M70 133 L225 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
       <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
@@ -101,7 +119,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Its tile blocks surface belt continuation.</text>
     </g>
     <g transform="translate(565 600)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">6. Over-the-hood underground exit</text>
       <path d="M70 133 L225 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
       <rect x="289" y="101" width="161" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />

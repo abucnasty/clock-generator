@@ -1,6 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="885" viewBox="0 0 1120 885" role="img" aria-labelledby="title desc">
   <title id="title">Supply, contents, phase, mirroring, reflection and belt drop</title>
   <desc id="desc">Independent conditions can be combined with pickup geometries. These are schematic examples, not measured stock snapshots.</desc>
+  <style>
+    /* Transparent canvas; light colors below remain the fallback for static renderers. */
+    @media (prefers-color-scheme: dark) {
+      [fill="#00796b"] { fill: #56d4b0; }
+      [fill="#1565c0"] { fill: #79b8ff; }
+      [fill="#203047"] { fill: #e6edf3; }
+      [fill="#526176"] { fill: #b3c0d0; }
+      [fill="#aeb8c5"] { fill: #48566b; }
+      [fill="#bd4c0b"] { fill: #ffab70; }
+      [fill="#eaf3ff"] { fill: #182c44; }
+      [fill="#fff2e7"] { fill: #36271d; }
+      [stroke="#1565c0"] { stroke: #79b8ff; }
+      [stroke="#203047"] { stroke: #e6edf3; }
+      [stroke="#65758a"] { stroke: #8c9caf; }
+      [stroke="#7c9ebd"] { stroke: #67819b; }
+      [stroke="#91a8bf"] { stroke: #6f859d; }
+      [stroke="#bd4c0b"] { stroke: #ffab70; }
+      [stroke="#ccd5df"] { stroke: #40516a; }
+    }
+  </style>
   <defs>
     <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
       <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
@@ -10,10 +30,9 @@
     </marker>
   </defs>
   <g font-family="Arial, Helvetica, sans-serif">
-    <rect x="0" y="0" width="1120" height="885" rx="0" fill="#f4f7fb" stroke="none" />
     <text x="20" y="27" font-size="16" fill="#203047" font-weight="normal">Independent test conditions • stacks are illustrative • belt speed does not change the layout</text>
     <g transform="translate(15 50)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">1. Moving / backed-up supply</text>
       <text x="18" y="83" font-size="14" fill="#203047" font-weight="normal">Moving</text>
       <rect x="162" y="60" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
@@ -38,7 +57,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Backed up: an obstruction queues stock; holes can refill.</text>
     </g>
     <g transform="translate(565 50)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">2. Same / different items on the lanes</text>
       <text x="18" y="83" font-size="14" fill="#203047" font-weight="normal">Same item</text>
       <rect x="162" y="60" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
@@ -68,7 +87,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Same-item fallback can use the other lane.</text>
     </g>
     <g transform="translate(15 325)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">3. Starting belt phase</text>
       <text x="18" y="83" font-size="14" fill="#203047" font-weight="normal">Initial phase</text>
       <rect x="162" y="60" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
@@ -92,7 +111,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Orange dot = same pickup location in both controls.</text>
     </g>
     <g transform="translate(565 325)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">4. Inserter mirroring</text>
       <text x="50" y="63" font-size="15" fill="#203047" font-weight="normal">Unmirrored</text>
       <rect x="63" y="91" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
@@ -118,7 +137,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Lane 1/2 preference shown for the tested front exit.</text>
     </g>
     <g transform="translate(15 600)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">5. Reflected side pickup</text>
       <rect x="60" y="112" width="140" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
       <path d="M65 134.0 L195 134.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
@@ -140,7 +159,7 @@
       <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">This moves the inserter; it is not a mirroring toggle.</text>
     </g>
     <g transform="translate(565 600)">
-      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
       <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">6. Belt drop</text>
       <rect x="70" y="120" width="380" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
       <path d="M75 152.0 L445 152.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
