@@ -11,16 +11,17 @@ import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
 import { advanceMergeStock, assessTwoStreamMerge, candidateTurboMergeEntry, observedMergeGrabs } from "./two-stream-merge-replay";
 import { composeProbeSource } from "../../helpers/probe-source";
+import { speedCapture } from "../../helpers/belt-speed-fixtures";
 import { EntityState, BeltState } from "../../../../src/state";
 import { BeltPickupMerge, MergeStack as SimulatedMergeStack } from "../../../../src/state/belt-pickup-merge";
 
 type Speed = "turbo" | "express" | "fast" | "yellow";
 interface Variant {
-    name: string; lane: 1 | 2 | "both"; speed: Speed;
+    name: string; extended?: boolean; lane: 1 | 2 | "both"; speed: Speed;
     backed?: boolean; reflect?: boolean; turn?: number; releaseTick?: number; repeatedMerge?: boolean;
     pauseTick?: number; resumeTick?: number;
     blockOutletTick?: number; releaseOutletTick?: number;
-    mixed?: "inner-cable" | "outer-cable";
+    mixed?: "inner-cable" | "outer-cable"; operating?: boolean;
     offsets: number[];
 }
 interface Stack { at: number; count: number; id: number; item: string }
@@ -63,6 +64,112 @@ variants.push({name: "turbo-south-both-repeated-merge-outlet", lane: "both", spe
 variants.push({name: "turbo-north-both-repeated-merge", lane: "both", speed: "turbo", repeatedMerge: true, reflect: true, offsets: [0, 1, 2, 3]});
 variants.push({name: "turbo-south-both-repeated-merge-mixed", lane: "both", speed: "turbo", repeatedMerge: true, mixed: "inner-cable", offsets: [0, 1, 2, 4]});
 variants.push({name: "turbo-south-both-repeated-merge-mixed-swapped", lane: "both", speed: "turbo", repeatedMerge: true, mixed: "outer-cable", offsets: [0, 1, 2, 4]});
+
+// Backfill missing speed combinations without claiming the turbo routing rule supports other speeds.
+for (const speed of ["express", "fast", "yellow"] as const) {
+    const add = (suffix: string, options: Partial<Variant>) => variants.push({
+        name: `${speed}-${suffix}`, speed, lane: "both", offsets: [], extended: true, ...options,
+    });
+    for (const lane of [1, 2, "both"] as const) {
+        add(`south-${lane}-backed`, {lane, backed: true});
+        add(`north-${lane}-moving`, {lane, reflect: true});
+        add(`south-${lane}-release17`, {lane, releaseTick: 17});
+    }
+    for (const turn of [1, 2, 3]) add(`inner-rotation-${turn}`, {lane: 2, turn});
+    if (speed !== "express") add("south-both-repeated-merge", {repeatedMerge: true});
+    add("south-both-repeated-merge-release17", {repeatedMerge: true, releaseTick: 17});
+    add("south-both-repeated-merge-pause", {repeatedMerge: true, pauseTick: 124, resumeTick: 156});
+    add("south-both-repeated-merge-outlet", {repeatedMerge: true, blockOutletTick: 124, releaseOutletTick: 188});
+    add("north-both-repeated-merge", {repeatedMerge: true, reflect: true});
+    for (const mixed of ["inner-cable", "outer-cable"] as const) {
+        add(`south-both-repeated-merge-${mixed}`, {repeatedMerge: true, mixed});
+        add(`south-both-repeated-merge-backed-${mixed}`, {repeatedMerge: true, mixed, backed: true});
+    }
+    add("south-both-repeated-merge-backed", {repeatedMerge: true, backed: true});
+}
+for (const speed of ["turbo", "express", "fast", "yellow"] as const) for (const lane of [1, 2] as const)
+    for (const backed of [false, true]) variants.push({
+        name: `${speed}-single-${lane}-repeated-${backed ? "backed" : "moving"}`,
+        speed, lane, backed, offsets: [], extended: true, repeatedMerge: true,
+    });
+
+for (const [speed, phases] of [["express", 8], ["fast", 4], ["yellow", 8]] as const) {
+    for (let phase = 2; phase < phases; phase++) {
+        for (const lane of [1, 2, "both"] as const) variants.push({
+            name: `${speed}-south-${lane}-release${16 + phase}`, speed, lane, releaseTick: 16 + phase,
+            offsets: [], extended: true,
+        });
+        variants.push({name: `${speed}-south-both-repeated-merge-release${16 + phase}`, speed,
+            lane: "both", releaseTick: 16 + phase, offsets: [], extended: true, repeatedMerge: true});
+    }
+}
+
+for (const speed of ["turbo", "express", "fast", "yellow"] as const) for (const mixed of ["inner-cable", "outer-cable"] as const) variants.push({
+    name: `${speed}-operating-merge-${mixed}`, speed, lane: "both", offsets: [], extended: true,
+    repeatedMerge: true, mixed, operating: true,
+});
+for (const mixed of [undefined, "inner-cable", "outer-cable"] as const) variants.push({
+    name: `turbo-south-both-repeated-merge-backed${mixed ? `-${mixed}` : ""}`, speed: "turbo", lane: "both",
+    offsets: [], extended: true, repeatedMerge: true, backed: true, mixed,
+});
+
+/** The calibration command records native results; later runs compare this compact committed baseline.
+ * Stack IDs are resolved by the existing observer and are never copied as expectations across saves. */
+function checkExtendedCapture(config: Config, samples: Sample[], variant: Variant, fixture: string, directory: string) {
+    const lane = variant.reflect ? 0 : 1;
+    const grabs = (variant.lane === "both" ? observedMergeGrabs(samples, lane)
+        : samples.slice(1).flatMap((sample, index) => sample.held > samples[index].held
+            ? [{tick: sample.tick, id: 0, origin: Number(variant.lane)}] : []))
+        .map(grab => ({...grab, item: samples.find(sample => sample.tick === grab.tick)!.held_item!}));
+    const complete: {item: string; offsets: number[]; origins: number[]}[] = [];
+    let hand: typeof grabs = [];
+    for (const grab of grabs) {
+        if (hand.length && grab.item !== hand[0].item) throw new Error("inserter changed ingredient within one hand");
+        hand.push(grab);
+        if (hand.length === 4) {
+            complete.push({item: hand[0].item, offsets: hand.map(g => g.tick - hand[0].tick), origins: hand.map(g => g.origin ?? 0)});
+            hand = [];
+        }
+    }
+    const simulatorMismatches = variant.lane !== "both" ? checkSimulator(config, samples, variant,
+        grabs[0].tick, samples.find(sample => sample.held === 16)!.tick, false) : undefined;
+    const summary = {
+        firstGrab: grabs[0]?.tick, grabs: grabs.length, unknownOrigins: grabs.filter(grab => grab.origin === undefined).length,
+        ...(simulatorMismatches ? {simulatorMismatchCount: simulatorMismatches.length, firstSimulatorMismatches: simulatorMismatches.slice(0, 10)} : {}),
+        origins: [1, 2].map(origin => grabs.filter(grab => grab.origin === origin).length),
+        patterns: [...new Set(complete.map(value => JSON.stringify(value)))].map(value => JSON.parse(value)),
+        completeHands: complete.length, partialGrabs: hand.length,
+        handStarts: grabs.filter((_, index) => index % 4 === 0 && index + 4 <= grabs.length).map(grab => grab.tick),
+        firstFull: samples.find(sample => sample.held === 16)?.tick,
+        endHeld: samples.at(-1)!.held,
+        ...(variant.operating ? {endInputs: samples.at(-1)!.inputs, endOutput: samples.at(-1)!.output} : {}),
+    };
+    expect(summary.firstGrab).toBeGreaterThan(variant.releaseTick ?? 16);
+    expect(summary.completeHands).toBeGreaterThan(0);
+    for (const sample of samples) {
+        expect(stacks(sample.lanes[1 - lane])).toEqual([]);
+        if (!variant.operating) expect(sample.crafting_progress).toBe(0);
+        expect(sample.held).toBeGreaterThanOrEqual(0);
+        expect(sample.held).toBeLessThanOrEqual(16);
+        for (const [index, feed] of sample.feed.lanes.entries()) {
+            const supplied = variant.lane === "both" || index + 1 === variant.lane;
+            expect([feed.count, feed.full]).toEqual(supplied ? [16, true] : [0, false]);
+        }
+        for (const stack of [...stacks(sample.lanes[lane]), ...sample.feed.lanes.flatMap(stacks)]) {
+            expect(stack.count).toBe(4);
+            expect(variant.mixed ? ["iron-plate", "copper-cable"] : ["iron-plate"]).toContain(stack.item);
+        }
+    }
+    if (variant.lane !== "both") {
+        const full = samples.find(sample => sample.held === 16)!;
+        if (!variant.backed) checkSingleStream(samples, variant, grabs[0].tick, full.tick);
+    }
+    fs.writeFileSync(path.join(directory, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
+    if (process.env.BELT_SPEED_CALIBRATE !== "1") {
+        const expected = JSON.parse(fs.readFileSync(path.join(fixture, "speed-controls.json"), "utf8"));
+        expect(summary).toEqual(expected[variant.name]);
+    }
+}
 
 /** Derive variants from the photographed layout: no additional copied blueprints or probes. */
 function makeVariant(text: string, variant: Variant) {
@@ -160,7 +267,7 @@ function checkSingleStream(samples: Sample[], variant: Variant, firstGrab: numbe
 }
 
 /** Verify the production mode with phase aligned from the pre-pickup stream, not fitted to grabs. */
-function checkSimulator(config: Config, samples: Sample[], variant: Variant, firstGrab: number, fullTick: number) {
+function checkSimulator(config: Config, samples: Sample[], variant: Variant, firstGrab: number, fullTick: number, compare = true) {
     const context = SimulationContext.fromConfig(config);
     const state = context.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
     const mode = InserterPickupMode.create({
@@ -179,11 +286,21 @@ function checkSimulator(config: Config, samples: Sample[], variant: Variant, fir
         expect(aligned, "profile phase must align with the observed stream").toBeDefined();
         shift = aligned!;
     }
-    for (const sample of samples.filter(s => s.tick >= firstGrab && s.tick <= fullTick)) {
+    const mismatches: {tick: number; simulated: number; native: number}[] = [];
+    const last = variant.repeatedMerge ? samples.at(-1)!.tick : fullTick;
+    const sink = context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id);
+    let active = false;
+    for (const sample of samples.filter(s => s.tick >= firstGrab && s.tick <= last)) {
         context.tick_provider.setCurrentTick(sample.tick + shift);
-        mode.executeForTick();
-        expect(state.held_item?.quantity ?? 0, `simulator held at ${sample.tick}`).toBe(sample.held);
+        if (sample.held === 0) {state.held_item = null; active = false;}
+        else if (samples[sample.tick - 2]?.held === 0) active = true;
+        if (active && (state.held_item?.quantity ?? 0) < 16 && sample.input_enabled) mode.executeForTick();
+        const simulated = state.held_item?.quantity ?? 0;
+        if (simulated !== sample.held) mismatches.push({tick: sample.tick, simulated, native: sample.held});
+        if (compare) expect(simulated, `simulator held at ${sample.tick}`).toBe(sample.held);
+        if (variant.repeatedMerge) sink.inventoryState.clear();
     }
+    return mismatches;
 }
 
 /** Actual production pickup mode and supply, seeded once. Only external refill IDs and arm start/drop times
@@ -239,9 +356,12 @@ function checkMergeSimulator(config: Config, samples: Sample[], receivingLane: n
 
 for (const variant of variants) test(`side-entry supply: ${variant.name}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
-    context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
+    const replayDirectory = process.env.BELT_SPEED_REPLAY_DIR ? path.resolve(process.env.BELT_SPEED_REPLAY_DIR, variant.name) : undefined;
+    context.skip(replayDirectory ? !fs.existsSync(path.join(replayDirectory, "recording.json"))
+        : !factorio || !save || !fs.existsSync(save), "No retained capture or Factorio harness is configured");
     const fixture = GameFixturePaths.SIDE_LOADED_STRAIGHT;
-    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "side-loaded-entry-"));
+    const capture = speedCapture(variant.name);
+    const scratch = capture.directory;
     try {
         const made = makeVariant(fs.readFileSync(path.join(fixture, "side-loaded-scaffold.txt"), "utf8"), variant);
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
@@ -268,20 +388,22 @@ for (const variant of variants) test(`side-entry supply: ${variant.name}`, async
             const profile = variant.lane === (variant.reflect ? 1 : 2) ? "side-inner" : "side-outer";
             source.pickup_supply = variant.reflect ? [profile, "through"] : ["through", profile];
         }
+        if (variant.extended && variant.lane === "both") Object.assign(made.options, {observeDownstream: true, downstreamTiles: 3});
         if (variant.repeatedMerge) Object.assign(made.options, {
-            lastTick: 512, clearDestination: true, observeDownstream: true,
+            lastTick: variant.operating ? 1200 : 512, clearDestination: !variant.operating, observeDownstream: true,
             pauseTick: variant.pauseTick, resumeTick: variant.resumeTick,
             blockOutletTick: variant.blockOutletTick, releaseOutletTick: variant.releaseOutletTick,
             downstreamTiles: 3,
         });
-        const result = await recordInFactorio({
+        const result = replayDirectory ? {recording: JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8")) as Awaited<ReturnType<typeof recordInFactorio>>["recording"]}
+            : await recordInFactorio({
             factorio: factorio!, save: save!, config, blueprint: made.blueprint,
             lua: composeProbeSource(path.join(fixture, "probe.lua"), made.options),
             out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
-            ticks: variant.repeatedMerge ? 540 : 120, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: false,
+            ticks: variant.operating ? 1220 : variant.repeatedMerge ? 540 : 120, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: false,
             game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
         });
-        const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/front-pickup.json"), "utf8")) as {
+        const report = JSON.parse(fs.readFileSync(path.join(replayDirectory ?? scratch, "game/script-output/front-pickup.json"), "utf8")) as {
             initial: { belt_shape: string }; samples: Sample[];
         };
         const exported = result.recording.config.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
@@ -305,8 +427,13 @@ for (const variant of variants) test(`side-entry supply: ${variant.name}`, async
         }
         const samples = report.samples;
         expect(report.initial.belt_shape).toBe("straight");
-        expect(samples).toHaveLength(variant.repeatedMerge ? 512 : 96);
+        expect(report.initial).toMatchObject({belt_speed: speedPerTick[variant.speed]});
+        expect(samples).toHaveLength(variant.operating ? 1200 : variant.repeatedMerge ? 512 : 96);
         expect(samples.slice(0, made.options.releaseTick).every(s => s.held === 0)).toBe(true);
+        if (variant.extended) {
+            checkExtendedCapture(config, samples, variant, fixture, scratch);
+            return;
+        }
         if (variant.repeatedMerge) {
             if (variant.speed === "turbo") checkMergeSimulator(config, samples, variant.reflect ? 0 : 1);
             const receivingLane = variant.reflect ? 0 : 1;
@@ -436,7 +563,7 @@ for (const variant of variants) test(`side-entry supply: ${variant.name}`, async
             expect(entered).toBe(true);
         }
     } finally {
-        fs.rmSync(scratch, { recursive: true, force: true });
+        capture.cleanup();
     }
 }, 240_000);
 
@@ -523,4 +650,58 @@ for (const {shift, outerStream} of [
     } finally {
         fs.rmSync(scratch, {recursive: true, force: true});
     }
+}, 240_000);
+
+// Each speed performs 136 independently seeded stock resets in a single bounded session.
+// These are native routing measurements: non-turbo merges remain unsupported by the engine.
+for (const speed of ["turbo", "express", "fast", "yellow"] as const) test(`side-entry boundary sweep: ${speed}`, async context => {
+    const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
+    const replayDirectory = process.env.BELT_SPEED_REPLAY_DIR ? path.resolve(process.env.BELT_SPEED_REPLAY_DIR, `${speed}-entry-sweep`) : undefined;
+    context.skip(replayDirectory ? !fs.existsSync(path.join(replayDirectory, "recording.json"))
+        : !factorio || !save || !fs.existsSync(save), "No retained capture or Factorio harness is configured");
+    const fixture = GameFixturePaths.SIDE_LOADED_STRAIGHT;
+    const capture = speedCapture(`${speed}-entry-sweep`);
+    try {
+        const made = makeVariant(fs.readFileSync(path.join(fixture, "side-loaded-scaffold.txt"), "utf8"), {
+            name: "entry-sweep", speed, lane: "both", offsets: [],
+        });
+        const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+        config.belts[0].type = `${speed === "yellow" ? "" : speed + "-"}transport-belt` as typeof config.belts[0]["type"];
+        const source = config.inserters[1].source;
+        if (source.type !== "belt") throw new Error("expected belt");
+        delete source.pickup_supply;
+        if (!replayDirectory) await recordInFactorio({factorio: factorio!, save: save!, config, blueprint: made.blueprint,
+            lua: composeProbeSource(path.join(fixture, "entry-sweep-probe.lua"), {speed: speedPerTick[speed] * 256}),
+            out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
+            ticks: 550, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: false,
+            game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
+        });
+        const report = JSON.parse(fs.readFileSync(path.join(replayDirectory ?? capture.directory, "game/script-output/entry-sweep.json"), "utf8")) as {
+            speed: number; cases: {shift: number; outer: boolean; initial: Sample; samples: Sample[]}[];
+        };
+        expect(report.speed).toBe(speedPerTick[speed] * 256);
+        expect(report.cases).toHaveLength(136);
+        const observations = report.cases.map(value => {
+            expect(value.samples).toHaveLength(4);
+            const inner = stacks(value.initial.feed.lanes[1])[0];
+            const first = value.samples[0];
+            const accepted = !stacks(first.feed.lanes[1]).some(stack => stack.id === inner.id);
+            for (const sample of [value.initial, ...value.samples]) {
+                expect(sample.held).toBe(0);
+                expect(stacks(sample.lanes[0])).toEqual([]);
+                expect(stacks(sample.lanes[1]).every(stack => stack.count === 4 && stack.item === "iron-plate")).toBe(true);
+            }
+            return {shift: value.shift, outer: value.outer, accepted,
+                arrival: stacks(first.lanes[1]).find(stack => stack.id === inner.id)?.at ?? null};
+        });
+        const summary = {speed: report.speed, observations};
+        fs.writeFileSync(path.join(capture.directory, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
+        // Independently measured integer boundaries; this does not implement slower merge routing.
+        const firstRejectedShift = {turbo: 96, express: 88, fast: 80, yellow: 72}[speed];
+        for (const observation of observations) {
+            const accepted = observation.shift < firstRejectedShift;
+            expect(observation.accepted, `shift ${observation.shift}, outer=${observation.outer}`).toBe(accepted);
+            expect(observation.arrival).toBe(accepted ? (67 + observation.shift - report.speed) / 256 : null);
+        }
+    } finally { capture.cleanup(); }
 }, 240_000);
