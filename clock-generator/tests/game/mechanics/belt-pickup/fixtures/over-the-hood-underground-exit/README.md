@@ -69,10 +69,9 @@ These families match the front-entrance controls. Across phases, same-item lane 
 at turbo and `PPFP`/`PPPF`/`PPFF` at other speeds. Every observed first grab occurs two ticks after release;
 that observation is separate from the replay, which starts from native stock and first-grab timing.
 
-The independent moving-stock replay agrees on all **216 moving first hands**; the experimental finite jammed
+The independent moving-stock replay agrees on all **216 moving first hands**; the finite jammed
 queue agrees on all **42 backed-up first hands**. Both condition on observed first grab/stock and do not prove
-absolute approach timing. The engine's simpler backed-up approximation still lacks the fast/normal finite-refill
-waits. No simulator or Sidecar implementation changes are included here.
+absolute approach timing. The production finite-refill model now matches these controls too.
 
 New Sidecar captures export **supported / belt model 2**, `pickup_layout: "over-hood-exit"`, half-tile reach and
 lane 1 unmirrored / lane 2 mirrored. Old captures keep their original **unsupported / inline** marker and require
@@ -81,8 +80,8 @@ recapture. Production pickup-mode comparisons now match held items, quantities a
 The [base expectations](expectations.json) and [shifted-phase expectations](phase-expectations.json) keep native
 timing, physical lane selection and replay results separate from that support boundary. Portable tests assert
 actual first-grab phase coverage in both lanes, preventing duplicate phases from silently shrinking coverage.
-These are isolated first hands; repeated operating throughput, interruptions and independently offset lanes
-remain untested for this orientation.
+These are isolated first hands. Separate [operating-clock checks](../../../../builds/README.md#over-the-hood-operating-clocks)
+test repeated throughput and interruptions; a turbo recovery counterexample exposes different lane phases.
 
 ## Evidence and reproduction
 
