@@ -32,7 +32,9 @@ export class BeltDropLogic implements InserterTransferLogic {
     public executeForTick(): void {
         // A refused supply freezes the drop schedule until the belt accepts the held item again.
         const held_item_name = this.inserter_state.held_item?.item_name;
+        this.inserter_state.trace?.record({type: "drop_attempt", item: held_item_name});
         if (held_item_name !== undefined && this.sink_entity_state.supply.refused.has(held_item_name)) {
+            this.inserter_state.trace?.record({type: "wait", phase: "drop", reason: "supply_refused", item: held_item_name});
             return;
         }
         this.dropOffToBelt(this.sink_entity_state, this.inserter_state);
@@ -75,6 +77,8 @@ export class BeltDropLogic implements InserterTransferLogic {
 
         if (amount_to_drop > 0) {
             removeFromHand(inserter_state, amount_to_drop);
+        } else {
+            inserter_state.trace?.record({type: "wait", phase: "drop", reason: "drop_cadence", item: held_item.item_name});
         }
     }
 
@@ -87,6 +91,8 @@ export class BeltDropLogic implements InserterTransferLogic {
         const traffic = belt_state.lane_traffic[drop.lane - 1];
         if (traffic.tryPlace(this.tick_provider.getCurrentTick(), this.spotTicks(belt_state, drop))) {
             removeFromHand(inserter_state, stack_size);
+        } else {
+            inserter_state.trace?.record({type: "wait", phase: "drop", reason: "output_space", item: inserter_state.held_item?.item_name});
         }
     }
 
