@@ -126,6 +126,8 @@ independent incoming streams; exact gate ticks remain in the fixture instruction
 | --- | --- | --- | --- | --- |
 | Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; no verified moving default for undergrounds | Tested | Tested |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
+| Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested; generator result mismatch | Tested; generator result mismatch | Tested | Tested |
+| Over-the-hood same-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
 | Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
@@ -194,8 +196,8 @@ fourth grab, consistent with the finite-refill controls.
 Independent moving-stock replays agree with all **216 moving first hands**; the production backed-up queue
 agrees with all **42 backed-up first hands**, conditioned on native arrival. Production pickup-mode comparisons
 also match held items, quantities and exposed stock for all 258 controls. Sidecar captures the explicit
-over-the-hood layout. These results do not establish independent lane alignment, repeated operating throughput
-or generated-clock parity; those remain later verification gates.
+over-the-hood layout. First-hand agreement does not establish generated-clock parity: the operating-clock
+controls below expose a recovery failure when the lanes acquire different phases.
 
 ### Side-loading onto a straight tile
 
@@ -313,8 +315,22 @@ ordinary defaults are correctly marked stable; two are startup-sensitive, and tw
 different supply condition. Four additional cold-start controls cover both normal undergrounds at offsets
 0 and 1287, matching all 16 output periods each. A full lane can still move: these controls verify stationary
 initial stock and empty machines/hands before comparing the simulator. The [build report](../../tests/game/builds/README.md)
-links current controls and preserves the original 39-run summaries. Broader startup timing and over-the-hood
-generated clocks remain separate verification gates; warm throughput alone does not establish them.
+links current controls and preserves the original 39-run summaries. Broader startup timing remains a separate
+verification gate; warm throughput alone does not establish it.
+
+**Over-the-hood clock recovery.** A mixed-item turbo default produces 64 circuits per 640 ticks before an
+interruption, in both mirroring states. After one ingredient is interrupted, recovery repeatedly contains
+one 48-item period among four 64-item periods, despite the generator's stable verdict.
+The [bounded native trace](../../tests/game/builds/over-hood-lane-phase-control.json) shows the interrupted
+lane shift by half a stack interval while the other lane keeps its phase. The existing pickup kernel reproduces
+this output pattern with separate lane phases; clock verification currently initializes both alike.
+The mirrored express default similarly recovers to 96/112 rather than 112 items per 1,120 ticks.
+The [32 operating controls](../../tests/game/builds/over-hood-clock-controls.json) cover all four speeds, both
+mirroring states and supplies, and same/different ingredients: 21 meet exact baseline and recovery output,
+including all 16 same-item cases; eight already receive unstable/no-recovery verdicts; these three receive
+false stable verdicts. Two fast moving mixed-item baselines already contain zero-output periods, so their
+recovery counts are retained without certifying recovery. This is a clock-verification gap, not a different
+lane-preference rule. Its simulator correction remains a separate release gate.
 
 **Side supply and capture.** Single streams enter at **67 inner / 188 outer** units. The bounded turbo merge
 requires finite incoming/receiving/downstream queues, compressed gaps and backpressure; seven repeated controls

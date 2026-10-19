@@ -106,7 +106,7 @@ counts match overlapping detailed recordings and the native hardware assertions.
 The six historical false-stable counterexamples involving fast undergrounds, normal straight pickups and
 normal moving underground recovery now pass with regenerated clocks. Both normal backed-up underground
 defaults pass the warm run, but the cold-start controls below confirm their startup sensitivity. No failing captured
-default is marked stable for its actual supply. These checks do not close broader startup timing,
+ordinary default is marked stable for its actual supply. These checks do not close broader startup timing,
 over-the-hood operating clocks or slower two-stream support.
 
 The portable `belt-pickup-clock.generation.test.ts` checks the selected periods, verdicts and supply against
@@ -138,3 +138,49 @@ or later stock are fed back into the simulator.
 BELT_SPEED_CAPTURE_DIR=../work/belt-clock-startup-new \
   npm run test:game -- tests/game/builds/pickup-clock-startup.game.test.ts
 ```
+
+## Over-the-hood operating clocks
+
+`over-hood-pickup-clock.game.test.ts` enumerates 32 controls: electronic circuits with different lane
+ingredients and gears with identical lane ingredients, at four speeds, both mirroring states, and
+moving/backed-up supply. Every variant uses the same compact assembler layout and 6/s target. Backed-up
+variants remove only the ingredient drain; the product outlet stays open until the output intervention.
+Sidecar must capture supported belt model 2, the over-the-hood layout and the correct preferred lane.
+
+[over-hood-clock-controls.json](over-hood-clock-controls.json) retains all 32 native summaries using clocks
+generated on engine `4f2d4e35` and Factorio 2.1.21. Twenty-one pass exact baseline and recovery output,
+including all 16 same-item cases. Eight already receive unstable/no-recovery verdicts. Three are marked stable
+but fail recovery: turbo moving in both mirroring states, and express moving when mirrored. Each capture has
+63 untouched baseline periods and overlapping detailed-recorder checks. These controls are historical evidence;
+changed selected clocks need fresh game verification rather than replacement of the old counts.
+
+These compact builds can keep producing through the ordinary runner's short outages using stored stock.
+Their three successive disturbances therefore last 24 periods, with machine inventories and clock state
+untouched. A disturbance must reduce output below the baseline before recovery is assessed. If the baseline
+already contains zero-output periods, the summary retains all counts and marks recovery `not_assessed`;
+that clock has already failed its undisturbed throughput check.
+
+The [bounded turbo trace](over-hood-lane-phase-control.json) preserves a separate, shorter ingredient-loss
+counterexample. Before the interruption, both lanes share a phase. Afterwards, only the interrupted lane
+shifts by half a stack interval. The clock was marked stable, but native output repeats a 48-item period
+among four 64-item periods instead of 64 every 640 ticks. The existing pickup kernel reproduces this pattern
+with different initial lane phases. A common clock shift alone does not check that state.
+
+This test work records the disagreement; it does not change simulator timing or certify the failing clock.
+Keep the phase-verification correction in a separate PR. A passing capture/replay means the recorded
+observations match expectations, including any shortfalls recorded there.
+
+Raw evidence is retained locally under `work/belt-pickup-parity/over-hood-different-native-02-{unmirrored,mirrored}/`
+and `over-hood-same-native-01-{unmirrored,mirrored}/`. The bounded shorter-loss trace is in
+`work/belt-pickup-parity/over-hood-phase-native-01/`. Earlier short-outage pilots are separate; an outage hidden
+by buffers does not add recovery coverage.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/over-hood-clock-new \
+  npm run test:game -- tests/game/builds/over-hood-pickup-clock.game.test.ts \
+  -t '^operating clock: over-hood-turbo-unmirrored-moving-different-items$'
+```
+
+Use the generation cache and replay variables above with a fresh capture directory. Optional
+`BELT_CLOCK_TRACE_PICKUPS=1` retains 64 ticks of native held/stock snapshots before the first disturbance
+and after each restoration; it does not feed observations into the simulator.
