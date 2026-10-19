@@ -47,16 +47,24 @@ Front-facing rows cover the measured layouts and both mirroring states.
 | Reflected side pickups, same item — backed up | Tested | Tested | Tested | Tested; refill counterexamples |
 | Backed-up straight-belt demand / insertion-limit controls | Tested | Tested | Tested | Tested |
 | Front exit, backed up — different and same items | Tested | Tested | Tested; refill counterexample | Tested; refill counterexample |
-| Front exit, moving | Not tested | Not tested | Not tested | Not tested |
+| Front exit, continuous moving supply | Blocked in this fixture | Blocked in this fixture | Blocked in this fixture | Blocked in this fixture |
+| Over-the-hood exit, moving — different items | Tested | Tested | Tested | Tested (compact layout) |
+| Over-the-hood exit, moving — same item on both lanes | Tested | Tested | Tested | Tested (compact layout) |
+| Over-the-hood exit, backed up — different and same items | Tested | Tested | Tested; finite refill | Tested (compact layout); finite refill |
 | Front entrance, moving — different items | Tested | Tested | Tested | Tested (compact layout) |
 | Front entrance, moving — same item on both lanes | Tested | Tested | Tested | Tested (compact layout) |
 | Front entrance, backed up — different and same items | Tested | Tested | Tested; refill counterexample | Tested; refill counterexample |
 
-The front-exit fixture physically blocks continuation; moving coverage awaits the user-supplied layout.
+The downstream front-exit fixture places the inserter on the next belt tile, physically blocking continuation.
+The supplied over-the-hood exit is a separate approach: its inserter sits upstream and leaves the downstream route open.
 Normal moving front-entrance controls use a paired compact assembler layout: the original plant needs a tunnel
 longer than normal underground range. Equivalent compact controls were also measured at the other speeds.
 Front-entrance phase sweeps verify actual first-grab positions, rather than assuming gate-delay labels imply
 distinct phases. Other cardinal orientations and arbitrary lane-to-lane phase offsets remain separate dimensions.
+The separate [over-the-hood exit](../tests/game/mechanics/belt-pickup/fixtures/over-the-hood-underground-exit/README.md)
+has 48 compact controls across all four speeds and 36 original-plant counterparts at turbo/express/fast. Both
+mirroring states, moving/backed-up supply, ingredient swaps and same-item lanes are measured at the base release;
+normal's original seven-tile tunnel exceeds its range. This is first-hand coverage, not a full phase sweep.
 
 ### Side-entry and merge controls
 
@@ -127,10 +135,33 @@ the destination. **Moving = false** denotes backed-up supply.
 | Front entrance, all speeds | true | Same item on both lanes | `0,1,2,3` | 4 | Every measured phase; distinct from the side-entrance counterexample |
 
 These are representative patterns, not an exhaustive list of repeated-hand states. The fixture baselines retain
-all observed patterns and known simulator differences. In the tested front-facing layouts, **unmirrored prefers
+all observed patterns and known simulator differences. In the tested downstream front-exit and front-entrance layouts, **unmirrored prefers
 lane 1; mirrored prefers lane 2**, preserved by ingredient swaps. Fast/normal backed-up front controls can use
 fallback even on the first hand; the turbo rule that all four grabs stay on the preferred lane is not universal.
-Moving front-exit grabs remain unmeasured.
+Continuous moving supply is blocked in the downstream front-exit fixture; over-the-hood exit pickups are a separate case.
+
+### Over-the-hood underground exits
+
+The inserter sits upstream of the exit and reaches across its hood, leaving the downstream route open.
+These base-release patterns agree between the compact and original layouts where both can be paired.
+
+| Speed | Moving | Lane contents | Measured offsets | Total pickup ticks |
+| --- | --- | --- | --- | --- |
+| Turbo | true | Different items | `0,1,3,5` | 6 |
+| Express | true | Different items | `0,1,3,6` | 7 |
+| Fast | true | Different items | `0,1,2,6` | 7 |
+| Normal | true | Different items | `0,1,4,12` | 13 |
+| Turbo/express | false | Different items | `0,1,2,3` | 4 |
+| Fast | false | Different items | `0,1,2,5` | 6 |
+| Normal | false | Different items | `0,1,2,9` | 10 |
+| All four | true | Same item on both lanes | `0,1,2,3` | 4 |
+| All four | false | Same item on both lanes | `0,1,2,3` | 4 |
+
+Unmirrored prefers lane 1 and mirrored lane 2, preserved by ingredient swaps. Same-item lanes allow fallback;
+fast/normal backed-up first hands use the other lane for their fourth grab. Independent moving-stock and
+experimental jammed-queue replays agree for all 84 first hands, conditioned on native arrival. Sidecar still
+classifies this approach as **unsupported / inline** and omits pickup geometry. Simulator/capture fixes remain
+separate; these results do not establish repeated-hand, full-phase or generated-clock support.
 
 ### Side-loading onto a straight tile
 
@@ -245,8 +276,10 @@ inputs. Ten portable clips preserve refill evidence and five preserve arm-travel
 production implementation or proof about absolute arm arrival. See the [fixture report](../tests/game/mechanics/belt-pickup/fixtures/different-items/README.md).
 
 **Front controls.** The 228 first-hand captures verify lane preference across ingredients, mirroring, speeds
-and observed entrance phases. Normal moving entrance coverage uses the paired compact destination; moving
-front-exit coverage remains open.
+and observed entrance phases. Normal moving entrance coverage uses the paired compact destination. The
+downstream front-exit fixture blocks continuous flow; the over-the-hood exit is documented separately.
+Its 84 base controls reproduce the lane preference and finite-stock rules while preserving the current
+unsupported capture warning; no production simulator or Sidecar change is included.
 
 **Generated clocks.** Collection replay after observed arm arrival does not establish
 clock throughput or a reliable stability verdict. Electromagnetic targets scale with belt speed: 22.5/s express,

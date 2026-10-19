@@ -11,7 +11,8 @@ implementation remains out of scope.**
 | --- | --- | --- |
 | Ordinary reach, refill, ingredient eligibility and repeated hands | [Different items and four-speed controls](fixtures/different-items/README.md) | `belt-speed-coverage.game.test.ts`, `ordinary-reflection.game.test.ts`, `ordinary-phase.game.test.ts`, `ingredient-demand.game.test.ts` |
 | Same-item lane fallback, hand sizes and circuit windows | [Same-item fixtures](fixtures/same-item/README.md) | `same-item-pickup-fixture.game.test.ts` |
-| Front-facing underground exit, mirroring and ingredient swaps | [Front exit](fixtures/front-underground-exit/README.md) | `front-underground-exit.game.test.ts` |
+| Downstream/open-end underground exit, mirroring and ingredient swaps | [Front exit](fixtures/front-underground-exit/README.md) | `front-underground-exit.game.test.ts` |
+| Over-the-hood underground exit, mirroring and moving/backed-up supply | [Over-the-hood exit](fixtures/over-the-hood-underground-exit/README.md) | `over-the-hood-underground-exit.game.test.ts` |
 | Front-facing underground entrance, moving/backed-up and observed arrival phases | [Front entrance](fixtures/front-underground-entrance/README.md) | `front-underground-entrance.game.test.ts`, `front-underground-entrance-fallback.game.test.ts` |
 | Side entry, finite merge stock, cutoff boundaries and starvation | [Side-loaded straight tile](fixtures/side-loaded-straight/README.md) | `side-loaded-straight.game.test.ts`, `side-loaded-entry.game.test.ts`, `two-stream-merge-replay.test.ts` |
 | Direct splitter pickup, priority, filters and seeded boundaries | [Single splitter](fixtures/splitter/README.md), [routing controls](fixtures/splitter/routing-controls.md) | `splitter.game.test.ts`, `splitter-routing.game.test.ts`, `splitter-entry-window.game.test.ts` |
@@ -20,15 +21,19 @@ implementation remains out of scope.**
 | Belt-drop stack sizes and finite output stock | [All-speed drop controls](../belt-drop/fixtures/turbo-stacks/README.md) | `../belt-drop/turbo-stacks.game.test.ts` |
 | Generated-clock throughput and recovery | [Build checks](../../builds/README.md) | `../../builds/moving-pickup.game.test.ts`, `../../builds/same-item-pickup-clock.game.test.ts` |
 
-All four belt speeds now have ordinary, front-entrance, backed-up front-exit, side-entry, splitter-observation
+All four belt speeds now have ordinary, front-entrance, backed-up front-exit, over-the-hood exit, side-entry, splitter-observation
 and drop measurements. Passing a capture regression can preserve a **known simulator counterexample**.
 Fast/normal backed-up supplies expose finite refill; normal moving side-entrance fallback can expose arm travel.
 A test-only jammed-queue replay fits the ordinary backed-up evidence without changing the production model.
 
-Moving front-exit coverage awaits a suitable user-supplied scaffold. Normal moving front-entrance controls use a
+The downstream front-exit fixture blocks belt continuation at the inserter's tile. Over-the-hood exit pickups
+have their own fixture: the inserter sits upstream and leaves the downstream route open. Normal moving front-entrance controls use a
 paired compact assembler because the original plant's tunnel exceeds normal underground range. Only the bounded
 turbo two-stream merge is implemented. Slower native captures do not enable configuration support. The shelved
 splitter kernel remains archived; current splitter probes observe the game and preserve unsupported warnings.
+The over-the-hood matrix has 48 compact first-hand controls at all four speeds and 36 original-plant counterparts
+at the three speeds that can pair its longer tunnel. Both mirrors, moving/backed-up supply and original/swapped/same-item
+lanes pass; full phase sweeps and repeated hands remain unverified for this approach. Sidecar still warns unsupported/inline.
 
 ## Run a targeted check
 
