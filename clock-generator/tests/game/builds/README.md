@@ -43,7 +43,7 @@ and avoids resetting the build or retaining millions of redundant samples.
 `pickup-clock-speed-controls.json` records native period summaries separately from the generator's
 verdict. A measured throughput/recovery counterexample is not a claim that the selected clock is safe.
 Express moving half-tile generation already reports `no recovery`; the backfill preserves that verdict.
-Unsupported splitter and slower-merge sources are not overridden to generate clocks.
+Unsupported sources are not overridden to generate clocks.
 
 The backfill retained 39 native runs, each with 63 baseline periods and three recovery windows.
 All 21 gear clocks meet their 16-item target in every baseline/recovery period. Eight of the 18

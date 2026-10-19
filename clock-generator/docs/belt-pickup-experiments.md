@@ -5,7 +5,7 @@ measurements, screenshots and reproduction commands remain in the [mechanics fix
 The [simulator guide](simulator.md#picking-up-from-moving-belts-and-underground-endpoints) defines supported behavior.
 
 The accepted changes are unreleased, reserved for **engine/UI 0.19.0** and **Sidecar 0.11.0**.
-Publishing remains on hold. **Splitter implementation is out of scope**; its measurements are retained as research.
+Publishing remains on hold. **Splitters are out of scope.**
 
 ## General rules
 
@@ -102,13 +102,10 @@ All four speeds now have repeated native controls. Only the bounded turbo merge 
 measured slower behavior does not establish a correct routing model. Release sweeps cover the tested gate delays,
 rather than every possible relative phase of independent incoming streams.
 
-### Splitter research, generated clocks and drops
+### Generated clocks and drops
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
-| Single splitter: ingredients, mirroring, ports, filters and priority controls | Tested | Tested | Tested | Tested |
-| Two serial splitters: independent mirroring and priority controls | Tested | Tested | Tested | Tested |
-| Seeded splitter routing / admission boundaries | Tested | Tested | Tested | Tested |
 | Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; generator result mismatch | Tested; generator result mismatch | Tested; generator result mismatch |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
@@ -116,9 +113,7 @@ rather than every possible relative phase of independent incoming streams.
 
 The 39 added ordinary clock checks are complete: 29 meet both target and recovery, eight miss baseline targets,
 and two meet baseline but fail exact recovery. Slower merge-clock generation is blocked by the intentionally
-turbo-only supported merge schema and remains **Not tested**. Splitter backfills restore observation-only probes;
-the production routing kernel and splitter implementation remain out of scope. All splitter rows record native
-research only, with no supported simulator comparison. The belt-drop row covers the first hand on an empty
+turbo-only supported merge schema and remains **Not tested**. The belt-drop row covers the first hand on an empty
 receiving tile; the normal-speed occupied-tile limitation is described below.
 
 ## Tick-pattern matrix
@@ -205,43 +200,6 @@ The equivalent observed landing limit is below 131 units; arbitrary incoming hea
 Backed-up fast/normal single-stream repeated hands also expose finite refill. Operating mixed-item controls
 starve at every speed and with either ingredient arrangement; inventory-clearing probes cannot prove throughput.
 
-### Direct splitter pickups — unsupported research
-
-These are natural captures with an operating machine. The single-splitter layout has a south pickup port and
-north drain; the serial layout has two splitters and two consumers feeding one machine. Priority controls are
-independent tests with ingredients, mirroring and gate timing unchanged.
-
-The table below records the original **turbo** controls. Here **Moving = false** describes the locally blocked pickup ports. Other outputs can still drain or route
-stock after withdrawals, so this does **not** imply the simulator's saturated backed-up availability rule.
-Totals below refer to the first hand; later behavior is listed separately.
-
-| Scenario | Moving | First-hand offsets | Total pickup ticks | Later behavior / interpretation |
-| --- | --- | --- | --- | --- |
-| One splitter, right priority, drain open | false | `0,1,2,3` | 4 | Next four hands `0,1,2,4`; ordinary saturated supply fails |
-| Same layout, ingredients swapped or inserter mirrored | false | `0,1,2,3` | 4 | Same timing limitation; selected physical lane follows mirroring |
-| One splitter, right priority, drain removed | false | `0,1,2,3` | 4 | Six hands remain consecutive |
-| One splitter, priority unset, drain open | false | `0,1,2,5` | 6 | Stock diverts to the other output while pickup is empty |
-| One splitter, priority unset, drain removed | false | `0,1,2,3` | 4 | Six hands remain consecutive in this local control |
-| One splitter, priority toward the open drain | false | No grabs in 60 ticks | — (no pickup) | Pickup port receives no stock |
-| One splitter, iron or cable output filter | false | `0,1,2,3` | 4 | Supply filter and machine insertion limits still apply |
-| Two serial splitters, both right priority | false | Both `0,1,2,3` | 4 each | Ingredient swaps and independent mirroring flips preserve first-hand timing |
-| Two serial splitters, both priorities unset | false | Both `0,1,2,5` | 6 each | Each changed splitter delays its own first hand |
-| Two serial splitters, only one priority unset | false | Changed: `0,1,2,5`; other: `0,1,2,3` | Changed: 6; other: 4 | Isolates the source of diversion |
-| Two serial splitters, both unset, final drain removed | false | Both `0,1,2,3` | 4 each | Upstream second hand becomes `0,1,2,5`; withdrawals reopen the through route |
-
-For reference, a first hand at capture ticks `2,3,4,7` is offsets **`0,1,2,5`**. The usual consecutive control is
-at ticks `2,3,4,5`. A later serial wait at `58,59,60,88` comes from the shared machine's insertion limit,
-not absent stock. These observations reject a universal splitter delay or a blanket backed-up approximation.
-
-The all-speed observation backfill preserves the priority distinction. For one splitter with an open drain:
-
-| Speed | Moving | Right-priority first-hand offsets | Total pickup ticks | Unset-priority first-hand offsets | Total pickup ticks |
-| --- | --- | --- | --- | --- | --- |
-| Turbo | false | `0,1,2,3` | 4 | `0,1,2,5` | 6 |
-| Express | false | `0,1,3,6` | 7 | `0,1,3,8` | 9 |
-| Fast | false | `0,1,3,7` | 8 | `0,1,3,11` | 12 |
-| Normal | false | `0,1,2,10` | 11 | `0,1,2,18` | 19 |
-
 ### Related belt-drop calibration
 
 These are **deposit offsets**, not pickups. The original turbo table is below. A finite 32-item source feeds the belt; only the belt-stack
@@ -317,31 +275,6 @@ match all 511 transitions each, and its generated gear clock held 60/60 periods.
 supported topology does not guarantee recipe supply. Sidecar's saved support/model metadata distinguishes
 supported, unsupported and legacy inputs. Updating software never promotes an old unsupported capture;
 recapture is required. See the [capture boundary](pickup-capture.md).
-
-## Shelved splitter calibrations
-
-The archived turbo routing candidate matched **60 natural transitions and 30 seeded controls**, checking all
-eight lines and stack identities, positions, items and counts. Observed feeder arrivals/withdrawals remain
-boundary inputs; seeded consumers are disabled. This is local routing evidence, not clock verification.
-
-| Boundary | Original turbo finding | Four-speed observation backfill |
-| --- | --- | --- |
-| Geometry/spacing | Input 179, output 128, normal spacing 64 units | Unchanged |
-| Preferred entry | Head `p < 32` lands at `p + 45`, shifted behind stock | Landing `p + 77 - speed` in tested crossings |
-| Output admission | 127 accepted; 128 waits | Unchanged |
-| Blocked preferred output | Isolated head waits; follower `q < 96` can overflow at `q - 19` | Still requires follower/stock state |
-| Follower/output-tail cutoff | 95 accepted; 96 first waits | Last accepted 95/87/79/71 for turbo/express/fast/normal |
-| Upstream admission | Shifted tail 178 fits; 179 waits upstream | Unchanged; normal decision can take two ticks |
-
-The controls reject constant entry at 64, unconditional diversion and admission without tail spacing. They do
-not establish general memoryless arbitration. The backfill adds 60 slower natural controls, 146 seeded controls
-and eight boundary repeats, retaining explicit unsupported capture status.
-
-The original [30 controls](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts)
-and [experimental kernel](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/src/state/turbo-splitter-supply.ts)
-remain at archived commit `7a1b4e2e`. Eleven replay and five kernel tests passed there, but **no generated
-splitter clock was verified**. Observation probes are backfilled here; the production kernel remains absent
-from master. **Splitter implementation and capture support remain out of scope.**
 
 ## Evidence limits
 

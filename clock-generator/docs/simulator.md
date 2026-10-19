@@ -29,7 +29,7 @@ filter/recipe order and matching physical lanes are tried in their config order.
 ### Picking up from moving belts and underground endpoints
 
 The [consolidated experiment record](belt-pickup-experiments.md) documents the measurements, rejected
-hypotheses, generated-clock checks and shelved splitter calibrations behind these scoped rules.
+hypotheses and generated-clock checks behind these scoped rules.
 
 **Take one reachable stack per tick: preferred lane first, then the other lane if the preferred lane has none of the item being collected. Leave a hole and keep the remaining stacks moving at belt speed.**
 
@@ -182,19 +182,7 @@ remain unverified after save/reload or version updates; update Sidecar and recap
 Manual configurations keep the straight-belt default. A newer engine does not reinterpret an old unsupported
 capture as a supported source.
 
-### Splitter pickups remain unsupported
-
-Keep ingredient selection separate from replenishment: choose an eligible item from reachable stock, try the
-preferred lane first, and keep that item while filling the hand. Recheck machine eligibility on every grab.
-The [splitter controls](../tests/game/mechanics/belt-pickup/fixtures/splitter/routing-controls.md) agree with
-these selection rules, but a splitter's priority, filter, other outlet and other consumers change when stock
-reaches its pickup port. There is no fixed splitter tick surcharge. Closing the final drain does not guarantee
-permanent local saturation when another consumer opens space upstream. Sidecar retains the `splitter` warning;
-ordinary straight-belt geometry or infinite backed-up supply must not be treated as verified splitter routing.
-
-The [shelved calibration record](belt-pickup-experiments.md#shelved-splitter-calibrations) preserves the later
-30 independent seeded controls and continuous native routing comparison. Their finite routing kernel remains
-on an archived feature commit; splitter implementation is out of scope, with no config or capture support.
+**Splitters are out of scope.**
 
 ### A stack inserter on a moving lane
 

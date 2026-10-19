@@ -74,7 +74,7 @@ not a stack-size research change. The regression preserves these native second h
 claiming the empty-belt function predicts a nonempty tile.
 
 Raw captures are retained locally under ignored `work/belt-speed-coverage/drop-01/` and `drop-02/`;
-the committed timing baseline is portable. No splitter implementation or release publication is involved.
+the committed timing baseline is portable. Publishing remains on hold.
 
 ## Reproduce
 

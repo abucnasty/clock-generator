@@ -43,7 +43,7 @@ npm run build   # tsc, into dist/
 
 The [contributor guide](../CONTRIBUTING.md) maps changes to relevant checks and explains where resources belong.
 The [belt pickup experiment record](docs/belt-pickup-experiments.md) consolidates measurements, simulator
-changes, coverage limits and shelved splitter calibrations. The [mechanics index](tests/game/mechanics/belt-pickup/README.md)
+changes and coverage limits. The [mechanics index](tests/game/mechanics/belt-pickup/README.md)
 links the runnable fixtures and their detailed findings.
 
 ## Entries and the Game Data
