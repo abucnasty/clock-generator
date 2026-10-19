@@ -28,7 +28,7 @@ filter/recipe order and matching physical lanes are tried in their config order.
 
 ### Picking up from moving belts and underground endpoints
 
-The [consolidated experiment record](belt-pickup-experiments.md) documents the measurements, rejected
+The [consolidated experiment record](belt-pickup/experiments.md) documents the measurements, rejected
 hypotheses and generated-clock checks behind these scoped rules.
 
 **Take one reachable stack per tick: preferred lane first, then the other lane if the preferred lane has none of the item being collected. Leave a hole and keep the remaining stacks moving at belt speed.**
@@ -108,7 +108,7 @@ The [same-item front-exit controls](../tests/game/mechanics/belt-pickup/fixtures
 also fill at `0,1,2,3` entirely from lane 1 unmirrored or lane 2 mirrored, leaving the other lane untouched.
 Their outlet is physically blocked by the front inserter, so these are backed-up measurements.
 
-The [four-speed backfill](belt-pickup-experiments.md#belt-speed-coverage) now measures ordinary side pickups,
+The [four-speed backfill](belt-pickup/experiments.md#belt-speed-coverage) now measures side pickups,
 front-entrance moving/backed-up controls and front-exit backed-up controls at turbo, express, fast and normal
 speeds. Normal moving front-entrance controls use a paired compact destination to respect underground range.
 The historical timing examples above describe turbo fixtures.
@@ -176,7 +176,7 @@ merge describes its behavior; it does not guarantee that the build can supply it
 
 ### Captured pickup provenance
 
-[Pickup capture status](pickup-capture.md) is saved on each imported source. Only an explicit supported model
+[Pickup capture status](belt-pickup/capture.md) is saved on each imported source. Only an explicit supported model
 with matching geometry/lane/supply data can drive generation. Unsupported and legacy unclassified pickups
 remain unverified after save/reload or version updates; update Sidecar and recapture when support is available.
 Manual configurations keep the straight-belt default. A newer engine does not reinterpret an old unsupported

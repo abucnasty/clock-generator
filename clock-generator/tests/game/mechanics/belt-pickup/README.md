@@ -1,6 +1,8 @@
 # Belt pickup experiments
 
-Start with the [consolidated findings and coverage matrix](../../../../docs/belt-pickup-experiments.md).
+Start with the [consolidated findings and coverage matrix](../../../../docs/belt-pickup/experiments.md).
+Use the [diagram glossary](../../../../docs/belt-pickup/glossary.md) to identify layouts and test conditions,
+and the [timing reference](../../../../docs/belt-pickup/timing.md) to compare grab ticks and total collection time.
 It distinguishes native measurements, simulator agreement and remaining gaps. Detailed fixture reports below
 retain the setup, corrections, screenshots and reproduction commands. **Publishing remains on hold.**
 **Splitters are out of scope.**
@@ -9,20 +11,20 @@ retain the setup, corrections, screenshots and reproduction commands. **Publishi
 
 | Question | Fixture findings | Automated checks |
 | --- | --- | --- |
-| Ordinary reach, refill, ingredient eligibility and repeated hands | [Different items and four-speed controls](fixtures/different-items/README.md) | `belt-speed-coverage.game.test.ts`, `ordinary-reflection.game.test.ts`, `ordinary-phase.game.test.ts`, `ingredient-demand.game.test.ts` |
+| Side pickups: reach, refill, ingredient eligibility and repeated hands | [Different items and four-speed controls](fixtures/different-items/README.md) | `belt-speed-coverage.game.test.ts`, `ordinary-reflection.game.test.ts`, `ordinary-phase.game.test.ts`, `ingredient-demand.game.test.ts` |
 | Same-item lane fallback, hand sizes and circuit windows | [Same-item fixtures](fixtures/same-item/README.md) | `same-item-pickup-fixture.game.test.ts` |
 | Downstream/open-end underground exit, mirroring and ingredient swaps | [Front exit](fixtures/front-underground-exit/README.md) | `front-underground-exit.game.test.ts` |
 | Over-the-hood underground exit, mirroring and moving/backed-up supply | [Over-the-hood exit](fixtures/over-the-hood-underground-exit/README.md) | `over-the-hood-underground-exit.game.test.ts` |
 | Front-facing underground entrance, moving/backed-up and observed arrival phases | [Front entrance](fixtures/front-underground-entrance/README.md) | `front-underground-entrance.game.test.ts`, `front-underground-entrance-fallback.game.test.ts` |
 | Side entry, finite merge stock, cutoff boundaries and starvation | [Side-loaded straight tile](fixtures/side-loaded-straight/README.md) | `side-loaded-straight.game.test.ts`, `side-loaded-entry.game.test.ts`, `two-stream-merge-replay.test.ts` |
-| Capture support and stale/unsupported metadata | [Capture boundary](../../../../docs/pickup-capture.md) | `pickup-capture.game.test.ts` |
+| Capture support and stale/unsupported metadata | [Capture boundary](../../../../docs/belt-pickup/capture.md) | `pickup-capture.game.test.ts` |
 | Belt-drop stack sizes and finite output stock | [All-speed drop controls](../belt-drop/fixtures/turbo-stacks/README.md) | `../belt-drop/turbo-stacks.game.test.ts` |
 | Generated-clock throughput and recovery | [Build checks](../../builds/README.md) | `../../builds/moving-pickup.game.test.ts`, `../../builds/same-item-pickup-clock.game.test.ts` |
 
-All four belt speeds now have ordinary, front-entrance, backed-up front-exit, over-the-hood exit, side-entry
+All four belt speeds now have side-pickup, front-entrance, backed-up front-exit, over-the-hood exit, side-entry
 and drop measurements. Passing a capture regression can preserve a **known simulator counterexample**.
 Fast/normal backed-up supplies expose finite refill; normal moving side-entrance fallback can expose arm travel.
-A test-only jammed-queue replay fits the ordinary backed-up evidence without changing the production model.
+A test-only jammed-queue replay fits the backed-up side-pickup evidence without changing the production model.
 
 The downstream front-exit fixture blocks belt continuation at the inserter's tile. Over-the-hood exit pickups
 have their own fixture: the inserter sits upstream and leaves the downstream route open. Normal moving front-entrance controls use a

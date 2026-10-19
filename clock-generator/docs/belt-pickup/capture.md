@@ -1,5 +1,7 @@
 # Pickup capture and configuration boundary
 
+[Belt pickup documentation](README.md)
+
 A manually configured belt pickup defaults to straight-belt geometry. An imported pickup is a different claim:
 its capture must explicitly identify a model the current engine supports. A default or a newer version number
 cannot supply facts that the old capture omitted.

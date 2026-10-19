@@ -50,7 +50,7 @@ All 21 gear clocks meet their 16-item target in every baseline/recovery period. 
 lower-speed electromagnetic clocks meet both; ten preserve counterexamples. Two of those already
 receive the generator verdict `no recovery` (express moving half-tile pickups). Eight receive `stable`
 but miss native baseline or recovery periods. Exact counts are in the committed summaries; the
-[experiment report](../../../docs/belt-pickup-experiments.md) compares the scenarios.
+[experiment report](../../../docs/belt-pickup/experiments.md) compares the scenarios.
 
 These are complete-clock observations. Finite input refill, clock/input phase, machine wake timing,
 and occupied output-belt history remain possible contributors; this capture does not isolate a cause.

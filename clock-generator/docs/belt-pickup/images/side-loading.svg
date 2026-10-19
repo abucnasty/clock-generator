@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="885" viewBox="0 0 560 885" role="img" aria-labelledby="title desc">
+  <title id="title">Inner-only, outer-only and two-stream side-loading</title>
+  <desc id="desc">The incoming belt travels up and turns right. Both incoming lanes enter the bottom lane of the straight receiving belt.</desc>
+  <defs>
+    <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
+    </marker>
+    <marker id="reach" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#bd4c0b" />
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="0" y="0" width="560" height="885" rx="0" fill="#f4f7fb" stroke="none" />
+    <text x="18" y="27" font-size="16" fill="#203047" font-weight="normal">Top view • receiving belt → • incoming belt ↑</text>
+    <g transform="translate(15 50)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">1. Inner stream only</text>
+      <rect x="70" y="75" width="380" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M75 107.0 L445 107.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M78 87 L438 87" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="139" width="64" height="62" rx="2" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M257 144 L257 196" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M257 50 L257 121" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="257" cy="121" r="5" fill="#bd4c0b" />
+      <rect x="242" y="35" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="253" y="55" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <path d="M273 193 L273 126 Q273 121 284 121 L319 121" fill="none" stroke="#7953b5" stroke-width="3" />
+      <circle cx="273" cy="157" r="4" fill="#7953b5" />
+      <circle cx="273" cy="181" r="4" fill="#7953b5" />
+      <text x="330" y="177" font-size="14" fill="#7953b5" font-weight="normal">Inner</text>
+      <path d="M319 121 l-7 -4 v8 Z" fill="#7953b5" />
+      <text x="370" y="154" font-size="13" fill="#526176" font-weight="normal">Lane 2</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Inside of the turn → near the downstream end.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The other incoming lane is empty.</text>
+    </g>
+    <g transform="translate(15 325)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">2. Outer stream only</text>
+      <rect x="70" y="75" width="380" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M75 107.0 L445 107.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M78 87 L438 87" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="139" width="64" height="62" rx="2" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M257 144 L257 196" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M257 50 L257 121" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="257" cy="121" r="5" fill="#bd4c0b" />
+      <rect x="242" y="35" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="253" y="55" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <path d="M241 193 L241 126 Q241 121 242 121 L277 121" fill="none" stroke="#00796b" stroke-width="3" />
+      <circle cx="241" cy="157" r="4" fill="#00796b" />
+      <circle cx="241" cy="181" r="4" fill="#00796b" />
+      <text x="80" y="177" font-size="14" fill="#00796b" font-weight="normal">Outer</text>
+      <path d="M277 121 l-7 -4 v8 Z" fill="#00796b" />
+      <text x="370" y="154" font-size="13" fill="#526176" font-weight="normal">Lane 2</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Outside of the turn → farther upstream.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The other incoming lane is empty.</text>
+    </g>
+    <g transform="translate(15 600)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="#ffffff" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">3. Two-stream merge</text>
+      <rect x="70" y="75" width="380" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M75 107.0 L445 107.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M78 87 L438 87" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="139" width="64" height="62" rx="2" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M257 144 L257 196" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M257 50 L257 121" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="257" cy="121" r="5" fill="#bd4c0b" />
+      <rect x="242" y="35" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="253" y="55" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <path d="M241 193 L241 126 Q241 121 242 121 L277 121" fill="none" stroke="#00796b" stroke-width="3" />
+      <circle cx="241" cy="157" r="4" fill="#00796b" />
+      <circle cx="241" cy="181" r="4" fill="#00796b" />
+      <text x="80" y="177" font-size="14" fill="#00796b" font-weight="normal">Outer</text>
+      <path d="M273 193 L273 126 Q273 121 284 121 L319 121" fill="none" stroke="#7953b5" stroke-width="3" />
+      <circle cx="273" cy="157" r="4" fill="#7953b5" />
+      <circle cx="273" cy="181" r="4" fill="#7953b5" />
+      <text x="330" y="177" font-size="14" fill="#7953b5" font-weight="normal">Inner</text>
+      <path d="M319 121 l-7 -4 v8 Z" fill="#7953b5" />
+      <text x="370" y="154" font-size="13" fill="#526176" font-weight="normal">Lane 2</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Both incoming lanes feed ONE receiving lane.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The streams share space; they are not two outputs.</text>
+    </g>
+  </g>
+</svg>

@@ -42,8 +42,8 @@ npm run build   # tsc, into dist/
 `record` and `verify` build first. Run either without arguments for its options.
 
 The [contributor guide](../CONTRIBUTING.md) maps changes to relevant checks and explains where resources belong.
-The [belt pickup experiment record](docs/belt-pickup-experiments.md) consolidates measurements, simulator
-changes and coverage limits. The [mechanics index](tests/game/mechanics/belt-pickup/README.md)
+The [belt pickup documentation](docs/belt-pickup/README.md) groups the diagram glossary, timing reference,
+experiment findings and capture rules. The [mechanics index](tests/game/mechanics/belt-pickup/README.md)
 links the runnable fixtures and their detailed findings.
 
 ## Entries and the Game Data
