@@ -8,7 +8,7 @@ onto an eastbound turbo belt. Two more straight tiles lead to an input loader an
 A constant combinator gates the inserter during 120 warm-up ticks. The source is empty during warm-up;
 the probe then inserts exactly 32 iron plates into the source chest and releases the gate. The source is an
 infinity chest with an iron filter set to **at least zero**, with unfiltered removal disabled: it identifies the
-source item for capture but supplies no additional items. Conservation checks enforce that finite supply. Belts and held
+source item for capture but supplies no additional items. Conservation checks enforce that finite supply. In the original empty-output controls, belts and held
 items are never seeded or edited. The receiving chest retains all deposits, so every item can be accounted for.
 
 ![Single legendary inserter depositing onto three eastbound turbo tiles and a loader to a receiving chest](scaffold.jpg)
@@ -70,11 +70,36 @@ All first hands start depositing at native tick 6. Every first-hand deposit and 
 **Normal second hands instead use 0,8,16,…:** preceding stock still occupies the receiving tile, so the initial
 two-stack burst is unavailable. Their first deposits occur at tick 126, 62, 38 and 30 for stack sizes 1–4;
 the corresponding second-hand durations are 121, 57, 33 and 25 ticks. This is finite receiving-space behavior,
-not a stack-size research change. The regression preserves these native second hands separately instead of
-claiming the empty-belt function predicts a nonempty tile.
+not a stack-size research change. Runtime now retains this output stock between hands; the empty-belt function
+remains a reference for the first hand. The production comparison checks both hands without observed hand arrivals
+or deposit ticks as inputs. It starts disabled with the same finite 32-item source.
 
 Raw captures are retained locally under ignored `work/belt-speed-coverage/drop-01/` and `drop-02/`;
 the committed timing baseline is portable. Publishing remains on hold.
+
+## Occupied output and admission cutoff
+
+The optional `seedPosition` control inserts one four-item copper packet into the receiving lane after native tick 5,
+when the inserter naturally holds its full iron hand and has made no deposit. It never edits held items. The probe
+retains the actual post-insertion position: `insert_at` shifts the requested coordinate by one movement step.
+The total changes once from 32 to 36 items; iron and copper sink counts preserve conservation.
+
+Sixteen coarse controls at express/normal speed and twelve cutoff controls at all four speeds produced the
+[portable production clips](output-clips.json), alongside the original sixteen speed/stack-size runs. The cutoff
+controls request positions `128 + 2 × speed`, plus/minus one 1/256-tile unit. Each runs in an independent save.
+All 44 clips match the production state machine on every held quantity, finite source quantity and receiving-tile
+packet position (9,120 ticks). Only the one observed copper seed is supplied; later pickups and deposits are predicted.
+
+A deposit lands at its nominal spot plus one movement step, shifted upstream when preceding stock requires it.
+The landing must stay strictly within a quarter tile behind the nominal spot. An insertion can compress the gap
+of an upstream packet, which then waits while the gap reopens. This explains the observed cutoff without a fixed
+per-hand delay. Runtime keeps this traffic across hands and control replacements. Explicit drop positions share
+traffic; unspecified positions retain independent local output tiles. The downstream outlet must drain freely.
+
+Fresh cutoff runs also compare the production model directly, rather than only preserving the native timing.
+Uncaptured coarse controls for turbo/fast remain available as separate experiments; the committed evidence above
+contains only the actual 44 recordings. Raw occupied-output reports live under ignored
+`work/belt-pickup-parity/drop-window-01/` and `drop-window-cutoff-01/`.
 
 ## Reproduce
 
@@ -86,7 +111,8 @@ BELT_DROP_CAPTURE_DIR=../work/belt-drop/new-run npm run test:game -- tests/game/
 
 # Affected native regression and offline checks.
 npm run test:game -- tests/game/mechanics/belt-drop/turbo-stacks.game.test.ts
-npm test -- src/entities/belt/belt.test.ts src/entities/inserter/inserter-hand-size.test.ts
+npm test -- src/entities/belt/belt.test.ts src/entities/inserter/inserter-hand-size.test.ts src/control-logic/inserter/modes/drop/belt-output-stock.test.ts
+BELT_SPEED_CAPTURE_DIR=../work/belt-drop/new-cutoff npm run test:game -- tests/game/mechanics/belt-drop/occupied-output.game.test.ts -t cutoff
 npm run screenshots -- --case=turbo-belt-drop-stacks
 ```
 

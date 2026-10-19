@@ -125,12 +125,12 @@ independent incoming streams; exact gate ticks remain in the fixture instruction
 | Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; generator result mismatch | Tested; generator result mismatch | Tested; generator result mismatch |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
-| Belt drops onto an empty tile, first hand, stack sizes 1–4 | Tested | Tested | Tested | Tested |
+| Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
+| Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
 The 39 added ordinary clock checks are complete: 29 meet both target and recovery, eight miss baseline targets,
 and two meet baseline but fail exact recovery. Slower merge-clock generation is blocked by the intentionally
-turbo-only supported merge schema and remains **Not tested**. The belt-drop row covers the first hand on an empty
-receiving tile; the normal-speed occupied-tile limitation is described below.
+turbo-only supported merge schema and remains **Not tested**. The belt-drop rows now also compare finite receiving stock against the simulator, including the normal-speed second hand.
 
 ## Tick-pattern matrix
 
@@ -244,7 +244,11 @@ The four-speed backfill covers all **16 speed/stack-size combinations** and cons
 Every first hand matches `Belt::amountToDropAtTick`. Stack size 3 leaves two items held after depositing 30.
 At normal speed, the second hand can encounter three stacks left on the receiving tile: its deposit offsets become
 `0,8,16,…`, losing the initial two-tick burst. This occupied-tile case is retained separately from the empty-belt
-calibration; an empty-belt formula is not a general finite-output-lane model.
+calibration. Runtime now retains output stock and admits deposits only when space is available, reproducing
+both hands at every speed/stack size. A further 28 occupied-output recordings check the strict landing cutoff
+and temporary compressed gaps. Across 44 portable clips, the simulator matches every source quantity, held
+quantity and receiving-tile position for 9,120 ticks from a disabled start. This validates freely draining output;
+it does not establish generated-clock recovery through downstream blockage.
 
 ## Simulator impact and verification
 

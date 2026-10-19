@@ -16,7 +16,6 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     // `tick` and the counts of items are left out of its key
     inserter: ["status", "tick", "held_item", "items_picked_up", "items_dropped", "waits_for_sink", "enabled"],
     drill: ["status"],
-    BeltDropLogic: ["current_tick"],
     MachineDropLogic: ["current_tick"],
     ChestDropLogic: ["current_tick"],
     // Belt position is in the source state; pickup age no longer drives any decision.

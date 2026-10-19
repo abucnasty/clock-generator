@@ -30,7 +30,7 @@ export interface Inserter extends Entity {
     /** Items per hand for each item it carries; see handSizeFor */
     hand_sizes?: ReadonlyMap<ItemName, number>;
     animation: InserterAnimation;
-    /** Where it drops on a belt that moves; without it the drop takes the same ticks wherever the belt carries stacks */
+    /** Where it drops on a shared output lane; omitted geometry uses an independent local tile with retained stock */
     drop?: BeltDropSpot;
     /** Physical exposed length of a belt input, retained for both moving and backed-up supply. */
     pickup_length?: 0.5 | 1;

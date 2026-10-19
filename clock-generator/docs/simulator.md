@@ -198,28 +198,38 @@ capture as a supported source.
 
 **Splitters are out of scope.**
 
-### A stack inserter on a moving lane
+### A stack inserter dropping onto a moving lane
 
-A stack inserter that drops on a belt that moves is not always done in the 4 ticks of a free lane. Its four stacks go in at the tick it starts, +1, +2 and +4; but when the stacks of another inserter pass its spot just then, or its own stacks do, a stack has to wait for room. The hand then takes 6, 14 or 22 ticks to empty.
+A legendary stack inserter deposits one belt stack per successful tick. Output packets persist between hands,
+so the empty-belt burst is available only when the receiving space permits it. With four-item stacks, an empty
+tile gives deposit offsets `0,1,2,4` on turbo, `0,1,2,5` on express, `0,1,4,8` on fast, and `0,1,8,16` on normal.
+A normal belt's next hand can instead use `0,8,16,24` because the previous hand still occupies the tile.
 
-The config gives the rule what it needs with `drop` on the sink of every inserter that drops on the belt: `{ "lane": 1, "position": 12.5 }`, the lane by its place in the belt's `lanes` (the left lane in the direction of travel first, as with `near_lane`; 1 when the belt lists one lane, even if the inserter drops on the belt's right lane) and the tiles along the belt's path, increasing in the direction the belt runs, from an origin that is the same for all of them (it may be negative, for instance minus the tiles to the end of the line, and fractions are allowed: only the distances count). It is all or none per belt: a config in which some inserters that drop on a belt have it and others do not is refused, naming the others, and `drop` on a source is refused. Without it the drop takes the ticks of a free lane, as before.
+The simulator keeps a finite queue at each drop spot, in 1/256-tile units:
 
-The rule, per lane of a belt, shared by every inserter that drops on it:
-- A lane moves 8 ticks a tile on a turbo belt (the speed comes from the belt type). A stack put down at tick t at a spot x, d ticks behind it, has the origin t + d - 8x. Two stacks keep the difference of their origins as long as they are on the lane, so the origin is all the lane remembers of a stack; it forgets the stacks that have passed the last spot.
-- An inserter with a full hand tries one stack of 4 (the stack size of the lane) in a tick, starting in the tick where a drop on a free lane starts. It takes the smallest d of 0, 1 and 2 ticks (a quarter of a tile) for which no stack on the lane, its own or another inserter's, has an origin within 1 tick of its own; if there is none, it waits for the next tick.
-- On a free lane that gives stacks at +0, +1, +2 and +4, the 4-tick drop. A gapless train of stacks passing the spot, 2 ticks apart, makes the hand wait and then go in behind it at 2 ticks apart (a 6-tick drop); a second train arriving while the hand is still at its stacks makes the later stack wait for it too (14 and 22 ticks).
-- The belt ends in a sink that takes everything: the lane never backs up.
+- Move packets downstream at belt speed (8/16/24/32 units per tick). Followers stop behind preceding packets at
+  quarter-tile spacing (64 units); an already compressed gap reopens without moving a packet backwards.
+- Try to place a new packet one movement step beyond the nominal drop spot, or behind preceding stock when
+  necessary. Its landing position must be strictly less than a quarter tile behind the nominal spot.
+- An insertion may temporarily compress an upstream follower's gap. Keep that packet and let it wait for space.
+- Retain packets between hands and control replacements. Forget them after they pass every drop spot's reach.
 
-Evidence: the thaeln-cell09 scaffold (`resources/config-samples/real/thaeln/cell09`, two turbo belts of four pack inserters each), recorded in Factorio 2.1.21 with the recorder of 0.8.0, which samples the hand and the lane of every inserter each tick. With only the tick each hand became full as input, the rule reproduced every stack of every hand: 432 slow drops predicted of 432 in the game, none false, none missed, and the ticks of all four stacks equal in 3,744 of 3,744 hands under the swings-2 clock; and 5,040 of 5,040 hands of Thaeln's own clock, where none is slow. The 4-tick burst, the 2-tick displacement and spacing were fixed from the free lane alone, nothing was fitted to the slow drops.
+To share this queue between output inserters, give every sink on that belt a `drop`, for example
+`{"lane": 1, "position": 12.5}`. Lane numbers follow the belt config's lane order; positions are tiles along the
+path, increasing downstream from one common origin. Negative and fractional positions are allowed. Either all
+output inserters on a belt specify geometry or none do. Without explicit geometry, each inserter uses an
+independent local tile at position 0.5 and retains its own output stock; the config does not imply that these
+unknown spots collide.
 
-The separate [free-lane drop calibration](../tests/game/mechanics/belt-drop/fixtures/turbo-stacks/README.md)
-checks turbo belt stack sizes **1, 2, 3 and 4** without changing research. Each drop transfers the selected
-stack size at offsets `0,1,2,4,6,…` until the full hand empties; both full native hands per size match
-`Belt::amountToDropAtTick`, including empty ticks. Stack size 3 uses the existing effective hand of 15 rather
-than the configured maximum of 16. This verifies unobstructed deposition; it does not extend the shared-lane
-collision calibration to those other stack sizes.
+The [drop calibration](../tests/game/mechanics/belt-drop/fixtures/turbo-stacks/README.md) covers all four speeds
+and belt stack sizes 1–4, with a finite source and unchanged research. Portable native clips check every source
+quantity, held quantity and receiving-tile position from a disabled start. Additional occupied-output controls
+check the landing cutoff and compressed gaps. Stack size 3 uses full hands of 15 and leaves the final two items
+waiting in the hand. `Belt.amountToDropAtTick` remains an empty-belt reference; runtime drops use actual space.
+The existing turbo shared-lane regressions retain their 4-, 6-, 14- and 22-tick drop patterns.
 
-What it does not cover: it is checked only with turbo belts and the legendary stack inserter (follow-up F7: other belts, stack sizes and inserters scale the ticks and are not tested), and a sink that backs up is not modelled. A lane that carries stacks of other cells or merges is not either.
+This local output rule assumes a freely draining downstream lane. Downstream blockage and external incoming
+traffic require their own modeled transport geometry. Other inserter prototypes and qualities remain uncalibrated.
 
 ### Two inserters that bring the same item
 
