@@ -8,6 +8,7 @@ import { generateClockAlternatives } from "../../../src/crafting/generate-bluepr
 import { encodeBlueprintFile } from "../../../src/blueprints/serde";
 import { recordInFactorio } from "../../../src/harness/factorio-harness";
 import { outputPerPeriod, recipesMaking } from "../../../src/harness/recording-output";
+import {capturePickupClockSpeed, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 
 const SAMPLE = GameFixturePaths.SAME_ITEM;
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
@@ -100,3 +101,9 @@ describe.sequential("default clocks with same-item lane fallback", () => {
         }
     }
 });
+
+for (const variant of pickupClockSpeedCases("same-item")) test(`speed coverage: ${variant.name}`, async context => {
+    const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
+    context.skip(!process.env.BELT_CLOCK_REPLAY_DIR && process.env.BELT_CLOCK_GENERATION_ONLY !== "1" && (!factorio || !save || !fs.existsSync(save)), "Factorio harness is not configured");
+    await capturePickupClockSpeed(variant);
+}, 960_000);
