@@ -29,7 +29,7 @@ By default every clock is selected and judged from the cold start alone, one run
 - the cold start with the competing inserters served in ascending config ids (`ascending`),
 - the cold start with the competing inserters of each machine served in a random order, drawn from a fixed seed for the whole run, twice (`random-1`, `random-2`).
 
-The existing 12 start phases and the trials for backpressure loss are kept as they were, on the cold start. A start reaches the target when the clock holds its expected output in every period of the judged part of the long run (for the cold start: all the checks of the generator). A clock that fails one of the checks that are not about the start (the one-period check, the 12 start phases) fails from every start, even if each long run keeps up, so it is unstable and not start-dependent. The verdict of the clock from the starts:
+The ordinary clock checks include 12 clock offsets and independent moving-lane phases. A start reaches the target when the clock holds its expected output in every period of the judged part of the long run (for the cold start: all the checks of the generator). A clock that fails one of the checks that are not about the start (the one-period check, the sampled offsets or lane phases) fails from every start, even if each long run keeps up, so it is unstable and not start-dependent. The verdict of the clock from the starts:
 - **stable**: it reaches its target from every start;
 - **start-dependent**: it reaches it from some start and not from another, judged on the same checks;
 - **unstable**: it reaches it from none, which is the verdict it would get with the check off.
@@ -39,6 +39,15 @@ A start-dependent clock is listed as unstable in the one word of the clock (`ver
 The requested override alone is not evidence that a check completed. A null `assessment.start_dependence` can mean not requested or unavailable; the UI preserves the request and generation completion separately and counts actual returned starts. Fractional periods omit shifted-phase samples. Holding from the modeled cold start, numerical rate, sampled-start verdict and evaluated recovery are separate facts: a start-dependent clock can hold its requested rate and have usable loss-trial results while its overall verdict is unstable.
 
 ### How a clock is tried for it
+
+Ordinary moving pickups are checked with independent phases on their two lanes, for both settled output and
+loss recovery. An interruption can shift one lane relative to the other even when a shared clock shift passes.
+The checks advance each lane through one stack-spacing cycle at its belt speed: 2 phase positions on turbo,
+8 on express, 4 on fast and 8 on normal. Both matching lanes are combined for one pickup at a time; other
+pickups keep their default phases. This bounded check does not enumerate joint phases across a conveyor
+network, combine every lane phase with every clock offset, or cover side-feed/merge phases. Backed-up
+pickups retain their finite stationary-stock initialization. These are verification starts, not new config settings
+or a change to the pickup timing rule.
 
 The generator tries every clock that holds its expected output, in the simulator. A loss is one item that stops arriving from the belts and infinity chests of the build, or one output that is no longer taken away. Each loss is cut at four places in the clock period, and at each it lasts a quarter, a half, three quarters and all of the time the build takes to stop. The build has stopped when nothing was moved, crafted or burned for a whole period; a loss ends after 200 periods at the latest. When the item is back the build has 40 periods to be at exactly its expected output again, and has to stay there. The slowest clock of the samples that gets back takes 19. The trials are the same for every build and every clock, and are defined in `clock-generator/src/crafting/backpressure-loss.ts`.
 

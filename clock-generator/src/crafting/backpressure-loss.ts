@@ -140,14 +140,19 @@ export interface LossOutcome {
     /** Clock periods in a bin */
     periods_per_bin: number;
     expected_per_bin: number;
+    /** Trials from the canonical start, or the first lane-phase start that fails. */
     trials: LossTrial[];
-    /** Every trial recovers */
+    /** Every trial recovers at every checked lane-phase start. */
     recovers: boolean;
     /** The most bins a trial took to be back at the expected output; null when one does not recover */
     recovered_after_bins: number | null;
     /** The most ticks the build went on after a cut, over the trials that ran their course; null when it had not stopped at the cap in one of them */
     stopped_after_ticks: number | null;
-    /** Ticks simulated for the trials */
+    /** Additional lane-phase starts checked after the canonical start. */
+    pickup_phase_starts_checked?: number;
+    /** First failing lane-phase start; values are public 1/32-tile units, keyed by inserter ID. */
+    failed_pickup_phases?: Record<string, readonly [number, number]>;
+    /** Ticks simulated across all checked starts. */
     ticks: number;
 }
 

@@ -2,7 +2,7 @@ import assert from "../common/assert";
 import { Config } from "../config";
 import { EnableControlOverrideConfig, EnableControlRange } from "../config/schema";
 import { InserterClock, unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
-import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { createEntityRegistryFromConfig, MovingPickupPhases } from "./sequence/simulation-context";
 import { OpenRange } from "../data-types";
 import { Entity, EntityId } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
@@ -259,7 +259,8 @@ export function clockFromWindows(
  * Whether a clock survives backpressure loss (GOALS.md): the build is run on the windows alone, as its blueprint runs
  * it, once undisturbed and once for every loss it can have (each item that comes off a belt or out of a chest stops
  * arriving, each item it puts on a belt or in a chest is not taken away), and has to be back at exactly its expected
- * output a period after each. See backpressure-loss.ts for how a loss is run and judged.
+ * output after each. Ordinary moving pickups are also tried with independent lane phases, one pickup at a time.
+ * See backpressure-loss.ts for how a loss is run and judged.
  *
  * The config has to be the one the clock was planned on, as for clockFromWindows: the plan gives a fuel inserter its
  * clock. `expected_output_items` is what the output inserters drop in a period of the clock when it holds.
@@ -278,14 +279,28 @@ export function backpressureLossOf(
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
-    const outcomeOf = (loss: BackpressureLossOptions["loss"]): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
+    const outcomeOf = (loss: BackpressureLossOptions["loss"], phases?: MovingPickupPhases): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
         factorio_states: false,
+        moving_pickup_phases: phases,
         backpressure_loss: { ...options, loss, period_ticks, expected_output_items },
     }).backpressure_loss!;
+    const phase_starts = [...movingPickupPhaseStarts(config)];
     const losses = backpressureLossesOf(createEntityRegistryFromConfig(config), config.target_output.recipe);
     const tried = (loss: BackpressureLoss, index: number): LossOutcome => {
         on_loss?.(loss, index, losses.length + 1);
-        return outcomeOf(loss);
+        const canonical = outcomeOf(loss);
+        if (!canonical.recovers || phase_starts.length === 0) return canonical;
+        let ticks = canonical.ticks, recovery = canonical.recovered_after_bins!, stopped = canonical.stopped_after_ticks;
+        for (const [index, phases] of phase_starts.entries()) {
+            const outcome = outcomeOf(loss, phases);
+            ticks += outcome.ticks;
+            if (!outcome.recovers) return {...outcome, ticks, pickup_phase_starts_checked: index + 1,
+                failed_pickup_phases: Object.fromEntries(phases)};
+            recovery = Math.max(recovery, outcome.recovered_after_bins!);
+            stopped = stopped === null || outcome.stopped_after_ticks === null ? null : Math.max(stopped, outcome.stopped_after_ticks);
+        }
+        return {...canonical, ticks, recovered_after_bins: recovery, stopped_after_ticks: stopped,
+            pickup_phase_starts_checked: phase_starts.length};
     };
     return reportOf(period_ticks, expected_output_items, tried({ kind: "none" }, 0), losses.map((loss, index) => tried(loss, index + 1)));
 }
