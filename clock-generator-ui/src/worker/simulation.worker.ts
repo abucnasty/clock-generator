@@ -383,9 +383,12 @@ function handleQuery(requestId: number, query: EngineQuery): void {
 function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
     runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
-        const plan = clockGenerator.planClockAlternatives(config, options);
-        return { type: 'planned', runId, primary: toRunView(plan.primary, config), context: plan.context, tasks: plan.tasks,
-            assumptions: { startDependenceRequested: config.overrides?.check_start_dependence === true } };
+        // the tasks go out as soon as the primary clock is made: the pool runs them while this worker assesses it
+        const plan = clockGenerator.planClockAlternatives(config, options, (context, tasks, primarySignature) => postResponse({
+            type: 'planned', runId, context, tasks, primarySignature,
+            assumptions: { startDependenceRequested: config.overrides?.check_start_dependence === true },
+        }));
+        return { type: 'primary-completed', runId, primary: toRunView(plan.primary, config) };
     });
 }
 
@@ -396,10 +399,11 @@ function handleTask(
     streamLogs: boolean,
     context: import('clock-generator/browser').ClockAlternativeContext,
     taskId: string,
+    assessedSignatures: string[] = [],
 ): void {
     runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
-        const run = clockGenerator.runClockAlternativeTask(config, context, taskId, options);
+        const run = clockGenerator.runClockAlternativeTask(config, context, taskId, options, assessedSignatures);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config) };
     });
 }
@@ -438,7 +442,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             handlePlan(request.runId, request.config, request.debugSteps, request.streamLogs);
             break;
         case 'task':
-            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId);
+            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures);
             break;
         case 'query':
             handleQuery(request.requestId, request.query);

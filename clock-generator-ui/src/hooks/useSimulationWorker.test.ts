@@ -31,6 +31,12 @@ class WorkerTransport {
     requests<T extends WorkerRequest['type']>(type: T) { return this.messages.filter((m): m is Extract<WorkerRequest, { type: T }> => m.type === type); }
 }
 let workers: WorkerTransport[];
+/** A plan as the planning worker sends it: the tasks first, then the primary alternative once it is assessed */
+function sendPlanned(planner: WorkerTransport, planned: Omit<Extract<WorkerResponse, { type: 'planned' }>, 'type' | 'primarySignature'>,
+    primary: Extract<WorkerResponse, { type: 'primary-completed' }>['primary']) {
+    planner.send({ type: 'planned', primarySignature: primary?.signature ?? 'primary', ...planned });
+    planner.send({ type: 'primary-completed', runId: planned.runId, primary });
+}
 const config = formDataToConfig(createDefaultConfig());
 const debug = {} as DebugSteps, validation = {} as ConfigValidation;
 const flush = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
@@ -47,8 +53,8 @@ function passCheck(worker: WorkerTransport) {
 }
 function plan(planner: WorkerTransport) {
     const { runId } = planner.requests('plan').at(-1)!;
-    planner.send({ type: 'planned', runId, primary: null, context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
-        tasks: [{ id: 'one', label: 'One', only_when_needed: false }, { id: 'two', label: 'Two', only_when_needed: false }] });
+    sendPlanned(planner, { runId, context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
+        tasks: [{ id: 'one', label: 'One', only_when_needed: false }, { id: 'two', label: 'Two', only_when_needed: false }] }, null);
     return runId;
 }
 function finishGeneration(planner: WorkerTransport) {
@@ -74,9 +80,9 @@ function selectionClock(id: string, wakeUps: number): ClockAlternativeView {
 
 function planSelection(clocks: ClockAlternativeView[], pending = false) {
     const request = workers[0].requests('plan').at(-1)!;
-    workers[0].send({ type: 'planned', runId: request.runId, primary: { signature: `run-${request.runId}`, alternatives: clocks },
+    sendPlanned(workers[0], { runId: request.runId,
         context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
-        tasks: pending ? [{ id: 'remaining', label: 'Remaining', only_when_needed: false }] : [] });
+        tasks: pending ? [{ id: 'remaining', label: 'Remaining', only_when_needed: false }] : [] }, { signature: `run-${request.runId}`, alternatives: clocks });
     return request.runId;
 }
 
@@ -116,14 +122,13 @@ describe('selection after generation', () => {
         await initialize();
         Render().runSimulation(config, debug, false);
         const request = workers[0].requests('plan').at(-1)!;
-        workers[0].send({ type: 'planned', runId: request.runId,
-            primary: { signature: 'primary', alternatives: [selectionClock('initial-best', 5), selectionClock('inspected', 10)] },
+        sendPlanned(workers[0], { runId: request.runId,
             context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
             tasks: [
                 { id: 'one', label: 'One', only_when_needed: false },
                 { id: 'two', label: 'Two', only_when_needed: false },
                 { id: 'three', label: 'Three', only_when_needed: false },
-            ] });
+            ] }, { signature: 'primary', alternatives: [selectionClock('initial-best', 5), selectionClock('inspected', 10)] });
         Render().selectAlternative(1);
         const busy = workers.filter(worker => worker.requests('task').some(task => task.runId === request.runId));
         busy.forEach((worker, index) => {
@@ -209,6 +214,28 @@ async function failReplacement() {
     return replacement;
 }
 
+describe('tasks alongside the primary alternative', () => {
+    it('runs the tasks while the planning worker assesses the primary clock, and finishes once it is in', async () => {
+        await initialize();
+        Render().runSimulation(config, debug, false);
+        const planner = workers[0];
+        const { runId } = planner.requests('plan').at(-1)!;
+        planner.send({ type: 'planned', runId, primarySignature: 'primary-clock', context: {} as ClockAlternativeContext,
+            assumptions: { startDependenceRequested: false }, tasks: [{ id: 'one', label: 'One', only_when_needed: false }] });
+        // the planning worker is still busy: the task goes to another one, told which clock the primary assesses
+        expect(planner.requests('task')).toHaveLength(0);
+        const runner = workers.find(w => w.requests('task').some(task => task.runId === runId))!;
+        const task = runner.requests('task').find(it => it.runId === runId)!;
+        expect(task.assessedSignatures).toEqual(['primary-clock']);
+        runner.send({ type: 'task-completed', runId, taskId: task.taskId, run: null });
+        expect(Render().isRunning).toBe(true);
+        planner.send({ type: 'primary-completed', runId, primary: { signature: 'primary-clock', alternatives: [selectionClock('primary', 1)] } });
+        const done = Render();
+        expect(done.isRunning).toBe(false);
+        expect(done.alternatives.map(it => it.id)).toEqual(['primary']);
+    });
+});
+
 describe('worker startup failure recovery through the hook', () => {
     it('carries typed repeated-unit recovery only for the matching Check/run and retires it on Cancel, crash and replacement', async () => {
         await initialize();
@@ -249,9 +276,9 @@ describe('worker startup failure recovery through the hook', () => {
         } as unknown as ClockAlternativeView;
         const sendPlan = (planner: WorkerTransport, requested: boolean, complete: boolean) => {
             const request = planner.requests('plan').at(-1)!;
-            planner.send({ type: 'planned', runId: request.runId, primary: { signature: 'a', alternatives: [candidate] },
+            sendPlanned(planner, { runId: request.runId,
                 context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: requested },
-                tasks: complete ? [] : [{ id: 'remaining', label: 'Remaining', only_when_needed: false }] });
+                tasks: complete ? [] : [{ id: 'remaining', label: 'Remaining', only_when_needed: false }] }, { signature: 'a', alternatives: [candidate] });
         };
         Render().runSimulation(config, debug, false);
         sendPlan(workers[0], false, true);
