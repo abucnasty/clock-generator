@@ -9,6 +9,8 @@ import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {EntityState, MachineState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
+import {BELT_SPEEDS, blueprintAtSpeed, configAtSpeed} from "../../helpers/belt-speed-fixtures";
+import {verifySplitterSpeedReport} from "./splitter-speed-research";
 
 interface Stack {id: number; at: number; count: number; item: string}
 interface Line {length: number; stacks: Stack[] | Record<string, never>}
@@ -19,23 +21,25 @@ interface Sample {
 interface Hand {item: string; ticks: number[]}
 const stacks = (line: Line): Stack[] => Object.values(line.stacks);
 
-for (const variant of [
+for (const speed of BELT_SPEEDS) for (const variant of [
     {name: "left-priority", priority: "left", mirrored: false, reflected: false, southInput: false, filter: undefined},
     {name: "filter-cable", priority: "right", mirrored: false, reflected: false, southInput: false, filter: "copper-cable"},
     {name: "filter-iron", priority: "right", mirrored: false, reflected: false, southInput: false, filter: "iron-plate"},
     {name: "south-input", priority: "right", mirrored: false, reflected: false, southInput: true, filter: undefined},
     {name: "north-port", priority: "left", mirrored: false, reflected: true, southInput: false, filter: undefined},
     {name: "north-port-mirrored", priority: "left", mirrored: true, reflected: true, southInput: false, filter: undefined},
-]) test(`turbo splitter routing: ${variant.name}`, async context => {
+]) test(`${speed.name} splitter routing: ${variant.name}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
-    context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
-    const retained = process.env.SPLITTER_ROUTING_CAPTURE_DIR;
-    const scratch = retained ? path.resolve(retained, variant.name) : fs.mkdtempSync(path.join(os.tmpdir(), "splitter-routing-"));
-    if (retained && fs.existsSync(scratch) && fs.readdirSync(scratch).length) throw new Error("Choose a new empty SPLITTER_ROUTING_CAPTURE_DIR");
+    const replay = process.env.SPLITTER_REPLAY_DIR;
+    context.skip(!replay && (!factorio || !save || !fs.existsSync(save)), "Factorio harness is not configured");
+    const retained = replay ?? process.env.SPLITTER_ROUTING_CAPTURE_DIR;
+    const scratch = retained ? path.resolve(retained, speed.name, variant.name) : fs.mkdtempSync(path.join(os.tmpdir(), "splitter-routing-"));
+    if (!replay && retained && fs.existsSync(scratch) && fs.readdirSync(scratch).length) throw new Error("Choose a new empty SPLITTER_ROUTING_CAPTURE_DIR");
     fs.mkdirSync(scratch, {recursive: true});
     try {
         const fixture = GameFixturePaths.SPLITTER;
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+        configAtSpeed(config, speed);
         const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
         const decoded = JSON.parse(zlib.inflateSync(Buffer.from(original.slice(1), "base64")).toString());
         for (const entity of decoded.blueprint.entities) {
@@ -55,12 +59,12 @@ for (const variant of [
             circuit_condition: {first_signal: {type: "virtual", name: "signal-Z"}, comparator: "<", constant: 0}};
         decoded.blueprint.entities.push({entity_number: 22, name: "constant-combinator", position: {x: -72.5, y: variant.reflected ? 411.5 : 416.5}});
         decoded.blueprint.wires = [[14, 1, 22, 1]];
-        const blueprint = "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64");
-        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {...variant, outputPriority: variant.priority});
-        fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
-        fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
-        fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
-        const result = await recordInFactorio({factorio: factorio!, save: save!, config, blueprint, lua,
+        const blueprint = blueprintAtSpeed("0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64"), speed);
+        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {...variant, outputPriority: variant.priority, beltPrefix: speed.prefix});
+        if (!replay) fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
+        if (!replay) fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
+        if (!replay) fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
+        const result = replay ? {recording: JSON.parse(fs.readFileSync(path.join(scratch, "recording.json"), "utf8")) as Awaited<ReturnType<typeof recordInFactorio>>["recording"]} : await recordInFactorio({factorio: factorio!, save: save!, config, blueprint, lua,
             out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
             ticks: 60, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: true,
             game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
@@ -68,10 +72,18 @@ for (const variant of [
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/splitter-pickup.json"), "utf8")) as {
             initial: {lines: Line[]; output_priority: string; filter?: {name: string; quality: string; comparator: string}; mirrored: boolean}; samples: Sample[];
         };
-        expect(report.samples).toHaveLength(60);
-        expect(report.initial).toMatchObject({output_priority: variant.priority, mirrored: variant.mirrored});
+        expect(report.initial).toMatchObject({splitter_name: `${speed.prefix}splitter`, splitter_direction: 4,
+            output_priority: variant.priority, input_priority: "none", mirrored: variant.mirrored,
+            inserter_direction: 12, use_filters: false, drain_present: true,
+            recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
         if (variant.filter) expect(report.initial.filter).toEqual({name: variant.filter, quality: "normal", comparator: "="});
         else expect(report.initial.filter).toBeUndefined();
+        if (speed.name !== "turbo") {
+            expect(report.samples).toHaveLength(60);
+            verifySplitterSpeedReport(report, fixture, scratch, `${speed.name}/${variant.name}`, result.recording.config, `${speed.prefix}splitter`);
+            return;
+        }
+        expect(report.samples).toHaveLength(60);
         const hands: Hand[] = [];
         for (const [index, sample] of report.samples.entries()) {
             const before = report.samples[index - 1]?.held ?? 0;

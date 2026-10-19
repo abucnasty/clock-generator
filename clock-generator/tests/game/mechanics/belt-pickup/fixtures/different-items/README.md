@@ -1,5 +1,69 @@
 # Moving input pickup: different items on the two lanes
 
+## Four-speed backfill
+
+The 72 controls cover all four speeds, three pickup geometries, moving/backed-up supply and isolated
+near/far ingredients or the same ingredient on both lanes. Fresh staged inserters stay circuit-gated for
+64 ticks while the naturally fed lanes fill. Each capture then records repeated hands through tick 1300,
+without placing belt stock or editing held items. Slower layouts shorten long ingredient tunnels while
+retaining the pickup and plant positions; actual speed, reach, initial stock and supply motion are asserted.
+
+Production held-count comparisons match 56 controls. This does not establish backed-up lane/stock fidelity:
+the production backed-up approximation does not track either. The remaining 16 are held-count counterexamples:
+
+- Fast backed-up single-lane supplies deplete, even on a straight belt. Later hands include `0,1,4,8`.
+- Normal backed-up supplies also deplete, including same-item two-lane supply. Single-lane hands eventually
+  reach `0,8,16,24`; two lanes help but do not guarantee consecutive grabs.
+- Normal moving entrance pickup with the same item on both lanes has a first hand `0,1,3,4` where the
+  point-based lane model predicts `0,1,2,3`. At the delayed tick the hand is visibly travelling between lanes.
+  Later hands agree with the independent stock replay. This observation does not yet establish a general
+  arm-travel rule.
+
+[Compact measured expectations](speed-expectations.json) retain actual hand patterns, counts, simulator
+mismatch counts/first differences and independent-replay results. A passing regression preserves these known
+limitations; it does not claim simulator parity for the 16 counterexamples. Comparing every depleted hand to
+fresh full stock would also be invalid: the production comparison instead seeds observed full stock once and
+retains its holes between hands, supplying only observed arm-arrival/drop boundaries.
+
+A test-only [jammed-queue replay](../../jammed-pickup-replay.ts) explains all 36 backed-up controls:
+seed the fully compressed lanes once at tick 64, advance stacks by the actual belt speed, clamp the head at
+position zero and followers to quarter-tile spacing, then withdraw the upstream-most reachable matching stack.
+Holes persist between hands; no instantaneous refill is assumed. Across 3,316 hand starts (including final
+partial hands) and 44,496 consecutive transitions, held quantities and both exposed lanes' positions, counts
+and items agree exactly. Native arm-arrival/drop boundaries remain inputs, so this is not an absolute arm-timing
+model or a production change.
+
+Ten short [native clips](jammed-pickup-clips.json) retain all four speeds and full-/half-tile reach plus normal
+same-item fallback. They run offline with:
+
+```bash
+npm test -- tests/game/mechanics/belt-pickup/jammed-pickup-replay.test.ts
+```
+
+The earlier three manual ingredient-demand controls are now automated at all four speeds. All 12 pass:
+eligible near stock13 wins even when far stock is zero; swapping ingredients preserves physical preference;
+near stock14 reaches the measured insertion limit and selection switches to the far ingredient. Machine
+inventory is staged once and remains untouched during these demand captures.
+
+From `clock-generator/`, choose one case and a fresh retained directory:
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-run npm run test:game -- tests/game/mechanics/belt-pickup/belt-speed-coverage.game.test.ts -t '^express-straight-belt-moving-accumulator$'
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-demand npm run test:game -- tests/game/mechanics/belt-pickup/ingredient-demand.game.test.ts
+```
+
+Use `BELT_SPEED_REPLAY_DIR` instead of `BELT_SPEED_CAPTURE_DIR` to check existing reports without launching
+Factorio. Each case retains its exact blueprint/config, recorder output and compact findings. Updating a
+baseline requires intentional discovery with `BELT_SPEED_DISCOVERY=1`, review of the native reports and a
+normal regression replay afterward. Full raw data stays in ignored `work/` directories.
+
+Evidence: `work/belt-speed-coverage/ordinary-gated-04/` and `ordinary-gated-05/` contain the 72 staged controls;
+`demand-01/` contains the12 demand controls. Earlier express captures remain in `ordinary-01/`. Incorrect
+setup/gate smoke runs are excluded from these findings. Absolute arm-arrival timing is not independently
+calibrated by the production comparison.
+
+## Original experiment
+
 These scaffolds compare a straight belt, underground entrance and underground exit, with accumulators on lane 1
 and supercapacitors on lane 2. The input inserter's nearest lane is 1. The belt drains continuously at its far end.
 `config.json` uses a half-tile pickup, conservatively covering all three geometries; Sidecar captures the straight
@@ -88,7 +152,7 @@ establish insertion thresholds for other setups or behavior with moving supply, 
 
 The retained scenarios, runners, recordings, detailed samples and simulator comparisons are local under
 `work/belt-pickup/mixed-demand-02/`, `work/belt-pickup/mixed-demand-swapped-01/`, and
-`work/belt-pickup/mixed-demand-limit-01/` at the repository root. These observations are not part of the automated
+`work/belt-pickup/mixed-demand-limit-01/` at the repository root. The original observations were manual; the four-speed controls above now automate this setup. They were not part of the original automated
 game regression suite. Reproduction requires the staged setup and initial
 inventories above; the backed-up capture command earlier in this file clears inputs and therefore does not reproduce
 this demand experiment.
@@ -115,3 +179,90 @@ Underground exit:
 ![Underground-exit scaffold](underground-exit-scaffold.jpg)
 
 See the [screenshot guide](../../../../README.md#scaffold-screenshots) for capture settings and regeneration.
+
+## Moving release-phase coverage
+
+`ordinary-phase.game.test.ts` shifts the gate release after the same 600-tick staged saturation, keeping layout,
+source stock, filters, mirroring and destination clearing fixed. The [phase probe](phase-probe.lua) verifies the
+actual transport speed/prototypes and paired ingredient tunnels, keeps the target circuit-disabled and empty
+through release, and records native stacks and hand positions. It clears machine inventories after observation;
+these are isolated first-hand collection controls, not operating throughput measurements.
+
+| Speed | Distinct quarter-spacing phases | Geometries × lane contents | First-hand controls |
+| --- | --- | --- | --- |
+| Turbo | 2 | 3 × 3 | 18 |
+| Express | 8 | 3 × 3 | 72 |
+| Fast | 4 | 3 × 3 | 36 |
+| Normal | 8 | 3 × 3 | 72 |
+
+The geometries are straight, underground entrance and underground exit. Contents are matching near lane,
+matching far lane, or the same item on both lanes. The 36 release-at-64 controls reuse the earlier captures;
+162 positive release shifts and an independent normal entrance repeat were captured separately. An offline
+coverage assertion verifies all **198 actual first-grab phase/scenario combinations**, including each lane's
+observed position modulo 64, rather than inferring coverage from release labels. All first grabs occurred two
+ticks after release. Lane alignment remains that of the supplied scaffold; arbitrary independently shifted lanes
+and sub-grid placements are separate questions.
+
+One case family exposes a simulator gap:
+
+| Geometry and contents | Moving | Actual first-grab phases (units of 1/256 tile, modulo 64) | Native grab offsets | Total pickup ticks | Current model offsets |
+| --- | --- | --- | --- | --- | --- |
+| Normal underground entrance, both lanes same item | true | 56,48,40,32 | 0,1,3,4 | 5 | 0,1,2,3 |
+| Same setup, remaining phases | true | 24,16,8,0 | 0,1,2,3 | 4 | 0,1,2,3 |
+
+The first row corresponds to gate delays 0–3, and includes the independently repeated delay 0 result. Matching
+far-lane stock exists while the hand moves between lanes during the extra tick. This points to a hand-movement
+constraint requiring further investigation; it is not a calibrated universal lane-switch delay. The other 194
+phase/scenario combinations agree with the phase-seeded production pickup mode and independent stock replay.
+
+Five small [native arm-travel clips](arm-travel-clips.json) preserve the delayed phases and one agreeing control,
+including hand coordinates and stack IDs. They run without Factorio using
+`npm test -- tests/game/mechanics/belt-pickup/arm-travel-clips.test.ts`.
+
+The [compact baseline](phase-expectations.json) preserves native patterns and the four explicit model/replay
+counterexamples. Native first-grab time conditions the comparison; the simulator is seeded once from gated stock,
+without fitting later grabs or resynchronizing lane stock. A future model fix should update the comparison results,
+not rewrite measured native timing. The 199 replay checks (198 controls plus the coverage assertion) pass.
+
+```bash
+# Fresh native evidence for a selected phase; never reuse a populated capture directory.
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-phase npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-phase.game.test.ts -t '^normal-underground-entrance-moving-same-item-phase-1$'
+
+# Recheck all retained evidence without launching Factorio.
+ORDINARY_PHASE_BASELINE_DIR=../work/belt-speed-coverage/ordinary-gated-05 ORDINARY_PHASE_REPLAY_DIR=../work/belt-speed-coverage/ordinary-phase-02 npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-phase.game.test.ts
+```
+
+Raw reports remain ignored under the two paths above. Failed setup pilots are excluded from findings. No production
+simulator change or publication is included in this phase sweep.
+
+## Reflected same-item controls
+
+`ordinary-reflection.game.test.ts` reflects the entire speed-routed cell, preserving feeder contents, inserter
+mirroring, gate release 64 and circuit connections. The input now sits north of the plant and its physical near
+supply is **lane 2**. The native probe checks ingredient tunnel pairing and transport tiers; gated observations
+verify full four-item stacks and actual moving or backed-up stock. Sidecar exports `near_lane: 2` at both reaches.
+
+All **24 native controls** passed at four speeds × three side-pickup geometries × moving/backed-up supply,
+covering **2,485 complete hands**. Every control has the same native pattern set, hand count and model-difference
+count as its original lane-1 counterpart. The [frozen baseline](reflected-speed-expectations.json) keeps these
+measurements separate from model agreement:
+
+- Moving stock replay agrees in 11/12 captures. Normal underground entrance again takes `0,1,3,4` on the first
+  hand instead of `0,1,2,3`; this is the same observed arm-travel gap on the opposite physical near side.
+- Production held quantities agree in 20/24 captures. The three normal backed-up layouts expose finite refill;
+  the remaining mismatch is the normal moving entrance's two delayed held-count ticks.
+- The experimental finite jammed queue matches both lane snapshots and held quantities in all 12 backed-up
+  captures: 1,252 hand starts and 14,832 transitions. Combined with the earlier 36 ordinary backed-up controls,
+  that is **48 captures / 4,568 hand starts / 59,328 transitions**. Starts include final unfinished hands; this is
+  observation-conditioned replay, not a production simulator fix or proof of absolute arm-arrival timing.
+
+Raw evidence is retained locally in `work/belt-speed-coverage/ordinary-reflected-01/`. These controls use aligned
+lanes and one gate release; they do not backfill every reflected release phase or historical interrupted window.
+
+```bash
+# New native capture (fresh directory required).
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-reflected npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
+
+# Recheck the retained 24 controls without starting Factorio.
+BELT_SPEED_REFLECTED_REPLAY_DIR=../work/belt-speed-coverage/ordinary-reflected-01 npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
+```

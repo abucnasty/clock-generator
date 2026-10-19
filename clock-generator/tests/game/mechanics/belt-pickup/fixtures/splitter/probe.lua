@@ -1,6 +1,12 @@
 -- Supplied layout with explicit ingredient/mirroring controls; only the target is gated during warm-up.
 -- Observe first-hand collection and operating continuation without seeding, held-stack edits or destination clearing.
 local entities = ...
+for _, entity in pairs(entities) do
+    if entity.type == "underground-belt" then assert(entity.underground_belt_neighbour and entity.underground_belt_neighbour.valid, "Unpaired underground") end
+    if entity.type == "transport-belt" or entity.type == "underground-belt" or entity.type == "splitter" or entity.type == "loader" then
+        assert(entity.name == (options.beltPrefix or "turbo-") .. entity.type, "Mixed transport speed")
+    end
+end
 local sink = capture.find_one(entities, function(e) return e.name == "electromagnetic-plant" end, "plant")
 local splitter = capture.find_one(entities, function(e) return e.type == "splitter" end, "splitter")
 local input = capture.find_one(entities, function(e)
@@ -14,7 +20,7 @@ local downstream = capture.find_one(entities, function(e)
     return e.type == "underground-belt" and e.belt_to_ground_type == "input"
 end, "drained north output")
 assert(splitter.splitter_output_priority == (options.outputPriority or "right"))
-assert(splitter.name == "turbo-splitter" and splitter.direction == defines.direction.east)
+assert(splitter.name == (options.beltPrefix or "turbo-") .. "splitter" and splitter.direction == defines.direction.east)
 assert(input.direction == defines.direction.west and input.mirroring == (options.mirrored or false))
 assert(input.pickup_position.x == splitter.position.x and input.pickup_position.y == splitter.position.y + (options.reflected and -0.5 or 0.5))
 assert(not input.held_stack.valid_for_read, "target must remain gated and empty during warm-up")

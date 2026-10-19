@@ -7,6 +7,8 @@ import {loadConfigFromFile} from "../../../../src/config/loader";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
+import {BELT_SPEEDS, blueprintAtSpeed, configAtSpeed} from "../../helpers/belt-speed-fixtures";
+import {verifySplitterSpeedReport} from "./splitter-speed-research";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
 import {EntityState, MachineState} from "../../../../src/state";
@@ -71,7 +73,7 @@ const measured: Record<string, {items: string[][]; ticks: number[][][]; products
     },
 };
 
-for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
+for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
     {name: "original", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: []},
     {name: "swapped", swapped: true, leftMirrored: false, rightMirrored: true, unsetPriorities: []},
     {name: "swapped-left-mirrored", swapped: true, leftMirrored: true, rightMirrored: true, unsetPriorities: []},
@@ -80,20 +82,22 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
     {name: "upstream-no-priority", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [12]},
     {name: "downstream-no-priority", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [20]},
     {name: "no-priority-blocked-drain", swapped: false, leftMirrored: false, rightMirrored: true, unsetPriorities: [12, 20]},
-]) test(`two serial turbo splitters: ${name === "no-priority-blocked-drain" ? "no priority, blocked drain"
+]) test(`${speed.name} serial splitters: ${name === "no-priority-blocked-drain" ? "no priority, blocked drain"
     : name.endsWith("-no-priority") ? `${name.replace("-no-priority", "")} priority unset only`
     : name === "no-priority" ? "no priority, original" : `right priority, ${name}`}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
-    context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
-    const retained = process.env.SPLITTER_TWO_CAPTURE_DIR;
-    const scratch = retained ? path.resolve(retained, name) : fs.mkdtempSync(path.join(os.tmpdir(), "splitter-two-pickups-"));
-    if (retained && fs.existsSync(scratch) && fs.readdirSync(scratch).length) throw new Error("Choose a new empty SPLITTER_TWO_CAPTURE_DIR");
+    const replay = process.env.SPLITTER_REPLAY_DIR;
+    context.skip(!replay && (!factorio || !save || !fs.existsSync(save)), "Factorio harness is not configured");
+    const retained = replay ?? process.env.SPLITTER_TWO_CAPTURE_DIR;
+    const scratch = retained ? path.resolve(retained, speed.name, name) : fs.mkdtempSync(path.join(os.tmpdir(), "splitter-two-pickups-"));
+    if (!replay && retained && fs.existsSync(scratch) && fs.readdirSync(scratch).length) throw new Error("Choose a new empty SPLITTER_TWO_CAPTURE_DIR");
     fs.mkdirSync(scratch, {recursive: true});
     try {
         const fixture = GameFixturePaths.SPLITTER_TWO_INSERTERS;
         const blockedDrain = name === "no-priority-blocked-drain";
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
         const outputPriorities = [12, 20].map(id => unsetPriorities.includes(id) ? "none" : "right");
+        configAtSpeed(config, speed);
         const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
         const decoded = JSON.parse(zlib.inflateSync(Buffer.from(original.slice(1), "base64")).toString());
         for (const id of unsetPriorities) {
@@ -127,12 +131,12 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
         }
         decoded.blueprint.entities.push({entity_number: 24, name: "constant-combinator", position: {x: -69.5, y: 418.5}});
         decoded.blueprint.wires = [[14, 1, 24, 1], [19, 1, 24, 1]];
-        const blueprint = "0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64");
-        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {leftMirrored, rightMirrored, outputPriorities, blockedDrain});
-        fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
-        fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
-        fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
-        const result = await recordInFactorio({factorio: factorio!, save: save!, config, blueprint, lua,
+        const blueprint = blueprintAtSpeed("0" + zlib.deflateSync(Buffer.from(JSON.stringify(decoded))).toString("base64"), speed);
+        const lua = composeProbeSource(path.join(fixture, "probe.lua"), {leftMirrored, rightMirrored, outputPriorities, blockedDrain, beltPrefix: speed.prefix});
+        if (!replay) fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
+        if (!replay) fs.writeFileSync(path.join(scratch, "config.json"), JSON.stringify(config, null, 2) + "\n");
+        if (!replay) fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
+        const result = replay ? {recording: JSON.parse(fs.readFileSync(path.join(scratch, "recording.json"), "utf8")) as Awaited<ReturnType<typeof recordInFactorio>>["recording"]} : await recordInFactorio({factorio: factorio!, save: save!, config, blueprint, lua,
             out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
             ticks: 120, warmup_ticks: 1200, settle_ticks: 0, seed: [], unclocked: true,
             game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
@@ -140,13 +144,18 @@ for (const {name, swapped, leftMirrored, rightMirrored, unsetPriorities} of [
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/splitter-two-pickups.json"), "utf8")) as {
             initial: {targets: unknown[]; state: Sample}; samples: Sample[];
         };
-        expect(report.samples).toHaveLength(120);
         expect(report.initial).toMatchObject({recipe: "electronic-circuit", crafting_speed: 5, machine_active: true});
         expect(report.initial.targets).toMatchObject([
             {inserter_direction: 12, mirrored: leftMirrored, output_priority: outputPriorities[0], input_priority: "none"},
             {inserter_direction: 4, mirrored: rightMirrored, output_priority: outputPriorities[1], input_priority: "none"},
         ]);
         expect(report.initial).toMatchObject({drain_present: !blockedDrain});
+        if (speed.name !== "turbo") {
+            expect(report.samples).toHaveLength(120);
+            verifySplitterSpeedReport(report, fixture, scratch, `${speed.name}/${name}`, result.recording.config, `${speed.prefix}splitter`);
+            return;
+        }
+        expect(report.samples).toHaveLength(120);
         const expected = measured[name];
         {
             for (let index = 0; index < 2; index++) {

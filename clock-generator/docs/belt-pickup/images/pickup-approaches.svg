@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="885" viewBox="0 0 1120 885" role="img" aria-labelledby="title desc">
+  <title id="title">Six belt pickup approaches</title>
+  <desc id="desc">All belts point right. Inserter location distinguishes side, front-facing and over-the-hood approaches.</desc>
+  <style>
+    /* Transparent canvas; light colors below remain the fallback for static renderers. */
+    @media (prefers-color-scheme: dark) {
+      [fill="#1565c0"] { fill: #79b8ff; }
+      [fill="#203047"] { fill: #e6edf3; }
+      [fill="#526176"] { fill: #b3c0d0; }
+      [fill="#aeb8c5"] { fill: #48566b; }
+      [fill="#bd4c0b"] { fill: #ffab70; }
+      [fill="#eaf3ff"] { fill: #182c44; }
+      [fill="#fff2e7"] { fill: #36271d; }
+      [stroke="#00796b"] { stroke: #56d4b0; }
+      [stroke="#1565c0"] { stroke: #79b8ff; }
+      [stroke="#65758a"] { stroke: #8c9caf; }
+      [stroke="#7c9ebd"] { stroke: #67819b; }
+      [stroke="#91a8bf"] { stroke: #6f859d; }
+      [stroke="#bd4c0b"] { stroke: #ffab70; }
+      [stroke="#ccd5df"] { stroke: #40516a; }
+    }
+  </style>
+  <defs>
+    <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
+    </marker>
+    <marker id="reach" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#bd4c0b" />
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="20" y="27" font-size="16" fill="#203047" font-weight="normal">Top view • blue = belt flow • orange = inserter reach • gray = hood • dashed blue = tunnel</text>
+    <g transform="translate(15 50)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">1. Straight belt — side pickups</text>
+      <rect x="70" y="101" width="380" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M75 133.0 L445 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M78 113 L438 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="64" height="64" rx="2" fill="none" stroke="#00796b" />
+      <path d="M257 65 L257 119" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="257" cy="119" r="5" fill="#bd4c0b" />
+      <rect x="242" y="50" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="253" y="70" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="70" y="190" font-size="13" fill="#1565c0" font-weight="normal">Belt flow →</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Inserter stands beside the belt.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Both lanes are exposed across the whole tile.</text>
+    </g>
+    <g transform="translate(565 50)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">2. Underground entrance — side pickups</text>
+      <rect x="70" y="101" width="155" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M75 133.0 L220 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M78 113 L213 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M289 133 L455 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M230 133.0 L284 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M233 113 L277 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="257" y="101" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+      <path d="M257 65 L241 119" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="241" cy="119" r="5" fill="#bd4c0b" />
+      <rect x="242" y="50" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="253" y="70" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="70" y="190" font-size="13" fill="#1565c0" font-weight="normal">Belt flow →</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Items enter the tunnel after the exposed half.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The gray half is the hood.</text>
+    </g>
+    <g transform="translate(15 325)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">3. Underground exit — side pickups</text>
+      <path d="M70 133 L225 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
+      <rect x="289" y="101" width="161" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M294 133.0 L445 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M297 113 L438 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M230 133.0 L284 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M233 113 L277 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+      <path d="M257 65 L273 119" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="273" cy="119" r="5" fill="#bd4c0b" />
+      <rect x="242" y="50" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="253" y="70" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="70" y="190" font-size="13" fill="#1565c0" font-weight="normal">Belt flow →</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Items leave the tunnel before the exposed half.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The gray half is the hood.</text>
+    </g>
+    <g transform="translate(565 325)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">4. Front-facing underground entrance</text>
+      <rect x="70" y="101" width="155" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M75 133.0 L220 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M78 113 L213 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M289 133 L455 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M230 133.0 L284 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M233 113 L277 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="257" y="101" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+      <path d="M321 133 L241 133" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="241" cy="133" r="5" fill="#bd4c0b" />
+      <rect x="306" y="118" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="317" y="138" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="70" y="190" font-size="13" fill="#1565c0" font-weight="normal">Belt flow →</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Inserter stands downstream, across the entrance hood.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">The underground connection passes beneath it.</text>
+    </g>
+    <g transform="translate(15 600)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">5. Front-facing underground exit</text>
+      <path d="M70 133 L225 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M230 133.0 L284 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M233 113 L277 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+      <path d="M321 133 L273 133" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="273" cy="133" r="5" fill="#bd4c0b" />
+      <rect x="306" y="118" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="317" y="138" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="70" y="190" font-size="13" fill="#1565c0" font-weight="normal">Belt flow →</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Inserter faces the open end from downstream.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Its tile blocks surface belt continuation.</text>
+    </g>
+    <g transform="translate(565 600)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">6. Over-the-hood underground exit</text>
+      <path d="M70 133 L225 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
+      <rect x="289" y="101" width="161" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M294 133.0 L445 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M297 113 L438 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M230 133.0 L284 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M233 113 L277 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="225" y="101" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+      <path d="M193 133 L273 133" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="273" cy="133" r="5" fill="#bd4c0b" />
+      <rect x="178" y="118" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="189" y="138" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="70" y="190" font-size="13" fill="#1565c0" font-weight="normal">Belt flow →</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Inserter stands upstream, across the exit hood.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Downstream surface belt continuation stays open.</text>
+    </g>
+  </g>
+</svg>

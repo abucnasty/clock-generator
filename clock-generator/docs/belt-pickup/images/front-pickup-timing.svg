@@ -1,0 +1,599 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="1232" viewBox="0 0 1120 1232" role="img" aria-labelledby="title desc">
+  <title id="title">Front-facing and over-the-hood pickup timing</title>
+  <desc id="desc">Top-down layout diagrams appear above the matching timelines. Moving phase ranges: turbo 5–6 · express 5–8 · fast 7–10 · normal 11–18 ticks (different items) Each green dot is a four-item stack pickup; the hand contains sixteen items after the fourth dot. All rows share a tick axis starting at the first grab. Total ticks include the first and last grab.</desc>
+  <style>
+    /* Transparent canvas; light colors below remain the fallback for static renderers. */
+    @media (prefers-color-scheme: dark) {
+      [fill="#00796b"] { fill: #56d4b0; }
+      [fill="#1565c0"] { fill: #79b8ff; }
+      [fill="#203047"] { fill: #e6edf3; }
+      [fill="#526176"] { fill: #b3c0d0; }
+      [fill="#a7b4c3"] { fill: #8c9caf; }
+      [fill="#aeb8c5"] { fill: #48566b; }
+      [fill="#bd4c0b"] { fill: #ffab70; }
+      [fill="#d9f1e9"] { fill: #123e34; }
+      [fill="#eaf3ff"] { fill: #182c44; }
+      [fill="#fff2e7"] { fill: #36271d; }
+      [stroke="#1565c0"] { stroke: #79b8ff; }
+      [stroke="#65758a"] { stroke: #8c9caf; }
+      [stroke="#7c9ebd"] { stroke: #67819b; }
+      [stroke="#91a8bf"] { stroke: #6f859d; }
+      [stroke="#bd4c0b"] { stroke: #ffab70; }
+      [stroke="#c4cdd7"] { stroke: #536479; }
+      [stroke="#ccd5df"] { stroke: #40516a; }
+    }
+  </style>
+  <defs>
+    <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
+    </marker>
+    <marker id="reach" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#bd4c0b" />
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="20" y="31" font-size="22" fill="#203047" font-weight="bold">Front-facing and over-the-hood pickup timing</text>
+    <text x="20" y="57" font-size="14" fill="#203047" font-weight="normal">Moving phase ranges: turbo 5–6 · express 5–8 · fast 7–10 · normal 11–18 ticks (different items)</text>
+    <text x="20" y="81" font-size="14" fill="#00796b" font-weight="normal">● Native grab = 4 items     Shaded span = total collection time     Gaps between grabs = waits</text>
+    <g data-layout-diagrams="true">
+      <text x="20" y="109" font-size="14" fill="#203047" font-weight="normal">Top view • blue = belt direction • orange arm = inserter reach • gray = hood • dashed blue = tunnel</text>
+      <g transform="translate(15 125)">
+        <rect width="350" height="205" rx="8" fill="none" stroke="#ccd5df" />
+        <text x="12" y="23" font-size="16" fill="#203047" font-weight="bold">Front-facing entrance</text>
+        <text x="12" y="44" font-size="13" fill="#203047" font-weight="normal">Downstream, reaching across the hood</text>
+        <g transform="translate(2 42) scale(0.65)">
+          <rect x="70" y="101" width="155" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+          <path d="M75 133.0 L220 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+          <path d="M78 113 L213 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+          <path d="M289 133 L455 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
+          <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+          <path d="M230 133.0 L284 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+          <path d="M233 113 L277 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+          <rect x="257" y="101" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+          <path d="M321 133 L241 133" fill="none" stroke="#bd4c0b" stroke-width="3" />
+          <circle cx="241" cy="133" r="5" fill="#bd4c0b" />
+          <rect x="306" y="118" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+          <text x="317" y="138" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+        </g>
+        <text x="12" y="191" font-size="12" fill="#203047" font-weight="normal">Tunnel passes beneath the inserter</text>
+      </g>
+      <g transform="translate(385 125)">
+        <rect width="350" height="205" rx="8" fill="none" stroke="#ccd5df" />
+        <text x="12" y="23" font-size="16" fill="#203047" font-weight="bold">Front-facing exit</text>
+        <text x="12" y="44" font-size="13" fill="#203047" font-weight="normal">Downstream, facing the open end</text>
+        <g transform="translate(2 42) scale(0.65)">
+          <path d="M70 133 L225 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
+          <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+          <path d="M230 133.0 L284 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+          <path d="M233 113 L277 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+          <rect x="225" y="101" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+          <path d="M321 133 L273 133" fill="none" stroke="#bd4c0b" stroke-width="3" />
+          <circle cx="273" cy="133" r="5" fill="#bd4c0b" />
+          <rect x="306" y="118" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+          <text x="317" y="138" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+        </g>
+        <text x="12" y="191" font-size="12" fill="#203047" font-weight="normal">Backed-up supply only in this layout</text>
+      </g>
+      <g transform="translate(755 125)">
+        <rect width="350" height="205" rx="8" fill="none" stroke="#ccd5df" />
+        <text x="12" y="23" font-size="16" fill="#203047" font-weight="bold">Over-the-hood exit</text>
+        <text x="12" y="44" font-size="13" fill="#203047" font-weight="normal">Upstream, reaching across the hood</text>
+        <g transform="translate(2 42) scale(0.65)">
+          <path d="M70 133 L225 133" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#flow)" />
+          <rect x="289" y="101" width="161" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+          <path d="M294 133.0 L445 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+          <path d="M297 113 L438 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+          <rect x="225" y="101" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+          <path d="M230 133.0 L284 133.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+          <path d="M233 113 L277 113" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+          <rect x="225" y="101" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+          <path d="M193 133 L273 133" fill="none" stroke="#bd4c0b" stroke-width="3" />
+          <circle cx="273" cy="133" r="5" fill="#bd4c0b" />
+          <rect x="178" y="118" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+          <text x="189" y="138" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+        </g>
+        <text x="12" y="191" font-size="12" fill="#203047" font-weight="normal">Downstream belt route stays open</text>
+      </g>
+    </g>
+    <g transform="translate(0 255)">
+      <text x="20" y="111" font-size="14" fill="#203047" font-weight="bold">Scenario / measured condition</text>
+      <text x="420" y="111" font-size="14" fill="#203047" font-weight="bold">Grab offsets (ticks from first grab)</text>
+      <text x="1095" y="111" font-size="14" fill="#203047" font-weight="bold" text-anchor="end">Total pickup ticks</text>
+      <text x="420" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">0</text>
+      <text x="442" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">1</text>
+      <text x="464" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">2</text>
+      <text x="486" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">3</text>
+      <text x="508" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">4</text>
+      <text x="530" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">5</text>
+      <text x="552" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">6</text>
+      <text x="574" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">7</text>
+      <text x="596" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">8</text>
+      <text x="618" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">9</text>
+      <text x="640" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">10</text>
+      <text x="662" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">11</text>
+      <text x="684" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">12</text>
+      <text x="706" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">13</text>
+      <text x="728" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">14</text>
+      <text x="750" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">15</text>
+      <text x="772" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">16</text>
+      <text x="794" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">17</text>
+      <text x="816" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">18</text>
+      <text x="838" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">19</text>
+      <text x="860" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">20</text>
+      <text x="882" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">21</text>
+      <text x="904" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">22</text>
+      <text x="926" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">23</text>
+      <text x="948" y="133" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">24</text>
+      <g data-offsets="0,1,2,4" data-total="5">
+        <text x="20" y="164" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · turbo</text>
+        <text x="20" y="184" font-size="12" fill="#526176" font-weight="normal">Moving · different items · shortest observed phase</text>
+        <rect x="409" y="150" width="110" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 162 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="162" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="162" r="6" fill="#00796b" />
+        <circle cx="442" cy="162" r="6" fill="#00796b" />
+        <circle cx="464" cy="162" r="6" fill="#00796b" />
+        <circle cx="508" cy="162" r="6" fill="#00796b" />
+        <text x="1095" y="167" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">5</text>
+      </g>
+      <g data-offsets="0,1,3,5" data-total="6">
+        <text x="20" y="224" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · turbo</text>
+        <text x="20" y="244" font-size="12" fill="#526176" font-weight="normal">Moving · different items · longest observed phase</text>
+        <rect x="409" y="210" width="132" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 222 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="222" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="222" r="6" fill="#00796b" />
+        <circle cx="442" cy="222" r="6" fill="#00796b" />
+        <circle cx="486" cy="222" r="6" fill="#00796b" />
+        <circle cx="530" cy="222" r="6" fill="#00796b" />
+        <text x="1095" y="227" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">6</text>
+      </g>
+      <g data-offsets="0,1,2,4" data-total="5">
+        <text x="20" y="284" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · express</text>
+        <text x="20" y="304" font-size="12" fill="#526176" font-weight="normal">Moving · different items · shortest observed phase</text>
+        <rect x="409" y="270" width="110" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 282 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="282" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="282" r="6" fill="#00796b" />
+        <circle cx="442" cy="282" r="6" fill="#00796b" />
+        <circle cx="464" cy="282" r="6" fill="#00796b" />
+        <circle cx="508" cy="282" r="6" fill="#00796b" />
+        <text x="1095" y="287" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">5</text>
+      </g>
+      <g data-offsets="0,1,4,7" data-total="8">
+        <text x="20" y="344" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · express</text>
+        <text x="20" y="364" font-size="12" fill="#526176" font-weight="normal">Moving · different items · longest observed phase</text>
+        <rect x="409" y="330" width="176" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 342 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="342" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="342" r="6" fill="#00796b" />
+        <circle cx="442" cy="342" r="6" fill="#00796b" />
+        <circle cx="508" cy="342" r="6" fill="#00796b" />
+        <circle cx="574" cy="342" r="6" fill="#00796b" />
+        <text x="1095" y="347" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">8</text>
+      </g>
+      <g data-offsets="0,1,2,6" data-total="7">
+        <text x="20" y="404" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · fast</text>
+        <text x="20" y="424" font-size="12" fill="#526176" font-weight="normal">Moving · different items · shortest observed phase</text>
+        <rect x="409" y="390" width="154" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 402 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="402" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="402" r="6" fill="#00796b" />
+        <circle cx="442" cy="402" r="6" fill="#00796b" />
+        <circle cx="464" cy="402" r="6" fill="#00796b" />
+        <circle cx="552" cy="402" r="6" fill="#00796b" />
+        <text x="1095" y="407" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">7</text>
+      </g>
+      <g data-offsets="0,1,5,9" data-total="10">
+        <text x="20" y="464" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · fast</text>
+        <text x="20" y="484" font-size="12" fill="#526176" font-weight="normal">Moving · different items · longest observed phase</text>
+        <rect x="409" y="450" width="220" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 462 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="462" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="462" r="6" fill="#00796b" />
+        <circle cx="442" cy="462" r="6" fill="#00796b" />
+        <circle cx="530" cy="462" r="6" fill="#00796b" />
+        <circle cx="618" cy="462" r="6" fill="#00796b" />
+        <text x="1095" y="467" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">10</text>
+      </g>
+      <g data-offsets="0,1,2,10" data-total="11">
+        <text x="20" y="524" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · normal</text>
+        <text x="20" y="544" font-size="12" fill="#526176" font-weight="normal">Moving · different items · shortest phase · compact layout</text>
+        <rect x="409" y="510" width="242" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 522 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="522" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="522" r="6" fill="#00796b" />
+        <circle cx="442" cy="522" r="6" fill="#00796b" />
+        <circle cx="464" cy="522" r="6" fill="#00796b" />
+        <circle cx="640" cy="522" r="6" fill="#00796b" />
+        <text x="1095" y="527" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">11</text>
+      </g>
+      <g data-offsets="0,1,9,17" data-total="18">
+        <text x="20" y="584" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · normal</text>
+        <text x="20" y="604" font-size="12" fill="#526176" font-weight="normal">Moving · different items · longest phase · compact layout</text>
+        <rect x="409" y="570" width="396" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 582 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="582" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="582" r="6" fill="#00796b" />
+        <circle cx="442" cy="582" r="6" fill="#00796b" />
+        <circle cx="618" cy="582" r="6" fill="#00796b" />
+        <circle cx="794" cy="582" r="6" fill="#00796b" />
+        <text x="1095" y="587" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">18</text>
+      </g>
+      <g data-offsets="0,1,2,3" data-total="4">
+        <text x="20" y="644" font-size="15" fill="#203047" font-weight="bold">Front entrance / over-hood exit · all speeds</text>
+        <text x="20" y="664" font-size="12" fill="#526176" font-weight="normal">Moving · same item on both lanes · every measured phase</text>
+        <rect x="409" y="630" width="88" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 642 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="642" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="642" r="6" fill="#00796b" />
+        <circle cx="442" cy="642" r="6" fill="#00796b" />
+        <circle cx="464" cy="642" r="6" fill="#00796b" />
+        <circle cx="486" cy="642" r="6" fill="#00796b" />
+        <text x="1095" y="647" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">4</text>
+      </g>
+      <g data-offsets="0,1,2,3" data-total="4">
+        <text x="20" y="704" font-size="15" fill="#203047" font-weight="bold">All three front approaches · turbo / express</text>
+        <text x="20" y="724" font-size="12" fill="#526176" font-weight="normal">Backed up · different items · first hand</text>
+        <rect x="409" y="690" width="88" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 702 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="702" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="702" r="6" fill="#00796b" />
+        <circle cx="442" cy="702" r="6" fill="#00796b" />
+        <circle cx="464" cy="702" r="6" fill="#00796b" />
+        <circle cx="486" cy="702" r="6" fill="#00796b" />
+        <text x="1095" y="707" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">4</text>
+      </g>
+      <g data-offsets="0,1,2,5" data-total="6">
+        <text x="20" y="764" font-size="15" fill="#203047" font-weight="bold">All three front approaches · fast</text>
+        <text x="20" y="784" font-size="12" fill="#526176" font-weight="normal">Backed up · different items · first hand</text>
+        <rect x="409" y="750" width="132" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 762 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="762" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="762" r="6" fill="#00796b" />
+        <circle cx="442" cy="762" r="6" fill="#00796b" />
+        <circle cx="464" cy="762" r="6" fill="#00796b" />
+        <circle cx="530" cy="762" r="6" fill="#00796b" />
+        <text x="1095" y="767" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">6</text>
+      </g>
+      <g data-offsets="0,1,2,9" data-total="10">
+        <text x="20" y="824" font-size="15" fill="#203047" font-weight="bold">All three front approaches · normal</text>
+        <text x="20" y="844" font-size="12" fill="#526176" font-weight="normal">Backed up · different items · first hand</text>
+        <rect x="409" y="810" width="220" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 822 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="822" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="822" r="6" fill="#00796b" />
+        <circle cx="442" cy="822" r="6" fill="#00796b" />
+        <circle cx="464" cy="822" r="6" fill="#00796b" />
+        <circle cx="618" cy="822" r="6" fill="#00796b" />
+        <text x="1095" y="827" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">10</text>
+      </g>
+      <g data-offsets="0,1,2,3" data-total="4">
+        <text x="20" y="884" font-size="15" fill="#203047" font-weight="bold">All three front approaches · all speeds</text>
+        <text x="20" y="904" font-size="12" fill="#526176" font-weight="normal">Backed up · same item on both lanes · first hand</text>
+        <rect x="409" y="870" width="88" height="25" rx="4" fill="#d9f1e9" />
+        <path d="M420 882 H948" stroke="#c4cdd7" stroke-width="1" />
+        <circle cx="420" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="442" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="464" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="486" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="508" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="530" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="552" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="574" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="596" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="618" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="640" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="662" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="684" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="706" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="728" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="750" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="772" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="794" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="816" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="838" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="860" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="882" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="904" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="926" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="948" cy="882" r="2" fill="#a7b4c3" />
+        <circle cx="420" cy="882" r="6" fill="#00796b" />
+        <circle cx="442" cy="882" r="6" fill="#00796b" />
+        <circle cx="464" cy="882" r="6" fill="#00796b" />
+        <circle cx="486" cy="882" r="6" fill="#00796b" />
+        <text x="1095" y="887" font-size="20" fill="#00796b" font-weight="bold" text-anchor="end">4</text>
+      </g>
+      <text x="20" y="938" font-size="13" fill="#203047" font-weight="normal">All three front approaches = front entrance, downstream front exit and over-the-hood exit. Downstream front exit is backed up only.</text>
+      <text x="20" y="961" font-size="13" fill="#526176" font-weight="normal">Collection only: excludes waiting before the first grab, travel to/from the destination and the drop. Measured examples, not universal constants.</text>
+    </g>
+  </g>
+</svg>

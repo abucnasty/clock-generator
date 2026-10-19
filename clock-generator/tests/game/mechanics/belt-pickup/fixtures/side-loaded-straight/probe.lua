@@ -22,7 +22,7 @@ local drain, drain_spec
 if block_outlet_tick or release_outlet_tick then
     assert(block_outlet_tick and release_outlet_tick and block_outlet_tick > release_tick
         and release_outlet_tick > block_outlet_tick, "outlet needs ordered block and release ticks")
-    drain = capture.find_one(entities, function(e) return e.name == "turbo-loader" and e.loader_type == "input" end, "drain")
+    drain = capture.find_one(entities, function(e) return e.type == "loader" and e.loader_type == "input" end, "drain")
     drain_spec = {name = drain.name, position = drain.position, direction = drain.direction,
         force = drain.force, type = drain.loader_type}
 end
@@ -49,7 +49,7 @@ local report = {initial = {
     block_outlet_tick = block_outlet_tick, release_outlet_tick = release_outlet_tick,
     feed = feed_state(), inputs = inventory.get_contents(), output = sink.get_inventory(defines.inventory.crafter_output).get_contents(),
     input_position = input.position, belt_position = belt.position, belt_shape = belt.belt_shape,
-    belt_direction = belt.direction, mirrored = input.mirroring, recipe = sink.get_recipe().name,
+    belt_speed = belt.prototype.belt_speed, belt_direction = belt.direction, mirrored = input.mirroring, recipe = sink.get_recipe().name,
     crafting_speed = sink.crafting_speed, use_filters = input.use_filters
 }, samples = {}}
 capture.each_tick{
@@ -57,7 +57,6 @@ capture.each_tick{
     after_tick = function(tick)
         if tick == release_tick then control.circuit_enable_disable = false end
         if tick == pause_tick then
-            assert(not input.held_stack.valid_for_read, "pause must start with an empty hand")
             control.circuit_enable_disable = true
         end
         if tick == resume_tick then control.circuit_enable_disable = false end

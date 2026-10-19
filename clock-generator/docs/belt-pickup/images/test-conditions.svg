@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="885" viewBox="0 0 1120 885" role="img" aria-labelledby="title desc">
+  <title id="title">Supply, contents, phase, mirroring, reflection and belt drop</title>
+  <desc id="desc">Independent conditions can be combined with pickup geometries. These are schematic examples, not measured stock snapshots.</desc>
+  <style>
+    /* Transparent canvas; light colors below remain the fallback for static renderers. */
+    @media (prefers-color-scheme: dark) {
+      [fill="#00796b"] { fill: #56d4b0; }
+      [fill="#1565c0"] { fill: #79b8ff; }
+      [fill="#203047"] { fill: #e6edf3; }
+      [fill="#526176"] { fill: #b3c0d0; }
+      [fill="#aeb8c5"] { fill: #48566b; }
+      [fill="#bd4c0b"] { fill: #ffab70; }
+      [fill="#eaf3ff"] { fill: #182c44; }
+      [fill="#fff2e7"] { fill: #36271d; }
+      [stroke="#1565c0"] { stroke: #79b8ff; }
+      [stroke="#203047"] { stroke: #e6edf3; }
+      [stroke="#65758a"] { stroke: #8c9caf; }
+      [stroke="#7c9ebd"] { stroke: #67819b; }
+      [stroke="#91a8bf"] { stroke: #6f859d; }
+      [stroke="#bd4c0b"] { stroke: #ffab70; }
+      [stroke="#ccd5df"] { stroke: #40516a; }
+    }
+  </style>
+  <defs>
+    <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
+    </marker>
+    <marker id="reach" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#bd4c0b" />
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="20" y="27" font-size="16" fill="#203047" font-weight="normal">Independent test conditions • stacks are illustrative • belt speed does not change the layout</text>
+    <g transform="translate(15 50)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">1. Moving / backed-up supply</text>
+      <text x="18" y="83" font-size="14" fill="#203047" font-weight="normal">Moving</text>
+      <rect x="162" y="60" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M167 82.0 L492 82.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M170 72 L485 72" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="199" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="259" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="319" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="379" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <path d="M390 94 L450 94" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <text x="18" y="153" font-size="14" fill="#203047" font-weight="normal">Backed up</text>
+      <rect x="162" y="130" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M167 152.0 L492 152.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M170 142 L485 142" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="389" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="409" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="429" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="449" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="469" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <path d="M497 127 L497 178" fill="none" stroke="#203047" stroke-width="5" />
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Moving: stacks advance through the pickup area.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Backed up: an obstruction queues stock; holes can refill.</text>
+    </g>
+    <g transform="translate(565 50)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">2. Same / different items on the lanes</text>
+      <text x="18" y="83" font-size="14" fill="#203047" font-weight="normal">Same item</text>
+      <rect x="162" y="60" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M167 82.0 L492 82.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M170 72 L485 72" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="199" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="259" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="319" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="379" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="219" y="76" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="279" y="76" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="339" y="76" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="399" y="76" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <text x="18" y="153" font-size="14" fill="#203047" font-weight="normal">Different items</text>
+      <rect x="162" y="130" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M167 152.0 L492 152.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M170 142 L485 142" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="199" y="157" width="12" height="12" rx="2" fill="#bd4c0b" stroke="none" />
+      <rect x="259" y="157" width="12" height="12" rx="2" fill="#bd4c0b" stroke="none" />
+      <rect x="319" y="157" width="12" height="12" rx="2" fill="#bd4c0b" stroke="none" />
+      <rect x="379" y="157" width="12" height="12" rx="2" fill="#bd4c0b" stroke="none" />
+      <rect x="219" y="146" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="279" y="146" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="339" y="146" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="399" y="146" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Color denotes ingredient, not lane preference.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Same-item fallback can use the other lane.</text>
+    </g>
+    <g transform="translate(15 325)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">3. Starting belt phase</text>
+      <text x="18" y="83" font-size="14" fill="#203047" font-weight="normal">Initial phase</text>
+      <rect x="162" y="60" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M167 82.0 L492 82.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M170 72 L485 72" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="199" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="263" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="327" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="391" y="87" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <circle cx="453" cy="94" r="5" fill="#bd4c0b" />
+      <text x="18" y="153" font-size="14" fill="#203047" font-weight="normal">Shifted phase</text>
+      <rect x="162" y="130" width="335" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M167 152.0 L492 152.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M170 142 L485 142" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="214" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="278" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="342" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <rect x="406" y="157" width="12" height="12" rx="2" fill="#00796b" stroke="none" />
+      <circle cx="453" cy="164" r="5" fill="#bd4c0b" />
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Stack positions differ when pickup is enabled.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Orange dot = same pickup location in both controls.</text>
+    </g>
+    <g transform="translate(565 325)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">4. Inserter mirroring</text>
+      <text x="50" y="63" font-size="15" fill="#203047" font-weight="normal">Unmirrored</text>
+      <rect x="63" y="91" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M68 123.0 L122 123.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M71 103 L115 103" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="63" y="91" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+      <path d="M159 123 L111 107" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="111" cy="107" r="5" fill="#bd4c0b" />
+      <rect x="144" y="108" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="155" y="128" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="61" y="182" font-size="14" fill="#00796b" font-weight="normal">Prefers lane 1</text>
+      <text x="295" y="63" font-size="15" fill="#203047" font-weight="normal">Mirrored</text>
+      <rect x="308" y="91" width="64" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M313 123.0 L367 123.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M316 103 L360 103" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <rect x="308" y="91" width="32" height="64" rx="2" fill="#aeb8c5" stroke="#65758a" />
+      <path d="M404 123 L356 139" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="356" cy="139" r="5" fill="#bd4c0b" />
+      <rect x="389" y="108" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="400" y="128" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="306" y="182" font-size="14" fill="#00796b" font-weight="normal">Prefers lane 2</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Flip the inserter setting; keep its tile and belt fixed.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Lane 1/2 preference shown for the tested front exit.</text>
+    </g>
+    <g transform="translate(15 600)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">5. Reflected side pickup</text>
+      <rect x="60" y="112" width="140" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M65 134.0 L195 134.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M68 124 L188 124" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M130 78 L130 122" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="130" cy="122" r="5" fill="#bd4c0b" />
+      <rect x="115" y="63" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="126" y="83" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="62" y="61" font-size="15" fill="#203047" font-weight="normal">Original</text>
+      <rect x="295" y="112" width="140" height="44" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M300 134.0 L430 134.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M303 124 L423 124" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M365 187 L365 146" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="365" cy="146" r="5" fill="#bd4c0b" />
+      <rect x="350" y="172" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="361" y="192" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="297" y="61" font-size="15" fill="#203047" font-weight="normal">Reflected</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Reflect the layout to approach the opposite side.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">This moves the inserter; it is not a mirroring toggle.</text>
+    </g>
+    <g transform="translate(565 600)">
+      <rect x="0" y="0" width="530" height="255" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="29" font-size="18" fill="#203047" font-weight="bold">6. Belt drop</text>
+      <rect x="70" y="120" width="380" height="64" rx="3" fill="#eaf3ff" stroke="#7c9ebd" />
+      <path d="M75 152.0 L445 152.0" fill="none" stroke="#91a8bf" stroke-width="1" stroke-dasharray="6 5" />
+      <path d="M78 132 L438 132" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M257 72 L257 140" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <circle cx="257" cy="140" r="5" fill="#bd4c0b" />
+      <rect x="242" y="57" width="30" height="30" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="253" y="77" font-size="15" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="35" y="110" font-size="14" fill="#203047" font-weight="normal">Machine / chest</text>
+      <path d="M125 85 L235 72" fill="none" stroke="#bd4c0b" stroke-width="2" marker-end="url(#reach)" />
+      <text x="322" y="100" font-size="14" fill="#bd4c0b" font-weight="normal">Deposit</text>
+      <text x="18" y="212" font-size="14" fill="#526176" font-weight="normal">Transfer runs from the inserter onto the belt.</text>
+      <text x="18" y="233" font-size="14" fill="#526176" font-weight="normal">Deposit timing differs from pickup timing.</text>
+    </g>
+  </g>
+</svg>

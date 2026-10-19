@@ -1,7 +1,7 @@
 /** Raw positions sampled by the same-item fixture's probe.lua. Empty Lua arrays serialize as {}. */
 interface ProbeStack { at: number; count: number; item: string }
 interface ProbeLane { length: number; stacks: ProbeStack[] | Record<string, never> }
-interface ProbeSample { tick: number; held: number; enabled?: boolean; lanes: ProbeLane[] }
+interface ProbeSample { tick: number; held: number; held_item?: string; enabled?: boolean; lanes: ProbeLane[] }
 export interface SameItemPickupProbe { endpoint: string; stack_size: number; samples: ProbeSample[] }
 
 const stacksOf = (lane: ProbeLane): ProbeStack[] => Array.isArray(lane.stacks) ? lane.stacks : [];
@@ -18,7 +18,8 @@ const signature = (lanes: Stack[][]) => JSON.stringify(lanes.map(lane => lane.fi
  * This does not claim to predict the arm's arrival, first-grab delay, or interrupted-hand resumption.
  * Ordinary runs discard the first 60 ticks; a staged first-hand experiment can explicitly include its startup.
  */
-export function assessSameItemPickups(probe: SameItemPickupProbe, speed: number, nearLane: 1 | 2, minimumFirstGrabTick = 60) {
+export function assessSameItemPickups(probe: SameItemPickupProbe, speed: number, nearLane: 1 | 2, minimumFirstGrabTick = 60,
+    matchingLane?: 1 | 2) {
     const samples = probe.samples;
     const phases = [0, 1].map(lane => {
         const sample = samples.find(sample => stacksOf(sample.lanes[lane]).length > 0);
@@ -67,7 +68,7 @@ export function assessSameItemPickups(probe: SameItemPickupProbe, speed: number,
         grabs.push(current.tick - samples[first].tick);
         if (current.held !== probe.stack_size || samples[first].tick < minimumFirstGrabTick) continue;
         if (samples.slice(first - 1, index + 1).some(sample => sample.enabled === false)) continue;
-        const predicted = replay(first, index, [nearLane - 1, 2 - nearLane]);
+        const predicted = replay(first, index, [nearLane - 1, 2 - nearLane].filter(lane => matchingLane === undefined || lane === matchingLane - 1));
         const legacy = replay(first, index, [0]);
         result.hands++;
         result.hand_patterns.add(grabs.join(","));

@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="740" viewBox="0 0 1120 740" role="img" aria-labelledby="title desc">
+  <title id="title">Phase A versus phase B: same belt, different item positions</title>
+  <desc id="desc">Turbo side-underground example. Phase A has stacks 32 and 96 units from the downstream end at the first attempt; phase B has stacks at 0 and 64. Distances use 256 units per tile and quarter-tile spacing. After two updates and the first two grabs, A can take the next stack at position 96; B must wait because its next stack is at excluded boundary 128. Native grab patterns are A: 0,1,2,4 and B: 0,1,3,5. Diagrams reconstruct the spacing and observed phase, rather than being game screenshots.</desc>
+  <style>
+    /* Transparent canvas; light colors below remain the fallback for static renderers. */
+    @media (prefers-color-scheme: dark) {
+      [fill="#00796b"] { fill: #56d4b0; }
+      [fill="#1565c0"] { fill: #79b8ff; }
+      [fill="#203047"] { fill: #e6edf3; }
+      [fill="#526176"] { fill: #b3c0d0; }
+      [fill="#b6c0cd"] { fill: #48566b; }
+      [fill="#bd4c0b"] { fill: #ffab70; }
+      [fill="#eaf3ff"] { fill: #182c44; }
+      [fill="#fff2e7"] { fill: #36271d; }
+      [stroke="#00796b"] { stroke: #56d4b0; }
+      [stroke="#1565c0"] { stroke: #79b8ff; }
+      [stroke="#65758a"] { stroke: #8c9caf; }
+      [stroke="#8292a7"] { stroke: #91a4b8; }
+      [stroke="#a7b4c3"] { stroke: #8c9caf; }
+      [stroke="#bd4c0b"] { stroke: #ffab70; }
+      [stroke="#ccd5df"] { stroke: #40516a; }
+    }
+  </style>
+  <defs>
+    <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="20" y="30" font-size="22" fill="#203047" font-weight="bold">Phase A vs phase B: same belt, different item positions</text>
+    <text x="20" y="55" font-size="15" fill="#203047" font-weight="normal">Turbo underground side pickup • same speed, reach and item • four-item stacks • sixteen-item hand</text>
+    <text x="20" y="80" font-size="14" fill="#203047" font-weight="normal">Phase = where the repeating train of stacks is when pickup starts. Shift the timing; the layout stays the same.</text>
+    <text x="20" y="104" font-size="13" fill="#203047" font-weight="normal">● Matching stack     ◌ Hole left by a grab     Orange stack = still outside reach     Blue arrow = belt direction</text>
+    <g transform="translate(15 125)" data-phase-units="32" data-offsets="0,1,2,4" data-total="5">
+      <rect x="0" y="0" width="535" height="525" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="30" font-size="19" fill="#203047" font-weight="bold">Phase A — 5 pickup ticks</text>
+      <text x="18" y="59" font-size="14" fill="#203047" font-weight="normal">First attempt: two matching stacks are in reach.</text>
+      <rect x="48" y="115" width="112" height="56" rx="3" fill="#b6c0cd" stroke="#65758a" />
+      <rect x="160" y="115" width="256" height="56" rx="3" fill="#eaf3ff" stroke="#1565c0" />
+      <path d="M168 124 H445" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M55 143 H150" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="5 4" />
+      <text x="70" y="192" font-size="12" fill="#203047" font-weight="normal">Hood / incoming</text>
+      <text x="215" y="192" font-size="12" fill="#203047" font-weight="normal">Exposed half-tile: in reach</text>
+      <circle cx="352" cy="143" r="8" fill="#00796b" stroke="none" stroke-width="2" />
+      <circle cx="224" cy="143" r="8" fill="#00796b" stroke="none" stroke-width="2" />
+      <circle cx="96" cy="143" r="8" fill="#bd4c0b" stroke="none" stroke-width="2" />
+      <path d="M300 90 L224 143" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <rect x="286" y="76" width="28" height="28" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="297" y="96" font-size="14" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="18" y="233" font-size="13" fill="#203047" font-weight="normal">At tick 2, after two belt updates and two grabs.</text>
+      <rect x="48" y="258" width="112" height="56" rx="3" fill="#b6c0cd" stroke="#65758a" />
+      <rect x="160" y="258" width="256" height="56" rx="3" fill="#eaf3ff" stroke="#1565c0" />
+      <path d="M168 267 H445" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M55 286 H150" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="5 4" />
+      <text x="70" y="335" font-size="12" fill="#203047" font-weight="normal">Hood / incoming</text>
+      <text x="215" y="335" font-size="12" fill="#203047" font-weight="normal">Exposed half-tile: in reach</text>
+      <circle cx="352" cy="286" r="8" fill="none" stroke="#8292a7" stroke-width="2" stroke-dasharray="3 3" />
+      <circle cx="224" cy="286" r="8" fill="#00796b" stroke="none" stroke-width="2" />
+      <text x="18" y="368" font-size="14" fill="#00796b" font-weight="bold">Next stack is inside the window: grab at tick 2.</text>
+      <text x="18" y="405" font-size="14" fill="#203047" font-weight="bold">Resulting grab ticks (0 = first grab)</text>
+      <text x="76" y="431" font-size="13" fill="#203047" font-weight="normal">0</text>
+      <circle cx="80" cy="451" r="6" fill="#00796b" stroke="#00796b" stroke-width="2" />
+      <text x="138" y="431" font-size="13" fill="#203047" font-weight="normal">1</text>
+      <circle cx="142" cy="451" r="6" fill="#00796b" stroke="#00796b" stroke-width="2" />
+      <text x="200" y="431" font-size="13" fill="#203047" font-weight="normal">2</text>
+      <circle cx="204" cy="451" r="6" fill="#00796b" stroke="#00796b" stroke-width="2" />
+      <text x="262" y="431" font-size="13" fill="#203047" font-weight="normal">3</text>
+      <circle cx="266" cy="451" r="6" fill="none" stroke="#a7b4c3" stroke-width="2" />
+      <text x="324" y="431" font-size="13" fill="#203047" font-weight="normal">4</text>
+      <circle cx="328" cy="451" r="6" fill="#00796b" stroke="#00796b" stroke-width="2" />
+      <text x="386" y="431" font-size="13" fill="#203047" font-weight="normal">5</text>
+      <circle cx="390" cy="451" r="6" fill="none" stroke="#a7b4c3" stroke-width="2" />
+      <text x="18" y="494" font-size="14" fill="#203047" font-weight="bold">Grabs: 0, 1, 2, 4   →   5 ticks, counting first and last.</text>
+    </g>
+    <g transform="translate(565 125)" data-phase-units="0" data-offsets="0,1,3,5" data-total="6">
+      <rect x="0" y="0" width="535" height="525" rx="10" fill="none" stroke="#ccd5df" />
+      <text x="18" y="30" font-size="19" fill="#203047" font-weight="bold">Phase B — 6 pickup ticks</text>
+      <text x="18" y="59" font-size="14" fill="#203047" font-weight="normal">First attempt: two matching stacks are in reach.</text>
+      <rect x="48" y="115" width="112" height="56" rx="3" fill="#b6c0cd" stroke="#65758a" />
+      <rect x="160" y="115" width="256" height="56" rx="3" fill="#eaf3ff" stroke="#1565c0" />
+      <path d="M168 124 H445" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M55 143 H150" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="5 4" />
+      <text x="70" y="192" font-size="12" fill="#203047" font-weight="normal">Hood / incoming</text>
+      <text x="215" y="192" font-size="12" fill="#203047" font-weight="normal">Exposed half-tile: in reach</text>
+      <circle cx="416" cy="143" r="8" fill="#00796b" stroke="none" stroke-width="2" />
+      <circle cx="288" cy="143" r="8" fill="#00796b" stroke="none" stroke-width="2" />
+      <circle cx="160" cy="143" r="8" fill="#bd4c0b" stroke="none" stroke-width="2" />
+      <path d="M300 90 L288 143" fill="none" stroke="#bd4c0b" stroke-width="3" />
+      <rect x="286" y="76" width="28" height="28" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+      <text x="297" y="96" font-size="14" fill="#bd4c0b" font-weight="bold">I</text>
+      <text x="18" y="233" font-size="13" fill="#203047" font-weight="normal">At tick 2, after two belt updates and two grabs.</text>
+      <rect x="48" y="258" width="112" height="56" rx="3" fill="#b6c0cd" stroke="#65758a" />
+      <rect x="160" y="258" width="256" height="56" rx="3" fill="#eaf3ff" stroke="#1565c0" />
+      <path d="M168 267 H445" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#flow)" />
+      <path d="M55 286 H150" fill="none" stroke="#1565c0" stroke-width="2" stroke-dasharray="5 4" />
+      <text x="70" y="335" font-size="12" fill="#203047" font-weight="normal">Hood / incoming</text>
+      <text x="215" y="335" font-size="12" fill="#203047" font-weight="normal">Exposed half-tile: in reach</text>
+      <circle cx="416" cy="286" r="8" fill="none" stroke="#8292a7" stroke-width="2" stroke-dasharray="3 3" />
+      <circle cx="288" cy="286" r="8" fill="none" stroke="#8292a7" stroke-width="2" stroke-dasharray="3 3" />
+      <circle cx="160" cy="286" r="8" fill="#bd4c0b" stroke="none" stroke-width="2" />
+      <text x="18" y="368" font-size="14" fill="#bd4c0b" font-weight="bold">Next stack is at the entry boundary: wait until tick 3.</text>
+      <text x="18" y="405" font-size="14" fill="#203047" font-weight="bold">Resulting grab ticks (0 = first grab)</text>
+      <text x="76" y="431" font-size="13" fill="#203047" font-weight="normal">0</text>
+      <circle cx="80" cy="451" r="6" fill="#00796b" stroke="#00796b" stroke-width="2" />
+      <text x="138" y="431" font-size="13" fill="#203047" font-weight="normal">1</text>
+      <circle cx="142" cy="451" r="6" fill="#00796b" stroke="#00796b" stroke-width="2" />
+      <text x="200" y="431" font-size="13" fill="#203047" font-weight="normal">2</text>
+      <circle cx="204" cy="451" r="6" fill="none" stroke="#a7b4c3" stroke-width="2" />
+      <text x="262" y="431" font-size="13" fill="#203047" font-weight="normal">3</text>
+      <circle cx="266" cy="451" r="6" fill="#00796b" stroke="#00796b" stroke-width="2" />
+      <text x="324" y="431" font-size="13" fill="#203047" font-weight="normal">4</text>
+      <circle cx="328" cy="451" r="6" fill="none" stroke="#a7b4c3" stroke-width="2" />
+      <text x="386" y="431" font-size="13" fill="#203047" font-weight="normal">5</text>
+      <circle cx="390" cy="451" r="6" fill="#00796b" stroke="#00796b" stroke-width="2" />
+      <text x="18" y="494" font-size="14" fill="#203047" font-weight="bold">Grabs: 0, 1, 3, 5   →   6 ticks, counting first and last.</text>
+    </g>
+    <text x="20" y="680" font-size="14" fill="#203047" font-weight="normal">A and B label these turbo examples only. They are not belt settings or universal phase names across speeds.</text>
+    <text x="20" y="705" font-size="13" fill="#526176" font-weight="normal">Positions illustrate the observed phase and quarter-tile spacing. Excludes waiting before the first grab and travel to/from the destination.</text>
+  </g>
+</svg>

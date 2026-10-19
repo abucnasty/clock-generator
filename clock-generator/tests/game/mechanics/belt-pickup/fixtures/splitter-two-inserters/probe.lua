@@ -1,6 +1,12 @@
 -- Both original target inserters are gated during natural warm-up and released together.
 -- No item seeding, held-stack editing or destination clearing; observe the operating machine.
 local entities = ...
+for _, entity in pairs(entities) do
+    if entity.type == "underground-belt" then assert(entity.underground_belt_neighbour and entity.underground_belt_neighbour.valid, "Unpaired underground") end
+    if entity.type == "transport-belt" or entity.type == "underground-belt" or entity.type == "splitter" or entity.type == "loader" then
+        assert(entity.name == (options.beltPrefix or "turbo-") .. entity.type, "Mixed transport speed")
+    end
+end
 local right_mirrored = options.rightMirrored
 if right_mirrored == nil then right_mirrored = true end
 local sink = capture.find_one(entities, function(e) return e.name == "electromagnetic-plant" end, "plant")
@@ -21,7 +27,7 @@ local metadata = {}
 for index, input in ipairs(inputs) do
     local splitter = splitters[index]
     assert(input.pickup_target == splitter and input.drop_target == sink)
-    assert(splitter.name == "turbo-splitter" and splitter.direction == defines.direction.east)
+    assert(splitter.name == (options.beltPrefix or "turbo-") .. "splitter" and splitter.direction == defines.direction.east)
     local priority = options.outputPriorities and options.outputPriorities[index] or options.outputPriority or "right"
     assert(splitter.splitter_output_priority == priority and splitter.splitter_input_priority == "none")
     assert(not splitter.splitter_filter and not input.use_filters)

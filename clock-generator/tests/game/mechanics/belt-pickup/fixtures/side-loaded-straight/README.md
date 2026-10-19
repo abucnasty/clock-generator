@@ -435,8 +435,8 @@ preparation state instead of timing out. Raw evidence is under
 `work/belt-pickup/turbo-merge-operating-mixed-02/`; the earlier attempt with its circuit gate still closed is
 not evidence of this failure. This capture does not claim every mixed merge or initial phase must starve.
 
-Other speeds, stack sizes, sparse streams, additional feeds, sub-unit entry precision and arbitrary phases
-remain outside the calibrated merge model. Keep the unsupported warning until those cases are investigated.
+Other speeds, stack sizes, sparse streams, additional feeds and sub-unit entry precision
+remain outside the production merge model; the four-speed backfill below records additional native evidence. Keep the unsupported warning until those cases are investigated.
 
 ## Reproduce
 
@@ -484,4 +484,80 @@ Raw captures, parameters, generated blueprints/configs and exploratory replays r
 the original turbo and express repeated-hand cases are the 25th and 26th named entry tests. The six subsequent
 turbo controls (release-17, pause, outlet, reflection and both mixed-item arrangements) bring this file to 32
 named cases; ten seeded cutoff calibrations bring the total to 42. Use an exact name or an end anchor when selecting only one; the original turbo name is also a
-prefix of several follow-ups. Further investigation is turbo-only; express is retained as historical evidence.
+prefix of several follow-ups. Those original42 cases remain regression controls; the four-speed backfill below adds the missing combinations.
+
+## Four-speed backfill
+
+The speed variants reuse these layouts and change only transport prototypes. Normal transport belts are
+named `yellow` in the entry-test identifiers. Each capture asserts the actual prototype speed, full
+incoming stack-four supply, empty unused lanes and native hand counts. Existing single-stream profiles
+are compared with the simulator; slower two-stream merges retain unsupported capture warnings.
+
+The 180 natural entry cases cover backed-up supply, reflection, the other three inner-stream rotations, each tick offset in the
+quarter-tile gate-release cycle, repeated hands, both mixed-item arrangements, pause/resume and outlet
+block/release. Operating-machine controls leave inventories alone; repeated timing controls clear only
+the destination inventories after observing each tick. Removing the ingredient drain supplies the
+backed-up variants. A fixed pause at tick 124 can interrupt a partial hand at slower speeds, so timings
+spanning that pause include the intentional circuit delay.
+
+Repeated mixed-stream hands are speed- and stock-dependent. At gate16, express moving hands include
+`0,1,2,3`, `0,1,2,4` and `0,1,2,5`; fast moving hands include `0,1,4,8`; normal moving hands eventually
+reach `0,8,16,24`. Swapping ingredients preserves outer-stream selection in these inventory-clearing
+controls. Backed-up first hands are consecutive at all four speeds, but fast and normal repeated hands
+can wait for replacement stock. A blocked outlet therefore does not imply unlimited pickup stock.
+
+The seeded inner-entry sweep accepts a forward shift strictly below `64 + speed`, using units of
+1/256 tile and speed in units/tick. With and without the outer stream, all integer shifts 61–128 agree:
+
+| Belt | Speed | Largest accepted shift | First rejected shift |
+| --- | ---: | ---: | ---: |
+| Turbo | 32 | 95 | 96 |
+| Express | 24 | 87 | 88 |
+| Fast | 16 | 79 | 80 |
+| Normal | 8 | 71 | 72 |
+
+This is an admission-window measurement, not a complete merge rule. The earlier express counterexample
+with a stack immediately upstream of the proposed entry still requires a separate clearance condition.
+
+Operating-machine controls leave both ingredient arrangements untouched for 1200ticks and produce no
+circuits at any speed. Turbo/express end with an empty hand; fast/normal hold 8/12 units of the missing
+inner ingredient in a partial hand, waiting to reach 16. The machine holds 16 outer iron or 32 outer cable
+and receives none of that partial inner hand. Inner reachability alone therefore does not guarantee a
+working mixed-stream clock.
+
+Repeated single-stream moving pickups match the existing supply profiles at all four speeds. The
+backed-up shortcut has a measured limitation: fast and normal streams deplete their initial receiving
+stock. Fast outer/inner first diverge from the simulator at ticks 42/32; normal outer/inner diverge at
+31/30. Native normal hands eventually require `0,8,16,24`. The regression summaries retain the exact
+mismatch counts and first differences as known model gaps; passing these captures does not claim
+simulator agreement for those four cases.
+
+`speed-controls.json` stores compact native summaries: complete-hand start ticks, distinct item/lane/tick
+patterns, stream counts and partial final hands. An origin of 0 means initial receiving stock could not
+be attributed to an incoming lane by observation. The entry-sweep test asserts the measured boundaries and positions directly, separately from natural supply. Four boundary-sweep sessions cover 544 seeded cases in total. They reset transport stock for each
+four-tick case, disable all inserters and assert actual seeded positions; they do not measure throughput.
+Neither set of slower merge measurements expands simulator or Sidecar support.
+
+Retain a new capture without overwriting an earlier run:
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/side-new \
+  npm run test:game -- tests/game/mechanics/belt-pickup/side-loaded-entry.game.test.ts
+```
+
+For a documentation or expectation change, replay retained natural captures without launching Factorio:
+
+```bash
+BELT_SPEED_REPLAY_DIR=../work/belt-speed-coverage/side-new \
+  npm run test:game -- tests/game/mechanics/belt-pickup/side-loaded-entry.game.test.ts -t '^side-entry (supply|boundary)'
+```
+
+`BELT_SPEED_CALIBRATE=1` records candidate summaries instead of comparing the committed summaries. Use it
+only for an intentional mechanics investigation with `BELT_SPEED_CAPTURE_DIR` set, then review the native
+reports before updating expectations. Normal test runs compare the committed measurements.
+
+The retained backfill evidence is under `work/belt-speed-coverage/side-01/`, `side-02/` and `side-03/`.
+The three native batches passed 130, 56 and 16 tests, including the eight straight/single-side controls and
+ten original turbo cutoff controls. Offline replays then validated all updated summaries and sweep
+assertions without another native run. These local raw directories are retained evidence, not committed
+fixtures; committed expectations stay in the small summary file and measured cutoff constants.

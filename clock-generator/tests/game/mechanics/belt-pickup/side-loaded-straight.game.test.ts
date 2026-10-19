@@ -1,5 +1,4 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { expect, test } from "vitest";
 import { Config } from "../../../../src/config";
@@ -9,6 +8,7 @@ import { SimulationContext } from "../../../../src/crafting/sequence/simulation-
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
 import { composeProbeSource } from "../../helpers/probe-source";
+import { BELT_SPEEDS, blueprintAtSpeed, configAtSpeed, speedCapture } from "../../helpers/belt-speed-fixtures";
 
 interface Sample {
     tick: number; held: number; held_item?: string;
@@ -27,7 +27,7 @@ function simulatedOffsets(config: Config, start: number) {
     });
     let held = 0;
     const offsets: number[] = [];
-    for (let tick = start; tick < start + 20 && held < 16; tick++) {
+    for (let tick = start; tick < start + 40 && held < 16; tick++) {
         simulation.tick_provider.setCurrentTick(tick);
         mode.executeForTick();
         expect(state.held_item?.item_name).toBe("iron-plate");
@@ -39,18 +39,20 @@ function simulatedOffsets(config: Config, start: number) {
     return offsets;
 }
 
-for (const straightThrough of [true, false]) {
-    test(`${straightThrough ? "straight-through control matches" : "single side stream matches"} the straight-belt model`, async context => {
+for (const speed of BELT_SPEEDS) for (const straightThrough of [true, false]) {
+    test(`${speed.name}: ${straightThrough ? "straight-through control matches" : "single side stream matches"} the straight-belt model`, async context => {
         const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
         context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
         const fixture = GameFixturePaths.SIDE_LOADED_STRAIGHT;
-        const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "side-loaded-straight-"));
+        const capture = speedCapture(`${speed.name}-${straightThrough ? "straight-through" : "single-side"}-control`);
+        const scratch = capture.directory;
         try {
             const config = await loadConfigFromFile(path.join(fixture, "config.json"));
+            configAtSpeed(config, speed);
             if (straightThrough && config.inserters[1].source.type === "belt") delete config.inserters[1].source.pickup_supply;
             const result = await recordInFactorio({
                 factorio: factorio!, save: save!, config,
-                blueprint: fs.readFileSync(path.join(fixture, `${straightThrough ? "straight-through" : "side-loaded"}-scaffold.txt`), "utf8"),
+                blueprint: blueprintAtSpeed(fs.readFileSync(path.join(fixture, `${straightThrough ? "straight-through" : "side-loaded"}-scaffold.txt`), "utf8"), speed),
                 lua: composeProbeSource(path.join(fixture, "probe.lua"), { straightThrough }),
                 out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
                 // The circuit holds the empty input through warm-up. A side-fed tile is not fully populated,
@@ -62,7 +64,7 @@ for (const straightThrough of [true, false]) {
                 initial: Record<string, unknown>; samples: Sample[];
             };
             expect(report.initial).toMatchObject({
-                inputs: {}, output: {}, belt_shape: "straight", belt_direction: 4, mirrored: false,
+                inputs: {}, output: {}, belt_speed: speed.units / 32, belt_shape: "straight", belt_direction: 4, mirrored: false,
                 recipe: "electronic-circuit", crafting_speed: 3.125, use_filters: false,
             });
             expect(report.samples).toHaveLength(30);
@@ -81,8 +83,9 @@ for (const straightThrough of [true, false]) {
             const offsets = grabs.map(s => s.tick - grabs[0].tick);
             expect(grabs.map(s => s.held_item)).toEqual(Array(4).fill("iron-plate"));
             expect(grabs.map(s => s.held)).toEqual([4, 8, 12, 16]);
-            expect(offsets).toEqual(straightThrough ? [0, 1, 2, 3] : [0, 2, 4, 6]);
-            const predicted = [simulatedOffsets(config, 0), simulatedOffsets(config, 1)];
+            const sideOffsets = {turbo: [0, 2, 4, 6], express: [0, 1, 4, 6], fast: [0, 4, 8, 12], normal: [0, 4, 12, 20]};
+            expect(offsets).toEqual(straightThrough ? [0, 1, 2, 3] : sideOffsets[speed.name]);
+            const predicted = Array.from({length: 8}, (_, tick) => simulatedOffsets(config, tick));
             expect(predicted).toContainEqual(offsets);
             const captured = result.recording.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
             expect(captured.source).toMatchObject({ near_lane: 1, pickup_length: 1 });
@@ -96,7 +99,7 @@ for (const straightThrough of [true, false]) {
             }
             expect(result.recording.config.pickup_warnings).toBeUndefined();
         } finally {
-            fs.rmSync(scratch, { recursive: true, force: true });
+            capture.cleanup();
         }
     }, 240_000);
 }

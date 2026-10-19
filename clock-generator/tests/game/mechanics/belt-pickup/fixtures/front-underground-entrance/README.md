@@ -64,8 +64,8 @@ were measured only in this eastbound fixture. Wrong-facing, off-center and upstr
 Supply motion is still a separate config choice and is not inferred from captured geometry.
 
 Sidecar 0.10.0 reported `inline` and omitted both fields for these same captures. The fixture retains explicit
-settings for the independent simulator comparison. Swapped ingredients, other cardinal orientations' actual grabs,
-repeated hands and other speeds remain unverified for this geometry. The earlier upstream-side
+settings for the independent simulator comparison. The four-speed sweep below also checks swapped ingredients. Other cardinal orientations' actual grabs and
+repeated hands remain unverified for this geometry. The earlier upstream-side
 prototype is a different approach and is not this fixture.
 
 ## Same item on both moving lanes
@@ -133,6 +133,89 @@ preferred lane, with the same filling offsets. These measurements cover first ha
 Raw captures are retained under `work/belt-pickup/front-entrance-same-item-backed-up-01/` and
 `front-entrance-same-item-mirrored-backed-up-01/`.
 
+## Four-speed controls
+
+The 2026-10-18 Factorio 2.1.21 sweep extends first-hand controls to all four belt speeds. At each applicable
+speed it independently tests both mirroring states, moving and backed-up supply, original and swapped ingredients,
+and the same item on both lanes. Stock is supplied naturally; neither held items nor transport stocks are seeded.
+The probe asserts the pickup's actual speed, checks its underground partner where pairing is required, records
+all transport lines at both endpoints, and keeps the exact transformed blueprint with each retained capture.
+
+The original plant requires a tunnel too long for normal moving supply. The original capture therefore derived a compact
+control by replacing the 4×4 electromagnetic plant with a 3×3 assembling machine making electronic circuits,
+shifting its center half a tile west/north while keeping the entrance and pickup inserter in place. Iron plates and
+copper cable replace the two original ingredients; same-item controls feed iron on both lanes. Its paired exit is
+five tiles after the observed entrance, within normal range. Both drains are retained for moving supply; only the
+ingredient drain is removed for backed-up supply. The compact control is measured at every speed, including turbo,
+so that layout change was checked against the original rather than assumed equivalent.
+The user-supplied replacement below repeats the same compact control matrix, including every phase-sweep release.
+
+For express/fast original-plant controls, the paired exit moves to the first free tile beyond the plant and the
+remaining path becomes ordinary belts. Normal original-plant backed-up controls have an unmatched, naturally
+saturated entrance; the compact normal control also checks the same backed-up result with a real paired tunnel.
+Original-plant normal moving variants are explicitly skipped, with the compact control providing their speed coverage.
+These transformations are shared in [front-speed-fixtures.ts](../../front-speed-fixtures.ts).
+
+The following table uses release delay 0; moving timings change with arrival phase.
+
+| Speed | Moving | Different-item grab offsets | Total pickup ticks | Same-item grab offsets |
+| --- | --- | --- | --- | --- |
+| Turbo | true | `0,1,2,4` | 5 | `0,1,2,3` |
+| Express | true | `0,1,4,6` | 7 | `0,1,2,3` |
+| Fast | true | `0,1,4,8` | 9 | `0,1,2,3` |
+| Normal | true | `0,1,8,16` | 17 | `0,1,2,3` |
+| Turbo | false | `0,1,2,3` | 4 | `0,1,2,3` |
+| Express | false | `0,1,2,3` | 4 | `0,1,2,3` |
+| Fast | false | `0,1,2,5` | 6 | `0,1,2,3` |
+| Normal | false | `0,1,2,9` | 10 | `0,1,2,3` |
+
+Mirroring still selects lane 1 unmirrored and lane 2 mirrored; swapping ingredients preserves the selected physical
+lane and its timing. Moving results match the existing position replay and a compatible simulator stream phase.
+The backed-up fast/normal different-item results expose the same finite-refill limitation as the
+[front-exit controls](../front-underground-exit/README.md#four-speed-controls): the model's four consecutive preferred-lane
+stacks are too optimistic. The tests retain this disagreement explicitly instead of claiming model support.
+Same-item backed-up hands can use the other lane to fill the fourth grab at fast/normal speeds.
+
+This sweep measures 60 different-item and 30 same-item first hands across the original and compact layouts.
+The six skipped original-plant normal moving combinations are covered by paired compact controls, rather than
+mislabelled as moving while their supply is blocked. Captures are local under
+`work/belt-speed-coverage/front-final-entrance-02/front-entrance-*`; compact normal smoke evidence is also in
+`front-compact-smoke-02/`. These are first-hand speed controls; repeated hands and other cardinal orientations remain separate coverage dimensions.
+The additional compact moving phase sweep is described below. No generated-clock or new simulator behavior
+is claimed by this sweep.
+
+### Moving supply phases
+
+The compact control also sweeps all distinct quarter-tile arrival phases: 2 turbo, 8 express, 4 fast and 8 normal.
+Each phase is observed with both mirroring states, original/swapped different ingredients, and the same item on
+both lanes. An empty constant combinator supplies a real circuit network; a false `Z < 0` condition holds only
+the measured inserter until the requested release, while feeders and transport stock remain untouched. Captures
+assert no grabs before release and retain the actual unselected-lane phase at the first grab.
+
+| Speed | Moving | Different-item patterns over all phases | Total pickup ticks | Same-item pattern / total |
+| --- | --- | --- | --- | --- |
+| Turbo | true | `0,1,k,k+2`, `k = 2..3` | 5–6 | `0,1,2,3` / 4 |
+| Express | true | `0,1,k,k+d`, `k = 2..4`, `d = 2..3` | 5–8 | `0,1,2,3` / 4 |
+| Fast | true | `0,1,k,k+4`, `k = 2..5` | 7–10 | `0,1,2,3` / 4 |
+| Normal | true | `0,1,k,k+8`, `k = 2..9` | 11–18 | `0,1,2,3` / 4 |
+
+All listed combinations were measured. Mirroring and ingredient swaps preserve these pattern sets. Same-item
+hands fill in four consecutive grabs at every measured phase. Their lane sequence varies: turbo uses `PPPF` or
+`PPFP`; the other speeds also use `PPFF`, where `P` is the mirroring-selected preferred lane and `F` the other lane.
+The existing engine and independently seeded position replay match every measured moving first hand.
+
+This adds 114 native controls beyond the first sweep. Express delays 0 and 1 both first grab at tick 3 and observe
+the same phase; delay 8 supplies the otherwise missing phase. The other speeds need delays `0..1`, `0..3`, and
+`0..7` respectively. Coverage is checked against observed positions, rather than inferred from the delay labels.
+Each of the six ingredient/mirroring variants observes all 2/8/4/8 phases; this does not claim every arbitrary
+lane-to-lane phase offset, repeated-hand timing or other orientation.
+
+Phase captures are local under `work/belt-speed-coverage/front-phase-final-01/` and
+`front-phase-express-8-01/`. Their observed-phase audit is `front-phase-coverage-01.json`. The front suite now
+covers 228 native first-hand controls, including the 24 exit controls; six original-plant normal moving variants
+remain explicitly skipped in favor of their paired compact controls. Setup attempts with an incorrectly connected
+gate are excluded from these counts.
+
 ## Reproduce
 
 From `clock-generator/`, with the [game setup](../../../../README.md#setup):
@@ -148,7 +231,7 @@ npm run screenshots -- --case=front-underground-entrance
 
 Use `-t 'moving supply'` or `-t 'backed-up supply'` to narrow the game command; `-t 'mirrored=true'` runs only the
 two flipped cases. The game test composes `probe.lua`, captures hand/lane observations, compares the existing
-simulator and checks Sidecar capture/export without warnings. Temporary test captures are removed afterward.
+simulator and checks Sidecar capture/export without warnings. Temporary test captures are removed afterward unless `BELT_SPEED_CAPTURE_DIR` names a fresh evidence directory.
 For the same-item command, `-t 'mirrored=true'` selects its two flipped cases, and `-t 'backed-up supply'`
 selects just the two backed-up controls.
 Raw captures with matching configs and the committed probe are retained
@@ -158,3 +241,51 @@ Flipped captures are under `work/belt-pickup/front-entrance-mirrored-moving-01/`
 only in the input inserter's mirror flag before the optional drain removal.
 These exploratory captures used Sidecar 0.10.0; the game regressions rerun all four cases with 0.11.0 to check capture/export.
 The same-item captures and regressions use Sidecar 0.11.0.
+
+For a retained four-speed capture, use a new directory on every run:
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-entrance-new \
+  npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts \
+  tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
+```
+
+Test-name filters `-t 'express'` or `-t 'compact'` select one speed or the compact destination controls.
+
+### Supplied compact replacement
+
+The [compact normal scaffold](compact-normal-scaffold.txt) is the exact user-supplied replacement from
+2026-10-19. It is authoritative: compact variants now derive directly from it, changing only transport tier,
+ingredient arrangement, mirroring, optional drain removal and gate release. The assembler's modules and
+geometry are preserved. The original electromagnetic-plant scaffold is unchanged.
+
+The replacement fixes the former compact output inserter's disconnected pickup: its pickup target is now the
+assembler, and its drop target feeds a connected product belt. Native guards check both targets in every compact
+first-hand run. The replacement passes **162 pickup controls** across all four tiers, both mirroring states,
+moving/backed-up supply, original/swapped ingredients and same-item lanes, including every phase-sweep release.
+Its first-hand timing and observed arrival phases match the earlier compact controls. These first-hand simulator
+configurations do not calibrate the replacement's module-boosted crafting throughput (native crafting speed is 50).
+
+The independent natural-output smoke makes no inventory or held-item edits and clears no inventories. Over
+600 ticks it crafts **53 circuits**, observes the output inserter carrying circuits, deposits the first stack at
+tick **310**, and observes circuits on the next belt at tick **326**. Passing evidence is retained locally under
+`work/belt-speed-coverage/compact-user-replacement-02/` (32 base controls and output smoke) and
+`work/belt-speed-coverage/compact-user-replacement-phases-01/` (130 phase/swap controls).
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/compact-output-new npm run test:game -- tests/game/mechanics/belt-pickup/compact-front-output.game.test.ts
+```
+
+![Supplied compact normal-belt entrance scaffold with its connected circuit output](compact-normal-scaffold.jpg)
+
+The native JPEG matches the supplied replacement, including the connected output inserter. Refresh with
+`npm run screenshots -- --case=front-underground-entrance/compact-normal` when two Factorio process slots are
+available; the helper launches a headless server and graphical client.
+
+Run only the additional phase controls with fresh retained evidence:
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-phases-new \
+  npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts \
+  tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts -t 'release [1-8]:'
+```

@@ -24,6 +24,15 @@ scaffolds. There is no clock in these blueprints.
 Input Inserter 2 stands beside the belt, with lane 1 nearest to it. Both configs explicitly specify the pickup
 length and nearest lane. Output Inserter 1 takes gears from Machine 1 into Chest 1.
 
+## Four-speed backfill
+
+The [ordinary speed controls](../different-items/README.md#four-speed-backfill) extend moving/backed-up
+same-item measurements to fast and normal belts on all three geometries. These use the electromagnetic
+fixture with accumulators on both lanes and cleared destination inventories; the gear-clock build checks use
+this fixture and iron plates. The distinction keeps isolated pickup evidence separate from operating throughput.
+Normal-speed repeated hands can have gaps even with two matching lanes; the normal moving side-entrance also
+has a measured lane-change arm-travel counterexample. The older turbo/express results below retain their scope.
+
 ## Capture pickup timing
 
 From `clock-generator/`, with `.env` pointing at Factorio and the staging save:

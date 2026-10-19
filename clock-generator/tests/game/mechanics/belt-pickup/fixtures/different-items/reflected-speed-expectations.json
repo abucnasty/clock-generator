@@ -1,0 +1,332 @@
+{
+  "express-straight-belt-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "express-straight-belt-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "express-underground-entrance-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "express-underground-entrance-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "express-underground-exit-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "express-underground-exit-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "fast-straight-belt-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "fast-straight-belt-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "fast-underground-entrance-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "fast-underground-entrance-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "fast-underground-exit-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "fast-underground-exit-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "normal-straight-belt-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3",
+      "0,1,2,5",
+      "0,1,5,8"
+    ],
+    "hands": 79,
+    "quantity_difference_count": 446,
+    "quantity_first_difference": {
+      "tick": 113,
+      "actual": 12,
+      "predicted": 16
+    },
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "normal-straight-belt-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3",
+      "0,1,7,8"
+    ],
+    "hands": 78,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "normal-underground-entrance-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3",
+      "0,1,3,7",
+      "0,1,4,8"
+    ],
+    "hands": 78,
+    "quantity_difference_count": 455,
+    "quantity_first_difference": {
+      "tick": 90,
+      "actual": 8,
+      "predicted": 12
+    },
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "normal-underground-entrance-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,3,4",
+      "0,1,4,5",
+      "0,1,7,8"
+    ],
+    "hands": 78,
+    "quantity_difference_count": 2,
+    "quantity_first_difference": {
+      "tick": 68,
+      "actual": 8,
+      "predicted": 12
+    },
+    "moving_replay_difference_count": 1,
+    "moving_replay_first_difference": {
+      "tick": 66,
+      "actual": [
+        0,
+        1,
+        3,
+        4
+      ],
+      "predicted": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "lane_mismatches": 2
+    },
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "normal-underground-exit-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3",
+      "0,1,3,7",
+      "0,1,4,8"
+    ],
+    "hands": 78,
+    "quantity_difference_count": 455,
+    "quantity_first_difference": {
+      "tick": 90,
+      "actual": 8,
+      "predicted": 12
+    },
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "normal-underground-exit-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3",
+      "0,1,6,7",
+      "0,1,7,8"
+    ],
+    "hands": 78,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "turbo-straight-belt-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "turbo-straight-belt-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "turbo-underground-entrance-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "turbo-underground-entrance-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "turbo-underground-exit-backed-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  },
+  "turbo-underground-exit-moving-reflected-same-item": {
+    "patterns": [
+      "0,1,2,3"
+    ],
+    "hands": 112,
+    "quantity_difference_count": 0,
+    "quantity_first_difference": null,
+    "moving_replay_difference_count": 0,
+    "moving_replay_first_difference": null,
+    "jammed_replay_difference_count": 0,
+    "jammed_replay_first_difference": null
+  }
+}

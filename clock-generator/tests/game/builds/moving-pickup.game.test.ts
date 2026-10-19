@@ -10,6 +10,7 @@ import { encodeBlueprintFile } from "../../../src/blueprints/serde";
 import { GeneratedClock, recordInFactorio } from "../../../src/harness/factorio-harness";
 import { outputPerPeriod, recipesMaking } from "../../../src/harness/recording-output";
 import { makeInputBeltBackedUp } from "../mechanics/belt-pickup/belt-pickup-fixtures";
+import {capturePickupClockSpeed, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 
 const FACTORIO = process.env.FACTORIO_PATH;
 const SAVE = process.env.FACTORIO_HARNESS_SAVE;
@@ -127,3 +128,9 @@ for (const backedUpBelts of [false, true]) {
         }
     });
 }
+
+// Speed backfill uses one uninterrupted baseline+recovery capture per configuration.
+for (const variant of pickupClockSpeedCases("electromagnetic")) test(`speed coverage: ${variant.name}`, async context => {
+    context.skip(!process.env.BELT_CLOCK_REPLAY_DIR && process.env.BELT_CLOCK_GENERATION_ONLY !== "1" && WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
+    await capturePickupClockSpeed(variant);
+}, 960_000);
