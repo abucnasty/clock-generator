@@ -38,11 +38,12 @@ for (const family of ["different-items", "same-item"] as const) for (const varia
         expect(native.expected).toBe(expected.expected);
         if (selected.verdict === "stable") {
             expect(native.baseline.every(items => items === native.expected)).toBe(true);
-            // Recovery is allowed to take time. Eight untouched final periods witness settled output;
-            // the mirrored turbo replacement needs seven periods, rather than the probe's initial six.
+            // The retained backed-up windows contain five periods; moving windows have at least eight.
+            // Recovery is allowed to take time: mirrored turbo needs seven periods after the last loss.
+            const heldPeriods = variant.backed ? 5 : 8;
             for (const loss of native.recovery) {
-                expect(loss.recovered.length).toBeGreaterThanOrEqual(8);
-                expect(loss.recovered.slice(-8).every(items => items === native.expected)).toBe(true);
+                expect(loss.recovered.length).toBeGreaterThanOrEqual(heldPeriods);
+                expect(loss.recovered.slice(-heldPeriods).every(items => items === native.expected)).toBe(true);
             }
         }
     });

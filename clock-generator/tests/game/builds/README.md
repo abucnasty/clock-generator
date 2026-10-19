@@ -191,7 +191,8 @@ after the final restoration, then 18 uninterrupted target periods: it recovers a
 40-period simulator recovery limit. The changed fast candidate remains unstable and misses target natively.
 Express keeps the same exported clock and native evidence but now receives the correct no-recovery verdict.
 The portable `over-hood-clock.generation.test.ts` checks these selections, exact clock hashes and the final
-eight untouched native recovery periods for clocks marked stable.
+untouched final native recovery windows for clocks marked stable (at least eight periods for moving supply,
+five for backed-up supply, whose assessment starts later).
 
 Raw evidence is retained locally under `work/belt-pickup-parity/over-hood-different-native-02-{unmirrored,mirrored}/`
 and `over-hood-same-native-01-{unmirrored,mirrored}/`. The bounded shorter-loss trace is in
