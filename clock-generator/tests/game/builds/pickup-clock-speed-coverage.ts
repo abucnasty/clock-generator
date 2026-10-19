@@ -74,6 +74,7 @@ async function prepare(variant: ClockCase): Promise<Prepared> {
     if (variant.family === "electromagnetic") config.target_output.items_per_second = 30 * variant.speed.units / 4;
     for (const inserter of config.inserters) if (inserter.source.type === "belt") {
         inserter.source.pickup_length = variant.geometry === "straight-belt" ? 1 : 0.5;
+        inserter.source.pickup_layout = variant.geometry === "straight-belt" ? "side-straight" : variant.geometry === "underground-entrance" ? "side-entrance" : "side-exit";
     }
     const started = performance.now();
     const alternatives = generateClockAlternatives(config, {logger: quiet});

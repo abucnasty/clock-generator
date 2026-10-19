@@ -32,6 +32,7 @@ async function main() {
     const config = await loadConfigFromFile(path.join(fixture, !backedUp && values.geometry === "straight-belt" ? "straight-belt.json" : "config.json"));
     const input = config.inserters.find(inserter => inserter.source.type === "belt");
     input.source.pickup_length = values.geometry === "straight-belt" ? 1 : 0.5;
+    input.source.pickup_layout = values.geometry === "straight-belt" ? "side-straight" : values.geometry === "underground-entrance" ? "side-entrance" : "side-exit";
     if (backedUp) {
         input.filters = [values.item];
         config.overrides = { ...config.overrides, backed_up_belts: true };

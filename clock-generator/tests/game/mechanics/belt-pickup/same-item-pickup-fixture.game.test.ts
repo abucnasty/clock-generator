@@ -54,6 +54,7 @@ describe.sequential("same-item moving pickup fixtures", () => {
                     const source = config.inserters[1].source;
                     if (source.type !== "belt") throw new Error("fixture input must pick up from a belt");
                     source.near_lane = nearLane;
+                    source.pickup_layout = name === "straight-belt" ? "side-straight" : name === "underground-entrance" ? "side-entrance" : "side-exit";
                     const text = fs.readFileSync(path.join(SAMPLE, `${name}-scaffold.txt`), "utf8").trim();
                     const blueprint = JSON.parse(zlib.inflateSync(Buffer.from(text.slice(1), "base64")).toString()) as FactorioBlueprintFile;
                     for (const entity of blueprint.blueprint!.entities!) {

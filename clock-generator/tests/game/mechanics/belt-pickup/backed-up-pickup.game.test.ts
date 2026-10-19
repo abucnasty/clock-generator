@@ -74,6 +74,7 @@ describe.sequential("backed-up pickup geometry", () => {
                     if (input.source.type !== "belt") throw new Error("expected belt input");
                     const pickup_length = name === "straight-belt" ? 1 : 0.5;
                     input.source.pickup_length = pickup_length;
+                    input.source.pickup_layout = name === "straight-belt" ? "side-straight" : name === "underground-entrance" ? "side-entrance" : "side-exit";
                     input.filters = [item];
                     const scaffold = fs.readFileSync(path.join(SAMPLE, `${name}-scaffold.txt`), "utf8");
                     const result = await recordInFactorio({

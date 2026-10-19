@@ -21,6 +21,7 @@ it.each(['side-inner', 'side-outer'] as const)('generates a stable moving clock 
     const source = config.inserters[1].source;
     if (source.type !== 'belt') throw new Error('expected belt input');
     source.pickup_length = 1;
+    source.pickup_layout = "side-straight";
     source.pickup_supply = [profile, 'through'];
     const generated = generateClockAlternatives(config, {logger: {log() {}, warn() {}, error() {}, debug() {}}});
     const selected = generated.alternatives[generated.selected_index];
@@ -35,6 +36,7 @@ it('generates a stable moving clock with two turbo streams sharing one pickup la
     const source = config.inserters[1].source;
     if (source.type !== 'belt') throw new Error('expected belt');
     source.pickup_length = 1;
+    source.pickup_layout = "side-straight";
     source.pickup_merge = {lane: 1, outer: {ingredient: 'iron-plate', stack_size: 4}, inner: {ingredient: 'iron-plate', stack_size: 4}, downstream_tiles: 3, outlet: 'open'};
     const generated = generateClockAlternatives(config, {logger: {log() {}, warn() {}, error() {}, debug() {}}});
     const selected = generated.alternatives[generated.selected_index];

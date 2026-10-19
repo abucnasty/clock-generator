@@ -121,8 +121,18 @@ const pickupCaptureDeclarationStep: ImportStep = input => (input.inserters ?? []
     ? Option.some("Belt pickup classification was not captured. Update Sidecar and recapture these inputs before generation. Updating the mod alone does not update a saved capture.")
     : Option.none();
 
+const pickupLayoutDeclarationStep: ImportStep = input => (input.inserters ?? []).some(inserter => {
+    if (typeof inserter !== "object" || inserter === null || !("source" in inserter)) return false;
+    const source = inserter.source;
+    if (typeof source !== "object" || source === null || !("pickup_capture" in source)) return false;
+    const capture = source.pickup_capture;
+    return typeof capture === "object" && capture !== null && "status" in capture && capture.status === "supported"
+        && "entity_type" in capture && capture.entity_type === "underground-belt"
+        && (!("model_version" in capture) || capture.model_version === 1 || !("pickup_layout" in source));
+}) ? Option.some("Underground pickup layout was not captured. Update Sidecar and recapture these inputs before generation; half-tile reach cannot identify the approach.") : Option.none();
+
 export const SIDECAR_IMPORT_PIPELINE: ImportPipeline = ImportPipeline
-    .of(...SIDECAR_FEATURES.map(sidecarFeatureStep), pickupCaptureDeclarationStep)
+    .of(...SIDECAR_FEATURES.map(sidecarFeatureStep), pickupCaptureDeclarationStep, pickupLayoutDeclarationStep)
     .otherwise(newerSidecarStep);
 
 /**

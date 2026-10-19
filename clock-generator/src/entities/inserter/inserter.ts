@@ -1,3 +1,4 @@
+import { BeltPickupLayout, pickupLengthForLayout, pickupLayoutProblem } from "../../common/belt-pickup-layout";
 import { assertPickupCaptureSupported } from "../../config/pickup-capture";
 import { InserterConfig } from "../../config";
 import { BeltPickupMergeConfig, BeltPickupSupplyProfile } from "../../config/schema";
@@ -33,6 +34,7 @@ export interface Inserter extends Entity {
     drop?: BeltDropSpot;
     /** Physical exposed length of a belt input, retained for both moving and backed-up supply. */
     pickup_length?: 0.5 | 1;
+    pickup_layout?: BeltPickupLayout;
     /** Single-stream entry per receiving lane; omitted profiles retain through supply. */
     pickup_supply?: readonly BeltPickupSupplyProfile[];
     pickup_merge?: BeltPickupMergeConfig;
@@ -246,7 +248,10 @@ export class InserterFactory {
             if (source.near_lane !== undefined) {
                 inserter.near_lane = source.near_lane;
             }
-            inserter.pickup_length = source.pickup_length ?? 1;
+            const layout_problem = pickupLayoutProblem(source);
+            assert(layout_problem === null, layout_problem ?? "Invalid pickup layout");
+            inserter.pickup_layout = source.pickup_layout ?? "side-straight";
+            inserter.pickup_length = source.pickup_length ?? pickupLengthForLayout(inserter.pickup_layout);
             if (source.pickup_supply) {
                 const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(source.id));
                 assertIsBelt(belt);

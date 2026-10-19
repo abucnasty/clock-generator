@@ -10,14 +10,14 @@ describe('pickup assumption presentation', () => {
     it('explains the default and underground opt-in for current and prospective builds', () => {
         const html = text(renderToStaticMarkup(<PickupGeometrySummary build={build} onEdit={() => {}} />));
         expect(html).toContain('Straight belt is the default');
-        expect(html).toContain('Choose Underground belt for an entrance or exit');
+        expect(html).toContain('Choose the underground endpoint and pickup approach');
         expect(html).not.toContain('missing');
-        expect(html).not.toContain('older full-belt assumption');
+        expect(html).not.toContain('Saved results retain their original timing assumptions');
     });
     it('preserves legacy saved-run assumptions and provides a specific inserter action', () => {
         const html = renderToStaticMarkup(<PickupGeometrySummary build={build} savedRun onEdit={() => {}} />);
         expect(text(html)).toContain('Pickup type known for 1 of 2 belt-fed inserters');
-        expect(text(html)).toContain('older full-belt assumption');
+        expect(text(html)).toContain('Saved results retain their original timing assumptions');
         expect(html).toContain('Set pickup for Inserter 3');
         expect(html).not.toContain('Set pickup for Inserter 8');
     });
@@ -34,7 +34,7 @@ describe('pickup assumption presentation', () => {
     it('uses the same named picker for list and diagram without exposing fractional lengths', () => {
         for (const compact of [false, true]) {
             const html = renderToStaticMarkup(<PickupTypeSelect source={{ type: 'belt', id: 1, pickup_length: 0.5 }} compact={compact} entityLabel="Inserter 3" onChange={() => {}} />);
-            expect(html).toContain('Underground belt');
+            expect(html).toContain('Choose underground layout');
             expect(html).toContain('Picks up from, Inserter 3');
             expect(text(html)).not.toContain('0.5');
         }
@@ -46,7 +46,7 @@ describe('pickup assumption presentation', () => {
         const html = renderToStaticMarkup(<PickupTypeSelect source={source} entityLabel="Inserter 3" onChange={() => {}} />);
         expect(text(html)).toContain('Unverified capture');
         expect(html).toContain('aria-disabled="true"');
-        expect(html).not.toContain('value="straight"');
+        expect(html).not.toContain('value="side-straight"');
         for (const savedRun of [false, true]) {
             const summary = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 3, source}], overrides: {backed_up_belts: true}}} savedRun={savedRun} />));
             expect(summary).toContain('pickup needs a supported capture before generation');
@@ -57,9 +57,18 @@ describe('pickup assumption presentation', () => {
     it('selects straight belt when geometry is omitted in either editor', () => {
         for (const compact of [false, true]) {
             const html = renderToStaticMarkup(<PickupTypeSelect source={{ type: 'belt', id: 1 }} compact={compact} entityLabel="Inserter 3" onChange={() => {}} />);
-            expect(html).toContain('value="straight"');
+            expect(html).toContain('value="side-straight"');
             expect(text(html)).toContain('Straight belt');
             expect(html).not.toContain('Not specified');
         }
     });
+});
+
+it('requires a manual underground layout for moving and backed-up inputs', () => {
+    for (const backed_up_belts of [false, true]) {
+        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 4,
+            source: {type: 'belt', pickup_length: 0.5}}], overrides: {backed_up_belts}}} onEdit={() => {}} />));
+        expect(html).toContain('Choose a pickup layout before generating again');
+        expect(html).toContain('Set pickup for Inserter 4');
+    }
 });

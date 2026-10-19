@@ -108,6 +108,23 @@ function helpers.get_pickup_length(inserter, belt)
     return nil
 end
 
+---Physical approach, distinct from exposed length and supply motion.
+function helpers.get_pickup_layout(inserter, belt)
+    if not helpers.get_near_lane(inserter, belt) then return nil end
+    if belt.type == "transport-belt" then return "side-straight" end
+    local run = {
+        [defines.direction.north] = { x = 0, y = -1 },
+        [defines.direction.east] = { x = 1, y = 0 },
+        [defines.direction.south] = { x = 0, y = 1 },
+        [defines.direction.west] = { x = -1, y = 0 },
+    }
+    local direction = run[belt.direction]
+    local dx, dy = inserter.position.x - belt.position.x, inserter.position.y - belt.position.y
+    local side = math.abs(dx * direction.y - dy * direction.x) > 0.25
+    local endpoint = belt.belt_to_ground_type == "input" and "entrance" or "exit"
+    return (side and "side-" or "front-") .. endpoint
+end
+
 ---Why capture cannot classify a belt pickup. Never infer geometry from an unsupported piece or observed motion.
 function helpers.get_pickup_problem(inserter, belt)
     if belt.type == "transport-belt" and belt.belt_shape ~= "straight" then return "bend" end

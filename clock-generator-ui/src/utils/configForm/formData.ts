@@ -45,6 +45,7 @@ export interface InserterFormData {
         pickup_merge?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_merge'];
         pickup_capture?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_capture'];
         pickup_length?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_length'];
+        pickup_layout?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_layout'];
         drop?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['drop'] };
     sink: { type: 'machine' | 'belt' | 'chest'; id: number;
         drop?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop'] };

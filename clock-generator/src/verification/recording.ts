@@ -1,3 +1,4 @@
+import { BELT_PICKUP_LAYOUTS } from "../common/belt-pickup-layout";
 import { BeltPickupCaptureSchema } from "../config/pickup-capture";
 import { z } from "zod";
 import { BeltPickupMergeSchema, BeltPickupSupplyProfileSchema } from "../config/schema";
@@ -22,6 +23,7 @@ const TargetRefSchema = z.object({
     /** Preferred belt pickup lane, 1 or 2. Absent in older or unclassified recordings. */
     near_lane: z.union([z.literal(1), z.literal(2)]).optional(),
     pickup_length: z.union([z.literal(0.5), z.literal(1)]).optional(),
+    pickup_layout: z.enum(BELT_PICKUP_LAYOUTS).optional(),
     pickup_supply: z.union([z.tuple([BeltPickupSupplyProfileSchema]), z.tuple([BeltPickupSupplyProfileSchema, BeltPickupSupplyProfileSchema])]).optional(),
     pickup_merge: BeltPickupMergeSchema.optional(),
     pickup_capture: BeltPickupCaptureSchema.optional(),

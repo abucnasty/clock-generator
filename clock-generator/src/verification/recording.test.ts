@@ -72,6 +72,15 @@ describe("the belt lanes of an inserter", () => {
         expect(read.samples.pickup_lane_items).toEqual({ "1": [0, 2], "2": [] });
     });
 
+    it("preserves layout and model format in both recorded targets and embedded config", () => {
+        const source = {type: "belt", id: 1, near_lane: 2, pickup_length: 0.5, pickup_layout: "front-exit",
+            pickup_capture: {status: "supported", model: "belt", model_version: 2, entity_type: "underground-belt"}};
+        const target = inserter({source, sink: {type: "machine", id: 1}}, {});
+        const parsed = parseRecording({...withInserter(target), config: {inserters: [target], belts: []}});
+        expect(parsed.inserters[0].source).toEqual(source);
+        expect(parsed.config.inserters[0].source).toEqual(source);
+    });
+
     it("are rejected when a count is not a whole number of at least 0", () => {
         expect(() => parseRecording(withInserter(inserter({}, { drop_lane_items: [-1, 0] })))).toThrow();
         expect(() => parseRecording(withInserter(inserter({}, { drop_lane_items: [1.5, 0] })))).toThrow();

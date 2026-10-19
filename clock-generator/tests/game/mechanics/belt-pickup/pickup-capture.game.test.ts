@@ -36,6 +36,7 @@ end
 local straight = belt("turbo-transport-belt", 100, 100, defines.direction.east)
 assert(h.get_pickup_problem({position = {x = 100, y = 99}}, straight) == nil)
 assert(h.get_pickup_length({position = {x = 100, y = 99}}, straight) == 1)
+assert(h.get_pickup_layout({position = {x = 100, y = 99}}, straight) == "side-straight")
 assert(h.get_pickup_problem({position = {x = straight.position.x - 1, y = straight.position.y}}, straight) == "inline")
 assert(h.get_pickup_problem({position = {x = straight.position.x + 1, y = straight.position.y},
     direction = defines.direction.west, mirroring = true}, straight) == "inline")
@@ -67,6 +68,10 @@ for index, entry in ipairs(directions) do
                 direction = (direction + 8) % 16, mirroring = mirrored}
             assert(h.get_near_lane(front, target) == (mirrored and 2 or 1))
             assert(h.get_pickup_length(front, target) == 0.5)
+            local endpoint = target.belt_to_ground_type == "input" and "entrance" or "exit"
+            assert(h.get_pickup_layout(front, target) == "front-" .. endpoint)
+            assert(h.get_pickup_layout({position = {x = target.position.x + dy, y = target.position.y - dx}}, target) == "side-" .. endpoint)
+            assert(h.get_pickup_layout({position = {x = target.position.x - dy, y = target.position.y + dx}}, target) == "side-" .. endpoint)
             assert(h.get_pickup_problem(front, target) == nil)
             -- Side pickups keep their physical nearest lane regardless of endpoint or mirroring.
             assert(h.get_near_lane({position = {x = target.position.x + dy, y = target.position.y - dx}, mirroring = mirrored}, target) == 1)
@@ -87,9 +92,10 @@ local input
 for _, entry in ipairs(export.exported_inserters(captured)) do
     if entry.source.type == "belt" then input = entry end
 end
-assert(input and input.source.pickup_length == 1)
+assert(input and input.source.pickup_length == 1 and input.source.pickup_layout == "side-straight")
+assert(supported.inserters[input.id].source.pickup_layout == "side-straight")
 local provenance = supported.inserters[input.id].source.pickup_capture
-assert(provenance.status == "supported" and provenance.model == "belt" and provenance.model_version == 1)
+assert(provenance.status == "supported" and provenance.model == "belt" and provenance.model_version == 2)
 assert(provenance.entity_type == "transport-belt" and provenance.sidecar_version == script.active_mods["clock-generator-sidecar"])
 -- Exercise the export boundary with an unclassified capture: geometry must stay absent and IDs match the JSON.
 input.inserter.source.pickup_length = nil

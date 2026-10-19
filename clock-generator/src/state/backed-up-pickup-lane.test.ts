@@ -26,6 +26,7 @@ for (const clip of fixture.clips) test(`production backed-up stock matches nativ
     const input = copy.inserters.find(i => i.source.type === "belt")!;
     if (input.source.type !== "belt") throw Error("Expected a belt source");
     input.source.pickup_length = clip.lane_length as 0.5 | 1;
+    input.source.pickup_layout = clip.lane_length === 1 ? "side-straight" : clip.name.includes("entrance") ? "side-entrance" : "side-exit";
     input.filters = [clip.item];
     const belt = copy.belts.find(b => b.id === input.source.id)!;
     const types = {"0.125": "turbo-transport-belt", "0.09375": "express-transport-belt",

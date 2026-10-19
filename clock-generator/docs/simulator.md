@@ -53,14 +53,17 @@ These are offsets from the first grab, not an arm-arrival or wake-up timing rule
 `source.pickup_length` describes physical reach: **1** tile for a straight belt (the default when omitted), or
 **0.5** for either underground endpoint. This default applies both when parsing a config and when constructing
 entities from a direct engine input. There is no legacy calculation selected by omitting geometry.
-Sidecar captures supported pickup geometry; the UI calls these **Straight belt** and **Underground belt**.
+The UI defaults to a straight side pickup. Underground inputs require a specific `source.pickup_layout`: side
+entrance/exit, front entrance/exit, or over the exit hood. Layout supplies omitted length; conflicting length is
+rejected. Sidecar exports layout with model format 2; older underground captures require recapture. See the
+[capture guide](belt-pickup/capture.md#physical-layout).
 
 Supply is a separate choice: **Moving** by default, or **Backed up** with `overrides.backed_up_belts: true`.
 The simulator retains the pickup length in both cases. Moving supply models reachable stacks, holes and partial
 stacks; ordinary backed-up supply additionally stops and compresses stacks at its closed endpoint. Choosing **Backed up** also omits moving-belt clock slack.
 Older `non_moving_belts` config settings migrate to `backed_up_belts` on import. New configs and exports use only
-`backed_up_belts`; if both keys are present, the new key takes precedence. Saved results retain their run's assumptions. Older underground configs must set `pickup_length: 0.5` explicitly;
-geometry cannot be recovered from an omitted field. Belt slack remains extra margin for late starts and supply gaps.
+`backed_up_belts`; if both keys are present, the new key takes precedence. Saved results retain their run's assumptions. Older manual underground configs must choose a layout;
+physical approach cannot be recovered from half-tile reach alone. Belt slack remains extra margin for late starts and supply gaps.
 
 The [lane model](../src/state/belt-pickup-lane.ts) stores only holes and partial stacks in an otherwise evenly spaced
 supply. [Belt pickup logic](../src/control-logic/inserter/modes/pickup/belt-pickup-logic.ts) chooses the physical lane. No whole-belt

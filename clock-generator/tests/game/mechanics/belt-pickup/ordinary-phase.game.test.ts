@@ -68,6 +68,7 @@ for (const speed of BELT_SPEEDS) {
                         const input = config.inserters.find(i => i.source.type === "belt")!;
                         if (input.source.type !== "belt") throw new Error("Expected belt source");
                         input.source.pickup_length = geometry === "straight-belt" ? 1 : 0.5;
+                        input.source.pickup_layout = geometry === "straight-belt" ? "side-straight" : geometry === "underground-entrance" ? "side-entrance" : "side-exit";
                         const wanted = ingredient === "same-item" ? "accumulator" : ingredient;
                         input.filters = [wanted];
                         let blueprint = fs.readFileSync(path.join(fixture, `${geometry}-scaffold.txt`), "utf8");

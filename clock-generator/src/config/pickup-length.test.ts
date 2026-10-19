@@ -8,10 +8,10 @@ describe("belt pickup geometry defaults", () => {
             const config = await parseConfig(JSON.stringify({
                 target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
                 machines: [], belts: [],
-                inserters: [{ source: { type: "belt", id: 1, pickup_length: length }, sink: { type: "machine", id: 1 } }],
+                inserters: [{ source: { type: "belt", id: 1, pickup_length: length, ...(length === 0.5 && {pickup_layout: "side-entrance"}) }, sink: { type: "machine", id: 1 } }],
                 overrides: { backed_up_belts },
             }));
-            expect(config.inserters[0].source).toEqual({ type: "belt", id: 1, pickup_length: length ?? 1 });
+            expect(config.inserters[0].source).toEqual({ type: "belt", id: 1, pickup_length: length ?? 1, ...(length === 0.5 && {pickup_layout: "side-entrance"}) });
             expect(config.overrides?.backed_up_belts).toBe(backed_up_belts);
         }
     });

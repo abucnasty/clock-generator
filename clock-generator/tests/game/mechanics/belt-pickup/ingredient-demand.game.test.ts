@@ -27,6 +27,7 @@ for (const speed of BELT_SPEEDS) for (const [swapped, nearCount] of [[false, 13]
             const configured = config.inserters.find(i => i.source.type === "belt")!;
             if (configured.source.type !== "belt") throw new Error("Expected belt input");
             configured.source.pickup_length = 1;
+            configured.source.pickup_layout = "side-straight";
             const nearItem = swapped ? "supercapacitor" : "accumulator";
             const farItem = swapped ? "accumulator" : "supercapacitor";
             let blueprint = fs.readFileSync(path.join(fixture, "straight-belt-scaffold.txt"), "utf8");

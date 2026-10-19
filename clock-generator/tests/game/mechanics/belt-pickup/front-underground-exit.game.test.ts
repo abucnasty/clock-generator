@@ -83,7 +83,7 @@ for (const speed of BELT_SPEEDS) for (const { label, swapped, sameItem, mirrored
             expect(captured.source.near_lane).toBe(preferred);
             expect(captured.source.pickup_length).toBe(0.5);
             const exported = result.recording.config.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
-            expect(exported.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5 });
+            expect(exported.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5, pickup_layout: "front-exit" });
             expect(result.recording.config.pickup_warnings).toBeUndefined();
             expect(report.samples).toHaveLength(30);
             const first = report.samples[0];

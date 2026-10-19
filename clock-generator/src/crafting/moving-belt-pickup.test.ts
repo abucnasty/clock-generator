@@ -51,12 +51,12 @@ describe("moving pickup affects the verdict of the old default clock", () => {
     it("uses straight-belt timing for omitted geometry, including direct unparsed engine inputs", () => {
         const omitted = { ...config, inserters: config.inserters.map(inserter => {
             if (inserter.source.type !== "belt") return inserter;
-            const { pickup_length: _length, ...source } = inserter.source;
+            const { pickup_length: _length, pickup_layout: _layout, ...source } = inserter.source;
             void _length;
             return { ...inserter, source };
         }) };
         const straight: Config = { ...omitted, inserters: omitted.inserters.map(inserter => inserter.source.type === "belt"
-            ? { ...inserter, source: { ...inserter.source, pickup_length: 1 } } : inserter) };
+            ? { ...inserter, source: { ...inserter.source, pickup_length: 1, pickup_layout: "side-straight" } } : inserter) };
         expect(outputCounts(omitted)).toEqual(outputCounts(straight));
         const input = SimulationContext.fromConfig(omitted).inserters.find(i => i.inserter_state.inserter.source.entity_id.type === "belt")!;
         expect(input.inserter_state.inserter.pickup_length).toBe(1);

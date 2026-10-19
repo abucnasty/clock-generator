@@ -6,6 +6,26 @@ A manually configured belt pickup defaults to straight-belt geometry. An importe
 its capture must explicitly identify a model the current engine supports. A default or a newer version number
 cannot supply facts that the old capture omitted.
 
+## Physical layout
+
+`source.pickup_layout` identifies the approach, separately from moving/backed-up supply:
+
+| Layout | Exposed reach | Meaning |
+| --- | --- | --- |
+| `side-straight` | 1 tile | Side pickup from an ordinary straight belt; the manual default |
+| `side-entrance` | 0.5 tile | Beside an underground entrance |
+| `side-exit` | 0.5 tile | Beside an underground exit |
+| `front-entrance` | 0.5 tile | Downstream, facing back into an entrance |
+| `front-exit` | 0.5 tile | Downstream, facing back into an exit |
+| `over-hood-exit` | 0.5 tile | Upstream, reaching across an exit's hood |
+
+Layout supplies `pickup_length` when length is omitted; an explicit conflicting length is rejected. Manual
+half-tile configs without a layout must choose one. The UI offers these choices for each belt-fed inserter.
+An old Sidecar underground capture becomes unclassified and requires recapture; selecting a default cannot
+supply the missing physical fact. Sidecar's over-the-hood classifier remains separate work.
+The [glossary](glossary.md) illustrates each approach. This field records geometry; adding it does not itself
+resolve the outstanding arm-travel or generated-clock discrepancies.
+
 ## Persistent per-pickup status
 
 Sidecar exports `source.pickup_capture` for each belt-fed inserter. It stays with that source through import,
@@ -13,7 +33,8 @@ file export, saved-build reload, sharing, and recording parsing. Top-level `pick
 Sidecar copy window and older import previews; they are not the only copy of the classification.
 
 - `supported`: a positive model declaration, currently `model: "belt"` or `"turbo-two-stream"`, with
-  `model_version: 1`, native `entity_type`, and the matching geometry, preferred lane and supply data.
+  `model_version: 2`, native `entity_type`, and the matching layout, reach, preferred lane and supply data.
+  Version 1 straight-belt captures remain valid; version 1 underground captures require recapture.
 - `unsupported`: Sidecar identified a geometry or supply outside the engine's calibrated models. Its reason,
   native entity type/name and exporting Sidecar version remain attached.
 - `unclassified`: a legacy export did not record a positive model declaration. Existing geometry fields are

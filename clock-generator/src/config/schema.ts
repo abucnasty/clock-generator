@@ -1,3 +1,4 @@
+import { BELT_PICKUP_LAYOUTS, pickupLayoutProblem } from "../common/belt-pickup-layout";
 import { BeltPickupCaptureSchema, normalizePickupCaptureConfig, pickupCaptureProblem } from "./pickup-capture";
 import { z } from "zod";
 import { MiningDrillType, BeltType, BeltStrategy, ChestType } from "../common/entity-types";
@@ -330,6 +331,8 @@ const InserterBeltSourceConfigSchema = z.object({
      * Geometry is independent of the moving/backed-up supply setting (backed_up_belts).
      */
     pickup_length: z.union([z.literal(0.5), z.literal(1)]).default(1),
+    /** Physical approach and endpoint; required for manual underground pickups. */
+    pickup_layout: z.enum(BELT_PICKUP_LAYOUTS).optional(),
     /** Single-stream entry per receiving lane, in the same order as the belt's lanes. Omitted means through.
      * Side profiles describe a continuously full, same-speed side feed into a straight pickup tile.
      * They restrict moving supply, not physical reach or backed-up stock.
@@ -622,6 +625,10 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
     overrides: ConfigOverridesSchema.optional()
 }).superRefine((config, context) => {
     config.inserters.forEach((inserter, index) => {
+        if (inserter.source.type === TargetType.BELT && !inserter.source.pickup_capture) {
+            const problem = pickupLayoutProblem(inserter.source);
+            if (problem) context.addIssue({code: "custom", path: ["inserters", index, "source", "pickup_layout"], message: problem});
+        }
         if (inserter.source.type === TargetType.BELT && inserter.source.pickup_capture?.status === "supported") {
             const problem = pickupCaptureProblem(inserter.source);
             if (problem) context.addIssue({code: "custom", path: ["inserters", index, "source", "pickup_capture"], message: problem});
