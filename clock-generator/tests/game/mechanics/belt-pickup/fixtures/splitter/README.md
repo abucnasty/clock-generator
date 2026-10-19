@@ -219,3 +219,80 @@ routing model, so the simulator and Sidecar remain unchanged. The [additional ro
 states there, the other input arrangement, opposite priority and both ingredient filters. Both priority settings
 for the single-consumer blocked-drain control above are complete. No general splitter support is claimed. Continue with turbo
 speed and one controlled change at a time.
+
+
+## Four-speed natural controls
+
+The six natural pickup controls and six routing controls are now repeated at express, fast and normal speed,
+using consistent replacements for every belt, underground, loader and splitter. Layout, ingredients, priorities,
+mirroring and warm-up/gate timing are otherwise retained. Native setup assertions check actual prototypes and
+paired undergrounds. [Measured speed baselines](speed-expectations.json) record complete observed hands and
+initial stock; the existing turbo cases retain their detailed ID/routing and simulator-mismatch assertions.
+All captures continue to report unsupported splitter pickup, without invented lane or reach metadata.
+
+| First hand, native ticks | Turbo | Express | Fast | Normal |
+| --- | --- | --- | --- | --- |
+| Right priority, drain open (original, swap, swap + mirror) | 2,3,4,5 | 2,3,5,8 | 2,3,5,9 | 2,3,4,12 |
+| Priority unset, drain open | 2,3,4,7 | 2,3,5,10 | 2,3,5,13 | 2,3,4,20 |
+| Drain removed, right priority or unset priority | 2,3,4,5 | 2,3,4,5 | 2,3,4,7 | 2,3,4,11 |
+
+These are operating native observations, not a universal splitter delay. Slower routing can delay a first hand
+even after removing the drain; a full final network does not turn a splitter into infinite backed-up supply.
+The complete routing/filter/reflection results are in the baseline rather than extrapolated from turbo timing.
+Raw runs are retained locally under ignored `work/belt-speed-coverage/splitter-natural-01/single/` and
+`routing/`. Set `SPLITTER_REPLAY_DIR` to the relevant family directory to re-evaluate a capture without
+launching Factorio. No splitter implementation or publishing is included.
+
+### Seeded routing calibration at all speeds
+
+The observation/seeding portion of the [shelved calibration](https://github.com/abucnasty/clock-generator/blob/7a1b4e2e7798a481ff1d76dae2a03f40c5164d8a/clock-generator/tests/game/mechanics/belt-pickup/fixtures/splitter/entry-window-probe.lua)
+is now exercised at all four speeds by `splitter-entry-window.game.test.ts`. No routing kernel was restored.
+All inserters are disabled, transport stock is cleared once, and stacks are placed at asserted starting positions.
+The probe compensates the pending step from the actual prototype speed. These are seeded boundary experiments,
+not natural throughput tests or generated-clock verification.
+
+Positions below use 1/256 tile. Inputs retain native length 179 and outputs length 128 at every speed.
+
+| Native boundary | Turbo (step32) | Express (step24) | Fast (step16) | Normal (step8) |
+| --- | --- | --- | --- | --- |
+| Head at0: landing in empty preferred output | 45 | 53 | 61 | 69 |
+| Last head position entering this tick / first position waiting | 31 / 32 | 23 / 24 | 15 / 16 | 7 / 8 |
+| Preferred-output tail: last accepting / first waiting position | 95 / 96 | 87 / 88 | 79 / 80 | 71 / 72 |
+| Follower behind blocked head: last allowing diversion / first waiting distance | 95 / 96 | 87 / 88 | 79 / 80 | 71 / 72 |
+
+In the preferred-output boundary controls, accepted stacks land at127 while the next candidate would require128
+and waits. For blocked preferred outputs, an isolated head still waits; a nearby follower can permit diversion.
+The follower's approach window changes with speed, so repeating only turbo positions95/96 would miss the slower
+boundaries. Original seed-order, other-lane, follower-spacing and ordinary-upstream controls are retained too.
+
+The [compact baseline](entry-speed-expectations.json) records stock identity/item/count once, then changed native
+positions `[id, units]` on each of eight lines; omitted ticks retain the preceding positions through `last_tick`.
+IDs are normalized within each control and have no cross-session meaning. Initial states and all changed or
+unchanged ticks are compared on replay, with no future stock reset, held-item edits or production prediction.
+Raw reports retain full snapshots, including upstream lines, under ignored `work/belt-speed-coverage/splitter-entry-01/`.
+These results strengthen the warning-only research record; they do not establish support for arbitrary splitter
+priorities, filters, rotations, stack sizes, networks or competing pickups.
+
+
+There are **146 independent calibration controls**: the original 30 at each speed, additional step-sensitive
+window boundaries, and six slower-speed upstream admission follow-ups (32 turbo and 38 each express/fast/normal).
+The follow-ups demonstrate entry at position178 and waiting when spacing would require179. Express/fast boundary
+hands use head positions10/11 and2/3 respectively; normal uses2/3 and reaches this admission decision on tick2
+rather than tick1. The larger input segment cannot accept a stack at its exact length179.
+
+All146 retained reports pass the observation regression. Eight preferred-output acceptance/rejection boundaries
+were captured again in fresh native sessions and matched the normalized baseline exactly. Three slower natural
+originals were also independently repeated. Follow-up/repeat evidence is retained under ignored
+`work/belt-speed-coverage/splitter-entry-02/` and `splitter-natural-02/`; `splitter-entry-final/` is a local symlink
+index combining the two calibration capture roots without duplicating game saves.
+
+```bash
+# Fresh native calibration run; select one speed or boundary while investigating.
+SPLITTER_ENTRY_CAPTURE_DIR=../work/belt-speed-coverage/new-entry npm run test:game -- tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts -t '^express'
+
+# Replay an existing capture without starting Factorio.
+SPLITTER_REPLAY_DIR=../work/belt-speed-coverage/splitter-entry-final npm run test:game -- tests/game/mechanics/belt-pickup/splitter-entry-window.game.test.ts
+```
+
+The replay path must contain the selected speed/case subdirectories. Baselines are committed; raw reports and
+local symlink indexes are not. Splitter support remains out of scope and publishing stays on hold.

@@ -227,3 +227,31 @@ Opposite input arrangements and filtered routing remain unmeasured. Removing the
 initially stationary serial supply, but does not establish permanently saturated local stock. Priority
 isolation establishes a local first-hand cause, not a complete simulation of splitter scheduling. Continue with
 one controlled change at a time.
+
+## Four-speed coverage
+
+The same eight independent controls now run at turbo, express, fast and normal speed. The transformation
+changes every belt, underground, loader and splitter prototype consistently, retaining ingredients, priorities,
+mirroring and gate timing. Native assertions verify paired undergrounds and the actual prototypes before release.
+Each slower control has 120 observed operating ticks after the same 1200-tick natural warm-up.
+[Measured baselines](speed-expectations.json) retain both inserters' complete hand sequences, initial eight-line
+stock without process-specific IDs, and final product counts. Turbo retains its existing detailed assertions.
+
+| First hand, native ticks | Turbo | Express | Fast | Normal |
+| --- | --- | --- | --- | --- |
+| Both priorities set, both inserters | 2,3,4,5 | 2,3,5,8 | 2,3,5,9 | 2,3,4,12 |
+| Only upstream priority unset: upstream | 2,3,4,7 | 2,3,5,10 | 2,3,5,13 | 2,3,4,20 |
+| Only upstream priority unset: downstream | 2,3,4,5 | 2,3,5,8 | 2,3,5,9 | 2,3,4,12 |
+| Only downstream priority unset: upstream | 2,3,4,5 | 2,3,5,8 | 2,3,5,9 | 2,3,4,12 |
+| Only downstream priority unset: downstream | 2,3,4,7 | 2,3,5,10 | 2,3,5,13 | 2,3,4,20 |
+| Both priorities unset, both inserters | 2,3,4,7 | 2,3,5,10 | 2,3,5,13 | 2,3,4,20 |
+| Both unset and final drain removed, both inserters | 2,3,4,5 | 2,3,4,5 | 2,3,4,7 | 2,3,4,11 |
+
+Ingredient swaps and the two independent mirroring flips retain the first-hand timing shown for priorities set;
+they change which ingredient is selected. Later hands and product counts vary with routing and shared machine
+eligibility, so this table is not a constant-delay rule. Removing the final drain does not guarantee four
+consecutive pickups at every speed. Splitter capture remains explicitly unsupported, with no inferred pickup
+length or lane. No splitter simulation has been introduced.
+
+Raw runs: ignored `work/belt-speed-coverage/splitter-natural-01/serial/`. Re-evaluate retained evidence without
+launching Factorio by setting `SPLITTER_REPLAY_DIR` to that serial directory and running this test file.
