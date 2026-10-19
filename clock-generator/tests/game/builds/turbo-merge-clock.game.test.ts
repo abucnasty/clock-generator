@@ -31,6 +31,7 @@ for (const recipe of ["iron-gear-wheel", "electronic-circuit"]) test(recipe === 
         const source = config.inserters[1].source;
         if (source.type !== "belt") throw new Error("expected belt");
         source.pickup_length = 1;
+        source.pickup_layout = "side-straight";
         delete source.pickup_supply;
         source.pickup_merge = {lane: 2, outer: {ingredient: "iron-plate", stack_size: 4}, inner: {ingredient: recipe === "iron-gear-wheel" ? "iron-plate" : "copper-cable", stack_size: 4},
             downstream_tiles: 3, outlet: "open"};

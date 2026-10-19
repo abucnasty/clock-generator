@@ -126,7 +126,7 @@ describe("physical belt lane fallback", () => {
         it(`fills an underground hand in four consecutive grabs: ${type}, near lane ${near}`, () => {
             const config = copy();
             config.belts[0].type = type;
-            config.inserters[1].source = { type: "belt", id: 1, near_lane: near, pickup_length: 0.5 };
+            config.inserters[1].source = { type: "belt", id: 1, near_lane: near, pickup_length: 0.5, pickup_layout: "side-entrance" };
             const input = pickup(config);
             expect(input.state.inserter.near_lane).toBe(near);
             expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
@@ -139,7 +139,7 @@ describe("physical belt lane fallback", () => {
     it("uses the preferred lane's stack size, then caps a fallback grab at the remaining hand capacity", () => {
         const config = copy();
         config.belts[0].lanes[1]!.stack_size = 2;
-        config.inserters[1].source = { type: "belt", id: 1, near_lane: 2, pickup_length: 0.5 };
+        config.inserters[1].source = { type: "belt", id: 1, near_lane: 2, pickup_length: 0.5, pickup_layout: "side-entrance" };
         config.inserters[1].stack_size = 7;
         const input = pickup(config);
         expect([0, 1, 2].map(input.take)).toEqual([2, 2, 3]);
@@ -156,7 +156,7 @@ describe("physical belt lane fallback", () => {
 
     it("retains the first-lane convention when the nearest physical lane was not supplied", () => {
         const config = copy();
-        config.inserters[1].source = { type: "belt", id: 1, pickup_length: 0.5 };
+        config.inserters[1].source = { type: "belt", id: 1, pickup_length: 0.5, pickup_layout: "side-entrance" };
         config.belts[0].lanes[0].stack_size = 2;
         expect(pickup(config).take(0)).toBe(2);
     });
@@ -182,7 +182,7 @@ describe("physical belt lane fallback", () => {
         for (const length of [1, 0.5] as const) {
             const config = copy();
             config.overrides = { backed_up_belts: true };
-            config.inserters[1].source = { type: "belt", id: 1, near_lane: 1, pickup_length: length };
+            config.inserters[1].source = { type: "belt", id: 1, near_lane: 1, pickup_length: length, pickup_layout: length === 1 ? "side-straight" : "side-entrance" };
             const input = pickup(config);
             expect(input.state.inserter.pickup_length).toBe(length);
             expect(input.state.inserter.belt_supply).toBe("backed_up");

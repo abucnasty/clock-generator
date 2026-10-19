@@ -5,7 +5,7 @@ function config(pickup_supply: unknown, pickup_length = 1) {
     return {
         target_output: { recipe: "electronic-circuit", items_per_second: 1, copies: 1 }, machines: [],
         belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ingredient: "", stack_size: 4}, {ingredient: "iron-plate", stack_size: 4}] }],
-        inserters: [{source: {type: "belt", id: 1, pickup_length, ...(pickup_supply === undefined ? {} : {pickup_supply})}, sink: {type: "machine", id: 1}}],
+        inserters: [{source: {type: "belt", id: 1, pickup_length, ...(pickup_length === 0.5 && {pickup_layout: "side-entrance"}), ...(pickup_supply === undefined ? {} : {pickup_supply})}, sink: {type: "machine", id: 1}}],
     };
 }
 

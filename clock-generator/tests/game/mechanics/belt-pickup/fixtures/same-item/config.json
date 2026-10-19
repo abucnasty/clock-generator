@@ -32,7 +32,8 @@
         "type": "belt",
         "id": 1,
         "near_lane": 1,
-        "pickup_length": 0.5
+        "pickup_length": 0.5,
+        "pickup_layout": "side-entrance"
       },
       "sink": {
         "type": "machine",

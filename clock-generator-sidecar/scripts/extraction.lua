@@ -158,6 +158,7 @@ local function extract_inserter_data(entity)
                 source.entity_type = pickup_target.type
                 source.near_lane = helpers.get_near_lane(entity, pickup_target)
                 source.pickup_length = helpers.get_pickup_length(entity, pickup_target)
+                source.pickup_layout = helpers.get_pickup_layout(entity, pickup_target)
                 source.pickup_problem = helpers.get_pickup_problem(entity, pickup_target)
             end
 

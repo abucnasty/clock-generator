@@ -70,6 +70,7 @@ describe("the light entry", () => {
             specifier.startsWith(".") ? path.relative(__dirname, resolveSource(path.join(__dirname, file), specifier)) : specifier));
         expect([...files].sort()).toEqual([
             "common/assert.ts",
+            "common/belt-pickup-layout.ts",
             "common/enable-control-types.ts",
             "common/entity-types.ts",
             "config/copies-value.ts",

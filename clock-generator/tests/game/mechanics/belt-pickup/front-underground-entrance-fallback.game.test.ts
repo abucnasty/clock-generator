@@ -132,9 +132,9 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
         }
 
         const captured = result.recording.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
-        expect(captured.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5 });
+        expect(captured.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5, pickup_layout: "front-entrance" });
         const exported = result.recording.config.inserters.find(i => i.source.type === "belt" && i.sink.type === "machine")!;
-        expect(exported.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5 });
+        expect(exported.source).toMatchObject({ near_lane: preferred, pickup_length: 0.5, pickup_layout: "front-entrance" });
         const exportedBelt = result.recording.config.belts.find(belt => belt.id === exported.source.id)!;
         expect(exportedBelt.lanes).toEqual(config.belts.find(belt => belt.id === 2)!.lanes);
         expect(result.recording.config.pickup_warnings).toBeUndefined();

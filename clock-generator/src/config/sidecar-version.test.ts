@@ -121,3 +121,11 @@ it('accepts an explicit current capture declaration without asking for a mod upd
         pickup_capture: {status: 'supported', model: 'belt', model_version: 1, entity_type: 'transport-belt'}}}];
     expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], inserters)).toEqual(Option.none());
 });
+
+it('requires layout recapture even when an old underground export names the current mod version', () => {
+    const source = {type: 'belt', id: 1, pickup_length: 0.5, near_lane: 1,
+        pickup_capture: {status: 'supported', model: 'belt', model_version: 1, entity_type: 'underground-belt'}};
+    expect(Option.toNullable(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [{source}]))).toContain('Underground pickup layout was not captured');
+    expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [{source: {...source, pickup_layout: 'front-entrance',
+        pickup_capture: {...source.pickup_capture, model_version: 2}}}])).toEqual(Option.none());
+});

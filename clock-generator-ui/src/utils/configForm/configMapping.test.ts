@@ -15,7 +15,7 @@ const imported = {
         { source: { type: 'machine', id: 1 }, sink: { type: 'machine', id: 2 }, stack_size: 16 },
         {
             id: 5,
-            source: { type: 'belt', id: 1, near_lane: 2, pickup_length: 0.5 },
+            source: { type: 'belt', id: 1, near_lane: 2, pickup_length: 0.5, pickup_layout: 'side-entrance' },
             sink: { type: 'machine', id: 2 },
             stack_size: 16,
             filters: ['iron-plate'],

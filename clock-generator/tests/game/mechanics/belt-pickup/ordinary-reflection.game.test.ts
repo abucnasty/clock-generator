@@ -32,6 +32,7 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
                 if (input.source.type !== "belt") throw new Error("Expected belt source");
                 const length = geometry === "straight-belt" ? 1 : 0.5;
                 input.source.pickup_length = length;
+                input.source.pickup_layout = geometry === "straight-belt" ? "side-straight" : geometry === "underground-entrance" ? "side-entrance" : "side-exit";
                 input.source.near_lane = 2;
                 input.filters = ["accumulator"];
                 config.belts.find(belt => belt.id === input.source.id)!.lanes.forEach(lane => {lane.ingredient = "accumulator";});
@@ -60,7 +61,8 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
                     {config: Config & {pickup_warnings?: unknown[]}};
                 const exported = recording.config.inserters.find(inserter => inserter.source.type === "belt" && inserter.sink.type === "machine")!;
                 expect(exported.source).toMatchObject({near_lane: 2, pickup_length: length,
-                    pickup_capture: {status: "supported", model: "belt", model_version: 1, entity_name: prototype}});
+                    pickup_capture: {status: "supported", model: "belt", model_version: replayRoot ? 1 : 2, entity_name: prototype}});
+                if (!replayRoot) expect(exported.source).toMatchObject({pickup_layout: input.source.pickup_layout});
                 expect(recording.config.pickup_warnings).toBeUndefined();
                 expect(report.samples).toHaveLength(1300);
                 expect(report.samples.slice(0, 64).every(sample => sample.held === 0)).toBe(true);

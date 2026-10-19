@@ -61,7 +61,7 @@ describe("persistent pickup capture boundary", () => {
 
     it.each([
         {...supported, model: "splitter"},
-        {...supported, model_version: 2},
+        {...supported, model_version: 3},
         {...supported, entity_type: "splitter"},
     ])("rejects unsupported model declarations instead of stripping their new fields", capture => {
         expect(ConfigSchema.safeParse(withSource({near_lane: 1, pickup_capture: capture})).success).toBe(false);

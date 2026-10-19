@@ -92,7 +92,7 @@ for (const backedUpBelts of [false, true]) {
                 test(`${name} ${disturbed ? "recovers after each ingredient cut and output blockage" : "holds every recorded period"}`, async context => {
                     context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
                     const runConfig: Config = { ...config, inserters: config.inserters.map(inserter => inserter.source.type === "belt"
-                        ? { ...inserter, source: { ...inserter.source, pickup_length: name === "straight-belt" ? 1 : 0.5 } } : inserter) };
+                        ? { ...inserter, source: { ...inserter.source, pickup_length: name === "straight-belt" ? 1 : 0.5, pickup_layout: name === "straight-belt" ? "side-straight" : name === "underground-entrance" ? "side-entrance" : "side-exit" } } : inserter) };
                     const scaffold = fs.readFileSync(path.join(SAMPLE, `${name}-scaffold.txt`), "utf8").trim();
                     const result = await recordInFactorio({
                         factorio: FACTORIO!, save: SAVE!,
