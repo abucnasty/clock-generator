@@ -34,8 +34,9 @@ orientation or topology is verified, or that the simulator supports it. **Not te
 without documented native evidence in this investigation. A suffix identifies an unresolved limitation:
 
 - **simulator timing mismatch**: the production simulator predicts different grab ticks from the game.
-- **generator result mismatch**: a generated clock misses its expected output or recovery in the game;
-  the underlying cause is not yet isolated.
+- **generator result mismatch**: the generator's rate or stability assessment disagrees with the game.
+- **no verified moving default**: the selected fallback requires backed-up supply and misses the target
+  with moving supply; it is not a verified default for that setup.
 - **experimental merge stock mismatch**: the experimental rule predicts the wrong stock movements or supplying
   stream, even when grab ticks agree. This is not a production simulator comparison.
 - **no simulator support**: measurements exist, but no supported production model is available for that case.
@@ -123,15 +124,18 @@ independent incoming streams; exact gate ticks remain in the fixture instruction
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
-| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; generator result mismatch | Tested; generator result mismatch | Tested; generator result mismatch |
+| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; no verified moving default for undergrounds | Tested | Tested; generator result mismatch for backed-up undergrounds |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
-The 39 added ordinary clock checks are complete: 29 meet both target and recovery, eight miss baseline targets,
-and two meet baseline but fail exact recovery. Slower merge-clock generation is blocked by the intentionally
-turbo-only supported merge schema and remains **Not tested**. The belt-drop rows now also compare finite receiving stock against the simulator, including the normal-speed second hand.
+The post-fix recapture covers **48 ordinary clocks** across all four speeds: **46 meet exact baseline and recovery output**.
+Of those, 44 are correctly marked stable; both normal backed-up underground clocks work in the game but are
+conservatively rejected by the simulator. The two express moving underground defaults require backed-up supply
+and miss the target under moving supply. The original 39 recordings remain separate historical evidence.
+Slower merge clocks remain **Not tested** under the turbo-only supported schema. The belt-drop rows also compare
+finite receiving stock, including the normal-speed second hand.
 
 ## Tick-pattern matrix
 
@@ -289,26 +293,25 @@ downstream front-exit fixture blocks continuous flow; the over-the-hood exit is 
 Its 258 controls reproduce the lane preference and finite-stock rules across observed aligned phases.
 The production model matches collection and stock, and Sidecar now exports a supported explicit layout.
 
-**Generated clocks.** Collection replay after observed arm arrival does not establish
-clock throughput or a reliable stability verdict. Electromagnetic targets scale with belt speed: 22.5/s express,
-15/s fast and 7.5/s normal; gear targets stay at 6/s. The measured limitations are:
+**Generated clocks.** The post-fix recapture uses one sustained baseline and three effective disruptions
+per configuration, without resetting machines or clocks. Each has 63 baseline periods; compact counts agree
+with two overlapping detailed recorder periods. Electromagnetic targets scale with speed: 30/s turbo,
+22.5/s express, 15/s fast and 7.5/s normal; gear targets remain 6/s.
 
-| Clock / speed | Moving | Generator verdict | Expected per period | Native baseline | Recovery finding |
+| Clock / speed | Moving | Generator verdict | Expected per period | Native baseline and recovery | Finding |
 | --- | --- | --- | --- | --- | --- |
-| Express undergrounds | true | No recovery | 528 / 1,408 ticks | 432 or 448 | Shortfall persists |
-| Fast undergrounds | false | Stable | 880 / 3,520 ticks | 704 | Shortfall persists |
-| Normal straight | true | Stable | 704 / 5,632 ticks | 576 or 608 | Shortfall persists |
-| Normal straight | false | Stable | 880 / 7,040 ticks | 624 or 656 | Shortfall persists |
-| Normal undergrounds | false | Stable | 880 / 7,040 ticks | 528 | Shortfall persists |
-| Normal undergrounds | true | Stable | 176 / 1,408 ticks | 176 | 160/192 after output blockage; both ingredient recoveries return 176 |
+| Express undergrounds | true | No recovery; backed-up fallback | 528 / 1,408 ticks | Baseline 432/448; target not recovered | No verified moving default |
+| Fast undergrounds | false | Stable | 176 / 704 ticks | 176 throughout | Historical shortfall resolved |
+| Normal straight | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
+| Normal straight | false | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
+| Normal undergrounds | false | Unstable; predicts 144 per period | 176 / 1,408 ticks | 176 throughout | Conservative simulator mismatch |
+| Normal undergrounds | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical recovery alternation resolved |
 
-Every added clock has at least 60 untouched periods; compact counts match two overlapping detailed recorder
-periods and native hardware metadata is audited separately. All 21 added gear cases hold 16 gears / 160 ticks
-through all interventions. Eight electromagnetic cases meet baseline/recovery targets; ten show the limits
-above, including eight marked **Stable** by the generator. Express straight/backed-up, fast moving and fast
-backed-up straight controls meet their targets. Causes remain unresolved: input phase/refill,
-output stock history and machine/clock timing must be distinguished. The [build report](../../tests/game/builds/README.md)
-retains the final comparisons. Mean-rate recovery is insufficient when exact output is required every period.
+All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-four
+ordinary defaults are correctly marked stable; two more work natively but are rejected, and two select a
+fallback for a different supply condition. The [build report](../../tests/game/builds/README.md) links the current
+controls and preserves the original 39-run summaries. Independent startup and over-the-hood generated-clock
+checks remain separate verification gates; a collection replay conditioned on hand arrival does not close them.
 
 **Side supply and capture.** Single streams enter at **67 inner / 188 outer** units. The bounded turbo merge
 requires finite incoming/receiving/downstream queues, compressed gaps and backpressure; seven repeated controls
