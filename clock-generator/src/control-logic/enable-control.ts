@@ -1,5 +1,5 @@
 import { Duration, OpenRange } from "../data-types";
-import { OffsetTickProvider, TickProvider } from "./current-tick-provider";
+import { TickProvider } from "./current-tick-provider";
 import { Resettable } from "./resettable";
 
 export interface EnableControl {
@@ -72,6 +72,36 @@ function clockPosition(tick: number, period: number): number {
     return snapped >= period ? 0 : snapped;
 }
 
+/** Longest whole-tick period whose answers clockLookup keeps in a table */
+const MAX_TABLED_PERIOD = 1 << 20;
+
+/**
+ * Whether a clock enables at a tick: inRange(clockPosition(tick, period)). For a whole-tick period, the position of a
+ * whole tick is its remainder, so each answer is worked out once and kept in a table; other ticks and periods are
+ * worked out every time.
+ */
+function clockLookup(period: number, inRange: (position: number) => boolean): (tick: number) => boolean {
+    if (!Number.isInteger(period) || period <= 0 || period > MAX_TABLED_PERIOD) {
+        return tick => inRange(clockPosition(tick, period));
+    }
+    // 0: not worked out yet, 1: disabled, 2: enabled
+    let table: Uint8Array | null = null;
+    return tick => {
+        if (!Number.isInteger(tick) || tick < 0) {
+            return inRange(clockPosition(tick, period));
+        }
+        table ??= new Uint8Array(period);
+        const position = tick % period;
+        const known = table[position];
+        if (known !== 0) {
+            return known === 2;
+        }
+        const enabled = inRange(position);
+        table[position] = enabled ? 2 : 1;
+        return enabled;
+    };
+}
+
 /** Same answer as ranges.some(r => r.contains(position)), by binary search over the merged ranges */
 function rangeLookup(ranges: ReadonlyArray<OpenRange>): (position: number) => boolean {
     const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
@@ -128,10 +158,9 @@ class ClockedEnableControl implements EnableControl, Resettable {
         );
     }
     private offset = 0;
-    private readonly offset_tick_provider: OffsetTickProvider;
     private readonly inRange: (position: number) => boolean;
     private readonly asked = new LastTwoTicks();
-    private readonly enabledAt = (tick: number) => this.inRange(clockPosition(tick, this.periodDuration.ticks));
+    private readonly enabledAt: (tick: number) => boolean;
 
     constructor(
         public readonly periodDuration: Duration,
@@ -139,11 +168,8 @@ class ClockedEnableControl implements EnableControl, Resettable {
         public readonly tickProvider: TickProvider,
         public readonly is_game_clock: boolean = false,
     ) {
-        this.offset_tick_provider = TickProvider.offset({
-            base: tickProvider,
-            offset: this.getOffset.bind(this),
-        })
         this.inRange = rangeLookup(enabledRanges);
+        this.enabledAt = clockLookup(periodDuration.ticks, this.inRange);
     }
 
     public isEnabled(): boolean {
@@ -151,7 +177,8 @@ class ClockedEnableControl implements EnableControl, Resettable {
     }
 
     public isEnabledIn(ticks: number): boolean {
-        return this.asked.get(this.offset_tick_provider.getCurrentTick() + ticks, this.enabledAt);
+        // the tick of the clock: the tick provider's, moved by the offset of the last reset
+        return this.asked.get(this.tickProvider.getCurrentTick() + this.offset + ticks, this.enabledAt);
     }
 
     public getOffset(): number {
@@ -166,7 +193,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
 class PeriodicEnableControl implements EnableControl {
     private readonly inRange: (position: number) => boolean;
     private readonly asked = new LastTwoTicks();
-    private readonly enabledAt = (tick: number) => this.inRange(clockPosition(tick, this.periodDuration.ticks));
+    private readonly enabledAt: (tick: number) => boolean;
 
     constructor(
         public readonly periodDuration: Duration,
@@ -174,6 +201,7 @@ class PeriodicEnableControl implements EnableControl {
         public readonly tickProvider: TickProvider
     ) {
         this.inRange = rangeLookup(enabledRanges);
+        this.enabledAt = clockLookup(periodDuration.ticks, this.inRange);
     }
 
     public isEnabled(): boolean {

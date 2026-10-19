@@ -504,7 +504,19 @@ function itemsPerSecondOverCopies(items_per_period: number, period_ticks: number
     return fraction(copies).multiply(items_per_period * 60).divide(period_ticks).toDecimal();
 }
 
-function runAlternative(definition: AlternativeDefinition, config: Config, logger: Logger, report?: (detail: string) => void): ClockAlternativeRun | null {
+/** What tells the clocks of two runs apart; runs with the same signature are listed once (see combineClockAlternativeRuns) */
+function signatureOf(result: BlueprintGenerationResult): string {
+    return JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
+}
+
+function runAlternative(
+    definition: AlternativeDefinition,
+    config: Config,
+    logger: Logger,
+    report?: (detail: string) => void,
+    /** Signatures of clocks another run assesses: a run that makes one of them again is merged away, so it skips assessing it */
+    assessed?: ReadonlySet<string>,
+): ClockAlternativeRun | null {
     const copies = config.target_output.copies ?? 1;
     let result: BlueprintGenerationResult;
     try {
@@ -514,8 +526,12 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
         return null;
     }
     const { id } = definition;
+    const signature = signatureOf(result);
+    if (assessed?.has(signature)) {
+        // listed behind the run that assessed it, which combineClockAlternativeRuns keeps in its place
+        return { signature, alternatives: [] };
+    }
     const label = withOutputSwings(definition, result.used_terminal_swing_count);
-    const signature = JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
     const entity_registry = createEntityRegistryFromConfig(config);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
@@ -595,10 +611,18 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
 }
 
 /** Runs the primary (batched swings) alternative and lists the rest as independent tasks */
-export function planClockAlternatives(config: Config, options: GenerateClockOptions = {}): ClockAlternativesPlan {
+export function planClockAlternatives(
+    config: Config,
+    options: GenerateClockOptions = {},
+    /**
+     * Called with the tasks once the primary clock is made, before it is assessed (its backpressure losses tried): the
+     * tasks need its clock, not its assessment, so they can run alongside the rest of the primary alternative. A task
+     * that makes the primary clock again can pass its signature to runClockAlternativeTask.
+     */
+    on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
+): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
     const definition = primaryDefinition(config, options, options.on_progress_detail);
-    const primary = runAlternative(definition, config, logger, options.on_progress_detail);
     const result = definition.run();
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
@@ -610,6 +634,8 @@ export function planClockAlternatives(config: Config, options: GenerateClockOpti
     };
     const tasks = alternativeDefinitions(config, context, {})
         .map(definition => ({ id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config) }));
+    on_tasks?.(context, tasks, signatureOf(result));
+    const primary = runAlternative(definition, config, logger, options.on_progress_detail);
     return { primary, context, tasks };
 }
 
@@ -631,12 +657,14 @@ export function runClockAlternativeTask(
     context: ClockAlternativeContext,
     task_id: string,
     options: GenerateClockOptions = {},
+    /** Signatures of clocks other runs assess, as the primary alternative's (see planClockAlternatives) */
+    assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
     const logger = options.logger ?? defaultLogger;
     const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
         .find(it => it.id === task_id);
     assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
-    return runAlternative(definition, config, logger, options.on_progress_detail);
+    return runAlternative(definition, config, logger, options.on_progress_detail, new Set(assessed_signatures));
 }
 
 /** The start dependence of a build's clocks in a line: that it was not checked, or which clocks depend on the start */

@@ -1,4 +1,5 @@
-import { CompositeControlLogic, ControlLogic, TickControlLogic } from "../../../control-logic";
+import { ControlLogic } from "../../../control-logic";
+import { SimulationTick } from "../simulation-tick";
 import { Duration } from "../../../data-types";
 import { SimulationContext } from "../../sequence";
 import { RunnerStep, RunnerStepType } from "./runner-step";
@@ -57,18 +58,6 @@ export class WarmupStep implements RunnerStep {
     }
 
     private build(): ControlLogic {
-        const context = this.simulation_context
-        const tick_control_logic = new TickControlLogic(context.tick_provider);
-
-        const control_logic = new CompositeControlLogic(
-            [
-                tick_control_logic,
-                ...context.drills,
-                context.inserterUpdates(),
-                ...context.machines,
-            ]
-        )
-
-        return control_logic;
+        return new SimulationTick(this.simulation_context);
     }
 }

@@ -14,7 +14,8 @@ import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
-import { ResettableRegistry, TickProvider } from "../../control-logic";
+import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
+import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
 import { EntityTransferCountMap, outputInsertersOf, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
@@ -464,6 +465,13 @@ interface RecordedBuild {
     relative_tick_provider: TickProvider;
     inventory_transfer_history: InventoryTransferHistory;
     state_transition_history: StateTransitionHistory;
+    /** The plugins that only feed the two histories */
+    history_plugins: ReadonlySet<ModePlugin<any>>;
+}
+
+/** Every plugin on the state machines of a simulation */
+function pluginsOf(context: SimulationContext): ModePlugin<any>[] {
+    return [...context.inserters, ...context.machines, ...context.drills].flatMap((it): ModePlugin<any>[] => it.getPlugins());
 }
 
 /** The simulation of a config, with the debug, transfer and state plugins on every entity; nothing is recorded yet */
@@ -482,23 +490,24 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
         .map(it => it.machine_state.machine)
         .forEach(machine => Machine.printMachineFacts(machine, logger));
 
-    const relative_tick = { start: 0 };
+    const relative_tick_provider = new RelativeTickProvider(simulation_context.tick_provider);
+    const relative_tick = relative_tick_provider;
 
-    const relative_tick_provider = TickProvider.offset({
-        base: simulation_context.tick_provider,
-        offset: () => -1 * relative_tick.start
-    });
-
-    // Configure plugins
-    configureDebugPlugins(simulation_context, relative_tick_provider, debug);
+    // Configure plugins. Debugging is only switched on for the steps debug_steps names (see withDebugFor): without
+    // any, the debug plugins would log nothing and only cost time every tick.
+    if (Object.values(options.debug_steps ?? {}).some(Boolean)) {
+        configureDebugPlugins(simulation_context, relative_tick_provider, debug);
+    }
+    const plugins_before_histories = new Set(pluginsOf(simulation_context));
     const inventory_transfer_history = configureInventoryTransferPlugins(simulation_context, relative_tick_provider);
     const state_transition_history = configureStateTransitionPlugins(simulation_context, relative_tick_provider, options.factorio_states ?? true);
+    const history_plugins = new Set(pluginsOf(simulation_context).filter(plugin => !plugins_before_histories.has(plugin)));
     inventory_transfer_history.recording = false;
     state_transition_history.recording = false;
 
     logger.log(`Created simulation context with ${simulation_context.machines.length} machines and ${simulation_context.inserters.length} inserters.`);
 
-    return { simulation_context, relative_tick, relative_tick_provider, inventory_transfer_history, state_transition_history };
+    return { simulation_context, relative_tick, relative_tick_provider, inventory_transfer_history, state_transition_history, history_plugins };
 }
 
 /**
@@ -950,6 +959,11 @@ function backpressureLossOf(
     // the run above is over: the trials go on from where it ended, and nothing of them goes into its histories
     build.inventory_transfer_history.recording = false;
     build.state_transition_history.recording = false;
+    // so the plugins that feed them have nothing to do: a trial ticks a few hundred thousand times
+    const trial_context = controlled.new_simulation_context;
+    for (const state_machine of [...trial_context.inserters, ...trial_context.machines, ...trial_context.drills]) {
+        state_machine.removePlugins(build.history_plugins);
+    }
     const loss_period = options.backpressure_loss.period_ticks;
     const repeat = subtickClockForPeriod(loss_period);
     const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }

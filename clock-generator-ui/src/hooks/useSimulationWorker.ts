@@ -178,6 +178,10 @@ interface Generation {
     done: Set<string>;
     idle: Worker[];
     completed: number;
+    /** The planning worker is still assessing the primary alternative, after it sent the tasks */
+    primaryPending: boolean;
+    /** Clocks the primary alternative assesses, which a task that makes one again need not assess */
+    assessedSignatures: string[];
     detail?: string;
     /** What was on screen when it started, for a Cancel to bring back */
     previous: ShownResults | null;
@@ -304,12 +308,15 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     /** The workers the generation keeps busy: every one running a task, and the first one while it plans */
     const busyWorkersFor = useCallback((generation: Generation) => busyWorkersOf(workersRef.current, {
         running: generation.running.keys(),
-        planning: generation.context === null,
+        planning: generation.context === null || generation.primaryPending,
         checking: false,
     }), []);
 
     const reportProgress = useCallback((generation: Generation) => {
         const running = Array.from(generation.running.values(), task => task.label);
+        if (generation.primaryPending) {
+            running.unshift(PRIMARY_STEP);
+        }
         progressStore.set({
             step: generation.context ? running.join(', ') : PRIMARY_STEP,
             detail: generation.detail,
@@ -423,7 +430,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [busyWorkersFor, progressStore, replace, setShown, updateResults]);
 
     const dispatchTasks = useCallback((generation: Generation) => {
-        if (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0) {
+        if (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0 && !generation.primaryPending) {
             // every clock made without a search is in: the searches run when none of them can be selected as stable
             const searches = generation.waiting;
             generation.waiting = [];
@@ -446,9 +453,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 streamLogs: generation.streamLogs,
                 context: generation.context!,
                 taskId: task.id,
+                assessedSignatures: generation.assessedSignatures,
             } satisfies WorkerRequest);
         }
-        if (generation.running.size > 0 || generation.queue.length > 0) {
+        if (generation.running.size > 0 || generation.queue.length > 0 || generation.primaryPending) {
             reportProgress(generation);
             return;
         }
@@ -506,11 +514,20 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 generation.assumptions = { ...response.assumptions, complete: false };
                 generation.context = response.context;
                 generation.tasks = response.tasks;
-                generation.runs = [response.primary, ...response.tasks.map(() => null)];
+                generation.runs = [null, ...response.tasks.map(() => null)];
                 generation.waiting = response.tasks.filter(task => task.only_when_needed);
                 generation.queue = slowestFirst(response.tasks.filter(task => !task.only_when_needed));
-                generation.completed = 1;
-                generation.idle = [...workersRef.current];
+                generation.primaryPending = true;
+                generation.assessedSignatures = [response.primarySignature];
+                // the planning worker goes on with the primary alternative
+                generation.idle = workersRef.current.filter(it => it !== worker);
+                dispatchTasks(generation);
+                break;
+            case 'primary-completed':
+                generation.runs[0] = response.primary;
+                generation.primaryPending = false;
+                generation.completed++;
+                generation.idle.push(worker);
                 publishAlternatives(generation);
                 dispatchTasks(generation);
                 break;
@@ -671,7 +688,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         const runId = ++runIdRef.current;
         generationRef.current = {
             runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [], assumptions: null,
-            running: new Map(), done: new Set(), idle: [], completed: 0,
+            running: new Map(), done: new Set(), idle: [], completed: 0, primaryPending: false, assessedSignatures: [],
             previous: shownRef.current, generatedFor: run.generatedFor, pickRule: rule, searchedDeeper: run.searchedDeeper,
         };
         worker.postMessage({ type: 'plan', runId, config: engineConfig, debugSteps, streamLogs } satisfies WorkerRequest);

@@ -222,6 +222,8 @@ export interface TaskRequest {
     streamLogs: boolean;
     context: ClockAlternativeContext;
     taskId: string;
+    /** Signatures of clocks other runs assess (see PlannedResponse.primarySignature) */
+    assessedSignatures?: string[];
 }
 
 /**
@@ -234,6 +236,7 @@ export type WorkerResponse =
     | LogResponse
     | ProgressResponse
     | PlannedResponse
+    | PrimaryCompletedResponse
     | TaskCompletedResponse
     | AnswerResponse
     | QueryFailedResponse
@@ -270,13 +273,24 @@ export interface ProgressResponse {
     detail: string;
 }
 
+/**
+ * The tasks of a plan, posted as soon as the primary clock is made; the planning worker goes on to assess it and posts
+ * PrimaryCompletedResponse
+ */
 export interface PlannedResponse {
     type: 'planned';
     runId: number;
-    primary: ClockAlternativeRunView | null;
     context: ClockAlternativeContext;
     tasks: ClockAlternativeTask[];
     assumptions: Pick<GenerationAssumptions, 'startDependenceRequested'>;
+    /** Signature of the primary clock: a task that makes the same clock is merged away, so it skips assessing it */
+    primarySignature: string;
+}
+
+export interface PrimaryCompletedResponse {
+    type: 'primary-completed';
+    runId: number;
+    primary: ClockAlternativeRunView | null;
 }
 
 export interface TaskCompletedResponse {
