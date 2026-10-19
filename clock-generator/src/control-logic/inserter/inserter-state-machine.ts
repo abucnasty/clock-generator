@@ -1,6 +1,6 @@
 import assert from "../../common/assert"
 import { ControlLogic } from "../control-logic";
-import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator } from "../mode";
+import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator, Transition } from "../mode";
 import { InserterDropMode, InserterIdleMode, InserterMode, InserterPickupMode, InserterSwingMode, InserterTransferLogicFactory } from "./modes";
 import { InserterTargetFullMode } from "./modes/target-full-mode";
 import { InserterWaitForSinkMode } from "./modes/wait-for-sink-mode";
@@ -40,7 +40,19 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
         if (this.ticking_control) {
             this.ticking_control.executeForTick();
         }
-        super.executeForTick();
+        // a copy of ModeStateMachine.executeForTick, see there
+        const evaluator = this.current_evaluator ?? this.modeEvaluatorForMode(this.current);
+        const transition = evaluator.evaluateTransition();
+        const next = transition instanceof Transition ? this.executeTransition(this.current, transition) : this.current;
+        if (next !== this.current) {
+            this.current = next;
+            this.current_evaluator = this.entered_evaluator ?? this.modeEvaluatorForMode(next);
+        }
+        next.executeForTick();
+        const tick_plugins = this.tick_plugins;
+        for (let index = 0; index < tick_plugins.length; index++) {
+            tick_plugins[index].executeForTick!();
+        }
         this.inserter_state.enabled = this.shownEnabled();
     }
 

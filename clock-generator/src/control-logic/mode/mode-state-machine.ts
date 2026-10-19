@@ -6,13 +6,13 @@ import { ModeTransitionEvaluator } from "./mode-transition-evaluator";
 
 export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
     
-    private current: M;
+    protected current: M;
     /** The evaluator of `current`, looked up when the mode changes rather than every tick */
-    private current_evaluator: ModeTransitionEvaluator<M> | undefined;
+    protected current_evaluator: ModeTransitionEvaluator<M> | undefined;
     /** The evaluator of the mode the last transition entered */
-    private entered_evaluator: ModeTransitionEvaluator<M> | undefined;
+    protected entered_evaluator: ModeTransitionEvaluator<M> | undefined;
     /** The plugins that do something every tick; most only watch transitions */
-    private readonly tick_plugins: ModePlugin<M>[];
+    protected readonly tick_plugins: ModePlugin<M>[];
 
     constructor(
         initial_mode: M,
@@ -32,6 +32,11 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
         return new Set(this.graph.keys());
     }
 
+    /**
+     * A tick of the current mode. The state machines of inserters and machines run copies of it (see
+     * InserterStateMachine.executeForTick): a copy of their own calls into their own kinds of modes and evaluators,
+     * which the engine optimizes better than one place calling into every kind.
+     */
     public executeForTick(): void {
         const next = this.evaluateTransition();
         if (next !== this.current) {
@@ -64,7 +69,7 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
         return this.current;
     }
 
-    private executeTransition(fromMode: M, transition: Transition<M>): M {
+    protected executeTransition(fromMode: M, transition: Transition<M>): M {
         if (fromMode === transition.toMode) {
             return fromMode;
         }
@@ -87,7 +92,7 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
         }
     }
 
-    private modeEvaluatorForMode(mode: M): ModeTransitionEvaluator<M> {
+    protected modeEvaluatorForMode(mode: M): ModeTransitionEvaluator<M> {
         const evaluator = this.graph.get(mode);
         if (!evaluator) {
             throw new Error(`No mode evaluator found for mode ${mode}`);

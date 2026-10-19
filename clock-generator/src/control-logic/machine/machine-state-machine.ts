@@ -1,7 +1,7 @@
 import assert from "../../common/assert"
 import { EntityId } from "../../entities";
 import { EntityState, MachineState, MachineStatus, ReadableEntityStateRegistry } from "../../state";
-import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator } from "../mode";
+import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator, Transition } from "../mode";
 import { MachineIngredientShortageMode, MachineMode, MachineNoFuelMode, MachineOutputFullMode, MachineWorkingMode } from "./modes";
 import { MachineStatusPlugin } from "./plugins";
 import { IngredientShortageModeTransitionEvaluator } from "./transitions/ingredient-shortage-mode-evaluator";
@@ -27,7 +27,19 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
     /** Products the machine holds go to its output in the tick there is room for them, whatever mode it is in */
     public override executeForTick(): void {
         this.working_mode.putHeldProductsInOutput();
-        super.executeForTick();
+        // a copy of ModeStateMachine.executeForTick, see there
+        const evaluator = this.current_evaluator ?? this.modeEvaluatorForMode(this.current);
+        const transition = evaluator.evaluateTransition();
+        const next = transition instanceof Transition ? this.executeTransition(this.current, transition) : this.current;
+        if (next !== this.current) {
+            this.current = next;
+            this.current_evaluator = this.entered_evaluator ?? this.modeEvaluatorForMode(next);
+        }
+        next.executeForTick();
+        const tick_plugins = this.tick_plugins;
+        for (let index = 0; index < tick_plugins.length; index++) {
+            tick_plugins[index].executeForTick!();
+        }
     }
 }
 
