@@ -13,7 +13,8 @@ name: Release
 # failed part way.
 # RELEASE_HOLD=true pauses GitHub releases and production deployment, including manual dispatches.
 # Tests and master preview deployments remain enabled during an unreleased merge.
-# Nothing is released or deployed unless the tests pass: the unit and generation tests and the UI build of test.yml.
+# Nothing is released or deployed unless the tests pass: the unit and generation tests, the UI build and the UI's
+# Generate in a browser of test.yml.
 #
 # The deployments need three secrets: VERCEL_TOKEN (a token of the Vercel account), VERCEL_ORG_ID and
 # VERCEL_PROJECT_ID (both in .vercel/repo.json or .vercel/project.json after `vercel link`). See "Versioning" in the README.

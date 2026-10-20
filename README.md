@@ -48,7 +48,7 @@ npm run test:all         # both
 npm run test:game -- <file> # selected game checks; requires Factorio (see the game verification guide)
 ```
 
-In `clock-generator-ui`, `npm test` runs the UI's tests.
+In `clock-generator-ui`, `npm test` runs the UI's tests, and `npm run test:browser` generates a clock in a real browser.
 
 The [game verification guide](clock-generator/tests/game/README.md) covers setup, mechanic fixtures, clock-build
 checks and retained probe captures.
