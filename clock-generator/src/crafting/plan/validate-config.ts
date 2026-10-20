@@ -23,8 +23,8 @@ export interface ConfigValidation {
 /**
  * Checks that a clock can be planned for the config and returns that plan, without generating any clock: every
  * ingredient and output has an inserter, the machines can reach the target rate, and every belt that is filled is
- * planned for. Costs one prepare run (the machines crafting until output blocked) instead of the hundreds of
- * simulations a generation does. Throws with the reason when the config is not valid.
+ * planned for. Costs one prepare run (the machines crafting until output blocked; a second with the belts backed up
+ * where they move, which the output swings are counted on) instead of the hundreds of simulations a generation does. Throws with the reason when the config is not valid.
  *
  * A generation can still end up with another plan than this one: it lowers the output swings when the planned
  * count is unstable, and offers other counts as potential clocks.

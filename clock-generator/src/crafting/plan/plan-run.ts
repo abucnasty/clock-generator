@@ -2023,8 +2023,30 @@ function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableC
 }
 
 /**
+ * The crafts of each machine, by id, in the prepare step of the build with its belts backed up; null where the prepare
+ * step that was run counts them: the belts are backed up already, no inserter takes from a belt, the config sets the
+ * output swings, or the plan takes fractional swings, whose swings per cycle are the build's own count, not a cap.
+ *
+ * Whole output swings per cycle are at most what a machine makes from the hands it gets before its output blocks, and
+ * the swing backoff only lowers them. On moving belts the prepare step's machines start empty and get their first
+ * hands as fast as the belt brings them: on the express moving half-tile pickups the electromagnetic plant gets one
+ * hand of each ingredient before its output blocks where backed-up belts give it two, so the plan had 2 output swings,
+ * a period of part ticks that no moving clock can be made for, and never reached 3, where observed windows hold.
+ */
+function craftsWithBeltsBackedUp(config: Config): Map<string, number> | null {
+    if (config.overrides?.backed_up_belts === true || config.overrides?.terminal_swing_count !== undefined
+        || config.overrides?.use_fractional_swings === true || !config.inserters.some(inserter => inserter.source.type === "belt")) {
+        return null;
+    }
+    const simulation_context = SimulationContext.fromConfig({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
+    new PrepareStep(simulation_context).execute();
+    return new Map(simulation_context.machines.map(({ machine_state }) => [machine_state.machine.entity_id.id, machine_state.craftCount]));
+}
+
+/**
  * Helper function to compute the crafting cycle plan.
  * This function assumes all machines have finished crafting while not having any items pulled out of their inventories.
+ * Where the belts move, whole swings are counted with them backed up (see craftsWithBeltsBackedUp).
  * 
  * For multiple output machines, the max swings possible is computed as the minimum across all machines
  * to ensure all machines can complete the required swings.
@@ -2047,6 +2069,7 @@ function computeCraftingCyclePlan(
     );
 
     const output_item_name = output_machine_states[0].machine.output.item_name;
+    const crafts_with_belts_backed_up = craftsWithBeltsBackedUp(config);
     
     // Compute max swings possible for each output machine and use the minimum
     let max_swings_possible: Fraction | null = null;
@@ -2055,8 +2078,10 @@ function computeCraftingCyclePlan(
         const machine_state = output_machine_states[i];
         const inserter = output_inserters[i];
         const output_machine = machine_state.machine;
-        const output_crafted = machine_state.craftCount * output_machine.output.amount_per_craft.toDecimal();
-        logger.log(`Output machine ${output_machine.entity_id.id} crafted ${output_crafted} ${output_item_name}`);
+        const crafts = crafts_with_belts_backed_up?.get(output_machine.entity_id.id) ?? machine_state.craftCount;
+        const output_crafted = crafts * output_machine.output.amount_per_craft.toDecimal();
+        logger.log(`Output machine ${output_machine.entity_id.id} crafted ${output_crafted} ${output_item_name}`
+            + (crafts_with_belts_backed_up === null ? "" : " with its belts backed up"));
         
         const machine_max_swings = fraction(output_crafted).divide(handSizeFor(inserter, output_item_name));
         

@@ -229,7 +229,10 @@ export function observedWindowsClock(
         end_padding_ticks: derived.end_padding_ticks,
     };
     stability_check.as_built = derived.as_built ?? undefined;
-    stability_check.holds = stability_check.holds && derived.windows !== null;
+    // the planning run's windows are not this clock's: it holds when its own windows hold, as even hands do. The swing
+    // backoff goes by this: on the express moving underground pickups the run the windows are observed in moves 560
+    // of 528 a period at 3 output swings, and the windows hold 528 from every start, and do in the game
+    stability_check.holds = derived.windows !== null && (derived.as_built?.holds ?? false);
 
     if (derived.windows !== null && derived.verification !== null) {
         const full_hand = fullHandTransferWindows(non_deriving_config, derived.windows, derived.verification,
@@ -237,6 +240,7 @@ export function observedWindowsClock(
         const windows = full_hand?.windows ?? derived.windows;
         if (full_hand) {
             stability_check.as_built = full_hand.check;
+            stability_check.holds = full_hand.check.holds;
             report.full_hand_inserters = full_hand.inserters;
         }
         // observed windows are what the inserters did, fuel hands included, and the run shown is the trial of them
