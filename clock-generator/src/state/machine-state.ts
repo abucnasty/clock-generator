@@ -214,7 +214,7 @@ function clone(machineState: MachineState): MachineState {
  * What drives the machine's next ticks besides its inventory (see simulationStateKey). The running totals only grow,
  * so they never repeat.
  */
-function stateKey(machineState: MachineState): string {
+function stateKey(machineState: MachineState, tick: number): string {
     return [
         machineState.status,
         machineState.pendingOutput,
@@ -224,7 +224,27 @@ function stateKey(machineState: MachineState): string {
         JSON.stringify(Array.from(machineState.lastOutputTaker)),
         machineState.craftingProgress.progress,
         machineState.bonusProgress.progress,
+        // a burner's future hangs on what is burning and what the fuel slot holds, which no other key carries
+        machineState.fuelProgress.energy_remaining_mj,
+        machineState.fuelProgress.energy_buffer_mj,
+        JSON.stringify(Object.entries(machineState.fuelInventory.export()).sort(([a], [b]) => a.localeCompare(b))),
+        // fractions of a by-product carried toward the next whole item
+        JSON.stringify(Array.from(machineState.byProductCarry).sort(([a], [b]) => a.localeCompare(b))),
+        // the asks of the tick the key is of: the pass-over rule of takesTurnForOutput reads them one tick longer
+        askedThisTick(machineState.outputWaiters, tick),
     ].join(";");
+}
+
+/** The inserters that asked for a product in this tick, by item: the only outputWaiters stamps the next tick reads */
+function askedThisTick(outputWaiters: ReadonlyMap<string, ReadonlyMap<string, number>>, tick: number): string {
+    const parts: string[] = [];
+    for (const [item_name, waiters] of outputWaiters) {
+        const asked = Array.from(waiters).filter(([, asked_tick]) => asked_tick === tick).map(([inserter_id]) => inserter_id);
+        if (asked.length > 0) {
+            parts.push(`${item_name}:${asked.sort().join(",")}`);
+        }
+    }
+    return parts.sort().join("|");
 }
 
 /** Where a machine keeps an ingredient: with its output, or apart from it when the recipe also makes that item */

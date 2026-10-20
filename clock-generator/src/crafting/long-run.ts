@@ -72,6 +72,56 @@ export function longRunPeriods(period: number, repeat: PeriodRepeat | null, base
 }
 
 /**
+ * Judges a long run that repeats: the state at the boundary of bin `from_bin + cycle_bins` equals the state at
+ * `from_bin`, so the bins between them are what the build does forever, and the verdict is a proof, not a sample.
+ * Every bin of the cycle has to be within `hand` of what a bin expects, as in judgeLongRun, and the cycle as a whole
+ * has to be exactly at its expected output: a cycle off by even one item drifts without bound.
+ *
+ * @param held what each output inserter held after each tick of the run; a fall from one tick to the next is a drop
+ * @param ticks ticks of the run: the repeating boundary's, so the judged bins are exactly the cycle
+ */
+export function judgeProvenCycle(
+    held: readonly (readonly number[])[],
+    ticks: number,
+    repeat: { bin_ticks: number; periods_per_bin: number; from_bin: number; cycle_bins: number },
+    expected_per_period: number,
+    hand: number,
+): LongRunVerdict {
+    const first_judged_tick = repeat.from_bin * repeat.bin_ticks;
+    const judged = new Array<number>(repeat.cycle_bins).fill(0);
+    for (const series of held) {
+        for (let t = Math.max(1, first_judged_tick); t < ticks; t++) {
+            if (series[t] < series[t - 1]) {
+                const index = Math.floor((t - first_judged_tick) / repeat.bin_ticks);
+                if (index < judged.length) {
+                    judged[index] += series[t - 1] - series[t];
+                }
+            }
+        }
+    }
+    const expected_per_bin = expected_per_period * repeat.periods_per_bin;
+    const off_bins = judged.map((items, index) => ({ index, items })).filter(it => Math.abs(it.items - expected_per_bin) > hand);
+    const total = judged.reduce((sum, items) => sum + items, 0);
+    const expected_total = expected_per_bin * judged.length;
+    // the cycle repeats forever: any shortfall or surplus in it is a drift that never ends
+    const span_off = total !== expected_total;
+    const judged_periods = repeat.periods_per_bin * judged.length;
+    return {
+        keeps_up: off_bins.length === 0 && !span_off,
+        bin_ticks: repeat.bin_ticks,
+        periods_per_bin: repeat.periods_per_bin,
+        first_judged_tick,
+        judged,
+        expected_per_bin,
+        off_bins,
+        total,
+        expected_total,
+        span_off,
+        output_items_per_period: judged_periods > 0 ? Math.round(total / judged_periods) : expected_per_period,
+    };
+}
+
+/**
  * Judges a long run by what its output inserters dropped.
  *
  * @param held what each output inserter held after each tick of the run; a fall from one tick to the next is a drop

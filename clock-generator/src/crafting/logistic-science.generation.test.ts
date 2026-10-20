@@ -101,7 +101,9 @@ describe("the searches only run when they are needed", () => {
             const selected = selectedOf(searched);
             expect(selected.id).toBe("derived");
             expect(selected.verdict).toBe("stable");
-            expect(selected.assessment.wake_ups_per_minute!).toBeCloseTo(163.64, 2);
+            // the long run repeats, so the wake-ups are the exact rate over the proven cycle (163.87), no longer
+            // the sample over the last two thirds of 120 periods (163.64)
+            expect(selected.assessment.wake_ups_per_minute!).toBeCloseTo(163.87, 2);
             expect(selected.assessment.wake_ups_per_minute!).toBeLessThan(selectedOf(by_default).assessment.wake_ups_per_minute!);
         });
     });

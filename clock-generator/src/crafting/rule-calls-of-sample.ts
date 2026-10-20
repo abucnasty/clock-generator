@@ -8,10 +8,11 @@ import { runBuild } from "./plan/plan-run";
 import { removedBetween, RuleRemoval } from "./rule-call";
 import { ruleCount, RuleCountRun } from "./rule-count";
 import { ruleCountInputOfStock } from "./rule-count-stock";
-import { FREE_RUNNING_CHECK_TICKS, longRunPeriodsOf, OUTPUT_FEEDER_CHECK_TICKS, simulateClockOnly } from "./trial";
+import { FREE_RUNNING_CHECK_TICKS, longRunPeriodsOf, OUTPUT_FEEDER_CHECK_TICKS, runClockOnBuild } from "./trial";
 import { LONG_RUN_SETTLE_SHARE } from "./long-run";
 import { wakeUpsOfStock } from "./wake-ups";
 import { Entity, EntityId } from "../entities";
+import { OpenRange } from "../data-types";
 
 /**
  * The rule of the inserter cost series applied to a build and its clock (see rule-count.ts and rule-call.ts), worked
@@ -40,13 +41,19 @@ export interface RuleCallsOfClock {
     clocked_wake_ups_per_minute: { here: number; long_run: number };
 }
 
-/** The clocked run: the build on the clock's windows alone, as long as its long run and over the same ticks */
-function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logger): StockRecording {
+/**
+ * The clocked run: the build on the clock's windows alone, as long as its long run and over the same ticks. A long
+ * run stops where its state repeats and is judged on the repeating cycle (see longRunOfFreeRunningBuild), so the run
+ * is made with the same repeat detection and `from_tick` is where its judged bins start.
+ */
+function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logger): { stock: StockRecording; from_tick: number } {
     const result = selected.result;
     const period = result.simulation_duration.ticks;
     const long_run = result.stability_check.as_built?.wake_ups;
     assert(long_run !== undefined, `The selected clock (${selected.id}, ${selected.verdict}) has no long-run wake-up count: its check failed `
         + "before the long run, or the period is too long for one");
+    const windows = new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     // the long run is the standard length, or twice that for a clock with output feeder windows (OUTPUT_FEEDER_CHECK_TICKS);
     // the one that gives the ticks the long run counted is the one the generator ran
     const tried = new Set<number>();
@@ -56,9 +63,16 @@ function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logg
             continue;
         }
         tried.add(periods);
-        const stock = simulateClockOnly(config, result.clock_windows, period, periods, logger);
-        if (stock.ticks - Math.max(1, Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE)) === long_run.ticks) {
-            return stock;
+        const run = runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period, logger,
+            { simulate_periods: periods, machine_stock: true, factorio_states: false, detect_repeat: true });
+        const stock = run.machine_stock;
+        assert(stock !== undefined, "The run recorded no stock");
+        // wakeUps counts from tick 1 at the earliest (the first tick has no change to read), as the generator's did
+        const from_tick = Math.max(1, run.state_repeat !== undefined
+            ? run.state_repeat.from_bin * run.state_repeat.bin_ticks
+            : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+        if (stock.ticks - from_tick === long_run.ticks) {
+            return { stock, from_tick };
         }
     }
     throw new Error(`No long run of the clock ${selected.id} (period ${period}) counts ${long_run.ticks} ticks; tried periods ${[...tried].join(", ")}`);
@@ -104,8 +118,7 @@ export function ruleCallsOfClock(config: Config, selected: ClockAlternative, log
     const planned = { ...config, overrides: { ...config.overrides, terminal_swing_count: result.used_terminal_swing_count } };
     const registry = createEntityRegistryFromConfig(planned);
 
-    const clocked_stock = clockedStockOf(planned, selected, logger);
-    const from_tick = Math.floor(clocked_stock.ticks / LONG_RUN_SETTLE_SHARE);
+    const { stock: clocked_stock, from_tick } = clockedStockOf(planned, selected, logger);
     const to_tick = clocked_stock.ticks;
     const unwired_stock = unwiredStockOf(planned, period, to_tick, logger);
 
