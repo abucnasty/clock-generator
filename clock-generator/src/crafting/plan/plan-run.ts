@@ -1969,13 +1969,51 @@ export function windowsFromHistory(
     always_enabled_by_config: ReadonlySet<string>,
 ): Map<string, OpenRange[]> {
     const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
+    // the belt window ends stand as given where they were not recorded transfer ends, or where they feed fuel:
+    // on a build with always-enabled inserters the belt windows are synthesized to stay open through late pickups
+    // (windowsOfThePlanWhereInsertersRunFree); a mixed fuel-and-ingredient window's end holds the room a hand of
+    // fuel needs ahead of the planned hands (fuelHandRoomTicks); and a dedicated fuel inserter's recorded ranges
+    // set the cadence its own fuel clock is derived from, which the trim would stretch (a machine then runs dry)
+    const keep_belt_ends = always_enabled.size > 0 ? null : new Set([
+        ...Array.from(fuelHandRoomTicks(entity_registry)).filter(([, ticks]) => ticks > 0).map(([id]) => id),
+        ...fuelOnlyInserters(entity_registry).map(inserter => inserter.entity_id.id),
+    ]);
     const windows = new Map<string, OpenRange[]>();
     for (const [entity_id, transfers] of history.entries()) {
         if (!always_enabled.has(entity_id.id) && !always_enabled_by_config.has(entity_id.id)) {
-            windows.set(entity_id.id, OpenRange.reduceRanges(transfers.map(t => t.tick_range)));
+            const ranges = OpenRange.reduceRanges(transfers.map(t => t.tick_range));
+            windows.set(entity_id.id, keep_belt_ends === null || keep_belt_ends.has(entity_id.id)
+                ? ranges
+                : beltFedWindowEndsBeforeTheReturnSwing(ranges, entity_registry, entity_id));
         }
     }
     return windows;
+}
+
+/**
+ * A belt-fed inserter's recorded ranges end where its last drop of the window lands, and its per-item ranges
+ * interleave into the window, so the end cannot be trimmed per transfer as a machine-fed inserter's is (see
+ * trimEndsToAvoidBackSwingWakeLists). Each window is pulled back one rotation instead: left open through the
+ * return swing of its last drop, the returned hand grabs again in the window's last tick — on a backed-up belt
+ * every time, one belt stack a period, which came out as an extra full hand every 4th period and one extra output
+ * hand every 16th on the over-hood builds (in-game confirmed; see tests/game/builds/README.md).
+ */
+function beltFedWindowEndsBeforeTheReturnSwing(
+    ranges: OpenRange[],
+    entity_registry: ReadableEntityRegistry,
+    entity_id: EntityId,
+): OpenRange[] {
+    const entity = entity_registry.getEntityById(entity_id);
+    if (entity === null || !Entity.isInserter(entity)) {
+        return ranges;
+    }
+    const source = entity_registry.getEntityById(entity.source.entity_id);
+    if (source === null || !Entity.isBelt(source)) {
+        return ranges;
+    }
+    const rotation = entity.animation.rotation.ticks;
+    return ranges.map(range => OpenRange.from(range.start_inclusive,
+        Math.max(range.start_inclusive, range.end_inclusive - rotation)));
 }
 
 function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableClockWindows {

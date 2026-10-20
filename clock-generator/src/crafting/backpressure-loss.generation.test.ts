@@ -72,7 +72,9 @@ describe("what the generator calls stable, on a build where some clocks are brok
     });
 
     it("selects a clock that survives over one with a better rank that does not", () => {
-        const batched = alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
+        // since belt windows close before their last return swing, planned-belt-slack no longer holds on this
+        // sample; derived is now the clock that holds and does not get back from the coal loss
+        const batched = alternatives.find(alternative => alternative.id === "derived")!;
         expect(batched.verdict).not.toBe("unstable");
         expect(batched.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null });
         expect(batched.verdict).not.toBe("stable");
@@ -81,7 +83,7 @@ describe("what the generator calls stable, on a build where some clocks are brok
     });
 
     it("says of a clock that does not survive which losses break it, in its description and in an insight", () => {
-        const batched = alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
+        const batched = alternatives.find(alternative => alternative.id === "derived")!;
         expect(batched.description).toContain("It does not survive backpressure loss: the build does not get back to its expected output under this clock after coal stops arriving.");
         expect(batched.insights.find(insight => insight.id === "backpressure-loss")?.what).toContain("coal stops arriving");
         expect(batched.insights.some(insight => insight.id === "unstable")).toBe(false);

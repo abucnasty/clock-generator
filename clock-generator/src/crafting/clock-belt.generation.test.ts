@@ -138,8 +138,12 @@ describe("the belt a clock is made for", () => {
         });
     });
 
-    // One belt inserter that takes two ingredients off a belt split between them. Batched swings moves more than the
-    // expected output, with the slack and without it; full-hand output swings holds it, also without the slack.
+    // One belt inserter that takes two ingredients off a belt split between them. Since the belt window-end trim,
+    // batched swings move exactly the expected output as built (32, where the untrimmed windows moved 48), but the
+    // verdict is "no recovery"; full-hand output swings holds it without the slack. The game agrees with the batched
+    // simulation: recorded on 2026-10-20 (record-clock.js, work/belt-pickup-parity/a2-native-01/clock-belt-batched),
+    // 460 of 499 periods moved exactly 32 and the rest alternated 16 and 48 in the periods the simulator names
+    // (offset by the recording start), every 16 paired with a 48 ten periods on.
     describe("automation science, with backed-up belts", () => {
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
@@ -151,12 +155,12 @@ describe("the belt a clock is made for", () => {
             selected = alternatives[generated.selected_index];
         });
 
-        it("makes full-hand output swings from batched swings that move more than the expected output", () => {
+        it("makes full-hand output swings from batched swings that cannot get back to their rate", () => {
             const batched = alternatives.find(a => a.id === "planned-belt-slack")!;
-            expect(batched.verdict).not.toBe("stable");
-            expect(batched.result.stability_check.as_built?.actual_output_items).toBe(48);
+            expect(batched.verdict).toBe("no recovery");
+            expect(batched.result.stability_check.as_built?.actual_output_items).toBe(32);
             expect(batched.result.stability_check.expected_output_items).toBe(32);
-            expect(alternatives.map(a => a.id)).toEqual(["planned-belt-slack", "full-hand"]);
+            expect(alternatives.map(a => a.id)).toEqual(["planned-belt-slack", "derived", "shifted-swings", "full-hand"]);
         });
 
         it("selects full-hand output swings without the slack", () => {
@@ -164,7 +168,7 @@ describe("the belt a clock is made for", () => {
             expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "backed_up" });
             expect(selected.result.clock_windows).toEqual({
-                "inserter:1": [{ start: 1, end: 23 }],
+                "inserter:1": [{ start: 1, end: 20 }],
                 "inserter:2": [{ start: 0, end: 3 }, { start: 36, end: 39 }],
             });
         });

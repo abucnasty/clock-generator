@@ -165,19 +165,20 @@ describe("generateClockForConfig", () => {
                     expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
                 });
 
+                // inserter 1 and 3 windows end 3 ticks earlier since belt windows close before their last return swing
                 it("batched swings for a moving belt add 4 ticks to the belt input inserters", () => {
                     expect(windowsOf("planned-belt-slack")).toEqual({
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:3": [{ start: 13, end: 40 }, { start: 181, end: 208 }, { start: 214, end: 230 }],
-                        "inserter:1": [{ start: 206, end: 221 }],
+                        "inserter:3": [{ start: 13, end: 37 }, { start: 181, end: 205 }, { start: 214, end: 227 }],
+                        "inserter:1": [{ start: 206, end: 218 }],
                     });
                 });
 
                 it("planned keeps the simulated windows", () => {
                     expect(windowsOf("planned")).toEqual({
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:3": [{ start: 13, end: 36 }, { start: 181, end: 204 }, { start: 214, end: 226 }],
-                        "inserter:1": [{ start: 206, end: 217 }],
+                        "inserter:3": [{ start: 13, end: 33 }, { start: 181, end: 201 }, { start: 214, end: 223 }],
+                        "inserter:1": [{ start: 206, end: 214 }],
                     });
                 });
 
@@ -349,18 +350,19 @@ describe("generateClockForConfig", () => {
                 expect(shifted.result.search).toMatchObject({
                     kind: "shifted cycle",
                     picked: { row: 2, setting: -25 },
-                    planned_ticks: { start: 145, end: 184 },
+                    // the round's last planned tick moved from 184 to 181: belt windows close before their last return swing
+                    planned_ticks: { start: 145, end: 181 },
                     moved: [
                         { entity_id: EntityId.forInserter(1), item_names: ["flying-robot-frame"] },
                         { entity_id: EntityId.forInserter(3), item_names: ["battery", "electronic-circuit"] },
                     ],
                 });
-                expect(shifted.description).toContain("The swings planned in clock ticks 145–184 (inserter 1: flying-robot-frame; "
+                expect(shifted.description).toContain("The swings planned in clock ticks 145–181 (inserter 1: flying-robot-frame; "
                     + "inserter 3: battery, electronic-circuit) start 25 ticks earlier than planned.");
                 expect(shifted.result.clock_windows).toEqual({
                     "inserter:1": [{ start: 1, end: 13 }, { start: 120, end: 132 }],
-                    "inserter:2": [{ start: 13, end: 40 }],
-                    "inserter:3": [{ start: 13, end: 51 }, { start: 132, end: 159 }],
+                    "inserter:2": [{ start: 13, end: 37 }],
+                    "inserter:3": [{ start: 13, end: 48 }, { start: 132, end: 156 }],
                 });
             });
 
@@ -368,20 +370,21 @@ describe("generateClockForConfig", () => {
                 const candidates = shifted.result.search!.candidates;
                 expect(new Set(candidates.map(it => it.row))).toEqual(new Set([2]));
                 const stable = candidates.filter(it => it.holds).map(it => it.setting);
-                // one unbroken range, checked every 5 ticks; from the staged start it reaches 60 (45 from the prepared build)
-                expect(stable).toEqual(Array.from({ length: 26 }, (_, n) => -65 + 5 * n));
+                // one unbroken range, checked every 5 ticks; the trimmed windows leave less room to shift on both
+                // sides: -60 to 30, where the untrimmed windows reached -65 to 60
+                expect(stable).toEqual(Array.from({ length: 19 }, (_, n) => -60 + 5 * n));
                 expect(candidates.some(it => !it.holds)).toBe(true);
             });
 
             it("says which machine limit ends the range on each side", () => {
                 expect(shifted.result.search!.earliest).toEqual({
-                    setting: -65,
+                    setting: -60,
                     is_search_limit: false,
-                    // 9 ticks before the belt wake rule (docs/simulator.md): the belt-fed inserter 3 starts a tick later
-                    notes: ["Inserter 3 waits 10 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
+                    // the trimmed windows start the range a step later and the wait is 4 ticks, no longer 10
+                    notes: ["Inserter 3 waits 4 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
                 });
                 expect(shifted.result.search!.latest).toEqual({
-                    setting: 60, // 45 from the prepared build
+                    setting: 30, // 60 with the untrimmed windows, 45 from the prepared build
                     is_search_limit: false,
                     // full output while its output is at the block, then short of ingredients: one 9 tick stop
                     notes: ["Machine 1 (flying-robot-frame) is out of ingredients for 9 ticks until these swings arrive"],

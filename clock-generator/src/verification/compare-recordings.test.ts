@@ -45,26 +45,25 @@ const cutFrom = (recording: Recording, from: number): Recording => {
     };
     const cut = (values: number[]) => values.slice(from);
     const cutAll = (series: Record<string, number[]>) => Object.fromEntries(Object.entries(series).map(([name, values]) => [name, cut(values)]));
+    // Every per-sample series is cut, generically, so a series this list never named (crafts_started, fuel)
+    // cannot stay at full length against the cut sample_count and shift what is read from it.
+    const CHANGE_LISTS = new Set(["status", "held_item", "currently_burning"]);
+    const cutSamples = <T extends Record<string, unknown>>(samples: T): T => Object.fromEntries(
+        Object.entries(samples).map(([name, series]) => {
+            if (CHANGE_LISTS.has(name)) return [name, changes(series as [number, string][])];
+            if (Array.isArray(series)) {
+                if (series.length !== recording.sample_count) throw new Error(`${name} is not one value per sample`);
+                return [name, cut(series as number[])];
+            }
+            if (series && typeof series === "object") return [name, cutAll(series as Record<string, number[]>)];
+            return [name, series];
+        })) as T;
     return {
         ...recording,
         sample_count: count,
         clock: { values: cut(recording.clock!.values) },
-        inserters: recording.inserters.map(inserter => ({
-            ...inserter,
-            samples: { held_count: cut(inserter.samples.held_count), held_item: changes(inserter.samples.held_item), status: changes(inserter.samples.status) },
-        })),
-        machines: recording.machines.map(machine => ({
-            ...machine,
-            samples: {
-                ...machine.samples,
-                status: changes(machine.samples.status),
-                products_finished: cut(machine.samples.products_finished),
-                crafting_progress: cut(machine.samples.crafting_progress),
-                bonus_progress: cut(machine.samples.bonus_progress),
-                inputs: cutAll(machine.samples.inputs),
-                outputs: cutAll(machine.samples.outputs),
-            },
-        })),
+        inserters: recording.inserters.map(inserter => ({ ...inserter, samples: cutSamples(inserter.samples) })),
+        machines: recording.machines.map(machine => ({ ...machine, samples: cutSamples(machine.samples) })),
     };
 };
 
@@ -117,7 +116,8 @@ describe("a simulated run in the format of the recorder", () => {
         expect(machine_standings).toEqual([{ machine_id: "machine:1", standing: "simulator" }]);
         const by_id = (a: { inserter_id: string }, b: { inserter_id: string }) => a.inserter_id.localeCompare(b.inserter_id);
         expect({ ...of_recording, inserters: [...of_recording.inserters].sort(by_id) }).toEqual({ ...of_stock, inserters: [...of_stock.inserters].sort(by_id) });
-        expect(of_recording.wake_ups_per_minute).toBeCloseTo(112.5, 1);
+        // the trimmed input window wakes the build in a 4-period cycle of 50/100/0/100 a minute: 62.5 on average
+        expect(of_recording.wake_ups_per_minute).toBeCloseTo(62.5, 1);
     });
 
     it("is what simulateRecording returns for a number of ticks", () => {

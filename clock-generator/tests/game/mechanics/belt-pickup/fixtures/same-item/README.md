@@ -75,7 +75,8 @@ Six additional game tests generate the current default clocks, check every basel
 scaffold), and test recovery after two ingredient cuts and a filled/restored output disposal chest. They require
 exact output after a six-period recovery allowance, without resetting the clock or machine. All six passed with
 the fallback implementation: 16 gears per 160 ticks (6/second), with a 26-tick input window on every geometry.
-The underground window was 28 ticks before the correction. See
+The underground window was 28 ticks before the correction; since the belt window-end trim the input window is
+23 ticks, ending one rotation before the last return swing, re-recorded in the a2 controls. See
 [the simulator findings](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints)
 for the general rules and measured scope; raw investigation captures and analysis remain local under
 `work/same-item-pickup/investigation/`.
