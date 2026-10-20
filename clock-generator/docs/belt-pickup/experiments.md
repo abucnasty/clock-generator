@@ -102,22 +102,20 @@ These are 258 first-hand controls; independent lane alignment and repeated throu
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
-The a2 recapture after the belt window-end trim covers **48 ordinary clocks** across all four speeds:
-**43 meet exact baseline and recovery output**, 41 of them marked stable. The turbo moving straight capture
-over-produces in two early periods from the coverage protocol's calibration state, then runs exact to the end
-with exact recoveries; plain runs of the same clock are clean, and start-state fidelity is roadmap C1. The two
-normal moving underground defaults hold their baseline in these warm recordings and got back to target after
-every loss, while the generator says "no recovery" from its sampled cold lane-phase starts (modeling those
-starts is A3). For the entrance the native cold starts match the model's dip, so its verdict only promises
-less than the game delivers; the exit is a known native counterexample — from its natural cold start it
-cycles at 143 a period under the same windows (`work/belt-pickup-parity/a3-native-rounds.md`, round 3), so
-its "holds" is wrong until the model's late resume after a wait for machine space is fixed (roadmap M1,
-release-blocking), and the exit must not be read as verified. The two normal backed-up underground defaults select a fractional
+The ordinary clocks are verified on **48 configurations** across all four speeds: the a2 recapture after the belt
+window-end trim, with the 20 electromagnetic clocks the M1 resume fix changed recorded again
+(`tests/game/builds/pickup-clock-m1-controls.json`). **44 meet exact baseline and recovery output**, 42 of them
+marked stable; the turbo moving straight clock no longer over-produces in its early periods. The two normal moving
+underground defaults hold their baseline in these warm recordings and got back to target after every loss, but the
+generator says "unstable": it finds the clock failing from cold lane phase [3,0], and a native sweep of all 64 lane
+phases shows the game never settling from it or from four other phases, the exit's natural one among them, where
+it cycles at 143 a period against 176 (`tests/game/builds/normal-underground-lane-phase-controls.json`, roadmap M1).
+The two normal backed-up underground defaults select a fractional
 clock whose baseline misses natively, matching holds false; their fully jammed cold-start controls alternate
 144/208 items at offset 1287 as fixed-window simulator checks. The two express moving underground defaults
-require backed-up supply and miss the target under moving supply. The previous post-fix recapture (46 of 48
-exact, 42 stable after the lane-phase audit) and the original 39 recordings remain separate historical
-evidence. The belt-drop rows also compare finite receiving stock, including the normal-speed second hand.
+require backed-up supply and miss the target under moving supply. The a2 recapture's own clocks (43 of 48 exact,
+41 stable), the earlier post-fix recapture (46 of 48 exact, 42 stable after the lane-phase audit) and the original
+39 recordings remain separate historical evidence. The belt-drop rows also compare finite receiving stock, including the normal-speed second hand.
 
 ## Tick-pattern matrix
 

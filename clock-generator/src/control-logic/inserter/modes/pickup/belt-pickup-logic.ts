@@ -5,7 +5,7 @@ import assert from "../../../../common/assert";
 import { FactorioDataService, ItemName } from "../../../../data";
 import { BeltState, EntityState, InserterState, InserterStatus } from "../../../../state";
 import { TickProvider } from "../../../current-tick-provider";
-import { actsInTheTickTheBlockIsLifted } from "../../waiting-inserter";
+import { actsInTheTickTheBlockIsLifted, wokenByItsMachinesCraftStart } from "../../waiting-inserter";
 import { BeltPickupLane } from "../../../../state/belt-pickup-lane";
 import { BackedUpPickupLane } from "../../../../state/backed-up-pickup-lane";
 import { BeltPickupStock } from "../../../../state/belt-pickup-stock";
@@ -52,11 +52,9 @@ export class BeltPickupLogic implements InserterTransferLogic {
     private readonly pickup_lane_order: number[];
 
     public onEnter(from_status: InserterStatus): void {
+        const waited_in_idle = from_status === InserterStatus.IDLE && this.inserterState.waits_for_sink;
         // a hand that starts right after a swing back lands its first stack on the usual schedule
-        this.belt_grab_decided = !(
-            (from_status === InserterStatus.IDLE && this.inserterState.waits_for_sink)
-            || from_status === InserterStatus.WAITING_FOR_SINK
-        );
+        this.belt_grab_decided = !(waited_in_idle || from_status === InserterStatus.WAITING_FOR_SINK);
         // A hand that stopped part way because the machine was at its output block goes on in the tick another
         // inserter takes the products down, when the machine finished a craft in the tick before: that craft had
         // woken the inserter already (see `actsInTheTickTheBlockIsLifted`, the rule of the game with its recorded
@@ -65,12 +63,17 @@ export class BeltPickupLogic implements InserterTransferLogic {
         if (from_status === InserterStatus.WAITING_FOR_SINK && EntityState.isMachine(sink) && actsInTheTickTheBlockIsLifted(sink)) {
             this.belt_grab_decided = true;
         }
+        // A hand that waited for room the machine made by starting a craft finds it a tick after the start, which is
+        // the tick the game takes its first stack in (see `wokenByItsMachinesCraftStart`)
+        if (waited_in_idle && EntityState.isMachine(sink) && wokenByItsMachinesCraftStart(sink)) {
+            this.belt_grab_decided = true;
+        }
     }
 
     /**
-     * As recorded in the game, a belt inserter that waited for its machine spends a tick deciding before the first
-     * stack lands in its hand, both when the hand starts after an idle wait and when it goes on after a pause in
-     * the middle; the stacks after that come a tick apart. True once that tick has passed.
+     * As recorded in the game, a belt inserter that waited for its machine to have its products taken spends a tick
+     * deciding before the first stack lands in its hand, both when the hand starts after an idle wait and when it goes
+     * on after a pause in the middle; the stacks after that come a tick apart. True once that tick has passed.
      */
     private belt_grab_decided: boolean = true;
 
