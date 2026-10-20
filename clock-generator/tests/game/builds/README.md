@@ -92,15 +92,17 @@ its observations with new clock results. Always pair a replay with the summaries
 
 ## Post-fix ordinary clock verification
 
-The current default expectations are [pickup-clock-m1-controls.json](pickup-clock-m1-controls.json), recorded on
-Factorio 2.1.21. Twenty configurations were re-recorded after the belt hand's resume after a craft start was fixed
-(roadmap M1, `aae515e9`), each with 63 untouched baseline periods and three effective disturbances: every
-electromagnetic clock whose exported blueprint and schedule changed. The other 28 are copied unchanged from
+The current default expectations are [pickup-clock-m2-controls.json](pickup-clock-m2-controls.json), recorded on
+Factorio 2.1.21. The fast straight moving electromagnetic configuration was re-recorded after a belt-fed window's first
+stack was tied to where its machine's products go (roadmap M2, `7950f77c`), with 63 untouched baseline periods and
+three effective disturbances: the only clock of the 48 whose exported blueprint and schedule changed (one output
+swing per cycle at 704 ticks again, in place of planned belt slack at 3520). The other 47 are copied unchanged from
+[pickup-clock-m1-controls.json](pickup-clock-m1-controls.json), in which twenty configurations were re-recorded after
+the belt hand's resume after a craft start was fixed (roadmap M1, `aae515e9`) and the other 28 were copied from
 [pickup-clock-a2-controls.json](pickup-clock-a2-controls.json), recorded after the belt window-end trim
-(`b654e895`), since the generator still exports the clocks they recorded; the two normal moving underground copies
-carry the generator's new "unstable" verdict for the same clock. The a2 file, and before it
-[pickup-clock-parity-controls.json](pickup-clock-parity-controls.json) (engine commit `4f2d4e35`), stay as the
-historical evidence of the clocks they recorded.
+(`b654e895`); the two normal moving underground copies carry the generator's "unstable" verdict for the same clock.
+The m1 and a2 files, and before them [pickup-clock-parity-controls.json](pickup-clock-parity-controls.json) (engine
+commit `4f2d4e35`), stay as the historical evidence of the clocks they recorded.
 
 | Result | Cases | Interpretation |
 | --- | --- | --- |
@@ -161,11 +163,12 @@ same counts on both clocked inserters in every cell. Five cells never settle: [3
 144, 128, 128, 144, and [3,3] and [3,4] repeat 128, 144, 160, 128, 144, 176, 143 a period against 176. [3,3] is the
 exit's natural phase: a staged start of the build without seeding lands there.
 
-`normal-underground-lane-phase.generation.test.ts` runs the simulator from each cell. In 51 cells per build it moves
-the game's output and pickups in every period, and its output inserter holds the game's count in every tick. In the
-other 13 the input and the output window open in the same tick on a machine at its output block, where the game's
-belt-fed input takes its first stack a tick later than the simulator does (roadmap M2); there the test holds only the
-last eight periods, by which every cell has settled into its long run.
+`normal-underground-lane-phase.generation.test.ts` runs the simulator from each cell. In every cell of both builds it
+moves the game's output and pickups in every period, and its output inserter holds the game's count in every tick.
+Since roadmap M2 that includes the 13 cells per build where the input and the output window open in the same tick on a
+machine at its output block: the output inserter puts the products onto a belt, so the game's belt-fed input takes its
+first stack a tick after they are taken, and the simulator does too. `known_differences` is empty; a cell listed there
+would be held only on its last eight periods.
 
 ## Over-the-hood operating clocks
 

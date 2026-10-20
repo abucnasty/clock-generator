@@ -83,6 +83,13 @@ export class MachineState implements EntityState {
     public productsTakenAsWindowOpened: boolean = false;
 
     /**
+     * Whether one of those inserters puts what it took into an inventory, a machine or a chest, not onto a belt. A
+     * belt-fed inserter whose window opens in this tick takes its first stack in this tick only then (`wokenThisTick`).
+     * Set and cleared as `productsTakenAsWindowOpened` is.
+     */
+    public productsTakenAsWindowOpenedIntoAnInventory: boolean = false;
+
+    /**
      * Ingredients that are also a product of the recipe (a pentapod egg makes pentapod eggs). The machine keeps what
      * it is given apart from what it makes, and never crafts from its own products.
      */

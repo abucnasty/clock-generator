@@ -118,6 +118,12 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
      * its first items a tick later, whatever the machine did in that tick. Only when the products were taken by an
      * inserter whose window opens in this tick too does it take them in this tick. Recorded in Factorio 2.1.21:
      * 1,158 of 1,170 a tick later where the taker was enabled before, 852 of 888 in the tick where it opened too.
+     *
+     * For an inserter that takes from a belt, that taker has to put the products into an inventory, a machine or a
+     * chest: where it puts them onto a belt, the inserter takes its first stack a tick later all the same. Recorded in
+     * Factorio 2.1.21 on windows that open with the taker's on a machine at its block (roadmap M2): a tick later in
+     * 1,327 of 1,327 where the taker drops onto a belt, in the tick in 602 of 602 where it drops into a machine or a
+     * chest, over fifteen builds; in one run of the chemical science build, 82 of 82 and 166 of 166 side by side.
      */
     private wokenThisTick(window_opens: boolean): boolean {
         const sink = this.sink_state;
@@ -126,7 +132,9 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         }
         const lifted = sink.outputBlockedAfterLastTick && !MachineState.machineIsOutputBlocked(sink);
         if (window_opens) {
-            return lifted && !sink.productsTakenAsWindowOpened;
+            const let_go = EntityState.isBelt(this.source_state) ? sink.productsTakenAsWindowOpenedIntoAnInventory
+                : sink.productsTakenAsWindowOpened;
+            return lifted && !let_go;
         }
         if (EntityState.isBelt(this.source_state)) {
             return false;

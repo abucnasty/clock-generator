@@ -23,6 +23,7 @@ export class MachineStatusPlugin implements ModePlugin<MachineMode> {
         this.starts_seen = state.craftsStarted;
         state.outputBlockedAfterLastTick = MachineState.machineIsOutputBlocked(state);
         state.productsTakenAsWindowOpened = false;
+        state.productsTakenAsWindowOpenedIntoAnInventory = false;
     }
 
     onTransition(fromMode: MachineMode, transition: Transition<MachineMode>): void {

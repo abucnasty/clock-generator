@@ -406,21 +406,7 @@
      "output_held_sha256": "bd68107a805a110af28cd90a0212f338f8e6586e66738e0814a4955e51b4ed2c"
     }
    },
-   "known_differences": {
-    "0,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "1,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "2,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "3,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,0": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,1": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,2": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,7": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "5,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "6,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "6,5": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "7,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held"
-   }
+   "known_differences": {}
   },
   "electromagnetic-normal-underground-exit-moving": {
    "period": 1408,
@@ -826,21 +812,7 @@
      "output_held_sha256": "bd68107a805a110af28cd90a0212f338f8e6586e66738e0814a4955e51b4ed2c"
     }
    },
-   "known_differences": {
-    "0,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "1,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "2,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "3,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,0": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,1": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,2": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "4,7": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "5,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "6,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "6,5": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held",
-    "7,4": "M2: the input and the output window open in the same tick on a machine at its output block; the game's belt-fed input takes its first stack a tick after the output inserter takes the products, the simulator in that tick (DECISIONS item 12). Only the settled periods are held"
-   }
+   "known_differences": {}
   }
  }
 }

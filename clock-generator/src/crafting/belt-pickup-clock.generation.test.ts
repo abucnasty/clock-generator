@@ -16,7 +16,7 @@ interface NativeClockControl {
 }
 
 const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-m1-controls.json"), "utf8")) as Record<string, NativeClockControl>;
+    "../../tests/game/builds/pickup-clock-m2-controls.json"), "utf8")) as Record<string, NativeClockControl>;
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 interface StartupControl {
