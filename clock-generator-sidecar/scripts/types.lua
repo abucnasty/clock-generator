@@ -32,9 +32,7 @@
 ---@field entity_type string|nil Native pickup entity type, preserved in capture provenance
 ---@field pickup_length number|nil Exposed pickup line length in tiles
 ---@field pickup_layout string|nil Physical side/front approach and endpoint
----@field pickup_supply string[]|nil Single-stream entry per physical receiving lane
----@field pickup_merge table|nil Supported turbo two-stream side merge with finite downstream length
----@field supply_problem string|nil Unsupported merge or ambiguous local supply
+---@field supply_problem "side-loaded"|nil Why the supply is out of scope: another belt side-loads onto the pickup tile
 ---@field pickup_problem string|nil Why the pickup geometry was omitted
 
 ---@class InfinityFilterData

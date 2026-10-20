@@ -9,7 +9,8 @@ The [diagram glossary](glossary.md) illustrates the layouts and test conditions 
 including a [phase A vs phase B example](glossary.md#phase-a-vs-phase-b).
 
 The accepted changes are unreleased, reserved for **engine/UI 0.19.0** and **Sidecar 0.11.0**.
-Publishing remains on hold. **Splitters are out of scope.**
+Publishing remains on hold. **Side-loaded pickup tiles, merges and splitters are out of scope**; see the
+[side-loading history](#side-loaded-pickups-and-merges).
 
 ## General rules
 
@@ -23,9 +24,9 @@ Publishing remains on hold. **Splitters are out of scope.**
   less reach, rather than a fixed tick penalty.
 - Geometry and supply motion are separate. Omitted `pickup_length` defaults to **1**; undergrounds use **0.5**.
   Moving is the default. Ordinary backed-up supply retains finite stock, stops stacks at the endpoint and
-  refills holes at belt speed. Side-fed backed-up supply also retains its finite receiving and incoming queues.
-- Replenishment depends on topology. A full incoming belt need not fill the pickup tile, and closing a final
-  outlet does not guarantee permanent local saturation when other consumers can reopen a route.
+  refills holes at belt speed.
+- Replenishment depends on topology. Closing a final outlet does not guarantee permanent local saturation when
+  other consumers can reopen a route.
 
 ## Belt-speed coverage
 
@@ -37,13 +38,10 @@ without documented native evidence in this investigation. A suffix identifies an
 - **generator result mismatch**: the generator's rate or stability assessment disagrees with the game.
 - **no verified moving default**: the selected fallback requires backed-up supply and misses the target
   with moving supply; it is not a verified default for that setup.
-- **experimental merge stock mismatch**: the experimental rule predicts the wrong stock movements or supplying
-  stream, even when grab ticks agree. This is not a production simulator comparison.
-- **no simulator support**: measurements exist, but no supported production model is available for that case.
 
 Remove a mismatch suffix once the corrected model passes the corresponding native regression; the status then
-becomes **Tested**. Remove a support suffix only after support is implemented and verified. Plain **Tested**
-records coverage with no additional disagreement flagged here; it does not imply every model detail was compared.
+becomes **Tested**. Plain **Tested** records coverage with no additional disagreement flagged here; it does not
+imply every model detail was compared.
 Normal means the standard transport-belt speed.
 Offline expectations and classifier-only checks do not count as native timing coverage. The speed backfill uses
 16-item hands and four-item belt stacks. Historical smaller-hand/interrupted-window/staggered-lane controls
@@ -93,33 +91,6 @@ turbo/express/fast. Another 174 moving controls cover the observed aligned arriv
 states with original/swapped/same-item lanes. Normal's original seven-tile tunnel exceeds its range.
 These are 258 first-hand controls; independent lane alignment and repeated throughput remain separate questions.
 
-### Side-entry and merge controls
-
-See the [side-loading diagrams](glossary.md#side-loading-and-merging) for inner-only, outer-only
-and two-stream supply.
-
-| Scenario | Turbo | Express | Fast | Normal (transport) |
-| --- | --- | --- | --- | --- |
-| Moving inner-only and outer-only streams, first hand, initial belt phase | Tested | Tested | Tested | Tested |
-| Moving two-stream merge, first hand, initial belt phase | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
-| Single-stream first hands, shifted belt phase | Tested | Tested | Tested | Tested |
-| Two-stream first hands, shifted belt phase | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
-| Reflected side feeds and rotated inner feed, first hands | Tested | Tested | Tested | Tested |
-| Backed-up inner-only and outer-only first hands | Tested | Tested | Tested | Tested |
-| Repeated single-stream moving and backed-up hands | Tested | Tested | Tested | Tested |
-| Backed-up two-stream first hands | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
-| Repeated same-item merge, initial belt phase | Tested | Tested; experimental merge stock mismatch; no simulator support | Tested; no simulator support | Tested; no simulator support |
-| Repeated same-item merge, shifted belt phase | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
-| Repeated merge: pause/resume, outlet block/release and reflection | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
-| Repeated different-item merge, both ingredient arrangements | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
-| Operating mixed-item merge starvation | Tested | Tested; no simulator support | Tested; no simulator support | Tested; no simulator support |
-| Seeded entry-window cutoff and compression controls | Tested | Tested | Tested | Tested |
-
-All four speeds now have repeated native controls. Only the bounded turbo merge is supported by the engine;
-measured slower behavior does not establish a correct routing model. Different starting belt phases are tested
-by changing when the inserter gate opens. These controls do not cover every possible relative phase of
-independent incoming streams; exact gate ticks remain in the fixture instructions.
-
 ### Generated clocks and drops
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
@@ -128,7 +99,6 @@ independent incoming streams; exact gate ticks remain in the fixture instruction
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested | Tested; no verified moving default when mirrored | Tested | Tested |
 | Over-the-hood same-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
-| Two-stream merge generated gear clock | Tested | Not tested | Not tested | Not tested |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
@@ -139,9 +109,8 @@ The normal moving undergrounds now also receive unstable verdicts: independent m
 alternate 192/160, while their measured warm runs still hold 176. Those additional failing cold starts have
 not been reproduced natively; a two-tick ingredient-restoration perturbation still holds target in both layouts.
 The two express moving underground defaults require backed-up supply and miss the target under moving supply.
-The original 39 recordings remain separate historical evidence.
-Slower merge clocks remain **Not tested** under the turbo-only supported schema. The belt-drop rows also compare
-finite receiving stock, including the normal-speed second hand.
+The original 39 recordings remain separate historical evidence. The belt-drop rows also compare finite receiving
+stock, including the normal-speed second hand.
 
 ## Tick-pattern matrix
 
@@ -201,45 +170,6 @@ agrees with all **42 backed-up first hands**, conditioned on native arrival. Pro
 also match held items, quantities and exposed stock for all 258 controls. Sidecar captures the explicit
 over-the-hood layout. First-hand agreement does not establish generated-clock parity: the operating-clock
 controls below expose a recovery failure when the lanes acquire different phases.
-
-### Side-loading onto a straight tile
-
-The [diagram glossary](glossary.md#side-loading-and-merging) shows each supply arrangement.
-
-Inner and outer identify the incoming stream's entry into the receiving lane, not a new inserter preference.
-Different starting belt phases are tested by opening the inserter gate one tick later. The table distinguishes
-the initial and shifted controls; exact gate ticks remain in the [fixture instructions](../../tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight/README.md).
-
-| Scenario | Moving | Starting belt phase | Measured offsets | Total pickup ticks | Finding |
-| --- | --- | --- | --- | --- | --- |
-| Turbo outer stream only | true | Initial | `0,1,2,4` | 5 | Enters near the upstream three-quarter position |
-| Turbo inner stream only | true | Initial | `0,2,4,6` | 7 | Enters near the downstream quarter position |
-| Turbo inner or outer stream only | true | Shifted | `0,1,3,5` | 6 | Phase matters |
-| Turbo single-stream controls, drain removed | false | Stationary | `0,1,2,3` | 4 | Backed-up first hands; not proof of infinite repeated supply |
-| Turbo two-stream merge, same item | true | Initial and shifted | `0,1,2,3` across 45 complete hands per control | 4 | Shared stock replenishes both entry points |
-| Turbo two-stream merge, different items, either arrangement | true | Initial | `0,1,2,4` for complete hands | 5 | Outer stream dominates in the inventory-clearing probe |
-| Express two-stream merge, same item | true | Initial | `0,1,2,3` across 45 hands | 4 | Same hand timing conceals different routing; unsupported |
-
-Single-stream first hands with the initial belt phase are below. Repeated controls have since been captured at every
-speed; the first-hand patterns alone do not establish two-stream routing support.
-
-| Incoming speed | Moving | Stream | Measured offsets | Total pickup ticks |
-| --- | --- | --- | --- | --- |
-| Express | true | Outer only | `0,1,2,4` | 5 |
-| Express | true | Inner only | `0,1,4,6` | 7 |
-| Fast | true | Outer only | `0,1,2,4` | 5 |
-| Fast | true | Inner only | `0,4,8,12` | 13 |
-| Transport | true | Outer only | `0,1,2,4` | 5 |
-| Transport | true | Inner only | `0,4,12,20` | 21 |
-
-With the incoming head seeded at position zero, the inner-entry shift cutoff is **strictly less than
-`64 + speed`**, using 1/256-tile units: last accepted / first rejected is **95/96 turbo, 87/88 express, 79/80 fast, 71/72 normal**.
-This local boundary is not a complete merge rule: express still has an upstream-clearance counterexample.
-The equivalent observed landing limit is below 131 units; arbitrary incoming head phases remain uncalibrated.
-Backed-up single-stream repeated hands now match the finite receiving/incoming queue model at all four speeds,
-including the fast/normal cases that exhausted the old unlimited-stock approximation. Eight portable clips
-compare both queues and held quantities over 4,096 ticks, conditioned on native arm starts/drops. Operating mixed-item controls
-starve at every speed and with either ingredient arrangement; inventory-clearing probes cannot prove throughput.
 
 ### Related belt-drop calibration
 
@@ -341,25 +271,55 @@ remaining 18 periods. That transient differs from the old clock's persistent sho
 original clock but is now marked **no recovery**. A changed fast candidate remains unstable and misses
 native target periods. This fixes the three false-stable verdicts without changing the pickup timing rule.
 
-**Side supply and capture.** Single streams enter at **67 inner / 188 outer** units. The bounded turbo merge
-requires finite incoming/receiving/downstream queues, compressed gaps and backpressure; seven repeated controls
-match all 511 transitions each, and its generated gear clock held 60/60 periods. Testing a shifted starting
-belt phase rejected the earlier 64-unit shift cap. Operating mixed-item layouts starve because refusing outer
-stock stops opening inner gaps;
-supported topology does not guarantee recipe supply. Sidecar's saved support/model metadata distinguishes
-supported, unsupported and legacy inputs. Updating software never promotes an old unsupported capture;
-recapture is required. See the [capture boundary](capture.md).
+**Capture.** Sidecar's saved support/model metadata distinguishes supported, unsupported and legacy inputs.
+Updating software never promotes an old unsupported capture; recapture is required. See the
+[capture boundary](capture.md).
+
+## Side-loaded pickups and merges
+
+Picking up from a belt tile that another belt side-loads onto is **out of scope**, as splitters are. This covers
+one side stream onto the pickup tile (formerly the per-lane `source.pickup_supply` profiles `side-inner` and
+`side-outer`) and two side streams merging onto one receiving lane (formerly `source.pickup_merge`). The generator
+models a belt that runs straight onto the pickup tile (through supply), an underground endpoint and an
+over-the-hood pickup. A config that names `pickup_supply` or `pickup_merge` is refused. Sidecar 0.11.0 marks a
+pickup from a side-loaded tile unsupported with the reason `side-loaded`, and the generator refuses that capture
+instead of timing it as an ordinary belt. A manual config or a capture from an older Sidecar does not record
+side-loading. Neither model was released.
+
+The measurements are kept here as history. They used Factorio 2.1.21, legendary stack inserters, 16-item hands
+and four-item stacks at all four belt speeds:
+
+- **A full incoming belt does not fill the pickup tile.** One side stream joins the receiving lane part-way
+  along the tile. The incoming lane on the inside of the turn supplies about the downstream quarter (entry at
+  67/256 tile); the lane on the outside supplies about three quarters (188/256).
+- Moving turbo first hands took `0,1,2,4` with the outer stream only and `0,2,4,6` with the inner stream only,
+  against `0,1,2,3` for through supply. Outer-only hands took `0,1,2,4` at every speed. Inner-only hands took
+  `0,1,4,6` express, `0,4,8,12` fast and `0,4,12,20` normal.
+- Two streams compete for one receiving lane. With the incoming head at position zero, an inner entry shifted
+  by less than `64 + speed` units (1/256 tile) was accepted: last accepted / first rejected 95/96 turbo,
+  87/88 express, 79/80 fast, 71/72 normal.
+- Two-stream merges were measured at all four speeds; only the bounded turbo merge had production support.
+  Its model matched all 511 transitions in each of seven repeated controls, and its generated gear clock held
+  60 of 60 periods. At express the same rule matched hand counts but not stream origins or stock movement, so
+  slower merges were never supported.
+- Different items on the two streams starved the inner ingredient in an operating machine at every speed: once
+  the machine stops accepting the outer ingredient, pickup stops opening gaps for the inner stream.
+- Backed-up single streams matched a finite receiving and incoming queue model in eight clips over 4,096 ticks.
+
+The removed model and tests, the `side-loaded-straight` fixture with its native controls, clips and screenshots,
+the turbo merge clock check, and the former coverage rows, timing tables and diagrams are at commit `52b4e9f0`
+on `master`. See the [fixture report](https://github.com/abucnasty/factorio-scripts/tree/52b4e9f0f125a7072c1665fe1fb8f3378ab63ce1/clock-generator/tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight)
+for the setup, corrections and reproduction commands, and the
+[belt pickup documentation](https://github.com/abucnasty/factorio-scripts/tree/52b4e9f0f125a7072c1665fe1fb8f3378ab63ce1/clock-generator/docs/belt-pickup)
+at that commit for the tables and diagrams. Raw captures stay in ignored `work/` directories.
 
 ## Evidence limits
 
 The fixture reports distinguish manual observations, automated mechanics checks and generated-clock checks.
 Replays aligned to observed stock or arm timing do not independently prove startup phase or feeder timing.
 Inventory-clearing probes do not establish crafting throughput; seeded controls do not establish natural supply.
-Matching hand counts does not prove routing, as the express merge counterexample demonstrated.
 
-Supported merge scope remains the bounded turbo, four-item-stack, single-consumer straight layout. Express
-and other slower merges remain unsupported despite native measurements. Sparse or independently phased supply,
-broader orientations and competing-consumer networks remain unverified. Early disabled-filter probes and a mixed-machine run with a closed gate were
-excluded from the corresponding findings. Detailed fixture reports retain those corrections and reproduction
-instructions. Full raw captures stay in ignored `work/` directories; fixture images use the shared native
-screenshot-to-JPEG script.
+Sparse or independently phased supply, broader orientations and competing-consumer networks remain unverified.
+Early disabled-filter probes were excluded from the corresponding findings. Detailed fixture reports retain those
+corrections and reproduction instructions. Full raw captures stay in ignored `work/` directories; fixture images
+use the shared native screenshot-to-JPEG script.

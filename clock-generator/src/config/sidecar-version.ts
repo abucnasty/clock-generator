@@ -97,12 +97,7 @@ const MOVING_PICKUP_FEATURE: SidecarFeature = {
         && "type" in inserter.source && inserter.source.type === "belt"),
     missing: () => "Physical belt pickup geometry was not exported. Update Sidecar and recapture these inputs; a straight-belt default does not establish their support.",
 };
-const PICKUP_SUPPLY_FEATURE: SidecarFeature = {
-    name: "pickup-supply", since: "0.11.0",
-    appliesTo: MOVING_PICKUP_FEATURE.appliesTo,
-    missing: () => "Local side-feed entry and merge warnings were not exported. Re-export belt inputs to capture single-stream supply and identify unsupported merges.",
-};
-export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE, PICKUP_SUPPLY_FEATURE];
+export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE];
 
 /** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
 const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";

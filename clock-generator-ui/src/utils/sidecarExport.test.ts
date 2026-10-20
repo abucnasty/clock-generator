@@ -105,17 +105,27 @@ describe('looksLikeSidecarExport', () => {
     });
 });
 
+describe('pickup capture warnings', () => {
+    it('reads a side-loaded note and ignores the retired merge and supply-unknown reasons as any unknown reason', () => {
+        const read = readSidecarExport(JSON.stringify({ machines: [machine], inserters: [{}, {}, {}], pickup_warnings: [
+            { inserter_id: 1, reason: 'side-loaded' }, { inserter_id: 2, reason: 'merge' }, { inserter_id: 3, reason: 'supply-unknown' },
+        ] }));
+        expect(read.kind).toBe('export');
+        if (read.kind === 'export') expect(read.pickupWarnings).toEqual([{ inserter_id: 1, reason: 'side-loaded' }]);
+    });
 
-it('retains supply diagnostics even when geometry is classified', () => {
-    const read = readSidecarExport(JSON.stringify({machines: [{}], inserters: [{}, {}], pickup_warnings: [
-        {inserter_id: 1, reason: 'merge'}, {inserter_id: 2, reason: 'supply-unknown'},
-    ]}));
-    expect(read.kind).toBe('export');
-    if (read.kind === 'export') expect(read.pickupWarnings?.map(warning => warning.reason)).toEqual(['merge', 'supply-unknown']);
-});
+    it.each(['splitter', 'side-loaded'] as const)('says a %s pickup is out of scope rather than waiting to be calibrated', reason => {
+        expect(pickupCaptureWarningMessage(reason)).toContain('out of scope for the clock generator');
+        expect(pickupCaptureWarningMessage(reason)).not.toContain('has not been calibrated');
+    });
 
-it('explains supply warnings without claiming that pickup geometry is unknown', () => {
-    expect(pickupCaptureWarningMessage('merge')).toContain('outside the supported turbo two-stream');
-    expect(pickupCaptureWarningMessage('supply-unknown')).toContain('Supply entry is unspecified');
-    expect(pickupCaptureWarningMessage('merge')).not.toContain('pickup type unspecified');
+    it('names what is out of scope', () => {
+        expect(pickupCaptureWarningMessage('splitter')).toMatch(/^pickup is on a splitter\. /);
+        expect(pickupCaptureWarningMessage('side-loaded')).toMatch(/^another belt side-loads onto the pickup tile\. /);
+    });
+
+    it.each(['bend', 'inline', 'unsupported'] as const)('keeps a %s pickup unverified until its geometry is calibrated', reason => {
+        expect(pickupCaptureWarningMessage(reason)).toContain('this geometry has not been calibrated');
+        expect(pickupCaptureWarningMessage(reason)).not.toContain('out of scope');
+    });
 });

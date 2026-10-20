@@ -40,19 +40,44 @@ describe('pickup assumption presentation', () => {
         }
         expect(renderToStaticMarkup(<PickupTypeSelect source={{ type: 'machine', id: 1 }} entityLabel="Inserter 3" onChange={() => {}} />)).toBe('');
     });
-    it('keeps an unsupported imported pickup visible in the editor and saved-run summary', () => {
+    it.each([
+        { reason: 'splitter', entity_type: 'splitter', label: 'splitter', detail: 'Its pickup tile is a splitter.' },
+        { reason: 'side-loaded', entity_type: 'transport-belt', label: 'side-loaded belt', detail: 'Another belt side-loads onto its pickup tile.' },
+    ])('keeps an out-of-scope $reason pickup visible as not supported in the editor and saved-run summary', ({ reason, entity_type, label, detail }) => {
         const source = {type: 'belt' as const, id: 1, pickup_length: 1 as const,
-            pickup_capture: {status: 'unsupported' as const, entity_type: 'splitter', reason: 'splitter', sidecar_version: '0.11.0'}};
-        const html = renderToStaticMarkup(<PickupTypeSelect source={source} entityLabel="Inserter 3" onChange={() => {}} />);
-        expect(text(html)).toContain('Unverified capture');
-        expect(html).toContain('aria-disabled="true"');
-        expect(html).not.toContain('value="side-straight"');
+            pickup_capture: {status: 'unsupported' as const, entity_type, reason, sidecar_version: '0.11.0'}};
+        for (const compact of [false, true]) {
+            const html = renderToStaticMarkup(<PickupTypeSelect source={source} compact={compact} entityLabel="Inserter 3" onChange={() => {}} />);
+            expect(text(html)).toContain(`Not supported: ${label}`);
+            expect(text(html)).toContain(detail);
+            expect(text(html)).toContain('Splitters and side-loaded belt tiles are out of scope');
+            expect(text(html)).not.toContain('Unverified capture');
+            expect(html).toContain('aria-disabled="true"');
+            expect(html).not.toContain('value="side-straight"');
+        }
         for (const savedRun of [false, true]) {
             const summary = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 3, source}], overrides: {backed_up_belts: true}}} savedRun={savedRun} />));
-            expect(summary).toContain('pickup needs a supported capture before generation');
-            expect(summary).toContain('Updating the mod alone does not update this saved capture');
+            expect(summary).toContain('1 belt pickup is not supported and blocks generation.');
+            expect(summary).toContain(`Not supported: Inserter 3 (${label}). Splitters and side-loaded belt tiles are out of scope.`);
+            expect(summary).toContain('Rebuild the pickup as one of these, then recapture it with Sidecar.');
+            expect(summary).not.toContain('(transport-belt)');
+            expect(summary).not.toContain('Unverified:');
+            expect(summary).not.toContain('Updating the mod alone does not update this saved capture');
             expect(summary).not.toContain('Saturated supply with captured pickup rules');
         }
+    });
+    it('keeps an unverified imported pickup apart from an out-of-scope one', () => {
+        const bend = {type: 'belt' as const, id: 1, pickup_capture: {status: 'unsupported' as const, entity_type: 'transport-belt', reason: 'bend'}};
+        const sideLoaded = {type: 'belt' as const, id: 2, pickup_capture: {status: 'unsupported' as const, entity_type: 'transport-belt', reason: 'side-loaded'}};
+        const select = text(renderToStaticMarkup(<PickupTypeSelect source={bend} entityLabel="Inserter 4" onChange={() => {}} />));
+        expect(select).toContain('Unverified capture');
+        expect(select).toContain('A supported Sidecar capture is required');
+        expect(select).not.toContain('out of scope');
+        const summary = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 4, source: bend}, {id: 5, source: sideLoaded}]}} />));
+        expect(summary).toContain('2 belt pickups need a supported capture before generation');
+        expect(summary).toContain('Not supported: Inserter 5 (side-loaded belt).');
+        expect(summary).toContain('Unverified: Inserter 4 (transport-belt). Update Sidecar and recapture when the geometry is supported.');
+        expect(summary).toContain('Updating the mod alone does not update this saved capture');
     });
     it('selects straight belt when geometry is omitted in either editor', () => {
         for (const compact of [false, true]) {

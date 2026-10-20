@@ -129,80 +129,28 @@ history from repeat detection once the hand is empty/full, since the next hand i
 
 This matches all 198 side-pickup arrival phases and all 96 ordinary/reflected repeated-hand controls, including
 the normal moving entrance's four delayed phases. Sixteen fresh controls check all eight normal entrance
-phases from both physical near sides. This collection constraint is calibrated for ordinary through supply and
-legendary stack inserters; side-fed supply and other prototypes/qualities remain separate calibrations.
+phases from both physical near sides. This collection constraint is calibrated for through supply and
+legendary stack inserters; other prototypes/qualities remain separate calibrations.
 Capture geometry and collection replay alone do not establish absolute arrival or generated-clock parity.
 
-Scope remains one controlled pickup supply. Sparse supply, shared upstream withdrawals, merges outside the turbo
-side-feed case below, bends, other inserters/qualities/orientations and arbitrary relative lane phases remain
-unverified. Moving front-exit supply awaits a suitable fixture.
-
-[Side-loading into a straight pickup tile](../tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight/README.md)
-changes which stacks are available, not the pickup selection rule. A full incoming belt need not fill the pickup
-tile. `source.pickup_supply` names one profile per receiving belt lane: `through` (the default), `side-inner` or
-`side-outer`. A single continuously full, same-speed side stream supplies approximately the downstream quarter
-or three quarters of a straight tile, respectively. The engine uses the measured entry positions and stream
-phase, retaining holes/partial stacks. These profiles are supported only with one-tile straight geometry;
-backed-up supply keeps a finite receiving queue and a full incoming side queue. In the calibrated jammed phase,
-an inner feed initially supplies three exposed packets and an outer feed four. Withdrawals leave holes; the
-incoming head advances at belt speed and can wait at the entry boundary. Refill does not reset between hands
-or control replacements. The side-feed and two-stream models share the same traffic code, with only one stream
-enabled for a single feed. Eight portable repeated-hand clips compare held quantities and both queues for
-4,096 ticks across all speeds; native arm-start/drop boundaries are supplied. Sidecar already captures the
-profile needed for this rule, so the capture format is unchanged.
-
-Two full four-item lanes of one perpendicular **turbo** belt can also feed the same straight pickup lane.
-`source.pickup_merge` describes this supply instead of `pickup_supply`:
-
-```json
-"pickup_merge": {
-  "lane": 2,
-  "outer": { "ingredient": "iron-plate", "stack_size": 4 },
-  "inner": { "ingredient": "copper-cable", "stack_size": 4 },
-  "downstream_tiles": 3,
-  "outlet": "open"
-}
-```
-
-The belt's receiving lane names the outer ingredient; both actual ingredients are supplied by the merge metadata.
-The other receiving lane must be empty, and one pickup inserter is supported. `downstream_tiles` counts straight
-tiles after the pickup, excluding its tile and the drain loader. An `open` outlet drains freely; `closed` is
-a physical belt end. Explicit Backed up supply also closes the outlet. Geometry remains separate from supply motion.
-
-The supply keeps two incoming queues and shared receiving/downstream stock. Each tick, entries check the preceding
-stock at positions 188 (outer) and 67 (inner), in 1/256-tile units. A blocked entry shifts upstream to preserve
-64-unit spacing behind downstream stock; turbo admits shifts **strictly below 96**, within the receiving tile.
-Old stock advances up to 32 units, then arrivals join. A closed downstream end propagates backpressure.
-Arrivals may temporarily compress a follower's gap: it waits or moves less until space opens, never backwards.
-Pickup then uses the existing selection rules: take one reachable stack, and continue collecting only the held item.
-
-Sidecar 0.11.0 captures local physical lanes, single-stream profiles and this supported turbo merge. It follows
-a bounded straight input/output path and exports a closed end or a turbo loader into an unfiltered disposal
-chest. Extra streams, upstream merges, unequal/non-turbo speeds, other stack sizes, downstream junctions or
-competing pickups retain a warning; these are not silently approximated as independent supplies.
-
-Seven repeated-hand game comparisons seed observed stock once and verify all 511 following transitions with
-the production supply and pickup mode: both start phases, pause/resume, outlet blockage/release, reflection,
-and different ingredients in both arrangements. Ten native seeded calibrations check the integer entry cutoff
-and compressed-follower movement. A generated gear clock also holds every one of 60 recorded periods.
-Ordinary configs still assume an initial phase; these results do not prove arbitrary startup phase, sparse
-supply, sub-unit entry precision, different merge layouts, or operating-machine throughput for the mixed-item probe.
-
-Different ingredients in one receiving lane can starve: when the machine stops accepting the outer ingredient,
-pickup no longer opens gaps for the inner stream. The freely running electronic-circuit fixture confirms this
-failure with 16 iron plates, no copper cable and no products over 1,200 recorded ticks. Preparation reports a
-repeating stalled state and suggests reviewing the merge or separating ingredients. Capturing a supported
-merge describes its behavior; it does not guarantee that the build can supply its recipe.
+Scope remains one controlled through supply. Pickups from a side-loaded tile, with one side stream or two
+merging onto the pickup lane, are out of scope and refused, as are pickups from a splitter; see the
+[experiment history](belt-pickup/experiments.md#side-loaded-pickups-and-merges). A belt fed through a splitter further
+upstream is modelled as a plain belt, which is wrong when the splitter's other output takes items. Sparse supply, shared upstream
+withdrawals, bends, other inserters/qualities/orientations and arbitrary relative lane phases remain unverified.
+Moving front-exit supply awaits a suitable fixture.
 
 ### Captured pickup provenance
 
 [Pickup capture status](belt-pickup/capture.md) is saved on each imported source. Only an explicit supported model
-with matching geometry/lane/supply data can drive generation. Unsupported and legacy unclassified pickups
+with matching geometry and lane data can drive generation. Unsupported and legacy unclassified pickups
 remain unverified after save/reload or version updates; update Sidecar and recapture when support is available.
 Manual configurations keep the straight-belt default. A newer engine does not reinterpret an old unsupported
 capture as a supported source.
 
-**Splitters are out of scope.**
+**Side-loaded pickup tiles, merges and splitters are out of scope.** A config that names `source.pickup_supply`
+or `source.pickup_merge` is refused, and so is a capture that Sidecar marks unsupported with the reason
+`side-loaded` or `splitter`. See the [experiment history](belt-pickup/experiments.md#side-loaded-pickups-and-merges).
 
 ### A stack inserter dropping onto a moving lane
 

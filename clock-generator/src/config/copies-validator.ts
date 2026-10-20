@@ -1,5 +1,6 @@
 import { BeltConfig, ChestConfig, Config, InserterConfig, MiningDrillConfig } from './schema';
 import { CopiesError, CopiesUnit } from './errors';
+import { assertPickupsInScope } from './pickup-capture';
 
 // ============================================================================
 // Units of a build
@@ -100,7 +101,7 @@ function endOfInserter(config: Config, end: InserterConfig['source'], nodes: Map
         const chest = config.chests?.find(it => it.id === end.id);
         return { outside: chest === undefined ? 'chest|unknown' : chestSpec(chest) };
     }
-    return { outside: `${beltSpec(config.belts.find(it => it.id === end.id), end.near_lane)}|${JSON.stringify(end.pickup_merge ?? null)}` };
+    return { outside: beltSpec(config.belts.find(it => it.id === end.id), end.near_lane) };
 }
 
 /** Unit nodes, edges and the components they form */
@@ -226,6 +227,7 @@ export function findRepeatedUnits(config: Config): RepeatedUnits {
  * multiply with `target_output.copies`.
  */
 export function validateCopies(config: Config): void {
+    assertPickupsInScope(config);
     const found = findRepeatedUnits(config);
     if (found.gcd > 1) {
         throw new CopiesError(found.copies, config.target_output.copies);

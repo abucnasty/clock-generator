@@ -40,27 +40,15 @@ The inserter stands inline with the endpoint rather than beside it.
 “Front” refers to these named fixture approaches, not a universal compass direction. Front-exit and
 over-the-hood-exit pickups approach opposite ends of the same endpoint.
 
-## Side-loading and merging
+## Supply onto the pickup tile
 
-**Side-loading** means a belt feeds into the side of a straight receiving belt. The inserter picks up from
-that receiving belt. This describes supply into the pickup tile; the **side pickups** category describes the inserter
-standing beside the belt. They are separate properties.
+**Through supply** means items enter from the upstream belt in the same direction and traverse the whole
+straight pickup tile. See the straight-belt diagram above. This describes supply into the pickup tile; the
+**side pickups** category describes the inserter standing beside the belt. They are separate properties.
 
-The diagrams show an incoming belt travelling upward and turning right onto the lower receiving lane.
-The other receiving lane stays empty. Inner and outer describe the incoming streams' turns, independently
-of the inserter's preferred lane.
-
-![Inner-only, outer-only and two-stream side-loading; both incoming lanes feed the same receiving lane](images/side-loading.svg)
-
-| Term | Meaning |
-| --- | --- |
-| Through supply | Items enter from the upstream belt in the same direction, traversing the whole straight pickup tile. See the straight-belt diagram above. |
-| Inner stream only | Only the incoming lane on the inside of the turn carries items. It enters near the receiving tile's downstream end. |
-| Outer stream only | Only the incoming lane on the outside of the turn carries items. It enters farther upstream on the receiving tile. |
-| Two-stream merge | Both incoming lanes carry items and compete for space on **one receiving lane**. They do not supply two independent receiving lanes. |
-
-See the [side-loading fixture screenshots and measurements](../../tests/game/mechanics/belt-pickup/fixtures/side-loaded-straight/README.md).
-Reflecting the feed to the other side changes the physical lane numbers, while preserving the inner/outer names.
+**Side-loading** means another belt feeds into the side of the pickup tile, as one stream or two streams merging
+onto one receiving lane. Picking up from a side-loaded tile is out of scope, as splitters are, and is refused.
+See the [experiment history](experiments.md#side-loaded-pickups-and-merges).
 
 ## Conditions applied to the layouts
 
@@ -95,4 +83,5 @@ control also allows the destination to craft; clearing its inventory to isolate 
 
 Normal, fast, express and turbo are speed variants of these layouts, not additional geometries. Diagrammed
 layouts do not imply simulator support; the [coverage matrix](experiments.md#belt-speed-coverage)
-marks support limits and measured disagreements. **Splitters are out of scope.**
+marks support limits and measured disagreements. **Side-loaded pickup tiles, merges and splitters are out of
+scope**; see the [experiment history](experiments.md#side-loaded-pickups-and-merges).
