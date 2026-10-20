@@ -1,5 +1,6 @@
 import { BELT_PICKUP_LAYOUTS, pickupLayoutProblem } from "../common/belt-pickup-layout";
 import { BeltPickupCaptureSchema, normalizePickupCaptureConfig, pickupCaptureProblem } from "./pickup-capture";
+import { sideLoadedPickupRefusal } from "./errors";
 import { z } from "zod";
 import { MiningDrillType, BeltType, BeltStrategy, ChestType } from "../common/entity-types";
 import {
@@ -302,19 +303,11 @@ const InserterBeltDropConfigSchema = z.object({
     position: z.number()
 });
 
-export const BeltPickupSupplyProfileSchema = z.enum(["through", "side-inner", "side-outer"]);
-export type BeltPickupSupplyProfile = z.infer<typeof BeltPickupSupplyProfileSchema>;
-
-const MergeStreamSchema = z.object({ingredient: z.string().min(1), stack_size: z.literal(4)});
-/** Two full lanes of one perpendicular turbo belt feeding one straight receiving lane. */
-export const BeltPickupMergeSchema = z.object({
-    lane: z.union([z.literal(1), z.literal(2)]),
-    outer: MergeStreamSchema,
-    inner: MergeStreamSchema,
-    downstream_tiles: z.number().int().min(0).max(128),
-    outlet: z.enum(["open", "closed"]),
-});
-export type BeltPickupMergeConfig = z.infer<typeof BeltPickupMergeSchema>;
+/**
+ * A field only a side-loaded pickup has. Side-loaded pickups are out of scope, so the field is kept only to refuse a
+ * config that names it: without it the schema would drop the field and read the pickup as a plain belt.
+ */
+const sideLoadedPickupField = (field: string) => z.custom<never>(() => false, { error: sideLoadedPickupRefusal(field) }).optional();
 
 const InserterBeltSourceConfigSchema = z.object({
     type: z.literal(TargetType.BELT),
@@ -333,15 +326,10 @@ const InserterBeltSourceConfigSchema = z.object({
     pickup_length: z.union([z.literal(0.5), z.literal(1)]).default(1),
     /** Physical approach and endpoint; required for manual underground pickups. */
     pickup_layout: z.enum(BELT_PICKUP_LAYOUTS).optional(),
-    /** Single-stream entry per receiving lane, in the same order as the belt's lanes. Omitted means through.
-     * Side profiles describe a continuously full, same-speed side feed into a straight pickup tile.
-     * They select the entry boundary and refill queue independently of physical reach or the supply setting.
-     */
-    pickup_supply: z.union([
-        z.tuple([BeltPickupSupplyProfileSchema]),
-        z.tuple([BeltPickupSupplyProfileSchema, BeltPickupSupplyProfileSchema]),
-    ]).optional(),
-    pickup_merge: BeltPickupMergeSchema.optional(),
+    /** Refused: side-loaded pickups, by one stream or two merging, are out of scope */
+    pickup_supply: sideLoadedPickupField("pickup_supply"),
+    /** Refused: side-loaded pickups, by one stream or two merging, are out of scope */
+    pickup_merge: sideLoadedPickupField("pickup_merge"),
     /** Persistent capture provenance; absent on manual configurations. */
     pickup_capture: BeltPickupCaptureSchema.optional(),
     /** Refused: only an inserter's sink has a drop spot (see the checks of ConfigSchema) */
@@ -632,31 +620,6 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
         if (inserter.source.type === TargetType.BELT && inserter.source.pickup_capture?.status === "supported") {
             const problem = pickupCaptureProblem(inserter.source);
             if (problem) context.addIssue({code: "custom", path: ["inserters", index, "source", "pickup_capture"], message: problem});
-        }
-        if (inserter.source.type === TargetType.BELT && inserter.source.pickup_merge) {
-            const source = inserter.source, merge = source.pickup_merge!;
-            const belt = config.belts.find(belt => belt.id === source.id);
-            const error = (message: string) => context.addIssue({code: "custom", path: ["inserters", index, "source", "pickup_merge"], message});
-            if (!belt || belt.type !== "turbo-transport-belt" || source.pickup_length !== 1) error("Two-stream pickup requires a straight, one-tile turbo belt");
-            if (source.pickup_supply) error("Choose pickup_merge or single-stream pickup_supply, not both");
-            if (belt && (merge.lane > belt.lanes.length || belt.lanes.some((lane, laneIndex) => laneIndex !== merge.lane - 1 && lane.ingredient !== "")
-                || belt.lanes[merge.lane - 1]?.stack_size !== 4 || belt.lanes[merge.lane - 1]?.ingredient !== merge.outer.ingredient))
-                error("Two-stream pickup requires one receiving lane of four-item stacks naming the outer ingredient, and an empty other lane");
-            if (config.inserters.filter(other => other.source.type === TargetType.BELT && other.source.id === source.id).length !== 1)
-                error("Two-stream pickup currently supports one pickup inserter per receiving belt");
-        }
-        if (inserter.source.type === TargetType.BELT && inserter.source.pickup_supply) {
-            const source = inserter.source;
-            const profiles = inserter.source.pickup_supply;
-            const belt = config.belts.find(belt => belt.id === source.id);
-            if (belt && profiles.length !== belt.lanes.length) {
-                context.addIssue({ code: "custom", path: ["inserters", index, "source", "pickup_supply"],
-                    message: "Pickup supply must name one profile for each receiving belt lane" });
-            }
-            if (source.pickup_length !== 1 && profiles.some(profile => profile !== "through")) {
-                context.addIssue({ code: "custom", path: ["inserters", index, "source", "pickup_supply"],
-                    message: "Side-entry supply is supported only on a straight, one-tile pickup" });
-            }
         }
         if (inserter.source.type === TargetType.BELT && inserter.source.drop !== undefined) {
             context.addIssue({

@@ -67,21 +67,8 @@ front approaches and describe the first hand, not a sustained throughput guarant
 
 ![Diagrams of front entrance, downstream front exit and over-the-hood exit above their phase-dependent and backed-up pickup timelines](images/front-pickup-timing.svg)
 
-## Side-loading onto a straight belt
-
-The diagrams show a belt arriving from below and feeding the lower lane of a straight receiving belt.
-The inner stream turns closest to the downstream end; the outer stream enters farther upstream. When both
-incoming lanes carry items, they merge onto **one receiving lane**.
-The initial and shifted controls begin collecting at different stack positions. The difference between the
-inner and outer streams is supply entry into the tile, not a fixed penalty on the inserter.
-
-![Diagrams of inner-only, outer-only and two-stream side-loading above the matching pickup timelines across belt speeds](images/side-loading-timing.svg)
-
-Four consecutive grabs in the express merge do not establish a correct supply model: the experimental
-candidate gets the hand counts right while disagreeing with the game about stream origins and stock movement.
-Slower merges remain unsupported. Other phases, repeated-hand conditions and support limits are documented
-in the linked matrix and fixture reports.
-
+Side-loaded pickup tiles, merges and splitters are out of scope. The
+[experiment history](experiments.md#side-loaded-pickups-and-merges) keeps the measured side-loading timings.
 Belt-drop timings describe **deposits** and are kept in the [separate calibration table](experiments.md#related-belt-drop-calibration).
 
 ## Supply and test conditions

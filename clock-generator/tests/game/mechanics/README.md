@@ -8,7 +8,7 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Staged start](staged-start/README.md): saturated belts and fresh cell inserters built in a controlled order.
 - [Clock wiring](clock-wiring/README.md): replacing inserter conditions inherited from a real build.
 
-The [screenshot catalog](screenshots.json) references seven local fixture blueprints and three shared sample
+The [screenshot catalog](screenshots.json) references 14 local fixture blueprints and 3 shared sample
 blueprints. Their [generated provenance](screenshots.generated.json) records source hashes, Factorio version,
 framing and compressed image sizes. Run `npm run screenshots -- --all` from `clock-generator/` to backfill missing
 or stale images, or `--case=<id>` to capture one.

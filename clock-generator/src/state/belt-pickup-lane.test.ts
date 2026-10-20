@@ -49,26 +49,3 @@ describe("reachable stacks on a moving pickup lane", () => {
         expect(lane.stateKey(17)).not.toBe(first);
     });
 });
-
-describe("single side-stream pickup regressions from Factorio 2.1.21", () => {
-    it.each([
-        { speed: BeltSpeed.TURBO_TRANSPORT_BELT, start: 1, inner: [0, 2, 4, 6], outer: [0, 1, 2, 4] },
-        { speed: BeltSpeed.TURBO_TRANSPORT_BELT, start: 0, inner: [0, 1, 3, 5], outer: [0, 1, 3, 5] },
-        { speed: BeltSpeed.EXPRESS_TRANSPORT_BELT, start: 5, inner: [0, 1, 4, 6], outer: [0, 1, 2, 4] },
-        { speed: BeltSpeed.FAST_TRANSPORT_BELT, start: 1, inner: [0, 4, 8, 12], outer: [0, 1, 2, 4] },
-        { speed: BeltSpeed.TRANSPORT_BELT, start: 5, inner: [0, 4, 12, 20], outer: [0, 1, 2, 4] },
-    ])("uses entry and stream phase at speed $speed, start $start", ({speed, start, inner, outer}) => {
-        expect(grabs(new BeltPickupLane(speed, 1, 4, 0, "side-inner"), 4, start)).toEqual(inner);
-        expect(grabs(new BeltPickupLane(speed, 1, 4, 0, "side-outer"), 4, start)).toEqual(outer);
-    });
-    it("keeps side-stream holes and partial stacks and takes only once in a tick", () => {
-        const lane = new BeltPickupLane(BeltSpeed.TURBO_TRANSPORT_BELT, 1, 4, 0, "side-outer");
-        expect(lane.take(0, 2)).toBe(2);
-        expect(lane.take(0, 4)).toBe(0);
-        expect(lane.take(1, 4)).toBe(4);
-        expect(lane.take(2, 4)).toBe(2);
-    });
-    it("does not reinterpret half-tile geometry as a straight side feed", () => {
-        expect(() => new BeltPickupLane(BeltSpeed.TURBO_TRANSPORT_BELT, 0.5, 4, 0, "side-inner")).toThrow("straight");
-    });
-});

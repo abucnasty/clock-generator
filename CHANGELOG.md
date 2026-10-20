@@ -13,7 +13,6 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ### Fixed
 - Avoid repeating recovery verification for identical clocks, including schedules whose inserter windows differ only in object ordering. Keep distinct supply assumptions and failure findings separate.
 - Check independently phased moving input lanes during clock verification and recovery. Clocks that meet their target only while both lanes stay aligned are no longer marked stable.
-- Replenish backed-up single-stream side feeds through finite incoming queues at the actual belt speed. Repeated hands on slower belts no longer draw from unlimited reachable stock.
 - Retain output-belt stock between hands at all four speeds. Inserters now wait for actual receiving space, including the slower second hand on normal belts and temporary compressed gaps.
 - Account for arm extension between ordinary belt grabs. This fixes the extra tick in affected normal-speed same-item underground-entrance pickups without adding a universal lane-switch delay.
 - Preserve finite stock and belt-speed refill for ordinary backed-up pickups, including underground reach and same-item lane fallback. Slower belts can run out of reachable stacks during or between hands instead of supplying a stack every tick.
@@ -22,13 +21,11 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Capture supported over-the-hood underground-exit pickups in Sidecar, including mirroring-selected lane preference. Older unsupported captures require recapture.
 - Identify underground pickup layouts explicitly: side entrance/exit, front entrance/exit, or over the exit hood. Manual underground configs require a layout choice; older Sidecar underground captures require recapture. Straight side pickups remain the default.
 - Preserve per-pickup capture status and source identity through import, saved builds and exports. Unclassified or unsupported captures require a new supported capture before generation; explicit model names/format versions prevent future data from silently falling back to straight-belt timing. Manual builds retain their existing defaults.
-- Model a single continuously supplied side feed into a straight pickup tile. Per-lane `source.pickup_supply` profiles distinguish through, inner side and outer side entry without changing reach, preferred lane or backed-up timing.
-- Model two full turbo side streams sharing a straight pickup lane, including different ingredients, persistent queues, temporary compression and finite downstream backpressure. `source.pickup_merge` captures both streams and the outlet geometry; other merge speeds and layouts remain unsupported.
-- Report when a two-stream supply repeats a stalled preparation state, including an inner ingredient starved by a full outer stream, instead of waiting for the simulation timeout.
-- Sidecar 0.11.0 captures the preferred lane and half-tile reach in front of underground entrances, plus local receiving lanes, single-stream side-feed profiles and supported turbo two-stream merges. Its copy window and import preview warn about unsupported merges and ambiguous side feeds.
+- Sidecar 0.11.0 captures the preferred lane and half-tile reach in front of underground entrances.
 
 ### Changed
 - Check the one-swing alternative early so a fully verified clock can be inspected while the remaining alternatives continue. Final ranking and recovery requirements are unchanged.
+- Refuse belt pickups from a tile that another belt side-loads onto, with the reason: side-loading is out of scope, as splitters are. Earlier versions modelled such a pickup as an ordinary belt. Sidecar 0.11.0 marks these pickups unsupported; recapture builds copied with an older Sidecar.
 
 ## [0.18.0] - 2026-10-18
 

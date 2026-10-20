@@ -3,7 +3,7 @@ import type { InserterFormData } from './configForm/formData';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import { createDefaultConfig } from './configForm/formData';
 import { endpointUpdate } from './inserterMetadata';
-import { pickupGeometryOf, pickupTypeOf, withPickupType } from './pickupGeometry';
+import { pickupGeometryOf, pickupTypeOf, unsupportedPickupOf, withPickupType } from './pickupGeometry';
 import { configKeyOf, generatedForOf, isStale } from './resultsStaleness';
 
 describe('pickup type edits and saved assumptions', () => {
@@ -38,9 +38,42 @@ describe('pickup type edits and saved assumptions', () => {
         expect(pickupTypeOf(restored.inserters[0].source)).toBe('unverified');
         expect(withPickupType(restored.inserters[0].source, 'side-straight')).toBe(restored.inserters[0].source);
         expect(withPickupType(restored.inserters[0].source, 'side-exit')).toBe(restored.inserters[0].source);
+        expect(unsupportedPickupOf(restored.inserters[0].source)).toBe('splitter');
         const geometry = pickupGeometryOf({...config, overrides: {backed_up_belts: true}});
         expect(geometry.known).toBe(0);
         expect(geometry.unverified).toEqual([1]);
+        expect(geometry.unsupported).toEqual([1]);
+    });
+    it('keeps a side-loaded pickup capture as out of scope across import, save and reload', () => {
+        const form = createDefaultConfig();
+        const capture = {status: 'unsupported' as const, entity_type: 'transport-belt', entity_name: 'turbo-transport-belt',
+            sidecar_version: '0.11.0', reason: 'side-loaded'};
+        form.inserters = [{id: 1, _uuid: 'input', source: {...source, pickup_capture: capture}, sink: {type: 'machine', id: 1}}];
+        const config = formDataToConfig(form);
+        const restored = configToFormData(JSON.parse(JSON.stringify(config)));
+        expect(restored.inserters[0].source.pickup_capture).toEqual(capture);
+        expect(pickupTypeOf(restored.inserters[0].source)).toBe('unverified');
+        expect(unsupportedPickupOf(restored.inserters[0].source)).toBe('side-loaded');
+        for (const type of ['side-straight', 'side-exit'] as const) {
+            expect(withPickupType(restored.inserters[0].source, type)).toBe(restored.inserters[0].source);
+        }
+        const geometry = pickupGeometryOf(config);
+        expect(geometry).toMatchObject({known: 0, unverified: [1], unsupported: [1]});
+    });
+    it('counts only the reasons the engine refuses as out of scope', () => {
+        for (const reason of ['bend', 'inline', 'unsupported', 'merge', 'supply-unknown']) {
+            const captured: InserterFormData['source'] = {...source, pickup_capture: {status: 'unsupported', entity_type: 'transport-belt', reason}};
+            expect(pickupTypeOf(captured)).toBe('unverified');
+            expect(unsupportedPickupOf(captured)).toBeNull();
+        }
+        for (const reason of ['splitter', 'side-loaded']) {
+            expect(unsupportedPickupOf({...source, pickup_capture: {status: 'unclassified', reason}})).toBeNull();
+        }
+        const supported: InserterFormData['source'] = {...source, pickup_length: 1, pickup_capture: {
+            status: 'supported', model: 'belt', model_version: 2, entity_type: 'transport-belt', sidecar_version: '0.11.0',
+        }};
+        expect(unsupportedPickupOf(source)).toBeNull();
+        expect(unsupportedPickupOf(supported)).toBeNull();
     });
     it('makes a deliberate geometry change a manual assumption without fabricating a fresh capture', () => {
         const captured: InserterFormData['source'] = {...source, pickup_length: 1, pickup_capture: {
@@ -55,15 +88,6 @@ describe('pickup type edits and saved assumptions', () => {
             const source = { type, id: 2 };
             expect(withPickupType(source, 'side-straight')).toBe(source);
         }
-    });
-    it('clears the captured straight-tile merge when selecting underground geometry', () => {
-        const merge: InserterFormData['source'] = {...source, pickup_length: 1, pickup_merge: {
-            lane: 2, outer: {ingredient: 'iron-plate', stack_size: 4}, inner: {ingredient: 'iron-plate', stack_size: 4},
-            downstream_tiles: 3, outlet: 'open',
-        }};
-        expect(withPickupType(merge, 'side-straight').pickup_merge).toEqual(merge.pickup_merge);
-        expect(withPickupType(merge, 'side-exit')).not.toHaveProperty('pickup_merge');
-        expect(merge).toHaveProperty('pickup_merge');
     });
     it('preserves a no-op route but clears geometry when its source changes', () => {
         const inserter: InserterFormData = { id: 1, _uuid: 'input', source: withPickupType(source, 'side-exit'), sink: { type: 'machine', id: 1 } };
@@ -88,7 +112,7 @@ describe('pickup type edits and saved assumptions', () => {
             { id: 7, source: withPickupType(source, 'side-straight') }, { id: 9, source },
             { source: { type: 'machine' } }, { source: { type: 'belt' } },
         ];
-        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], unverified: [], backedUp: false });
+        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], unverified: [], unsupported: [], backedUp: false });
         expect(pickupGeometryOf({ inserters, overrides: { backed_up_belts: true } }).backedUp).toBe(true);
     });
 });

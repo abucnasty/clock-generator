@@ -41,8 +41,6 @@ export interface InserterFormData {
     /** `near_lane`: of a belt, the lane nearest to the inserter (1 or 2, by its place in the belt's lanes), which it takes from first */
     source: { type: 'machine' | 'belt' | 'chest'; id: number;
         near_lane?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['near_lane'];
-        pickup_supply?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_supply'];
-        pickup_merge?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_merge'];
         pickup_capture?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_capture'];
         pickup_length?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_length'];
         pickup_layout?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_layout'];

@@ -157,25 +157,3 @@ describe('imported inserter metadata', () => {
         expect(configToFormData(file).inserters[0].stack_size).toBe(stack_size);
     });
 });
-
-
-it('preserves per-lane pickup supply through Sidecar/form/config round trips', () => {
-    const config = structuredClone(imported);
-    const source = config.inserters[1].source;
-    if (source.type !== 'belt') throw new Error('expected belt');
-    source.pickup_length = 1;
-    source.near_lane = 1;
-    source.pickup_supply = ['side-outer'];
-    const roundTrip = formDataToConfig(configToFormData(config));
-    expect(roundTrip.inserters[1].source).toMatchObject({pickup_length: 1, near_lane: 1, pickup_supply: ['side-outer']});
-});
-
-it('preserves two-stream merge ingredients and finite outlet geometry through form/config round trips', () => {
-    const config = structuredClone(imported);
-    const source = config.inserters[1].source;
-    if (source.type !== 'belt') throw new Error('expected belt');
-    source.pickup_length = 1;
-    source.pickup_merge = {lane: 1, outer: {ingredient: 'iron-plate', stack_size: 4}, inner: {ingredient: 'copper-cable', stack_size: 4}, downstream_tiles: 3, outlet: 'open'};
-    const restored = formDataToConfig(configToFormData(config));
-    expect(restored.inserters[1].source).toMatchObject({pickup_merge: source.pickup_merge});
-});

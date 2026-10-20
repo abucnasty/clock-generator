@@ -3,11 +3,40 @@ import type { InserterFormData } from './configForm/formData';
 
 export type PickupType = BeltPickupLayout;
 type Source = InserterFormData['source'];
+type Capture = Source['pickup_capture'];
+
+/** A capture that cannot drive generation: recorded as unsupported or unclassified, or an old underground declaration */
+const isUnverified = (capture: Capture) => capture !== undefined
+    && (capture.status !== 'supported' || (capture.model_version === 1 && capture.entity_type === 'underground-belt'));
 
 export function pickupTypeOf(source: Source): PickupType | 'underground' | 'unverified' {
-    const capture = source.pickup_capture;
-    if (capture && (capture.status !== 'supported' || (capture.model_version === 1 && capture.entity_type === 'underground-belt'))) return 'unverified';
+    if (isUnverified(source.pickup_capture)) return 'unverified';
     return source.pickup_layout ?? (source.pickup_length === 0.5 ? 'underground' : 'side-straight');
+}
+
+/** A pickup that the clock generator leaves out on purpose, by the reason its capture gives */
+type OutOfScopePickup = 'splitter' | 'side-loaded';
+
+/** How an out-of-scope pickup is named, and what makes it one */
+export const OUT_OF_SCOPE_PICKUPS: Readonly<Record<OutOfScopePickup, { label: string; detail: string }>> = {
+    'splitter': { label: 'splitter', detail: 'Its pickup tile is a splitter.' },
+    'side-loaded': { label: 'side-loaded belt', detail: 'Another belt side-loads onto its pickup tile.' },
+};
+
+/** Why no update of Sidecar or recapture makes an out-of-scope pickup supported, and what to build instead */
+export const OUT_OF_SCOPE_PICKUP_SCOPE = 'Splitters and side-loaded belt tiles are out of scope.'
+    + ' The clock generator models a belt that runs straight onto the pickup tile, an underground endpoint and an over-the-hood pickup.'
+    + ' Rebuild the pickup as one of these, then recapture it with Sidecar.';
+
+/**
+ * The out-of-scope pickup an imported capture records, or null. Only the reasons that the engine refuses as out of
+ * scope count; any other unsupported capture stays unverified.
+ */
+export function unsupportedPickupOf(source: { pickup_capture?: Capture }): OutOfScopePickup | null {
+    const capture = source.pickup_capture;
+    if (capture?.status !== 'unsupported') return null;
+    const reason = capture.reason;
+    return reason === 'splitter' || reason === 'side-loaded' ? reason : null;
 }
 
 export function withPickupType(source: Source, type: PickupType): Source {
@@ -16,10 +45,6 @@ export function withPickupType(source: Source, type: PickupType): Source {
     const updated = { ...source, pickup_length: length, pickup_layout: type };
     // A deliberate geometry edit becomes a manual configuration, not a new physical capture.
     if (pickupTypeOf(source) !== type) delete updated.pickup_capture;
-    if (type !== 'side-straight') {
-        delete updated.pickup_merge;
-        delete updated.pickup_supply;
-    }
     return updated;
 }
 
@@ -37,12 +62,10 @@ export interface PickupBuild {
 export function pickupGeometryOf(build: PickupBuild) {
     const inputs = build.inserters.map((inserter, index) => ({ id: inserter.id ?? index + 1, source: inserter.source }))
         .filter(inserter => inserter.source.type === 'belt');
-    const unverified = inputs.filter(inserter => {
-        const capture = inserter.source.pickup_capture;
-        return capture && (capture.status !== 'supported' || (capture.model_version === 1 && capture.entity_type === 'underground-belt'));
-    }).map(i => i.id);
+    const unverified = inputs.filter(inserter => isUnverified(inserter.source.pickup_capture)).map(i => i.id);
+    // Out of scope: a subset of the unverified pickups, which no recapture makes supported
+    const unsupported = inputs.filter(inserter => unsupportedPickupOf(inserter.source) !== null).map(i => i.id);
     const missing = inputs.filter(inserter => (inserter.source.pickup_length !== 1 && inserter.source.pickup_length !== 0.5)
         || (inserter.source.pickup_length === 0.5 && !inserter.source.pickup_layout)).map(i => i.id);
-    return { total: inputs.length, known: inputs.filter(i => !missing.includes(i.id) && !unverified.includes(i.id)).length, missing, unverified, backedUp: build.overrides?.backed_up_belts === true };
+    return { total: inputs.length, known: inputs.filter(i => !missing.includes(i.id) && !unverified.includes(i.id)).length, missing, unverified, unsupported, backedUp: build.overrides?.backed_up_belts === true };
 }
-

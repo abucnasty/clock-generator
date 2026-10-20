@@ -89,6 +89,19 @@ it('shows capture diagnostics alongside prospective pickup coverage, only while 
     expect(Render().some(e => JSON.stringify(e.props.children)?.includes('pickup is on a belt bend'))).toBe(false);
 });
 
+it('says in the paste preview that a side-loaded pickup is out of scope', async () => {
+    incoming.inserters = [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } }];
+    incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
+    vi.stubGlobal('navigator', { clipboard: { readText: async () => JSON.stringify({
+        machines: incoming.machines, inserters: incoming.inserters, belts: incoming.belts,
+        pickup_warnings: [{ inserter_id: 1, reason: 'side-loaded' }],
+    }) } });
+    await paste();
+    const lines = Render().map(e => JSON.stringify(e.props.children) ?? '');
+    expect(lines.some(line => line.includes('another belt side-loads onto the pickup tile') && line.includes('out of scope'))).toBe(true);
+    expect(lines.some(line => line.includes('has not been calibrated'))).toBe(false);
+});
+
 describe('Paste acknowledgment bound to the actual preview', () => {
     it('guards Apply until the current mixed preview is deliberately acknowledged, then applies once with one Undo', async () => {
         await paste(); expect(apply().disabled).toBe(true); clickApply();

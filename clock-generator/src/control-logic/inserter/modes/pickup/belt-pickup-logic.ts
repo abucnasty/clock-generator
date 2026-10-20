@@ -7,10 +7,8 @@ import { BeltState, EntityState, InserterState, InserterStatus } from "../../../
 import { TickProvider } from "../../../current-tick-provider";
 import { actsInTheTickTheBlockIsLifted } from "../../waiting-inserter";
 import { BeltPickupLane } from "../../../../state/belt-pickup-lane";
-import { SideFedPickupLane } from "../../../../state/side-fed-pickup-lane";
 import { BackedUpPickupLane } from "../../../../state/backed-up-pickup-lane";
 import { BeltPickupStock } from "../../../../state/belt-pickup-stock";
-import { BeltPickupMerge } from "../../../../state/belt-pickup-merge";
 import { InserterTransferLogic } from "../transfer-logic";
 import { canPickupItemForSink, recordPickup } from "../transfer-helpers";
 
@@ -26,18 +24,6 @@ export class BeltPickupLogic implements InserterTransferLogic {
         const pickup_length = inserterState.inserter.pickup_length;
         assert(pickup_length !== undefined, "Belt pickups need pickup geometry");
         assert(inserterState.inserter.belt_supply !== undefined, "Belt pickups need a supply setting");
-        const merge = inserterState.inserter.pickup_merge;
-        if (merge) {
-            assert(tick_provider !== undefined, "Two-stream pickups need the simulation tick provider");
-            assert(sourceEntityState.belt.belt_speed === 60 && pickup_length === 1, "Two-stream pickup requires a straight turbo belt");
-            let supply = sourceEntityState.pickup_merges.get(merge.lane);
-            if (!supply) {
-                supply = new BeltPickupMerge(merge, inserterState.inserter.belt_supply === "backed_up");
-                sourceEntityState.pickup_merges.set(merge.lane, supply);
-            }
-            this.merge = supply;
-            return;
-        }
         assert(tick_provider !== undefined, "Belt pickups need the simulation tick provider");
 
         // Keep this inserter's lane gaps and partial stacks when its control is replaced.
@@ -45,22 +31,15 @@ export class BeltPickupLogic implements InserterTransferLogic {
         let pickup_lanes = sourceEntityState.pickup_lanes.get(inserter_id);
         if (pickup_lanes === undefined) {
             const belt = sourceEntityState.belt;
-            pickup_lanes = belt.lanes.map((lane, index) => {
-                const profile = inserterState.inserter.pickup_supply?.[index] ?? "through";
-                if (inserterState.inserter.belt_supply === "backed_up") {
-                    return profile === "through"
-                        ? new BackedUpPickupLane(belt.belt_speed, pickup_length, lane.stack_size)
-                        : new SideFedPickupLane(belt.belt_speed, lane.stack_size, profile);
-                }
-                return new BeltPickupLane(belt.belt_speed, pickup_length, lane.stack_size, 0, profile);
-            });
+            pickup_lanes = belt.lanes.map(lane => inserterState.inserter.belt_supply === "backed_up"
+                ? new BackedUpPickupLane(belt.belt_speed, pickup_length, lane.stack_size)
+                : new BeltPickupLane(belt.belt_speed, pickup_length, lane.stack_size, 0));
             sourceEntityState.pickup_lanes.set(inserter_id, pickup_lanes);
         }
         this.pickup_lanes = pickup_lanes;
         const metadata = inserterState.inserter.metadata;
-        // Other prototypes/qualities and side-fed replenishment remain separate calibrations.
-        if (metadata.type === "stack-inserter" && metadata.quality === "legendary"
-            && !inserterState.inserter.pickup_supply?.some(profile => profile !== "through")) {
+        // Other prototypes and qualities remain separate calibrations.
+        if (metadata.type === "stack-inserter" && metadata.quality === "legendary") {
             assert(inserterState.inserter.pickup_layout !== undefined || pickup_length === 1, "Underground pickups need an explicit layout");
             const extension = FactorioDataService.findInserterOrThrow(metadata.type).extension_speed
                 * (1 + 0.3 * FactorioDataService.findQualityOrThrow(metadata.quality).level) * 256;
@@ -69,8 +48,7 @@ export class BeltPickupLogic implements InserterTransferLogic {
     }
 
     private readonly arm?: BeltPickupArm;
-    private readonly pickup_lanes?: BeltPickupStock[];
-    private readonly merge?: BeltPickupMerge;
+    private readonly pickup_lanes: BeltPickupStock[];
     private readonly pickup_lane_order: number[];
 
     public onEnter(from_status: InserterStatus): void {
@@ -143,7 +121,7 @@ export class BeltPickupLogic implements InserterTransferLogic {
             return;
         }
 
-        const items = this.merge ? this.mergeItems() : inserter_state.inserter.filtered_items;
+        const items = inserter_state.inserter.filtered_items;
         let has_items = false;
         for (const item_name of items) {
             has_items = true;
@@ -172,15 +150,7 @@ export class BeltPickupLogic implements InserterTransferLogic {
     private takeFromBelt(source: BeltState, item: ItemName, capacity: number): number {
         if (capacity <= 0) return 0;
         const tick = this.tick_provider?.getCurrentTick();
-        if (this.merge) {
-            BeltState.advancePickups(source, tick!);
-            const quantity = this.merge.take(tick!, item, capacity);
-            if (quantity > 0) this.inserterState.trace?.record({type: "pickup_lane", item, lane: this.merge.config.lane, fallback: false});
-            else this.inserterState.trace?.record({type: "wait", phase: "pickup",
-                reason: this.merge.hasTakenAt(tick!) ? "already_collected_this_tick" : "no_reachable_stack", item});
-            return quantity;
-        }
-        if (this.pickup_lanes?.some(lane => lane.hasTakenAt(tick!))) {
+        if (this.pickup_lanes.some(lane => lane.hasTakenAt(tick!))) {
             this.inserterState.trace?.record({type: "wait", phase: "pickup", reason: "already_collected_this_tick", item});
             return 0;
         }
@@ -190,7 +160,7 @@ export class BeltPickupLogic implements InserterTransferLogic {
             if (!lane || lane.ingredient_name !== item) continue;
             matching_lane = true;
             if (this.arm) {
-                const stack = this.pickup_lanes![index].peek(tick!);
+                const stack = this.pickup_lanes[index].peek(tick!);
                 if (!stack) continue;
                 const layout = this.inserterState.inserter.pickup_layout ?? "side-straight";
                 const target = pickupTargetRadius(layout, this.inserterState.inserter.near_lane ?? 1, index + 1, stack.position);
@@ -200,8 +170,7 @@ export class BeltPickupLogic implements InserterTransferLogic {
                 }
             }
             const limit = Math.min(lane.stack_size, capacity);
-            const quantity = this.pickup_lanes
-                ? this.pickup_lanes[index].take(tick!, limit) : limit;
+            const quantity = this.pickup_lanes[index].take(tick!, limit);
             // Retry the other matching lane only if this one had nothing reachable. One stack total per tick.
             if (quantity > 0) {
                 this.inserterState.trace?.record({type: "pickup_lane", item, lane: index + 1, fallback: index !== this.pickup_lane_order[0]});
@@ -211,11 +180,5 @@ export class BeltPickupLogic implements InserterTransferLogic {
         assert(matching_lane, `No belt lane found for item ${item}`);
         this.inserterState.trace?.record({type: "wait", phase: "pickup", reason: "no_reachable_stack", item});
         return 0;
-    }
-
-    private mergeItems(): string[] {
-        const tick = this.tick_provider!.getCurrentTick();
-        BeltState.advancePickups(this.sourceEntityState, tick);
-        return this.merge!.availableItems(tick).filter(item => this.inserterState.inserter.filtered_items.has(item));
     }
 }

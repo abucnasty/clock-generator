@@ -1,7 +1,7 @@
 import { BELT_PICKUP_LAYOUTS } from "../common/belt-pickup-layout";
 import { BeltPickupCaptureSchema } from "../config/pickup-capture";
 import { z } from "zod";
-import { BeltPickupMergeSchema, BeltPickupSupplyProfileSchema } from "../config/schema";
+import { sideLoadedPickupRefusal } from "../config/errors";
 
 // Lua's table_to_json writes empty tables as {} even when they are arrays.
 const luaArray = <T extends z.ZodTypeAny>(item: T) => z.preprocess(
@@ -24,8 +24,9 @@ const TargetRefSchema = z.object({
     near_lane: z.union([z.literal(1), z.literal(2)]).optional(),
     pickup_length: z.union([z.literal(0.5), z.literal(1)]).optional(),
     pickup_layout: z.enum(BELT_PICKUP_LAYOUTS).optional(),
-    pickup_supply: z.union([z.tuple([BeltPickupSupplyProfileSchema]), z.tuple([BeltPickupSupplyProfileSchema, BeltPickupSupplyProfileSchema])]).optional(),
-    pickup_merge: BeltPickupMergeSchema.optional(),
+    // a recording of a side-loaded pickup is refused rather than compared as a plain belt
+    pickup_supply: z.custom<never>(() => false, { error: sideLoadedPickupRefusal("pickup_supply") }).optional(),
+    pickup_merge: z.custom<never>(() => false, { error: sideLoadedPickupRefusal("pickup_merge") }).optional(),
     pickup_capture: BeltPickupCaptureSchema.optional(),
 });
 

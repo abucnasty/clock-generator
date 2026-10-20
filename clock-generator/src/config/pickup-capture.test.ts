@@ -53,8 +53,8 @@ describe("persistent pickup capture boundary", () => {
 
     it("migrates pasted entries before defaults and gives an explicit warning precedence", () => {
         const entries = [{source: {type: "belt", id: 1, near_lane: 1, pickup_capture: supported}}];
-        expect(sidecarPickupInserters(entries, "0.11.0", [{inserter_id: 1, reason: "merge"}])).toMatchObject([
-            {source: {pickup_capture: {status: "unsupported", reason: "merge"}}},
+        expect(sidecarPickupInserters(entries, "0.11.0", [{inserter_id: 1, reason: "side-loaded"}])).toMatchObject([
+            {source: {pickup_capture: {status: "unsupported", reason: "side-loaded"}}},
         ]);
         expect(sidecarPickupInserters(entries, "0.11.0", [])).toEqual(entries);
     });
@@ -63,13 +63,13 @@ describe("persistent pickup capture boundary", () => {
         {...supported, model: "splitter"},
         {...supported, model_version: 3},
         {...supported, entity_type: "splitter"},
+        {...supported, model: "turbo-two-stream"},
     ])("rejects unsupported model declarations instead of stripping their new fields", capture => {
         expect(ConfigSchema.safeParse(withSource({near_lane: 1, pickup_capture: capture})).success).toBe(false);
     });
 
-    it("requires matching physical and supply inputs for a supported model", () => {
+    it("requires matching physical inputs for a supported model", () => {
         expect(ConfigSchema.safeParse(withSource({pickup_capture: supported})).success).toBe(false);
         expect(ConfigSchema.safeParse(withSource({near_lane: 1, pickup_length: 0.5, pickup_capture: supported})).success).toBe(false);
-        expect(ConfigSchema.safeParse(withSource({near_lane: 1, pickup_capture: {...supported, model: "turbo-two-stream"}})).success).toBe(false);
     });
 });

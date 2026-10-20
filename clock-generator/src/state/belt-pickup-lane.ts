@@ -1,12 +1,10 @@
-import { BeltPickupSupplyProfile } from "../config/schema";
 import { BeltSpeed } from "../entities/belt";
 import { BeltPickupStock } from "./belt-pickup-stock";
 
 /**
  * One continuously supplied moving stream at a pickup. Internally distances use 1/256 tile units:
- * stacks are 64 units apart, belt speeds are 8/16/24/32 units per tick. Through streams span the
- * exposed line; a single side stream spans its measured free-flow entry boundary. Holes and partial
- * stacks persist, and at most one stack can be taken per tick. Merges/backpressure need a shared supply model.
+ * stacks are 64 units apart, belt speeds are 8/16/24/32 units per tick. The stream spans the exposed line.
+ * Holes and partial stacks persist, and at most one stack can be taken per tick.
  */
 export class BeltPickupLane implements BeltPickupStock {
     private readonly speed: number;
@@ -15,14 +13,11 @@ export class BeltPickupLane implements BeltPickupStock {
     private readonly remaining = new Map<number, number>();
     private last_take_tick = Number.NEGATIVE_INFINITY;
 
-    /** phase keeps its existing public 1/32-tile units; side-entry offset is added internally. */
-    constructor(belt_speed: BeltSpeed, length_tiles: number, private readonly stack_size: number, phase = 0,
-        profile: BeltPickupSupplyProfile = "through") {
+    /** phase keeps its existing public 1/32-tile units. */
+    constructor(belt_speed: BeltSpeed, length_tiles: number, private readonly stack_size: number, phase = 0) {
         this.speed = belt_speed / BeltSpeed.TRANSPORT_BELT * 8;
-        const entry = profile === "side-inner" ? 67 : profile === "side-outer" ? 188 : undefined;
-        this.length = entry ?? length_tiles * 256;
-        this.phase = phase * 8 + (entry === undefined ? 0 : entry % 64);
-        if (entry !== undefined && length_tiles !== 1) throw new Error("Side-entry supply requires a straight, one-tile pickup");
+        this.length = length_tiles * 256;
+        this.phase = phase * 8;
     }
 
     public take(tick: number, capacity: number): number {

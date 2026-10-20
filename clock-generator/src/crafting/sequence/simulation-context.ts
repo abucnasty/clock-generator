@@ -9,7 +9,7 @@ import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { MiningProductivity } from "../../entities/drill/mining-productivity";
-import { assertIsMachineState, BeltState, DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, MachineState, WritableEntityStateRegistry } from "../../state";
+import { assertIsMachineState, DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, MachineState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
 import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
@@ -53,7 +53,7 @@ export class SimulationContext {
             assert(control !== undefined, `Cannot initialize pickup phases for unknown ${id}`);
             const inserter = control.inserter_state.inserter;
             const source = this.state_registry.getStateByEntityIdOrThrow(inserter.source.entity_id);
-            assert(EntityState.isBelt(source) && inserter.belt_supply === "moving" && !inserter.pickup_merge,
+            assert(EntityState.isBelt(source) && inserter.belt_supply === "moving",
                 `Pickup phases need independent moving lanes: ${id}`);
             const length = inserter.pickup_length;
             assert(length !== undefined, `Pickup phases need pickup geometry: ${id}`);
@@ -63,20 +63,13 @@ export class SimulationContext {
             assert(lanes !== undefined, `Pickup lanes have not been initialized for ${id}`);
             // Transfer logic already holds this array. Keep its identity when seeding the trial.
             lanes.splice(0, lanes.length, ...source.belt.lanes.map((lane, index) => new BeltPickupLane(
-                source.belt.belt_speed, length, lane.stack_size, lane_phases[index], inserter.pickup_supply?.[index] ?? "through")));
+                source.belt.belt_speed, length, lane.stack_size, lane_phases[index])));
         }
     }
 
     /** The update of every inserter in a tick, in the order of the list and of `competing_takers_order` */
     public inserterUpdates(): ControlLogic {
-        const updates = new InserterUpdates(this.inserters, this.state_registry, this.competing_takers_order);
-        const belts = this.state_registry.getAllStates().filter(EntityState.isBelt).filter(state => state.pickup_merges.size > 0);
-        if (belts.length === 0) return updates;
-        return {executeForTick: () => {
-            const tick = this.tick_provider.getCurrentTick();
-            for (const state of belts) BeltState.advancePickups(state, tick);
-            updates.executeForTick();
-        }};
+        return new InserterUpdates(this.inserters, this.state_registry, this.competing_takers_order);
     }
 
     public clone(args: Partial<SimulationContext> = {}): SimulationContext {

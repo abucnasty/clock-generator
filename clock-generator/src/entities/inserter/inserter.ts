@@ -1,7 +1,6 @@
 import { BeltPickupLayout, pickupLengthForLayout, pickupLayoutProblem } from "../../common/belt-pickup-layout";
 import { assertPickupCaptureSupported } from "../../config/pickup-capture";
 import { InserterConfig } from "../../config";
-import { BeltPickupMergeConfig, BeltPickupSupplyProfile } from "../../config/schema";
 import { FactorioDataService, ItemName } from "../../data";
 import { BeltStackSize, Lane } from "../belt";
 import { EntityType } from "../entity-type";
@@ -35,9 +34,6 @@ export interface Inserter extends Entity {
     /** Physical exposed length of a belt input, retained for both moving and backed-up supply. */
     pickup_length?: 0.5 | 1;
     pickup_layout?: BeltPickupLayout;
-    /** Single-stream entry per receiving lane; omitted profiles retain through supply. */
-    pickup_supply?: readonly BeltPickupSupplyProfile[];
-    pickup_merge?: BeltPickupMergeConfig;
     /** Belt availability is independent of geometry; absent only for non-belt sources. */
     belt_supply?: "moving" | "backed_up";
     /** Physical input lane to try first, including when both lanes carry the same item. */
@@ -122,10 +118,6 @@ export class InserterFactory {
             belt.lanes.forEach(lane => {
                 source_provided_items.add(lane.ingredient_name)
             })
-            if (source.pickup_merge) {
-                source_provided_items.add(source.pickup_merge.outer.ingredient);
-                source_provided_items.add(source.pickup_merge.inner.ingredient);
-            }
         }
 
         if (source.type === EntityType.MACHINE) {
@@ -252,16 +244,7 @@ export class InserterFactory {
             assert(layout_problem === null, layout_problem ?? "Invalid pickup layout");
             inserter.pickup_layout = source.pickup_layout ?? "side-straight";
             inserter.pickup_length = source.pickup_length ?? pickupLengthForLayout(inserter.pickup_layout);
-            if (source.pickup_supply) {
-                const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(source.id));
-                assertIsBelt(belt);
-                assert(source.pickup_supply.length === belt.lanes.length, "Pickup supply must name every receiving belt lane");
-                assert(inserter.pickup_length === 1 || source.pickup_supply.every(profile => profile === "through"),
-                    "Side-entry supply is supported only on a straight, one-tile pickup");
-                inserter.pickup_supply = [...source.pickup_supply];
-            }
             inserter.belt_supply = this.belt_supply;
-            inserter.pickup_merge = source.pickup_merge;
         }
 
         if (drop_spot !== undefined) {

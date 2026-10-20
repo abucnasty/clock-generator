@@ -121,61 +121,72 @@ assert(unknown.inserters[input.id].source.pickup_capture.reason == "bend")
 assert(unknown.inserters[input.id].source.pickup_capture.entity_type == "transport-belt")
 assert(unknown.inserters[input.id].source.pickup_capture.model == nil)
 
--- Supply classifier checks only: these inserted stacks do not measure pickup timing.
+-- Side-loading checks only: these inserted stacks do not measure pickup timing. Picking up from a belt tile that
+-- another belt side-loads onto, as one stream or two merging, is out of scope, as splitters are.
 local supply = require("__clock-generator-sidecar__.scripts.pickup-supply")
 for index, entry in ipairs(directions) do
     local direction, dx, dy = entry[1], entry[2], entry[3]
     local x, y = 210 + index * 8, 160
     local target = belt("turbo-transport-belt", x, y, direction)
     local rear = belt("turbo-transport-belt", x - dx, y - dy, direction)
-    local feed = belt("turbo-transport-belt", x - dy, y + dx, (direction + 12) % 16)
+    -- A belt that runs straight onto the pickup tile is ordinary supply, with or without items on it.
     assert(target.belt_shape == "straight")
+    assert(supply.problem(target) == nil)
+    rear.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+    assert(supply.problem(target) == nil)
+    -- A belt that side-loads onto the tile is out of scope, whether or not it carries anything yet.
+    local feed = belt("turbo-transport-belt", x - dy, y + dx, (direction + 12) % 16)
+    assert(target.belt_shape == "straight", "the rear input must keep the tile straight")
+    assert(supply.problem(target) == "side-loaded")
     feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
-    local view = supply.capture(target)
-    assert(view and view.problem == nil)
-    assert(view.profiles[1] == "through" and view.profiles[2] == "side-inner")
-    assert(view.lanes[1].ingredient == nil and view.lanes[2].ingredient == "iron-plate")
-    -- A rear stream and a side stream merging on the same receiving lane are unsupported.
-    rear.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
-    assert(supply.capture(target).problem == "merge")
-    rear.get_transport_line(2).clear()
-    -- Two lanes of one turbo side input form the supported merge, including distinct ingredients.
-    feed.get_transport_line(1).insert_at_back({name = "copper-plate", count = 4}, 4)
-    local two = supply.capture(target)
-    assert(two.problem == nil and two.profiles == nil)
-    assert(two.merge.lane == 2 and two.merge.outer.ingredient == "copper-plate" and two.merge.inner.ingredient == "iron-plate")
-    assert(two.merge.downstream_tiles == 0 and two.merge.outlet == "closed")
-    -- A third observed rear stream remains unsupported.
-    rear.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
-    assert(supply.capture(target).problem == "merge")
-    rear.get_transport_line(2).clear()
-    -- A partial incoming stack is not proof of the calibrated four-item stream.
-    feed.get_transport_line(1).clear()
-    feed.get_transport_line(1).insert_at_back({name = "copper-plate", count = 2}, 2)
-    assert(supply.capture(target).problem == "merge")
+    assert(supply.problem(target) == "side-loaded")
+    -- Two streams merging from both sides, with no rear input, are side-loading too.
+    local other = belt("turbo-transport-belt", x + dy, y - dx, (direction + 4) % 16)
+    rear.destroy()
+    assert(target.belt_shape == "straight", "a T-junction must keep the tile straight")
+    assert(supply.problem(target) == "side-loaded")
+    other.get_transport_line(1).insert_at_back({name = "copper-plate", count = 4}, 4)
+    assert(supply.problem(target) == "side-loaded")
+    -- An underground entrance that a belt side-loads onto is out of scope as well.
+    local entrance = belt("turbo-underground-belt", x, y + 10, direction, "input")
+    belt("turbo-transport-belt", x - dx, y + 10 - dy, direction)
+    assert(supply.problem(entrance) == nil)
+    belt("turbo-transport-belt", x - dy, y + 10 + dx, (direction + 12) % 16)
+    assert(supply.problem(entrance) == "side-loaded")
 end
-local target = belt("turbo-transport-belt", 260, 160, defines.direction.east)
-belt("turbo-transport-belt", 259, 160, defines.direction.east)
-local feed = belt("turbo-transport-belt", 260, 161, defines.direction.north)
-feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
-assert(supply.capture(target).problem == nil)
--- A dry adjacent piece can still have an upstream stream. Retain that stream's item/lane mapping.
-feed.get_transport_line(2).clear()
-local upstream = belt("turbo-transport-belt", 260, 162, defines.direction.north)
-upstream.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
-local dry_front = supply.capture(target)
-assert(dry_front.problem == nil and dry_front.profiles[2] == "side-inner")
-assert(dry_front.lanes[2].ingredient == "iron-plate")
--- Empty does not mean unused: this unpowered feeder could populate the other incoming lane later.
-local potential = assert(surface.create_entity{name = "stack-inserter", position = {261, 161},
-    direction = defines.direction.east, force = "player"})
-assert(math.abs(potential.drop_position.x - feed.position.x) < 0.5 and math.abs(potential.drop_position.y - feed.position.y) < 0.5, "empty feeder must target incoming lane")
-assert(supply.capture(target).problem == "supply-unknown")
-potential.destroy()
-feed.destroy()
-feed = belt("express-transport-belt", 260, 161, defines.direction.north)
-feed.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
-assert(supply.capture(target).problem == "supply-unknown")
+
+-- Exercise extraction and export with a side-loaded pickup: it is refused with a warning, never a plain belt pickup.
+local tile = belt("turbo-transport-belt", 260, 160, defines.direction.east)
+local behind = belt("turbo-transport-belt", 259, 160, defines.direction.east)
+local side = belt("turbo-transport-belt", 260, 161, defines.direction.north)
+assert(tile.belt_shape == "straight")
+behind.get_transport_line(1).insert_at_back({name = "iron-plate", count = 4}, 4)
+side.get_transport_line(2).insert_at_back({name = "iron-plate", count = 4}, 4)
+local picker = assert(surface.create_entity{name = "stack-inserter", position = {260, 159},
+    direction = defines.direction.south, force = "player"})
+local disposal = assert(surface.create_entity{name = "infinity-chest", position = {260, 158}, force = "player"})
+-- A newly built inserter may know what it picks up from and drops into only after its first tick.
+picker.pickup_target = tile
+picker.drop_target = disposal
+assert(picker.pickup_target == tile and picker.drop_target == disposal)
+local side_loaded = extraction.extract_all_entities({tile, behind, side, picker, disposal}, game.forces.player)
+local refused = export.to_table(side_loaded)
+local taken
+for _, entry in ipairs(export.exported_inserters(side_loaded)) do
+    if entry.inserter.entity == picker then taken = entry end
+end
+assert(taken, "a side-loaded pickup must stay in the JSON")
+local source = refused.inserters[taken.id].source
+-- The geometry is captured as for any straight belt: only the supply is out of scope.
+assert(source.pickup_length == 1 and source.pickup_layout == "side-straight")
+assert(source.pickup_capture.status == "unsupported" and source.pickup_capture.reason == "side-loaded")
+assert(source.pickup_capture.entity_type == "transport-belt")
+assert(source.pickup_capture.model == nil and source.pickup_capture.model_version == nil)
+assert(source.pickup_supply == nil and source.pickup_merge == nil)
+assert(#refused.pickup_warnings == 1)
+assert(refused.pickup_warnings[1].inserter_id == taken.id and refused.pickup_warnings[1].reason == "side-loaded")
+local json = helpers.table_to_json(refused)
+assert(not json:find("pickup_supply", 1, true) and not json:find("pickup_merge", 1, true))
 `,
         });
         expect(result.recording.inserters.some(inserter => inserter.source.pickup_length === 1)).toBe(true);

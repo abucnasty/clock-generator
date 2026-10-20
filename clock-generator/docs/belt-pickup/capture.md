@@ -33,11 +33,14 @@ Sidecar exports `source.pickup_capture` for each belt-fed inserter. It stays wit
 file export, saved-build reload, sharing, and recording parsing. Top-level `pickup_warnings` remain for the
 Sidecar copy window and older import previews; they are not the only copy of the classification.
 
-- `supported`: a positive model declaration, currently `model: "belt"` or `"turbo-two-stream"`, with
-  `model_version: 2`, native `entity_type`, and the matching layout, reach, preferred lane and supply data.
+- `supported`: a positive model declaration, currently `model: "belt"`, with `model_version: 2`, native
+  `entity_type`, and the matching layout, reach and preferred lane.
   Version 1 straight-belt captures remain valid; version 1 underground captures require recapture.
 - `unsupported`: Sidecar identified a geometry or supply outside the engine's calibrated models. Its reason,
-  native entity type/name and exporting Sidecar version remain attached.
+  native entity type/name and exporting Sidecar version remain attached. This includes the out-of-scope
+  pickups: reason `splitter` for a splitter and `side-loaded` for a belt tile that another belt side-loads onto,
+  as one stream or two merging. Recapturing does not make these supported; see the
+  [experiment history](experiments.md#side-loaded-pickups-and-merges).
 - `unclassified`: a legacy export did not record a positive model declaration. Existing geometry fields are
   retained for inspection, but do not make the capture supported.
 
@@ -46,7 +49,8 @@ status still blocks simulation/generation: that default does not establish suppo
 The same check applies to direct engine inputs, not only the UI. Unverified builds can be imported, saved and
 reviewed. Their picker and coverage summary show the unverified state, including with backed-up supply; changing
 a dropdown default cannot clear it. Reconfigure the physical input to a supported layout and capture it again,
-or recapture when that geometry has an implemented model.
+or recapture when that geometry has an implemented model. Out-of-scope captures (`splitter`, `side-loaded`) show as
+not supported instead: only rebuilding the input as a supported layout and capturing it again clears them.
 
 A deliberate geometry edit on an already supported pickup becomes a manual configuration and clears its
 capture declaration; it does not fabricate another native capture. Manual configurations and old files with
@@ -75,7 +79,7 @@ engine validation. Unknown model names or format versions are rejected rather th
 as an existing ordinary-belt model. `sidecar_version` provides provenance and update guidance; it is not a
 model-support flag. Add or increment the model format when interpretation or required inputs change.
 
-Regression coverage includes manual defaults; positive declarations; geometry/supply mismatches; old/current/
+Regression coverage includes manual defaults; positive declarations; geometry mismatches; old/current/
 future-version exports; legacy warnings; unknown future model names/versions; direct simulation refusal;
-save/reload and form round trips; editor presentation; and actual Sidecar exports for straight, underground,
-unsupported sources and supported turbo two-stream pickups. Native timing behavior is unchanged.
+save/reload and form round trips; editor presentation; and actual Sidecar exports for straight, underground
+and unsupported sources, including splitters and side-loaded tiles. Native timing behavior is unchanged.

@@ -48,10 +48,10 @@ For verification appropriate to other changes, see the [contributor guide](../..
 ## Bounded parallel runs
 
 The default game suite remains sequential. Independent controls for the same mechanics question may run in
-two headless processes at once. A local check of the turbo repeated-merge release-17 and outlet controls passed
-both sequentially and concurrently, with distinct live game/RCON ports and write-data directories. The pair
-took 5.17 seconds sequentially and 3.08 seconds concurrently; this single comparison does not establish a
-benefit for larger worker counts or heavier builds.
+two headless processes at once. A local check of two short belt-pickup controls (the turbo merge release-17 and
+outlet cases, removed after commit `52b4e9f0`) passed both sequentially and concurrently, with distinct live
+game/RCON ports and write-data directories. The pair took 5.17 seconds sequentially and 3.08 seconds
+concurrently; this single comparison does not establish a benefit for larger worker counts or heavier builds.
 
 Start with **two Factorio processes total**, including any launched by other workers. Select exact `-t` cases
 in separate commands; do not enable an unbounded test sweep. The harness assigns ports and copies the save

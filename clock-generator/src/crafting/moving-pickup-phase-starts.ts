@@ -10,8 +10,7 @@ import {createEntityRegistryFromConfig, MovingPickupPhases} from "./sequence/sim
 export function* movingPickupPhaseStarts(config: Config): Generator<MovingPickupPhases> {
     const registry = createEntityRegistryFromConfig(config);
     for (const inserter of registry.getAll().filter(Entity.isInserter)) {
-        if (inserter.belt_supply !== "moving" || inserter.pickup_merge
-            || inserter.pickup_supply?.some(profile => profile !== "through")) continue;
+        if (inserter.belt_supply !== "moving") continue;
         const source = registry.getSourceEntityOrThrow(inserter.entity_id);
         if (!Entity.isBelt(source)) continue;
         // Stacks are spaced 8 public units apart. Advance by one belt tick until the phase repeats.

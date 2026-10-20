@@ -5,10 +5,8 @@ Version: 0.11.0
     - captures the physical side/front pickup layout in model format 2, separately from exposed length and supply motion; older underground captures need recapture
     - exports persistent pickup classification, native source identity and versioned supported model declarations, so old unsupported captures can be retained and distinguished from manual belt settings
     - captures the preferred lane and half-tile pickup length for an inserter centered downstream of an underground entrance and facing back into it: lane 2 when mirrored, lane 1 otherwise
-    - captures single-stream inner/outer side-feed supply at straight pickup tiles, separately from reach and lane preference
-    - keeps physical receiving lanes local to side-fed pickups, including empty lanes
-    - captures two four-item turbo side streams merging onto one straight pickup lane, with both ingredients and finite downstream length; supports straight closed ends or a turbo loader into an unfiltered disposal chest
-    - warns for other merges, unequal speeds, ambiguous inputs, downstream junctions, and competing pickups
+  Changes:
+    - an inserter that picks up from a belt tile that another belt side-loads onto is marked unsupported in the JSON, with a warning. Side-loading and splitters are out of scope for the Clock Generator. Earlier versions exported it as an ordinary belt pickup
 ---------------------------------------------------------------------------------------------------
 Version: 0.10.0
 Date: 2026-10-18

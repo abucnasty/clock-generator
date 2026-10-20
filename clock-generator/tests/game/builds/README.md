@@ -107,8 +107,8 @@ counts match overlapping detailed recordings and the native hardware assertions.
 The six historical false-stable counterexamples involving fast undergrounds, normal straight pickups and
 normal moving underground recovery now pass with regenerated clocks. Both normal backed-up underground
 defaults pass the warm run, but the cold-start controls below confirm their startup sensitivity. No failing captured
-ordinary default is marked stable for its actual supply. These checks do not close broader startup timing,
-over-the-hood operating clocks or slower two-stream support.
+ordinary default is marked stable for its actual supply. These checks do not close broader startup timing
+or over-the-hood operating clocks.
 
 The lane-phase audit leaves all 48 exported clocks unchanged. Two additional normal moving underground
 verdicts become unstable, with the modeled failing starts retained separately in

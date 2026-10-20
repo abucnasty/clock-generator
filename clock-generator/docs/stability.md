@@ -45,9 +45,9 @@ loss recovery. An interruption can shift one lane relative to the other even whe
 The checks advance each lane through one stack-spacing cycle at its belt speed: 2 phase positions on turbo,
 8 on express, 4 on fast and 8 on normal. Both matching lanes are combined for one pickup at a time; other
 pickups keep their default phases. This bounded check does not enumerate joint phases across a conveyor
-network, combine every lane phase with every clock offset, or cover side-feed/merge phases. Backed-up
-pickups retain their finite stationary-stock initialization. These are verification starts, not new config settings
-or a change to the pickup timing rule.
+network or combine every lane phase with every clock offset. Backed-up pickups retain their finite
+stationary-stock initialization. These are verification starts, not new config settings or a change to the
+pickup timing rule.
 
 The generator tries every clock that holds its expected output, in the simulator. A loss is one item that stops arriving from the belts and infinity chests of the build, or one output that is no longer taken away. Each loss is cut at four places in the clock period, and at each it lasts a quarter, a half, three quarters and all of the time the build takes to stop. The build has stopped when nothing was moved, crafted or burned for a whole period; a loss ends after 200 periods at the latest. When the item is back the build has 40 periods to be at exactly its expected output again, and has to stay there. The slowest clock of the samples that gets back takes 19. The trials are the same for every build and every clock, and are defined in `clock-generator/src/crafting/backpressure-loss.ts`.
 

@@ -110,12 +110,6 @@ it('asks older belt imports to re-export pickup geometry rather than silently cl
 });
 
 
-it('asks older belt imports to re-export local supply entry and merge diagnostics', () => {
-    const inserters = [{source: {type: 'belt', id: 1, pickup_length: 1}, sink: {type: 'machine', id: 1}}];
-    expect(Option.toNullable(checkSidecarImport('0.10.0', [], undefined, [], inserters))).toContain('Local side-feed entry and merge warnings were not exported');
-});
-
-
 it('accepts an explicit current capture declaration without asking for a mod update', () => {
     const inserters = [{source: {type: 'belt', id: 1, pickup_length: 1, near_lane: 1,
         pickup_capture: {status: 'supported', model: 'belt', model_version: 1, entity_type: 'transport-belt'}}}];

@@ -5,7 +5,9 @@ Use the [diagram glossary](../../../../docs/belt-pickup/glossary.md) to identify
 and the [timing reference](../../../../docs/belt-pickup/timing.md) to compare grab ticks and total collection time.
 It distinguishes native measurements, simulator agreement and remaining gaps. Detailed fixture reports below
 retain the setup, corrections, screenshots and reproduction commands. **Publishing remains on hold.**
-**Splitters are out of scope.**
+**Side-loaded pickup tiles, merges and splitters are out of scope**; the
+[experiment history](../../../../docs/belt-pickup/experiments.md#side-loaded-pickups-and-merges) records the
+removed side-loading measurements.
 
 ## Choose an experiment
 
@@ -16,21 +18,19 @@ retain the setup, corrections, screenshots and reproduction commands. **Publishi
 | Downstream/open-end underground exit, mirroring and ingredient swaps | [Front exit](fixtures/front-underground-exit/README.md) | `front-underground-exit.game.test.ts` |
 | Over-the-hood underground exit, mirroring and moving/backed-up supply | [Over-the-hood exit](fixtures/over-the-hood-underground-exit/README.md) | `over-the-hood-underground-exit.game.test.ts` |
 | Front-facing underground entrance, moving/backed-up and observed arrival phases | [Front entrance](fixtures/front-underground-entrance/README.md) | `front-underground-entrance.game.test.ts`, `front-underground-entrance-fallback.game.test.ts` |
-| Side entry, finite merge stock, cutoff boundaries and starvation | [Side-loaded straight tile](fixtures/side-loaded-straight/README.md) | `side-loaded-straight.game.test.ts`, `side-loaded-entry.game.test.ts`, `two-stream-merge-replay.test.ts` |
 | Capture support and stale/unsupported metadata | [Capture boundary](../../../../docs/belt-pickup/capture.md) | `pickup-capture.game.test.ts` |
 | Belt-drop stack sizes and finite output stock | [All-speed drop controls](../belt-drop/fixtures/turbo-stacks/README.md) | `../belt-drop/turbo-stacks.game.test.ts` |
 | Generated-clock throughput and recovery | [Build checks](../../builds/README.md) | `../../builds/moving-pickup.game.test.ts`, `../../builds/same-item-pickup-clock.game.test.ts` |
 
-All four belt speeds now have side-pickup, front-entrance, backed-up front-exit, over-the-hood exit, side-entry
-and drop measurements. Passing a capture regression can preserve a **known simulator counterexample**.
+All four belt speeds now have side-pickup, front-entrance, backed-up front-exit, over-the-hood exit and drop
+measurements. Passing a capture regression can preserve a **known simulator counterexample**.
 The production finite-stock queue now matches ordinary backed-up collection and exposed stock at all four speeds.
 The radial collection model also matches normal moving side-entrance fallback, including all eight phases from
-both physical near sides. Side-fed refill remains a separate calibration.
+both physical near sides.
 
 The downstream front-exit fixture blocks belt continuation at the inserter's tile. Over-the-hood exit pickups
 have their own fixture: the inserter sits upstream and leaves the downstream route open. Normal moving front-entrance controls use a
-paired compact assembler because the original plant's tunnel exceeds normal underground range. Only the bounded
-turbo two-stream merge is implemented. Slower native captures do not enable configuration support.
+paired compact assembler because the original plant's tunnel exceeds normal underground range.
 The over-the-hood matrix has 84 baseline first hands and 174 delayed moving controls, covering both mirrors,
 moving/backed-up supply, original/swapped/same-item lanes and all observed aligned arrival phases. Compact controls
 cover all four speeds, with original-plant counterparts at the three speeds that can pair its longer tunnel.
@@ -71,5 +71,4 @@ composer or `npm run probe -- ...`; a standalone scenario source is not directly
 Observation precedes inventory clearing. Inventory-clearing probes isolate collection; operating-machine runs
 measure crafting. Seeded boundary controls isolate routing decisions; they do not prove natural supply or
 throughput. A position replay aligned to observed first grabs does not independently calibrate arm arrival.
-Hand-count agreement alone does not prove routing: the express merge counterexample has matching counts and
-different stack movements. Native screenshots illustrate layouts and are not timing evidence.
+Native screenshots illustrate layouts and are not timing evidence.

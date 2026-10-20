@@ -29,6 +29,22 @@ export const NOT_SUPPORTED_YET: Readonly<Record<string, string>> = {
     "lab": "labs are not modelled: they consume no recipe",
 };
 
+/**
+ * What the generator leaves out on purpose, not on the roadmap. A config or capture naming one of these is refused
+ * with the reason, never modelled as the nearest thing the generator does support.
+ */
+export const OUT_OF_SCOPE = {
+    side_loaded_pickup: "picking up from a belt tile that another belt side-loads onto, as one stream or two merging, is out of scope, "
+        + "as splitters are: the generator models a belt that runs straight onto the pickup tile, an underground endpoint "
+        + "and an over-the-hood pickup",
+    splitter_pickup: "picking up from a splitter is out of scope",
+} as const;
+
+/** The refusal of a field that only a side-loaded pickup has */
+export function sideLoadedPickupRefusal(field: string): string {
+    return `\`${field}\` is refused: ${OUT_OF_SCOPE.side_loaded_pickup}`;
+}
+
 function formatPath(pathArray: readonly (string | number)[]): string {
     return pathArray.length > 0
         ? pathArray.map((p: string | number, i: number) =>
