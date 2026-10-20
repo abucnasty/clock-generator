@@ -24,8 +24,9 @@ half-tile configs without a layout must choose one. The UI offers these choices 
 An old Sidecar underground capture becomes unclassified and requires recapture; selecting a default cannot
 supply the missing physical fact. Sidecar recognizes the centered upstream exit approach when the inserter faces with belt travel, using
 mirroring for lane preference. Other unsupported inline approaches stay unclassified.
-The [glossary](glossary.md) illustrates each approach. This field records geometry; adding it does not itself
-resolve the outstanding arm-travel or generated-clock discrepancies.
+The [glossary](glossary.md) illustrates each approach. This field records geometry; the calibrated
+[arm-reach model](../simulator.md#picking-up-from-moving-belts-and-underground-endpoints) also uses it to place
+each stack relative to the inserter.
 
 ## Persistent per-pickup status
 

@@ -135,7 +135,7 @@ the destination. **Moving = false** denotes backed-up supply.
 | Underground side pickups, express | true | One matching lane | `0,1,2,5`, `0,1,3,5` or `0,1,3,6` | 6 or 7 | Representative repeated patterns |
 | Side pickups, fast / normal | true | One matching lane | Depleted hands include `0,1,4,8` / `0,8,16,24` | 9 / 25 | Belt-speed refill limits collection |
 | Side pickups, turbo/express/fast | true | Same item on both lanes | `0,1,2,3` in measured controls | 4 | Fallback fills preferred-lane gaps |
-| Side entrance, normal | true | Same item on both lanes | First hand `0,1,3,4` | 5 | Observed arm travel; model predicts 4 ticks |
+| Side entrance, normal | true | Same item on both lanes | First hand `0,1,3,4` | 5 | Observed arm travel; the arm-reach model also predicts `0,1,3,4` |
 | All geometries, turbo/express | false | Each ingredient isolated | `0,1,2,3` | 4 | Measured full-supply controls |
 | Underground, fast / normal | false | Each ingredient isolated | First hand `0,1,2,5` / `0,1,2,9` | 6 / 10 | Finite refill already affects first hand |
 | Side straight, normal | false | One matching lane | First `0,1,2,3`; later `0,8,16,24` | 4, then 25 | Initial stock masks later depletion |
@@ -149,7 +149,7 @@ the destination. **Moving = false** denotes backed-up supply.
 | Front entrance / over-hood exit, express | true | Different items | `0,1,k,k+d`, `k = 2..4`, `d = 2..3` | 5–8 | Eight observed arrival phases |
 | Front entrance / over-hood exit, fast | true | Different items | `0,1,k,k+4`, `k = 2..5` | 7–10 | Four observed arrival phases |
 | Front entrance / over-hood exit, normal (compact) | true | Different items | `0,1,k,k+8`, `k = 2..9` | 11–18 | Eight observed arrival phases |
-| Front entrance / over-hood exit, all speeds | true | Same item on both lanes | `0,1,2,3` | 4 | Every measured phase; distinct from the side-entrance counterexample |
+| Front entrance / over-hood exit, all speeds | true | Same item on both lanes | `0,1,2,3` | 4 | Every measured phase; no arm-travel delay, unlike the normal side entrance |
 
 These are representative patterns, not an exhaustive list of repeated-hand states. The fixture baselines retain
 all observed patterns and known simulator differences. In these tested front and over-the-hood layouts, **unmirrored prefers
@@ -241,11 +241,12 @@ with two overlapping detailed recorder periods. Electromagnetic targets scale wi
 | Normal straight | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | false | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal undergrounds | false | Unstable | 176 / 1,408 ticks | Warm: 176; fully jammed cold offset 1287: 144/208 | Correctly rejects startup-sensitive clock |
-| Normal undergrounds | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical recovery alternation resolved |
+| Normal undergrounds | true | Unstable | 176 / 1,408 ticks | Warm: 176 throughout | Historical recovery alternation resolved; a modeled cold lane-phase start alternates 192/160 and has not been reproduced natively |
 
-All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-four
-ordinary defaults are correctly marked stable; two are startup-sensitive, and two select a fallback for a
-different supply condition. Four additional cold-start controls cover both normal undergrounds at offsets
+All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-two
+ordinary defaults are correctly marked stable; two are startup-sensitive, two are rejected on modeled lane phases
+that have not been reproduced natively, and two select a fallback for a different supply condition. Four
+additional cold-start controls cover both normal backed-up undergrounds at offsets
 0 and 1287, matching all 16 output periods each. A full lane can still move: these controls verify stationary
 initial stock and empty machines/hands before comparing the simulator. The [build report](../../tests/game/builds/README.md)
 links current controls and preserves the original 39-run summaries. Broader startup timing remains a separate

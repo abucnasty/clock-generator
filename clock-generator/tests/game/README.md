@@ -48,12 +48,14 @@ For verification appropriate to other changes, see the [contributor guide](../..
 ## Bounded parallel runs
 
 The default game suite remains sequential. Independent controls for the same mechanics question may run in
-two headless processes at once. A local check of two short belt-pickup controls (the turbo merge release-17 and
+separate headless processes at once, within the process limit below. A local check of two short belt-pickup controls (the turbo merge release-17 and
 outlet cases, removed after commit `52b4e9f0`) passed both sequentially and concurrently, with distinct live
 game/RCON ports and write-data directories. The pair took 5.17 seconds sequentially and 3.08 seconds
 concurrently; this single comparison does not establish a benefit for larger worker counts or heavier builds.
 
-Start with **two Factorio processes total**, including any launched by other workers. Select exact `-t` cases
+Harness runs may use at most **four Factorio processes at once**, including any launched by other workers. A
+watched run counts as two: its headless server and the graphical client that watches it. A game someone is
+playing outside the harness is not counted and must never be closed. Select exact `-t` cases
 in separate commands; do not enable an unbounded test sweep. The harness assigns ports and copies the save
 and mods into each session's directory. Tests using `mkdtemp` already isolate those directories. For manual
 captures, each worker must have a unique work directory and output path: preparation deletes the work

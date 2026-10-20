@@ -4,9 +4,10 @@ import { StockRecording } from "./machine-stock";
 /**
  * The wake-up lists of the game, and what they cost a build (GOALS.md, goal 2).
  *
- * An inserter with nothing to move goes to sleep on the wake-up list of the machine it waits on, and a machine wakes
- * the inserters on its list each time it finishes a craft. A woken inserter looks for something to move, finds
- * nothing or a little, and goes back to sleep: with the debug option `show-wakeup-lists` the yellow line from the
+ * An inserter with nothing to move goes to sleep on the wake-up list of the machine it waits on. A machine wakes the
+ * inserters that put into it when it starts a craft, and the inserters that take from it when it finishes a craft or
+ * pays out a productivity bar (`wakeUps` below). A woken inserter looks for something to move, finds nothing or a
+ * little, and goes back to sleep: with the debug option `show-wakeup-lists` the yellow line from the
  * inserter to the machine flickers. An inserter its clock has disabled is on no list and is never woken. A wake-up
  * is one such waking, and what a clock is there to spare a build.
  *
