@@ -42,6 +42,14 @@ for (const family of ["different-items", "same-item"] as const) for (const varia
         }
         const native = (JSON.parse(fs.readFileSync(path.join(directory, expected.native_control), "utf8")) as Record<string, NativeClock>)[variant.name];
         expect(native.expected).toBe(expected.expected);
+        // The native baseline judges the generator's own holds verdict for every recorded clock, not only the
+        // stable ones: a clock rejected for recovery alone can hide a baseline it wrongly believes holds, as the
+        // backed different-items picks did (96 moved in 4 of 63 recorded periods while holds stayed true). Only a
+        // recording made under the selection's own supply speaks to its baseline.
+        const recorded_supply = variant.backed ? "backed_up" : "moving";
+        if (recorded_supply === expected.selection.supply && native.baseline.some(items => items !== native.expected)) {
+            expect(selected.assessment.holds, "the native baseline misses the expected output: the generator has to see that itself").toBe(false);
+        }
         if (selected.verdict === "stable") {
             expect(native.baseline.every(items => items === native.expected)).toBe(true);
             // The retained backed-up windows contain five periods; moving windows have at least eight.

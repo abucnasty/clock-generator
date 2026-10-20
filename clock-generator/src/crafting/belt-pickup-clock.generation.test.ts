@@ -85,6 +85,12 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
             // A fallback requiring backed-up supply is not a verified clock for moving input.
             expect(selected.verdict !== "stable" || selected.belt?.kind !== (variant.backed ? "backed_up" : "moving"),
                 "a measured shortfall must not be advertised as stable for this supply").toBe(true);
+            // And where the clock was recorded under its own supply, a baseline miss has to be the generator's own
+            // finding: a clock rejected for recovery alone can hide a baseline it wrongly believes holds.
+            if (selected.belt?.kind === (variant.backed ? "backed_up" : "moving")
+                && native.baseline.some(items => items !== native.expected)) {
+                expect(selected.assessment.holds, "the native baseline misses the expected output: the generator has to see that itself").toBe(false);
+            }
         }
     });
 });
