@@ -148,6 +148,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 1200,
+        // Pre-existing, not from the belt window trim: the copper foundry's output inserter wakes 25 a minute in
+        // the game and 5 in the simulator, because the game counts a held product when it enters the output and
+        // the simulator when it is made (docs/simulator.md). The gap crossed the tolerance only once the trim cut
+        // the build's total wake-ups 100 -> 75 a minute; the trimmed belt inserter itself matches the game tick
+        // for tick (work/belt-pickup-parity/belted-buffer-wakeups/REPORT.md):
+        wake_ups_open: "the game counts a foundry's held product entering its output, the simulator the make: ",
     },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
     // copies. Its clock of 792 ticks takes two periods more than the others to settle.
