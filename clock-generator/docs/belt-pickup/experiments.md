@@ -95,7 +95,7 @@ These are 258 first-hand controls; independent lane alignment and repeated throu
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
-| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested; no verified moving default for undergrounds | Tested | Tested |
+| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested | Tested | Tested |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested | Tested; no verified moving default when mirrored | Tested | Tested |
 | Over-the-hood same-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
@@ -104,8 +104,9 @@ These are 258 first-hand controls; independent lane alignment and repeated throu
 
 The ordinary clocks are verified on **48 configurations** across all four speeds: the a2 recapture after the belt
 window-end trim, with the 20 electromagnetic clocks the M1 resume fix changed recorded again, and the fast straight
-moving clock the M2 window rule changed recorded once more (`tests/game/builds/pickup-clock-m2-controls.json`).
-**44 meet exact baseline and recovery output**, 42 of them marked stable; the turbo moving straight clock no longer
+moving clock the M2 window rule changed recorded once more, and the two express moving underground clocks A4 changed
+(`tests/game/builds/pickup-clock-a4-controls.json`).
+**46 meet exact baseline and recovery output**, 42 of them marked stable; the turbo moving straight clock no longer
 over-produces in its early periods. The two normal moving
 underground defaults hold their baseline in these warm recordings and got back to target after every loss, but the
 generator says "unstable": it finds the clock failing from cold lane phase [3,0], and a native sweep of all 64 lane
@@ -113,8 +114,12 @@ phases shows the game never settling from it or from four other phases, the exit
 it cycles at 143 a period against 176 (`tests/game/builds/normal-underground-lane-phase-controls.json`, roadmap M1).
 The two normal backed-up underground defaults select a fractional
 clock whose baseline misses natively, matching holds false; their fully jammed cold-start controls alternate
-144/208 items at offset 1287 as fixed-window simulator checks. The two express moving underground defaults
-require backed-up supply and miss the target under moving supply. The a2 recapture's own clocks (43 of 48 exact,
+144/208 items at offset 1287 as fixed-window simulator checks. The two express moving underground defaults are
+observed windows at 3 output swings, made for moving supply (A4): exact baseline and recovery in the game, while the
+generator says "no recovery", its loss trials failing from lane phase [1,5] alone, which the capture cannot set up
+(`pickup-clock-recovery-phase-controls.json`). Through this half-tile pickup the game moves 704 to 716 a period with
+every inserter always enabled, the plant's own limit: the pickup was never the bound. The clock before, made for
+backed-up supply, moved 352 a period under moving supply, in the model as in the game. The a2 recapture's own clocks (43 of 48 exact,
 41 stable), the earlier post-fix recapture (46 of 48 exact, 42 stable after the lane-phase audit) and the original
 39 recordings remain separate historical evidence. The belt-drop rows also compare finite receiving stock, including the normal-speed second hand.
 
@@ -242,7 +247,7 @@ with two overlapping detailed recorder periods. Electromagnetic targets scale wi
 
 | Clock / speed | Moving | Generator verdict | Expected per period | Native baseline and recovery | Finding |
 | --- | --- | --- | --- | --- | --- |
-| Express undergrounds | true | No recovery; backed-up fallback | 528 / 1,408 ticks | Baseline 432/448; target not recovered | No verified moving default |
+| Express undergrounds | true | No recovery (lane phase [1,5]) | 528 / 1,408 ticks | 528 throughout | Observed windows at 3 swings, made for moving supply (A4); unclocked bound 704–716 |
 | Fast undergrounds | false | Stable | 176 / 704 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | false | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
@@ -277,6 +282,13 @@ assessed windows; mirrored recovery takes seven periods after the final interrup
 remaining 18 periods. That transient differs from the old clock's persistent shortfall. Express keeps its
 original clock but is now marked **no recovery**. A changed fast candidate remains unstable and misses
 native target periods. This fixes the three false-stable verdicts without changing the pickup timing rule.
+
+Since A4 an observed-windows clock holds when its own windows hold, not when the run they were observed in does, and
+nine mixed-item selections change to observed windows; six had no stable default (fast in both mirroring states and
+supplies, normal mirrored at both supplies, among them the fast unmirrored backed pick that repeated every 16,160
+ticks). All nine hold their baseline natively and get back to target after every disturbance, the normal mirrored
+moving one after two short periods following the last
+([a4 controls](../../tests/game/builds/over-hood-a4-clock-controls.json)).
 
 **Capture.** Sidecar's saved support/model metadata distinguishes supported, unsupported and legacy inputs.
 Updating software never promotes an old unsupported capture; recapture is required. See the

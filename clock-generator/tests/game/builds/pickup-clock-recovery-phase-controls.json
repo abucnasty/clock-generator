@@ -1,0 +1,7 @@
+{
+  "meaning": "Moving-supply defaults whose native capture holds the target in every baseline period and gets back to it after every disturbance, while the generator's loss trials find a lane-phase start the clock does not get back from after a loss: the verdict stays \"no recovery\", which the game has not been shown to share. The capture cannot set a lane phase; a native check from the pinned phase is open (roadmap A4). Every loss the generator tries fails from the pinned start alone.",
+  "cases": {
+    "electromagnetic-express-underground-entrance-moving": {"phases": {"inserter:2": [1, 5]}},
+    "electromagnetic-express-underground-exit-moving": {"phases": {"inserter:2": [1, 5]}}
+  }
+}
