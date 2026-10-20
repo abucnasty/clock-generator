@@ -319,8 +319,9 @@ with nothing cut is judged: their padding search then takes 4 ticks instead of 1
 at 7 output swings with the input window 3 ticks longer, which hold **112 in all 63 baseline periods and exactly 112
 after all three disturbances** in the game. The unmirrored express moving clock's input window grows a tick and holds
 96 throughout, as before ([a5 controls](../../tests/game/builds/over-hood-a5-clock-controls.json)). The check adds
-about 1 to 2% to generation in total; builds with moving pickups whose observed windows are searched take longer, up
-to about twice as long on two of the samples (3 to 9 seconds each).
+about 1 to 2% to generation in total; builds with moving pickups whose observed windows are searched take longer: three
+samples 4 to 8 seconds more each (one of them about twice as long), this build 3 seconds more (about twice as long),
+and metallurgic science a third less.
 
 **Capture.** Sidecar's saved support/model metadata distinguishes supported, unsupported and legacy inputs.
 Updating software never promotes an old unsupported capture; recapture is required. See the
