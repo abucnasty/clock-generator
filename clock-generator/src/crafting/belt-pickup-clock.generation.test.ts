@@ -18,20 +18,6 @@ interface NativeClockControl {
 const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
     "../../tests/game/builds/pickup-clock-a2-controls.json"), "utf8")) as Record<string, NativeClockControl>;
 
-// Builds whose retained warm recording holds its baseline and got back to target after every loss, while the
-// generator says "no recovery" from its sampled cold lane-phase starts. A3 (moving lane phases) is to model
-// those starts. A measured shortfall still never passes as stable.
-const GAME_RECOVERS_BEYOND_MODEL = new Set([
-    // The entrance's native cold starts match the model's dip and its warm runs hold 176: the "no recovery"
-    // verdict promises less than the game delivers, erring on the safe side.
-    "electromagnetic-normal-underground-entrance-moving",
-    // The exit's warm recording recovers too, but a native cold start at its natural phase (native [7,7])
-    // cycles at 143 a period under these same windows (a3-native-rounds.md, round 3): the "holds" half of the
-    // verdict is wrong until the model's late resume after waiting for machine space is fixed (roadmap M1,
-    // release-blocking). Do not read this build's assertions as a verified default.
-    "electromagnetic-normal-underground-exit-moving",
-]);
-
 // Builds whose recording starts with a deterministic over-production transient: from the coverage
 // protocol's post-calibration belt state the first periods pick up an extra stack, then every period to the
 // end and every recovery is exact. Two 204-period runs without the calibration phase are clean, and the
@@ -105,22 +91,17 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
             }
         }
         if (movingPhases.cases[variant.name]) {
-            // These warm native runs still pass. The stronger verifier finds another modeled cold
-            // lane-phase start; this is not a claim that the retained game run failed.
+            // These warm native runs still pass. The verifier finds a cold lane-phase start the clock fails from,
+            // and the game fails from it too (normal-underground-lane-phase-controls.json): the retained warm
+            // run started at another phase.
             expect(meetsTarget).toBe(true);
             expect(selected.assessment.holds).toBe(false);
             expect(selected.result.stability_check.as_built?.failed_pickup_phases)
                 .toEqual(movingPhases.cases[variant.name].phases);
         } else if (meetsTarget) {
-            if (GAME_RECOVERS_BEYOND_MODEL.has(variant.name)) {
-                // A recovery-only rejection: the baseline holds, and the measured recoveries all land.
-                expect(selected.verdict).toBe("no recovery");
-                expect(selected.assessment.holds).toBe(true);
-            } else {
-                expect(selected.verdict).toBe("stable");
-                expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
-                expect(selected.belt?.kind).toBe(variant.backed ? "backed_up" : "moving");
-            }
+            expect(selected.verdict).toBe("stable");
+            expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
+            expect(selected.belt?.kind).toBe(variant.backed ? "backed_up" : "moving");
         } else if (START_TRANSIENT_OVER_PRODUCERS.has(variant.name) && startTransientOverProductionOnly(native)) {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);

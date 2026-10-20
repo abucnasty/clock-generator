@@ -52,9 +52,10 @@ export class MachineState implements EntityState {
     public productsFinished: number = 0;
 
     /**
-     * Crafts started so far: the times the machine took the ingredients of a craft out of its inventory. Only counted,
-     * never read by the simulation; the rule count of the inserter cost series reads it to check the starts it infers
-     * from `productsFinished` and the working status (see crafting/rule-count.ts).
+     * Crafts started so far: the times the machine took the ingredients of a craft out of its inventory. The
+     * simulation reads only whether it grew in the machine's last tick (`startedCraftInLastTick`); the rule count of
+     * the inserter cost series reads it to check the starts it infers from `productsFinished` and the working status
+     * (see crafting/rule-count.ts).
      */
     public craftsStarted: number = 0;
 
@@ -67,6 +68,12 @@ export class MachineState implements EntityState {
 
     /** Whether the machine finished a craft in its last tick, which wakes the inserters that wait on it */
     public finishedCraftInLastTick: boolean = false;
+
+    /**
+     * Whether the machine started a craft in its last tick, taking its ingredients: what wakes the inserters waiting
+     * to put into it (docs/wake-ups.md)
+     */
+    public startedCraftInLastTick: boolean = false;
 
     /**
      * Whether an inserter took the machine's products in this tick in the first tick of its window of a clock of the
@@ -203,6 +210,7 @@ function clone(machineState: MachineState): MachineState {
     cloned.craftsStarted = machineState.craftsStarted;
     cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
     cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
+    cloned.startedCraftInLastTick = machineState.startedCraftInLastTick;
     cloned.selfIngredients = machineState.selfIngredients.clone();
     machineState.outputWaiters.forEach((waiters, item_name) => cloned.outputWaiters.set(item_name, new Map(waiters)));
     machineState.lastOutputTaker.forEach((inserter_id, item_name) => cloned.lastOutputTaker.set(item_name, inserter_id));
@@ -220,6 +228,7 @@ function stateKey(machineState: MachineState, tick: number): string {
         machineState.pendingOutput,
         machineState.outputBlockedAfterLastTick,
         machineState.finishedCraftInLastTick,
+        machineState.startedCraftInLastTick,
         JSON.stringify(machineState.selfIngredients.export()),
         JSON.stringify(Array.from(machineState.lastOutputTaker)),
         machineState.craftingProgress.progress,

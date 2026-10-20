@@ -1,4 +1,13 @@
 {
-  "meaning": "Additional modeled cold lane-phase starts; not native cold-start measurements. Empty since the belt window trim (A2): the two normal-underground moving entries it held are superseded by the generator's own no-recovery verdict and the a2 parity recordings.",
-  "cases": {}
+  "meaning": "Cold lane-phase starts at which the generator's verifier finds the selected clock failing, while the retained warm native controls hold their target and recover. Since M1 these are native-confirmed: the game never settles from this start either (normal-underground-lane-phase-controls.json, cell [3,0]; bins here are the game's output from it, 16 periods). The two entries an earlier audit held here were modeled only and went with the belt window trim (A2).",
+  "cases": {
+    "electromagnetic-normal-underground-entrance-moving": {
+      "phases": {"inserter:2": [3, 0]},
+      "bins": [128, 128, 128, 144, 176, 160, 144, 128, 128, 144, 176, 160, 144, 128, 128, 144]
+    },
+    "electromagnetic-normal-underground-exit-moving": {
+      "phases": {"inserter:2": [3, 0]},
+      "bins": [128, 128, 128, 144, 176, 160, 144, 128, 128, 144, 176, 160, 144, 128, 128, 144]
+    }
+  }
 }

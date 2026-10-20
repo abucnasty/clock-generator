@@ -84,10 +84,12 @@ describe("generateClockForConfig", () => {
         it("records one transfer of the output inserter (2) from tick 1 to 49, and four of the input inserter (1)", () => {
             expect(result.transfer_history.size).toBeGreaterThan(0);
             expect(transferRanges(result, 2)).toEqual([[1, 49]]);
-            expect(transferRanges(result, 1).sort((a, b) => a[0] - b[0])).toEqual([[52, 63], [63, 74], [76, 88], [88, 99]]);
+            // the third hand starts in the tick after the craft start that made room for it, as the game's does
+            expect(transferRanges(result, 1).sort((a, b) => a[0] - b[0])).toEqual([[52, 63], [63, 74], [76, 87], [87, 98]]);
         });
 
-        // these three alternatives were confirmed to hold full output in game
+        // These three alternatives were confirmed to hold full output in game with their windows from before the belt
+        // window trim, which ended 4 ticks later than these; the build has no scaffold, so these were not recorded
         describe("clock alternatives", () => {
             let alternatives: ClockAlternative[];
             const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
@@ -101,25 +103,26 @@ describe("generateClockForConfig", () => {
                 expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
             });
 
-            // inserter 1's windows end 3 ticks earlier since belt windows close before their last return swing
+            // inserter 1's windows end 3 ticks earlier since belt windows close before their last return swing, and
+            // one more since its hands after a craft start come a tick sooner
             it("batched swings for a moving belt add 4 ticks to the belt input inserter", () => {
                 expect(windowsOf("planned-belt-slack")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
-                    "inserter:1": [{ start: 52, end: 100 }],
+                    "inserter:1": [{ start: 52, end: 99 }],
                 });
             });
 
             it("planned keeps the simulated windows", () => {
                 expect(windowsOf("planned")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
-                    "inserter:1": [{ start: 52, end: 71 }, { start: 76, end: 96 }],
+                    "inserter:1": [{ start: 52, end: 71 }, { start: 76, end: 95 }],
                 });
             });
 
             it("observed windows follow the input inserter's activity", () => {
                 expect(windowsOf("derived")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
-                    "inserter:1": [{ start: 25, end: 78 }],
+                    "inserter:1": [{ start: 25, end: 77 }],
                 });
             });
 
