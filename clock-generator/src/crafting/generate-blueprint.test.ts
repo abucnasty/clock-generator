@@ -101,17 +101,18 @@ describe("generateClockForConfig", () => {
                 expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
             });
 
+            // inserter 1's windows end 3 ticks earlier since belt windows close before their last return swing
             it("batched swings for a moving belt add 4 ticks to the belt input inserter", () => {
                 expect(windowsOf("planned-belt-slack")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
-                    "inserter:1": [{ start: 52, end: 103 }],
+                    "inserter:1": [{ start: 52, end: 100 }],
                 });
             });
 
             it("planned keeps the simulated windows", () => {
                 expect(windowsOf("planned")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
-                    "inserter:1": [{ start: 52, end: 74 }, { start: 76, end: 99 }],
+                    "inserter:1": [{ start: 52, end: 71 }, { start: 76, end: 96 }],
                 });
             });
 

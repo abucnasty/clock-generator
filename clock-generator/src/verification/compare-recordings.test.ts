@@ -117,7 +117,8 @@ describe("a simulated run in the format of the recorder", () => {
         expect(machine_standings).toEqual([{ machine_id: "machine:1", standing: "simulator" }]);
         const by_id = (a: { inserter_id: string }, b: { inserter_id: string }) => a.inserter_id.localeCompare(b.inserter_id);
         expect({ ...of_recording, inserters: [...of_recording.inserters].sort(by_id) }).toEqual({ ...of_stock, inserters: [...of_stock.inserters].sort(by_id) });
-        expect(of_recording.wake_ups_per_minute).toBeCloseTo(112.5, 1);
+        // the trimmed input window wakes the build in a 4-period cycle of 50/100/0/100 a minute: 62.5 on average
+        expect(of_recording.wake_ups_per_minute).toBeCloseTo(62.5, 1);
     });
 
     it("is what simulateRecording returns for a number of ticks", () => {

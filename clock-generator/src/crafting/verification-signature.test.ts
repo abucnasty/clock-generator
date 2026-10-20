@@ -89,7 +89,8 @@ describe("request-local duplicate verification", () => {
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
         expect(new Set(keys).size).toBe(keys.length);
-        expect(generated.alternatives[generated.selected_index].id).toBe("swings-3");
+        // swings-2 since belt windows close before their last return swing (fewest wake-ups of the stable clocks)
+        expect(generated.alternatives[generated.selected_index].id).toBe("swings-2");
         // A later request must make its own checks, rather than inherit a verdict from this generation.
         const first_count = recovery.mock.calls.length;
         generateClockAlternatives(logistic, {logger: quiet});
