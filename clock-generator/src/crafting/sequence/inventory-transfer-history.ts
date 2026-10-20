@@ -48,6 +48,8 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
                 return;
             }
             const source_entity = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
+            // a belt-fed inserter's transfers stay whole here: its per-item ranges interleave into one window, whose
+            // end windowsFromHistory pulls back one rotation (trimming the ranges would cut the window apart inside)
             if (Entity.isBelt(source_entity)) {
                 trimmed.set(entityId, transfers);
                 return;
