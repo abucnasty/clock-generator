@@ -11,7 +11,9 @@ import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
-import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, planRun, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
+import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
+import { SimulationTick } from "./runner/simulation-tick";
+import { simulationStateKey } from "./runner/steady-state";
 import { windowsOfInsertersFeedingTheOutputMachine } from "./candidates/output-feeders";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
@@ -104,6 +106,14 @@ export interface AsBuiltStabilityCheck {
     long_run_proven?: boolean;
     /** Clock periods in the repeating cycle the proven long run was judged on */
     long_run_cycle_periods?: number;
+    /**
+     * Every clock start phase of the whole period was checked, each resolved by proof: its own repeating cycle, or
+     * a state met on another phase's proven orbit (see exhaustiveStartPhases). Absent when the check sampled its
+     * start phases; false when some phase hit the cap unresolved and was judged on its last bin as a sample.
+     */
+    start_phases_proven?: boolean;
+    /** Phases of the exhaustive check that hit its cap unresolved */
+    unresolved_start_phases?: number;
     /**
      * How often the machines woke the inserters asleep on their wake-up lists (goal 2 of GOALS.md, see wake-ups.ts),
      * for one copy of the build over the judged part of the long run of the unshifted clock. Absent when the check
@@ -407,12 +417,160 @@ export function startDependenceOf(
     return { verdict: startVerdictOf(outcomes), starts: outcomes, expected_output_items };
 }
 
+/** Crossings a phase run of the exhaustive check may take to resolve before it is judged on its last bin instead */
+const PHASE_PROOF_CAP_CROSSINGS = 48;
+
+/** What checking every start phase of the period found (see exhaustiveStartPhases) */
+export interface ExhaustiveStartPhasesOutcome {
+    /** The eternal cycle every phase settles into holds the expected output; false as soon as one does not */
+    holds: boolean;
+    /** Phases simulated; the whole period, or fewer when one failed */
+    phases_checked: number;
+    /** First failing phase, as the windows are rotated for it */
+    failed_start_offset?: number;
+    /** Items a period of the failing phase's cycle moved */
+    failed_output_items?: number;
+    /** Every checked phase was resolved by proof: its own repeating cycle, or a merge into a proven orbit */
+    proven: boolean;
+    /** Phases that hit the cap unresolved and were judged on their last bin as a sample */
+    unresolved_phases: number;
+    /** Phases resolved by meeting a state of another phase's proven orbit */
+    merged_phases: number;
+    /** Ticks simulated over all phases */
+    ticks: number;
+}
+
+/**
+ * Checks every clock start phase of the period, not a sample of them: in game a blueprint's machines can meet the
+ * clock at any of its `period` ticks, and each meeting is a start phase. Exhausting them is affordable because a
+ * phase's run is not run to a verdict of its own: it stops at the first crossing of the clock's phase 0 whose
+ * simulation state was seen on a phase already resolved, and inherits that phase's eternal cycle — most phases fall
+ * into the orbit of an earlier one within a few periods. A phase no earlier orbit catches runs until a crossing
+ * repeats a state of its own run, which proves its cycle: every bin of it (a period, or the merge with own fuel
+ * clocks) has to be within the stability tolerance of the expected output. States of different phases compare at
+ * these crossings because every clock of the build stands at the same place there; with fuel clocks of their own
+ * moduli they do not, so those builds resolve each phase by its own repeat alone. Null when the check does not
+ * apply: a fractional period, or a build not on fixed clocks throughout, keeps the sampled check.
+ *
+ * What stays sampled here: moving-lane phases (varied one pickup at a time elsewhere), and the competing-takers
+ * order, which is the one the game was observed to use.
+ */
+export function exhaustiveStartPhases(
+    config: Config,
+    decider_windows: Map<string, OpenRange[]>,
+    period: number,
+    logger: Logger,
+    report?: (checked: number, total: number) => void,
+): ExhaustiveStartPhasesOutcome | null {
+    if (!Number.isInteger(period)) {
+        return null;
+    }
+    const as_built = buildAsBuiltConfig(config, decider_windows, period);
+    const proof_bin = provenRepeatBin(as_built, period);
+    if (proof_bin === null) {
+        return null;
+    }
+    const quiet = quietLogger(logger);
+    // one run with the full machinery gives the crafting cycle plan, the expected output and the output inserters,
+    // which rotating the windows changes nothing of; every phase's cold build reuses them
+    const base = runBuild(as_built, { logger: quiet, cold_start: true, factorio_states: false });
+    const stride_periods = proof_bin.ticks / period;
+    // at a crossing of one phase's run a fuel clock of its own modulus stands elsewhere than at another's, so only
+    // a build whose clocks all share the period merges phases into one another's orbits
+    const can_merge = stride_periods === 1;
+    const expected_per_bin = base.total_expected_output * stride_periods;
+    const tolerance = LCM_STABILITY_TOLERANCE * stride_periods;
+
+    const orbit_of = new Map<string, number>();
+    const orbit_holds: boolean[] = [];
+    const outcome: ExhaustiveStartPhasesOutcome = {
+        holds: true, phases_checked: 0, proven: true, unresolved_phases: 0, merged_phases: 0, ticks: 0,
+    };
+
+    for (let offset = 0; offset < period && outcome.holds; offset++) {
+        const rotated_config = offset === 0 ? as_built : buildAsBuiltConfig(config,
+            new Map(Array.from(decider_windows, ([key, ranges]) => [key, rotateRanges(ranges, offset, period)] as const)), period);
+        const context = coldControlledTrialBuild(rotated_config, base.crafting_cycle_plan, base.recipe_lcm, {}, quiet);
+        const output_states = context.inserters.map(it => it.inserter_state)
+            .filter(state => base.output_inserter_ids.has(state.entity_id.id));
+        const dropped = () => output_states.reduce((sum, state) => sum + state.items_dropped, 0);
+        const control_logic = new SimulationTick(context);
+        const now = () => context.tick_provider.getCurrentTick();
+
+        // the rotated windows enable at tick t what the unrotated enable at t - offset, so the unrotated clock's
+        // phase 0 falls on the local ticks offset, offset + bin, ...: the crossings every phase's states compare at
+        const own_crossing = new Map<string, number>();
+        const keys_of_run: string[] = [];
+        const drops_at: number[] = [];
+        let run_holds: boolean | null = null;
+        let run_output: number | null = null;
+        let run_proven = true;
+        for (let crossing = 0; run_holds === null; crossing++) {
+            const until = offset + crossing * proof_bin.ticks;
+            while (now() < until) {
+                control_logic.executeForTick();
+            }
+            const key = simulationStateKey(context);
+            const earlier = own_crossing.get(key);
+            if (earlier !== undefined) {
+                // the run's own cycle: the bins from `earlier` repeat forever
+                const cycle = drops_at.slice(earlier + 1).concat(dropped()).map((drops, index, all) =>
+                    drops - (index === 0 ? drops_at[earlier] : all[index - 1]));
+                run_holds = cycle.every(items => Math.abs(items - expected_per_bin) <= tolerance);
+                run_output = Math.round((dropped() - drops_at[earlier]) / (cycle.length * stride_periods));
+                break;
+            }
+            const orbit = can_merge ? orbit_of.get(key) : undefined;
+            if (orbit !== undefined) {
+                run_holds = orbit_holds[orbit];
+                outcome.merged_phases++;
+                break;
+            }
+            if (crossing >= PHASE_PROOF_CAP_CROSSINGS) {
+                // unresolved: judged on its last bin, a sample as the shifted runs of the sampled check are
+                const last_bin = dropped() - drops_at[drops_at.length - 1];
+                run_holds = Math.abs(last_bin - expected_per_bin) <= tolerance;
+                run_output = Math.round(last_bin / stride_periods);
+                run_proven = false;
+                outcome.unresolved_phases++;
+                break;
+            }
+            own_crossing.set(key, crossing);
+            keys_of_run.push(key);
+            drops_at.push(dropped());
+        }
+        if (can_merge && run_proven) {
+            const orbit_id = orbit_holds.push(run_holds!) - 1;
+            for (const key of keys_of_run) {
+                orbit_of.set(key, orbit_id);
+            }
+        }
+        outcome.ticks += now();
+        outcome.phases_checked++;
+        outcome.proven &&= run_proven;
+        report?.(outcome.phases_checked, period);
+        if (run_holds === false) {
+            outcome.holds = false;
+            outcome.failed_start_offset = offset;
+            if (run_output !== null) {
+                outcome.failed_output_items = run_output;
+            }
+        }
+    }
+    logger.log(`Exhaustive start phases: ${outcome.phases_checked} of ${period} checked, ${outcome.merged_phases} merged into earlier orbits, `
+        + `${outcome.unresolved_phases} unresolved, ${outcome.ticks} ticks${outcome.holds ? "" : `, failed at offset ${outcome.failed_start_offset}`}`);
+    return outcome;
+}
+
 /**
  * The clock-only check of a clock: the build driven only by the decider windows, first with the clock as planned and
  * then with the whole clock shifted to other start offsets relative to the machines' initial state, and, when the
  * unshifted run holds, over a long run (`longRunOfFreeRunningBuild`), which counts the wake-ups. Stops at the first
  * start phase that fails. Moving lane phases are also varied per pickup, without enumerating joint starts across
  * different pickups. Fractional periods are only checked unshifted.
+ *
+ * With CLOCK_PROOF_PHASES=1 the shifted start offsets are not sampled: every phase of the period is checked by
+ * proof instead (see exhaustiveStartPhases), where that check applies.
  */
 export function runAsBuiltCheck(
     config: Config,
@@ -492,6 +650,24 @@ export function runAsBuiltCheck(
         return { result, check, stock };
     }
 
+    if (process.env.CLOCK_PROOF_PHASES === "1") {
+        const exhaustive = exhaustiveStartPhases(config, decider_windows, period, logger, report);
+        if (exhaustive !== null) {
+            check.start_phases_checked = exhaustive.phases_checked;
+            check.start_phases_proven = exhaustive.proven;
+            if (exhaustive.unresolved_phases > 0) {
+                check.unresolved_start_phases = exhaustive.unresolved_phases;
+            }
+            if (!exhaustive.holds) {
+                check.holds = false;
+                check.failed_start_offset = exhaustive.failed_start_offset;
+                if (exhaustive.failed_output_items !== undefined) {
+                    check.actual_output_items = exhaustive.failed_output_items;
+                }
+            }
+            return { result, check, stock };
+        }
+    }
     for (let offset = step; offset < period && check.start_phases_checked < start_phases; offset += step) {
         const rotated = new Map(Array.from(decider_windows, ([key, ranges]) => [key, rotateRanges(ranges, offset, period)] as const));
         // only its output count is read

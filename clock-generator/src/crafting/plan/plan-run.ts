@@ -769,6 +769,30 @@ function warmUp(
 }
 
 /**
+ * A cold controlled build of a config for a trial that reads nothing but entity states: the staged scaffold's start
+ * (nothing in the machines, the loop seeds given once), every inserter and drill on its enable control, and the
+ * history plugins stripped, since nothing of such a run is recorded. The crafting cycle plan and its LCM come from a
+ * run of the same build (rotating clock windows changes neither), so the prepare and planning steps are not run
+ * again. The enable controls are reset before the build is handed over; its clock starts at tick 0.
+ */
+export function coldControlledTrialBuild(
+    config: Config,
+    crafting_cycle_plan: CraftingCyclePlan,
+    recipe_lcm: number,
+    options: Pick<RunOptions, "competing_takers_order" | "moving_pickup_phases">,
+    logger: Logger,
+): SimulationContext {
+    const build = coldBuildOf(config, options, DebugSettingsProvider.mutable(), logger);
+    const controlled = withEnableControls(config, build, crafting_cycle_plan, recipe_lcm, logger);
+    const context = controlled.new_simulation_context;
+    for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
+        state_machine.removePlugins(build.history_plugins);
+    }
+    controlled.resettable_registry.resetAll();
+    return context;
+}
+
+/**
  * The simulation state at a bin boundary of the recorded run came up at an earlier boundary. The build is on fixed
  * clocks and every clock stands at the same place at each boundary, so the run repeats the bins between the two
  * boundaries forever: what they hold is a proof of what the build does for good, not a sample of it.
