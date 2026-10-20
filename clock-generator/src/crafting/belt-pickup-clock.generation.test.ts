@@ -18,11 +18,17 @@ interface NativeClockControl {
 const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
     "../../tests/game/builds/pickup-clock-a2-controls.json"), "utf8")) as Record<string, NativeClockControl>;
 
-// The game got back to target after every loss on these builds, where the model's sampled cold lane-phase
-// starts do not: the generator's "no recovery" promises less than the game delivers, erring on the safe
-// side. A3 (moving lane phases) is to model those starts. A measured shortfall still never passes as stable.
+// Builds whose retained warm recording holds its baseline and got back to target after every loss, while the
+// generator says "no recovery" from its sampled cold lane-phase starts. A3 (moving lane phases) is to model
+// those starts. A measured shortfall still never passes as stable.
 const GAME_RECOVERS_BEYOND_MODEL = new Set([
+    // The entrance's native cold starts match the model's dip and its warm runs hold 176: the "no recovery"
+    // verdict promises less than the game delivers, erring on the safe side.
     "electromagnetic-normal-underground-entrance-moving",
+    // The exit's warm recording recovers too, but a native cold start at its natural phase (native [7,7])
+    // cycles at 143 a period under these same windows (a3-native-rounds.md, round 3): the "holds" half of the
+    // verdict is wrong until the model's late resume after waiting for machine space is fixed (roadmap M1,
+    // release-blocking). Do not read this build's assertions as a verified default.
     "electromagnetic-normal-underground-exit-moving",
 ]);
 
