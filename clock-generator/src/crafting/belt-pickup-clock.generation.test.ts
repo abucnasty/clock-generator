@@ -16,29 +16,8 @@ interface NativeClockControl {
 }
 
 const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-a2-controls.json"), "utf8")) as Record<string, NativeClockControl>;
+    "../../tests/game/builds/pickup-clock-m1-controls.json"), "utf8")) as Record<string, NativeClockControl>;
 
-// Builds whose recording starts with a deterministic over-production transient: from the coverage
-// protocol's post-calibration belt state the first periods pick up an extra stack, then every period to the
-// end and every recovery is exact. Two 204-period runs without the calibration phase are clean, and the
-// rerun reproduces the phase-2 capture exactly (periods 9 and 11 at 188/180; see
-// work/belt-pickup-parity/a2-native-01/turbo-straight-300 and a2-item2-turbo-straight.md). Roadmap C1
-// (startup timing predicted, not replayed) owns the start state. Only over-target misses followed by exact
-// periods to the end, with exact recoveries, are accepted; a shortfall on any build still fails.
-const START_TRANSIENT_OVER_PRODUCERS = new Set([
-    "electromagnetic-turbo-straight-belt-moving",
-]);
-
-function startTransientOverProductionOnly(native: NativeClockControl): boolean {
-    const miss_indices = native.baseline.flatMap((items, index) => items !== native.expected ? [index] : []);
-    if (miss_indices.length === 0) {
-        return false;
-    }
-    const last_miss = miss_indices[miss_indices.length - 1];
-    return miss_indices.every(index => native.baseline[index] > native.expected)
-        && last_miss < native.baseline.length - 1
-        && native.recovery.every(trial => trial.recovered.every(items => items === native.expected));
-}
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 interface StartupControl {
     period: number;
@@ -99,10 +78,6 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
             expect(selected.result.stability_check.as_built?.failed_pickup_phases)
                 .toEqual(movingPhases.cases[variant.name].phases);
         } else if (meetsTarget) {
-            expect(selected.verdict).toBe("stable");
-            expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
-            expect(selected.belt?.kind).toBe(variant.backed ? "backed_up" : "moving");
-        } else if (START_TRANSIENT_OVER_PRODUCERS.has(variant.name) && startTransientOverProductionOnly(native)) {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
             expect(selected.belt?.kind).toBe(variant.backed ? "backed_up" : "moving");

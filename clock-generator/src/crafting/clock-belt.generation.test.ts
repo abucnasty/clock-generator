@@ -167,8 +167,9 @@ describe("the belt a clock is made for", () => {
             expect(selected.id).toBe("full-hand");
             expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "backed_up" });
+            // inserter 1's window ends a tick earlier since its hands after a craft start come a tick sooner
             expect(selected.result.clock_windows).toEqual({
-                "inserter:1": [{ start: 1, end: 20 }],
+                "inserter:1": [{ start: 1, end: 19 }],
                 "inserter:2": [{ start: 0, end: 3 }, { start: 36, end: 39 }],
             });
         });
