@@ -1,5 +1,6 @@
 import { BeltPickupLayout, pickupLengthForLayout, pickupLayoutProblem } from "../../common/belt-pickup-layout";
 import { assertPickupCaptureSupported } from "../../config/pickup-capture";
+import { assertInserterInScope } from "../../config/inserter-scope";
 import { InserterConfig } from "../../config";
 import { FactorioDataService, ItemName } from "../../data";
 import { BeltStackSize, Lane } from "../belt";
@@ -103,6 +104,7 @@ export class InserterFactory {
         const prototype = config.prototype ?? InserterType.STACK_INSERTER
         const quality = config.quality ?? "legendary"
         assertSupportedInserterKind(prototype, quality)
+        assertInserterInScope(id, config)
         const stack_size = configuredHandSize(config)
 
         if (sink.type === EntityType.BELT && source.type === EntityType.BELT) {

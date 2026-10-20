@@ -1,7 +1,7 @@
 import type { InserterFormData } from '../utils/configForm/formData';
 import { Box, Typography } from '@mui/material';
 import { effectiveInserterStackSize, inserterMetadataText } from '../utils/inserterMetadata';
-import { usesAutomaticFilters } from '../utils/inserterFilters';
+import { usesAutomaticFilters, usesBlacklist } from '../utils/inserterFilters';
 import { useGameNames } from '../hooks/useGameNames';
 
 interface AssumedInserter {
@@ -10,6 +10,7 @@ interface AssumedInserter {
     quality?: InserterFormData['quality'];
     stack_size?: number;
     filters?: string[];
+    filter_mode?: string;
     overrides?: { enable_control?: { mode: string } };
 }
 
@@ -33,7 +34,7 @@ export function InserterAssumptions({ inserters, detailed = false }: { inserters
                 return <Typography component="li" variant="body2" key={row.id ?? index} sx={{ mb: 0.5 }}>
                     Inserter {row.id ?? index + 1}: {inserterMetadataText(row)} ({row.prototype === undefined ? 'type assumed' : 'type explicit'}; {row.quality === undefined ? 'quality assumed' : 'quality explicit'}).{' '}
                     Capacity {row.stack_size === undefined ? 'Automatic' : 'Explicit'}: {Number.isFinite(capacity) ? `${capacity} items${row.stack_size === undefined ? ', all capacity research' : ''}` : 'unavailable'}.{' '}
-                    Filters: {usesAutomaticFilters(row.filters) ? 'Automatic, follow the route' : `Explicit: ${row.filters!.map(itemLabel).join(', ')}`}.{' '}
+                    Filters: {usesAutomaticFilters(row.filters) ? 'Automatic, follow the route' : `${usesBlacklist(row) ? 'Blacklist, not supported' : 'Explicit'}: ${row.filters!.map(itemLabel).join(', ')}`}.{' '}
                     Enable rule: {row.overrides?.enable_control === undefined ? 'Automatic (omitted)' : row.overrides.enable_control.mode === 'AUTO' ? 'Automatic (explicit Auto)' : `Explicit ${row.overrides.enable_control.mode}`}.
                 </Typography>;
             })}

@@ -97,7 +97,20 @@ const MOVING_PICKUP_FEATURE: SidecarFeature = {
         && "type" in inserter.source && inserter.source.type === "belt"),
     missing: () => "Physical belt pickup geometry was not exported. Update Sidecar and recapture these inputs; a straight-belt default does not establish their support.",
 };
-export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE];
+/**
+ * Before 0.11.0 every inserter was exported without its prototype, quality and filter mode, so it ran as a legendary
+ * stack inserter and a blacklist as the items to move. Without the notice such a capture could not be told from one of
+ * a legendary stack inserter, which an inserter without a prototype also is.
+ */
+const INSERTER_IDENTITY_FEATURE: SidecarFeature = {
+    name: "inserter-identity", since: "0.11.0",
+    appliesTo: input => (input.inserters ?? []).some(inserter => typeof inserter === "object" && inserter !== null
+        && !("prototype" in inserter)),
+    missing: () => "Inserter kind, quality and filter mode were not exported, so every inserter is read as a legendary "
+        + "stack inserter and its filters as the items it moves. Update Sidecar and recapture these inputs; updating the "
+        + "mod alone does not update a saved capture.",
+};
+export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE, INSERTER_IDENTITY_FEATURE];
 
 /** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
 const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";

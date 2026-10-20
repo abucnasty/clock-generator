@@ -2,7 +2,7 @@ import { Config, BeltConfig, ChestConfig, InserterConfig, MachineConfiguration, 
 import { FactorioDataService } from '../data/factorio-data-service';
 import { BurnerEnergySource, MachineType } from '../entities';
 import { InserterCoverageError, InserterCoverageIssue, InserterFixOption } from './errors';
-import { assertPickupsInScope } from './pickup-capture';
+import { assertInsertersInScope } from './inserter-scope';
 
 // ============================================================================
 // Item-source coverage helpers
@@ -313,7 +313,7 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
  * Intended to be called at the start of blueprint generation.
  */
 export function assertInserterCoverage(config: Config): void {
-    assertPickupsInScope(config);
+    assertInsertersInScope(config);
     const issues = validateInserterCoverage(config);
     if (issues.length > 0) {
         throw new InserterCoverageError(issues);

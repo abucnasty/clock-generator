@@ -280,9 +280,14 @@ The swing comes from the game data (`inserter` and `quality` in `data-filtered.j
 `ceil(0.5 / ω) - 2` ticks, where ω is the prototype's `rotation_speed` times 1 + 0.3 times the quality's level (normal
 0, uncommon 1, rare 2, epic 3, legendary 5), and picking up from or dropping into a machine or chest takes 1 tick. The
 swing from machine to machine is 8 ticks for a legendary stack inserter, 24 for a normal fast inserter and 70 for a
-normal inserter. Picking up from a belt (4 ticks) and dropping onto one are still the timings of the legendary stack
-inserter, which are not checked for any other prototype or quality. The simulator also gives every inserter the stack
-inserter's wait for a full hand, which the other prototypes do not have in the game.
+normal inserter. Picking up from a belt (4 ticks) is calibrated on the legendary stack inserter alone, so a belt pickup
+by any other prototype or quality is refused (follow-up F7). Dropping onto a belt keeps the legendary stack inserter's
+timing, which is not checked for the others. The simulator also gives every inserter the stack inserter's wait for a
+full hand, which the other prototypes do not have in the game.
+
+`filters` are the items the inserter moves, a whitelist. An optional `filter_mode` says so with `"whitelist"`; a
+`"blacklist"`, naming the items to leave, is refused when there are filters. The Clock Generator Sidecar exports the
+prototype, the quality and a blacklist from 0.11.0 on.
 
 ```json
 {

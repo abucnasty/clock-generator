@@ -191,6 +191,10 @@ function export.to_table(result)
         local inserter_export = {
             source = exported.source,
             sink = exported.sink,
+            -- The clock generator times the swing by the prototype and quality, and refuses a belt pickup by any
+            -- inserter but the legendary stack inserter. Without them it would run every inserter as that one.
+            prototype = inserter.inserter_type,
+            quality = inserter.quality,
             stack_size = inserter.stack_size
         }
 
@@ -199,6 +203,11 @@ function export.to_table(result)
         -- the sink does not accept.
         if #inserter.filters > 0 then
             inserter_export.filters = inserter.filters
+            -- The clock generator reads filters as the items to move and refuses a blacklist, which names the items
+            -- to leave. A whitelist needs no mode.
+            if inserter.filter_mode == "blacklist" then
+                inserter_export.filter_mode = "blacklist"
+            end
         end
 
         table.insert(output.inserters, inserter_export)

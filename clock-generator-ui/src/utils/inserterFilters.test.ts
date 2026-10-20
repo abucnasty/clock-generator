@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { removeFilterSlot, setFilterSlot, usesAutomaticFilters } from './inserterFilters';
+import { removeFilterSlot, setFilterSlot, usesAutomaticFilters, usesBlacklist } from './inserterFilters';
 
 describe('inserter filter edits', () => {
     it('starts from the automatic list, preserving the other items and never making holes', () => {
@@ -23,5 +23,11 @@ describe('inserter filter edits', () => {
         expect(usesAutomaticFilters(undefined)).toBe(true);
         expect(usesAutomaticFilters([])).toBe(true);
         expect(usesAutomaticFilters(['a'])).toBe(false);
+    });
+    it('tells a captured blacklist apart, which only matters while it names items', () => {
+        expect(usesBlacklist({ filters: ['a'], filter_mode: 'blacklist' })).toBe(true);
+        expect(usesBlacklist({ filters: ['a'], filter_mode: 'whitelist' })).toBe(false);
+        expect(usesBlacklist({ filters: ['a'] })).toBe(false);
+        expect(usesBlacklist({ filters: undefined, filter_mode: 'blacklist' })).toBe(false);
     });
 });

@@ -3,6 +3,11 @@ export function usesAutomaticFilters(filters: string[] | undefined): boolean {
     return !filters?.length;
 }
 
+/** Filters captured as a blacklist, naming the items the inserter leaves: the engine refuses them, so the form says so */
+export function usesBlacklist(inserter: { filters?: string[]; filter_mode?: string }): boolean {
+    return inserter.filter_mode === 'blacklist' && !usesAutomaticFilters(inserter.filters);
+}
+
 function result(filters: string[], wasAutomatic: boolean) {
     // Compact empty entries too: a slot can never put a null hole in exported JSON.
     const kept = filters.filter(Boolean);

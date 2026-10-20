@@ -388,7 +388,8 @@ export const InserterConfigSchema = z.object({
     /**
      * The inserter's prototype name in the game data: "inserter", "fast-inserter", "long-handed-inserter",
      * "bulk-inserter" or "stack-inserter" (default). The burner inserter needs fuel and is refused. The prototype sets
-     * how long a swing takes, with the quality, and how many items the hand holds, with the research.
+     * how long a swing takes, with the quality, and how many items the hand holds, with the research. Only the
+     * legendary stack inserter may pick up from a belt: belt pickup timing is calibrated on it alone (follow-up F7).
      */
     prototype: z.string().optional(),
     /** The inserter's quality (default "legendary"); the higher it is, the faster the arm turns. It does not change the hand. */
@@ -399,6 +400,12 @@ export const InserterConfigSchema = z.object({
      */
     stack_size: z.number().int().positive().optional(),
     filters: z.array(z.string()).optional(),
+    /**
+     * How the game reads `filters`: "whitelist" (default), the items the inserter moves. "blacklist", the items it
+     * leaves, is refused when there are filters: the generator models a whitelist only. Kept so that a captured
+     * blacklist is refused rather than stripped and read as the items to move.
+     */
+    filter_mode: z.enum(["whitelist", "blacklist"]).optional(),
     overrides: InserterOverridesConfigSchema.optional()
 });
 

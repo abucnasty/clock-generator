@@ -133,14 +133,20 @@ local function extract_inserter_data(entity)
         stack_size = entity.inserter_target_pickup_count
     end
 
-    -- Get filters
+    -- Get filters, only while they are switched on: an inserter whose filters are set but switched off moves whatever
+    -- it is given, as one without filters does. Its mode says whether they name the items to move (a whitelist) or the
+    -- items to leave (a blacklist).
     local filters = {}
+    local filter_mode = nil
     local filter_slot_count = entity.filter_slot_count or 0
-    for i = 1, filter_slot_count do
-        local filter = entity.get_filter(i)
-        if filter and filter.name then
-            table.insert(filters, filter.name)
+    if filter_slot_count > 0 and entity.use_filters then
+        for i = 1, filter_slot_count do
+            local filter = entity.get_filter(i)
+            if filter and filter.name then
+                table.insert(filters, filter.name)
+            end
         end
+        filter_mode = entity.inserter_filter_mode
     end
 
     -- Get source (pickup target)
@@ -183,9 +189,11 @@ local function extract_inserter_data(entity)
     local data = {
         entity = entity,
         inserter_type = entity.name,
+        quality = entity.quality.name,
         position = entity.position,
         stack_size = stack_size,
         filters = filters,
+        filter_mode = filter_mode,
         source = source,
         sink = sink
     }

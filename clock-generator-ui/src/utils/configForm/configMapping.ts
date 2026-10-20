@@ -64,6 +64,7 @@ export function configToFormData(imported: Config): ConfigFormData {
             quality: ins.quality,
             stack_size: ins.stack_size,
             filters: ins.filters,
+            ...(ins.filter_mode !== undefined && { filter_mode: ins.filter_mode }),
             overrides: ins.overrides ? {
                 animation: ins.overrides.animation,
                 enable_control: ins.overrides.enable_control

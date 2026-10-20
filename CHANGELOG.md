@@ -16,6 +16,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Retain output-belt stock between hands at all four speeds. Inserters now wait for actual receiving space, including the slower second hand on normal belts and temporary compressed gaps.
 - Account for arm extension between ordinary belt grabs. This fixes the extra tick in affected normal-speed same-item underground-entrance pickups without adding a universal lane-switch delay.
 - Preserve finite stock and belt-speed refill for ordinary backed-up pickups, including underground reach and same-item lane fallback. Slower belts can run out of reachable stacks during or between hands instead of supplying a stack every tick.
+- Read each inserter's kind, quality and filter mode from Sidecar 0.11.0 captures. Earlier captures ran every inserter as a legendary stack inserter and read a blacklist, or filters switched off in the game, as the items to move; they now ask for a recapture. A belt pickup by any inserter but the legendary stack inserter is refused with the reason, as belt timing is calibrated on it alone, and so is a blacklist; other kinds and qualities keep working on chests and machines.
 
 ### Added
 - Capture supported over-the-hood underground-exit pickups in Sidecar, including mirroring-selected lane preference. Older unsupported captures require recapture.

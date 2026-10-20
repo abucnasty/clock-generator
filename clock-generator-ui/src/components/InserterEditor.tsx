@@ -6,7 +6,7 @@ import { useGameNames } from '../hooks/useGameNames';
 import { useAnnounce } from '../hooks/useMessages';
 import { entityOptionsOf, findOption, stackSizeFrom, type EntityOption } from '../utils/inserterOptions';
 import { inferInserterItems, sourceItemsOf } from '../utils/inferInserterItems';
-import { removeFilterSlot, setFilterSlot, usesAutomaticFilters } from '../utils/inserterFilters';
+import { removeFilterSlot, setFilterSlot, usesAutomaticFilters, usesBlacklist } from '../utils/inserterFilters';
 import { DROP_ROUTE_READ_ONLY, endpointUpdate, effectiveInserterStackSize, INSERTER_TIMING_ASSUMPTION, inserterTimingLabels, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NearLaneSelect } from './NearLaneSelect';
@@ -14,6 +14,8 @@ import { PickupTypeSelect } from './PickupTypeSelect';
 import { NumberField } from './NumberField';
 import { EntitySelector } from './EntitySelector';
 
+/** A captured blacklist names the items the inserter leaves; the generator reads filters as the items to move */
+const BLACKLIST_NOTE = 'Blacklist · Not supported: set a whitelist in the game and recapture';
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start' };
 
 export interface InserterEditorProps {
@@ -68,10 +70,11 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
                 placeholder="Automatic" helperText={stackHelp} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
                 min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
             <Box ref={filtersRef} sx={row ? { alignSelf: 'start', minWidth: 0, flex: '1 1 180px' } : { mt: 2 }}>
-                <FilterSlotSelector compact={row} label={row ? `Filters · ${usesAutomaticFilters(value.filters) ? 'Automatic' : 'Explicit'}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
+                <FilterSlotSelector compact={row} label={row ? `Filters · ${usesAutomaticFilters(value.filters) ? 'Automatic' : usesBlacklist(value) ? 'Blacklist' : 'Explicit'}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
-                {!row && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? 'Automatic filters' : 'Explicit · Set by hand'}</Typography>}
+                {!row && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? 'Automatic filters' : usesBlacklist(value) ? BLACKLIST_NOTE : 'Explicit · Set by hand'}</Typography>}
+                {row && usesBlacklist(value) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{BLACKLIST_NOTE}</Typography>}
                 {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: row ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                     <Button size="small" color="inherit" onClick={() => {
                         // The return action disappears; slot zero survives the switch back to Automatic.

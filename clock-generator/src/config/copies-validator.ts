@@ -1,6 +1,6 @@
 import { BeltConfig, ChestConfig, Config, InserterConfig, MiningDrillConfig } from './schema';
 import { CopiesError, CopiesUnit } from './errors';
-import { assertPickupsInScope } from './pickup-capture';
+import { assertInsertersInScope } from './inserter-scope';
 
 // ============================================================================
 // Units of a build
@@ -227,7 +227,7 @@ export function findRepeatedUnits(config: Config): RepeatedUnits {
  * multiply with `target_output.copies`.
  */
 export function validateCopies(config: Config): void {
-    assertPickupsInScope(config);
+    assertInsertersInScope(config);
     const found = findRepeatedUnits(config);
     if (found.gcd > 1) {
         throw new CopiesError(found.copies, config.target_output.copies);
