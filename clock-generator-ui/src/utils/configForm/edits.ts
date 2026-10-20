@@ -176,6 +176,14 @@ function withPreservedEndpoints(ins: InserterFormData, updates: Partial<Inserter
         sink: ins.sink.drop !== undefined ? ins.sink : endpoint(ins.sink, updates.sink, 'sink') };
 }
 
+/**
+ * Filters set back to Automatic take a captured blacklist's mode with them: a blacklist that names nothing moves what no
+ * filters move, and filters picked by hand later are the items to move, not a blacklist the engine refuses.
+ */
+function dropStaleFilterMode(next: InserterFormData, updates: Partial<InserterFormData>): void {
+    if ('filters' in updates && !updates.filters?.length) delete next.filter_mode;
+}
+
 /** An update with `overrides` replaces the rule, so it is no longer one forced by Exclude from LCM. */
 export function updateInserter(prev: ConfigFormData, index: number, updates: Partial<InserterFormData>): ConfigFormData {
     return {
@@ -184,6 +192,7 @@ export function updateInserter(prev: ConfigFormData, index: number, updates: Par
             if (i !== index) return ins;
             const next = withPreservedEndpoints(ins, updates);
             if ('overrides' in updates) delete next._forced_always;
+            dropStaleFilterMode(next, updates);
             return next;
         }),
     };
@@ -203,6 +212,7 @@ export function updateInserters(prev: ConfigFormData, uuids: readonly string[], 
                 next.overrides = { ...ins.overrides, ...updates.overrides };
             }
             if ('filters' in updates && updates.filters === undefined) delete next.filters;
+            dropStaleFilterMode(next, updates);
             if ('stack_size' in updates && updates.stack_size === undefined) delete next.stack_size;
             return next;
         }),

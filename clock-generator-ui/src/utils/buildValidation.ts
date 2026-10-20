@@ -36,6 +36,8 @@ interface Input {
     machines: { id: number }[];
     chestIssues: OutputChestIssue[];
     coverageText: (issue: InserterCoverageIssue) => string;
+    /** The live refusal of an inserter that is out of scope, shown in place of its coverage */
+    scopeRefusal?: string | null;
     failure?: { message: string; diagnostics?: ValidationDiagnostic[] };
 }
 
@@ -57,6 +59,10 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
         add({ id, text: input.coverageText(issue), source: 'coverage', coverage: issue, severity: 'error', blocksGeneration: true,
             target: { kind: 'validation-issue', id } });
     };
+    if (input.scopeRefusal) {
+        add({ id: 'inserter-scope', text: input.scopeRefusal, severity: 'error', blocksGeneration: true, source: 'engine',
+            target: { kind: 'validation-issue', id: 'inserter-scope' } });
+    }
     input.coverage.forEach(addCoverage);
     for (const diagnostic of input.failure?.diagnostics ?? []) {
         if (diagnostic.kind === 'coverage') { addCoverage(diagnostic.issue); continue; }
@@ -77,7 +83,8 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
         const location = stablePath.length ? stablePath.join('.').replaceAll('_', ' ') : 'Build';
         add(field(fieldTarget ? focusIdOf(fieldTarget) : `field:${stablePath.join('.')}`, `${location}: ${diagnostic.message}`, fieldTarget));
     }
-    if (input.failure && !input.failure.diagnostics?.length) {
+    // a Check that stopped at the refusal shown live says the same: one issue per cause
+    if (input.failure && !input.failure.diagnostics?.length && input.failure.message !== input.scopeRefusal) {
         const id = 'engine-check';
         add({ id, text: input.failure.message, severity: 'error', blocksGeneration: true, source: 'engine',
             target: { kind: 'validation-issue', id } });

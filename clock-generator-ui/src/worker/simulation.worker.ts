@@ -353,8 +353,12 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             } catch {
                 return null;
             }
-        case 'inserter-coverage':
-            return liveCoverage(query.config);
+        case 'inserter-coverage': {
+            // what is out of scope is refused before coverage, as Check does: read as built, a blacklist or a side stream
+            // would be explained as a missing inserter
+            const refusal = clockGenerator.insertersScopeProblem(query.config);
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal };
+        }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);
         case 'repeated-unit-conversion':

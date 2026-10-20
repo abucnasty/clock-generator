@@ -1,11 +1,12 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { Config } from 'clock-generator/browser';
-import type { PastedEntities, WorkerRequest, WorkerResponse } from './types';
+import type { LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
+import { buildValidationIssues } from '../utils/buildValidation';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -118,18 +119,43 @@ it('keeps a captured inserter kind, quality and filter mode through paste, save 
         return { ...formDataToConfig(reloaded), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
     };
 
+    /**
+     * What the App lists for the build as the editor checks it live, before any Check: the 'inserter-coverage' query
+     * useInserterValidation asks, folded into the issues that block Generate
+     */
+    const liveIssues = async (config: Config) => {
+        const answer = await send({ type: 'query', requestId: 55, query: { kind: 'inserter-coverage', config } });
+        expect(answer.type).toBe('answer');
+        const coverage = (answer as { answer: LiveCoverage }).answer;
+        return buildValidationIssues({ fieldProblems: [], coverage: coverage.issues, scopeRefusal: coverage.refusal, chests: [], inserters: [],
+            machines: config.machines, chestIssues: [], coverageText: issue => `${issue.kind} ${issue.item_name}` })
+            .filter(issue => issue.blocksGeneration).map(({ source, text }) => ({ source, text }));
+    };
+
     const supported = await pastedSavedReloaded(exported({}));
     expect(supported.inserters.map(({ prototype, quality }) => ({ prototype, quality })))
         .toEqual([{ prototype: 'stack-inserter', quality: 'legendary' }, { prototype: 'fast-inserter', quality: 'normal' }]);
+    expect(await liveIssues(supported)).toEqual([]);
     expect(await send({ type: 'validate', requestId: 52, config: supported })).toMatchObject({ type: 'validated' });
 
     const longHanded = await pastedSavedReloaded(exported({}, { prototype: 'long-handed-inserter', quality: 'normal', stack_size: 4 }));
     expect(longHanded.inserters[0]).toMatchObject({ prototype: 'long-handed-inserter', quality: 'normal' });
+    const longHandedRefusal = 'Inserter 1: picking up from a belt with a normal long-handed-inserter is not supported yet';
+    expect(await liveIssues(longHanded)).toEqual([{ source: 'engine', text: expect.stringContaining(longHandedRefusal) }]);
     expect(await send({ type: 'validate', requestId: 53, config: longHanded })).toMatchObject({ type: 'validation-failed',
-        message: expect.stringContaining('Inserter 1: picking up from a belt with a normal long-handed-inserter is not supported yet') });
+        message: expect.stringContaining(longHandedRefusal) });
 
+    // read as a whitelist, the blacklist would leave the gears without an output inserter and offer a new belt for them
     const blacklist = await pastedSavedReloaded(exported({ filters: ['iron-plate'], filter_mode: 'blacklist' }));
     expect(blacklist.inserters[1]).toMatchObject({ filters: ['iron-plate'], filter_mode: 'blacklist' });
-    expect(await send({ type: 'validate', requestId: 54, config: blacklist })).toMatchObject({ type: 'validation-failed',
-        message: expect.stringContaining('Inserter 2: `filter_mode` "blacklist" is refused') });
+    const blacklistRefusal = 'Inserter 2: `filter_mode` "blacklist" is refused';
+    expect(await liveIssues(blacklist)).toEqual([{ source: 'engine', text: expect.stringContaining(blacklistRefusal) }]);
+    const checked = await send({ type: 'validate', requestId: 54, config: blacklist });
+    expect(checked).toMatchObject({ type: 'validation-failed', message: expect.stringContaining(blacklistRefusal) });
+    // a Check that stopped at the same refusal adds no second issue for it
+    const answer = await send({ type: 'query', requestId: 56, query: { kind: 'inserter-coverage', config: blacklist } });
+    const coverage = (answer as { answer: LiveCoverage }).answer;
+    expect(buildValidationIssues({ fieldProblems: [], coverage: coverage.issues, scopeRefusal: coverage.refusal, chests: [], inserters: [],
+        machines: blacklist.machines, chestIssues: [], coverageText: () => '', failure: { message: (checked as { message: string }).message } }))
+        .toHaveLength(1);
 });

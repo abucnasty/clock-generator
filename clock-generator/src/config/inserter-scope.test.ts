@@ -6,6 +6,8 @@ import { validateConfig } from "../crafting/plan/validate-config";
 import { generateClockAlternatives } from "../crafting/generate-blueprint";
 import { computeMachineTargetRates } from "../crafting/machine-target-rates";
 import { Entity } from "../entities/entity";
+import { insertersScopeProblem } from "./inserter-scope";
+import { createInserterCoverageValidator, validateInserterCoverage } from "./inserter-coverage-validator";
 
 const base = () => ({
     target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
@@ -125,5 +127,47 @@ describe("filters that are a blacklist", () => {
         expect(() => validateConfig(withInserter(2, { filter_mode: "blacklist" }))).not.toThrow();
         expect(() => validateConfig(withInserter(2, { filter_mode: "blacklist", filters: [] }))).not.toThrow();
         expect(() => validateConfig(withInserter(2, { filter_mode: "whitelist", filters: ["iron-gear-wheel"] }))).not.toThrow();
+    });
+});
+
+describe("the live check of what is out of scope", () => {
+    it("names the first inserter that is out of scope, or none", () => {
+        expect(insertersScopeProblem(withInserter(2, { filters: ["iron-plate"], filter_mode: "blacklist" })))
+            .toMatch(/^Inserter 2: `filter_mode` "blacklist" is refused/);
+        expect(insertersScopeProblem(withInserter(1, { prototype: "fast-inserter" })))
+            .toMatch(/^Inserter 1: picking up from a belt with a legendary fast-inserter is not supported yet/);
+        expect(insertersScopeProblem(withInserter(1, { prototype: "assembling-machine-3" }))).toMatch(/^Inserter 1: .*not an inserter of the game data/);
+        expect(insertersScopeProblem(withInserter(2, { prototype: "fast-inserter", filters: ["iron-gear-wheel"] }))).toBeNull();
+        expect(insertersScopeProblem(base() as unknown as Config)).toBeNull();
+    });
+
+    it("is what Check refuses with, word for word", () => {
+        const config = withInserter(2, { filters: ["iron-plate"], filter_mode: "blacklist" });
+        expect(() => validateConfig(config)).toThrow(insertersScopeProblem(config)!);
+    });
+});
+
+describe("coverage of an inserter whose filters are a blacklist", () => {
+    // the build a blacklist capture gives: the output inserter leaves iron plates, so it still takes the gears out
+    const blacklisting = (items: string[]) => withInserter(2, { filters: items, filter_mode: "blacklist" });
+
+    it("reads the filters as the items it leaves, never as the items it moves", () => {
+        expect(validateInserterCoverage(blacklisting(["iron-plate"]))).toEqual([]);
+        expect(createInserterCoverageValidator()(blacklisting(["iron-plate"]))).toEqual([]);
+        // read as a whitelist, the same filters would leave the gears without an output inserter
+        expect(validateInserterCoverage(withInserter(2, { filters: ["iron-plate"] }))).toMatchObject([{ kind: "missing_output_inserter", item_name: "iron-gear-wheel" }]);
+    });
+
+    it("misses the item it names, with its filters to review", () => {
+        expect(validateInserterCoverage(blacklisting(["iron-gear-wheel"]))).toMatchObject([{
+            kind: "missing_output_inserter", item_name: "iron-gear-wheel",
+            fix_options: expect.arrayContaining([{ type: "review_filters", inserter_id: 2, item_name: "iron-gear-wheel" }]),
+        }]);
+    });
+
+    it("is checked again in the live editor when only the filter mode changes", () => {
+        const live = createInserterCoverageValidator();
+        expect(live(withInserter(2, { filters: ["iron-plate"] }))).toHaveLength(1);
+        expect(live(blacklisting(["iron-plate"]))).toEqual([]);
     });
 });

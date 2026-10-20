@@ -404,13 +404,22 @@ export type EngineQuery =
         suggested_target: unknown;
     };
 
+export interface LiveCoverage {
+    issues: InserterCoverageIssue[];
+    refusal: string | null;
+}
+
 export interface EngineAnswers {
     'timeline-recording': TimelineRecording;
     'lookups': FactorioLookups;
     /** Null when they cannot be worked out, e.g. for an unknown recipe */
     'machine-facts': SerializableMachineFacts | null;
     'machine-target-rates': MachineTargetRate[];
-    'inserter-coverage': InserterCoverageIssue[];
+    /**
+     * The coverage of each machine, or the refusal of the first inserter that is out of scope (a belt pickup by another
+     * inserter than the legendary stack inserter, a blacklist, a side-loaded pickup) with no coverage, as Check does
+     */
+    'inserter-coverage': LiveCoverage;
     'repeated-unit-conversion': CheckedRepeatedUnitConversion;
     /** Why the saved config cannot be used; null when it can */
     'saved-config': string | null;

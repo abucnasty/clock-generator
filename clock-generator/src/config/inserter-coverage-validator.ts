@@ -24,6 +24,12 @@ function chestAcceptsItem(chest: ChestConfig, itemName: string): boolean {
     return chest.type === 'infinity-chest' ? chest.remove_unfiltered_items === true || chest.item_filter.some(filter => filter.item_name === itemName) : chestSuppliesItem(chest, itemName);
 }
 
+/** Whether the inserter's own filters keep it from moving the item: a whitelist without it, or a blacklist with it */
+function filtersExclude(inserter: InserterConfig, itemName: string): boolean {
+    if (!inserter.filters?.length) return false;
+    return inserter.filter_mode === 'blacklist' ? inserter.filters.includes(itemName) : !inserter.filters.includes(itemName);
+}
+
 /** Returns true if this inserter carries `itemName` into machine `machineId`. */
 function inserterCoversInputItem(
     inserter: InserterConfig,
@@ -37,7 +43,7 @@ function inserterCoversInputItem(
         return false;
     }
     // If the inserter has explicit filters that exclude this item, it doesn't cover it
-    if (inserter.filters && inserter.filters.length > 0 && !inserter.filters.includes(itemName)) {
+    if (filtersExclude(inserter, itemName)) {
         return false;
     }
     const source = inserter.source;
@@ -83,7 +89,7 @@ function inserterCoversOutputItem(
     if (inserter.source.type !== 'machine' || inserter.source.id !== machineId) {
         return false;
     }
-    if (inserter.filters && inserter.filters.length > 0 && !inserter.filters.includes(itemName)) {
+    if (filtersExclude(inserter, itemName)) {
         return false;
     }
     if (inserter.sink.type === 'chest') {
@@ -142,7 +148,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
 
             if (!covered) {
                 const fixOptions: InserterFixOption[] = [];
-                const blocked = config.inserters.filter(ins => ins.filters?.length && !ins.filters.includes(itemName)
+                const blocked = config.inserters.filter(ins => filtersExclude(ins, itemName)
                     && inserterCoversInputItem({ ...ins, filters: undefined }, machine.id, itemName, belts, chests, machines));
                 blocked.forEach(ins => fixOptions.push({ type: 'review_filters', inserter_id: ins.id ?? config.inserters.indexOf(ins) + 1, item_name: itemName }));
                 const alreadyConnected = (type: 'machine' | 'belt' | 'chest', id: number) => blocked.some(ins => ins.source.type === type && ins.source.id === id);
@@ -183,7 +189,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
                             ins.source.id === belt.id &&
                             ins.sink.type === 'machine' &&
                             ins.sink.id === machine.id &&
-                            (!ins.filters?.length || ins.filters.includes(itemName)),
+                            !filtersExclude(ins, itemName),
                     );
                     if (feedsMachine && belt.lanes.length < 2 && !beltCoversItem(belt, itemName)) {
                         fixOptions.push({
@@ -217,7 +223,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
 
             if (!covered) {
                 const fixOptions: InserterFixOption[] = [];
-                const blocked = config.inserters.filter(ins => ins.filters?.length && !ins.filters.includes(itemName)
+                const blocked = config.inserters.filter(ins => filtersExclude(ins, itemName)
                     && inserterCoversOutputItem({ ...ins, filters: undefined }, machine.id, itemName, chests));
                 blocked.forEach(ins => fixOptions.push({ type: 'review_filters', inserter_id: ins.id ?? config.inserters.indexOf(ins) + 1, item_name: itemName }));
                 const alreadyConnected = (type: 'machine' | 'belt' | 'chest', id: number) => blocked.some(ins => ins.sink.type === type && ins.sink.id === id);
@@ -278,7 +284,7 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
         if (catalog !== nextCatalog) { cached.clear(); catalog = nextCatalog; }
         const routes = new Map<number, unknown[]>();
         config.inserters.forEach((inserter, index) => {
-            const route = [inserter.id ?? index + 1, inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters];
+            const route = [inserter.id ?? index + 1, inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters, inserter.filter_mode];
             const ids = new Set<number>();
             if (inserter.source.type === 'machine') ids.add(inserter.source.id);
             if (inserter.sink.type === 'machine') ids.add(inserter.sink.id);

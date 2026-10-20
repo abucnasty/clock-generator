@@ -324,7 +324,7 @@ function App() {
     const [changelogOpen, setChangelogOpen] = useState(false);
 
     // null until the engine has looked for missing inserters; until then the check catches them
-    const checkedCoverageIssues = useInserterValidation(engineConfig, isInitialized);
+    const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
@@ -517,13 +517,13 @@ function App() {
             machines: config.machines,
             machinesMax,
         }),
-        coverage: checkedCoverageIssues ?? [], chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
+        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
             ? { message: validation.message, diagnostics: validation.diagnostics }
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
-    }), [config.target_output, config.machines, config.chests, config.inserters, checkedCoverageIssues, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey]);
+    }), [config.target_output, config.machines, config.chests, config.inserters, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
 
     // set while a check Generate started runs, which goes on to generate

@@ -55,14 +55,29 @@ export function assertInserterInScope(id: number, inserter: ScopedInserter): voi
 }
 
 /**
+ * The refusal of the first inserter that is out of scope, named by its id, or null when none is. A belt pickup by a
+ * prototype or quality the model does not run at all is refused for that. The live editor shows it in place of the
+ * coverage check, as Check does.
+ */
+export function insertersScopeProblem(config: { inserters: readonly ScopedInserter[] }): string | null {
+    for (const [index, inserter] of config.inserters.entries()) {
+        const id = inserter.id ?? index + 1;
+        try {
+            const problem = pickupOutOfScopeProblem(inserter.source) ?? beltPickupKindProblem(inserter) ?? filterModeProblem(inserter);
+            if (problem) return `Inserter ${id}: ${problem}`;
+        } catch (error) {
+            return `Inserter ${id}: ${error instanceof Error ? error.message : String(error)}`;
+        }
+    }
+    return null;
+}
+
+/**
  * Refuses what is out of scope before a check that would explain the build in other terms: without the side stream
- * a side-loaded pickup lacks an ingredient, and the coverage check would ask for an inserter to bring it.
+ * a side-loaded pickup lacks an ingredient, and the coverage check would ask for an inserter to bring it; a blacklist
+ * read as the items to move leaves the rest without an inserter.
  */
 export function assertInsertersInScope(config: { inserters: readonly ScopedInserter[] }): void {
-    config.inserters.forEach((inserter, index) => {
-        const id = inserter.id ?? index + 1;
-        const problem = pickupOutOfScopeProblem(inserter.source);
-        if (problem) throw new Error(`Inserter ${id}: ${problem}`);
-        assertInserterInScope(id, inserter);
-    });
+    const problem = insertersScopeProblem(config);
+    if (problem) throw new Error(problem);
 }

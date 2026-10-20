@@ -35,7 +35,7 @@ import { itemsUnion, pruneSelection, rangeSelect } from '../utils/bulkEdit';
 import { sourceItemsOf } from '../utils/inferInserterItems';
 import { selectRowName } from '../utils/a11yLabels';
 import { describeBulkEdit, type BulkEditKind } from '../utils/undoSnapshot';
-import { removeFilterSlot, setFilterSlot, usesAutomaticFilters } from '../utils/inserterFilters';
+import { BLACKLIST_NOTE, filtersLabel, removeFilterSlot, setFilterSlot, usesAutomaticFilters, usesBlacklist } from '../utils/inserterFilters';
 import { describeEnableRule } from '../utils/enableRuleLabel';
 
 const LIST_GRID_SX = {
@@ -109,8 +109,9 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
                     <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
                         {findOption(editor.options ?? [], value.source.type, value.source.id)?.label ?? entityLabel(value.source.type, value.source.id)} → {findOption(editor.options ?? [], value.sink.type, value.sink.id)?.label ?? entityLabel(value.sink.type, value.sink.id)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">{usesAutomaticFilters(value.filters) ? 'Automatic' : 'Explicit filters'}</Typography>
+                    <Typography variant="caption" color="text.secondary">{filtersLabel(value, 'Automatic', 'Explicit filters')}</Typography>
                     {!usesAutomaticFilters(value.filters) && <Button size="small" color="inherit" sx={{ ml: 0.5, py: 0, minWidth: 0 }} onClick={() => onChange({ filters: undefined })}>Use auto</Button>}
+                    {usesBlacklist(value) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{BLACKLIST_NOTE}</Typography>}
                 </Box>
                 <Box data-row-first="" sx={{ minWidth: 0, '@container filter-row (max-width: 500px)': { gridColumn: 2 } }}>
                     <FilterSlotSelector filters={value.filters} inferredFilters={filterItems} itemNames={editor.itemNames}
@@ -152,7 +153,7 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
                                 setRuleRevision(previous => previous + 1);
                             }} />
                     }]} summary={<Typography variant="body2">
-                        Stack {effectiveInserterStackSize(value)}{value.stack_size === undefined ? ' (automatic)' : ' (explicit)'} · Filters: {usesAutomaticFilters(value.filters) ? 'Auto' : 'Explicit'}{filterItems.length ? ` (${filterItems.map(itemLabel).join(', ')})` : ' (none)'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
+                        Stack {effectiveInserterStackSize(value)}{value.stack_size === undefined ? ' (automatic)' : ' (explicit)'} · Filters: {filtersLabel(value, 'Auto', 'Explicit')}{filterItems.length ? ` (${filterItems.map(itemLabel).join(', ')})` : ' (none)'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
                         {value.source.type === 'belt' && value.source.near_lane !== undefined && ` · Nearest lane ${value.source.near_lane}`}
                         {value.prototype !== undefined && ` · ${inserterTimingLabels(value).type}`}
                         {value.quality !== undefined && ` · ${inserterTimingLabels(value).quality}`}

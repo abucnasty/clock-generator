@@ -615,3 +615,37 @@ describe('updateInserters', () => {
         expect(after.inserters[1]).toBe(before.inserters[1]);
     });
 });
+
+describe('a captured blacklist', () => {
+    /** The form with its first inserter's filters captured as a blacklist of iron plates */
+    const blacklisted = () => {
+        const before = form();
+        before.inserters[0] = { ...before.inserters[0], filters: ['iron-plate'], filter_mode: 'blacklist' };
+        return before;
+    };
+
+    it('loses its mode with its filters when the row goes back to automatic filters', () => {
+        const before = blacklisted();
+        for (const filters of [undefined, []]) {
+            const after = edits.updateInserter(before, 0, { filters });
+            expect(after.inserters[0]).not.toHaveProperty('filter_mode');
+            // filters picked by hand afterwards are the items to move, not a blacklist the engine refuses
+            expect(edits.updateInserter(after, 0, { filters: ['iron-gear-wheel'] }).inserters[0]).not.toHaveProperty('filter_mode');
+        }
+        expect(before.inserters[0].filter_mode).toBe('blacklist');
+    });
+
+    it('loses its mode with its filters in a bulk edit back to automatic filters', () => {
+        const before = blacklisted();
+        const after = edits.updateInserters(before, [before.inserters[0]._uuid, before.inserters[1]._uuid], { filters: undefined });
+        expect(after.inserters[0]).not.toHaveProperty('filter_mode');
+        expect(after.inserters[0]).not.toHaveProperty('filters');
+    });
+
+    it('keeps its mode while it still names items, so it stays refused as captured', () => {
+        const before = blacklisted();
+        expect(edits.updateInserter(before, 0, { filters: ['iron-plate', 'copper-plate'] }).inserters[0].filter_mode).toBe('blacklist');
+        expect(edits.updateInserters(before, [before.inserters[0]._uuid], { filters: ['copper-plate'] }).inserters[0].filter_mode).toBe('blacklist');
+        expect(edits.updateInserter(before, 0, { stack_size: 4 }).inserters[0].filter_mode).toBe('blacklist');
+    });
+});

@@ -97,20 +97,7 @@ const MOVING_PICKUP_FEATURE: SidecarFeature = {
         && "type" in inserter.source && inserter.source.type === "belt"),
     missing: () => "Physical belt pickup geometry was not exported. Update Sidecar and recapture these inputs; a straight-belt default does not establish their support.",
 };
-/**
- * Before 0.11.0 every inserter was exported without its prototype, quality and filter mode, so it ran as a legendary
- * stack inserter and a blacklist as the items to move. Without the notice such a capture could not be told from one of
- * a legendary stack inserter, which an inserter without a prototype also is.
- */
-const INSERTER_IDENTITY_FEATURE: SidecarFeature = {
-    name: "inserter-identity", since: "0.11.0",
-    appliesTo: input => (input.inserters ?? []).some(inserter => typeof inserter === "object" && inserter !== null
-        && !("prototype" in inserter)),
-    missing: () => "Inserter kind, quality and filter mode were not exported, so every inserter is read as a legendary "
-        + "stack inserter and its filters as the items it moves. Update Sidecar and recapture these inputs; updating the "
-        + "mod alone does not update a saved capture.",
-};
-export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE, INSERTER_IDENTITY_FEATURE];
+export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE];
 
 /** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
 const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";
@@ -139,8 +126,21 @@ const pickupLayoutDeclarationStep: ImportStep = input => (input.inserters ?? [])
         && (!("model_version" in capture) || capture.model_version === 1 || !("pickup_layout" in source));
 }) ? Option.some("Underground pickup layout was not captured. Update Sidecar and recapture these inputs before generation; half-tile reach cannot identify the approach.") : Option.none();
 
+/**
+ * A Sidecar export whose inserters have no prototype: every inserter ran as a legendary stack inserter, a blacklist as
+ * the items to move. Told by what the export holds, not its version: development builds of 0.11.0 exported none either.
+ * Without the notice such a capture could not be told from one of legendary stack inserters.
+ */
+const inserterIdentityDeclarationStep: ImportStep = input => (input.inserters ?? []).some(inserter =>
+    typeof inserter === "object" && inserter !== null && !("prototype" in inserter))
+    ? Option.some("Inserter kind, quality and filter mode were not exported, so every inserter is read as a legendary "
+        + "stack inserter and its filters as the items it moves. Update Sidecar and recapture these inputs; updating the "
+        + "mod alone does not update a saved capture.")
+    : Option.none();
+
 export const SIDECAR_IMPORT_PIPELINE: ImportPipeline = ImportPipeline
-    .of(...SIDECAR_FEATURES.map(sidecarFeatureStep), pickupCaptureDeclarationStep, pickupLayoutDeclarationStep)
+    .of(...SIDECAR_FEATURES.map(sidecarFeatureStep), pickupCaptureDeclarationStep, pickupLayoutDeclarationStep,
+        inserterIdentityDeclarationStep)
     .otherwise(newerSidecarStep);
 
 /**
