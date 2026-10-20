@@ -357,7 +357,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             // what is out of scope is refused before coverage, as Check does: read as built, a blacklist or a side stream
             // would be explained as a missing inserter
             const refusal = clockGenerator.insertersScopeProblem(query.config);
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal };
+            const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config));
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);

@@ -89,6 +89,8 @@ export {
     assertInserterCoverage,
 } from './config/inserter-coverage-validator';
 export { insertersScopeProblem } from './config/inserter-scope';
+export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/pickup-calibration';
+export type { UncalibratedBeltPickup } from './config/pickup-calibration';
 
 // ============================================================================
 // Blueprint Generation

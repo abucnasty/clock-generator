@@ -70,7 +70,10 @@ supply. [Belt pickup logic](../src/control-logic/inserter/modes/pickup/belt-pick
 simulation or extra search dimension is involved.
 
 Calibration: Factorio 2.1.21, legendary stack inserters, four-item belt stacks, turbo/express belts, and pickups
-from both sides of an eastward belt. Same-item probes checked 5,268 uninterrupted hands across 78 captures,
+from both sides of an eastward belt. Belt pickup timing is calibrated with 16-item hands on four-item belt stacks
+only: pickup from one- to three-item stacks was never measured, and the 8- and 12-item hands of the same-item probes
+are seeded checks on moving turbo and express belts. Both are [Not tested](belt-pickup/experiments.md#belt-stack-sizes-and-hand-sizes);
+the generator warns about such a pickup and does not refuse it (follow-up F7). Same-item probes checked 5,268 uninterrupted hands across 78 captures,
 including hand sizes 8/12/16, interrupted windows and staggered turbo lanes; subsequent grabs and lane contents
 matched when seeded with the observed first grab, remaining stacks and phases. Game regressions compare actual
 simulator grabs and default-clock throughput/recovery on the [same-item fixtures](../tests/game/mechanics/belt-pickup/fixtures/same-item),

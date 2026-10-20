@@ -16,6 +16,12 @@ interface ScopedInserter {
 /** The quality of the only inserter whose belt pickup timing is calibrated, the legendary stack inserter */
 const BELT_PICKUP_QUALITY = "legendary";
 
+/** Whether an inserter is the legendary stack inserter, the only one allowed to pick up from a belt (the default) */
+export function isLegendaryStackInserter(inserter: { prototype?: string; quality?: string }): boolean {
+    return (inserter.prototype ?? InserterType.STACK_INSERTER) === InserterType.STACK_INSERTER
+        && (inserter.quality ?? BELT_PICKUP_QUALITY) === BELT_PICKUP_QUALITY;
+}
+
 /**
  * The refusal of a belt pickup by any inserter but the legendary stack inserter, null for any other inserter. Belt
  * pickup timing was calibrated on the legendary stack inserter only (follow-up F7); other kinds and qualities keep
@@ -23,10 +29,9 @@ const BELT_PICKUP_QUALITY = "legendary";
  * not run at all is refused for that instead.
  */
 function beltPickupKindProblem(inserter: ScopedInserter): string | null {
-    if (inserter.source.type !== "belt") return null;
+    if (inserter.source.type !== "belt" || isLegendaryStackInserter(inserter)) return null;
     const prototype = inserter.prototype ?? InserterType.STACK_INSERTER;
     const quality = inserter.quality ?? BELT_PICKUP_QUALITY;
-    if (prototype === InserterType.STACK_INSERTER && quality === BELT_PICKUP_QUALITY) return null;
     assertSupportedInserterKind(prototype, quality);
     const kind = `${quality} ${prototype}`;
     return `picking up from a belt with ${/^[aeiou]/.test(kind) ? "an" : "a"} ${kind} is not supported yet: belt pickup timing `

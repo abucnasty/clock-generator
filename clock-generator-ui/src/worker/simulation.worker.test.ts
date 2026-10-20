@@ -159,3 +159,47 @@ it('keeps a captured inserter kind, quality and filter mode through paste, save 
         machines: blacklist.machines, chestIssues: [], coverageText: () => '', failure: { message: (checked as { message: string }).message } }))
         .toHaveLength(1);
 });
+
+it('warns live of a belt pickup whose timing is not tested, as generation logs it, and Check and generation go on', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    /** A gear assembler fed by a legendary stack inserter with its full hand, from a belt of the given stack size */
+    const gears = (stack_size: number) => ({
+        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
+        inserters: [
+            { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
+            { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 } },
+        ],
+        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size }] }],
+        chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
+    } as Config);
+    const live = async (config: Config) => {
+        const answer = await send({ type: 'query', requestId: 60, query: { kind: 'inserter-coverage', config } });
+        return (answer as { answer: LiveCoverage }).answer;
+    };
+
+    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null });
+    const warning = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
+        + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
+        + 'game, so the clock may not match the game.';
+    const untested = await live(gears(2));
+    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning });
+    expect(buildValidationIssues({ fieldProblems: [], coverage: untested.issues, scopeRefusal: untested.refusal, pickupNotTested: untested.pickupNotTested,
+        chests: [], inserters: [], machines: gears(2).machines, chestIssues: [], coverageText: () => '' })
+        .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
+        .toEqual([{ source: 'calibration', severity: 'warning', blocksGeneration: false, text: warning }]);
+
+    expect(await send({ type: 'validate', requestId: 61, config: gears(2) })).toMatchObject({ type: 'validated' });
+    const planned = await send({ type: 'plan', runId: 3, config: gears(2), debugSteps: { prepare: false, warm_up: false, simulate: false }, streamLogs: true });
+    expect(planned).toMatchObject({ type: 'primary-completed', runId: 3 });
+    const { primary } = planned as Extract<WorkerResponse, { type: 'primary-completed' }>;
+    expect(primary?.alternatives[0].insights.filter(insight => insight.id === 'belt-pickup-not-tested')).toHaveLength(1);
+    const warned = posted.flatMap(response => response.type === 'log' ? response.messages : []).filter(message => message.level === 'warn');
+    expect(warned.map(message => message.message)).toEqual([warning]);
+});

@@ -30,7 +30,7 @@ const blacklisting = (fields: object = {}): Config => ({
     belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
     chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
 } as Config);
-const refused: LiveCoverage = { issues: [], refusal: 'Inserter 2: `filter_mode` "blacklist" is refused' };
+const refused: LiveCoverage = { issues: [], refusal: 'Inserter 2: `filter_mode` "blacklist" is refused', pickupNotTested: null };
 
 /** Renders the hook, runs its effects and lets the debounced engine question go out */
 function render(config: Config) {
@@ -66,6 +66,7 @@ describe('the live connection check', () => {
         { change: 'the filter mode', fields: { filter_mode: undefined } },
         { change: 'the inserter kind', fields: { prototype: 'fast-inserter' } },
         { change: 'the quality', fields: { quality: 'rare' } },
+        { change: 'the hand', fields: { stack_size: 8 } },
     ])('shows no result checked before $change changed', async ({ fields }) => {
         stub.askEngine.mockResolvedValue(refused);
         render(blacklisting());
@@ -74,5 +75,15 @@ describe('the live connection check', () => {
         stub.askEngine.mockResolvedValue({ issues: [], refusal: null });
         expect(render(blacklisting(fields))).toBeNull();
         expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: blacklisting(fields) });
+    });
+
+    it('shows no result checked before a lane stack size changed', async () => {
+        stub.askEngine.mockResolvedValue(refused);
+        render(blacklisting());
+        await vi.runAllTimersAsync();
+        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
+        const restacked = { ...blacklisting(), belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 2 }] }] } as Config;
+        expect(render(restacked)).toBeNull();
+        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: restacked });
     });
 });

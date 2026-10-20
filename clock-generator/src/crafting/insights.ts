@@ -7,6 +7,8 @@ import { SerializableEntityStateTransitions, SerializableStateTransitionHistory 
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
 import { FactorioDataService } from "../data";
+import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPickups } from "../config/pickup-calibration";
+import type { Config } from "../config/schema";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -390,6 +392,27 @@ export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): C
             + "by their wake-ups. A build is free of the risk when each item is brought to a machine by one inserter only, or "
             + "when an inserter that shares an item brings nothing else.",
     };
+}
+
+/**
+ * That belt pickups of the build are outside what belt pickup timing was calibrated on, and which: an item taken in
+ * belt stacks other than 4 or with a hand other than 16 (follow-up F7). None when every belt pickup is inside it.
+ */
+export function beltPickupNotTestedInsights(config: Config): ClockInsight[] {
+    const pickups = uncalibratedBeltPickups(config);
+    if (pickups.length === 0) {
+        return [];
+    }
+    return [{
+        id: "belt-pickup-not-tested",
+        scope: "build",
+        title: "Not tested: belt pickup outside 16-item hands on 4-item belt stacks",
+        what: pickups.map(describeUncalibratedPickup).join(" "),
+        why: `${BELT_PICKUP_CALIBRATION}. At other belt stack sizes and hand sizes the simulator's pickup timing has not been `
+            + "compared with the game.",
+        explanation: "The clock may not match the game: its rate, stability and wake-ups are worked out from pickup timing "
+            + "never checked there.",
+    }];
 }
 
 export function clockInsights(result: BlueprintGenerationResult, holds: boolean, loop_seed_items = DEFAULT_LOOP_SEED_ITEMS): ClockInsight[] {

@@ -407,6 +407,8 @@ export type EngineQuery =
 export interface LiveCoverage {
     issues: InserterCoverageIssue[];
     refusal: string | null;
+    /** The engine's warning for belt pickups outside 16-item hands on 4-item belt stacks, which does not block generation */
+    pickupNotTested: string | null;
 }
 
 export interface EngineAnswers {
@@ -417,7 +419,8 @@ export interface EngineAnswers {
     'machine-target-rates': MachineTargetRate[];
     /**
      * The coverage of each machine, or the refusal of the first inserter that is out of scope (a belt pickup by another
-     * inserter than the legendary stack inserter, a blacklist, a side-loaded pickup) with no coverage, as Check does
+     * inserter than the legendary stack inserter, a blacklist, a side-loaded pickup) with no coverage, as Check does; and
+     * the warning for belt pickups whose timing is not tested, as generation logs it
      */
     'inserter-coverage': LiveCoverage;
     'repeated-unit-conversion': CheckedRepeatedUnitConversion;

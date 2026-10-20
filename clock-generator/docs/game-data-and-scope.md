@@ -14,3 +14,5 @@ What the generator does not model is refused by name, with where it is on the ro
 - Inserter filters that are a blacklist (`filter_mode: "blacklist"`, exported by the sidecar from 0.11.0 on): refused; `filters` are read as the items to move. Filters switched off in the game are not exported.
 - Latches and sensors switching an inserter: not modelled and not compared; such an inserter is one to clock.
 
+What the generator runs without its timing having been checked in the game is generated with a warning instead: a belt pickup from a lane whose `stack_size` is not 4, or with a hand other than 16 (an inserter's `stack_size`, or an item that stacks to less). Belt pickup timing is calibrated with 16-item hands on four-item belt stacks only (`src/config/pickup-calibration.ts`, [experiments](belt-pickup/experiments.md#belt-stack-sizes-and-hand-sizes)); the warning is in the log, among the clocks' insights and in the web form's Build validation, and measuring these is follow-up F7.
+
