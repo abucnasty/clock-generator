@@ -21,6 +21,11 @@ export function trueStartsOfRecordedMachine(
     const n = recording.sample_count;
     if (machine.samples.crafts_started !== undefined) {
         const started = machine.samples.crafts_started;
+        if (started.length !== n) {
+            // One value per sample, or the starts are read against the wrong ticks: a recording assembled or
+            // cut with crafts_started at another length is a programmer error.
+            throw new Error(`crafts_started of machine ${machine.id} holds ${started.length} values for ${n} samples`);
+        }
         return { true_starts: started.map((count, t) => t > 0 && count > started[t - 1]), method: "simulator" };
     }
     const machines = (recording.config as { machines?: { id: number; crafting_speed?: number; productivity?: number }[] }).machines ?? [];
