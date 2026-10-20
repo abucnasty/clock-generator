@@ -106,6 +106,7 @@ function createInserterStateMachine(args: {
         sourceState: source_state,
         sinkState: sink_state,
         tick_provider,
+        decider_build_order: enable_control.decider_build_order,
     });
     const pickup_mode = new InserterPickupMode(inserter_state, transfer_logic.pickup);
     const swing_mode = new InserterSwingMode();

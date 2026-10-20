@@ -22,8 +22,7 @@ export class MachineStatusPlugin implements ModePlugin<MachineMode> {
         state.startedCraftInLastTick = state.craftsStarted !== this.starts_seen;
         this.starts_seen = state.craftsStarted;
         state.outputBlockedAfterLastTick = MachineState.machineIsOutputBlocked(state);
-        state.productsTakenAsWindowOpened = false;
-        state.productsTakenAsWindowOpenedIntoAnInventory = false;
+        state.windowOpeningTakeDecider = null;
     }
 
     onTransition(fromMode: MachineMode, transition: Transition<MachineMode>): void {

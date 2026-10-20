@@ -27,7 +27,10 @@ By default every clock is selected and judged from the cold start alone, one run
 `overrides.check_start_dependence` in the config asks for it to be checked (the scripts in `clock-generator/scripts` take `START_DEPENDENCE=1`; the UI has no setting for it). Every clock is then also run, as its long run is, from:
 - the cold start with the clock standing 30, 300, 700 and 1,000 ticks into its period at the first tick (`cold+N`; the cold start itself is the 0; a clock whose period is not a whole number of ticks is tried unshifted only),
 - the cold start with the competing inserters served in ascending config ids (`ascending`),
-- the cold start with the competing inserters of each machine served in a random order, drawn from a fixed seed for the whole run, twice (`random-1`, `random-2`).
+- the cold start with the competing inserters of each machine served in a random order, drawn from a fixed seed for the whole run, twice (`random-1`, `random-2`),
+- the cold start with the clock's window deciders built in reverse order (`deciders-reversed`).
+
+Every other run takes the deciders in the order the clock's blueprint builds them, as a build placed in one go has them. Where the window of an inserter opens with the window of the inserter that takes its machine's products, on a machine at its block, the order decides whether it takes its first items in the tick of the take or a tick later: the game updates the inserter of the last built decider first ([simulator](simulator.md), "When a waiting inserter acts"). A build put down by robots can have its deciders in any order; the reversed start turns every such pair the other way round.
 
 The ordinary clock checks include 12 clock offsets and independent moving-lane phases. A start reaches the target when the clock holds its expected output in every period of the judged part of the long run (for the cold start: all the checks of the generator). A clock that fails one of the checks that are not about the start (the one-period check, the sampled offsets or lane phases) fails from every start, even if each long run keeps up, so it is unstable and not start-dependent. The verdict of the clock from the starts:
 - **stable**: it reaches its target from every start;

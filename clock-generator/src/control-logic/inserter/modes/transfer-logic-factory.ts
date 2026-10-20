@@ -14,15 +14,17 @@ export interface InserterPickupLogicArgs {
     sinkState: EntityState;
     /** Required for timed belt stock; also lets machine output takers share turns. */
     tick_provider?: TickProvider;
+    /** Where the decider of the inserter's clock of the game stands in the order they are built, when known */
+    decider_build_order?: number;
 }
 
 function createPickup(args: InserterPickupLogicArgs): InserterTransferLogic {
-    const { inserterState, sourceState, sinkState, tick_provider } = args;
+    const { inserterState, sourceState, sinkState, tick_provider, decider_build_order } = args;
     if (EntityState.isBelt(sourceState)) {
         return new BeltPickupLogic(inserterState, sourceState, sinkState, tick_provider);
     }
     if (EntityState.isMachine(sourceState)) {
-        return new MachinePickupLogic(inserterState, sourceState, sinkState, tick_provider);
+        return new MachinePickupLogic(inserterState, sourceState, sinkState, tick_provider, decider_build_order);
     }
     if (EntityState.isChest(sourceState)) {
         return new ChestPickupLogic(inserterState, sourceState, sinkState);

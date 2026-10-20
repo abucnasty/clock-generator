@@ -99,7 +99,15 @@ const EnableControlOverrideNeverSchema = z.object({
 const EnableControlOverrideClockedSchema = z.object({
     mode: z.literal(EnableControlMode.CLOCKED),
     ranges: z.array(EnableControlRangeSchema).min(1),
-    period_duration_ticks: z.number().int().positive().optional()
+    period_duration_ticks: z.number().int().positive().optional(),
+    /**
+     * Where the decider of these windows stands in the order the clock's deciders are built, 0 the first: set by the
+     * check of an exported clock, which builds them in the order of its blueprint. Of two inserters whose windows open
+     * in the same tick the game updates the one whose decider was built last first. Where it is left out on either
+     * of two such inserters, the one that waits for the other's take goes a tick after it, the later of the two ticks
+     * the game can have.
+     */
+    decider_build_order: z.number().int().nonnegative().optional(),
 });
 
 // ============================================================================

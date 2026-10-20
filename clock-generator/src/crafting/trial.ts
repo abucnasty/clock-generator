@@ -18,6 +18,7 @@ import { windowsOfInsertersFeedingTheOutputMachine } from "./candidates/output-f
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 import { canonicalVerificationJson } from "./verification-signature";
+import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider-order";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -143,7 +144,7 @@ export function runClockOnBuild(
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): TrialRun {
     const named_start = options.keep_output_buffers === true || options.start_stock !== undefined;
-    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks), { logger: quietLogger(logger), cold_start: !named_start, ...options }));
+    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, options.decider_order), { logger: quietLogger(logger), cold_start: !named_start, ...options }));
 }
 
 /** Ticks a clock is run on its own to see that the build keeps up: ten minutes of game time */
@@ -194,8 +195,8 @@ function longRunOfFreeRunningBuild(
     expected_output_items: number,
     logger: Logger,
     check_ticks: number = FREE_RUNNING_CHECK_TICKS,
-    /** How the run starts; the cold start of the staged scaffold with the default order by default */
-    start: Pick<RunOptions, "competing_takers_order"> = {},
+    /** How the run starts; the cold start of the staged scaffold with the default orders by default */
+    start: Pick<RunOptions, "competing_takers_order" | "decider_order"> = {},
 ): {
     keeps_up: boolean;
     output_items_per_period: number;
@@ -391,7 +392,7 @@ export function startDependenceOf(
     const runs = tried.map(start => {
         const standing = new Map(Array.from(windows, ([key, ranges]) =>
             [key, start.clock_shift === 0 ? ranges : rotateRanges(ranges, period - start.clock_shift % period, period)] as const));
-        const order = { competing_takers_order: start.competing_takers_order };
+        const order = { competing_takers_order: start.competing_takers_order, decider_order: start.decider_order };
         const long_run = longRunOfFreeRunningBuild(check_config, standing, period, expected_output_items, logger, FREE_RUNNING_CHECK_TICKS, order);
         const keeps_up = long_run !== null
             ? long_run.keeps_up
@@ -802,13 +803,21 @@ function buildAsBuiltConfig(
     period: number,
     /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
+    /** In what order the clock's window deciders are built: as the blueprint has them by default */
+    decider_order: DeciderOrder = "built",
 ): Config {
     const windows = new Map<string, EnableControlRange[]>();
+    const entity_registry = createEntityRegistryFromConfig(config);
     // inserters outside the plan swing on clocks that do not come from the windows of the plan
-    const inserter_clocks = unplannedInserterClocks(createEntityRegistryFromConfig(config), period, undefined, undefined, alwaysEnabledByConfig(config));
-    for (const [key, ranges] of withInserterClocks(decider_windows, inserter_clocks, period)) {
+    const inserter_clocks = unplannedInserterClocks(entity_registry, period, undefined, undefined, alwaysEnabledByConfig(config));
+    const clocked = withInserterClocks(decider_windows, inserter_clocks, period);
+    for (const [key, ranges] of clocked) {
         windows.set(key, shiftRangesForCircuitLatency(ranges, period));
     }
+    // the order the blueprint builds the deciders in, which decides which of two windows that open together goes first
+    const settled = new Map(Array.from(inserter_clocks, ([key, clock]) => [key, (clock.own_clock ? fuel_clocks?.get(key) : undefined) ?? clock] as const));
+    const built = deciderBuildOrder(clocked, entity_registry, settled);
+    const decider_build_order = decider_order === "reversed" ? reversedDeciderOrder(built) : built;
 
     const asBuiltControl = (entity_key: string, current: EnableControlOverrideConfig | undefined): EnableControlOverrideConfig => {
         // a fuel inserter is on a clock of its own, which the run makes for it from the plan like the blueprint does
@@ -818,11 +827,12 @@ function buildAsBuiltConfig(
                 mode: "CLOCKED",
                 ranges: [{ start: fuel_clock.window.start_inclusive, end: fuel_clock.window.end_inclusive }],
                 period_duration_ticks: fuel_clock.modulus,
+                decider_build_order: decider_build_order.get(entity_key),
             };
         }
         const ranges = windows.get(entity_key);
         if (ranges && ranges.length > 0) {
-            return { mode: "CLOCKED", ranges, period_duration_ticks: period };
+            return { mode: "CLOCKED", ranges, period_duration_ticks: period, decider_build_order: decider_build_order.get(entity_key) };
         }
         return current?.mode === "NEVER" ? current : { mode: "ALWAYS" };
     };

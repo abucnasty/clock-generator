@@ -115,15 +115,16 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
      *
      * An inserter whose window of a clock of the game opens in this tick shows as enabled in the tick before, and
      * waits in it: when the machine was at its block when that tick was done, the inserter is asleep on it and takes
-     * its first items a tick later, whatever the machine did in that tick. Only when the products were taken by an
-     * inserter whose window opens in this tick too does it take them in this tick. Recorded in Factorio 2.1.21:
-     * 1,158 of 1,170 a tick later where the taker was enabled before, 852 of 888 in the tick where it opened too.
-     *
-     * For an inserter that takes from a belt, that taker has to put the products into an inventory, a machine or a
-     * chest: where it puts them onto a belt, the inserter takes its first stack a tick later all the same. Recorded in
-     * Factorio 2.1.21 on windows that open with the taker's on a machine at its block (roadmap M2): a tick later in
-     * 1,327 of 1,327 where the taker drops onto a belt, in the tick in 602 of 602 where it drops into a machine or a
-     * chest, over fifteen builds; in one run of the chemical science build, 82 of 82 and 166 of 166 side by side.
+     * its first items a tick later, whatever the machine did in that tick, as where the inserter that took the
+     * products was enabled before (1,158 of 1,170 recorded in Factorio 2.1.21). Where the window of that inserter
+     * opened in this tick too, the game updates the two in the reverse of the order their deciders were built, the
+     * last built first: the inserter takes its first items in this tick when the taker's decider was built after its
+     * own, as it is updated after the take, and a tick later when it was built before (`windowOpeningTakeDecider`,
+     * `decider_build_order`). Recorded in Factorio 2.1.21 on windows that open with the taker's on a machine at its
+     * block, from a belt and from a machine, onto a belt and into a machine or a chest, in 9,189 of 9,189 over fifteen
+     * runs, each clock built in its own order, in reverse and renumbered (roadmap M3); where the drop target seemed to
+     * decide (M2) it was the order the generator builds the deciders in. Where either order is not known, a tick
+     * later.
      */
     private wokenThisTick(window_opens: boolean): boolean {
         const sink = this.sink_state;
@@ -132,14 +133,22 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         }
         const lifted = sink.outputBlockedAfterLastTick && !MachineState.machineIsOutputBlocked(sink);
         if (window_opens) {
-            const let_go = EntityState.isBelt(this.source_state) ? sink.productsTakenAsWindowOpenedIntoAnInventory
-                : sink.productsTakenAsWindowOpened;
-            return lifted && !let_go;
+            return lifted && !this.updatedAfterTheTake(sink);
         }
         if (EntityState.isBelt(this.source_state)) {
             return false;
         }
         return this.saw_sink_blocked && lifted && !actsInTheTickTheBlockIsLifted(sink);
+    }
+
+    /**
+     * The game updated this inserter after the inserter that took the sink's products as both their windows opened:
+     * the taker's decider was built after this one's
+     */
+    private updatedAfterTheTake(sink: MachineState): boolean {
+        const own = this.enable_control.decider_build_order;
+        const taker = sink.windowOpeningTakeDecider;
+        return own !== undefined && taker !== null && taker > own;
     }
 
     /** True in the tick before a window of a clock of the game opens, which the game shows the inserter enabled in */

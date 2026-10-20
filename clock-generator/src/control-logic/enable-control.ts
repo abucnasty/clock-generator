@@ -17,6 +17,13 @@ export interface EnableControl {
      */
     readonly is_game_clock?: boolean;
     /**
+     * Where the decider that enables the inserter stands in the order the clock's deciders are built, 0 the first, on
+     * a clock of the game that the check of an exported clock runs (`deciderBuildOrder`). Of two inserters whose
+     * windows open in the same tick the game updates the one whose decider was built last first. Unset where the
+     * order is not known.
+     */
+    readonly decider_build_order?: number;
+    /**
      * Used for debugging purposes to identify the control in logs.
      */
     toString?(): string;
@@ -178,12 +185,14 @@ class ClockedEnableControl implements EnableControl, Resettable {
         enabledRanges: ReadonlyArray<OpenRange>,
         tickProvider: TickProvider,
         is_game_clock?: boolean,
+        decider_build_order?: number,
     }): ClockedEnableControl {
         return new ClockedEnableControl(
             args.periodDuration,
             args.enabledRanges,
             args.tickProvider,
             args.is_game_clock ?? false,
+            args.decider_build_order,
         );
     }
     private offset = 0;
@@ -194,6 +203,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         public readonly enabledRanges: ReadonlyArray<OpenRange>,
         public readonly tickProvider: TickProvider,
         public readonly is_game_clock: boolean = false,
+        public readonly decider_build_order?: number,
     ) {
         this.windows = new ClockWindows(periodDuration.ticks, enabledRanges);
     }
