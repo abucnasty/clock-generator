@@ -115,7 +115,7 @@ its timing is not tested. Measuring them is follow-up F7.
 | --- | --- | --- | --- | --- |
 | Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested | Tested | Tested |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
-| Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested | Tested; no verified moving default when mirrored | Tested | Tested |
+| Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
 | Over-the-hood same-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
@@ -307,6 +307,20 @@ supplies, normal mirrored at both supplies, among them the fast unmirrored backe
 ticks). All nine hold their baseline natively and get back to target after every disturbance, the normal mirrored
 moving one after two short periods following the last
 ([a4 controls](../../tests/game/builds/over-hood-a4-clock-controls.json)).
+
+That left the mirrored express moving build "no recovery", which the game shared: six 112s and one 96 after each
+disturbance. Its observed windows (7 output swings, 1,120 ticks) held their first period from every lane-phase start,
+which is all the clock-only check judged of a start; run on with nothing cut, 9 of the 64 starts (the lanes about half a
+stack interval apart) repeat that same cycle, and so do all four losses from them. The input window ended 2 ticks too
+early for those starts. The game holds 6 a second with exact recovery at 5, 6 and 8 output swings too, the counts the
+model calls stable, and moves 320 to 336 a period unclocked, as the model does. Since A5 every clock-only check made
+while observed windows are made judges each moving lane-phase start over its repeating cycle, as the loss report's run
+with nothing cut is judged: their padding search then takes 4 ticks instead of 1, and the build gets observed windows
+at 7 output swings with the input window 3 ticks longer, which hold **112 in all 63 baseline periods and exactly 112
+after all three disturbances** in the game. The unmirrored express moving clock's input window grows a tick and holds
+96 throughout, as before ([a5 controls](../../tests/game/builds/over-hood-a5-clock-controls.json)). The check adds
+about 1 to 2% to generation in total; builds with moving pickups whose observed windows are searched take longer, up
+to about twice as long on two of the samples (3 to 9 seconds each).
 
 **Capture.** Sidecar's saved support/model metadata distinguishes supported, unsupported and legacy inputs.
 Updating software never promotes an old unsupported capture; recapture is required. See the
