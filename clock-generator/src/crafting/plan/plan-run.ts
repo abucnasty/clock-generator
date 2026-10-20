@@ -49,7 +49,7 @@ import { factorioDrillState, factorioInserterState, factorioMachineState } from 
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
-import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, beltPickupSlackHelps, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
 /**
  * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
@@ -1081,6 +1081,8 @@ interface PlannedClock {
     belt_pickup_slack_left_out: boolean;
     /** Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient (see fuelHandRoomTicks) */
     fuel_hand_room: Map<string, number>;
+    /** The clock-only check the slack decision already ran on exactly `windows`, which checkedClock reuses */
+    as_built_run: AsBuiltRun | null;
 }
 
 /**
@@ -1094,8 +1096,10 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
     // on backed-up belts a clock is made without the slack, whatever the alternative asks for
     const backed_up_belts = config.overrides?.backed_up_belts === true;
     const belt_pickup_slack_mode = backed_up_belts ? "never" : options.belt_pickup_slack ?? "auto";
-    const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (belt_pickup_slack_mode === "auto"
-        && beltPickupSlackHelps(config, unslacked_windows, full_belt_pickup_slack, duration.ticks, total_expected_output, logger));
+    const slack_trial = belt_pickup_slack_mode === "auto"
+        ? beltPickupSlackTrial(config, unslacked_windows, full_belt_pickup_slack, duration.ticks, total_expected_output, logger)
+        : null;
+    const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (slack_trial !== null && slack_trial.helps);
     const belt_pickup_slack = use_belt_pickup_slack ? full_belt_pickup_slack : new Map<string, number>();
     // the slack only lengthens a window there is, and only in a period of whole ticks (see withBeltPickupSlack)
     const belt_fed_with_windows = Array.from(unslacked_windows)
@@ -1113,8 +1117,12 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
     const slack_ticks = Array.from(new Set(Object.values(applied_belt_pickup_slack))).sort((a, b) => a - b);
     const belt: ClockBelt | null = belt_fed_with_windows.length === 0 ? null
         : slack_ticks.length > 0 ? { kind: "moving", slack_ticks } : { kind: "backed_up" };
-    const windows = withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
-    return { windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room };
+    // the slack decision already checked the slacked windows: hand its run over, with the exact map it ran on
+    // (with the slack in use the fuel hand room is empty, so these are the windows the clock gets)
+    const verified = use_belt_pickup_slack ? slack_trial?.verified ?? null : null;
+    const windows = verified !== null ? verified.windows
+        : withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
+    return { windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room, as_built_run: verified?.run ?? null };
 }
 
 /** What a clock's export carries beyond the plan and its windows */
@@ -1334,8 +1342,10 @@ export function checkedClock(
     let output_feeders: BlueprintGenerationResult["output_feeders"];
     let item_names: ReadonlyMap<string, string> | undefined;
     if (options.verify_as_built ?? false) {
-        const as_built_run = runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
-            (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`));
+        // the identical check may have run for the slack decision on exactly these windows (see clockOfPlan)
+        const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
+            : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
+                (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`));
         let kept_run = as_built_run;
         if (stability_check.holds && as_built_run.check.holds) {
             const fed = trialWithOutputFeeders(config, windows, duration.ticks, new Set(all_output_inserters.map(os => os.inserter.source.entity_id.id)),

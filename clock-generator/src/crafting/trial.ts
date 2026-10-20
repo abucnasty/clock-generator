@@ -382,7 +382,7 @@ export function runAsBuiltCheck(
     start_phases: number = AS_BUILT_START_PHASES,
     report?: (checked: number, total: number) => void,
     long_run_ticks: number = FREE_RUNNING_CHECK_TICKS,
-): { result: TrialRun; check: AsBuiltStabilityCheck; /** The long run of the check, when it made one */ stock?: StockRecording } {
+): AsBuiltRun {
     const step = Math.max(1, Math.floor(period / start_phases));
     const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
     const result = runClockOnBuild(config, decider_windows, period, logger);
@@ -498,33 +498,55 @@ export function trialWithOutputFeeders(
     };
 }
 
+/** What runAsBuiltCheck yields */
+export interface AsBuiltRun {
+    result: TrialRun;
+    check: AsBuiltStabilityCheck;
+    /** The long run of the check, when it made one */
+    stock?: StockRecording;
+}
+
+export interface BeltPickupSlackDecision {
+    helps: boolean;
+    /**
+     * The check that decided for the slack, with the exact windows it ran on: a caller checking the same windows
+     * reuses it instead of running the identical check again (see checkedClock). Null when no check ran, or when
+     * the slack is left out.
+     */
+    verified: { windows: Map<string, OpenRange[]>; run: AsBuiltRun } | null;
+}
+
 /**
  * Slack lets a belt-fed inserter finish a late pickup, but in a short period it can also leave time for an
- * extra swing when the machine is not at its insertion limit. False only when the clock-only check passes
- * without the slack but not with it, or lands further from the expected output with it.
+ * extra swing when the machine is not at its insertion limit. `helps` is false only when the clock-only check
+ * passes without the slack but not with it, or lands further from the expected output with it. The config is
+ * checked with `derive_clock_windows` off, which only `generateClockForConfig` reads: the run is the same as
+ * on the config as given.
  */
-export function beltPickupSlackHelps(
+export function beltPickupSlackTrial(
     config: Config,
     windows: Map<string, OpenRange[]>,
     slack: Map<string, number>,
     period: number,
     expected_output: number,
     logger: Logger,
-): boolean {
+): BeltPickupSlackDecision {
     if (Array.from(slack.values()).every(ticks => ticks === 0) || !Number.isInteger(period)) {
-        return true;
+        return { helps: true, verified: null };
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const with_slack = runAsBuiltCheck(base_config, withBeltPickupSlack(windows, slack, period), period, logger).check;
-    if (with_slack.holds) {
-        return true;
+    const slacked = withBeltPickupSlack(windows, slack, period);
+    const with_slack = runAsBuiltCheck(base_config, slacked, period, logger);
+    if (with_slack.check.holds) {
+        return { helps: true, verified: { windows: slacked, run: with_slack } };
     }
     const without_slack = runAsBuiltCheck(base_config, windows, period, logger).check;
-    logger.log(`Belt pickup slack: clock-only actual with=${with_slack.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
+    logger.log(`Belt pickup slack: clock-only actual with=${with_slack.check.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
     if (without_slack.holds) {
-        return false;
+        return { helps: false, verified: null };
     }
-    return Math.abs(with_slack.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);
+    const helps = Math.abs(with_slack.check.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);
+    return { helps, verified: helps ? { windows: slacked, run: with_slack } : null };
 }
 
 /**
