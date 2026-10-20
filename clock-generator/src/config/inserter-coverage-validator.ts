@@ -20,12 +20,12 @@ function chestSuppliesItem(chest: ChestConfig, itemName: string): boolean {
     return chest.item_filter.some((f) => f.item_name === itemName && f.request_count > 0);
 }
 
-function chestAcceptsItem(chest: ChestConfig, itemName: string): boolean {
+export function chestAcceptsItem(chest: ChestConfig, itemName: string): boolean {
     return chest.type === 'infinity-chest' ? chest.remove_unfiltered_items === true || chest.item_filter.some(filter => filter.item_name === itemName) : chestSuppliesItem(chest, itemName);
 }
 
 /** Whether the inserter's own filters keep it from moving the item: a whitelist without it, or a blacklist with it */
-function filtersExclude(inserter: InserterConfig, itemName: string): boolean {
+export function filtersExclude(inserter: InserterConfig, itemName: string): boolean {
     if (!inserter.filters?.length) return false;
     return inserter.filter_mode === 'blacklist' ? inserter.filters.includes(itemName) : !inserter.filters.includes(itemName);
 }

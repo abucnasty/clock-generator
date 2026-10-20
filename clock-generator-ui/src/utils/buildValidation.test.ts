@@ -80,3 +80,15 @@ it('collects field problems before coverage, retaining engine order, game names 
     ]);
     expect(issues.slice(2).map(issue => issue.coverage)).toEqual([output, input]);
 });
+
+it('lists the engine warning for a belt pickup whose timing is not tested as advice that never blocks generation', () => {
+    const text = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks.';
+    const input = { fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 3 }], chestIssues: [], coverageText: () => '' };
+    expect(buildValidationIssues({ ...input, pickupNotTested: text })).toEqual([{ id: 'belt-pickup-not-tested', text, severity: 'warning',
+        blocksGeneration: false, source: 'calibration', target: { kind: 'validation-issue', id: 'belt-pickup-not-tested' } }]);
+    expect(buildValidationIssues({ ...input, pickupNotTested: null })).toEqual([]);
+    // beside an error, the error still blocks and the warning still does not
+    const both = buildValidationIssues({ ...input, pickupNotTested: text, failure: { message: 'Independent simulation refusal' } });
+    expect(both.map(({ source, blocksGeneration }) => ({ source, blocksGeneration })))
+        .toEqual([{ source: 'engine', blocksGeneration: true }, { source: 'calibration', blocksGeneration: false }]);
+});

@@ -12,7 +12,8 @@ export interface BuildValidationIssue extends Problem {
     id: string;
     severity: 'error' | 'warning';
     blocksGeneration: boolean;
-    source: 'field' | 'coverage' | 'chest' | 'engine';
+    /** 'calibration': the engine's warning that a belt pickup's timing is not tested, shown as plain text */
+    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration';
     fieldTarget?: FocusTarget;
     coverage?: InserterCoverageIssue;
     chest?: OutputChestIssue;
@@ -38,6 +39,8 @@ interface Input {
     coverageText: (issue: InserterCoverageIssue) => string;
     /** The live refusal of an inserter that is out of scope, shown in place of its coverage */
     scopeRefusal?: string | null;
+    /** The live warning for belt pickups outside 16-item hands on 4-item belt stacks: advice, never blocking */
+    pickupNotTested?: string | null;
     failure?: { message: string; diagnostics?: ValidationDiagnostic[] };
 }
 
@@ -87,6 +90,11 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
     if (input.failure && !input.failure.diagnostics?.length && input.failure.message !== input.scopeRefusal) {
         const id = 'engine-check';
         add({ id, text: input.failure.message, severity: 'error', blocksGeneration: true, source: 'engine',
+            target: { kind: 'validation-issue', id } });
+    }
+    if (input.pickupNotTested) {
+        const id = 'belt-pickup-not-tested';
+        add({ id, text: input.pickupNotTested, severity: 'warning', blocksGeneration: false, source: 'calibration',
             target: { kind: 'validation-issue', id } });
     }
     return [...found.values()];

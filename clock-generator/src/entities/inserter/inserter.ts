@@ -56,7 +56,7 @@ export function handSizeFor(inserter: Inserter, item_name: ItemName): number {
     return inserter.hand_sizes?.get(item_name) ?? inserter.metadata.stack_size;
 }
 
-function effectiveHandSize(inserter_stack_size: number, item_name: ItemName, belt_lane_stack_size?: number): number {
+export function effectiveHandSize(inserter_stack_size: number, item_name: ItemName, belt_lane_stack_size?: number): number {
     let item_stack_size = Number.POSITIVE_INFINITY;
     try {
         item_stack_size = FactorioDataService.findItemOrThrow(item_name).stack_size;

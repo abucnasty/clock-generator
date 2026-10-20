@@ -1,12 +1,13 @@
 import assert from "../common/assert";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
+import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
 import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
+import { backpressureLossInsight, beltPickupNotTestedInsights, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
@@ -569,6 +570,7 @@ function runAlternative(
         ...clockInsights(result, held, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS),
         ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
         ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
+        ...beltPickupNotTestedInsights(config),
         ...(start_dependence_note !== null && start_dependence !== null ? [startDependenceInsight(start_dependence_note, start_dependence)] : []),
     ];
     const period = result.simulation_duration.ticks;
@@ -625,6 +627,7 @@ export function planClockAlternatives(
     on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
 ): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
+    warnUncalibratedBeltPickups(config, logger);
     const definition = primaryDefinition(config, options, options.on_progress_detail);
     const result = definition.run();
     const context: ClockAlternativeContext = {

@@ -28,6 +28,14 @@ The [glossary](glossary.md) illustrates each approach. This field records geomet
 [arm-reach model](../simulator.md#picking-up-from-moving-belts-and-underground-endpoints) also uses it to place
 each stack relative to the inserter.
 
+## Belt stack size
+
+Sidecar exports each lane's `stack_size` as the larger of 1 + the force's belt stack size bonus and the largest
+stack it sees on the lane. Belt pickup timing is calibrated on four-item stacks only, and the generator warns about
+a pickup from a lane whose `stack_size` is not 4 ([Not tested](experiments.md#belt-stack-sizes-and-hand-sizes)). With
+the belt stacking research done, the bonus alone makes a lane 4, so a belt that carries unstacked items exports as
+four-item stacks and the warning cannot see it. A lane exports below 4 only while that research is not done.
+
 ## Persistent per-pickup status
 
 Sidecar exports `source.pickup_capture` for each belt-fed inserter. It stays with that source through import,

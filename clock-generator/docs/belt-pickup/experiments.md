@@ -44,8 +44,10 @@ becomes **Tested**. Plain **Tested** records coverage with no additional disagre
 imply every model detail was compared.
 Normal means the standard transport-belt speed.
 Offline expectations and classifier-only checks do not count as native timing coverage. The speed backfill uses
-16-item hands and four-item belt stacks. Historical smaller-hand/interrupted-window/staggered-lane controls
-are not an exhaustive cross-speed matrix.
+16-item hands and four-item belt stacks, and so does every native clock control: belt pickup timing is calibrated
+there only. Historical smaller-hand/interrupted-window/staggered-lane controls are not an exhaustive cross-speed
+matrix. Pickup from one- to three-item belt stacks and with hands other than 16 is **Not tested**
+([below](#belt-stack-sizes-and-hand-sizes)).
 
 ### Side pickups
 
@@ -90,6 +92,22 @@ has 84 baseline controls: 48 compact cases across all four speeds and 36 origina
 turbo/express/fast. Another 174 moving controls cover the observed aligned arrival phases at both mirroring
 states with original/swapped/same-item lanes. Normal's original seven-tile tunnel exceeds its range.
 These are 258 first-hand controls; independent lane alignment and repeated throughput remain separate questions.
+
+### Belt stack sizes and hand sizes
+
+Every pickup row above is a legendary stack inserter with a 16-item hand on four-item belt stacks. Drops onto a belt
+were measured at stack sizes 1–4 ([below](#generated-clocks-and-drops)); pickups were not.
+
+| Scenario | Turbo | Express | Fast | Normal (transport) |
+| --- | --- | --- | --- | --- |
+| Pickup from 1-, 2- or 3-item belt stacks, any geometry and supply | Not tested | Not tested | Not tested | Not tested |
+| Pickup with a hand other than 16 (an inserter `stack_size`, or an item that stacks to less), any geometry and supply | Not tested | Not tested | Not tested | Not tested |
+
+The same-item probes' 8- and 12-item hands ([calibration](../simulator.md#picking-up-from-moving-belts-and-underground-endpoints))
+matched subsequent grabs when seeded with the observed first grab, on moving turbo and express belts of four-item
+stacks; they cover no other speed, no backed-up supply and no clock, so these rows stay Not tested. A config with
+such a pickup is generated, not refused: the log, the clocks' insights and the web form's Build validation warn that
+its timing is not tested. Measuring them is follow-up F7.
 
 ### Generated clocks and drops
 
