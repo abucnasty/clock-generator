@@ -396,7 +396,7 @@ export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): C
 
 /**
  * That belt pickups of the build are outside what belt pickup timing was calibrated on, and which: an item taken in
- * belt stacks other than 4 or with a hand other than 16 (C6). None when every belt pickup is inside it.
+ * belt stacks other than 4 or with a hand other than 16 (follow-up F7). None when every belt pickup is inside it.
  */
 export function beltPickupNotTestedInsights(config: Config): ClockInsight[] {
     const pickups = uncalibratedBeltPickups(config);

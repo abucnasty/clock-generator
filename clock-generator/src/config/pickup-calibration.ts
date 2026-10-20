@@ -66,9 +66,10 @@ function uncalibratedPickupsOf(config: Config, inserter: InserterConfig, inserte
 
 /**
  * Every belt pickup of a config whose timing is not tested: an item a belt-fed inserter takes in belt stacks other than
- * 4 or with a hand other than 16 (C6). Only the legendary stack inserter is read, the one inserter allowed to pick up
- * from a belt; the others are refused for that. Read from the config alone, so that the live editor can show it while
- * the build is half made: an inserter whose recipe, fuel or item the data does not know is left out, never thrown on.
+ * 4 or with a hand other than 16 (follow-up F7). Only the legendary stack inserter is read, the one inserter allowed to
+ * pick up from a belt; the others are refused for that. Read from the config alone, so that the live editor can show it
+ * while the build is half made: an inserter whose recipe, fuel or item the data does not know is left out, never thrown
+ * on.
  */
 export function uncalibratedBeltPickups(config: Config): UncalibratedBeltPickup[] {
     return config.inserters.flatMap((inserter, index) => {
