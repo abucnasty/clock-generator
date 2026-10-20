@@ -15,6 +15,7 @@ import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, 
 import { windowsOfInsertersFeedingTheOutputMachine } from "./candidates/output-feeders";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
+import { canonicalVerificationJson } from "./verification-signature";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -381,10 +382,16 @@ export function runAsBuiltCheck(
     start_phases: number = AS_BUILT_START_PHASES,
     report?: (checked: number, total: number) => void,
     long_run_ticks: number = FREE_RUNNING_CHECK_TICKS,
-): { result: TrialRun; check: AsBuiltStabilityCheck; /** The long run of the check, when it made one */ stock?: StockRecording } {
+    /**
+     * A check that already PASSED on exactly these windows, config and period: its unshifted run and pickup phase
+     * starts are taken over instead of being run again, and so is its long run where it made one as long as this
+     * check's. The start phases are still this check's own: their step differs with the count of phases.
+     */
+    passed?: { run: AsBuiltRun; long_run_ticks: number },
+): AsBuiltRun {
     const step = Math.max(1, Math.floor(period / start_phases));
     const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
-    const result = runClockOnBuild(config, decider_windows, period, logger);
+    const result = passed !== undefined ? passed.run.result : runClockOnBuild(config, decider_windows, period, logger);
     const check: AsBuiltStabilityCheck = {
         holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
@@ -395,6 +402,11 @@ export function runAsBuiltCheck(
     report?.(1, total);
     let stock: StockRecording | undefined;
     if (check.holds) for (const phases of movingPickupPhaseStarts(config)) {
+        if (passed !== undefined) {
+            // the handed-over check asked from this start and it held
+            check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
+            continue;
+        }
         const shifted = runClockOnBuild(config, decider_windows, period, logger,
             {moving_pickup_phases: phases, factorio_states: false});
         check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
@@ -408,16 +420,24 @@ export function runAsBuiltCheck(
         }
     }
     if (check.holds) {
-        // no long run when none is asked for (a quick trial of a search)
-        const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks) : null;
-        stock = long_run?.stock;
-        if (stock) {
-            // judged as the long run is: what follows its start-up
-            check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
-        }
-        if (long_run && !long_run.keeps_up) {
-            check.holds = false;
-            check.actual_output_items = long_run.output_items_per_period;
+        if (passed !== undefined && passed.long_run_ticks === long_run_ticks) {
+            // the handed-over check made this long run and the build kept up in it
+            stock = passed.run.stock;
+            if (stock) {
+                check.wake_ups = passed.run.check.wake_ups;
+            }
+        } else {
+            // no long run when none is asked for (a quick trial of a search)
+            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks) : null;
+            stock = long_run?.stock;
+            if (stock) {
+                // judged as the long run is: what follows its start-up
+                check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+            }
+            if (long_run && !long_run.keeps_up) {
+                check.holds = false;
+                check.actual_output_items = long_run.output_items_per_period;
+            }
         }
     }
     if (!check.holds) {
@@ -497,33 +517,55 @@ export function trialWithOutputFeeders(
     };
 }
 
+/** What runAsBuiltCheck yields */
+export interface AsBuiltRun {
+    result: TrialRun;
+    check: AsBuiltStabilityCheck;
+    /** The long run of the check, when it made one */
+    stock?: StockRecording;
+}
+
+export interface BeltPickupSlackDecision {
+    helps: boolean;
+    /**
+     * The check that decided for the slack, with the exact windows it ran on: a caller checking the same windows
+     * reuses it instead of running the identical check again (see checkedClock). Null when no check ran, or when
+     * the slack is left out.
+     */
+    verified: { windows: Map<string, OpenRange[]>; run: AsBuiltRun } | null;
+}
+
 /**
  * Slack lets a belt-fed inserter finish a late pickup, but in a short period it can also leave time for an
- * extra swing when the machine is not at its insertion limit. False only when the clock-only check passes
- * without the slack but not with it, or lands further from the expected output with it.
+ * extra swing when the machine is not at its insertion limit. `helps` is false only when the clock-only check
+ * passes without the slack but not with it, or lands further from the expected output with it. The config is
+ * checked with `derive_clock_windows` off, which only `generateClockForConfig` reads: the run is the same as
+ * on the config as given.
  */
-export function beltPickupSlackHelps(
+export function beltPickupSlackTrial(
     config: Config,
     windows: Map<string, OpenRange[]>,
     slack: Map<string, number>,
     period: number,
     expected_output: number,
     logger: Logger,
-): boolean {
+): BeltPickupSlackDecision {
     if (Array.from(slack.values()).every(ticks => ticks === 0) || !Number.isInteger(period)) {
-        return true;
+        return { helps: true, verified: null };
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const with_slack = runAsBuiltCheck(base_config, withBeltPickupSlack(windows, slack, period), period, logger).check;
-    if (with_slack.holds) {
-        return true;
+    const slacked = withBeltPickupSlack(windows, slack, period);
+    const with_slack = runAsBuiltCheck(base_config, slacked, period, logger);
+    if (with_slack.check.holds) {
+        return { helps: true, verified: { windows: slacked, run: with_slack } };
     }
     const without_slack = runAsBuiltCheck(base_config, windows, period, logger).check;
-    logger.log(`Belt pickup slack: clock-only actual with=${with_slack.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
+    logger.log(`Belt pickup slack: clock-only actual with=${with_slack.check.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
     if (without_slack.holds) {
-        return false;
+        return { helps: false, verified: null };
     }
-    return Math.abs(with_slack.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);
+    const helps = Math.abs(with_slack.check.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);
+    return { helps, verified: helps ? { windows: slacked, run: with_slack } : null };
 }
 
 /**
@@ -626,4 +668,30 @@ export function backpressureLossVerdictOf(
         logger.log(`Backpressure loss could not be tried: ${error instanceof Error ? error.message : error}`);
         return null;
     }
+}
+
+/**
+ * Identity of a candidate's verification, not its planning strategy or export object order.
+ * Recovery forces the actual output swing count and turns off window derivation. All physical config, including
+ * supply, geometry, seeds, entity order and overrides, stays in the key, along with the observed clock-only check.
+ */
+export function clockVerificationSignature(config: Config, result: BlueprintGenerationResult): string {
+    const period = result.simulation_duration.ticks;
+    const windows = new Map(Object.entries(result.clock_windows).map(([id, ranges]) =>
+        [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const verification_config = buildAsBuiltConfig({ ...config, overrides: { ...config.overrides,
+        derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } }, windows, period);
+    const fully_controlled = verification_config.inserters.every(inserter => inserter.overrides?.enable_control?.mode !== "AUTO")
+        && (verification_config.drills?.configs.every(drill => drill.overrides?.enable_control?.mode !== "AUTO") ?? true);
+    // At a forced whole swing count, fractional mode changes only the AUTO swing distribution. Clocked/always/never
+    // controls do not use that distribution. Keep the flag when any own-clock fuel inserter still needs AUTO.
+    verification_config.overrides!.use_fractional_swings = fully_controlled && Number.isInteger(result.used_terminal_swing_count)
+        ? false : config.overrides?.use_fractional_swings === true;
+    return canonicalVerificationJson({ config: verification_config, period, windows: result.clock_windows,
+        belt_kind: result.belt?.kind ?? null, belt_pickup_slack_left_out: result.belt_pickup_slack_left_out,
+        expected_output: result.stability_check.expected_output_items,
+        base_cycle_ticks: result.crafting_cycle_plan.total_duration.ticks,
+        transfer_plan: result.serializable_transfer_plan,
+        inserter_clocks: result.unplanned_inserter_clocks,
+        check: result.stability_check.as_built ?? result.stability_check });
 }

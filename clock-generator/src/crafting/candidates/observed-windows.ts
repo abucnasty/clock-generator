@@ -7,7 +7,7 @@ import { InventoryTransferHistory } from "../sequence/inventory-transfer-history
 import { Logger } from "../../common/logger";
 import { withBeltPickupSlack } from "../clock";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, planRun, windowsFromHistory } from "../plan/plan-run";
-import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 import { fullHandTransferWindows } from "./full-hand";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
@@ -36,6 +36,8 @@ export interface DerivedWindows {
     as_built: AsBuiltStabilityCheck | null;
     /** The output windows spread evenly, when that would change them: a second try for `deriveClockWindows` */
     even_output_windows: Map<string, OpenRange[]> | null;
+    /** The quick trial that passed on exactly `windows`, whose early stages a confirmation of them takes over */
+    verified?: AsBuiltRun;
     search: SearchReport;
 }
 
@@ -135,7 +137,7 @@ export function deriveWithOutputWindows(
     const unpadded = new Map([...fixed_windows, ...busy_windows]);
     const ticks = (padding: number) => `${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows)`;
 
-    const { picked, pick, tried } = search<number, QuickTrial & { windows: Map<string, OpenRange[]>; result: TrialRun }, Confirmed>({
+    const { picked, pick, tried } = search<number, QuickTrial & { windows: Map<string, OpenRange[]>; result: TrialRun; run: AsBuiltRun }, Confirmed>({
         candidates: DERIVED_WINDOW_END_PADDING_CANDIDATES,
         quick: padding => {
             const windows = withBeltPickupSlack(paddedWindows(unpadded, busy_windows.keys(), padding, period), belt_pickup_slack, period);
@@ -147,11 +149,11 @@ export function deriveWithOutputWindows(
         neighbours: () => true,
         tieBreak: (a, b) => a.candidate - b.candidate,
         confirm: ({ candidate: padding, quick }) => confirm_pick
-            ? confirm(base_config, quick.windows, period, logger, ticks(padding), report)
+            ? confirm(base_config, quick.windows, period, logger, ticks(padding), report, quick.run)
             : { result: quick.result, check: checkOfRun(quick.result) },
     });
     if (picked !== null && pick !== null) {
-        return { windows: pick.quick.windows, end_padding_ticks: pick.candidate, verification: picked.result, as_built: picked.check, even_output_windows, search: reportOf(tried, pick.candidate) };
+        return { windows: pick.quick.windows, end_padding_ticks: pick.candidate, verification: picked.result, as_built: picked.check, even_output_windows, verified: pick.quick.run, search: reportOf(tried, pick.candidate) };
     }
     const best = tried.map(it => it.quick).reduce((a, b) => b.result.stability_check.actual_output_items > a.result.stability_check.actual_output_items ? b : a);
     return { windows: null, end_padding_ticks: null, verification: best.result, as_built: { ...checkOfRun(best.result), holds: false, failed_start_offset: 0 }, even_output_windows, search: reportOf(tried, null) };
@@ -185,8 +187,10 @@ export function observedWindowsClock(
     let planned_check = planned_run.check;
     let clock_only_run = clockOnlyRunOf(planned_run.result);
     if (planned_stable && planned_check.holds) {
+        // the check just made covered the unshifted run, every pickup phase start and the long run on these windows
         planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES,
-            (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`)).check;
+            (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`),
+            FREE_RUNNING_CHECK_TICKS, { run: planned_run, long_run_ticks: FREE_RUNNING_CHECK_TICKS }).check;
     }
     logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
     // the feeders of the output machine are part of the planned windows, kept or dropped here as without derivation

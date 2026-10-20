@@ -299,20 +299,40 @@ export function runLossTrials(
     const inserter_states = context.inserters.map(it => it.inserter_state);
     const machine_states = context.machines.map(it => it.machine_state);
     const watch_stock = context.drills.length > 0;
-    let last_seen: number[] = [];
+    // asked every tick of a loss: the two buffers are swapped instead of built anew
+    const slots = inserter_states.length * 2 + machine_states.length * (watch_stock ? 4 : 3);
+    let seen = new Float64Array(slots);
+    let last_seen = new Float64Array(slots);
+    let seen_before = false;
     const didSomething = (): boolean => {
-        const seen: number[] = [];
-        for (const state of inserter_states) {
-            seen.push(state.items_picked_up, state.items_dropped);
+        const current = seen;
+        let at = 0;
+        for (let index = 0; index < inserter_states.length; index++) {
+            const state = inserter_states[index];
+            current[at++] = state.items_picked_up;
+            current[at++] = state.items_dropped;
         }
-        for (const state of machine_states) {
-            seen.push(state.productsFinished, state.craftingProgress.progress, state.bonusProgress.progress);
+        for (let index = 0; index < machine_states.length; index++) {
+            const state = machine_states[index];
+            current[at++] = state.productsFinished;
+            current[at++] = state.craftingProgress.progress;
+            current[at++] = state.bonusProgress.progress;
             if (watch_stock) {
-                seen.push(state.inventoryState.getTotalQuantity());
+                current[at++] = state.inventoryState.getTotalQuantity();
             }
         }
-        const changed = seen.length !== last_seen.length || seen.some((value, index) => value !== last_seen[index]);
-        last_seen = seen;
+        let changed = !seen_before;
+        seen_before = true;
+        if (!changed) {
+            for (let index = 0; index < slots; index++) {
+                if (current[index] !== last_seen[index]) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        seen = last_seen;
+        last_seen = current;
         return changed;
     };
 

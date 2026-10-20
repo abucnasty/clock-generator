@@ -109,7 +109,7 @@ export function deriveUnevenOutputClockWindows(
         // candidates are listed per moved window in shift order, so neighbours in the list are neighbours in time
         neighbours: (a, b) => a.window_index === b.window_index,
         tieBreak: (a, b) => Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks),
-        confirm: ({ candidate, quick }) => confirm(base_config, quick.derived.windows!, period, logger, describe(candidate), report),
+        confirm: ({ candidate, quick }) => confirm(base_config, quick.derived.windows!, period, logger, describe(candidate), report, quick.derived.verified),
     });
     logger.log(`Uneven output swings: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} positions pass the quick trial`);
     if (picked === null || pick === null) {

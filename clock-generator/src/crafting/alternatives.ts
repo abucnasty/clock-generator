@@ -15,7 +15,7 @@ import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
-import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, startDependenceVerdictOf } from "./trial";
+import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
 import { START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
 import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
@@ -71,7 +71,7 @@ export interface ClockAlternativesResult {
 
 /** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
 export interface ClockAlternativeRun<T = ClockAlternative> {
-    /** Runs with the same period and windows are duplicates; only the first is listed */
+    /** Runs with the same clock, physical assumptions and checked behavior are duplicates; only the first is listed */
     signature: string;
     alternatives: T[];
 }
@@ -342,10 +342,12 @@ function alternativeDefinitionsFor(
     // output inserter takes hands, so longer cycles can work too
     const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
         : Array.from({ length: Math.max(swings, context.planned_swings ?? swings) + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i);
+    // Supply still matters for always-enabled and fuel pickups, even when the clock has no belt windows.
+    const offer_backed_up_belt = config.overrides?.backed_up_belts !== true
+        && config.inserters.some(inserter => inserter.source.type === "belt");
 
     return [
-        // with backed-up belts the first run is already made without the slack, unless it only holds with it
-        ...(config.overrides?.backed_up_belts === true ? [] : [{
+        ...(offer_backed_up_belt ? [{
             id: WITHOUT_BELT_PICKUP_SLACK_ID,
             label: `${BATCHED_SWINGS_LABEL}, backed-up belt`,
             description: BATCHED_SWINGS_DESCRIPTION,
@@ -356,7 +358,7 @@ function alternativeDefinitionsFor(
                 // The simulation uses backed-up supply, but this alternative still opts out of the user's moving-belt choice.
                 return { ...result, belt_pickup_slack_left_out: result.belt !== null && Number.isInteger(result.simulation_duration.ticks) };
             },
-        }]),
+        }] : []),
         {
             id: "fractional",
             label: fractional ? "Without fractional swings" : "Fractional swings",
@@ -504,10 +506,7 @@ function itemsPerSecondOverCopies(items_per_period: number, period_ticks: number
     return fraction(copies).multiply(items_per_period * 60).divide(period_ticks).toDecimal();
 }
 
-/** What tells the clocks of two runs apart; runs with the same signature are listed once (see combineClockAlternativeRuns) */
-function signatureOf(result: BlueprintGenerationResult): string {
-    return JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
-}
+type VerificationAssessment = Pick<ClockAssessment, "backpressure_loss" | "start_dependence">;
 
 function runAlternative(
     definition: AlternativeDefinition,
@@ -516,6 +515,7 @@ function runAlternative(
     report?: (detail: string) => void,
     /** Signatures of clocks another run assesses: a run that makes one of them again is merged away, so it skips assessing it */
     assessed?: ReadonlySet<string>,
+    verification_cache?: Map<string, VerificationAssessment>,
 ): ClockAlternativeRun | null {
     const copies = config.target_output.copies ?? 1;
     let result: BlueprintGenerationResult;
@@ -526,7 +526,7 @@ function runAlternative(
         return null;
     }
     const { id } = definition;
-    const signature = signatureOf(result);
+    const signature = clockVerificationSignature(definition.planned_on ?? config, result);
     if (assessed?.has(signature)) {
         // listed behind the run that assessed it, which combineClockAlternativeRuns keeps in its place
         return { signature, alternatives: [] };
@@ -540,10 +540,13 @@ function runAlternative(
     // where the exported clock does not; in game, recordings matched the clock-only check
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
     const held = holds(result);
-    const backpressure_loss = held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
-    const start_dependence = config.overrides?.check_start_dependence === true
+    const cached = verification_cache?.get(signature);
+    const backpressure_loss = cached ? cached.backpressure_loss
+        : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
+    const start_dependence = cached ? cached.start_dependence : config.overrides?.check_start_dependence === true
         ? startDependenceVerdictOf(definition.planned_on ?? config, result, held, logger, report)
         : null;
+    verification_cache?.set(signature, {backpressure_loss, start_dependence});
     const start_dependence_note = start_dependence === null ? null
         : startDependenceNote(start_dependence, items => itemsPerSecondOverCopies(items, result.simulation_duration.ticks, copies));
     const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
@@ -634,7 +637,7 @@ export function planClockAlternatives(
     };
     const tasks = alternativeDefinitions(config, context, {})
         .map(definition => ({ id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config) }));
-    on_tasks?.(context, tasks, signatureOf(result));
+    on_tasks?.(context, tasks, clockVerificationSignature(config, result));
     const primary = runAlternative(definition, config, logger, options.on_progress_detail);
     return { primary, context, tasks };
 }
@@ -714,6 +717,12 @@ export function generateClockAlternatives(
     completed++;
 
     const stable_by_id = new Map<string, boolean>();
+    // Request-local: a new generation (or changed config/data) never inherits another run's verdict.
+    const verification_cache = new Map<string, VerificationAssessment>();
+    if (plan.primary?.alternatives[0]) {
+        const {backpressure_loss, start_dependence} = plan.primary.alternatives[0].assessment;
+        verification_cache.set(plan.primary.signature, {backpressure_loss, start_dependence});
+    }
     const known_stable = (id: string) => stable_by_id.get(id);
     const definitions = alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable);
     // listed in the order of the definitions, whichever are made first
@@ -722,7 +731,7 @@ export function generateClockAlternatives(
         for (const definition of made) {
             current_step = definition.label;
             report();
-            const run = runAlternative(definition, config, logger, report);
+            const run = runAlternative(definition, config, logger, report, undefined, verification_cache);
             completed++;
             runs[1 + definitions.indexOf(definition)] = run;
             if (run) {

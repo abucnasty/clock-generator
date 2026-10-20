@@ -1,6 +1,6 @@
 import { ControlLogic } from "../control-logic";
 import { handSizeFor } from "../../entities";
-import { EntityState, MachineState, ReadableEntityStateRegistry } from "../../state";
+import { EntityState, LiveQuantity, MachineState, ReadableEntityStateRegistry } from "../../state";
 import { InserterStateMachine } from "./inserter-state-machine";
 
 /**
@@ -39,14 +39,19 @@ export function orderIsOpen(quantity: number, has_taker_history: boolean, bigges
  * order is open (see `orderIsOpen`): those are updated in the order of `order`, among the places they have in the list.
  */
 export class InserterUpdates implements ControlLogic {
-    /** The inserters that take from one machine, with the places they have in the list, for every machine with more than one */
-    private readonly groups: { machine: MachineState; item: string; biggest_hand: number; places: number[]; ranked: InserterStateMachine[] }[] = [];
+    /** Competing takers whose ranked order differs from their original places in the list. */
+    private readonly groups: {
+        machine: MachineState; item: string; stock: LiveQuantity; biggest_hand: number; places: number[];
+        original: InserterStateMachine[]; ranked: InserterStateMachine[]; open: boolean;
+    }[] = [];
+    private readonly updates: InserterStateMachine[];
 
     constructor(
-        private readonly inserters: readonly InserterStateMachine[],
+        inserters: readonly InserterStateMachine[],
         states: ReadableEntityStateRegistry,
         order: TakerOrder = DEFAULT_TAKER_ORDER,
     ) {
+        this.updates = [...inserters];
         const places_by_machine = new Map<string, number[]>();
         inserters.forEach((it, place) => {
             const source = it.inserter_state.inserter.source.entity_id;
@@ -63,26 +68,33 @@ export class InserterUpdates implements ControlLogic {
             const members = places.map(place => inserters[place]);
             const key = new Map(members.map(it => [it, draw === null ? it.inserter_state.entity_id.number : draw()] as const));
             const sign = order === "descending" ? -1 : 1;
+            const ranked = [...members].sort((a, b) => sign * (key.get(a)! - key.get(b)!));
+            // Draw seeded ranks before skipping: later groups must keep the same seeded order.
+            if (ranked.every((member, index) => member === members[index])) continue;
             const item = machine.machine.output.item_name;
             const biggest_hand = Math.max(...places.map(place => handSizeFor(inserters[place].inserter_state.inserter, item)));
-            this.groups.push({ machine, item, biggest_hand, places, ranked: [...members].sort((a, b) => sign * (key.get(a)! - key.get(b)!)) });
+            const stock = new LiveQuantity(machine.inventoryState, item);
+            this.groups.push({ machine, item, stock, biggest_hand, places, original: members, ranked, open: false });
         }
     }
 
     public executeForTick(): void {
-        let updates = this.inserters;
-        for (const { machine, item, biggest_hand, places, ranked } of this.groups) {
-            if (!orderIsOpen(machine.inventoryState.getQuantity(item), machine.lastOutputTaker.get(item) !== undefined, biggest_hand)) {
-                continue;
+        // Decide every group's order before any inserter can change a machine's stock this tick.
+        const groups = this.groups;
+        for (let at = 0; at < groups.length; at++) {
+            const group = groups[at];
+            const quantity = group.stock.get();
+            const open = orderIsOpen(quantity,
+                quantity > 0 && quantity < group.biggest_hand && group.machine.lastOutputTaker.has(group.item), group.biggest_hand);
+            if (open !== group.open) {
+                const members = open ? group.ranked : group.original;
+                for (let index = 0; index < group.places.length; index++) this.updates[group.places[index]] = members[index];
+                group.open = open;
             }
-            if (updates === this.inserters) {
-                updates = [...this.inserters];
-            }
-            const reordered = updates as InserterStateMachine[];
-            places.forEach((place, index) => { reordered[place] = ranked[index]; });
         }
-        for (const inserter of updates) {
-            inserter.executeForTick();
+        const updates = this.updates;
+        for (let index = 0; index < updates.length; index++) {
+            updates[index].executeForTick();
         }
     }
 }

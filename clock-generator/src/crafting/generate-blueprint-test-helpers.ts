@@ -1,10 +1,15 @@
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { EntityId } from "../entities";
-import { generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
+import { generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult } from "./generate-blueprint";
 
 /** A logger for the generations whose log the test does not read */
 export const quiet = { log() { }, warn() { }, error() { }, debug() { } };
+
+export const SEARCH_IDS = ["derived", "uneven-output", "shifted-swings", "full-hand"];
+export const SEARCH_LABELS = ["Observed windows", "Uneven output swings", "Shifted swings", "Full-hand output swings"];
+export const alternativeIdsOf = (generated: ClockAlternativesResult) => generated.alternatives.map(alternative => alternative.id);
+export const selectedAlternativeOf = (generated: ClockAlternativesResult) => generated.alternatives[generated.selected_index];
 
 /**
  * The config with the four searches asked for (`overrides.search_for_fewer_wake_ups`): for a test of a search's clock

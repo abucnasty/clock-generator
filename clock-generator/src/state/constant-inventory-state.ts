@@ -34,6 +34,18 @@ export class ConstantInventoryState implements WritableInventoryState {
         return this.readable_inventory_state.getItemOrThrow(itemName);
     }
 
+    public recordOf(itemName: string): InventoryItem | null {
+        return this.readable_inventory_state.recordOf(itemName);
+    }
+
+    public get structure_generation(): number {
+        return this.readable_inventory_state.structure_generation;
+    }
+
+    public get mutation_generation(): number {
+        return this.readable_inventory_state.mutation_generation;
+    }
+
     public getQuantity(itemName: string): number {
         return this.readable_inventory_state.getQuantity(itemName);
     }
