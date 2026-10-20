@@ -339,13 +339,29 @@ describe("transitions (belt to machine)", () => {
             expect(firstPickupLook(2)).toBe(1);
         })
 
-        test("takes its first items from a belt in the tick the products are taken when the window of the inserter that takes them opens in that tick too", () => {
+        // Recorded in Factorio 2.1.21 (roadmap M2): with the taker's window opening in that tick too, a tick later in
+        // 1,327 of 1,327 windows where the taker drops onto a belt, in the tick in 602 of 602 where it drops into a
+        // machine or a chest; in one run of the chemical science build, 82 of 82 and 166 of 166 side by side.
+        test("takes its first items from a belt in the tick the products are taken when the inserter that takes them, its window opening in that tick too, puts them into a machine or a chest", () => {
             const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
             const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(belt, 2);
             endTickAtTheBlock(false);
             expect(look()?.toMode).toBe(disabled_mode);
             takeProducts();
             sink.productsTakenAsWindowOpened = true;
+            sink.productsTakenAsWindowOpenedIntoAnInventory = true;
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("takes its first items from a belt a tick later when the inserter that takes them, its window opening in that tick too, puts them onto a belt", () => {
+            const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
+            const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(belt, 2);
+            endTickAtTheBlock(false);
+            expect(look()?.toMode).toBe(disabled_mode);
+            takeProducts();
+            sink.productsTakenAsWindowOpened = true;
+            expect(look()).toBe(ModeTransition.NONE);
+            endTickUnderTheBlock();
             expect(look()?.toMode).toBe(pickup_mode);
         })
     })

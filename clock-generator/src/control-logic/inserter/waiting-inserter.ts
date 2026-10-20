@@ -14,8 +14,9 @@
  * tick before. A hand from a belt that had not started lands its first stack a tick after the products are taken
  * either way, which the pickup mode has (`belt_grab_decided`). A hand from a belt whose window opens on a machine at
  * its output block is the exception: it comes from the disabled mode, has no such tick, and waits like the hand from
- * a machine does (2 ticks from the enable to the first stack). A hand from a belt that waited for the machine's own
- * craft start has no such tick either (`wokenByItsMachinesCraftStart`).
+ * a machine does (2 ticks from the enable to the first stack), also when the window of the inserter that takes the
+ * products opens in that tick too, unless that inserter puts them into a machine or a chest (`wokenThisTick`). A hand
+ * from a belt that waited for the machine's own craft start has no such tick either (`wokenByItsMachinesCraftStart`).
  *
  * `sink` is the machine as its last tick left it: `MachineStatusPlugin` records after every tick of a machine whether
  * it was at its output block and whether it finished a craft, and the inserters read them in the next tick. Inserters
@@ -36,9 +37,9 @@ export function actsInTheTickTheBlockIsLifted(sink: { outputBlockedAfterLastTick
  * Recorded in Factorio 2.1.21 on the normal moving underground pickups from cold starts at chosen lane phases: in all
  * 102 resumes from such a wait in A3's runs the game took its first stack in the tick after the craft start, a tick
  * before a simulator that kept the extra tick (work/belt-pickup-parity/a3-native-rounds.md, section 8.5). With it the
- * simulator follows the game from each of the 64 lane-phase starts of both builds
- * (tests/game/builds/normal-underground-lane-phase-controls.json), except where a window opens in the same tick as the
- * output inserter's on a machine at its output block, which another rule decides.
+ * simulator follows the game from each of the 64 lane-phase starts of both builds, tick for tick with the rule for a
+ * window that opens on a machine at its output block (`wokenThisTick`;
+ * tests/game/builds/normal-underground-lane-phase-controls.json).
  */
 export function wokenByItsMachinesCraftStart(sink: { outputBlockedAfterLastTick: boolean; startedCraftInLastTick: boolean }): boolean {
     return sink.startedCraftInLastTick && !sink.outputBlockedAfterLastTick;

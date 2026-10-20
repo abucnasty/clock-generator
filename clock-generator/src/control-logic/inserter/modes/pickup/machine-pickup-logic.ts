@@ -93,6 +93,9 @@ export class MachinePickupLogic implements InserterTransferLogic {
         source.inventoryState.removeQuantity(output_item_name, pickup_quantity);
         if (this.window_opened && this.ticks_in_pickup === 1) {
             source.productsTakenAsWindowOpened = true;
+            if (!EntityState.isBelt(this.sinkEntityState)) {
+                source.productsTakenAsWindowOpenedIntoAnInventory = true;
+            }
         }
     }
 

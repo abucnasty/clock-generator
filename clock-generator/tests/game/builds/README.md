@@ -161,11 +161,12 @@ same counts on both clocked inserters in every cell. Five cells never settle: [3
 144, 128, 128, 144, and [3,3] and [3,4] repeat 128, 144, 160, 128, 144, 176, 143 a period against 176. [3,3] is the
 exit's natural phase: a staged start of the build without seeding lands there.
 
-`normal-underground-lane-phase.generation.test.ts` runs the simulator from each cell. In 51 cells per build it moves
-the game's output and pickups in every period, and its output inserter holds the game's count in every tick. In the
-other 13 the input and the output window open in the same tick on a machine at its output block, where the game's
-belt-fed input takes its first stack a tick later than the simulator does (roadmap M2); there the test holds only the
-last eight periods, by which every cell has settled into its long run.
+`normal-underground-lane-phase.generation.test.ts` runs the simulator from each cell. In every cell of both builds it
+moves the game's output and pickups in every period, and its output inserter holds the game's count in every tick.
+Since roadmap M2 that includes the 13 cells per build where the input and the output window open in the same tick on a
+machine at its output block: the output inserter puts the products onto a belt, so the game's belt-fed input takes its
+first stack a tick after they are taken, and the simulator does too. `known_differences` is empty; a cell listed there
+would be held only on its last eight periods.
 
 ## Over-the-hood operating clocks
 
