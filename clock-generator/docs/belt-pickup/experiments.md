@@ -103,9 +103,10 @@ These are 258 first-hand controls; independent lane alignment and repeated throu
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
 The ordinary clocks are verified on **48 configurations** across all four speeds: the a2 recapture after the belt
-window-end trim, with the 20 electromagnetic clocks the M1 resume fix changed recorded again
-(`tests/game/builds/pickup-clock-m1-controls.json`). **44 meet exact baseline and recovery output**, 42 of them
-marked stable; the turbo moving straight clock no longer over-produces in its early periods. The two normal moving
+window-end trim, with the 20 electromagnetic clocks the M1 resume fix changed recorded again, and the fast straight
+moving clock the M2 window rule changed recorded once more (`tests/game/builds/pickup-clock-m2-controls.json`).
+**44 meet exact baseline and recovery output**, 42 of them marked stable; the turbo moving straight clock no longer
+over-produces in its early periods. The two normal moving
 underground defaults hold their baseline in these warm recordings and got back to target after every loss, but the
 generator says "unstable": it finds the clock failing from cold lane phase [3,0], and a native sweep of all 64 lane
 phases shows the game never settling from it or from four other phases, the exit's natural one among them, where
