@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.19.0] - Unreleased
 
 ### Fixed
+- Prove a clock's long-run output and its recovery from a supply loss by finding an exact repeat of the simulated state, instead of judging a sample of periods. A clock whose output drifts off target only after the sampled periods is no longer marked stable; this rejects the earlier clocks for the over-the-hood express and turbo backed-up builds with two different ingredients, which over-produced in the game.
 - Avoid repeating recovery verification for identical clocks, including schedules whose inserter windows differ only in object ordering. Keep distinct supply assumptions and failure findings separate.
 - Check independently phased moving input lanes during clock verification and recovery. Clocks that meet their target only while both lanes stay aligned are no longer marked stable.
 - Replenish backed-up single-stream side feeds through finite incoming queues at the actual belt speed. Repeated hands on slower belts no longer draw from unlimited reachable stock.
