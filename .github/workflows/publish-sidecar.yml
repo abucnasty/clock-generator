@@ -3,8 +3,9 @@ name: Publish sidecar mod
 # The sidecar mod has a version of its own (clock-generator-sidecar/info.json) and is published to the Factorio mod
 # portal when that version is not there yet. It runs when the mod's folder changes on master, and by hand
 # ("Run workflow", or `gh workflow run publish-sidecar.yml`) to try a failed upload again. A release of the clock
-# generator does not publish the mod. Nothing is published unless the unit tests and the UI build of test.yml pass:
-# among them are the tests that keep the mod's version, its changelog and the version the generator asks for in step.
+# generator does not publish the mod. Nothing is published unless the unit tests, the UI build and the UI's Generate in
+# a browser of test.yml pass: among them are the tests that keep the mod's version, its changelog and the version the
+# generator asks for in step.
 # RELEASE_HOLD=true blocks uploads on push and manual dispatch, while tests remain enabled.
 on:
   push:
