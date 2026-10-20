@@ -111,6 +111,7 @@ export class ConfigurableEnableControlFactory {
             tickProvider: this.tick_provider,
             is_game_clock: true,
             decider_build_order: override.decider_build_order,
+            start_latency_ticks: override.latency_ticks,
         });
 
         this.resettable_registry.register(clocked_control);

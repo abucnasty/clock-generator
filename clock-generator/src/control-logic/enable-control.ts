@@ -186,6 +186,8 @@ class ClockedEnableControl implements EnableControl, Resettable {
         tickProvider: TickProvider,
         is_game_clock?: boolean,
         decider_build_order?: number,
+        /** Ticks of circuit latency the ranges were moved by, which the clock's start leaves dark (see `reset`) */
+        start_latency_ticks?: number,
     }): ClockedEnableControl {
         return new ClockedEnableControl(
             args.periodDuration,
@@ -193,9 +195,12 @@ class ClockedEnableControl implements EnableControl, Resettable {
             args.tickProvider,
             args.is_game_clock ?? false,
             args.decider_build_order,
+            args.start_latency_ticks ?? 0,
         );
     }
     private offset = 0;
+    /** The ticks of the clock from its start that no window reaches yet: from 0 up to this one */
+    private dark_until = 0;
     private readonly windows: ClockWindows;
 
     constructor(
@@ -204,6 +209,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         public readonly tickProvider: TickProvider,
         public readonly is_game_clock: boolean = false,
         public readonly decider_build_order?: number,
+        public readonly start_latency_ticks: number = 0,
     ) {
         this.windows = new ClockWindows(periodDuration.ticks, enabledRanges);
     }
@@ -214,15 +220,28 @@ class ClockedEnableControl implements EnableControl, Resettable {
 
     public isEnabledIn(ticks: number): boolean {
         // the tick of the clock: the tick provider's, moved by the offset of the last reset
-        return this.windows.ask(this.tickProvider.getCurrentTick() + this.offset + ticks);
+        const tick = this.tickProvider.getCurrentTick() + this.offset + ticks;
+        if (tick < this.dark_until && tick >= 0) {
+            return false;
+        }
+        return this.windows.ask(tick);
     }
 
     public getOffset(): number {
         return this.offset
     }
 
-    public reset(): void {
-        this.offset = this.tickProvider.getCurrentTick() * -1
+    /**
+     * Starts the clock's count again from this tick. Where the reset puts the clock on the build (`starts_clock`), its
+     * first `start_latency_ticks` stay dark: a clock of the game counts from 1 at its start and a window decider is open
+     * for the values of its window only, so no window from before the start has reached an inserter in the ticks the
+     * latency takes, the part of a window that the latency carries over the end of the period included (recorded in
+     * Factorio 2.1.21: docs/simulator.md, "Starting on supplied belts"). The reset that starts a later step of a run
+     * leaves nothing dark, since the clock has run all along.
+     */
+    public reset(starts_clock: boolean = false): void {
+        this.offset = this.tickProvider.getCurrentTick() * -1;
+        this.dark_until = starts_clock ? this.start_latency_ticks : 0;
     }
 }
 
