@@ -199,6 +199,23 @@ and `over-hood-same-native-01-{unmirrored,mirrored}/`. The bounded shorter-loss 
 `work/belt-pickup-parity/over-hood-phase-native-01/`. Earlier short-outage pilots are separate; an outage hidden
 by buffers does not add recovery coverage.
 
+Since the long run is judged by state repetition (proof-verification, 2026-10-19), two entries changed:
+`over-hood-{express,turbo}-unmirrored-backed-different-items`. Their old 800-tick `planned-belt-slack` picks never
+held 80 a period: the simulation repeats a 16-period cycle in which one period moves 96 (one extra hand), an
+eternal average of 81.04. The old 45-period long run judged 30 bins that held exactly one such spike, which one
+hand of tolerance absorbed; the proven cycle does not. The game agrees: the retained native baselines in
+[over-hood-clock-controls.json](over-hood-clock-controls.json) run 63 periods per variant and move 96 at periods
+15, 31, 47 and 63, which nothing compared before because the old test read the baseline only for "stable"
+verdicts and these two were "no recovery". Fresh 64-period headless runs of the old clocks reproduce it (96 at
+periods 8, 24, 40 and 56; `work/belt-pickup-parity/over-hood-watch/`), and the express run was watched in game.
+The mechanism, read off those recordings: the belt input inserter picks 324 items a period against the planned
+320 - after its last planned return swing its window still holds one pickup tick, which on a backed-up belt
+always grabs one 4-item stack - and the carried partial hand becomes an extra full hand every 4th period, in
+recipe proportion; the assembler has the spare speed to craft them, and the output inserter drops the extra
+96-item hand every 16th period. Every alternative of these two variants carries the same cycle, so both now pin
+an unstable selection. Their `native_control` is dropped only because the pinned selection changed (swings-7 has
+no recording of its own); the old recordings stand as the in-game confirmation that the old picks fail.
+
 ```bash
 BELT_SPEED_CAPTURE_DIR=../work/over-hood-clock-new \
   npm run test:game -- tests/game/builds/over-hood-pickup-clock.game.test.ts \
