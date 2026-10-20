@@ -13,7 +13,7 @@ Inserters have been measured to have lower update time cost when clocked. When a
 
 Wake-up lists are how the game decides which idle inserters to check, and they are what goal 2 is measured in.
 
-An inserter with nothing to move goes to sleep on the wake-up list of the machine it is waiting on. Each time that machine finishes a craft it wakes the inserters on its list. A woken inserter looks for something to move, finds nothing or only part of a hand, and goes back to sleep. An inserter that is disabled by the circuit network is on no list and is never woken: the debug tooltip of a disabled inserter reads "Wakeup list count: 0".
+An inserter with nothing to move goes to sleep on the wake-up list of the machine it is waiting on. A machine has two lists and wakes them on different events: the inserters waiting to put items into it are woken when it starts a craft, and the inserters waiting to take items out of it when it finishes a craft or pays out a productivity bonus (both detailed below). A woken inserter looks for something to move, finds nothing or only part of a hand, and goes back to sleep. An inserter that is disabled by the circuit network is on no list and is never woken: the debug tooltip of a disabled inserter reads "Wakeup list count: 0".
 
 This can be seen in the game with the debug setting `show-wakeup-lists`, which draws a yellow line from a waiting inserter to what it waits on. A line that flickers on and off very frequently is an inserter that keeps getting woken for nothing, and that is considered bad.
 
