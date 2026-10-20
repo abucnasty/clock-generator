@@ -189,7 +189,12 @@ but fail recovery: turbo moving in both mirroring states, and express moving whe
 63 untouched baseline periods and overlapping detailed-recorder checks. These controls are historical evidence;
 changed selected clocks need fresh game verification rather than replacement of the old counts.
 
-The current default expectations are [over-hood-a4-clock-controls.json](over-hood-a4-clock-controls.json): the nine
+The current default expectations are [over-hood-a5-clock-controls.json](over-hood-a5-clock-controls.json): the two
+express moving mixed-item variants whose selected clock A5 changed (observed windows judge each lane-phase start over its
+repeating cycle), re-recorded from the generator on Factorio 2.1.21, both exact in baseline and recovery:
+the mirrored one, whose old clock repeated six 112-item periods and one 96-item period after each disturbance, holds
+112 throughout with its input window 3 ticks longer, and the unmirrored one keeps 96 with its input window a tick
+longer; the other 30 copied from [over-hood-a4-clock-controls.json](over-hood-a4-clock-controls.json): the nine
 mixed-item variants whose selected clock A4 changed to observed windows (an observed-windows clock holds when its own
 windows hold, `54af3542`), re-recorded on Factorio 2.1.21 and all exact in baseline and recovery, the normal mirrored
 moving one after two short periods following its last disturbance; among them fast unmirrored backed, recorded for the
@@ -217,7 +222,10 @@ with different initial lane phases. A common clock shift alone does not check th
 
 The matching express trace is retained in [over-hood-express-lane-phase-control.json](over-hood-express-lane-phase-control.json).
 The old mirrored express clock repeats six 112-item periods and one 96-item period after recovery. Separate
-lane phases reproduce that seven-period cycle in the existing simulator too, under its own loss protocol.
+lane phases reproduce that seven-period cycle in the existing simulator too, under its own loss protocol: from 9 of
+its 64 lane-phase starts the clock repeats it with nothing lost, while the clock-only check judged one period of each
+start and passed them all. Observed windows now judge each start over its repeating cycle, and the new default holds
+112 in the game after every disturbance.
 Native observer ticks have a different origin from the exported clock, so the comparison uses relative lane
 phase and cycle rotation; it does not claim the same initial inventory, first failing period or loss transient.
 
@@ -229,7 +237,8 @@ observations match expectations, including any shortfalls recorded there; it doe
 selections and hashes their exact exported blueprint/schedule, regenerated after the window-end trim. The
 lane-phase audit's three changed clocks keep their native counts from that time in
 [over-hood-phase-clock-controls.json](over-hood-phase-clock-controls.json); since the trim, every recorded
-pin's `native_control` pointed at the a2 controls above, and the nine A4 changed point at the a4 controls. Until A4
+pin's `native_control` pointed at the a2 controls above, the nine A4 changed point at the a4 controls, and the two A5
+changed at the a5 controls. Until A4
 fast-unmirrored-backed-different-items had no recording: its fractional selection repeated every 16,160 ticks, more
 than a 63-period recording fits under the harness's 72,000-tick cap, and moved 6.95 a second against 6 with holds
 false. Its observed windows at 800 ticks hold 80 a period, in the game too.

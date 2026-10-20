@@ -116,8 +116,11 @@ export function search<C, Q extends QuickTrial, R>(it: Search<C, Q, R>): SearchR
  * in the game on automation science; the dozen phases keep every clock the game has confirmed, at more runs on the
  * full-hand search, whose scan had used one run.
  */
-export function quickTrial(config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger): QuickTrial & { result: TrialRun; run: AsBuiltRun } {
-    const run = runAsBuiltCheck(config, windows, period, logger, AS_BUILT_START_PHASES, undefined, 0);
+export function quickTrial(config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger,
+    /** Judge each lane-phase start over its repeating cycle (see runAsBuiltCheck): observed windows do */
+    pickup_phase_cycles: boolean = false,
+): QuickTrial & { result: TrialRun; run: AsBuiltRun } {
+    const run = runAsBuiltCheck(config, windows, period, logger, AS_BUILT_START_PHASES, undefined, 0, undefined, pickup_phase_cycles);
     return { holds: run.check.holds, result: run.result, run };
 }
 
@@ -136,10 +139,12 @@ export interface Confirmed {
 export function confirm(config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger, label: string, report?: (detail: string) => void,
     /** The quick trial that passed on exactly these windows, whose unshifted run and pickup phase starts the confirmation takes over */
     passed?: AsBuiltRun,
+    /** Judge each lane-phase start over its repeating cycle (see runAsBuiltCheck), as the quick trial did */
+    pickup_phase_cycles: boolean = false,
 ): Confirmed | null {
     const full = runAsBuiltCheck(config, windows, period, logger, FULL_CHECK_START_PHASES,
         (n, total) => report?.(`Confirming ${label}, clock start ${n}/${total}`), undefined,
-        passed === undefined ? undefined : { run: passed, long_run_ticks: 0 });
+        passed === undefined ? undefined : { run: passed, long_run_ticks: 0 }, pickup_phase_cycles);
     logger.log(`Search: ${label} confirmed from ${full.check.start_phases_checked} start phases -> stable=${full.check.holds}`);
     return full.check.holds ? full : null;
 }
