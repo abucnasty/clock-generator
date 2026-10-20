@@ -92,35 +92,33 @@ its observations with new clock results. Always pair a replay with the summaries
 
 ## Post-fix ordinary clock verification
 
-The current default expectations are [pickup-clock-a2-controls.json](pickup-clock-a2-controls.json): all 48
-configurations re-recorded after the belt window-end trim (`b654e895`) on Factorio 2.1.21, each with 63
-untouched baseline periods and three effective disturbances. The trim changes every exported ordinary clock,
-so none of the old recordings describes a clock the generator still makes. The previous defaults,
-[pickup-clock-parity-controls.json](pickup-clock-parity-controls.json), captured after the finite-stock,
-collection-reach and occupied-output changes on engine commit `4f2d4e35`, stay as the historical evidence of
-the clocks they recorded.
+The current default expectations are [pickup-clock-m1-controls.json](pickup-clock-m1-controls.json), recorded on
+Factorio 2.1.21. Twenty configurations were re-recorded after the belt hand's resume after a craft start was fixed
+(roadmap M1, `aae515e9`), each with 63 untouched baseline periods and three effective disturbances: every
+electromagnetic clock whose exported blueprint and schedule changed. The other 28 are copied unchanged from
+[pickup-clock-a2-controls.json](pickup-clock-a2-controls.json), recorded after the belt window-end trim
+(`b654e895`), since the generator still exports the clocks they recorded; the two normal moving underground copies
+carry the generator's new "unstable" verdict for the same clock. The a2 file, and before it
+[pickup-clock-parity-controls.json](pickup-clock-parity-controls.json) (engine commit `4f2d4e35`), stay as the
+historical evidence of the clocks they recorded.
 
 | Result | Cases | Interpretation |
 | --- | --- | --- |
-| Stable, exact baseline and recovery | 41 | The selected clock works under its configured supply |
-| Stable, over-target start transient only | 1 | Turbo straight moving: the coverage protocol's clock-speed calibration leaves a belt state from which periods 9 and 11 over-produce (188 and 180 against 176), byte-identically across runs; every period from 12 on and every recovery is exact, and two 204-period runs without the calibration phase are clean (`work/belt-pickup-parity/a2-item2-turbo-straight.md`). Start-state fidelity is roadmap C1 |
-| Exact baseline and recovery, generator says no recovery | 2 | Normal moving underground entrance/exit: the model's sampled cold lane-phase starts fail where these warm recordings got back to target after every loss; A3 (moving lane phases) is to model those starts. The entrance's native cold starts match the model's dip, so its verdict only promises less than the game delivers. The exit is a known native counterexample: from its natural cold start it cycles at 143 a period under these same windows (`work/belt-pickup-parity/a3-native-rounds.md`, round 3), so its "holds" is wrong until the model's late resume after a wait for machine space is fixed (roadmap M1, release-blocking) — do not read the exit as verified |
-| Moving target missed, selected clock requires backed-up supply | 2 | Express moving underground entrance/exit; no verified moving default |
-| Baseline missed, generator says unstable | 2 | Normal backed-up underground entrance/exit: the fractional selection (holds false, 5.45 a second against 7.5) misses natively, and the cold-start controls below check the simulator against the measured starts |
+| Stable, exact baseline and recovery | 42 | The selected clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early periods from the coverage protocol's calibration state; the clock since M1 runs exact from the first period |
+| Exact baseline and recovery in these warm recordings, generator says unstable | 2 | Normal moving underground entrance/exit: the generator finds the clock failing from cold lane phase [3,0], and the game never settles from it either, nor from four other phases, among them the exit's natural one, where it cycles at 143 a period against 176 ("Normal underground lane phases" below). The warm runs started at a phase that holds |
+| Moving target missed, selected clock requires backed-up supply | 2 | Express moving underground entrance/exit; no verified moving default (roadmap A4). Under moving supply the clock since M1 moves 352 a period against 528 (the earlier one 384 and 400) |
+| Baseline missed, generator says unstable | 2 | Normal backed-up underground entrance/exit: the fractional selection (holds false) misses natively, and the cold-start controls below check the simulator against the measured starts |
 
 No failing captured ordinary default is marked stable for its actual supply. These checks do not close broader
 startup timing or over-the-hood operating clocks.
 
-The two modeled failing cold lane-phase starts that the lane-phase audit had retained in
-[pickup-clock-moving-phase-controls.json](pickup-clock-moving-phase-controls.json) are removed: since the
-window trim, the generator itself gives the normal moving underground selections the "no recovery" verdict,
-so there is no separate modeled-phase pin to carry. The file keeps only its meaning note.
+[pickup-clock-moving-phase-controls.json](pickup-clock-moving-phase-controls.json) pins the cold lane-phase start
+the generator's verifier fails the two normal moving underground clocks from, [3,0], with the game's output from
+that start.
 
 The portable `belt-pickup-clock.generation.test.ts` checks the selected periods, verdicts and supply against
-these native controls, with two explicit, commented exception lists: the builds whose recording recovers
-beyond the model (expecting "no recovery" with a holding baseline), and the one start-transient over-producer
-above, where only over-target misses followed by exact periods to the end, with exact recoveries, are
-accepted. A measured shortfall on any build, listed or not, still fails, and where a clock was recorded under
+these native controls. A build whose warm recording holds while the generator finds a failing cold lane phase has
+to fail at the pinned phase. A measured shortfall on any build still fails, and where a clock was recorded under
 its own supply, a baseline miss has to make the generator's own holds verdict false. Fresh generation also
 saves the selected rate, required supply and alternative id in `generation-selection.json` when that metadata
 is available in its cache.
@@ -151,6 +149,23 @@ or later stock are fed back into the simulator.
 BELT_SPEED_CAPTURE_DIR=../work/belt-clock-startup-new \
   npm run test:game -- tests/game/builds/pickup-clock-startup.game.test.ts
 ```
+
+### Normal underground lane phases
+
+[normal-underground-lane-phase-controls.json](normal-underground-lane-phase-controls.json) records cold starts of the
+normal moving underground entrance and exit at all 64 pairs of input lane phases, 128 runs in Factorio 2.1.21
+(roadmap M1, 2026-10-20), under the fixed windows of their swings-1 clock. The fixture clears every supply-chain line
+of both lanes, seeds it on the requested lattice and checks the lanes before the first grab and in every period; its
+probe, test and every run are kept with the evidence in `work/belt-pickup-parity/m1/`. Entrance and exit recorded the
+same counts on both clocked inserters in every cell. Five cells never settle: [3,0], [3,1] and [3,7] repeat 176, 160,
+144, 128, 128, 144, and [3,3] and [3,4] repeat 128, 144, 160, 128, 144, 176, 143 a period against 176. [3,3] is the
+exit's natural phase: a staged start of the build without seeding lands there.
+
+`normal-underground-lane-phase.generation.test.ts` runs the simulator from each cell. In 51 cells per build it moves
+the game's output and pickups in every period, and its output inserter holds the game's count in every tick. In the
+other 13 the input and the output window open in the same tick on a machine at its output block, where the game's
+belt-fed input takes its first stack a tick later than the simulator does (roadmap M2); there the test holds only the
+last eight periods, by which every cell has settled into its long run.
 
 ## Over-the-hood operating clocks
 
