@@ -650,7 +650,7 @@ export function runAsBuiltCheck(
         return { result, check, stock };
     }
 
-    if (process.env.CLOCK_PROOF_PHASES === "1") {
+    if (typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1") {
         const exhaustive = exhaustiveStartPhases(config, decider_windows, period, logger, report);
         if (exhaustive !== null) {
             check.start_phases_checked = exhaustive.phases_checked;
