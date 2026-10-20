@@ -3,7 +3,7 @@ import path from "path";
 import {describe, expect, test} from "vitest";
 import {generateClockAlternatives} from "./generate-blueprint";
 import {rotateRanges, SerializableClockWindows} from "./clock";
-import {simulateClockOnly} from "./trial";
+import {backpressureLossOf, simulateClockOnly} from "./trial";
 import {OpenRange} from "../data-types";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
 
@@ -16,7 +16,7 @@ interface NativeClockControl {
 }
 
 const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-m2-controls.json"), "utf8")) as Record<string, NativeClockControl>;
+    "../../tests/game/builds/pickup-clock-a4-controls.json"), "utf8")) as Record<string, NativeClockControl>;
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 interface StartupControl {
@@ -30,6 +30,9 @@ const startupControls = JSON.parse(fs.readFileSync(path.join(__dirname,
 const movingPhases = JSON.parse(fs.readFileSync(path.join(__dirname,
     "../../tests/game/builds/pickup-clock-moving-phase-controls.json"), "utf8")) as
     {cases: Record<string, {phases: Record<string, [number, number]>; bins: number[]}>};
+const recoveryPhases = JSON.parse(fs.readFileSync(path.join(__dirname,
+    "../../tests/game/builds/pickup-clock-recovery-phase-controls.json"), "utf8")) as
+    {cases: Record<string, {phases: Record<string, [number, number]>}>};
 
 // The native controls witness the selected default, including its failures. A different default must be
 // rechecked in the game; matching the requested rate in the simulator alone does not replace that evidence.
@@ -77,6 +80,17 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
             expect(selected.assessment.holds).toBe(false);
             expect(selected.result.stability_check.as_built?.failed_pickup_phases)
                 .toEqual(movingPhases.cases[variant.name].phases);
+        } else if (recoveryPhases.cases[variant.name]) {
+            // The capture holds and recovers, and the generator's loss trials find a lane-phase start the clock does not
+            // get back from after a loss, which the capture cannot set up: a cautious verdict, not a measured failure.
+            expect(meetsTarget).toBe(true);
+            expect(selected.assessment.holds).toBe(true);
+            expect(selected.belt?.kind).toBe("moving");
+            const swings = {...config, overrides: {...config.overrides, terminal_swing_count: selected.result.used_terminal_swing_count}};
+            const failed = backpressureLossOf(swings, selected.result.clock_windows, period, native.expected, quiet).losses
+                .filter(loss => !loss.recovers);
+            expect(failed.length).toBeGreaterThan(0);
+            expect(failed.map(loss => loss.failed_pickup_phases)).toEqual(failed.map(() => recoveryPhases.cases[variant.name].phases));
         } else if (meetsTarget) {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
