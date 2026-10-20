@@ -564,6 +564,26 @@ export function exhaustiveStartPhases(
 }
 
 /**
+ * The stability check of a lane-phase start's run, judged over its repeating cycle where the run went on with nothing
+ * cut (see `pickup_phase_cycles` of runAsBuiltCheck): a run that holds its first period but does not stay at the
+ * expected output does not hold, and reports the lowest period of the cycle it ends in.
+ */
+function overItsCycle(run: TrialRun): TrialRun["stability_check"] {
+    const cycle = run.backpressure_loss;
+    if (!run.stability_check.holds || cycle === undefined || cycle.recovers) {
+        return run.stability_check;
+    }
+    const ends = cycle.trials[0]?.ends_in ?? [];
+    return {
+        ...run.stability_check,
+        holds: false,
+        actual_output_items: ends.length > 0 ? Math.min(...ends) : run.stability_check.expected_output_items - 1,
+        repeat_periods: ends.length || undefined,
+        repeat_output_items: ends.length > 1 ? ends.reduce((sum, items) => sum + items, 0) : undefined,
+    };
+}
+
+/**
  * The clock-only check of a clock: the build driven only by the decider windows, first with the clock as planned and
  * then with the whole clock shifted to other start offsets relative to the machines' initial state, and, when the
  * unshifted run holds, over a long run (`longRunOfFreeRunningBuild`), which counts the wake-ups. Stops at the first
@@ -572,6 +592,12 @@ export function exhaustiveStartPhases(
  *
  * With CLOCK_PROOF_PHASES=1 the shifted start offsets are not sampled: every phase of the period is checked by
  * proof instead (see exhaustiveStartPhases), where that check applies.
+ *
+ * With `pickup_phase_cycles` each lane-phase start is judged over its repeating cycle, not its first period: its run
+ * goes on with nothing cut, as the loss report's undisturbed run does (see backpressureLossOf), and a start that does
+ * not stay at the expected output fails. Observed windows ask for it: they are read off a run from one lane phase, and
+ * on the express mirrored moving over-the-hood pickup windows read that way held their first period from every lane
+ * phase but repeated six periods of 112 and one of 96 from nine of them, as the game does after a loss.
  */
 export function runAsBuiltCheck(
     config: Config,
@@ -587,6 +613,7 @@ export function runAsBuiltCheck(
      * check's. The start phases are still this check's own: their step differs with the count of phases.
      */
     passed?: { run: AsBuiltRun; long_run_ticks: number },
+    pickup_phase_cycles: boolean = false,
 ): AsBuiltRun {
     const step = Math.max(1, Math.floor(period / start_phases));
     const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
@@ -607,14 +634,16 @@ export function runAsBuiltCheck(
             continue;
         }
         const shifted = runClockOnBuild(config, decider_windows, period, logger,
-            {moving_pickup_phases: phases, factorio_states: false});
+            {moving_pickup_phases: phases, factorio_states: false, ...(pickup_phase_cycles && {backpressure_loss:
+                {loss: {kind: "none"}, period_ticks: period, expected_output_items: result.stability_check.expected_output_items}})});
         check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
-        if (!shifted.stability_check.holds) {
+        const judged = overItsCycle(shifted);
+        if (!judged.holds) {
             check.holds = false;
-            check.actual_output_items = shifted.stability_check.actual_output_items;
+            check.actual_output_items = judged.actual_output_items;
             check.failed_pickup_phases = Object.fromEntries(phases);
-            check.repeat_periods = shifted.stability_check.repeat_periods;
-            check.repeat_output_items = shifted.stability_check.repeat_output_items;
+            check.repeat_periods = judged.repeat_periods;
+            check.repeat_output_items = judged.repeat_output_items;
             break;
         }
     }
@@ -703,6 +732,8 @@ export function trialWithOutputFeeders(
     start_phases: number,
     logger: Logger,
     report?: (detail: string) => void,
+    /** Judge each lane-phase start over its repeating cycle (see runAsBuiltCheck) */
+    pickup_phase_cycles: boolean = false,
 ): {
     result: TrialRun;
     check: AsBuiltStabilityCheck;
@@ -723,7 +754,7 @@ export function trialWithOutputFeeders(
         fed_windows.set(inserter_id, feeder.windows);
     }
     const fed_run = runAsBuiltCheck(config, fed_windows, period, logger, start_phases,
-        (n, total) => report?.(`Checking output feeder windows, clock start ${n}/${total}`), OUTPUT_FEEDER_CHECK_TICKS);
+        (n, total) => report?.(`Checking output feeder windows, clock start ${n}/${total}`), OUTPUT_FEEDER_CHECK_TICKS, undefined, pickup_phase_cycles);
     const passes_as_before = fed_run.check.holds && fed_run.check.failed_start_offset === undefined
         && fed_run.check.start_phases_checked === run.check.start_phases_checked;
     logger.log(`Output feeders: ${passes_as_before ? "kept" : "dropped, the as-built check with them does not pass as without"}`);

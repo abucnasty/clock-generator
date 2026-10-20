@@ -85,6 +85,8 @@ function fullHandOutputWindows(
     logger: Logger,
     report?: (detail: string) => void,
     count_waits = false,
+    /** Judge each lane-phase start of the trials over its repeating cycle (see runAsBuiltCheck): observed windows do */
+    pickup_phase_cycles = false,
 ): FullHandWindows | null {
     const swing_counts = Array.from(new Set(Array.from(output_swings.values(), s => Math.round(s * 1e6) / 1e6)));
     if (swing_counts.length !== 1 || !Number.isInteger(swing_counts[0]) || swing_counts[0] < 1) {
@@ -191,7 +193,7 @@ function fullHandOutputWindows(
         quick: (timing, index) => {
             report?.(`Searching full-hand output timing (${index + 1}/${timings.length})`);
             const timing_windows = build(timing);
-            const trial = quickTrial(config, timing_windows, period, logger);
+            const trial = quickTrial(config, timing_windows, period, logger, pickup_phase_cycles);
             return trial.holds
                 ? { holds: true, output_full: outputFullTicks(trial.result), slow: slowPickups(trial.result), windows: timing_windows, run: trial.run }
                 : { holds: false, output_full: 0, slow: 0, windows: timing_windows, run: trial.run };
@@ -217,7 +219,7 @@ function fullHandOutputWindows(
             // without spare capacity the windows are the quick trial's, whose check the confirmation takes over
             const candidate_windows = recovery.spare ? build(timing, recovery.spare) : quick.windows;
             const confirmed = confirm(config, candidate_windows, period, logger, label, report,
-                recovery.spare ? undefined : quick.run);
+                recovery.spare ? undefined : quick.run, pickup_phase_cycles);
             logger.log(`Full-hand output: ${label}, ${output_full} output-full ticks, ${slow} slow pickups, stable=${confirmed !== null}`);
             return confirmed === null ? null : { ...confirmed, windows: candidate_windows };
         },
@@ -279,8 +281,9 @@ export function fullHandTransferWindows(
             || transfers.length === 0 || transfers.some(t => t.amount !== stack_size)) {
             continue;
         }
+        // the windows around these are observed windows, checked as they are (see observedWindowsClock)
         const found = fullHandOutputWindows(config, current?.windows ?? windows, new Map([[entity_id.id, transfers.length]]),
-            new Set([source.entity_id.id]), period, logger, report, true);
+            new Set([source.entity_id.id]), period, logger, report, true, true);
         if (found) {
             current = found;
             inserters.push(entity_id.id);

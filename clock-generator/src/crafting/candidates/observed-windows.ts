@@ -142,14 +142,14 @@ export function deriveWithOutputWindows(
         quick: padding => {
             const windows = withBeltPickupSlack(paddedWindows(unpadded, busy_windows.keys(), padding, period), belt_pickup_slack, period);
             report?.(`Trying ${ticks(padding)}`);
-            const trial = quickTrial(base_config, windows, period, logger);
+            const trial = quickTrial(base_config, windows, period, logger, true);
             logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${trial.result.stability_check.actual_output_items} holds=${trial.holds}`);
             return { ...trial, windows };
         },
         neighbours: () => true,
         tieBreak: (a, b) => a.candidate - b.candidate,
         confirm: ({ candidate: padding, quick }) => confirm_pick
-            ? confirm(base_config, quick.windows, period, logger, ticks(padding), report, quick.run)
+            ? confirm(base_config, quick.windows, period, logger, ticks(padding), report, quick.run, true)
             : { result: quick.result, check: checkOfRun(quick.result) },
     });
     if (picked !== null && pick !== null) {
@@ -168,6 +168,11 @@ export function deriveWithOutputWindows(
  * anyway; "uneven_output" derives with one output swing moved off its planned start (`deriveUnevenOutputClockWindows`).
  * The feeders of the output machine are kept or dropped as for a planned clock. When nothing derived passes, the
  * planned windows are exported with the report of what was tried.
+ *
+ * The clock-only checks made here of the windows observed and of the planned windows judge each moving lane-phase
+ * start over its repeating cycle (see runAsBuiltCheck): the windows are read off a run from one lane phase, so they can
+ * hold their first period from another and still fall short every few periods. The plan's belt pickup slack is decided
+ * as for any planned clock (see clockOfPlan).
  */
 export function observedWindowsClock(
     config: Config,
@@ -183,21 +188,21 @@ export function observedWindowsClock(
     const planned_stable = stability_check.holds;
     const non_deriving_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const planned_run = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
-        (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`));
+        (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`), FREE_RUNNING_CHECK_TICKS, undefined, true);
     let planned_check = planned_run.check;
     let clock_only_run = clockOnlyRunOf(planned_run.result);
     if (planned_stable && planned_check.holds) {
         // the check just made covered the unshifted run, every pickup phase start and the long run on these windows
         planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES,
             (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`),
-            FREE_RUNNING_CHECK_TICKS, { run: planned_run, long_run_ticks: FREE_RUNNING_CHECK_TICKS }).check;
+            FREE_RUNNING_CHECK_TICKS, { run: planned_run, long_run_ticks: FREE_RUNNING_CHECK_TICKS }, true).check;
     }
     logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
     // the feeders of the output machine are part of the planned windows, kept or dropped here as without derivation
     const feedPlanned = () => {
         const fed = planned_stable && planned_check.holds
             ? trialWithOutputFeeders(non_deriving_config, planned_windows, duration.ticks, output_machine_ids, { check: planned_check, stock: planned_run.stock },
-                planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES, logger, options.on_progress_detail)
+                planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES, logger, options.on_progress_detail, true)
             : null;
         if (fed !== null) {
             planned_check = fed.check;
