@@ -110,6 +110,7 @@ export class ConfigurableEnableControlFactory {
             enabledRanges: enabled_ranges,
             tickProvider: this.tick_provider,
             is_game_clock: true,
+            decider_build_order: override.decider_build_order,
         });
 
         this.resettable_registry.register(clocked_control);

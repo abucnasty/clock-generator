@@ -76,18 +76,13 @@ export class MachineState implements EntityState {
     public startedCraftInLastTick: boolean = false;
 
     /**
-     * Whether an inserter took the machine's products in this tick in the first tick of its window of a clock of the
-     * game. Set by that inserter, which is updated before the inserters that put into the machine, and cleared after
-     * the machine's tick.
+     * Where the last built of the deciders stands (`decider_build_order`) whose inserters took the machine's products
+     * in this tick in the first tick of their window of a clock of the game; -1 for such an inserter whose decider is
+     * not known, null when none took them so. Set by those inserters, which are updated before the inserters that put
+     * into the machine, and cleared after the machine's tick. An inserter whose window opens in this tick too takes
+     * its first items in it only when that decider was built after its own (`wokenThisTick`).
      */
-    public productsTakenAsWindowOpened: boolean = false;
-
-    /**
-     * Whether one of those inserters puts what it took into an inventory, a machine or a chest, not onto a belt. A
-     * belt-fed inserter whose window opens in this tick takes its first stack in this tick only then (`wokenThisTick`).
-     * Set and cleared as `productsTakenAsWindowOpened` is.
-     */
-    public productsTakenAsWindowOpenedIntoAnInventory: boolean = false;
+    public windowOpeningTakeDecider: number | null = null;
 
     /**
      * Ingredients that are also a product of the recipe (a pentapod egg makes pentapod eggs). The machine keeps what

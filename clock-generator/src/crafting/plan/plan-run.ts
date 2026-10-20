@@ -28,6 +28,7 @@ import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../control-logic/inserter/competing-takers";
+import { DeciderOrder } from "../decider-order";
 import { WarmupStep } from "../runner/steps/warmup-step";
 import { simulationStateKey } from "../runner/steady-state";
 import { SimulateStep } from "../runner/steps/simulate-step";
@@ -328,6 +329,12 @@ export interface RunOptions {
     cold_start?: boolean;
     /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide (default descending config ids) */
     competing_takers_order?: TakerOrder;
+    /**
+     * In what order the check of a clock has its window deciders built (default "built", as its blueprint has them),
+     * which decides what an inserter does whose window opens with the window of the inserter that takes its machine's
+     * products (see `deciderBuildOrder`). Read by the runs of a clock's windows (`runClockOnBuild`) only.
+     */
+    decider_order?: DeciderOrder;
     /** Start warmup with the output machines still output blocked, so the clock has to drain the surplus */
     keep_output_buffers?: boolean;
     /**
