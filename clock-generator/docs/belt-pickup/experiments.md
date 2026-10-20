@@ -195,7 +195,8 @@ mirroring state and ingredient arrangement. Fast/normal backed-up first hands us
 fourth grab, consistent with the finite-refill controls.
 
 Independent moving-stock replays agree with all **216 moving first hands**; the production backed-up queue
-agrees with all **42 backed-up first hands**, conditioned on native arrival. Production pickup-mode comparisons
+agrees with all **42 backed-up first hands**, conditioned on native arrival; from placement, with no arrival given,
+the whole simulation reproduces all 42 and all 216 moving ones as well ([startup](#startup-from-placement)). Production pickup-mode comparisons
 also match held items, quantities and exposed stock for all 258 controls. Sidecar captures the explicit
 over-the-hood layout. First-hand agreement does not establish generated-clock parity: the operating-clock
 controls below expose a recovery failure when the lanes acquire different phases.
@@ -240,9 +241,9 @@ at near stock 14, selection switches to the far ingredient. No demand-ranking ru
 **Implemented ordinary backed-up rule.** Advance a jammed queue at actual belt speed, stop its head at the endpoint,
 maintain quarter-tile spacing, and withdraw the upstream-most reachable matching stack. Preserve holes across
 hands. Seeded once at the closed gate, the production queue matches all exposed stock and held counts across
-**59,328 transitions / 4,568 hand starts** in 48 side-pickup captures, including both physical near sides. Native arm-arrival/drop boundaries remain
-inputs. Ten portable clips exercise the production pickup logic and preserve refill evidence; five separate clips
-preserve the arm-travel evidence and exercise production reach and stock. Neither comparison proves absolute arm arrival. See the [fixture report](../../tests/game/mechanics/belt-pickup/fixtures/different-items/README.md).
+**59,328 transitions / 4,568 hand starts** in 48 side-pickup captures, including both physical near sides. That comparison
+takes the game's arm arrival and drop; the [startup replay](#startup-from-placement) predicts them. Ten portable clips exercise the production pickup logic and preserve refill evidence; five separate clips
+preserve the arm-travel evidence and exercise production reach and stock. See the [fixture report](../../tests/game/mechanics/belt-pickup/fixtures/different-items/README.md).
 
 **Arm reach.** In the calibrated legendary stack-inserter model, extend or retract toward the selected stack
 at 0.25 tile per tick; collect when it is within one further extension step, then snap collection reach to that
@@ -326,6 +327,51 @@ and metallurgic science a third less.
 **Capture.** Sidecar's saved support/model metadata distinguishes supported, unsupported and legacy inputs.
 Updating software never promotes an old unsupported capture; recapture is required. See the
 [capture boundary](capture.md).
+
+## Startup from placement
+
+The simulator predicts a supplied belt's first hand and every hand after it from the clock's start, with only the lane
+state at placement taken from the game ([startup contract](../simulator.md#starting-on-supplied-belts); roadmap C1,
+2026-10-20; Factorio 2.1.21).
+
+| Evidence | Runs | From placement, tick for tick |
+| --- | --- | --- |
+| Retained gated side captures (`ordinary-gated-05`, `ordinary-reflected-01`): 4 tiers × straight, entrance, exit × moving, backed; near lane 1 (three ingredient set-ups) and 2 | 96 | 96: held count and item, every hand start, both pickup lanes' stock (9,012 hands) |
+| Retained backed-up over-the-hood first-hand captures (`over-hood-base-02`) | 42 | 42 (several hands each, through the machine's insertion limit) |
+| Retained moving over-the-hood captures (`over-hood-base-02`, `over-hood-phase-01`) | 216 | 216 |
+| Clocked cold starts on the generator's selected clock: 4 tiers × 2 near sides × 3 side topologies × 2 supplies, the game's own lane phase | 48 | 48 on both clocked inserters, with the clock's start rule; 44 without it |
+| Deciding cases: the clock started inside an input window (moving and backed, side and over the hood), the deciders built in reverse, the inserters built in reverse, the build moved | 9 | 8; the ninth from the start, one later hand a tick early (below) |
+
+The probes' frame: a gated probe's input takes its first stack two samples after the script releases it; a clocked
+start's model `held[i]` is sample `i + 4` and its lane phase the native one minus `4u`, at every tier (the frame grid
+of each tier's preflight run is exact at a shift of 4 and nowhere else). The clock's start: no window reaches an
+inserter in the first two ticks after the clock starts, which matters where the latency carries a window that ends at
+the period's end (or a start inside a window) into ticks 0-1; in the 11 such runs the game follows the rule, the
+simulator without it in none. A near-lane-2 crafting cell needs its plant mirrored as well as the reflection
+(`reflectOrdinaryPickup` turns it half a turn, leaving its fluid inputs off the pipes). The 57 clocked runs are pinned
+by `pickup-clock-cold-start.generation.test.ts` against `tests/game/builds/pickup-clock-cold-start-controls.json`.
+
+One later hand differs: on the backed turbo entrance started inside a window, a hand that comes back from its swing in
+the tick the output inserter takes the machine's products off its output block waits a tick in the game and not in
+the simulator (5 input ticks once in 16 periods; output exact). It is not the start; it is held as a known difference
+and listed in the roadmap's follow-ups.
+
+**Clock latencies never checked tick for tick in the game.** The simulator gives the window deciders of the period
+clock two ticks of latency, pinned tick for tick on whole-tick clocks by the runs above, A3's staged runs and M1's 128
+lane-phase cells. Two kinds of clock rest on the blueprint's encoding alone:
+
+- **A subtick clock** (a fractional period) runs in the simulator on the same two ticks. Its blueprint puts a multiply
+  and a modulo between the counter and the deciders and makes up for them by moving the windows back a tick, so its
+  steady state is the period clock's by construction; the one recording of such a clock (the advanced circuit scaffold
+  at 230 a second) agrees per period and by state shares, not tick for tick. At its start the encoding differs further:
+  the lock filter adds its 1 before the multiply and the modulo have put anything out, so for its first ticks the
+  inserters see the window position of tick 1. Not recorded.
+- **A fuel inserter's clock of its own** runs in the simulator with no latency: its window is not moved, so its start
+  leaves nothing dark. Its blueprint decider is encoded as every window, behind a counter and a lock filter of its own
+  (or a modulo of the one clock), so the game's fuel windows would open two ticks later than the simulator's. The
+  recorder does not record a fuel clock, and the comparisons check fuel swings by their spacing and state shares only,
+  so nothing pins it. A two-tick dark start of these clocks moves no clock the generator selects (166 of 166 blast jobs
+  identical with and without it).
 
 ## Side-loaded pickups and merges
 

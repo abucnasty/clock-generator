@@ -19,7 +19,7 @@ backed-up discrepancies and also matches their exposed stock. The measured behav
   The production radial-reach model now reproduces that delay without a universal lane-switch penalty.
 
 [Compact measured expectations](speed-expectations.json) retain actual hand patterns, counts, simulator
-mismatch counts/first differences and independent-replay results. Production collection now agrees; it does not claim absolute arm-arrival or generated-clock parity. Comparing every depleted hand to
+mismatch counts/first differences and independent-replay results. Production collection now agrees; generated-clock parity is a separate check. Comparing every depleted hand to
 fresh full stock would also be invalid: the production comparison instead seeds observed full stock once and
 retains its holes between hands, supplying only observed arm-arrival/drop boundaries.
 
@@ -28,8 +28,9 @@ seed the fully compressed lanes once at tick 64, advance stacks by the actual be
 position zero and followers to quarter-tile spacing, then withdraw the upstream-most reachable matching stack.
 Holes persist between hands; no instantaneous refill is assumed. Across 3,316 hand starts (including final
 partial hands) and 44,496 consecutive transitions, held quantities and both exposed lanes' positions, counts
-and items agree exactly. Native arm-arrival/drop boundaries remain inputs, so this is not an absolute arm-timing
-model. The replay uses the same bounded queue as the generator.
+and items agree exactly. Native arm-arrival/drop boundaries are inputs to this replay; the whole simulation run from
+placement, with no arrival given, reproduces these captures as well, every hand included (roadmap C1,
+[startup](../../../../../../docs/belt-pickup/experiments.md#startup-from-placement)). The replay uses the same bounded queue as the generator.
 
 Ten short [native clips](jammed-pickup-clips.json) retain all four speeds and full-/half-tile reach plus normal
 same-item fallback. They run offline with:
