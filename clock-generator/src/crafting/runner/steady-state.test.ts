@@ -12,7 +12,7 @@ import { InserterDropMode, InserterPickupMode } from "../../control-logic/insert
  */
 const PLAIN_FIELDS: Record<string, string[]> = {
     // the running totals are left out of its key
-    MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "craftsStarted", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick", "productsTakenAsWindowOpened", "productsTakenAsWindowOpenedIntoAnInventory"],
+    MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "craftsStarted", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick", "windowOpeningTakeDecider"],
     // `tick` and the counts of items are left out of its key
     inserter: ["status", "tick", "held_item", "items_picked_up", "items_dropped", "waits_for_sink", "enabled"],
     drill: ["status"],
@@ -20,8 +20,9 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     ChestDropLogic: ["current_tick"],
     // Belt position is in the source state; pickup age no longer drives any decision.
     BeltPickupLogic: ["belt_grab_decided"],
-    // what marks a take in the first tick of a window counts only within that tick
-    MachinePickupLogic: ["current_tick", "window_opened", "ticks_in_pickup"],
+    // what marks a take in the first tick of a window counts only within that tick; the order of its decider is the
+    // build's, the same in every tick
+    MachinePickupLogic: ["decider_build_order", "current_tick", "window_opened", "ticks_in_pickup"],
     ChestPickupLogic: ["current_tick"],
     IdleModeTransitionEvaluator: ["saw_sink_blocked", "window_opens"],
     InserterSwingModeTransitionEvaluator: ["entered_tick", "from"],

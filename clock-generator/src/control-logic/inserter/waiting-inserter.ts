@@ -14,9 +14,10 @@
  * tick before. A hand from a belt that had not started lands its first stack a tick after the products are taken
  * either way, which the pickup mode has (`belt_grab_decided`). A hand from a belt whose window opens on a machine at
  * its output block is the exception: it comes from the disabled mode, has no such tick, and waits like the hand from
- * a machine does (2 ticks from the enable to the first stack), also when the window of the inserter that takes the
- * products opens in that tick too, unless that inserter puts them into a machine or a chest (`wokenThisTick`). A hand
- * from a belt that waited for the machine's own craft start has no such tick either (`wokenByItsMachinesCraftStart`).
+ * a machine does (2 ticks from the enable to the first stack). Where the window of the inserter that takes the
+ * products opens in that tick too, either kind goes in the tick of the take only when that inserter's decider was
+ * built after its own, as the game updates the last built first (`wokenThisTick`). A hand from a belt that waited for
+ * the machine's own craft start has no such tick either (`wokenByItsMachinesCraftStart`).
  *
  * `sink` is the machine as its last tick left it: `MachineStatusPlugin` records after every tick of a machine whether
  * it was at its output block and whether it finished a craft, and the inserters read them in the next tick. Inserters

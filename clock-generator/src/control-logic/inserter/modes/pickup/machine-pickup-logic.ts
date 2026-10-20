@@ -17,6 +17,8 @@ export class MachinePickupLogic implements InserterTransferLogic {
         private readonly sourceEntityState: MachineState,
         private readonly sinkEntityState: EntityState,
         private readonly tick_provider?: TickProvider,
+        /** Where the decider of the inserter's clock of the game stands in the order they are built, when known */
+        private readonly decider_build_order?: number,
     ) {}
 
     public onEnter(from_status: InserterStatus): void {
@@ -92,10 +94,7 @@ export class MachinePickupLogic implements InserterTransferLogic {
         recordPickup(this.inserterState, output_item_name, pickup_quantity);
         source.inventoryState.removeQuantity(output_item_name, pickup_quantity);
         if (this.window_opened && this.ticks_in_pickup === 1) {
-            source.productsTakenAsWindowOpened = true;
-            if (!EntityState.isBelt(this.sinkEntityState)) {
-                source.productsTakenAsWindowOpenedIntoAnInventory = true;
-            }
+            source.windowOpeningTakeDecider = Math.max(source.windowOpeningTakeDecider ?? -1, this.decider_build_order ?? -1);
         }
     }
 

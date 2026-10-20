@@ -32,11 +32,12 @@ describe("the starts a clock is tried from", () => {
         expect(insight.explanation).not.toContain("start this one as the first start");
         expect(startDependenceInsight("all reached", { ...dependence, verdict: "stable" }).title).toContain("every sampled start");
     });
-    it("are the cold start with the clock at five places of its period, then ascending and two random orders, the cold start first", () => {
-        expect(CLOCK_STARTS.map(it => it.id)).toEqual(["cold", "cold+30", "cold+300", "cold+700", "cold+1000", "ascending", "random-1", "random-2"]);
+    it("are the cold start with the clock at five places of its period, then ascending and two random orders, then the deciders built in reverse, the cold start first", () => {
+        expect(CLOCK_STARTS.map(it => it.id)).toEqual(["cold", "cold+30", "cold+300", "cold+700", "cold+1000", "ascending", "random-1", "random-2", "deciders-reversed"]);
         expect(COLD_START_SHIFTS).toEqual([0, 30, 300, 700, 1000]);
         expect(CLOCK_STARTS.slice(0, 5).map(it => [it.clock_shift, it.competing_takers_order])).toEqual([0, 30, 300, 700, 1000].map(shift => [shift, "descending"]));
-        expect(CLOCK_STARTS.slice(5).map(it => [it.clock_shift, it.competing_takers_order])).toEqual([[0, "ascending"], [0, { seed: 1 }], [0, { seed: 2 }]]);
+        expect(CLOCK_STARTS.slice(5).map(it => [it.clock_shift, it.competing_takers_order])).toEqual([[0, "ascending"], [0, { seed: 1 }], [0, { seed: 2 }], [0, "descending"]]);
+        expect(CLOCK_STARTS.map(it => it.decider_order ?? "built")).toEqual([...Array(8).fill("built"), "reversed"]);
     });
 });
 

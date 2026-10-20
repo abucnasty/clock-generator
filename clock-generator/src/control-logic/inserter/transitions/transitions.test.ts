@@ -180,8 +180,11 @@ describe("transitions (belt to machine)", () => {
     // the recording of the evenly spaced windows (28 down to 12, block 21), and the cable and the plastic inserter of
     // that plant, waiting since 221 and 224, took their hands at 231.
     describe("an inserter that waits for space in a machine whose products another inserter takes", () => {
-        /** `window_opens_at`: the tick a window of a clock of the game opens, before which the inserter is disabled */
-        const setup = (source_state: EntityState, window_opens_at?: number) => {
+        /**
+         * `window_opens_at`: the tick a window of a clock of the game opens, before which the inserter is disabled;
+         * `decider_build_order`: where that clock's decider stands in the order the clock's deciders are built
+         */
+        const setup = (source_state: EntityState, window_opens_at?: number, decider_build_order?: number) => {
             const sink = MachineState.forMachine(createMachine("transport-belt"));
             const inserter_state = InserterState.createIdle(createInserter({
                 source: { entity_id: source_state.entity_id, item_names: new Set(["iron-gear-wheel"]) },
@@ -193,6 +196,7 @@ describe("transitions (belt to machine)", () => {
             let tick = 0;
             const window_control = window_opens_at === undefined ? AlwaysEnabledControl : {
                 is_game_clock: true,
+                decider_build_order,
                 isEnabled: () => tick >= window_opens_at,
                 isEnabledIn: (ticks: number) => tick + ticks >= window_opens_at,
             };
@@ -268,7 +272,9 @@ describe("transitions (belt to machine)", () => {
         // that take from a machine and whose window opens in the tick another inserter takes the products of the
         // machine they put into down from its block: the first items a tick later in 1,158 cases of 1,170 where the
         // inserter that took the products was enabled before, also where the machine finished a craft the tick before
-        // (44 of 44), and in the tick the products are taken in 852 of 888 where that inserter's window opened too.
+        // (44 of 44). Where that inserter's window opened too, the game updates the inserter of the last built decider
+        // first (roadmap M3): in the tick of the take where the taker's decider was built after this one's, a tick later
+        // where before, 9,189 of 9,189 windows over fifteen runs, each clock also built in reverse and renumbered.
         test("takes its first items a tick later when its window opens in the tick the products are taken", () => {
             const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(machineWithGears(), 2);
             endTickAtTheBlock(false);
@@ -288,13 +294,35 @@ describe("transitions (belt to machine)", () => {
             expect(look()).toBe(ModeTransition.NONE);
         })
 
-        test("takes them in the tick they are taken when the window of the inserter that takes them opens in that tick too", () => {
-            const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(machineWithGears(), 2);
+        test("takes them in the tick they are taken when the window of the inserter that takes them opens in that tick too, its decider built after this one's", () => {
+            const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(machineWithGears(), 2, 1);
             endTickAtTheBlock(false);
             expect(look()?.toMode).toBe(disabled_mode);
             takeProducts();
-            sink.productsTakenAsWindowOpened = true;
+            sink.windowOpeningTakeDecider = 2;
             expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("takes them a tick later when the window of the inserter that takes them opens in that tick too, its decider built before this one's", () => {
+            const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(machineWithGears(), 2, 1);
+            endTickAtTheBlock(false);
+            expect(look()?.toMode).toBe(disabled_mode);
+            takeProducts();
+            sink.windowOpeningTakeDecider = 0;
+            expect(look()).toBe(ModeTransition.NONE);
+            endTickUnderTheBlock();
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("takes them a tick later where the order of its own decider or the taker's is not known", () => {
+            for (const [own, taker] of [[undefined, 2], [1, -1]] as const) {
+                const { sink, look, endTickAtTheBlock, takeProducts, disabled_mode } = setup(machineWithGears(), 2, own);
+                endTickAtTheBlock(false);
+                expect(look()?.toMode).toBe(disabled_mode);
+                takeProducts();
+                sink.windowOpeningTakeDecider = taker;
+                expect(look()).toBe(ModeTransition.NONE);
+            }
         })
 
         test("is not held up when its window opens after the machine was cleared", () => {
@@ -339,27 +367,27 @@ describe("transitions (belt to machine)", () => {
             expect(firstPickupLook(2)).toBe(1);
         })
 
-        // Recorded in Factorio 2.1.21 (roadmap M2): with the taker's window opening in that tick too, a tick later in
-        // 1,327 of 1,327 windows where the taker drops onto a belt, in the tick in 602 of 602 where it drops into a
-        // machine or a chest; in one run of the chemical science build, 82 of 82 and 166 of 166 side by side.
-        test("takes its first items from a belt in the tick the products are taken when the inserter that takes them, its window opening in that tick too, puts them into a machine or a chest", () => {
+        // A belt-fed inserter goes by the same order (roadmap M3): where M2 found the taker's drop target deciding it
+        // (a tick later in 1,327 of 1,327 windows where the taker drops onto a belt, in the tick in 602 of 602 where
+        // into a machine or a chest), each was the order the generator builds the deciders in; built the other way,
+        // the same windows flip, onto a belt and into a machine alike (chemical science: 82 and 166 swap sides).
+        test("takes its first items from a belt in the tick the products are taken when the inserter that takes them, its window opening in that tick too, has its decider built after this one's", () => {
             const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
-            const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(belt, 2);
+            const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(belt, 2, 0);
             endTickAtTheBlock(false);
             expect(look()?.toMode).toBe(disabled_mode);
             takeProducts();
-            sink.productsTakenAsWindowOpened = true;
-            sink.productsTakenAsWindowOpenedIntoAnInventory = true;
+            sink.windowOpeningTakeDecider = 1;
             expect(look()?.toMode).toBe(pickup_mode);
         })
 
-        test("takes its first items from a belt a tick later when the inserter that takes them, its window opening in that tick too, puts them onto a belt", () => {
+        test("takes its first items from a belt a tick later when the inserter that takes them, its window opening in that tick too, has its decider built before this one's", () => {
             const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
-            const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(belt, 2);
+            const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(belt, 2, 1);
             endTickAtTheBlock(false);
             expect(look()?.toMode).toBe(disabled_mode);
             takeProducts();
-            sink.productsTakenAsWindowOpened = true;
+            sink.windowOpeningTakeDecider = 0;
             expect(look()).toBe(ModeTransition.NONE);
             endTickUnderTheBlock();
             expect(look()?.toMode).toBe(pickup_mode);

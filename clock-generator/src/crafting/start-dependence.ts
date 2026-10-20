@@ -1,4 +1,5 @@
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../control-logic/inserter/competing-takers";
+import { DeciderOrder } from "./decider-order";
 
 /**
  * Whether a clock reaches its target from every sampled cold phase/order start, or only from some
@@ -22,12 +23,15 @@ export interface ClockStart {
     clock_shift: number;
     /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide */
     competing_takers_order: TakerOrder;
+    /** In what order the clock's window deciders are built: as its blueprint has them where unset */
+    decider_order?: DeciderOrder;
 }
 
 /**
  * The cold start of the staged scaffold (machines, buffers and hands empty, the clock from tick 0) with the clock
- * standing 0, 30, 300, 700 and 1000 ticks into its period, and the cold start with the competing inserters served in
- * the order of ascending config ids and in two random orders. The first is the one every clock is judged on.
+ * standing 0, 30, 300, 700 and 1000 ticks into its period, the cold start with the competing inserters served in the
+ * order of ascending config ids and in two random orders, and the cold start with the clock's window deciders built in
+ * reverse order, as a build put down by robots can have them (roadmap M3). The first is the one every clock is judged on.
  */
 export const CLOCK_STARTS: readonly ClockStart[] = [
     ...COLD_START_SHIFTS.map(shift => ({
@@ -43,6 +47,13 @@ export const CLOCK_STARTS: readonly ClockStart[] = [
         clock_shift: 0,
         competing_takers_order: { seed },
     })),
+    {
+        id: "deciders-reversed",
+        label: "the cold start with the clock's window deciders built in reverse order",
+        clock_shift: 0,
+        competing_takers_order: DEFAULT_TAKER_ORDER,
+        decider_order: "reversed" as const,
+    },
 ];
 
 /** What a clock does from one start */
