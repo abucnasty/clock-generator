@@ -48,6 +48,14 @@ export class FactorioDataService {
     }
 
     /**
+     * Whether the data can be read: initialized, or with a default source to read it from on first use, as in Node once
+     * `factorio-data-file` is imported. In the browser, where the data is fetched, it is the same as `isInitialized`.
+     */
+    public static isAvailable(): boolean {
+        return this.initialized || this.default_source !== null;
+    }
+
+    /**
      * Get the Factorio data, initializing from the default source if there is one.
      */
     private static getData(): FactorioData {

@@ -110,11 +110,11 @@ function inserterCoversOutputItem(
  * Each missing ingredient/output produces a separate `InserterCoverageIssue`
  * — the loop never returns early so ALL missing items are reported.
  *
- * Returns an empty array if `FactorioDataService` has not been initialized yet,
- * so this is safe to call from the browser before data is loaded.
+ * Returns an empty array while the game data cannot be read, so this is safe to call from the browser before the data
+ * is loaded. In Node the data is read on first use, here too: a check that comes first is not skipped.
  */
 function coverageForMachines(config: Config, checkedMachines: MachineConfiguration[]): InserterCoverageIssue[] {
-    if (!FactorioDataService.isInitialized()) {
+    if (!FactorioDataService.isAvailable()) {
         return [];
     }
 
@@ -275,7 +275,7 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
     let catalog = '';
     let cached = new Map<number, { key: string; issues: InserterCoverageIssue[] }>();
     return config => {
-        if (!FactorioDataService.isInitialized()) return [];
+        if (!FactorioDataService.isAvailable()) return [];
         const nextCatalog = JSON.stringify({
             machines: config.machines.map(({ id, recipe, type, fuel }) => [id, recipe, type, fuel]),
             belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => lane.ingredient)]),

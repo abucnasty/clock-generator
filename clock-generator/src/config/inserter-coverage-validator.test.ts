@@ -1,14 +1,8 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { loadConfigFromFile } from './loader';
 import { ConfigPaths } from './config-paths';
 import { Config } from './schema';
 import { validateInserterCoverage } from './inserter-coverage-validator';
-import { FactorioDataService } from '../data/factorio-data-service';
-
-// Trigger auto-initialization from resources/data-filtered.json before any test runs
-beforeAll(() => {
-    FactorioDataService.findRecipeOrThrow('accumulator');
-});
 
 describe('validateInserterCoverage', () => {
     describe('bad-accumulator-config', () => {
@@ -78,5 +72,38 @@ describe('validateInserterCoverage', () => {
             const fuelInserter = { source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 2 };
             expect(validateInserterCoverage(biochamberConfig([fuelInserter]))).toHaveLength(0);
         });
+    });
+});
+
+/**
+ * The engine as a script loads it, with nothing of the game data read yet: in Node the data is read on first use, and
+ * the coverage check reads it too, where before it skipped itself and the generation ran to its tick cap
+ */
+describe('a coverage check that comes before anything read the game data', () => {
+    const quiet = { log() { }, warn() { }, error() { }, debug() { } };
+
+    it('refuses a config missing an inserter in Node, before any simulation', async () => {
+        vi.resetModules();
+        await import('../data/factorio-data-file');
+        const { FactorioDataService: data } = await import('../data/factorio-data-service');
+        const { loadConfigFromFile: load } = await import('./loader');
+        const { ConfigPaths: paths } = await import('./config-paths');
+        const { generateClockAlternatives } = await import('../crafting/generate-blueprint');
+        const config = await load(paths.BAD_ACCUMULATOR_CONFIG);
+        expect(data.isInitialized()).toBe(false);
+        expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(
+            "Missing inserter coverage (2 issues):\n  - Machine 1 (accumulator): missing input inserter for 'iron-plate'\n"
+            + "  - Machine 1 (accumulator): missing output inserter for 'accumulator'");
+    });
+
+    it('is still skipped where the data has no source yet, as in the browser before it is fetched', async () => {
+        vi.resetModules();
+        const { FactorioDataService: data } = await import('../data/factorio-data-service');
+        const { validateInserterCoverage: validate, createInserterCoverageValidator: live } = await import('./inserter-coverage-validator');
+        const config = JSON.parse(JSON.stringify(await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG))) as Config;
+        expect(data.isAvailable()).toBe(false);
+        expect(validate(config)).toEqual([]);
+        expect(live()(config)).toEqual([]);
+        expect(data.isInitialized()).toBe(false);
     });
 });
