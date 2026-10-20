@@ -102,15 +102,18 @@ These are 258 first-hand controls; independent lane alignment and repeated throu
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
-The post-fix recapture covers **48 ordinary clocks** across all four speeds: **46 meet exact baseline and recovery output**.
-Of those, 42 remain marked stable after the lane-phase audit. Both normal backed-up underground clocks pass the warm run, but
-fully jammed cold-start controls alternate 144/208 items at offset 1287, matching their unstable verdict.
-The normal moving undergrounds now also receive unstable verdicts: independent modeled lane phases can
-alternate 192/160, while their measured warm runs still hold 176. Those additional failing cold starts have
-not been reproduced natively; a two-tick ingredient-restoration perturbation still holds target in both layouts.
-The two express moving underground defaults require backed-up supply and miss the target under moving supply.
-The original 39 recordings remain separate historical evidence. The belt-drop rows also compare finite receiving
-stock, including the normal-speed second hand.
+The a2 recapture after the belt window-end trim covers **48 ordinary clocks** across all four speeds:
+**43 meet exact baseline and recovery output**, 41 of them marked stable. The turbo moving straight capture
+over-produces in two early periods from the coverage protocol's calibration state, then runs exact to the end
+with exact recoveries; plain runs of the same clock are clean, and start-state fidelity is roadmap C1. The two
+normal moving underground defaults hold their baseline, and the game got back to target after every loss, while
+the generator says "no recovery" from its sampled cold lane-phase starts: the verdict promises less than the
+game delivers (modeling those starts is A3). The two normal backed-up underground defaults select a fractional
+clock whose baseline misses natively, matching holds false; their fully jammed cold-start controls alternate
+144/208 items at offset 1287 as fixed-window simulator checks. The two express moving underground defaults
+require backed-up supply and miss the target under moving supply. The previous post-fix recapture (46 of 48
+exact, 42 stable after the lane-phase audit) and the original 39 recordings remain separate historical
+evidence. The belt-drop rows also compare finite receiving stock, including the normal-speed second hand.
 
 ## Tick-pattern matrix
 
