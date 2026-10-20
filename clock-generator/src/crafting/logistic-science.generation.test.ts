@@ -40,15 +40,19 @@ describe("the belt a clock is made for", () => {
             });
 
             it("names a clock it left the slack out of a backed-up belt clock, and says why", () => {
-                expect(moving.filter(a => a.belt?.kind === "backed_up").map(a => a.id)).toEqual(["planned", "swings-2", "swings-1"]);
-                expect(alternative("swings-2").ranking.matches_belt_choice).toBe(false);
-                expect(alternative("swings-2").description).toContain("This clock did not hold the expected output with the slack");
+                // since belt windows close before their last return swing, swings-2 and swings-1 hold with the
+                // slack and export as moving clocks: planned is the one backed-up fallback left
+                expect(moving.filter(a => a.belt?.kind === "backed_up").map(a => a.id)).toEqual(["planned"]);
+                expect(alternative("swings-2").ranking.matches_belt_choice).toBe(true);
+                expect(alternative("swings-2").belt).toEqual({ kind: "moving", slack_ticks: [4] });
+                expect(alternative("planned").ranking.matches_belt_choice).toBe(false);
             });
 
-            it("selects a clock for a moving belt over the backed-up belt clock with no wake-ups", () => {
-                expect(alternative("swings-2").assessment.wake_ups_per_minute).toBe(0);
+            it("selects the moving clock with the fewest wake-ups", () => {
+                // swings-2's trimmed windows wake 82.76 a minute, the fewest of the stable moving clocks
+                expect(alternative("swings-2").assessment.wake_ups_per_minute).toBeCloseTo(82.76, 2);
                 expect(alternative("swings-2").ranking.meets_target_rate).toBe(true);
-                expect(moving_selected.id).toBe("swings-3");
+                expect(moving_selected.id).toBe("swings-2");
                 expect(moving_selected.belt).toEqual({ kind: "moving", slack_ticks: [4] });
             });
         });
@@ -92,19 +96,18 @@ describe("the searches only run when they are needed", () => {
             searched = generateClockAlternatives(withSearches(config), {logger: quiet});
         });
 
-        it("runs the searches when the config asks for them, and selects a clock with fewer wake-ups", () => {
+        it("runs the searches when the config asks for them, and keeps the planned clock that beats them", () => {
             expect(by_default.skipped_searches).toEqual(SEARCH_LABELS);
-            expect(selectedOf(by_default).id).toBe("swings-3");
+            expect(selectedOf(by_default).id).toBe("swings-2");
             expect(searched.skipped_searches).toEqual([]);
             // the other three searches find no clock for this build
             expect(idsOf(searched).filter(id => SEARCH_IDS.includes(id))).toEqual(["derived"]);
+            // since belt windows close before their last return swing, the planned swings-2 wakes 82.76 a minute,
+            // fewer than the derived clock the search finds: the searches run, and the planned clock keeps winning
             const selected = selectedOf(searched);
-            expect(selected.id).toBe("derived");
+            expect(selected.id).toBe("swings-2");
             expect(selected.verdict).toBe("stable");
-            // the long run repeats, so the wake-ups are the exact rate over the proven cycle (163.87), no longer
-            // the sample over the last two thirds of 120 periods (163.64)
-            expect(selected.assessment.wake_ups_per_minute!).toBeCloseTo(163.87, 2);
-            expect(selected.assessment.wake_ups_per_minute!).toBeLessThan(selectedOf(by_default).assessment.wake_ups_per_minute!);
+            expect(selected.assessment.wake_ups_per_minute!).toBeCloseTo(82.76, 2);
         });
     });
 });

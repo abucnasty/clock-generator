@@ -34,8 +34,9 @@ describe("the searches only run when they are needed", () => {
 
         it("selects a stable clock made without a search", () => {
             const selected = selectedOf(by_default);
-            // "fractional" since the belt wake rule (docs/simulator.md): 16.07 wake-ups against 26.79 for planned-belt-slack
-            expect(selected.id).toBe("fractional");
+            // "planned-belt-slack" since belt windows close before their last return swing: fractional no longer
+            // holds under its trimmed windows, and planned-belt-slack's wake-ups fell from 26.79 to 10.73 a minute
+            expect(selected.id).toBe("planned-belt-slack");
             expect(selected.verdict).toBe("stable");
             expect(selectableAsStable(selected.ranking)).toBe(true);
         });
@@ -72,8 +73,8 @@ describe("the clocks of a build with a deadlock risk", () => {
         // none is listed as having no recovery; from the prepared build "planned" was
         expect(no_recovery).toHaveLength(0);
         expect(no_recovery.every(it => it.assessment.backpressure_loss?.survives === false)).toBe(true);
-        // "fractional" since the belt wake rule (docs/simulator.md): its wake-ups fell to 16.07 where planned-belt-slack
-        // has 26.79, which tied before
-        expect(selected.id).toBe("fractional");
+        // "planned-belt-slack" since belt windows close before their last return swing: fractional no longer holds
+        // under its trimmed windows, and planned-belt-slack wakes 10.73 a minute
+        expect(selected.id).toBe("planned-belt-slack");
     });
 });
