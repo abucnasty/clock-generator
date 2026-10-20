@@ -627,9 +627,10 @@ export function planClockAlternatives(
     on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
 ): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
-    warnUncalibratedBeltPickups(config, logger);
     const definition = primaryDefinition(config, options, options.on_progress_detail);
     const result = definition.run();
+    // after the primary clock, so that it is not the first to read the game data: the coverage check runs only once something has
+    warnUncalibratedBeltPickups(config, logger);
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
         planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
