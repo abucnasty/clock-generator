@@ -85,6 +85,17 @@ jobs:
 
       - run: npm ci
 
+      # Vitest starts the files that took longest in the run before; without its results it starts the largest files,
+      # and over-hood-clock, a short file and one of the slowest, started last and ran alone for minutes. The results
+      # are saved at the end of every run (one cache entry each) and the newest is restored, after `npm ci`, which
+      # empties node_modules.
+      - name: Durations of the last generation tests
+        uses: actions/cache@v4
+        with:
+          path: clock-generator/node_modules/.vite/vitest
+          key: generation-durations-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: generation-durations-
+
       - name: Build
         run: npm run build
 

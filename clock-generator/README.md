@@ -562,7 +562,7 @@ npm run test:generation  # the generation tests: the clock alternatives of whole
 npm run test:all         # both
 ```
 
-The generation tests are the files named `*.generation.test.ts`. They generate every clock alternative of a sample and check what is selected, so they take as long as the slowest sample (most of it one test of agricultural science). Pull requests run the unit tests; pull requests to master run the generation tests too (`.github/workflows/test.yml`). Run `npm run test:all` before opening one.
+The generation tests are the files named `*.generation.test.ts`. They generate every clock alternative of a sample and check what is selected, so they take as long as the slowest sample (most of it one test of agricultural science). They run the engine as tsc builds it into `dist/`, which `npm run test:generation` and `npm run test:all` build first: run from the TypeScript as Vite transforms it for the tests, they take 1.8 times as long. A run of `npx vitest` on a generation test stops and asks for `npm run build` when `dist/` is older than `src/`. Pull requests run the unit tests; pull requests to master run the generation tests too (`.github/workflows/test.yml`). Run `npm run test:all` before opening one.
 
 ### Recording a Build in Factorio
 
