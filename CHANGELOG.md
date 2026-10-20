@@ -11,7 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.19.0] - Unreleased
 
 ### Fixed
-- Generated clocks no longer leave a belt-fed inserter's input window open through its last return swing, which let it pick up an extra stack and over-produce (over-the-hood express and turbo builds); input windows end one swing earlier, cutting wake-ups.
+- Generated clocks no longer leave a belt-fed inserter's input window open through its last return swing, which let it pick up an extra stack and over-produce (over-the-hood express and turbo builds); input windows end one swing earlier, cutting wake-ups. Three verdicts improve, each confirmed in the game: the over-the-hood express and turbo backed-up two-ingredient builds are stable again, and the normal moving underground entrance's baseline holds, rejected only for its modeled cold-start recovery.
 - Prove a clock's long-run output and its recovery from a supply loss by finding an exact repeat of the simulated state, instead of judging a sample of periods. A clock whose output drifts off target only after the sampled periods is no longer marked stable; this rejects the earlier clocks for the over-the-hood express and turbo backed-up builds with two different ingredients, which over-produced in the game.
 - Avoid repeating recovery verification for identical clocks, including schedules whose inserter windows differ only in object ordering. Keep distinct supply assumptions and failure findings separate.
 - Check independently phased moving input lanes during clock verification and recovery. Clocks that meet their target only while both lanes stay aligned are no longer marked stable.
