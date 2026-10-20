@@ -5,7 +5,8 @@ import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../../ent
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { BlueprintGenerationResult, GenerateClockOptions, LCM_STABILITY_TOLERANCE, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
-import { AsBuiltStabilityCheck, runClockOnBuild } from "../trial";
+import { AsBuiltRun, AsBuiltStabilityCheck, runClockOnBuild } from "../trial";
+import { StockRecording } from "../machine-stock";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { SpareOutputWindows, withSingleSwingOutput } from "./transforms";
 
@@ -45,6 +46,10 @@ interface TimingTrial extends QuickTrial {
     output_full: number;
     /** Pickups that waited at the machine for more items */
     slow: number;
+    /** The windows the quick trial ran on, which the confirmation reuses when no spare capacity is added */
+    windows: Map<string, OpenRange[]>;
+    /** The quick trial's check, whose early stages the confirmation takes over on the same windows */
+    run: AsBuiltRun;
 }
 
 /** What the full-hand search yields: the windows, the confirming check and its run, and what it tried */
@@ -52,6 +57,8 @@ interface FullHandWindows {
     windows: Map<string, OpenRange[]>;
     result: TrialRun;
     check: AsBuiltStabilityCheck;
+    /** The long run of the confirming check, which the clock-only check of the export takes over */
+    stock?: StockRecording;
     search: SearchReport;
 }
 
@@ -183,10 +190,11 @@ function fullHandOutputWindows(
         candidates: timings,
         quick: (timing, index) => {
             report?.(`Searching full-hand output timing (${index + 1}/${timings.length})`);
-            const { holds, result } = quickTrial(config, build(timing), period, logger);
-            return holds
-                ? { holds: true, output_full: outputFullTicks(result), slow: slowPickups(result) }
-                : { holds: false, output_full: 0, slow: 0 };
+            const timing_windows = build(timing);
+            const trial = quickTrial(config, timing_windows, period, logger);
+            return trial.holds
+                ? { holds: true, output_full: outputFullTicks(trial.result), slow: slowPickups(trial.result), windows: timing_windows, run: trial.run }
+                : { holds: false, output_full: 0, slow: 0, windows: timing_windows, run: trial.run };
         },
         // the offsets of one window length are listed in order, so neighbours in the list are neighbours in time, and
         // the last offset is next to the first: the windows repeat every spacing
@@ -206,8 +214,10 @@ function fullHandOutputWindows(
             if (recovery.spare) {
                 label += `, every ${recovery.spare.every} windows +${recovery.spare.ticks} ticks`;
             }
-            const candidate_windows = build(timing, recovery.spare);
-            const confirmed = confirm(config, candidate_windows, period, logger, label, report);
+            // without spare capacity the windows are the quick trial's, whose check the confirmation takes over
+            const candidate_windows = recovery.spare ? build(timing, recovery.spare) : quick.windows;
+            const confirmed = confirm(config, candidate_windows, period, logger, label, report,
+                recovery.spare ? undefined : quick.run);
             logger.log(`Full-hand output: ${label}, ${output_full} output-full ticks, ${slow} slow pickups, stable=${confirmed !== null}`);
             return confirmed === null ? null : { ...confirmed, windows: candidate_windows };
         },
@@ -305,5 +315,9 @@ export function fullHandClock(config: Config, options: GenerateClockOptions = {}
         new Set(output_inserters.map(os => os.inserter.source.entity_id.id)),
         duration.ticks, plan.logger, options.on_progress_detail,
     );
-    return checkedClock(plan, clock, full_hand?.windows ?? clock.windows, options, { search: full_hand?.search });
+    return checkedClock(plan, clock, full_hand?.windows ?? clock.windows, options, {
+        search: full_hand?.search,
+        verified: full_hand === null ? undefined
+            : { windows: full_hand.windows, run: { result: full_hand.result, check: full_hand.check, stock: full_hand.stock } },
+    });
 }

@@ -4,6 +4,7 @@ import { EntityId, EntityType } from "../../entities";
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { CIRCUIT_LATENCY_TICKS } from "../clock";
+import { AsBuiltRun } from "../trial";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { Confirmed, QuickTrial, SearchRangeEdge, SearchReport, confirm, quickTrial, search } from "./search";
 import { cycleOfWindow, withCycleShifted } from "./transforms";
@@ -210,12 +211,12 @@ function shiftedCycleWindows(
     period: number,
     logger: Logger,
     report?: (detail: string) => void,
-): { windows: Map<string, OpenRange[]>; search: SearchReport } | null {
+): { windows: Map<string, OpenRange[]>; search: SearchReport; verified: Confirmed } | null {
     const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, period);
     const describe = (candidate: ShiftedCycleCandidate) =>
         `cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
 
-    const { picked, pick, tried } = search<ShiftedCycleCandidate, QuickTrial & { result: TrialRun }, Confirmed>({
+    const { picked, pick, tried } = search<ShiftedCycleCandidate, QuickTrial & { result: TrialRun; run: AsBuiltRun }, Confirmed>({
         candidates,
         quick: (candidate, index) => {
             report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)})`);
@@ -225,7 +226,7 @@ function shiftedCycleWindows(
         neighbours: (a, b) => a.selectable && b.selectable && a.cycle_index === b.cycle_index && Math.sign(a.shift_ticks) === Math.sign(b.shift_ticks),
         eligible: candidate => candidate.selectable,
         tieBreak: (a, b) => Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks),
-        confirm: ({ candidate }) => confirm(config, candidate.windows, period, logger, describe(candidate), report),
+        confirm: ({ candidate, quick }) => confirm(config, candidate.windows, period, logger, describe(candidate), report, quick.run),
     });
     logger.log(`Shifted crafting cycle: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} shifts pass the quick trial`);
     if (picked === null || pick === null) {
@@ -248,6 +249,7 @@ function shiftedCycleWindows(
     const planned = movedWindows(planned_windows, { ...candidate, shift_ticks: 0 }, cycle_ticks, period);
     return {
         windows: candidate.windows,
+        verified: picked,
         search: {
             kind: "shifted cycle",
             candidates: tried.map(it => ({ row: it.candidate.cycle_index + 1, setting: it.candidate.shift_ticks, holds: it.quick.holds })),
@@ -279,5 +281,6 @@ export function shiftedSwingsClock(config: Config, options: GenerateClockOptions
         ...shifted.search,
         moved: shifted.search.moved!.map(it => ({ ...it, item_names: (plan.item_names.get(it.entity_id.id) ?? "").split(",").filter(Boolean) })),
     };
-    return checkedClock(plan, clock, shifted?.windows ?? clock.windows, options, { search: report });
+    return checkedClock(plan, clock, shifted?.windows ?? clock.windows, options,
+        { search: report, verified: shifted === null ? undefined : { windows: shifted.windows, run: shifted.verified } });
 }

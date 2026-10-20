@@ -382,10 +382,16 @@ export function runAsBuiltCheck(
     start_phases: number = AS_BUILT_START_PHASES,
     report?: (checked: number, total: number) => void,
     long_run_ticks: number = FREE_RUNNING_CHECK_TICKS,
+    /**
+     * A check that already PASSED on exactly these windows, config and period: its unshifted run and pickup phase
+     * starts are taken over instead of being run again, and so is its long run where it made one as long as this
+     * check's. The start phases are still this check's own: their step differs with the count of phases.
+     */
+    passed?: { run: AsBuiltRun; long_run_ticks: number },
 ): AsBuiltRun {
     const step = Math.max(1, Math.floor(period / start_phases));
     const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
-    const result = runClockOnBuild(config, decider_windows, period, logger);
+    const result = passed !== undefined ? passed.run.result : runClockOnBuild(config, decider_windows, period, logger);
     const check: AsBuiltStabilityCheck = {
         holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
@@ -396,6 +402,11 @@ export function runAsBuiltCheck(
     report?.(1, total);
     let stock: StockRecording | undefined;
     if (check.holds) for (const phases of movingPickupPhaseStarts(config)) {
+        if (passed !== undefined) {
+            // the handed-over check asked from this start and it held
+            check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
+            continue;
+        }
         const shifted = runClockOnBuild(config, decider_windows, period, logger,
             {moving_pickup_phases: phases, factorio_states: false});
         check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
@@ -409,16 +420,24 @@ export function runAsBuiltCheck(
         }
     }
     if (check.holds) {
-        // no long run when none is asked for (a quick trial of a search)
-        const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks) : null;
-        stock = long_run?.stock;
-        if (stock) {
-            // judged as the long run is: what follows its start-up
-            check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
-        }
-        if (long_run && !long_run.keeps_up) {
-            check.holds = false;
-            check.actual_output_items = long_run.output_items_per_period;
+        if (passed !== undefined && passed.long_run_ticks === long_run_ticks) {
+            // the handed-over check made this long run and the build kept up in it
+            stock = passed.run.stock;
+            if (stock) {
+                check.wake_ups = passed.run.check.wake_ups;
+            }
+        } else {
+            // no long run when none is asked for (a quick trial of a search)
+            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks) : null;
+            stock = long_run?.stock;
+            if (stock) {
+                // judged as the long run is: what follows its start-up
+                check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+            }
+            if (long_run && !long_run.keeps_up) {
+                check.holds = false;
+                check.actual_output_items = long_run.output_items_per_period;
+            }
         }
     }
     if (!check.holds) {

@@ -49,7 +49,7 @@ import { factorioDrillState, factorioInserterState, factorioMachineState } from 
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
-import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
 /**
  * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
@@ -1335,7 +1335,10 @@ export function checkedClock(
     clock: PlannedClock,
     windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions = {},
-    extras: Pick<ClockExportExtras, "search"> = {},
+    extras: Pick<ClockExportExtras, "search"> & {
+        /** A search's confirmation that passed on exactly `windows`, whose early stages the check here takes over */
+        verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
+    } = {},
 ): BlueprintGenerationResult {
     const { config, logger, run: { stability_check, total_expected_output, all_output_inserters, duration } } = plan;
     let clock_only_run: ClockOnlyRun | undefined;
@@ -1345,7 +1348,11 @@ export function checkedClock(
         // the identical check may have run for the slack decision on exactly these windows (see clockOfPlan)
         const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
             : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
-                (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`));
+                (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`),
+                FREE_RUNNING_CHECK_TICKS,
+                // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
+                extras.verified !== undefined && extras.verified.windows === windows
+                    ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);
         let kept_run = as_built_run;
         if (stability_check.holds && as_built_run.check.holds) {
             const fed = trialWithOutputFeeders(config, windows, duration.ticks, new Set(all_output_inserters.map(os => os.inserter.source.entity_id.id)),

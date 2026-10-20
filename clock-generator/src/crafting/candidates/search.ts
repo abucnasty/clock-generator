@@ -4,7 +4,7 @@ import { EntityId } from "../../entities";
 import { Logger } from "../../common/logger";
 import { StockRecording } from "../machine-stock";
 import { TrialRun } from "../plan/plan-run";
-import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
 
 /**
  * The one search every transform of a clock's windows goes through, with the one policy for trying its candidates.
@@ -116,9 +116,9 @@ export function search<C, Q extends QuickTrial, R>(it: Search<C, Q, R>): SearchR
  * in the game on automation science; the dozen phases keep every clock the game has confirmed, at more runs on the
  * full-hand search, whose scan had used one run.
  */
-export function quickTrial(config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger): QuickTrial & { result: TrialRun } {
-    const { result, check } = runAsBuiltCheck(config, windows, period, logger, AS_BUILT_START_PHASES, undefined, 0);
-    return { holds: check.holds, result };
+export function quickTrial(config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger): QuickTrial & { result: TrialRun; run: AsBuiltRun } {
+    const run = runAsBuiltCheck(config, windows, period, logger, AS_BUILT_START_PHASES, undefined, 0);
+    return { holds: run.check.holds, result: run.result, run };
 }
 
 /** What a confirmation yields: the clock-only check that passed, with its run and the long run's stock */
@@ -133,9 +133,13 @@ export interface Confirmed {
  * which the quick trial's dozen phases are the first of. Null when it fails. `label` names the candidate in the
  * progress shown.
  */
-export function confirm(config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger, label: string, report?: (detail: string) => void): Confirmed | null {
+export function confirm(config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger, label: string, report?: (detail: string) => void,
+    /** The quick trial that passed on exactly these windows, whose unshifted run and pickup phase starts the confirmation takes over */
+    passed?: AsBuiltRun,
+): Confirmed | null {
     const full = runAsBuiltCheck(config, windows, period, logger, FULL_CHECK_START_PHASES,
-        (n, total) => report?.(`Confirming ${label}, clock start ${n}/${total}`));
+        (n, total) => report?.(`Confirming ${label}, clock start ${n}/${total}`), undefined,
+        passed === undefined ? undefined : { run: passed, long_run_ticks: 0 });
     logger.log(`Search: ${label} confirmed from ${full.check.start_phases_checked} start phases -> stable=${full.check.holds}`);
     return full.check.holds ? full : null;
 }
