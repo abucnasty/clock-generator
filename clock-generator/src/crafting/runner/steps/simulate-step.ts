@@ -6,7 +6,7 @@ import { RunnerStep, RunnerStepType } from "./runner-step";
 
 export class SimulateStep implements RunnerStep {
     public readonly type: RunnerStepType = RunnerStepType.SIMULATE
-    
+
     private readonly control_logic: ControlLogic;
 
     constructor(
@@ -14,9 +14,14 @@ export class SimulateStep implements RunnerStep {
         private readonly duration: Duration,
         /** Called after every simulated tick */
         private readonly after_tick?: () => void,
+        /** Asked after every simulated tick (after `after_tick`); the step stops early when it answers true */
+        private readonly stop_early?: () => boolean,
     ) {
         this.control_logic = this.build()
     }
+
+    /** Ticks actually simulated by the last execute(): the duration, or less when `stop_early` ended the run */
+    public ticks_run = 0;
 
     public execute(): void {
         const context = this.simulation_context
@@ -32,7 +37,11 @@ export class SimulateStep implements RunnerStep {
             }
             control_logic.executeForTick();
             this.after_tick?.();
+            if (this.stop_early?.() === true) {
+                break;
+            }
         }
+        this.ticks_run = context.tick_provider.getCurrentTick() - start_tick;
     }
 
     private build(): ControlLogic {

@@ -8,7 +8,7 @@ import { Entity, EntityId } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
 import { StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
-import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
+import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, planRun, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
@@ -97,6 +97,14 @@ export interface AsBuiltStabilityCheck {
     /** Output items of the reported run over its repeat_periods periods; set when repeat_periods is more than 1 */
     repeat_output_items?: number;
     /**
+     * The long run repeated a simulation state at a bin boundary (see runner/steady-state.ts), so its judged bins
+     * are what the build does forever: its verdict is a proof, not a sample of 120 periods. Absent when the check
+     * made no long run; false when the long run ran its full length without a state coming up again.
+     */
+    long_run_proven?: boolean;
+    /** Clock periods in the repeating cycle the proven long run was judged on */
+    long_run_cycle_periods?: number;
+    /**
      * How often the machines woke the inserters asleep on their wake-up lists (goal 2 of GOALS.md, see wake-ups.ts),
      * for one copy of the build over the judged part of the long run of the unshifted clock. Absent when the check
      * made no long run: the clock already failed its one-period check, or its period is too long for one.
@@ -162,6 +170,12 @@ export function longRunPeriodsOf(period: number, check_ticks: number = FREE_RUNN
  * periods instead, longer for a fractional period whose repeat needs it, and judged on what follows the first third:
  * in bins of whole ticks (a period, or the repeat of a fractional one), none more than a hand off what it expects
  * and all of them together within a hand.
+ *
+ * The run watches for the simulation state repeating at a bin boundary (see `detect_repeat`): a build on fixed
+ * clocks repeats forever from a repeated state, so the run stops there and the bins of the repeating cycle are
+ * judged instead, as a proof (`proven`) rather than a sample — every cycle bin within a hand, and the cycle as a
+ * whole exactly at its expected output (see judgeProvenCycle). A run that never repeats within its periods is
+ * judged as before.
  */
 function longRunOfFreeRunningBuild(
     config: Config,
@@ -172,7 +186,20 @@ function longRunOfFreeRunningBuild(
     check_ticks: number = FREE_RUNNING_CHECK_TICKS,
     /** How the run starts; the cold start of the staged scaffold with the default order by default */
     start: Pick<RunOptions, "competing_takers_order"> = {},
-): { keeps_up: boolean; output_items_per_period: number; /** Items the output inserters dropped in each judged bin */ judged: number[]; off_bins: number; span_items: number; stock: StockRecording } | null {
+): {
+    keeps_up: boolean;
+    output_items_per_period: number;
+    /** Items the output inserters dropped in each judged bin */ judged: number[];
+    off_bins: number;
+    span_items: number;
+    stock: StockRecording;
+    /** The judged bins repeat forever: the verdict is a proof of the build's eternity, not a sample of 120 periods */
+    proven: boolean;
+    /** Clock periods in the proven repeating cycle; null when the run never repeated */
+    cycle_periods: number | null;
+    /** Tick of the run the first judged bin starts at, for judging the same window the verdict is of */
+    first_judged_tick: number;
+} | null {
     // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
     const registry = createEntityRegistryFromConfig(config);
     // a fractional period repeats in whole ticks only every few periods, as its subtick clock counts them
@@ -182,7 +209,7 @@ function longRunOfFreeRunningBuild(
         return null;
     }
     // only its stock is read, which names the state of every inserter itself
-    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false, ...start });
+    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false, detect_repeat: true, ...start });
     const stock = run.machine_stock;
     if (!stock) {
         return null;
@@ -195,14 +222,27 @@ function longRunOfFreeRunningBuild(
         .filter(it => makers.has(it.source.entity_id.id) && !EntityId.isMachine(it.sink.entity_id));
     const output_ids = new Set(output_inserters.map(it => it.entity_id.id));
     const hand = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size));
+    const held = stock.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held);
     // the first third of the run carries its start-up, which a loop can take a dozen periods to work out of, as a
     // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
-    // to come out within a hand, and no bin further off than a hand
-    const verdict = judgeLongRun(stock.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held),
-        stock.ticks, period, repeat, expected_output_items, hand);
+    // to come out within a hand, and no bin further off than a hand. A run that repeated is judged on its cycle.
+    const verdict = run.state_repeat !== undefined
+        ? judgeProvenCycle(held, stock.ticks, run.state_repeat, expected_output_items, hand)
+        : judgeLongRun(held, stock.ticks, period, repeat, expected_output_items, hand);
+    const proven = run.state_repeat !== undefined;
     const bins = verdict.bin_ticks === null ? "span(s)" : verdict.periods_per_bin === 1 ? "periods" : `repeats of ${verdict.periods_per_bin} periods (${verdict.bin_ticks} ticks)`;
-    logger.log(`Free running build over ${verdict.judged.length} ${bins}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
-    return { keeps_up: verdict.keeps_up, output_items_per_period: verdict.output_items_per_period, judged: verdict.judged, off_bins: verdict.off_bins.length, span_items: verdict.total - verdict.expected_total, stock };
+    logger.log(`Free running build over ${verdict.judged.length} ${bins}${proven ? " (repeats forever)" : ""}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
+    return {
+        keeps_up: verdict.keeps_up,
+        output_items_per_period: verdict.output_items_per_period,
+        judged: verdict.judged,
+        off_bins: verdict.off_bins.length,
+        span_items: verdict.total - verdict.expected_total,
+        stock,
+        proven,
+        cycle_periods: run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.periods_per_bin,
+        first_judged_tick: verdict.first_judged_tick,
+    };
 }
 
 /**
@@ -425,14 +465,21 @@ export function runAsBuiltCheck(
             stock = passed.run.stock;
             if (stock) {
                 check.wake_ups = passed.run.check.wake_ups;
+                check.long_run_proven = passed.run.check.long_run_proven;
+                check.long_run_cycle_periods = passed.run.check.long_run_cycle_periods;
             }
         } else {
             // no long run when none is asked for (a quick trial of a search)
             const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks) : null;
             stock = long_run?.stock;
-            if (stock) {
-                // judged as the long run is: what follows its start-up
-                check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+            if (long_run && stock) {
+                // judged as the long run is: the proven cycle, or what follows the start-up of a sampled run
+                check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config),
+                    long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+                check.long_run_proven = long_run.proven;
+                if (long_run.cycle_periods !== null) {
+                    check.long_run_cycle_periods = long_run.cycle_periods;
+                }
             }
             if (long_run && !long_run.keeps_up) {
                 check.holds = false;

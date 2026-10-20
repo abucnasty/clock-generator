@@ -48,7 +48,10 @@ describe("the rule count of a simulated run", () => {
         expect(machine.products_finished.at(-1)).toBe(4018);
         expect(machine.crafts_started.at(-1)).toBe(2010);
         expect(machine.crafts_started.every((count, tick) => tick === 0 || count >= machine.crafts_started[tick - 1])).toBe(true);
-        expect(clock.result.stability_check.as_built!.wake_ups!.wake_ups_per_minute).toBeCloseTo(177.27, 2);
+        // the long run repeats from its first bin, so the wake-ups are the exact eternal rate over the one-period
+        // cycle (177.95), no longer the sample over the last two thirds of 120 periods (177.27)
+        expect(clock.result.stability_check.as_built!.long_run_proven).toBe(true);
+        expect(clock.result.stability_check.as_built!.wake_ups!.wake_ups_per_minute).toBeCloseTo(177.95, 2);
     });
 
     it("turns a stock and the config's entities into the rule count's input", () => {
@@ -82,14 +85,17 @@ describe("the rule count of a simulated run", () => {
 
     it("works out the removal and the calls of a clock, over the ticks of its long run", () => {
         const calls = ruleCallsOfClock(config, clock);
-        expect(calls.from_tick).toBe(Math.floor(calls.to_tick / 3));
+        // the long run of this clock repeats from its first bin, so the judged window is the one-period cycle
+        // (from tick 1, as the wake-ups count it), no longer the last two thirds of 120 periods
+        expect(calls.from_tick).toBe(1);
+        expect(calls.to_tick).toBe(264);
         // the clocked run is the long run again: goal 2's count of it is the generator's own
         expect(calls.clocked_wake_ups_per_minute.here).toBeCloseTo(calls.clocked_wake_ups_per_minute.long_run, 9);
         expect(calls.unwired_run.ticks).toBe(calls.clocked_run.ticks);
         expect(calls.unwired_run.groups.every(group => group.wired === 0)).toBe(true);
         expect(calls.clocked_run.groups.reduce((sum, group) => sum + group.wired, 0)).toBe(3);
         expect(calls.removal.newly_wired_inserters).toBe(3);
-        expect(calls.removal.w_removed_pooled).toBeCloseTo(549.7, 1);
+        expect(calls.removal.w_removed_pooled).toBeCloseTo(552.1, 1);
         expect(calls.removal.call).toMatchObject({ call: "clock", firm: true, region: "above 175.7", count: "true starts" });
         expect(calls.removal.groups.map(group => group.status)).toEqual(["newly wired", "newly wired", "newly wired"]);
         // its sinks are fed from belts at +0%: the true starts are the inferred ones, and the two counts agree

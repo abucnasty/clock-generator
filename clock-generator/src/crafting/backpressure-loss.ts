@@ -259,7 +259,10 @@ export function judgeRecovery(
  * @param bin whole ticks the output is counted in, and the clock periods they are
  * @param quiet_ticks ticks without anything done after which the build has stopped: a period, or the longest clock of
  *                    an inserter that has one of its own
- * @param state_repeats every inserter is on the clock or always enabled, so equal states a bin apart repeat for good
+ * @param proof_stride bins between boundaries whose equal states repeat for good: 1 when every inserter is on the
+ *                     clock of the period or always enabled, more when inserters have clocks of their own (fuel),
+ *                     which stand at the same place only every merged period (see provenRepeatBin); null when a
+ *                     repeated state proves nothing (some control decides from more than the tick)
  */
 export function runLossTrials(
     context: SimulationContext,
@@ -267,7 +270,7 @@ export function runLossTrials(
     options: BackpressureLossOptions,
     bin: { ticks: number; periods: number },
     quiet_ticks: number,
-    state_repeats: boolean,
+    proof_stride: number | null,
 ): LossOutcome {
     const { loss } = options;
     const expected_per_bin = options.expected_output_items * bin.periods;
@@ -379,7 +382,7 @@ export function runLossTrials(
         const output_per_bin: number[] = [];
         const bin_by_state = new Map<string, number>();
         let repeats_from: number | null = null;
-        if (state_repeats) {
+        if (proof_stride !== null) {
             bin_by_state.set(simulationStateKey(context), 0);
         }
         while (output_per_bin.length < max_recovery_bins && repeats_from === null) {
@@ -388,7 +391,8 @@ export function runLossTrials(
                 step();
             }
             output_per_bin.push(dropped() - before);
-            if (state_repeats) {
+            // only boundaries a whole stride apart have every clock standing at the same place, so only they compare
+            if (proof_stride !== null && output_per_bin.length % proof_stride === 0) {
                 const key = simulationStateKey(context);
                 repeats_from = bin_by_state.get(key) ?? null;
                 bin_by_state.set(key, output_per_bin.length);

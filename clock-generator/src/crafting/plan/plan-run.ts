@@ -354,6 +354,14 @@ export interface RunOptions {
     fuel_levels?: boolean;
     /** Record what every machine and inserter holds after each tick of the run (default false) */
     machine_stock?: boolean;
+    /**
+     * Watch the recorded run for the simulation state repeating at a bin boundary, and stop it early when it does:
+     * a build on fixed clocks repeats forever from a repeated state (see runner/steady-state.ts), so the bins
+     * recorded to there say everything the full run would. The repeat is reported in `state_repeat`. Only read when
+     * `simulate_periods` is more than 1, and only on a build whose every control is a fixed clock (see
+     * `provenRepeatBin`); any other run is never cut short.
+     */
+    detect_repeat?: boolean;
     /** Detailed UI recording, requested separately from clock generation. */
     timeline_recording?: TimelineRecordingOptions;
     /**
@@ -376,8 +384,10 @@ interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     inserter_clocks: Map<string, InserterClock>;
     /** The period of the clock */
     duration: Duration;
-    /** What was recorded: `simulate_periods` periods */
+    /** What was recorded: `simulate_periods` periods, or less when `detect_repeat` ended the run at a repeat */
     recorded_duration: Duration;
+    /** The repeat that ended the recorded run early, when `detect_repeat` found one */
+    state_repeat?: StateRepeat;
     /** The transfers of the recorded run, as the windows of the plan are read off them */
     final_history: InventoryTransferHistory;
     state_transition_history: StateTransitionHistory;
@@ -422,7 +432,8 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
     const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger);
 
     const repeat_periods = warmUp(config, controlled, duration, warmup_period, debug, debug_steps, logger);
-    const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger);
+    const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
+    const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
     const final_history = finalHistoryOf(build, crafting_cycle_plan, all_output_inserters, duration, logger);
     const output = checkOutput(build, controlled, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
     const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger);
@@ -445,6 +456,7 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
         inserter_clocks: controlled.inserter_clocks,
         duration,
         recorded_duration: simulated.recorded_duration,
+        state_repeat: simulated.state_repeat,
         final_history,
         state_transition_history,
         fuel_levels: simulated.fuel_levels,
@@ -756,10 +768,28 @@ function warmUp(
     });
 }
 
+/**
+ * The simulation state at a bin boundary of the recorded run came up at an earlier boundary. The build is on fixed
+ * clocks and every clock stands at the same place at each boundary, so the run repeats the bins between the two
+ * boundaries forever: what they hold is a proof of what the build does for good, not a sample of it.
+ */
+export interface StateRepeat {
+    /** Whole ticks in a bin: the period, the whole-tick repeat of a fractional one, or their merge with own clocks */
+    bin_ticks: number;
+    /** Clock periods in a bin */
+    periods_per_bin: number;
+    /** The boundary whose state came up again, in bins from the start of the recorded run */
+    from_bin: number;
+    /** Bins from `from_bin` to where its state came up again: the run repeats these bins forever */
+    cycle_bins: number;
+}
+
 /** What the recorded run yields beyond the histories of the build */
 interface SimulatedRun {
-    /** What was recorded: `simulate_periods` periods */
+    /** What was recorded: `simulate_periods` periods, or less when `detect_repeat` ended the run at a repeat */
     recorded_duration: Duration;
+    /** The repeat that ended the run early, when `detect_repeat` found one */
+    state_repeat?: StateRepeat;
     /** The states of the inserters that take the target item out of the build, as it runs */
     output_inserter_states: InserterState[];
     /** What those inserters had dropped before the recorded run */
@@ -779,6 +809,8 @@ function simulate(
     debug: MutableDebugSettingsProvider,
     debug_steps: DebugSteps,
     logger: Logger,
+    /** Bin at whose boundaries a repeated state repeats forever; the run stops early at a repeat (see detect_repeat) */
+    repeat_bin: { ticks: number; periods: number } | null = null,
 ): SimulatedRun {
     const { simulation_context, inventory_transfer_history, state_transition_history } = build;
     const { new_simulation_context, resettable_registry } = controlled;
@@ -809,19 +841,47 @@ function simulate(
     const timeline_recorder = options.timeline_recording
         ? new TimelineRecorder(new_simulation_context, options.timeline_recording)
         : undefined;
+    let state_repeat: StateRepeat | undefined;
+    let stop_early: (() => boolean) | undefined;
+    if (repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks) {
+        const boundary_by_key = new Map<string, number>();
+        const first_tick = new_simulation_context.tick_provider.getCurrentTick();
+        boundary_by_key.set(simulationStateKey(new_simulation_context), 0);
+        stop_early = () => {
+            const ticks = new_simulation_context.tick_provider.getCurrentTick() - first_tick;
+            if (ticks % repeat_bin.ticks !== 0) {
+                return false;
+            }
+            const boundary = ticks / repeat_bin.ticks;
+            const key = simulationStateKey(new_simulation_context);
+            const earlier = boundary_by_key.get(key);
+            if (earlier !== undefined) {
+                state_repeat = { bin_ticks: repeat_bin.ticks, periods_per_bin: repeat_bin.periods, from_bin: earlier, cycle_bins: boundary - earlier };
+                return true;
+            }
+            boundary_by_key.set(key, boundary);
+            return false;
+        };
+    }
     const simulate_step = new SimulateStep(new_simulation_context, recorded_duration,
-        (fuel_level_recorder || stock_recorder || timeline_recorder) && (() => { fuel_level_recorder?.record(); stock_recorder?.record(); timeline_recorder?.record(); }));
+        (fuel_level_recorder || stock_recorder || timeline_recorder) && (() => { fuel_level_recorder?.record(); stock_recorder?.record(); timeline_recorder?.record(); }),
+        stop_early);
     withDebugFor(debug, debug_steps, RunnerStepType.SIMULATE, () => simulate_step.execute());
 
+    const actual_duration = simulate_step.ticks_run < recorded_duration.ticks ? Duration.ofTicks(simulate_step.ticks_run) : recorded_duration;
+    if (state_repeat !== undefined) {
+        logger.log(`Simulation repeats: the state at bin ${state_repeat.from_bin + state_repeat.cycle_bins} equals bin ${state_repeat.from_bin} (${state_repeat.bin_ticks} ticks a bin), so the run repeats those ${state_repeat.cycle_bins} bins forever`);
+    }
     logger.log(`Simulation complete`);
 
     return {
-        recorded_duration,
+        recorded_duration: actual_duration,
+        state_repeat,
         output_inserter_states,
         dropped_before_run,
         fuel_levels: fuel_level_recorder?.series(),
         machine_stock: stock_recorder?.recording(),
-        timeline_recording: timeline_recorder?.recording("clock", recorded_duration.ticks,
+        timeline_recording: timeline_recorder?.recording("clock", actual_duration.ticks,
             inventory_transfer_history.ticks_before_run, new_simulation_context.target_production_rate.copies),
     };
 }
@@ -973,8 +1033,11 @@ function backpressureLossOf(
         : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
     assert(bin !== null, `A clock of ${loss_period} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
     const own_clock_ticks = Array.from(controlled.inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
+    // boundaries a whole proven bin apart repeat for good; in bins of the period that is every `stride`-th boundary
+    const proven_bin = provenRepeatBin(config, loss_period);
+    const proof_stride = proven_bin !== null && Number.isInteger(proven_bin.ticks / bin.ticks) ? proven_bin.ticks / bin.ticks : null;
     const backpressure_loss = runLossTrials(controlled.new_simulation_context, simulated.output_inserter_states, options.backpressure_loss, bin,
-        Math.max(bin.ticks, ...own_clock_ticks), isClockedThroughout(config, loss_period));
+        Math.max(bin.ticks, ...own_clock_ticks), proof_stride);
     logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
     return backpressure_loss;
 }
@@ -1000,11 +1063,14 @@ export interface TrialRun {
     machine_stock?: StockRecording;
     /** With the backpressure_loss option: what the build made after each trial of the loss */
     backpressure_loss?: LossOutcome;
+    /** With the detect_repeat option: the repeat that ended the recorded run early, when one was found */
+    state_repeat?: StateRepeat;
 }
 
 export function trialRunOf(run: BuildRun): TrialRun {
     return {
         timeline_recording: run.timeline_recording,
+        state_repeat: run.state_repeat,
         stability_check: run.stability_check,
         simulation_duration: run.duration,
         transfer_history: run.final_history,
@@ -1692,6 +1758,51 @@ function isClockedThroughout(config: Config, period: number): boolean {
     );
     return config.inserters.every(inserter => fixed(inserter.overrides?.enable_control))
         && (config.drills?.configs ?? []).every(drill => fixed(drill.overrides?.enable_control));
+}
+
+/**
+ * The bin at whose boundaries equal simulation states repeat forever: every control of the build is a fixed clock
+ * (always, never, or windows of a stated period), so the next tick is a function of the entity states and of where
+ * each clock stands, and at boundaries of this bin every clock stands where it stood at the last one. The bin is the
+ * period for a build clocked throughout on whole ticks, the whole-tick repeat of a fractional period, and their
+ * merge with the moduli of the clocks inserters have of their own (fuel), as one combinator would count them
+ * (see mergedClockTicks). Null when some control decides from more than the tick (AUTO), or no whole-tick
+ * repeat exists: a repeated state then proves nothing.
+ */
+export function provenRepeatBin(config: Config, period: number): { ticks: number; periods: number } | null {
+    const moduli = new Set<number>();
+    const fixed = (control: EnableControlOverrideConfig | undefined): boolean => {
+        if (control === undefined) {
+            return false;
+        }
+        if (control.mode === "ALWAYS" || control.mode === "NEVER") {
+            return true;
+        }
+        if (control.mode !== "CLOCKED" || control.period_duration_ticks === undefined) {
+            return false;
+        }
+        moduli.add(control.period_duration_ticks);
+        return true;
+    };
+    if (!config.inserters.every(inserter => fixed(inserter.overrides?.enable_control))
+        || !(config.drills?.configs ?? []).every(drill => fixed(drill.overrides?.enable_control))) {
+        return null;
+    }
+    const repeat = subtickClockForPeriod(period);
+    const base = Number.isInteger(period) ? { ticks: period, periods: 1 }
+        : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
+    if (base === null) {
+        return null;
+    }
+    const own_moduli = Array.from(moduli).filter(modulus => modulus !== period);
+    if (own_moduli.length === 0) {
+        return base;
+    }
+    const merged = mergedClockTicks(base.ticks, own_moduli);
+    if (merged === null || merged >= MAX_SIMULATION_TICKS) {
+        return null;
+    }
+    return { ticks: merged, periods: (merged / base.ticks) * base.periods };
 }
 
 /** Longest the fuel consumption view runs, in simulated ticks */
