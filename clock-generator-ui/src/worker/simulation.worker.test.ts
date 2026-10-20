@@ -1,7 +1,12 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { Config } from 'clock-generator/browser';
-import type { WorkerRequest, WorkerResponse } from './types';
+import type { LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
+import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
+import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
+import { createDefaultConfig } from '../utils/configForm/formData';
+import { applyPaste } from '../utils/pastePreview';
+import { buildValidationIssues } from '../utils/buildValidation';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -79,4 +84,78 @@ it('replays detailed activity through the real worker query without changing the
     await port.onmessage!({ data: { type: 'query', requestId: 40, query: { kind: 'timeline-recording', request: { config, mode: 'plan', period_ticks: 240, terminal_swing_count: 1, windows: {} } } } });
     expect(posted.at(-1)).toMatchObject({ type: 'answer', requestId: 40, answer: { mode: 'plan', start_tick: 0, end_tick: 240, entities: expect.arrayContaining([expect.objectContaining({ id: 'machine:1', recipe: 'iron-gear-wheel' })]) } });
     expect(JSON.stringify(config)).toBe(before);
+});
+
+it('keeps a captured inserter kind, quality and filter mode through paste, save and reload, and Check refuses what is out of scope', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    // A Sidecar 0.11.0 export: a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
+    const pickup = { type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
+        entity_type: 'transport-belt', entity_name: 'turbo-transport-belt', sidecar_version: '0.11.0', model: 'belt', model_version: 2 } };
+    const exported = (output: object, input: object = {}) => ({
+        kind: 'pasted-entities' as const, sidecar_version: '0.11.0', suggested_target: undefined, drills: [],
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0, type: 'machine' }],
+        inserters: [
+            { source: pickup, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16, ...input },
+            { source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, prototype: 'fast-inserter', quality: 'normal', stack_size: 4, ...output },
+        ],
+        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
+        chests: [{ id: 1, type: 'infinity-chest', remove_unfiltered_items: true }],
+    });
+    /** Paste into a new build, save it and reload it the way the page does */
+    const pastedSavedReloaded = async (query: ReturnType<typeof exported>) => {
+        const answer = await send({ type: 'query', requestId: 50, query });
+        expect(answer).toMatchObject({ type: 'answer', answer: { guidance: { _tag: 'None' } } });
+        const pasted = (answer as { answer: PastedEntities }).answer;
+        const form = applyPaste(createDefaultConfig(), pasted, { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
+        const saved = readSavedConfig(serializeConfig(form))!;
+        expect(await send({ type: 'query', requestId: 51, query: { kind: 'saved-config', config: formDataToConfig(saved) } })).toMatchObject({ answer: null });
+        const reloaded = configToFormData(formDataToConfig(saved));
+        return { ...formDataToConfig(reloaded), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
+    };
+
+    /**
+     * What the App lists for the build as the editor checks it live, before any Check: the 'inserter-coverage' query
+     * useInserterValidation asks, folded into the issues that block Generate
+     */
+    const liveIssues = async (config: Config) => {
+        const answer = await send({ type: 'query', requestId: 55, query: { kind: 'inserter-coverage', config } });
+        expect(answer.type).toBe('answer');
+        const coverage = (answer as { answer: LiveCoverage }).answer;
+        return buildValidationIssues({ fieldProblems: [], coverage: coverage.issues, scopeRefusal: coverage.refusal, chests: [], inserters: [],
+            machines: config.machines, chestIssues: [], coverageText: issue => `${issue.kind} ${issue.item_name}` })
+            .filter(issue => issue.blocksGeneration).map(({ source, text }) => ({ source, text }));
+    };
+
+    const supported = await pastedSavedReloaded(exported({}));
+    expect(supported.inserters.map(({ prototype, quality }) => ({ prototype, quality })))
+        .toEqual([{ prototype: 'stack-inserter', quality: 'legendary' }, { prototype: 'fast-inserter', quality: 'normal' }]);
+    expect(await liveIssues(supported)).toEqual([]);
+    expect(await send({ type: 'validate', requestId: 52, config: supported })).toMatchObject({ type: 'validated' });
+
+    const longHanded = await pastedSavedReloaded(exported({}, { prototype: 'long-handed-inserter', quality: 'normal', stack_size: 4 }));
+    expect(longHanded.inserters[0]).toMatchObject({ prototype: 'long-handed-inserter', quality: 'normal' });
+    const longHandedRefusal = 'Inserter 1: picking up from a belt with a normal long-handed-inserter is not supported yet';
+    expect(await liveIssues(longHanded)).toEqual([{ source: 'engine', text: expect.stringContaining(longHandedRefusal) }]);
+    expect(await send({ type: 'validate', requestId: 53, config: longHanded })).toMatchObject({ type: 'validation-failed',
+        message: expect.stringContaining(longHandedRefusal) });
+
+    // read as a whitelist, the blacklist would leave the gears without an output inserter and offer a new belt for them
+    const blacklist = await pastedSavedReloaded(exported({ filters: ['iron-plate'], filter_mode: 'blacklist' }));
+    expect(blacklist.inserters[1]).toMatchObject({ filters: ['iron-plate'], filter_mode: 'blacklist' });
+    const blacklistRefusal = 'Inserter 2: `filter_mode` "blacklist" is refused';
+    expect(await liveIssues(blacklist)).toEqual([{ source: 'engine', text: expect.stringContaining(blacklistRefusal) }]);
+    const checked = await send({ type: 'validate', requestId: 54, config: blacklist });
+    expect(checked).toMatchObject({ type: 'validation-failed', message: expect.stringContaining(blacklistRefusal) });
+    // a Check that stopped at the same refusal adds no second issue for it
+    const answer = await send({ type: 'query', requestId: 56, query: { kind: 'inserter-coverage', config: blacklist } });
+    const coverage = (answer as { answer: LiveCoverage }).answer;
+    expect(buildValidationIssues({ fieldProblems: [], coverage: coverage.issues, scopeRefusal: coverage.refusal, chests: [], inserters: [],
+        machines: blacklist.machines, chestIssues: [], coverageText: () => '', failure: { message: (checked as { message: string }).message } }))
+        .toHaveLength(1);
 });

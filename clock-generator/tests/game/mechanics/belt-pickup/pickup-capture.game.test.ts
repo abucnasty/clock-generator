@@ -14,7 +14,7 @@ require = function(name) return assert(capture_modules[name], name) end
     return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
-test("Sidecar classifies supported pickups and explains unclassified captures", async context => {
+test("Sidecar classifies supported pickups, explains unclassified captures and exports inserter identity", async context => {
     const factorio = process.env.FACTORIO_PATH;
     const save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
@@ -187,9 +187,64 @@ assert(#refused.pickup_warnings == 1)
 assert(refused.pickup_warnings[1].inserter_id == taken.id and refused.pickup_warnings[1].reason == "side-loaded")
 local json = helpers.table_to_json(refused)
 assert(not json:find("pickup_supply", 1, true) and not json:find("pickup_merge", 1, true))
+assert(refused.inserters[taken.id].prototype == "stack-inserter")
+assert(refused.inserters[taken.id].quality == "normal", "a stack inserter built without a quality is normal")
+
+-- Inserter identity and filter mode: capture checks only, these inserters measure no timing. Every inserter is exported
+-- with its prototype and quality; filters switched off are not exported, and a blacklist is marked so it is refused.
+local function capture_one(index, name, quality, setup)
+    local x = 300 + index * 4
+    local tile = belt("turbo-transport-belt", x, 200, defines.direction.east)
+    tile.get_transport_line(1).insert_at_back({name = "iron-plate", count = 4}, 4)
+    local inserter = assert(surface.create_entity{name = name, quality = quality, position = {x, 199},
+        direction = defines.direction.south, force = "player"})
+    local chest = assert(surface.create_entity{name = "infinity-chest", position = {x, 198}, force = "player"})
+    inserter.pickup_target = tile
+    inserter.drop_target = chest
+    assert(inserter.pickup_target == tile and inserter.drop_target == chest)
+    if setup then setup(inserter) end
+    local exported = export.to_table(extraction.extract_all_entities({tile, inserter, chest}, game.forces.player))
+    assert(#exported.inserters == 1, name .. " must stay in the JSON")
+    return exported.inserters[1], helpers.table_to_json(exported)
+end
+local fast = capture_one(1, "fast-inserter", "normal")
+assert(fast.prototype == "fast-inserter" and fast.quality == "normal")
+assert(fast.source.type == "belt" and fast.source.pickup_capture.status == "supported")
+assert(fast.filters == nil and fast.filter_mode == nil)
+local rare = capture_one(2, "stack-inserter", "rare")
+assert(rare.prototype == "stack-inserter" and rare.quality == "rare")
+local stack = capture_one(3, "stack-inserter", "legendary")
+assert(stack.prototype == "stack-inserter" and stack.quality == "legendary")
+local blacklist, blacklist_json = capture_one(4, "stack-inserter", "legendary", function(inserter)
+    inserter.use_filters = true
+    inserter.set_filter(1, "copper-plate")
+    inserter.inserter_filter_mode = "blacklist"
+end)
+assert(#blacklist.filters == 1 and blacklist.filters[1] == "copper-plate" and blacklist.filter_mode == "blacklist")
+assert(blacklist_json:find('"filter_mode":"blacklist"', 1, true))
+local whitelist = capture_one(5, "bulk-inserter", "epic", function(inserter)
+    inserter.use_filters = true
+    inserter.set_filter(1, "iron-plate")
+    inserter.inserter_filter_mode = "whitelist"
+end)
+assert(whitelist.prototype == "bulk-inserter" and whitelist.quality == "epic")
+assert(#whitelist.filters == 1 and whitelist.filters[1] == "iron-plate" and whitelist.filter_mode == nil)
+local switched_off, switched_off_json = capture_one(6, "stack-inserter", "legendary", function(inserter)
+    inserter.use_filters = true
+    inserter.set_filter(1, "copper-plate")
+    inserter.inserter_filter_mode = "blacklist"
+    inserter.use_filters = false
+    assert(inserter.get_filter(1) ~= nil, "the filter stays set while it is switched off")
+end)
+assert(switched_off.filters == nil and switched_off.filter_mode == nil)
+assert(not switched_off_json:find("copper-plate", 1, true))
 `,
         });
         expect(result.recording.inserters.some(inserter => inserter.source.pickup_length === 1)).toBe(true);
+        // the scaffold is built of legendary stack inserters, and the recorder exports them as the Sidecar does
+        expect(result.recording.config.inserters.map(({ prototype, quality }) => ({ prototype, quality })))
+            .toEqual(result.recording.config.inserters.map(() => ({ prototype: "stack-inserter", quality: "legendary" })));
+        expect(result.recording.config.inserters.length).toBeGreaterThan(0);
     } finally {
         fs.rmSync(scratch, { recursive: true, force: true });
     }

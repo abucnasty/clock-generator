@@ -112,14 +112,51 @@ it('asks older belt imports to re-export pickup geometry rather than silently cl
 
 it('accepts an explicit current capture declaration without asking for a mod update', () => {
     const inserters = [{source: {type: 'belt', id: 1, pickup_length: 1, near_lane: 1,
-        pickup_capture: {status: 'supported', model: 'belt', model_version: 1, entity_type: 'transport-belt'}}}];
+        pickup_capture: {status: 'supported', model: 'belt', model_version: 1, entity_type: 'transport-belt'}},
+        prototype: 'stack-inserter', quality: 'legendary'}];
     expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], inserters)).toEqual(Option.none());
 });
 
 it('requires layout recapture even when an old underground export names the current mod version', () => {
     const source = {type: 'belt', id: 1, pickup_length: 0.5, near_lane: 1,
         pickup_capture: {status: 'supported', model: 'belt', model_version: 1, entity_type: 'underground-belt'}};
-    expect(Option.toNullable(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [{source}]))).toContain('Underground pickup layout was not captured');
+    const identity = {prototype: 'stack-inserter', quality: 'legendary'};
+    expect(Option.toNullable(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [{source, ...identity}]))).toContain('Underground pickup layout was not captured');
     expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [{source: {...source, pickup_layout: 'front-entrance',
-        pickup_capture: {...source.pickup_capture, model_version: 2}}}])).toEqual(Option.none());
+        pickup_capture: {...source.pickup_capture, model_version: 2}}, ...identity}])).toEqual(Option.none());
+});
+
+describe('an older capture without inserter identity', () => {
+    const capture = { source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16 };
+    const recapture = 'Inserter kind, quality and filter mode were not exported, so every inserter is read as a legendary stack inserter';
+
+    it('is asked to recapture, whatever its inserters take from', () => {
+        for (const version of [undefined, '0.6.0', '0.10.0']) {
+            const guidance = Option.toNullable(checkSidecarImport(version, [], undefined, [], [capture]))!;
+            expect(guidance).toContain(recapture);
+            expect(guidance).toContain('Update Sidecar and recapture these inputs');
+        }
+    });
+
+    it('is told apart from a capture of legendary stack inserters, which says what it is', () => {
+        const identified = { ...capture, prototype: 'stack-inserter', quality: 'legendary' };
+        expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [identified])).toEqual(Option.none());
+        expect(Option.toNullable(checkSidecarImport('0.10.0', [], undefined, [], [capture]))).toContain(recapture);
+    });
+
+    it('is asked to recapture by what it holds, even when it names the current version', () => {
+        // development builds of Sidecar 0.11.0 exported no prototype either
+        expect(Option.toNullable(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [capture]))).toContain(recapture);
+        expect(Option.toNullable(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [],
+            [{ ...capture, prototype: 'stack-inserter', quality: 'legendary' }, capture]))).toContain(recapture);
+    });
+
+    it('is not asked to recapture when an older version says what each inserter is', () => {
+        const identified = { ...capture, prototype: 'fast-inserter', quality: 'normal' };
+        expect(Option.toNullable(checkSidecarImport('0.10.0', [], undefined, [], [identified]))).not.toContain(recapture);
+    });
+
+    it('has nothing to recapture when the export holds no inserter', () => {
+        expect(Option.toNullable(checkSidecarImport('0.10.0', [{ recipe: 'iron-gear-wheel' }]))).not.toContain(recapture);
+    });
 });

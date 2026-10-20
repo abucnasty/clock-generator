@@ -21,7 +21,7 @@ export const BeltPickupCaptureSchema = z.discriminatedUnion("status", [
     }),
 ]);
 
-type PickupSource = {
+export type PickupSource = {
     type: string;
     pickup_capture?: z.infer<typeof BeltPickupCaptureSchema>;
     pickup_length?: number;
@@ -139,21 +139,10 @@ export function assertPickupCaptureSupported(id: number, source: PickupSource): 
 }
 
 /** The refusal of a pickup that is out of scope, named in the config or captured as such; null for any other */
-function pickupOutOfScopeProblem(source: PickupSource): string | null {
+export function pickupOutOfScopeProblem(source: PickupSource): string | null {
     const named = pickupScopeProblem(source);
     if (named !== null) return named;
     const capture = source.type === "belt" ? source.pickup_capture : undefined;
     return capture?.status === "unsupported" && Object.prototype.hasOwnProperty.call(OUT_OF_SCOPE_CAPTURES, capture.reason)
         ? pickupCaptureProblem(source) : null;
-}
-
-/**
- * Refuses what is out of scope before a check that would explain the build in other terms: without the side stream
- * a side-loaded pickup lacks an ingredient, and the coverage check would ask for an inserter to bring it.
- */
-export function assertPickupsInScope(config: { inserters: readonly { id?: number; source: PickupSource }[] }): void {
-    config.inserters.forEach((inserter, index) => {
-        const problem = pickupOutOfScopeProblem(inserter.source);
-        if (problem) throw new Error(`Inserter ${inserter.id ?? index + 1}: ${problem}`);
-    });
 }

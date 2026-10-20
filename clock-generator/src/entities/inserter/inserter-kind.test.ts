@@ -7,11 +7,17 @@ import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { Entity } from "../entity";
 import { handSizeFor, Inserter } from "./inserter";
 
-/** The automation science sample with the given fields set on its inserters, one of them or all */
-async function sampleWith(fields: Record<string, unknown>, only_first = false): Promise<Config> {
+/**
+ * The sample's machine-to-belt inserter, which takes the packs off the assembler. Only the legendary stack inserter may
+ * pick up from a belt (inserter-scope.test.ts), so other kinds and qualities are set on this one, not on the belt-fed one.
+ */
+const OUTPUT = 1;
+
+/** The automation science sample with the given fields set on its inserters, the one at index `only` or all */
+async function sampleWith(fields: Record<string, unknown>, only?: number): Promise<Config> {
     const config: Config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
     config.inserters = config.inserters.map((inserter, index) => {
-        if (only_first && index > 0) {
+        if (only !== undefined && index !== only) {
             return inserter;
         }
         const changed: Record<string, unknown> = { ...inserter, ...fields };
@@ -52,11 +58,11 @@ describe("an inserter that names its prototype and quality", () => {
     });
 
     it("turns a rare stack inserter for 6 ticks each way, 14 ticks machine to machine", async () => {
-        const config = await sampleWith({ prototype: "stack-inserter", quality: "rare" }, true);
-        const [rare, untouched] = insertersOf(config);
+        const config = await sampleWith({ prototype: "stack-inserter", quality: "rare" }, OUTPUT);
+        const [untouched, rare] = insertersOf(config);
         expect(rare.metadata.quality).toBe("rare");
         expect(rare.animation.rotation.ticks).toBe(6);
-        expect(rare.animation.pickup.ticks).toBe(4);
+        expect(rare.animation.pickup.ticks).toBe(1);
         // the one that was not changed is still the legendary one
         expect(untouched.animation.rotation.ticks).toBe(3);
         // the machine to machine swing of the same inserter
@@ -64,18 +70,18 @@ describe("an inserter that names its prototype and quality", () => {
     });
 
     it("turns a normal fast inserter for 11 ticks each way, 24 ticks machine to machine, with a hand of 4", async () => {
-        const config = await sampleWith({ prototype: "fast-inserter", quality: "normal", stack_size: undefined }, true);
-        const [fast, untouched] = insertersOf(config);
+        const config = await sampleWith({ prototype: "fast-inserter", quality: "normal", stack_size: undefined }, OUTPUT);
+        const [untouched, fast] = insertersOf(config);
         expect(fast.metadata.type).toBe("fast-inserter");
         expect(fast.animation.rotation.ticks).toBe(11);
         expect(1 + 1 + 2 * fast.animation.rotation.ticks).toBe(24);
         expect(fast.metadata.stack_size).toBe(4);
-        expect(handSizeFor(fast, "copper-plate")).toBe(4);
+        expect(handSizeFor(fast, "automation-science-pack")).toBe(4);
         expect(untouched.metadata.stack_size).toBe(16);
     });
 
     it("takes the stack size the config sets over the hand of the prototype", async () => {
-        const [fast] = insertersOf(await sampleWith({ prototype: "fast-inserter", quality: "normal", stack_size: 2 }, true));
+        const [, fast] = insertersOf(await sampleWith({ prototype: "fast-inserter", quality: "normal", stack_size: 2 }, OUTPUT));
         expect(fast.metadata.stack_size).toBe(2);
     });
 
@@ -91,13 +97,11 @@ describe("an inserter that names its prototype and quality", () => {
         await expect(async () => insertersOf(await sampleWith({ prototype: "assembling-machine-3" }))).rejects.toThrow("not an inserter of the game data");
     });
 
-    it("generates a clock for the sample with normal fast inserters, whatever its verdict", async () => {
-        const config = await sampleWith({ prototype: "fast-inserter", quality: "normal", stack_size: undefined });
+    it("generates a clock for the sample with a normal fast output inserter, whatever its verdict", async () => {
+        const config = await sampleWith({ prototype: "fast-inserter", quality: "normal", stack_size: undefined }, OUTPUT);
         const result = generateClockForConfig(config);
         expect(result).toBeDefined();
-        expect(result.serializable_transfer_plan.entities.length).toBeGreaterThan(0);
-        for (const planned of result.serializable_transfer_plan.entities) {
-            expect(planned.stack_size).toBe(4);
-        }
+        const hands = new Map(result.serializable_transfer_plan.entities.map(planned => [planned.entity_number, planned.stack_size]));
+        expect(hands).toEqual(new Map([[1, 16], [2, 4]]));
     });
 });

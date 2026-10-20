@@ -38,4 +38,4 @@ Each follow-up becomes a GitHub issue. Until then, it is listed here.
 - F4: quality upcycling loops.
 - F5: moving trains, including a wagon on a moving train.
 - F6: spoilage-removal inserters clocked from the spoil time.
-- F7: belt pickup and drop timing for inserters other than the legendary stack inserter. Until it is measured, other kinds and qualities are "not checked" on belts.
+- F7: belt pickup and drop timing for inserters other than the legendary stack inserter. Until it is measured, a belt pickup by another kind or quality is refused, and a belt drop by one is "not checked".

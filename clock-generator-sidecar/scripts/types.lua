@@ -56,9 +56,11 @@
 ---@class InserterData
 ---@field entity LuaEntity
 ---@field inserter_type string The inserter entity name
+---@field quality string The inserter's quality name
 ---@field position MapPosition Where the inserter stands
 ---@field stack_size number The inserter stack size
----@field filters string[] Item filters set on the inserter
+---@field filters string[] Item filters the inserter uses: none while its filters are switched off
+---@field filter_mode "whitelist"|"blacklist"|nil How the inserter reads its filters, nil while they are switched off
 ---@field source InserterTargetRef|nil The pickup target
 ---@field sink InserterTargetRef|nil The drop target
 

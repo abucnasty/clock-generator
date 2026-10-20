@@ -126,8 +126,21 @@ const pickupLayoutDeclarationStep: ImportStep = input => (input.inserters ?? [])
         && (!("model_version" in capture) || capture.model_version === 1 || !("pickup_layout" in source));
 }) ? Option.some("Underground pickup layout was not captured. Update Sidecar and recapture these inputs before generation; half-tile reach cannot identify the approach.") : Option.none();
 
+/**
+ * A Sidecar export whose inserters have no prototype: every inserter ran as a legendary stack inserter, a blacklist as
+ * the items to move. Told by what the export holds, not its version: development builds of 0.11.0 exported none either.
+ * Without the notice such a capture could not be told from one of legendary stack inserters.
+ */
+const inserterIdentityDeclarationStep: ImportStep = input => (input.inserters ?? []).some(inserter =>
+    typeof inserter === "object" && inserter !== null && !("prototype" in inserter))
+    ? Option.some("Inserter kind, quality and filter mode were not exported, so every inserter is read as a legendary "
+        + "stack inserter and its filters as the items it moves. Update Sidecar and recapture these inputs; updating the "
+        + "mod alone does not update a saved capture.")
+    : Option.none();
+
 export const SIDECAR_IMPORT_PIPELINE: ImportPipeline = ImportPipeline
-    .of(...SIDECAR_FEATURES.map(sidecarFeatureStep), pickupCaptureDeclarationStep, pickupLayoutDeclarationStep)
+    .of(...SIDECAR_FEATURES.map(sidecarFeatureStep), pickupCaptureDeclarationStep, pickupLayoutDeclarationStep,
+        inserterIdentityDeclarationStep)
     .otherwise(newerSidecarStep);
 
 /**

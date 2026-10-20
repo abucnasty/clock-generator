@@ -88,6 +88,7 @@ export {
     createInserterCoverageValidator,
     assertInserterCoverage,
 } from './config/inserter-coverage-validator';
+export { insertersScopeProblem } from './config/inserter-scope';
 
 // ============================================================================
 // Blueprint Generation

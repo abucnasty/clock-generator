@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { removeFilterSlot, setFilterSlot, usesAutomaticFilters } from './inserterFilters';
+import { filtersLabel, removeFilterSlot, setFilterSlot, usesAutomaticFilters, usesBlacklist } from './inserterFilters';
 
 describe('inserter filter edits', () => {
     it('starts from the automatic list, preserving the other items and never making holes', () => {
@@ -23,5 +23,17 @@ describe('inserter filter edits', () => {
         expect(usesAutomaticFilters(undefined)).toBe(true);
         expect(usesAutomaticFilters([])).toBe(true);
         expect(usesAutomaticFilters(['a'])).toBe(false);
+    });
+    it('tells a captured blacklist apart, which only matters while it names items', () => {
+        expect(usesBlacklist({ filters: ['a'], filter_mode: 'blacklist' })).toBe(true);
+        expect(usesBlacklist({ filters: ['a'], filter_mode: 'whitelist' })).toBe(false);
+        expect(usesBlacklist({ filters: ['a'] })).toBe(false);
+        expect(usesBlacklist({ filters: undefined, filter_mode: 'blacklist' })).toBe(false);
+    });
+    it('names a captured blacklist so in each view, never as filters set by hand', () => {
+        const blacklist = { filters: ['a'], filter_mode: 'blacklist' };
+        expect(filtersLabel(blacklist, 'Auto', 'Explicit')).toBe('Blacklist, not supported');
+        expect(filtersLabel({ filters: ['a'] }, 'Auto', 'Explicit')).toBe('Explicit');
+        expect(filtersLabel({ filters: [], filter_mode: 'blacklist' }, 'Auto', 'Explicit')).toBe('Auto');
     });
 });

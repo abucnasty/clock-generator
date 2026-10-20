@@ -7,6 +7,8 @@ Version: 0.11.0
     - captures the preferred lane and half-tile pickup length for an inserter centered downstream of an underground entrance and facing back into it: lane 2 when mirrored, lane 1 otherwise
   Changes:
     - an inserter that picks up from a belt tile that another belt side-loads onto is marked unsupported in the JSON, with a warning. Side-loading and splitters are out of scope for the Clock Generator. Earlier versions exported it as an ordinary belt pickup
+  Bugfixes:
+    - exports each inserter's prototype and quality, and its filter mode when its filters are a blacklist; filters that are switched off are no longer exported. Earlier versions left them out, so the Clock Generator ran every inserter as a legendary stack inserter and read a blacklist as the items to move
 ---------------------------------------------------------------------------------------------------
 Version: 0.10.0
 Date: 2026-10-18

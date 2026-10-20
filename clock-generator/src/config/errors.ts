@@ -38,6 +38,8 @@ export const OUT_OF_SCOPE = {
         + "as splitters are: the generator models a belt that runs straight onto the pickup tile, an underground endpoint "
         + "and an over-the-hood pickup",
     splitter_pickup: "picking up from a splitter is out of scope",
+    blacklist_filters: "filters that are a blacklist, naming the items an inserter leaves, are out of scope: the generator "
+        + "reads `filters` as the items an inserter moves, a whitelist",
 } as const;
 
 /** The refusal of a field that only a side-loaded pickup has */

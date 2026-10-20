@@ -52,6 +52,8 @@ export interface InserterFormData {
     /** Omitted means the prototype's fully researched capacity (Automatic). */
     stack_size?: number;
     filters?: string[];
+    /** How the game reads `filters`; a blacklist with filters is refused by the engine, so it is kept as captured */
+    filter_mode?: Config['inserters'][number]['filter_mode'];
     overrides?: InserterOverrides;
     /** UI-only, never part of the exported config: set when Exclude from LCM forced this inserter's rule to ALWAYS
      *  (its items are all excluded), so that including one of them again may take that ALWAYS away. Replacing the
