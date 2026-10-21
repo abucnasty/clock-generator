@@ -91,9 +91,17 @@ export function containerMechanicCases(): ContainerMechanicCase[] {
     ];
 }
 
-export function containerMechanicBlueprint(variant: ContainerMechanicCase): string {
+/**
+ * The blueprint, its inserters (listed in config id order) built last: by default in descending config id, so the game
+ * serves inserter 1 first among inserters that act in one tick, as the simulator does (the game updates the last built
+ * first); `ascending` builds them the other way, the build order variant of the rule checks.
+ */
+export function containerMechanicBlueprint(variant: ContainerMechanicCase, order: "descending" | "ascending" = "descending"): string {
+    const inserters = variant.entities.filter(entity => entity.name === "stack-inserter");
+    const others = variant.entities.filter(entity => entity.name !== "stack-inserter");
+    const entities = [...others, ...(order === "descending" ? [...inserters].reverse() : inserters)];
     return encodeBlueprintFile({blueprint: {item: "blueprint", label: `Containers ${variant.name}`, version: 562949955649536,
-        entities: variant.entities.map((entity, index) => ({entity_number: index + 1, ...entity}))}} as unknown as FactorioBlueprintFile);
+        entities: entities.map((entity, index) => ({entity_number: index + 1, ...entity}))}} as unknown as FactorioBlueprintFile);
 }
 
 /** The hand each time it was at its fullest, before items left it */
@@ -149,11 +157,17 @@ for (const variant of containerMechanicCases()) test(`containers as chests: ${va
     fs.mkdirSync(scratch, {recursive: true});
     try {
         const config = ConfigSchema.parse(variant.config);
-        const blueprint = containerMechanicBlueprint(variant);
+        // the rule checks' variants: the inserters built the other way (CONTAINERS_BUILD_ORDER=ascending), and the build
+        // moved (CONTAINERS_POSITION=x,y); the ascending order serves the inserters in the reverse of the simulator's
+        // order, so it is recorded and compared but not asserted
+        const order = process.env.CONTAINERS_BUILD_ORDER === "ascending" ? "ascending" : "descending";
+        const [x, y] = (process.env.CONTAINERS_POSITION ?? "").split(",").map(Number);
+        const position = Number.isFinite(x) && Number.isFinite(y) && process.env.CONTAINERS_POSITION ? {x, y} : undefined;
+        const blueprint = containerMechanicBlueprint(variant, order);
         const lua = composeProbeSource(path.join(__dirname, "probe.lua"), {ticks: variant.ticks, ...variant.probe});
         fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
         await recordInFactorio({factorio: factorio!, save: save!, blueprint, lua,
-            out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),
+            out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"), ...(position && {position}),
             ticks: variant.ticks + 60, warmup_ticks: 1, settle_ticks: 0, seed: [], unclocked: true,
             game_speed: 1000, watch: false, timeout_seconds: 300, log() {},
         });
@@ -165,8 +179,9 @@ for (const variant of containerMechanicCases()) test(`containers as chests: ${va
             ...(report.rocket && {rocket: report.rocket, input: report.input}),
         };
         const simulated = simulateContainerMechanic(config, variant.ticks);
-        fs.writeFileSync(path.join(scratch, "comparison.json"), JSON.stringify({game, simulated, rocket_parts: report.rocket_parts}, null, 2) + "\n");
+        fs.writeFileSync(path.join(scratch, "comparison.json"), JSON.stringify({order, position: position ?? null, game, simulated,
+            rocket_parts: report.rocket_parts}, null, 2) + "\n");
         if (report.rocket_parts !== undefined) expect(report.rocket_parts, "the silo crafted nothing").toBe(0);
-        expect(simulated).toEqual(game);
+        if (order === "descending") expect(simulated).toEqual(game);
     } finally {if (!retained) fs.rmSync(scratch, {recursive: true, force: true});}
 }, 360_000);
