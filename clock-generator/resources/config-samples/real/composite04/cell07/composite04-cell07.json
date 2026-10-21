@@ -1,7 +1,7 @@
 {
  "target_output": {
   "recipe": "advanced-circuit",
-  "items_per_second": 90.0416666667,
+  "items_per_second": 90,
   "copies": 1
  },
  "machines": [
@@ -106,7 +106,8 @@
    "id": 5,
    "source": {
     "type": "belt",
-    "id": 1
+    "id": 1,
+    "near_lane": 1
    },
    "sink": {
     "type": "machine",
@@ -121,7 +122,8 @@
    "id": 6,
    "source": {
     "type": "belt",
-    "id": 1
+    "id": 1,
+    "near_lane": 1
    },
    "sink": {
     "type": "machine",
@@ -201,6 +203,10 @@
     {
      "ingredient": "coal",
      "stack_size": 4
+    },
+    {
+     "ingredient": "coal",
+     "stack_size": 4
     }
    ]
   }
@@ -209,12 +215,8 @@
   {
    "type": "infinity-chest",
    "id": 1,
-   "item_filter": [
-    {
-     "item_name": "advanced-circuit",
-     "request_count": 1000
-    }
-   ]
+   "item_filter": [],
+   "remove_unfiltered_items": true
   },
   {
    "type": "infinity-chest",
@@ -239,12 +241,8 @@
   {
    "type": "infinity-chest",
    "id": 4,
-   "item_filter": [
-    {
-     "item_name": "advanced-circuit",
-     "request_count": 1000
-    }
-   ]
+   "item_filter": [],
+   "remove_unfiltered_items": true
   }
  ]
 }
