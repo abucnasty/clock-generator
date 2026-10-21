@@ -1,4 +1,11 @@
+import path from "path";
+import {expect} from "vitest";
 import {Config, ConfigSchema} from "../../../src/config";
+import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
+import {encodeBlueprintFile} from "../../../src/blueprints/serde";
+import {Recording} from "../../../src/verification/recording";
+import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
  * Clocks through a car, a tank or a cargo wagon taken as a chest. The container stands between two inserters, so the
@@ -60,4 +67,76 @@ export function containerClockConfig(variant: ContainerClockCase): Config {
             ...supplies,
         ],
     });
+}
+
+interface Placed {name: string; position: {x: number; y: number}; [key: string]: unknown}
+
+/** Where the inserters stand around each container, as checked in the game (a wagon stands on rails at x = 1) */
+const LAYOUTS = {
+    "cargo-wagon": {container: {x: 1, y: 0.5}, plates: {x: -0.5, y: 0.5, direction: 12}, cable: {x: -0.5, y: 1.5, direction: 12}, taker: {x: 2.5, y: 0.5}},
+    car: {container: {x: 0, y: 0.5}, plates: {x: -1.5, y: 0.5, direction: 12}, cable: {x: 0.5, y: -1.5, direction: 0}, taker: {x: 1.5, y: 0.5}},
+    tank: {container: {x: 0, y: 0.5}, plates: {x: -1.5, y: 0.5, direction: 12}, cable: {x: -1.5, y: 1.5, direction: 12}, taker: {x: 1.5, y: 0.5}},
+} as const;
+
+/** One step back from an inserter, against the way it moves items: where its supply chest stands */
+function behind(inserter: {x: number; y: number; direction: number}): {x: number; y: number} {
+    return inserter.direction === 12 ? {x: inserter.x - 1, y: inserter.y} : {x: inserter.x, y: inserter.y - 1};
+}
+
+/**
+ * The supplies, their inserters into the container, the container (its slot filters in the blueprint), the inserter
+ * that takes from it into the assembler, the output inserter and the disposal chest, left to right (west to east).
+ */
+export function containerClockScaffold(variant: ContainerClockCase): string {
+    const type = variant.container.type as keyof typeof LAYOUTS;
+    const layout = LAYOUTS[type];
+    const inputs = variant.recipe === "iron-gear-wheel" ? (["plates"] as const) : (["plates", "cable"] as const);
+    const items = {plates: "iron-plate", cable: "copper-cable"} as const;
+    const filters = ((variant.container.slot_filters ?? []) as {slot: number; item: string}[]).map(filter => ({index: filter.slot, name: filter.item}));
+    const inventory = filters.length > 0 ? {filters} : undefined;
+    const container: Placed = type === "cargo-wagon"
+        ? {name: "cargo-wagon", position: layout.container, orientation: 0, ...(variant.container.quality ? {quality: variant.container.quality} : {}), ...(inventory ? {inventory} : {})}
+        : {name: type, position: layout.container, orientation: 0, ...(inventory ? {trunk_inventory: inventory} : {})};
+    const machine = {x: layout.taker.x + 2, y: layout.taker.y};
+    const entities: Placed[] = [
+        ...(type === "cargo-wagon" ? Array.from({length: 9}, (_, index) => ({name: "straight-rail", position: {x: 1, y: -7 + 2 * index}, direction: 0})) : []),
+        container,
+        ...inputs.flatMap(input => [
+            {name: "infinity-chest", position: behind(layout[input]),
+                infinity_settings: {remove_unfiltered_items: true, filters: [{name: items[input], count: 200, mode: "exactly", index: 1}]}},
+            {name: "stack-inserter", position: {x: layout[input].x, y: layout[input].y}, direction: layout[input].direction, quality: "legendary"},
+        ]),
+        {name: "stack-inserter", position: layout.taker, direction: 12, quality: "legendary"},
+        {name: "assembling-machine-3", position: machine, recipe: variant.recipe, quality: "legendary"},
+        {name: "stack-inserter", position: {x: machine.x + 2, y: machine.y}, direction: 12, quality: "legendary"},
+        {name: "infinity-chest", position: {x: machine.x + 3, y: machine.y}, infinity_settings: {remove_unfiltered_items: true, filters: []}},
+    ];
+    return encodeBlueprintFile({blueprint: {item: "blueprint", label: `Container clock ${variant.name}`, version: 562949955649536,
+        entities: entities.map((entity, index) => ({entity_number: index + 1, ...entity}))}} as unknown as FactorioBlueprintFile);
+}
+
+/** The native build is the config's: one machine at its speed, the container between its supplies and the machine */
+export function assertContainerHardware(recording: Recording, config: Config, variant: ContainerClockCase): void {
+    expect(recording.machines).toHaveLength(1);
+    expect(recording.config.machines).toMatchObject([{recipe: config.machines[0].recipe, crafting_speed: CONTAINER_CRAFTING_SPEED, productivity: 0}]);
+    const chests = (recording.config.chests ?? []) as {type: string; quality?: string; slot_filters?: unknown[]}[];
+    const container = chests.filter(chest => chest.type === variant.container.type);
+    expect(container).toHaveLength(1);
+    expect(container[0].quality).toBe(variant.container.type === "cargo-wagon" ? (variant.container.quality ?? "normal") : undefined);
+    expect((container[0].slot_filters ?? []).length).toBe(((variant.container.slot_filters ?? []) as unknown[]).length);
+    const taker = recording.inserters.filter(inserter => inserter.source.type === "chest" && inserter.sink.type === "machine");
+    expect(taker).toHaveLength(1);
+    expect(recording.inserters.filter(inserter => inserter.source.type === "machine")).toHaveLength(1);
+}
+
+export function containerClockScenario(variant: ContainerClockCase): PickupClockScenario {
+    return {
+        name: variant.name, speed: BELT_SPEEDS[0], backed: false,
+        config: () => containerClockConfig(variant), scaffold: () => containerClockScaffold(variant),
+        interventions: CONTAINER_INTERVENTIONS,
+        probeFile: path.join(__dirname, "container-clock-probe.lua"),
+        probe: {family: "container", cuts: variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"]} as PickupClockScenario["probe"],
+        controls: path.join(__dirname, "container-clock-controls.json"),
+        assertHardware: (recording, config) => assertContainerHardware(recording, config, variant),
+    };
 }
