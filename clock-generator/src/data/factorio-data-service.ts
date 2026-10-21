@@ -1,4 +1,4 @@
-import { FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualitySpec, Recipe, Resource, ResourceName } from "./factorio-data-types";
+import { ContainerPrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
 
@@ -198,6 +198,47 @@ export class FactorioDataService {
             throw new Error(`${name} is not a quality of the game data`);
         }
         return qualities[name];
+    }
+
+    /** The container prototype of that name (a car, a tank, a cargo wagon); an unknown name is refused */
+    public static findContainerOrThrow(name: string): ContainerPrototype {
+        const containers = this.getData().container;
+        if (!Object.prototype.hasOwnProperty.call(containers, name)) {
+            throw new Error(`${name} is not a container of the game data`);
+        }
+        return containers[name];
+    }
+
+    /**
+     * The slots of a container of that prototype and quality: its inventory size, times the quality's cargo wagon
+     * multiplier where the prototype lets quality change it (exact at every quality of 2.1.21: 40, 50, 60, 70, 100)
+     */
+    public static containerSlots(name: string, quality: QualityName): number {
+        const container = this.findContainerOrThrow(name);
+        this.findQualityOrThrow(quality);
+        if (!container.quality_affects_inventory_size) {
+            return container.inventory_size;
+        }
+        const multiplier = this.getData().quality_inventory[quality]?.cargo_wagon_inventory_size_multiplier ?? 1;
+        return Math.floor(container.inventory_size * multiplier);
+    }
+
+    /** The rocket silo prototype of that name; an unknown name is refused */
+    public static findRocketSiloOrThrow(name: string): RocketSiloPrototype {
+        const silos = this.getData().rocket_silo;
+        if (!Object.prototype.hasOwnProperty.call(silos, name)) {
+            throw new Error(`${name} is not a rocket silo of the game data`);
+        }
+        return silos[name];
+    }
+
+    /** An item's weight as the game holds it; an item without one is refused */
+    public static itemWeightOrThrow(item: ItemName): number {
+        const weights = this.getData().item_weight;
+        if (!Object.prototype.hasOwnProperty.call(weights, item)) {
+            throw new Error(`Item ${item} has no weight in the game data`);
+        }
+        return weights[item];
     }
 
     /** What all the technologies together add to the hand of an inserter */
