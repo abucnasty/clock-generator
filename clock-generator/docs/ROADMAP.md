@@ -2,6 +2,8 @@
 
 The clock generator is working towards clocking the cells that real Space Age bases are made of: foundries, electromagnetic plants, recyclers, quality drills, and cars and cargo wagons used as chests. Each milestone below adds one family of such cells. The live board is the GitHub project "Real Boy": https://github.com/users/abucnasty/projects/2.
 
+The plans of the release in flight and of the next one, with their packages and what is left, are in [roadmap/](roadmap/); each is dropped when its release ships.
+
 When the generator refuses a config because it does not model something yet, the message names the milestone or follow-up where that gap is planned, such as "roadmap milestone M2 (containers)" or "follow-up F1". You can look each name up here.
 
 ## Milestones
