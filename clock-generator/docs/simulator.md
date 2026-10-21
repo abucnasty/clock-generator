@@ -239,8 +239,16 @@ check the landing cutoff and compressed gaps. Stack size 3 uses full hands of 15
 waiting in the hand. `Belt.amountToDropAtTick` remains an empty-belt reference; runtime drops use actual space.
 The existing turbo shared-lane regressions retain their 4-, 6-, 14- and 22-tick drop patterns.
 
-This local output rule assumes a freely draining downstream lane. Downstream blockage and external incoming
-traffic require their own modeled transport geometry. Other inserter prototypes and qualities remain uncalibrated.
+This local output rule assumes a freely draining downstream lane. A blocked lane is a belt that refuses the product
+(a backpressure loss, see [stability](stability.md)): the output inserter holds its hand from the tick the belt stops
+taking, where the game first fills the belt behind the drop (112 to 192 items on the 104 belt-output clock controls at
+stack size 4; 9 to 156 on the blocked-output clocks at stack sizes 1–4, `tests/game/builds/blocked-output-clock-controls.json`).
+That moves output between the blocked periods and the few after the release (the game is back at its output 0 to 5
+periods after the release period, the simulator 1 to 6), not what follows: in all 120 recordings every period the
+captures judge is the same in game and simulator, and a belt that fills to an outlet 10 or 25 tiles past the drop
+changes no verdict or selection in the blast or on those 16 clocks
+([experiments](belt-pickup/experiments.md#generated-clocks-and-drops)). External incoming traffic still needs its own
+modeled transport geometry. Other inserter prototypes and qualities remain uncalibrated.
 
 ### Two inserters that bring the same item
 

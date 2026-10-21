@@ -19,8 +19,14 @@ export interface PickupClockScenario {
     scaffold: () => string;
     controls: string;
     outagePeriods?: number;
+    /** Interventions of a probe of its own, in place of pickupClockInterventions(outagePeriods) */
+    interventions?: [number, number, number][];
+    /** A probe of its own, in place of pickup-clock-speed-probe.lua; it writes the same clock-speed.json */
+    probeFile?: string;
     probe: {family: string; machine_name?: string; ingredients?: readonly [string, string]; output_to_belt?: boolean;
-        trace_periods?: readonly number[]; trace_ticks?: number};
+        trace_periods?: readonly number[]; trace_ticks?: number; stackSize?: number};
+    /** The native setup audit, in place of assertPickupClockHardware (which expects a belt-fed input) */
+    assertHardware?: (recording: Recording, config: Config, blueprint: string) => void;
     validateRecording?: (recording: Recording, config: Config) => void;
 }
 
@@ -88,29 +94,32 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         if (process.env.BELT_CLOCK_GENERATION_ONLY === "1") return;
         const {config, clock, period, expected} = prepared;
         const inputConfig = config.inserters.find(inserter => inserter.source.type === "belt" && inserter.sink.type === "machine");
-        if (inputConfig?.source.type !== "belt") throw new Error("Expected one belt-fed clock input");
-        const reach = inputConfig.source.pickup_length ?? 1;
+        // a probe of the scenario's own may watch a clock whose inputs come from chests
+        if (inputConfig?.source.type !== "belt" && !scenario.probeFile) throw new Error("Expected one belt-fed clock input");
+        const reach = inputConfig?.source.type === "belt" ? inputConfig.source.pickup_length ?? 1 : undefined;
         const blueprint = scenario.scaffold();
         fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint.trim() + "\n");
-        const plannedInterventions = pickupClockInterventions(scenario.outagePeriods);
-        const lastPeriod = plannedInterventions[2][2];
+        const plannedInterventions = scenario.interventions ?? pickupClockInterventions(scenario.outagePeriods);
+        const lastPeriod = plannedInterventions[plannedInterventions.length - 1][2];
         const settle = (lastPeriod + 10) * period;
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
             : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint,
                 out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
                 ticks: 2 * period, warmup_ticks: 3600, settle_ticks: settle, seed: [], unclocked: false,
-                lua: composeProbeSource(path.join(__dirname, "pickup-clock-speed-probe.lua"), {
+                lua: composeProbeSource(scenario.probeFile ?? path.join(__dirname, "pickup-clock-speed-probe.lua"), {
                     period, settle: 10 * period, lastPeriod: lastPeriod + 14, ...scenario.probe,
-                    ...(scenario.outagePeriods !== undefined && {interventions: plannedInterventions}),
+                    ...((scenario.outagePeriods !== undefined || scenario.interventions) && {interventions: plannedInterventions}),
                     speed: scenario.speed.units / 32, reach, product: config.target_output.recipe,
                 }), game_speed: 1000, watch: false, timeout_seconds: 900, log() {},
             })).recording;
-        assertPickupClockHardware(recording, config, blueprint);
+        (scenario.assertHardware ?? assertPickupClockHardware)(recording, config, blueprint);
         scenario.validateRecording?.(recording, config);
-        const source = recording.inserters.find((inserter: {source: {type: string}; sink: {type: string}}) => inserter.source.type === "belt" && inserter.sink.type === "machine")!;
-        expect(source.source.pickup_length).toBe(reach);
         const report = JSON.parse(fs.readFileSync(path.join(replayDirectory ?? capture.directory, "game/script-output/clock-speed.json"), "utf8"));
-        expect(report.initial).toMatchObject({speed: scenario.speed.units / 32, reach: reach});
+        if (reach !== undefined) {
+            const source = recording.inserters.find((inserter: {source: {type: string}; sink: {type: string}}) => inserter.source.type === "belt" && inserter.sink.type === "machine")!;
+            expect(source.source.pickup_length).toBe(reach);
+            expect(report.initial).toMatchObject({speed: scenario.speed.units / 32, reach: reach});
+        }
         const detailed = outputPerPeriod(recording, recipesMaking(config, config.target_output.recipe));
         expect(detailed).toHaveLength(2);
         const periods = report.periods as {start: number; end: number; items: number}[];

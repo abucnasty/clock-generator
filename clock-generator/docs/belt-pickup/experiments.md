@@ -122,6 +122,7 @@ its timing is not tested. Measuring them is follow-up F7.
 | Front exit clocks on a moving config (the belt backed up in the game), both mirroring states | Tested | Tested | Tested | Tested |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
+| Blocked output behind a belt drop, chest-fed: throughput and recovery, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 
 The ordinary clocks are verified on **48 configurations** across all four speeds: the a2 recapture after the belt
 window-end trim, with the 20 electromagnetic clocks the M1 resume fix changed recorded again, and the fast straight
@@ -161,6 +162,26 @@ game whatever the config says, and the clock made for moving belts holds and rec
 includes the express clocks the generator calls "no recovery" and the normal ones it calls "unstable", both judged
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) this exit cannot have; at normal it moves the 176 the
 backed-up config's own clock misses.
+
+**Recovery through a blocked output** is verified on **16 configurations**
+(`tests/game/builds/blocked-output-clock-controls.json`, recorded 2026-10-21): iron gears in a legendary assembler 3
+(crafting speed 3.125) fed from an infinity chest, its output inserter dropping onto a belt that runs ten tiles to a
+loader, at every tier and belt stack size 1–4 (the force's `belt_stack_size_bonus`, set as the belt-drop calibration
+sets it; the chest-fed input keeps the stack size away from any pickup), 5 gears a second. The loader is removed for 24
+periods. All 16 selected clocks are stable and exact in their 63 baseline periods and in all 33 periods after the
+release; the hand is 15 at stack size 3. **The simulator holds the output inserter from the tick its belt stops taking
+the product; the game first fills the belt behind the drop.** The ten-tile lane takes about 39 stacks: 9 to 39 more
+items at stack size 1 (part of the lane is already in flight), 62 to 78 at 2, 102 to 117 at 3 and 140 to 156 at 4, so
+output stops one to ten periods into the block. The 104 belt-output clock controls above (the electromagnetic side
+pickups, over the hood and the front clocks, all at stack size 4) buffer 112 to 192 items. Replayed in the simulator on
+the game's own schedule, the 120 recordings differ in the blocked periods and just after the release, where the
+simulator makes up the machine's surplus that the game had already put onto the belt: both are back at the expected
+output within a few periods (the game 0 to 5 periods after the release period, the simulator 1 to 6, neither always
+first), and every period the captures judge, from 6 or 10 periods after the release, is the same number in game and
+simulator in all 120 (the four that miss there miss alike). The generator's own loss trials, run with a belt that
+fills to an outlet 10 or 25 tiles past the drop (a scratch rule patch), change no selected clock, selection, or verdict
+of any alternative in the 208 sample and fixture jobs of the blast, nor in these 16 configurations: no verdict depends
+on the instant hold, and the simulator keeps it ([simulator](../simulator.md#a-stack-inserter-dropping-onto-a-moving-lane)).
 
 ## Tick-pattern matrix
 
@@ -242,7 +263,7 @@ calibration. Runtime now retains output stock and admits deposits only when spac
 both hands at every speed/stack size. A further 28 occupied-output recordings check the strict landing cutoff
 and temporary compressed gaps. Across 44 portable clips, the simulator matches every source quantity, held
 quantity and receiving-tile position for 9,120 ticks from a disabled start. This validates freely draining output;
-it does not establish generated-clock recovery through downstream blockage.
+recovery through a blocked output is measured on generated clocks ([above](#generated-clocks-and-drops)).
 
 ## Simulator impact and verification
 
