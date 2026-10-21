@@ -14,6 +14,7 @@ import {speedCapture} from "../helpers/belt-speed-fixtures";
 import {reflectOrdinaryPickup} from "../mechanics/belt-pickup/ordinary-reflection-fixtures";
 import {pickupClockConfig, pickupClockScaffold, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 import {overHoodClockCases, overHoodClockConfig, overHoodClockScaffold} from "./over-hood-clock-fixtures";
+import {readControls} from "./clock-controls";
 
 interface Run {
     case: string; clock: string; rotate: number; decider_order: "built" | "reversed";
@@ -30,7 +31,7 @@ interface Report {
     placement_tick: number; phases: number[];
     periods: Record<string, {off_lattice: number; phases: Record<string, boolean>}[]>; clock_offsets: number[];
 }
-const controls = JSON.parse(fs.readFileSync(path.join(__dirname, "pickup-clock-cold-start-controls.json"), "utf8")) as Controls;
+const controls = readControls<{cold_start: Controls}>("pickup-clock-start-controls.json").cold_start;
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 const sha = (x: unknown) => createHash("sha256").update(JSON.stringify(x)).digest("hex");
 

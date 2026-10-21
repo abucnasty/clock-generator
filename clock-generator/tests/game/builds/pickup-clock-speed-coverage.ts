@@ -82,6 +82,6 @@ export function capturePickupClockSpeed(variant: ClockCase) {
     return capturePickupClockScenario({
         name: variant.name, speed: variant.speed, backed: variant.backed,
         config: () => pickupClockConfig(variant), scaffold: () => pickupClockScaffold(variant),
-        probe: {family: variant.family}, controls: path.join(__dirname, "pickup-clock-a8-controls.json"),
+        probe: {family: variant.family}, controls: path.join(__dirname, "pickup-clock-controls.json"),
     });
 }

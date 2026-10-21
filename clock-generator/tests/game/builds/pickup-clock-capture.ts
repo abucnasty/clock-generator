@@ -10,6 +10,7 @@ import {Recording} from "../../../src/verification/recording";
 import {FixtureBeltSpeed, speedCapture} from "../helpers/belt-speed-fixtures";
 import {composeProbeSource} from "../helpers/probe-source";
 import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
+import {expectedNativeSummary} from "./clock-controls";
 
 export interface PickupClockScenario {
     name: string;
@@ -17,6 +18,7 @@ export interface PickupClockScenario {
     backed: boolean;
     config: () => Config | Promise<Config>;
     scaffold: () => string;
+    /** The family's controls file (clock-controls.ts), whose entry for the scenario the capture is compared with */
     controls: string;
     outagePeriods?: number;
     /** Interventions of a probe of its own, in place of pickupClockInterventions(outagePeriods) */
@@ -155,11 +157,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
             ...(report.interventions && {interventions: report.interventions})};
         fs.writeFileSync(path.join(capture.directory, "summary.json"), JSON.stringify(summary) + "\n");
         if (process.env.BELT_CLOCK_CALIBRATE !== "1") {
-            const expectations = process.env.BELT_CLOCK_EXPECTATIONS
-                ? path.resolve(process.env.BELT_CLOCK_EXPECTATIONS)
-                : scenario.controls;
-            const expectedSummaries = JSON.parse(fs.readFileSync(expectations, "utf8"));
-            expect(summary).toEqual(expectedSummaries[scenario.name]);
+            expect(summary).toEqual(expectedNativeSummary(scenario.controls, scenario.name));
         }
     } finally {capture.cleanup();}
 }

@@ -44,8 +44,8 @@ settling, retaining complete-period counts through all interventions. The record
 two detailed periods, which must match overlapping compact aggregates exactly. This preserves the limit
 and avoids resetting the build or retaining millions of redundant samples.
 
-The historical `pickup-clock-speed-controls.json` records native period summaries separately from the generator's
-verdict. A measured throughput/recovery counterexample is not a claim that the selected clock is safe.
+The original backfill's native period summaries (#245) are kept in
+[pickup-clock-history-controls.json](pickup-clock-history-controls.json), separately from the generator's verdict. A measured throughput/recovery counterexample is not a claim that the selected clock is safe.
 Express moving half-tile generation already reports `no recovery`; the backfill preserves that verdict.
 Unsupported sources are not overridden to generate clocks.
 
@@ -89,41 +89,41 @@ required supply as well as its verdict; a backed-up fallback selected for moving
 operating condition. Cache entries keep underground entrances and exits separate because their layout can
 affect arm travel.
 
-`BELT_CLOCK_EXPECTATIONS` selects another summary JSON file when verifying a later simulator revision.
-The original `pickup-clock-speed-controls.json` remains the historical experiment evidence; do not overwrite
-its observations with new clock results. Always pair a replay with the summaries of the same retained run.
+`BELT_CLOCK_EXPECTATIONS` selects other summaries when verifying a later simulator revision: a family's controls
+file, or a history file and the PR of the recording, `<file>#<pr>` ([clock-controls.ts](clock-controls.ts)). The
+history files keep the superseded recordings as experiment evidence; do not overwrite their observations with new clock
+results. Always pair a replay with the summaries of the same retained run: the committed summaries are the durable
+record, and a replay needs captures made locally.
 
 ## Post-fix ordinary clock verification
 
-The current default expectations are [pickup-clock-a8-controls.json](pickup-clock-a8-controls.json), recorded on
-Factorio 2.1.21. The two normal backed-up underground configurations were re-recorded on the clock the generator now
-makes for them last, when no other clock can be selected as stable (roadmap A8, `6588a59b`: planned with the belts
-moving, given belt pickup slack and checked on the backed-up belts, in place of a fractional clock that missed), with
-63 untouched baseline periods and three effective disturbances; the other 46 are copied unchanged from
-[pickup-clock-a4-controls.json](pickup-clock-a4-controls.json). There the two express moving underground configurations
-were re-recorded on their first clock made for moving supply (roadmap A4, `54af3542`: observed windows at 3 output
-swings, in place of a clock for backed-up belts); the other 46 are copied unchanged from
-[pickup-clock-m2-controls.json](pickup-clock-m2-controls.json). There the fast straight moving electromagnetic
-configuration was re-recorded after a belt-fed window's first stack was tied to where its machine's products go
-(roadmap M2, `7950f77c`): the only clock of the 48 whose exported blueprint and schedule changed (one output swing per
-cycle at 704 ticks again, in place of planned belt slack at 3520). Its other 47 are copied unchanged from
-[pickup-clock-m1-controls.json](pickup-clock-m1-controls.json), in which twenty configurations were re-recorded after
-the belt hand's resume after a craft start was fixed (roadmap M1, `aae515e9`) and the other 28 were copied from
-[pickup-clock-a2-controls.json](pickup-clock-a2-controls.json), recorded after the belt window-end trim
-(`b654e895`); the two normal moving underground copies carry the generator's "unstable" verdict for the same clock.
-The a4, m2, m1 and a2 files, and before them [pickup-clock-parity-controls.json](pickup-clock-parity-controls.json) (engine
-commit `4f2d4e35`), stay as the historical evidence of the clocks they recorded.
+The current default expectations are [pickup-clock-controls.json](pickup-clock-controls.json), recorded on
+Factorio 2.1.21; each entry names the PR that recorded it and the frozen head its clock was generated on. All 48 were
+recorded after the belt window-end trim (#265, frozen head `77f11ce6`; turbo straight moving again at `9d8f7089`); 20
+again after the belt hand's resume after a craft start was fixed (#266, `aae515e9`); the fast straight moving
+electromagnetic configuration again after a belt-fed window's first stack was tied to where its machine's products go
+(#267, `7950f77c`: the only clock of the 48 whose exported blueprint and schedule changed, one output swing per cycle
+at 704 ticks again, in place of planned belt slack at 3520); the two express moving underground configurations on
+their first clock made for moving supply (#269, `959c08d5`: observed windows at 3 output swings, in place of a clock
+for backed-up belts); and the two normal backed-up underground configurations on the clock the generator now makes for
+them last, when no other clock can be selected as stable (#275, `6588a59b`: planned with the belts moving, given belt
+pickup slack and checked on the backed-up belts, in place of a fractional clock that missed), each with 63 untouched
+baseline periods and three effective disturbances. The two normal moving underground entries keep their #265
+recording with the generator's "unstable" verdict for the same clock (#266). The recordings these replaced, and the
+#253 recapture on engine `4f2d4e35` before them, stay in
+[pickup-clock-history-controls.json](pickup-clock-history-controls.json) as the historical evidence of the clocks they
+recorded.
 
 | Result | Cases | Interpretation |
 | --- | --- | --- |
-| Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early periods from the coverage protocol's calibration state; the clock since M1 runs exact from the first period. It also includes the normal backed-up underground entrance/exit (roadmap A8): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the fractional clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock planned with the belts moving and checked on the backed-up belts holds; the cold-start controls below still check the simulator against the measured starts with fixed windows |
+| Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early periods from the coverage protocol's calibration state; the clock since #266 runs exact from the first period. It also includes the normal backed-up underground entrance/exit (#275): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the fractional clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock planned with the belts moving and checked on the backed-up belts holds; the cold-start controls below still check the simulator against the measured starts with fixed windows |
 | Exact baseline and recovery in these warm recordings, generator says unstable | 2 | Normal moving underground entrance/exit: the generator finds the clock failing from cold lane phase [3,0], and the game never settles from it either, nor from four other phases, among them the exit's natural one, where it cycles at 143 a period against 176 ("Normal underground lane phases" below). The warm runs started at a phase that holds |
-| Exact baseline and recovery, generator says no recovery | 2 | Express moving underground entrance/exit (roadmap A4): every loss the generator tries fails from lane phase [1,5] alone, which the capture cannot set up ([pickup-clock-recovery-phase-controls.json](pickup-clock-recovery-phase-controls.json)). Their clocks before, made for backed-up belts, moved 352 a period against 528 under moving supply; with every inserter always enabled the game moves 704 to 716 through this pickup |
+| Exact baseline and recovery, generator says no recovery | 2 | Express moving underground entrance/exit (#269): every loss the generator tries fails from lane phase [1,5] alone, which the capture cannot set up ([lane-phase-controls.json](lane-phase-controls.json), `recovery_phase`). Their clocks before, made for backed-up belts, moved 352 a period against 528 under moving supply; with every inserter always enabled the game moves 704 to 716 through this pickup |
 
 No failing captured ordinary default is marked stable for its actual supply. These checks do not close broader
 startup timing or over-the-hood operating clocks.
 
-[pickup-clock-moving-phase-controls.json](pickup-clock-moving-phase-controls.json) pins the cold lane-phase start
+[lane-phase-controls.json](lane-phase-controls.json) (`moving_phase`) pins the cold lane-phase start
 the generator's verifier fails the two normal moving underground clocks from, [3,0], with the game's output from
 that start.
 
@@ -135,21 +135,22 @@ its own supply, a baseline miss has to make the generator's own holds verdict fa
 saves the selected rate, required supply and alternative id in `generation-selection.json` when that metadata
 is available in its cache.
 
-To replay the original 39 controls, set
-`BELT_CLOCK_EXPECTATIONS=tests/game/builds/pickup-clock-speed-controls.json` with their retained recording
-directory. Current captures use the a4 controls by default. Always retain failed captures for diagnosis;
+To replay against the original 39 controls, set
+`BELT_CLOCK_EXPECTATIONS=tests/game/builds/pickup-clock-history-controls.json#245` with a recording directory of
+those clocks made locally; the original recordings were not kept. Current captures use pickup-clock-controls.json by
+default. Always retain failed captures for diagnosis;
 the passing measurement test alone does not certify a clock that a control records below target.
 
 
 ### Fully backed-up cold starts
 
-[pickup-clock-startup-controls.json](pickup-clock-startup-controls.json) records the normal underground
+[pickup-clock-start-controls.json](pickup-clock-start-controls.json) (`backed_up_start`, #253) records the normal underground
 entrance/exit with new empty machines/hands and verified stationary `[0,64]` stock on both half-tile lanes.
 At offset 0, all 16 periods produce 176 items. Rotating the same windows by 1287 ticks makes both game and
 simulator alternate 144/208 for all 16 periods. The mean is 176, but exact per-period output fails. The
 windows are the old swings-1 selection, kept as fixed-window checks of the simulator against the game's
 measured cold starts: both tests build them as given, independent of the selection, which since the window
-trim is fractional for these two builds and is judged on its own a2 recording like any other default.
+trim is fractional for these two builds and is judged on its own recording like any other default.
 
 The staged harness's default saturation check establishes fullness, which can still occur while stock moves.
 These fixtures wait for 1,200 saturation ticks and additionally assert stationary stock before the first grab;
@@ -164,26 +165,26 @@ BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-startup-new \
 
 ### Normal underground lane phases
 
-[normal-underground-lane-phase-controls.json](normal-underground-lane-phase-controls.json) records cold starts of the
+[lane-phase-controls.json](lane-phase-controls.json) (`normal_underground`) records cold starts of the
 normal moving underground entrance and exit at all 64 pairs of input lane phases, 128 runs in Factorio 2.1.21
-(roadmap M1, 2026-10-20), under the fixed windows of their swings-1 clock. The fixture clears every supply-chain line
-of both lanes, seeds it on the requested lattice and checks the lanes before the first grab and in every period; its
-probe, test and every run are kept with the evidence in `work/belt-pickup-parity/m1/`. Entrance and exit recorded the
+(#266, 2026-10-20, on master `f6c598c8`), under the fixed windows of their swings-1 clock. The fixture clears every
+supply-chain line of both lanes, seeds it on the requested lattice and checks the lanes before the first grab and in
+every period; its probe, test and runs were not kept in the repository. Entrance and exit recorded the
 same counts on both clocked inserters in every cell. Five cells never settle: [3,0], [3,1] and [3,7] repeat 176, 160,
 144, 128, 128, 144, and [3,3] and [3,4] repeat 128, 144, 160, 128, 144, 176, 143 a period against 176. [3,3] is the
 exit's natural phase: a staged start of the build without seeding lands there.
 
 `normal-underground-lane-phase.generation.test.ts` runs the simulator from each cell. In every cell of both builds it
 moves the game's output and pickups in every period, and its output inserter holds the game's count in every tick.
-Since roadmap M2 that includes the 13 cells per build where the input and the output window open in the same tick on a
+Since #267 that includes the 13 cells per build where the input and the output window open in the same tick on a
 machine at its output block: the output inserter puts the products onto a belt, so the game's belt-fed input takes its
 first stack a tick after they are taken, and the simulator does too. `known_differences` is empty; a cell listed there
 would be held only on its last eight periods.
 
 ### Clocked cold starts
 
-[pickup-clock-cold-start-controls.json](pickup-clock-cold-start-controls.json) records 57 clocked cold starts in
-Factorio 2.1.21 (roadmap C1, 2026-10-20), each 16 periods from the harness's staged start, with nothing written to a
+[pickup-clock-start-controls.json](pickup-clock-start-controls.json) (`cold_start`) records 57 clocked cold starts in
+Factorio 2.1.21 (#273, 2026-10-20, frozen head `98f362ce`), each 16 periods from the harness's staged start, with nothing written to a
 belt: the game's own lane phase at placement, read off the pickup tile.
 
 - **The matrix, 48:** every electromagnetic side pickup fixture at 4 tiers × straight belt, underground entrance and
@@ -201,8 +202,8 @@ placement and in the model's frame (native - 4 × the tier's speed), and what th
 moved in each period and held in each tick of the model's frame (model `held[i]` = sample `i + 4`), as sha256.
 `pickup-clock-cold-start.game.test.ts` records them again: the same clock, a cold cell, the clock a tick behind the
 probe, every period on the placement lattice, and both series as kept. Its probe
-(`pickup-clock-cold-start-probe.lua`) only observes. The runs, the scratch fixture they came from and their analyses
-are with the evidence in `work/belt-pickup-parity/c1/`.
+(`pickup-clock-cold-start-probe.lua`) only observes. The raw runs, the scratch fixture they came from and their
+analyses were not kept in the repository.
 
 `pickup-clock-cold-start.generation.test.ts` runs the simulator from each cold start and holds both clocked inserters'
 counts in every tick and their items in every period: 57 of 57, the input of one held only by its output (a hand back
@@ -223,27 +224,27 @@ moving/backed-up supply. Every variant uses the same compact assembler layout an
 variants remove only the ingredient drain; the product outlet stays open until the output intervention.
 Sidecar must capture supported belt model 2, the over-the-hood layout and the correct preferred lane.
 
-[over-hood-clock-controls.json](over-hood-clock-controls.json) retains all 32 native summaries using clocks
-generated on engine `4f2d4e35` and Factorio 2.1.21. Twenty-one pass exact baseline and recovery output,
+[over-hood-clock-history-controls.json](over-hood-clock-history-controls.json) retains all 32 native summaries of #254,
+using clocks generated on engine `4f2d4e35` and Factorio 2.1.21. Twenty-one pass exact baseline and recovery output,
 including all 16 same-item cases. Eight already receive unstable/no-recovery verdicts. Three are marked stable
 but fail recovery: turbo moving in both mirroring states, and express moving when mirrored. Each capture has
 63 untouched baseline periods and overlapping detailed-recorder checks. These controls are historical evidence;
 changed selected clocks need fresh game verification rather than replacement of the old counts.
 
-The current default expectations are [over-hood-a5-clock-controls.json](over-hood-a5-clock-controls.json): the two
-express moving mixed-item variants whose selected clock A5 changed (observed windows judge each lane-phase start over its
-repeating cycle), re-recorded from the generator on Factorio 2.1.21, both exact in baseline and recovery:
+The current default expectations are [over-hood-clock-controls.json](over-hood-clock-controls.json), each entry with
+the PR that recorded it and its frozen head. The two express moving mixed-item variants whose selected clock #272
+changed (observed windows judge each lane-phase start over its repeating cycle) were re-recorded from the generator on
+Factorio 2.1.21 (frozen head `4162ddfe`, the PR's source commit before its last amend), both exact in baseline and
+recovery:
 the mirrored one, whose old clock repeated six 112-item periods and one 96-item period after each disturbance, holds
 112 throughout with its input window 3 ticks longer, and the unmirrored one keeps 96 with its input window a tick
-longer; the other 30 copied from [over-hood-a4-clock-controls.json](over-hood-a4-clock-controls.json): the nine
-mixed-item variants whose selected clock A4 changed to observed windows (an observed-windows clock holds when its own
-windows hold, `54af3542`), re-recorded on Factorio 2.1.21 and all exact in baseline and recovery, the normal mirrored
-moving one after two short periods following its last disturbance; among them fast unmirrored backed, recorded for the
-first time; the other 23 copied from [over-hood-a2-clock-controls.json](over-hood-a2-clock-controls.json):
-28 variants re-recorded with the clocks of the belt window-end trim (`b654e895`) on Factorio 2.1.21, plus the
-three whose exported clock the trim leaves byte-identical, copied from the historical file (the
-express-mirrored-moving copy corrects a stale `generationVerdict` to the generator's "no recovery", said since
-the lane-phase audit). Of the 31 entries, 25 pass their baseline and recoveries exactly — the mirrored moving
+longer. The nine mixed-item variants whose selected clock #269 changed to observed windows (an observed-windows clock
+holds when its own windows hold) were re-recorded on Factorio 2.1.21 (frozen head `959c08d5`), all exact in baseline and
+recovery, the normal mirrored moving one after two short periods following its last disturbance; among them fast
+unmirrored backed, recorded for the first time. #265 re-recorded 28 variants with the clocks of the belt window-end
+trim on Factorio 2.1.21 (frozen head `77f11ce6`), and kept #254's recordings of the three whose exported clock the trim
+leaves byte-identical (its express-mirrored-moving copy corrected a stale `generationVerdict` to the generator's "no
+recovery", said since the lane-phase audit; the history entry's note keeps it). Of #265's 31 entries, 25 pass their baseline and recoveries exactly — the mirrored moving
 turbo's third recovery overshoots one period and pauses four before holding target for its last 14 periods —
 five are correctly rejected, with native baseline misses behind each holds-false pick (fast mirrored at both
 supplies, fast unmirrored moving, normal mirrored at both supplies), and the copied mirrored moving express
@@ -255,13 +256,13 @@ untouched. A disturbance must reduce output below the baseline before recovery i
 already contains zero-output periods, the summary retains all counts and marks recovery `not_assessed`;
 that clock has already failed its undisturbed throughput check.
 
-The [bounded turbo trace](over-hood-lane-phase-control.json) preserves a separate, shorter ingredient-loss
+The [bounded turbo trace](lane-phase-controls.json) (`over_hood_turbo_trace`, #254) preserves a separate, shorter ingredient-loss
 counterexample. Before the interruption, both lanes share a phase. Afterwards, only the interrupted lane
 shifts by half a stack interval. The clock was marked stable, but native output repeats a 48-item period
 among four 64-item periods instead of 64 every 640 ticks. The existing pickup kernel reproduces this pattern
 with different initial lane phases. A common clock shift alone does not check that state.
 
-The matching express trace is retained in [over-hood-express-lane-phase-control.json](over-hood-express-lane-phase-control.json).
+The matching express trace is retained in [lane-phase-controls.json](lane-phase-controls.json) (`over_hood_express_trace`, #255).
 The old mirrored express clock repeats six 112-item periods and one 96-item period after recovery. Separate
 lane phases reproduce that seven-period cycle in the existing simulator too, under its own loss protocol: from 9 of
 its 64 lane-phase starts the clock repeats it with nothing lost, while the clock-only check judged one period of each
@@ -274,12 +275,10 @@ Clock verification now varies ordinary moving lanes independently in both steady
 The historical summaries preserve the original clocks and verdicts. A passing capture/replay means the recorded
 observations match expectations, including any shortfalls recorded there; it does not certify a failing clock.
 
-[over-hood-phase-generation-controls.json](over-hood-phase-generation-controls.json) pins all 32 audited
-selections and hashes their exact exported blueprint/schedule, regenerated after the window-end trim. The
-lane-phase audit's three changed clocks keep their native counts from that time in
-[over-hood-phase-clock-controls.json](over-hood-phase-clock-controls.json); since the trim, every recorded
-pin's `native_control` pointed at the a2 controls above, the nine A4 changed point at the a4 controls, and the two A5
-changed at the a5 controls. Until A4
+The `generation` field of each entry of [over-hood-clock-controls.json](over-hood-clock-controls.json) pins its
+audited selection and hashes its exact exported blueprint/schedule, regenerated after the window-end trim, beside the
+native recording of that clock. The lane-phase audit's three changed clocks keep their native counts from that time
+(#255) in [over-hood-clock-history-controls.json](over-hood-clock-history-controls.json). Until #269
 fast-unmirrored-backed-different-items had no recording: its fractional selection repeated every 16,160 ticks, more
 than a 63-period recording fits under the harness's 72,000-tick cap, and moved 6.95 a second against 6 with holds
 false. Its observed windows at 800 ticks hold 80 a period, in the game too.
@@ -287,20 +286,19 @@ The portable `over-hood-clock.generation.test.ts` checks these selections, exact
 untouched final native recovery windows for clocks marked stable (at least eight periods for moving supply,
 five for backed-up supply, whose assessment starts later).
 
-Raw evidence is retained locally under `work/belt-pickup-parity/over-hood-different-native-02-{unmirrored,mirrored}/`
-and `over-hood-same-native-01-{unmirrored,mirrored}/`. The bounded shorter-loss trace is in
-`work/belt-pickup-parity/over-hood-phase-native-01/`. Earlier short-outage pilots are separate; an outage hidden
-by buffers does not add recovery coverage.
+The raw recordings of #254 and of the bounded shorter-loss trace were not kept in the repository; their summaries
+above are the record. Earlier short-outage pilots are separate; an outage hidden by buffers does not add recovery
+coverage.
 
 Since the long run is judged by state repetition (proof-verification, 2026-10-19), two entries changed:
 `over-hood-{express,turbo}-unmirrored-backed-different-items`. Their old 800-tick `planned-belt-slack` picks never
 held 80 a period: the simulation repeats a 16-period cycle in which one period moves 96 (one extra hand), an
 eternal average of 81.04. The old 45-period long run judged 30 bins that held exactly one such spike, which one
-hand of tolerance absorbed; the proven cycle does not. The game agrees: the retained native baselines in
-[over-hood-clock-controls.json](over-hood-clock-controls.json) run 63 periods per variant and move 96 at periods
+hand of tolerance absorbed; the proven cycle does not. The game agrees: the retained native baselines of #254 in
+[over-hood-clock-history-controls.json](over-hood-clock-history-controls.json) run 63 periods per variant and move 96 at periods
 15, 31, 47 and 63, which nothing compared before because the old test read the baseline only for "stable"
 verdicts and these two were "no recovery". Fresh 64-period headless runs of the old clocks reproduce it (96 at
-periods 8, 24, 40 and 56; `work/belt-pickup-parity/over-hood-watch/`), and the express run was watched in game.
+periods 8, 24, 40 and 56; #258, not kept in the repository), and the express run was watched in game.
 The mechanism, read off those recordings: the belt input inserter picks 324 items a period against the planned
 320 - after its last planned return swing its window still holds one pickup tick, which on a backed-up belt
 always grabs one 4-item stack - and the carried partial hand becomes an extra full hand every 4th period, in
@@ -308,7 +306,7 @@ recipe proportion; the assembler has the spare speed to craft them, and the outp
 96-item hand every 16th period. Every alternative of those two variants carried the same cycle, so both pinned
 an unstable selection until the belt window-end trim (`b654e895`) removed the extra pickup at its source: a
 belt-fed inserter's input window now ends one rotation before its last return swing. Both variants again select
-planned-belt-slack, at period 960, and the a2 controls record their baselines and recoveries exact in the game;
+planned-belt-slack, at period 960, and #265's recordings show their baselines and recoveries exact in the game;
 the old recordings stand as the in-game confirmation that the old picks fail.
 
 ```bash
@@ -338,20 +336,19 @@ and after each restoration; it does not feed observations into the simulator.
   assessed as for backed-up supply.
 
 [front-clock-controls.json](front-clock-controls.json) holds the 48 native summaries, recorded on Factorio 2.1.21
-from clocks generated after A5 (`5cb7c83b`), each with 63 untouched baseline periods and three disturbances that cut
-output; the two normal backed-up exits were recorded again on A8's clock (`6588a59b`). **All 48 meet exact baseline and
+from clocks generated on `5cb7c83b` (#274), each with 63 untouched baseline periods and three disturbances that cut
+output; the two normal backed-up exits were recorded again on #275's clock (`6588a59b`). **All 48 meet exact baseline and
 recovery output.** All 32 entrance clocks are stable and exact. All eight backed-up exit clocks are stable and exact.
 At normal, in both mirroring states, every clock planned for backed-up supply fails (the fractional clock selected
 before, holds false at 5.45 of 7.5/s, missed natively, 128, 128, 96 repeating against 176, the generator's own
 as-built repeat); the selection is the clock planned with the belts moving and checked on the backed-up belts, which
-the generator makes last, only when no other clock can be selected as stable (roadmap A8), the same clock as the
+the generator makes last, only when no other clock can be selected as stable (#275), the same clock as the
 moving config's. All eight moving-config exit clocks hold and recover exactly on the backed-up exit, including
 the express ones the generator calls "no recovery" and the normal ones it calls "unstable": both verdicts come
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
 
-The portable `front-pickup-clock.generation.test.ts` pins each selection, its exact exported clock
-([front-clock-generation-controls.json](front-clock-generation-controls.json)), and checks it against its native
-summary: a baseline miss under the selection's own supply needs holds false; a stable clock, or a moving-config
+The portable `front-pickup-clock.generation.test.ts` pins each selection and its exact exported clock (each entry's
+`generation`), and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false; a stable clock, or a moving-config
 clock on the backed-up exit, needs an exact baseline and its last recovery periods at target. 29 of the 32
 entrance clocks are byte-identical to the over-the-hood pins of the same speed, mirroring, supply and family;
 the builds differ in the game, so each has its own control.
@@ -375,13 +372,12 @@ from period 96 to 130. The capture runner takes the scenario's own probe, interv
 (a chest-fed input, crafting speed 3.125, every drop the case's stack size, hands of 15 at stack size 3 and 16 otherwise).
 
 [blocked-output-clock-controls.json](blocked-output-clock-controls.json) holds the 16 native summaries, recorded on
-Factorio 2.1.21 on `b9fd341b`. **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery
+Factorio 2.1.21 on `b9fd341b` (#277). **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery
 output (33 periods).** Output stops one to ten periods into the block, once the belt behind the drop is full (about 39
 stacks), where the simulator holds the output inserter at once; the periods judged after the release are the same in
 both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-and-drops)). The portable
-`blocked-output-clock.generation.test.ts` pins each selection and its exported clock
-([blocked-output-clock-generation-controls.json](blocked-output-clock-generation-controls.json)) and checks it against
-its native summary.
+`blocked-output-clock.generation.test.ts` pins each selection and its exported clock (each entry's `generation`) and
+checks it against its native summary beside it.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/blocked-output-new \

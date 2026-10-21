@@ -1,11 +1,10 @@
-import fs from "fs";
-import path from "path";
 import {createHash} from "crypto";
 import {describe, expect, test} from "vitest";
 import {runClockOnBuild} from "./trial";
 import {SerializableClockWindows} from "./clock";
 import {OpenRange} from "../data-types";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
+import {readControls} from "../../tests/game/builds/clock-controls";
 
 interface LanePhaseCell {
     /** Items the output inserter dropped in each clock period */
@@ -29,8 +28,7 @@ interface LanePhaseControl {
 /** The last periods of a cold start, by which every cell has settled into its long run, a cycle included */
 const SETTLED_PERIODS = 8;
 
-const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/normal-underground-lane-phase-controls.json"), "utf8")) as {builds: Record<string, LanePhaseControl>};
+const controls = readControls<{normal_underground: {builds: Record<string, LanePhaseControl>}}>("lane-phase-controls.json").normal_underground;
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 /** What the inserter moved in each period: drops (held count falling) and pickups (rising), from an empty hand */
