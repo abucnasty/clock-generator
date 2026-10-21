@@ -12,7 +12,7 @@ import { deciderBuildOrder } from "./decider-order";
  * The order the check of a clock gives its deciders (`deciderBuildOrder`, from the windows and the inserters' filters)
  * is the order the exported blueprint builds them in, on samples where inserters with the same windows share a decider
  * and on those with fuel clocks of their own: of two inserters, the one whose decider has the higher entity number
- * stands later. It decides which of two windows that open together the game updates first (roadmap M3). Checked on
+ * stands later. It decides which of two windows that open together the game updates first (#268). Checked on
  * every alternative of every sample in the roadmap's blast radius (2026-10-20); these are cheap ones that have both.
  */
 const SAMPLES = ["LITHIUM_PLATES", "ACCUMULATOR_640", "IRON_BACTERIA_CULTIVATION", "CHEMICAL_SCIENCE_SHARED_FOUNDRY", "GLEBA_ROCKET_FUEL_JELLY_STACK_15"] as const;

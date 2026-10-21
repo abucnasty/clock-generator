@@ -42,12 +42,12 @@ From `clock-generator/`, with the [game setup](../../README.md#setup) configured
 
 ```bash
 # One naturally supplied case; retain raw evidence in a new directory.
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-run \
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/new-run \
   npm run test:game -- tests/game/mechanics/belt-pickup/belt-speed-coverage.game.test.ts \
   -t '^express-straight-belt-moving-accumulator$'
 
-# Check already-retained ordinary reports without launching Factorio.
-BELT_SPEED_REPLAY_DIR=../work/belt-speed-coverage/ordinary-gated-05 \
+# Check the reports of a capture made locally, such as the run above, without launching Factorio.
+BELT_SPEED_REPLAY_DIR=.scratch/belt-speed-coverage/new-run \
   npm run test:game -- tests/game/mechanics/belt-pickup/belt-speed-coverage.game.test.ts
 
 # Portable native clips, simulator unit regression and generation regression.
@@ -59,7 +59,9 @@ npm run test:generation -- src/crafting/moving-belt-pickup.generation.test.ts
 Other families have their own retained-replay variables and filters documented beside the fixture. Do not launch
 the whole game suite to check a documentation or import-only change. Native captures use at most two isolated
 Factorio instances concurrently; each process needs its own working/output directory. Full recordings stay in
-ignored `work/`; compact reviewed expectations belong with the fixture. A capture directory must be fresh.
+the ignored `clock-generator/.scratch/`; compact reviewed expectations belong with the fixture, and they are the durable
+record: the raw captures behind them were not kept, so a replay needs captures made locally. A capture directory must
+be fresh.
 
 ## Probe and evidence conventions
 

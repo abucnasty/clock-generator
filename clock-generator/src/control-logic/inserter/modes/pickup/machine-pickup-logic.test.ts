@@ -30,7 +30,7 @@ async function takeAsItEnters(from: InserterStatus, decider_build_order?: number
 }
 
 describe("a take from a machine in the first tick of a window", () => {
-    // an inserter whose window opens in that tick too goes by the order of the two deciders (roadmap M3)
+    // an inserter whose window opens in that tick too goes by the order of the two deciders (#268)
     it("marks the machine with where the taker's decider stands in the order they are built", async () => {
         const source: MachineState = await takeAsItEnters(InserterStatus.DISABLED, 3);
         expect(source.windowOpeningTakeDecider).toBe(3);

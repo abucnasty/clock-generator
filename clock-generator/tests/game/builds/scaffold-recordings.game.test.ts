@@ -164,7 +164,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // the game and 5 in the simulator, because the game counts a held product when it enters the output and
         // the simulator when it is made (docs/simulator.md). The gap crossed the tolerance only once the trim cut
         // the build's total wake-ups 100 -> 75 a minute; the trimmed belt inserter itself matches the game tick
-        // for tick (work/belt-pickup-parity/belted-buffer-wakeups/REPORT.md):
+        // for tick (#265; the comparison's recordings were not kept in the repository):
         wake_ups_open: "the game counts a foundry's held product entering its output, the simulator the make: ",
     },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three

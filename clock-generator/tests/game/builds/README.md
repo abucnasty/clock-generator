@@ -71,7 +71,7 @@ These assertions do not establish that such an incomplete captured config can be
 From `clock-generator/`, select a bounded case and retain its artifacts:
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/build-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/build-new \
   npm run test:game -- tests/game/builds/moving-pickup.game.test.ts \
   -t '^speed coverage: electromagnetic-express-underground-entrance-moving$'
 ```
@@ -158,7 +158,7 @@ for a fully backed-up start. Counts begin at cold placement and include the firs
 or later stock are fed back into the simulator.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-clock-startup-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-startup-new \
   npm run test:game -- tests/game/builds/pickup-clock-startup.game.test.ts
 ```
 
@@ -211,7 +211,7 @@ start rule the 11 runs where a window the latency carries over the period's end 
 other 46 pass.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-clock-cold-start-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
   npm run test:game -- tests/game/builds/pickup-clock-cold-start.game.test.ts -t 'express-underground-entrance-moving-l1'
 ```
 
@@ -312,7 +312,7 @@ planned-belt-slack, at period 960, and the a2 controls record their baselines an
 the old recordings stand as the in-game confirmation that the old picks fail.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/over-hood-clock-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/over-hood-clock-new \
   npm run test:game -- tests/game/builds/over-hood-pickup-clock.game.test.ts \
   -t '^operating clock: over-hood-turbo-unmirrored-moving-different-items$'
 ```
@@ -357,7 +357,7 @@ entrance clocks are byte-identical to the over-the-hood pins of the same speed, 
 the builds differ in the game, so each has its own control.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/front-clock-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/front-clock-new \
   npm run test:game -- tests/game/builds/front-pickup-clock.game.test.ts \
   -t '^operating clock: front-exit-normal-unmirrored-backed-different-items$'
 ```
@@ -384,7 +384,7 @@ both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-an
 its native summary.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/blocked-output-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/blocked-output-new \
   npm run test:game -- tests/game/builds/blocked-output-clock.game.test.ts \
   -t '^blocked output clock: blocked-output-express-stack-3$'
 ```

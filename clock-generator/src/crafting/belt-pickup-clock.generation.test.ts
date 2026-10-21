@@ -54,7 +54,7 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         if (startup) {
             // The fixed windows stay as a check of the simulator against the game's measured cold starts (a
             // fully jammed start at offset 1287 alternates 144/208 natively), independent of the selection:
-            // the generator now selects the clock planned with the belts moving here (A8), which the branches
+            // the generator now selects the clock planned with the belts moving here (#275), which the branches
             // below judge on its own recording.
             for (const phase of startup.phases) {
                 const windows = Object.fromEntries(Object.entries(startup.clock_windows).map(([id, ranges]) =>

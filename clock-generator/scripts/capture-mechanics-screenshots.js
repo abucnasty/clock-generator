@@ -43,7 +43,7 @@ async function main() {
     if (!pending.length) { console.log("All selected screenshots are current; Factorio was not started."); return; }
     try { process.loadEnvFile(path.join(ROOT, ".env")); } catch (error) { if (error.code !== "ENOENT") throw error; }
     if (!process.env.FACTORIO_PATH || !process.env.FACTORIO_HARNESS_SAVE) throw new Error("Set FACTORIO_PATH and FACTORIO_HARNESS_SAVE in .env");
-    const work = path.resolve(values["work-dir"] ?? path.join(ROOT, "../work/mechanics-screenshots", new Date().toISOString().replace(/[:.]/g, "-")));
+    const work = path.resolve(values["work-dir"] ?? path.join(ROOT, ".scratch/mechanics-screenshots", new Date().toISOString().replace(/[:.]/g, "-")));
     if (await exists(work) && (await fs.readdir(work)).length) throw new Error("Choose an empty --work-dir; previous captures will not be overwritten");
     require("../dist/data/factorio-data-file");
     const { HarnessSession } = require("../dist/harness/factorio-harness");

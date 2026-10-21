@@ -74,8 +74,8 @@ not a stack-size research change. Runtime now retains this output stock between 
 remains a reference for the first hand. The production comparison checks both hands without observed hand arrivals
 or deposit ticks as inputs. It starts disabled with the same finite 32-item source.
 
-Raw captures are retained locally under ignored `work/belt-speed-coverage/drop-01/` and `drop-02/`;
-the committed timing baseline is portable. Publishing remains on hold.
+The raw captures (#245) were not kept; the committed timing baseline ([speed-expectations.json](speed-expectations.json))
+is portable and is their record. Publishing remains on hold.
 
 ## Occupied output and admission cutoff
 
@@ -98,8 +98,7 @@ traffic; unspecified positions retain independent local output tiles. The downst
 
 Fresh cutoff runs also compare the production model directly, rather than only preserving the native timing.
 Uncaptured coarse controls for turbo/fast remain available as separate experiments; the committed evidence above
-contains only the actual 44 recordings. Raw occupied-output reports live under ignored
-`work/belt-pickup-parity/drop-window-01/` and `drop-window-cutoff-01/`.
+contains only the actual 44 recordings. The raw occupied-output reports (#251) were not kept.
 
 ## Reproduce
 
@@ -107,12 +106,12 @@ From `clock-generator/`, with the [game harness configured](../../../../README.m
 
 ```bash
 # Select one stack size at a time during investigation.
-BELT_DROP_CAPTURE_DIR=../work/belt-drop/new-run npm run test:game -- tests/game/mechanics/belt-drop/turbo-stacks.game.test.ts -t '^express belt drops: stack size 3$'
+BELT_DROP_CAPTURE_DIR=.scratch/belt-drop/new-run npm run test:game -- tests/game/mechanics/belt-drop/turbo-stacks.game.test.ts -t '^express belt drops: stack size 3$'
 
 # Affected native regression and offline checks.
 npm run test:game -- tests/game/mechanics/belt-drop/turbo-stacks.game.test.ts
 npm test -- src/entities/belt/belt.test.ts src/entities/inserter/inserter-hand-size.test.ts src/control-logic/inserter/modes/drop/belt-output-stock.test.ts
-BELT_SPEED_CAPTURE_DIR=../work/belt-drop/new-cutoff npm run test:game -- tests/game/mechanics/belt-drop/occupied-output.game.test.ts -t cutoff
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-drop/new-cutoff npm run test:game -- tests/game/mechanics/belt-drop/occupied-output.game.test.ts -t cutoff
 npm run screenshots -- --case=turbo-belt-drop-stacks
 ```
 
@@ -120,5 +119,5 @@ The retained run directory must be empty for each selected speed/size. Each gets
 the exact blueprint, composed probe, ordinary recorder output and `game/script-output/belt-drop-stacks.json`.
 The report has a pre-release snapshot and 360 native tick samples of the hand, both chest quantities, and every
 transport line's stack ID, position, item and count. The shared capture/snapshot helpers only observe; assertions
-and production comparisons live in the game test. All four finalized controls passed in
-ignored `work/belt-drop/turbo-final-02/`.
+and production comparisons live in the game test. All four finalized controls passed (#237); their raw captures
+were not kept.

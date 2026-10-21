@@ -29,7 +29,7 @@ position zero and followers to quarter-tile spacing, then withdraw the upstream-
 Holes persist between hands; no instantaneous refill is assumed. Across 3,316 hand starts (including final
 partial hands) and 44,496 consecutive transitions, held quantities and both exposed lanes' positions, counts
 and items agree exactly. Native arm-arrival/drop boundaries are inputs to this replay; the whole simulation run from
-placement, with no arrival given, reproduces these captures as well, every hand included (roadmap C1,
+placement, with no arrival given, reproduces these captures as well, every hand included (#273,
 [startup](../../../../../../docs/belt-pickup/experiments.md#startup-from-placement)). The replay uses the same bounded queue as the generator.
 
 Ten short [native clips](jammed-pickup-clips.json) retain all four speeds and full-/half-tile reach plus normal
@@ -47,18 +47,18 @@ inventory is staged once and remains untouched during these demand captures.
 From `clock-generator/`, choose one case and a fresh retained directory:
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-run npm run test:game -- tests/game/mechanics/belt-pickup/belt-speed-coverage.game.test.ts -t '^express-straight-belt-moving-accumulator$'
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-demand npm run test:game -- tests/game/mechanics/belt-pickup/ingredient-demand.game.test.ts
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/new-run npm run test:game -- tests/game/mechanics/belt-pickup/belt-speed-coverage.game.test.ts -t '^express-straight-belt-moving-accumulator$'
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/new-demand npm run test:game -- tests/game/mechanics/belt-pickup/ingredient-demand.game.test.ts
 ```
 
 Use `BELT_SPEED_REPLAY_DIR` instead of `BELT_SPEED_CAPTURE_DIR` to check existing reports without launching
 Factorio. Each case retains its exact blueprint/config, recorder output and compact findings. Updating a
 baseline requires intentional discovery with `BELT_SPEED_DISCOVERY=1`, review of the native reports and a
-normal regression replay afterward. Full raw data stays in ignored `work/` directories.
+normal regression replay afterward. Full raw data goes to the ignored `clock-generator/.scratch/`.
 
-Evidence: `work/belt-speed-coverage/ordinary-gated-04/` and `ordinary-gated-05/` contain the 72 staged controls;
-`demand-01/` contains the12 demand controls. Earlier express captures remain in `ordinary-01/`. Incorrect
-setup/gate smoke runs are excluded from these findings. Absolute arm-arrival timing is not independently
+Evidence: the 72 staged controls and the 12 demand controls were captured for #245; the 72 are pinned in
+[speed-expectations.json](speed-expectations.json), and the raw captures were not kept. Incorrect setup/gate smoke runs
+are excluded from these findings. Absolute arm-arrival timing is not independently
 calibrated by the production comparison.
 
 ## Original experiment
@@ -97,7 +97,7 @@ hand must match the simulator's `0,1,2,3` grab offsets. These offsets describe f
 To retain one raw capture, from `clock-generator/` with `.env` configured:
 
 ```bash
-npm run probe -- --fixture=backed-up --item=supercapacitor --geometry=underground-entrance --out=../work/belt-pickup/backed-up-run-01
+npm run probe -- --fixture=backed-up --item=supercapacitor --geometry=underground-entrance --out=.scratch/belt-pickup/backed-up-run-01
 ```
 
 Use `--item=accumulator` for the other ingredient and choose any of the three geometry names. The runner removes
@@ -149,16 +149,15 @@ setup: prefer the near lane while its ingredient is accepted, then fall back to 
 The existing simulator agrees with all three observations, so no simulator change was needed. These cases do not
 establish insertion thresholds for other setups or behavior with moving supply, filters, or front-facing pickups.
 
-The retained scenarios, runners, recordings, detailed samples and simulator comparisons are local under
-`work/belt-pickup/mixed-demand-02/`, `work/belt-pickup/mixed-demand-swapped-01/`, and
-`work/belt-pickup/mixed-demand-limit-01/` at the repository root. The original observations were manual; the four-speed controls above now automate this setup. They were not part of the original automated
+The scenarios, runners, recordings, detailed samples and simulator comparisons of these manual observations were
+not kept in the repository; #219 recorded them locally. The original observations were manual; the four-speed controls above now automate this setup. They were not part of the original automated
 game regression suite. Reproduction requires the staged setup and initial
 inventories above; the backed-up capture command earlier in this file clears inputs and therefore does not reproduce
 this demand experiment.
 
 The [same-item iron-gear fixtures](../same-item) test fallback
 between two lanes carrying the same item. See the [general pickup rules](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
-Original raw probes and clock recordings remain local under `work/belt-pickup-investigation/`.
+The original raw probes and clock recordings were not kept in the repository.
 
 ## Scaffold screenshots
 
@@ -225,13 +224,14 @@ without fitting later grabs or resynchronizing lane stock. Only production compa
 
 ```bash
 # Fresh native evidence for a selected phase; never reuse a populated capture directory.
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-phase npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-phase.game.test.ts -t '^normal-underground-entrance-moving-same-item-phase-1$'
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/new-phase npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-phase.game.test.ts -t '^normal-underground-entrance-moving-same-item-phase-1$'
 
-# Recheck all retained evidence without launching Factorio.
-ORDINARY_PHASE_BASELINE_DIR=../work/belt-speed-coverage/ordinary-gated-05 ORDINARY_PHASE_REPLAY_DIR=../work/belt-speed-coverage/ordinary-phase-02 npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-phase.game.test.ts
+# Recheck captures made locally without launching Factorio: a speed-coverage capture as the baseline, a phase capture as the replay.
+ORDINARY_PHASE_BASELINE_DIR=.scratch/belt-speed-coverage/new-run ORDINARY_PHASE_REPLAY_DIR=.scratch/belt-speed-coverage/new-phase npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-phase.game.test.ts
 ```
 
-Raw reports remain ignored under the two paths above. Failed setup pilots are excluded from findings. No production
+[phase-expectations.json](phase-expectations.json) is the record of the sweep (#245); its raw reports were not kept.
+Failed setup pilots are excluded from findings. No production
 simulator change or publication is included in this phase sweep.
 
 ## Reflected same-item controls
@@ -254,15 +254,16 @@ measurements separate from model agreement:
   that is **48 captures / 4,568 hand starts / 59,328 transitions**. Starts include final unfinished hands; this is
   observation-conditioned production replay, rather than proof of absolute arm-arrival timing.
 
-Raw evidence is retained locally in `work/belt-speed-coverage/ordinary-reflected-01/`. These controls use aligned
+[reflected-speed-expectations.json](reflected-speed-expectations.json) is their record (#245); the raw captures were
+not kept. These controls use aligned
 lanes and one gate release; they do not backfill every reflected release phase or historical interrupted window.
 
 ```bash
 # New native capture (fresh directory required).
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/new-reflected npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/new-reflected npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
 
-# Recheck the retained 24 controls without starting Factorio.
-BELT_SPEED_REFLECTED_REPLAY_DIR=../work/belt-speed-coverage/ordinary-reflected-01 npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
+# Recheck a capture made locally, such as the one above, without starting Factorio.
+BELT_SPEED_REFLECTED_REPLAY_DIR=.scratch/belt-speed-coverage/new-reflected npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-reflection.game.test.ts
 ```
 
 ## Arm-reach regression
@@ -274,5 +275,5 @@ speeds and native hand coordinates; it never moves the arm or inserts stock. Fou
 fitted back into the simulator. These are collection controls, rather than absolute startup or clock checks.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-pickup-parity/new-arm-phases npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-arm-travel.game.test.ts
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-pickup-parity/new-arm-phases npm run test:game -- tests/game/mechanics/belt-pickup/ordinary-arm-travel.game.test.ts
 ```

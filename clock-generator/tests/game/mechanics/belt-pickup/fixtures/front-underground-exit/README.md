@@ -87,9 +87,8 @@ same-item lanes without warnings. No simulator behavior change is needed.
 This fixture is physically backed up: the input inserter occupies the tile immediately beyond the exit, blocking
 straight-through belt continuation. Setting a moving config flag would not make its actual game supply freely
 flowing. A moving front-exit experiment needs a different physical arrangement; it has not been measured here.
-The existing screenshot shows the same geometry with different lane ingredients. Raw same-item captures remain
-under `work/belt-pickup/front-exit-same-item-unmirrored-backed-up-01/` and
-`front-exit-same-item-mirrored-backed-up-01/`.
+The existing screenshot shows the same geometry with different lane ingredients. The raw same-item captures (#237)
+were not kept.
 
 ## Four-speed controls
 
@@ -121,8 +120,8 @@ arrives and is grabbed at tick 3, and the remaining exposed stack is grabbed at 
 The untouched other lane stays stationary in different-item controls. A candidate first-hand fourth offset is
 `1 + floor(64 / belt_speed_in_256ths_per_tick)` for this saturated geometry; it is not a complete repeated-hand model.
 
-All 24 controls were captured twice. Final pairing/speed-checked evidence is local under
-`work/belt-speed-coverage/front-final-entrance-02/front-exit-*`; the earlier sweep is `front-exit-01/`.
+All 24 controls were captured twice (#245); the raw captures of both sweeps were not kept, and the results above
+are their record.
 These are first-hand observations, not repeated-hand or complete phase verification. Moving front-exit supply
 cannot be built in this geometry; generated clocks, including those of a moving config, are below.
 
@@ -157,13 +156,12 @@ for all 24 speed/ingredient/mirroring cases. The same-item command runs both mir
 hand regressions without Factorio. The game test composes
 `probe.lua`; the scenario alone cannot be passed directly to `--lua`. Reports contain `initial` setup metadata and
 `samples` with held quantities/items, exposed lane stacks/IDs, machine inventories and crafting progress.
-Raw manual evidence remains local under `work/belt-pickup/front-exit-02/`, `work/belt-pickup/front-exit-03/`,
-`work/belt-pickup/front-exit-swapped-01/`, and `work/belt-pickup/front-exit-flipped-01/` at the repository root.
+The raw manual evidence (#219) was not kept in the repository.
 
 To retain fresh captures instead of deleting temporary artifacts:
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-exit-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/front-exit-new \
   npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts
 ```
 
