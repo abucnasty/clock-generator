@@ -14,8 +14,8 @@ function build(copies: number, items_per_second: number, crafting_speed: number)
             { source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 2 }, stack_size: 1, filters: ['iron-gear-wheel'] },
         ],
         belts: [
-            { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
-            { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
         ],
     });
 }

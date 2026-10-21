@@ -358,7 +358,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             // would be explained as a missing inserter
             const refusal = clockGenerator.insertersScopeProblem(query.config);
             const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config));
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested };
+            const laneSharedByCopies = clockGenerator.laneSharedByCopiesWarning(query.config);
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);

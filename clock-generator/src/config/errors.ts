@@ -276,3 +276,69 @@ export class CopiesError extends Error {
             + `(now ${configuredCopies}, times ${found}).`;
     }
 }
+
+// ============================================================================
+// Lane Capacity Validation Types
+// ============================================================================
+
+/** Whether inserters take items off belt lanes or drop them onto them */
+export type LaneFlowKind = 'take' | 'drop';
+
+/** A set of lanes of a belt that inserters ask for more items a second than it carries */
+export interface LaneCapacityIssue {
+    kind: LaneFlowKind;
+    belt_id: number;
+    /** The lanes, by place in the belt's `lanes` (1 or 2), ascending; both for a drop onto a belt that lists one */
+    lanes: number[];
+    /** The inserters of one unit that take from, or drop onto, only these lanes */
+    inserter_ids: number[];
+    /** Items a second those inserters move at the target, in one unit */
+    items_per_second: number;
+    /** Items a second the lanes carry: half the belt's speed times each lane's stack size */
+    capacity_per_second: number;
+    /** `target_output.copies` of the config */
+    copies: number;
+}
+
+/** A rate with at most two decimals, more when two decimals would show it equal to what it is compared with */
+export function formatRate(value: number, against?: number): string {
+    const two = Number(value.toFixed(2));
+    return String(against !== undefined && two === Number(against.toFixed(2)) ? Number(value.toFixed(4)) : two);
+}
+
+const listed = (values: readonly (string | number)[]): string =>
+    values.length <= 1 ? values.join('') : `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
+
+/** "lane 1 of belt 1" or "both lanes of belt 1" */
+export function describeLanes(issue: Pick<LaneCapacityIssue, 'lanes' | 'belt_id'>): string {
+    return `${issue.lanes.length === 1 ? `lane ${issue.lanes[0]}` : 'both lanes'} of belt ${issue.belt_id}`;
+}
+
+/** "Inserters 1 and 8 take 140 a second from lane 1 of belt 1, which carries 120." */
+export function describeLaneOverCapacity(issue: LaneCapacityIssue): string {
+    const many = issue.inserter_ids.length > 1;
+    const verb = issue.kind === 'take' ? (many ? 'take' : 'takes') : (many ? 'drop' : 'drops');
+    return `Inserter${many ? 's' : ''} ${listed(issue.inserter_ids)} ${verb} ${formatRate(issue.items_per_second, issue.capacity_per_second)} `
+        + `a second ${issue.kind === 'take' ? 'from' : 'onto'} ${describeLanes(issue)}, which carr${issue.lanes.length === 1 ? 'ies' : 'y'} `
+        + `${formatRate(issue.capacity_per_second)}.`;
+}
+
+/**
+ * One unit's inserters take from, or drop onto, a belt lane more items a second than it carries, so no clock can hold
+ * the target.
+ */
+export class LaneCapacityError extends Error {
+    public readonly issues: LaneCapacityIssue[];
+
+    constructor(issues: LaneCapacityIssue[]) {
+        super(LaneCapacityError.formatMessage(issues));
+        this.name = 'LaneCapacityError';
+        this.issues = issues;
+    }
+
+    private static formatMessage(issues: LaneCapacityIssue[]): string {
+        return `A belt lane is asked for more than it carries at the target: ${issues.map(describeLaneOverCapacity).join(' ')} `
+            + "A lane carries half its belt's items a second times its stack size. Lower the target, or move inserters to "
+            + 'another lane or belt.';
+    }
+}

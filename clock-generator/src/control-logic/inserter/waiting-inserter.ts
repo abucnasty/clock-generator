@@ -39,7 +39,7 @@ export function actsInTheTickTheBlockIsLifted(sink: { outputBlockedAfterLastTick
  * 102 resumes from such a wait in the game runs behind PR #266 the game took its first stack in the tick after the
  * craft start, a tick before a simulator that kept the extra tick. With it the simulator follows the game from each
  * of the 64 lane-phase starts of both builds, tick for tick with the rule for a window that opens on a machine at its
- * output block (`wokenThisTick`; tests/game/builds/normal-underground-lane-phase-controls.json).
+ * output block (`wokenThisTick`; tests/game/builds/lane-phase-controls.json).
  */
 export function wokenByItsMachinesCraftStart(sink: { outputBlockedAfterLastTick: boolean; startedCraftInLastTick: boolean }): boolean {
     return sink.startedCraftInLastTick && !sink.outputBlockedAfterLastTick;

@@ -35,6 +35,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Sidecar 0.11.0 captures the preferred lane and half-tile reach in front of underground entrances.
 
 ### Changed
+- Refuse a config whose inserters, in one copy of the build, take from or drop onto a belt lane more items a second than it carries, with the numbers ("Inserters 1 and 3 take 140 a second from lane 1 of belt 1, which carries 120"). A lane carries half its belt's speed times its stack size; drops onto a belt that lists one lane may use both lanes. Over capacity only once every copy is counted, it is a warning in the log and the editor, since a build's copies may have belts of their own.
 - Check the one-swing alternative early so a fully verified clock can be inspected while the remaining alternatives continue. Final ranking and recovery requirements are unchanged.
 - Refuse belt pickups from a tile that another belt side-loads onto, with the reason: side-loading is out of scope, as splitters are. Earlier versions modelled such a pickup as an ordinary belt. Sidecar 0.11.0 marks these pickups unsupported; recapture builds copied with an older Sidecar.
 

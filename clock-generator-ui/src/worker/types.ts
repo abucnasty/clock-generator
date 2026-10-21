@@ -409,6 +409,8 @@ export interface LiveCoverage {
     refusal: string | null;
     /** The engine's warning for belt pickups outside 16-item hands on 4-item belt stacks, which does not block generation */
     pickupNotTested: string | null;
+    /** The engine's warning for belt lanes that the copies, summed, would ask for more than they carry; it does not block */
+    laneSharedByCopies: string | null;
 }
 
 export interface EngineAnswers {

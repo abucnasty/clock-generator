@@ -11,6 +11,10 @@
  * - "not checked": no recording covers it, or it is outside the recorded range, or its ingredients are fluids only
  *   (no yardstick).
  * The simulator's true starts are its own count, not this method, and have no standing here.
+ *
+ * The tables below name recipes and machines. That is allowed because they only label how far a diagnostic (the rule
+ * counts and the recordings' wake-ups) can be trusted, where the method was measured: no clock, verdict or selection
+ * reads them.
  */
 
 export type TrueStartStanding = "checked" | "not checked" | "known miss";

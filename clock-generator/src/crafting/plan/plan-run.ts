@@ -3,6 +3,7 @@ import { Config } from "../../config";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
+import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { DebugPluginFactory } from "../sequence/debug/debug-plugin-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
 import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
@@ -1147,6 +1148,9 @@ interface PlanRun {
 export function planRun(config: Config, options: PlanRunOptions = {}): PlanRun {
     const logger = options.logger ?? defaultLogger;
     const run = runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states });
+    // Throws LaneCapacityError if one unit asks a belt lane for more than it carries; after the run, so the planner's
+    // own refusal of the target comes first
+    assertLaneCapacity(config);
     const { simulation_context, final_history, always_enabled_by_config } = run;
     const unslacked_windows = windowsFromHistory(final_history, simulation_context.entity_registry, always_enabled_by_config);
     const entity_ids = new Map(simulation_context.entity_registry.getAll().map(entity => [entity.entity_id.id, entity.entity_id]));
