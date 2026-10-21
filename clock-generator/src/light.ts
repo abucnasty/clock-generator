@@ -26,6 +26,8 @@ export { StatusCategory, statusToCategory } from "./state/status-category";
 
 export { combineClockAlternativeRuns, searchesAreNeeded } from "./crafting/rank";
 
+export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
+
 export { Option } from "./data-types/option";
 
 export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-value";

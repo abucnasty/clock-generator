@@ -1,7 +1,7 @@
 import { ExpandMore } from '@mui/icons-material';
 import { Alert, Box, Button, Collapse, MenuItem, Paper, TextField, Typography } from '@mui/material';
 import { useId, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
-import type { Config } from 'clock-generator/browser';
+import type { Config, NotMadeClock } from 'clock-generator/browser';
 import type { ResultDetail } from '../utils/resultsView';
 import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
 import { useBuildSection } from '../hooks/useBuildViewContext';
@@ -29,6 +29,7 @@ import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
 import { beltValue, clockTechnicalName, wakeUpsText } from '../utils/clockSummary';
 import { rateWarningOf } from '../utils/rateWarning';
+import { whyNotStableOf } from '../utils/whyNotStable';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
@@ -63,6 +64,8 @@ interface ResultsWorkspaceProps {
     pickRule: PickRule | null;
     pending: string[];
     skippedSearches: string[];
+    /** The alternatives the latest generation could not make, with the generator's reasons */
+    notMade: NotMadeClock[];
     /** The latest generation ran the slower searches because it asked for them */
     searchedDeeper: boolean;
     /** "Search for fewer wake-ups" is on in the form */
@@ -165,6 +168,9 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         clock.beltLabel ? beltValue(props.pickRule, clock.beltLabel) : '',
     ].filter(Boolean).join(' · ');
     const rateWarning = rateWarningOf(selected);
+    // said of the whole run once it is done: while clocks still arrive, a stable one may yet come
+    const whyNotStable = props.isRunning ? null
+        : whyNotStableOf(props.alternatives, props.recommendedIndex, saved?.overrides?.backed_up_belts === true, props.notMade);
     const noticeKind = deeperSearchNoticeOf({
         searchesSkipped: props.skippedSearches.length > 0,
         searchedDeeper: props.searchedDeeper,
@@ -206,6 +212,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 isGenerating={props.isRunning}
                 stoppedEarly={props.stoppedEarly}
                 rateWarning={rateWarning}
+                whyNotStable={whyNotStable}
                 stale={props.staleFor !== null}
                 beltAction={props.beltAction}
                 comparisonAction={<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>

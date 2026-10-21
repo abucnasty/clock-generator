@@ -68,6 +68,8 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
             expect(selected.assessment.holds).toBe(false);
             expect(selected.result.stability_check.as_built?.failed_pickup_phases)
                 .toEqual(movingPhases.cases[variant.name].phases);
+            // and the result says so: it holds from the modeled start, and a belt in another lane phase can fall short
+            expect(result.why_not_stable?.cause).toBe("moving lane phases");
         } else if (recoveryPhases.cases[variant.name]) {
             // The capture holds and recovers, and the generator's loss trials find a lane-phase start the clock does not
             // get back from after a loss, which the capture cannot set up: a cautious verdict, not a measured failure.
@@ -79,12 +81,15 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
                 .filter(loss => !loss.recovers);
             expect(failed.length).toBeGreaterThan(0);
             expect(failed.map(loss => loss.failed_pickup_phases)).toEqual(failed.map(() => recoveryPhases.cases[variant.name].phases));
+            // which the result tells as the moving lane phases, not as a clock that does not recover
+            expect(result.why_not_stable?.cause).toBe("moving lane phases");
         } else if (meetsTarget) {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
             // a backed-up config gets a clock for a moving belt only as the fallback, where no other clock is stable
             // (the normal underground entrance and exit, whose backed-up belts refill slower than a stack a tick)
             expect(selected.belt?.kind).toBe(variant.backed && selected.id !== "planned-moving-belt" ? "backed_up" : "moving");
+            expect(result.why_not_stable).toBeNull();
         } else {
             // A fallback requiring backed-up supply is not a verified clock for moving input.
             expect(selected.verdict !== "stable" || selected.belt?.kind !== (variant.backed ? "backed_up" : "moving"),

@@ -470,6 +470,11 @@ export interface BackpressureLossVerdict {
     survives: boolean;
     /** The losses it does not get back from, as lossLabel words them: "coal stops arriving" */
     broken_by: string[];
+    /**
+     * The losses of `broken_by` it gets back from at the lanes' modeled phase, and not from a start where a moving lane
+     * comes back in another phase (the loss's `failed_pickup_phases`). Absent from results made before it was kept.
+     */
+    broken_at_other_lane_phases?: string[];
     /** The most periods it took to be back at the expected output over all trials; null when it does not survive */
     recovered_after_periods: number | null;
 }
@@ -478,6 +483,8 @@ export function verdictOf(report: BackpressureLossReport): BackpressureLossVerdi
     return {
         survives: report.survives,
         broken_by: report.losses.filter(outcome => !outcome.recovers).map(outcome => lossLabel(outcome.loss)),
+        broken_at_other_lane_phases: report.losses.filter(outcome => !outcome.recovers && outcome.failed_pickup_phases !== undefined)
+            .map(outcome => lossLabel(outcome.loss)),
         recovered_after_periods: report.recovered_after_periods,
     };
 }

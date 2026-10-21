@@ -96,7 +96,7 @@ describe("a clock for a shorter period, on the Thaeln sample", () => {
             proven: true, ends_in: [764, 772, 764, 772]});
         expect(failures[0].ends_in.reduce((sum, amount) => sum + amount, 0) / failures[0].ends_in.length).toBe(768);
         const backpressure_loss = verdictOf(report);
-        expect(backpressure_loss).toEqual({survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null});
+        expect(backpressure_loss).toEqual({survives: false, broken_by: ["coal stops arriving"], broken_at_other_lane_phases: [], recovered_after_periods: null});
         const verdict = clockVerdictOf({ holds: true, backpressure_loss, items_per_second: 480, wake_ups_per_minute: null, start_dependence: null });
         expect(verdict).toBe("no recovery");
     });

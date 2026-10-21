@@ -1,4 +1,5 @@
 import assert from "../../common/assert";
+import type { NotMadeClock } from "../why-not-stable";
 import { Config } from "../../config";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
@@ -286,6 +287,8 @@ export interface GenerateClockOptions {
     on_progress?: (progress: GenerationProgress) => void;
     /** Called with a short description of the current sub-step (clock-only checks, observed window derivation) */
     on_progress_detail?: (detail: string) => void;
+    /** Called with each clock alternative that could not be made, and the generator's reason */
+    on_not_made?: (clock: NotMadeClock) => void;
 }
 
 /** What a machine holds when a run starts: see GenerateClockOptions.start_stock */

@@ -7,6 +7,7 @@ import type {
     ClockAssessment,
     ClockRanking,
     ClockVerdict,
+    ClockBelt,
     ClockInsight,
     ConfigValidation,
     FuelLevelSeries,
@@ -18,6 +19,7 @@ import type {
     ClockAlternativeContext,
     ClockAlternativeRun,
     ClockAlternativeTask,
+    NotMadeClock,
     ComputeMachineFactsParams,
     Config,
     DebugSteps,
@@ -132,6 +134,8 @@ export interface ClockAlternativeView {
     deadlockRisk: string | null;
     /** The belt the clock is made for: "moving (+4 ticks)" or "backed-up"; empty when no clocked inserter picks up from a belt */
     beltLabel: string;
+    /** The same belt as the engine gives it; missing from clocks kept before it was carried */
+    belt?: ClockBelt | null;
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;
     terminalSwingCount: number;
@@ -291,6 +295,8 @@ export interface PrimaryCompletedResponse {
     type: 'primary-completed';
     runId: number;
     primary: ClockAlternativeRunView | null;
+    /** The primary alternative, when it could not be made, with the generator's reason; none when absent */
+    notMade?: NotMadeClock[];
 }
 
 export interface TaskCompletedResponse {
@@ -298,6 +304,8 @@ export interface TaskCompletedResponse {
     runId: number;
     taskId: string;
     run: ClockAlternativeRunView | null;
+    /** The task's alternative, when it could not be made, with the generator's reason; none when absent */
+    notMade?: NotMadeClock[];
 }
 
 export interface AnswerResponse {

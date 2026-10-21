@@ -32,6 +32,8 @@ export interface GenerationPin {
     verdict: string;
     selection: {id: string; holds: boolean; rate: number; supply: string | null};
     clock_sha256: string;
+    /** The cause the generation gives of why its selection does not meet goal 1 (see whyNotStable); absent where it does */
+    why_not_stable?: string;
 }
 
 /** One configuration of a family: its current recording and, where a generation test pins it, the selection */

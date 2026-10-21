@@ -8,7 +8,7 @@ import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
  */
 
 import type { z } from 'zod';
-import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
+import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
@@ -139,6 +139,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         ranking: alternative.ranking,
         deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),
         beltLabel: clockGenerator.clockBeltLabel(alternative.belt),
+        belt: alternative.belt,
         asBuilt: result.stability_check.as_built ?? null,
         expectedOutputItems: result.stability_check.expected_output_items,
         terminalSwingCount: result.used_terminal_swing_count,
@@ -389,12 +390,13 @@ function handleQuery(requestId: number, query: EngineQuery): void {
 function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
     runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
+        const notMade: NotMadeClock[] = [];
         // the tasks go out as soon as the primary clock is made: the pool runs them while this worker assesses it
-        const plan = clockGenerator.planClockAlternatives(config, options, (context, tasks, primarySignature) => postResponse({
+        const plan = clockGenerator.planClockAlternatives(config, { ...options, on_not_made: clock => notMade.push(clock) }, (context, tasks, primarySignature) => postResponse({
             type: 'planned', runId, context, tasks, primarySignature,
             assumptions: { startDependenceRequested: config.overrides?.check_start_dependence === true },
         }));
-        return { type: 'primary-completed', runId, primary: toRunView(plan.primary, config) };
+        return { type: 'primary-completed', runId, primary: toRunView(plan.primary, config), notMade };
     });
 }
 
@@ -409,8 +411,9 @@ function handleTask(
 ): void {
     runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
-        const run = clockGenerator.runClockAlternativeTask(config, context, taskId, options, assessedSignatures);
-        return { type: 'task-completed', runId, taskId, run: toRunView(run, config) };
+        const notMade: NotMadeClock[] = [];
+        const run = clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: clock => notMade.push(clock) }, assessedSignatures);
+        return { type: 'task-completed', runId, taskId, run: toRunView(run, config), notMade };
     });
 }
 
