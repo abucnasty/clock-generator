@@ -317,6 +317,73 @@ describe('tasks alongside the primary alternative', () => {
         expect(done.isRunning).toBe(false);
         expect(done.alternatives.map(it => it.id)).toEqual(['primary']);
     });
+
+    describe('a fallback, a clock for another belt than the config\'s', () => {
+        const unstable = (id: string) => {
+            const clock = selectionClock(id, 1);
+            return { ...clock, verdict: 'unstable', ranking: { ...clock.ranking, meets_target_rate: false } } as ClockAlternativeView;
+        };
+        const start = () => {
+            Render().runSimulation(config, debug, false);
+            const planner = workers[0];
+            const { runId } = planner.requests('plan').at(-1)!;
+            sendPlanned(planner, { runId, context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
+                tasks: [{ id: 'one', label: 'One', only_when_needed: false },
+                    { id: 'derived', label: 'Observed windows', only_when_needed: true },
+                    { id: 'planned-moving-belt', label: 'Batched swings, moving belt', only_when_needed: true, fallback: true }] }, null);
+            const requested = (taskId: string) => workers.flatMap(w => w.requests('task')).some(m => m.runId === runId && m.taskId === taskId);
+            const finish = (taskId: string, clock: ClockAlternativeView | null) => {
+                const worker = workers.find(w => w.requests('task').some(m => m.runId === runId && m.taskId === taskId))!;
+                worker.send({ type: 'task-completed', runId, taskId, run: clock && { signature: taskId, alternatives: [clock] } });
+            };
+            return { requested, finish };
+        };
+
+        it('runs after the searches, while no clock made before it can be selected as stable', async () => {
+            await initialize();
+            const { requested, finish } = start();
+            expect(requested('derived')).toBe(false);
+            finish('one', unstable('one'));
+            expect(requested('derived')).toBe(true);
+            expect(requested('planned-moving-belt')).toBe(false);
+            finish('derived', null);
+            expect(requested('planned-moving-belt')).toBe(true);
+            finish('planned-moving-belt', selectionClock('planned-moving-belt', 1));
+            const done = Render();
+            expect(done.isRunning).toBe(false);
+            expect(done.skippedSearches).toEqual([]);
+            expect(done.alternatives[done.selectedAlternativeIndex].id).toBe('planned-moving-belt');
+        });
+
+        it('is left out with the searches, and not listed among them, when a clock made before it is stable', async () => {
+            await initialize();
+            const { requested, finish } = start();
+            finish('one', selectionClock('one', 1));
+            const done = Render();
+            expect(requested('derived')).toBe(false);
+            expect(requested('planned-moving-belt')).toBe(false);
+            expect(done.isRunning).toBe(false);
+            expect(done.pendingAlternatives).toEqual([]);
+            expect(done.skippedSearches).toEqual(['Observed windows']);
+        });
+
+        it('waits for the searches the config runs on every build, and is left out when one of them is stable', async () => {
+            await initialize();
+            Render().runSimulation(config, debug, false);
+            const planner = workers[0];
+            const { runId } = planner.requests('plan').at(-1)!;
+            sendPlanned(planner, { runId, context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
+                tasks: [{ id: 'derived', label: 'Observed windows', only_when_needed: false },
+                    { id: 'planned-moving-belt', label: 'Batched swings, moving belt', only_when_needed: true, fallback: true }] }, null);
+            const all = () => workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId).map(m => m.taskId);
+            expect(all()).toEqual(['derived']);
+            const worker = workers.find(w => w.requests('task').some(m => m.runId === runId && m.taskId === 'derived'))!;
+            worker.send({ type: 'task-completed', runId, taskId: 'derived', run: { signature: 'derived', alternatives: [selectionClock('derived', 1)] } });
+            expect(all()).toEqual(['derived']);
+            expect(Render().isRunning).toBe(false);
+            expect(Render().skippedSearches).toEqual([]);
+        });
+    });
 });
 
 describe('worker startup failure recovery through the hook', () => {

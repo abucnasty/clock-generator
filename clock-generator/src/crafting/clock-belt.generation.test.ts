@@ -4,6 +4,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { quiet, withSearches } from "./generate-blueprint-test-helpers";
+import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
 
 const backedUpBelts = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
 
@@ -172,6 +173,39 @@ describe("the belt a clock is made for", () => {
                 "inserter:1": [{ start: 1, end: 19 }],
                 "inserter:2": [{ start: 0, end: 3 }, { start: 36, end: 39 }],
             });
+        });
+    });
+
+    // At normal speed a backed-up belt refills a pickup slower than a stack a tick: every clock planned for backed-up
+    // supply closes its windows before the hand is full, and the selected fractional clock moved 128, 128, 96 of 176 in
+    // the game, as its holds false said. The clock planned with the belts moving, given the slack and checked on the
+    // backed-up belts, holds: recorded on 2026-10-20 (A8), 176 in every period and after every disturbance, at the
+    // side underground entrance and exit and the front exit alike.
+    describe("the normal side underground exit, with backed-up belts", () => {
+        let generated: ClockAlternativesResult;
+
+        beforeAll(async () => {
+            const variant = pickupClockSpeedCases("electromagnetic").find(it => it.name === "electromagnetic-normal-underground-exit-backed")!;
+            generated = generateClockAlternatives(await pickupClockConfig(variant), { logger: quiet });
+        });
+
+        it("makes a clock for a moving belt last, when no clock for a backed-up belt can be selected as stable", () => {
+            const others = generated.alternatives.filter(a => a.id !== "planned-moving-belt");
+            expect(others.length).toBeGreaterThan(0);
+            expect(others.every(a => a.verdict !== "stable" && a.belt?.kind === "backed_up")).toBe(true);
+            expect(generated.skipped_searches).toEqual([]);
+        });
+
+        it("selects it, judged on the backed-up belts the config describes", () => {
+            const selected = generated.alternatives[generated.selected_index];
+            expect(selected.id).toBe("planned-moving-belt");
+            expect(selected.verdict).toBe("stable");
+            expect(selected.belt).toEqual({ kind: "moving", slack_ticks: [4] });
+            expect(selected.result.used_terminal_swing_count).toBe(1);
+            // its planning run, on moving belts, over-produces; it holds by its check on the backed-up belts
+            expect(selected.result.stability_check.actual_output_items).toBe(192);
+            expect(selected.result.stability_check.as_built?.actual_output_items).toBe(176);
+            expect(selected.description).toMatch(/The config says the input belts are backed up/);
         });
     });
 

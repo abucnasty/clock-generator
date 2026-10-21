@@ -43,3 +43,22 @@ describe("backed-up belt alternative tasks", () => {
         expect(plan.tasks.some(task => task.id === "planned")).toBe(false);
     });
 });
+
+describe("moving belt fallback task", () => {
+    it("is a fallback of a config whose belts are backed up: it waits, also for searches the config runs on every build", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const plan = planClockAlternatives({...config,
+            overrides: {...config.overrides, backed_up_belts: true, search_for_fewer_wake_ups: true}}, options);
+        expect(plan.tasks.filter(task => task.only_when_needed)).toEqual([
+            {id: "planned-moving-belt", label: "Batched swings, moving belt", only_when_needed: true, fallback: true},
+        ]);
+    });
+
+    it("is not offered where the belts move, or where no inserter picks up from a belt", async () => {
+        const moving = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        expect(planClockAlternatives(moving, options).tasks.some(task => task.id === "planned-moving-belt")).toBe(false);
+        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS);
+        const plan = planClockAlternatives({...config, overrides: {...config.overrides, backed_up_belts: true}}, options);
+        expect(plan.tasks.some(task => task.id === "planned-moving-belt")).toBe(false);
+    });
+});
