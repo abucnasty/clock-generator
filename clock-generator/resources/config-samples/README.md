@@ -47,6 +47,7 @@ Conventions:
 | science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock was the one selected from 2026-10-10; since 2026-10-14 (issue 152) batched swings gets back from every loss and is selected again, and the game tests recorded it that day both ways, 400 in every period | in `test:game`, both ways; with "Backed-up belts" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
+| science/logistic-science, direct-insert | yes (2026-10-21) | selected clock exact, with "Backed-up belts" off and on: 192 in each of 125 periods of 288 ticks (1 output swing per cycle; 40 a second a copy, 240 over 6 copies). The config is the owner's build on turbo belts, each science assembler with an input belt of its own; it replaced a yellow-belt config whose transport belt machine could not be built. The transport belt foundry's productivity of 50 is what the game records. With the ingredients cut twice and the outputs blocked once, both clocks made 192 again from the first period after each | in `test:game`, both ways |
 | intermediates/low-density-structure | yes | selected clock exact. Since 2026-10-11 the selected clock is batched swings with 6 output swings per cycle, 703 wake-ups a minute, where full-hand output swings (1,528) was selected while the ranking put it first on a machine with spare speed; recorded exact the same day, 36,000 ticks | in `test:game` |
 | science/chemical-science, shared foundry | yes | selected clock exact: 256 in each of 102 periods of 352 ticks (1 output swing per cycle, 5.5 copies of 240 a second); the runner-up (2 output swings, 122.1 wake-ups) recorded too, 122.7 in the game; the selected clock's wake-ups are not held (see below) | in `test:game`, wake-ups open |
 | science/utility-science | yes | selected clock exact, with "Backed-up belts" off and on: 192 in each of 53 periods | in `test:game`, both ways; a build with a deadlock risk, see "Backpressure loss" and below |
@@ -68,8 +69,8 @@ label is trusted. One copy each, in the build's folder, named `<build>-scaffold.
 `tests/game/builds/scaffold-recordings.game.test.ts` with its seeds, if any, and the warm-up and settle it needs.
 
 In the order they would settle the most:
-1. **science/logistic-science** (shared-inserter, sample, direct-insert): the 1-swing label of the shared-inserter
-   and sample configs flipped from unstable to stable; direct-insert's selection changed.
+1. **science/logistic-science** (shared-inserter, sample): the 1-swing label of the shared-inserter and sample configs
+   flipped from unstable to stable. Direct-insert has its scaffold (Status above).
 2. **science/production-science** (shared): its rate changed in the sweep.
 3. **science/metallurgic-science**: the selected clock changed and rates moved, and changed again on 2026-10-09 from the
    planned 1-swing clock to the full-hand one (both 45 a second). The planned clock only passed the long run because

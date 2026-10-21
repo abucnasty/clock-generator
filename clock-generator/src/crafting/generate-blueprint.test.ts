@@ -141,23 +141,23 @@ describe("generateClockForConfig", () => {
             result = generateClockForConfig(config);
         });
 
-        it("plans logistic science packs in a cycle of 96 ticks (48 ticks per swing × 2 swings), with 2 transfers for each output inserter", () => {
+        it("plans logistic science packs in a cycle of 192 ticks (48 ticks per swing × 4 swings), with 4 transfers for each output inserter", () => {
             expect(result.crafting_cycle_plan.production_rate.machine_production_rate.item).toBe("logistic-science-pack");
-            // With 2 output machines and a target rate of 120 items/sec over 3 copies,
-            // each machine produces at 1/3 items/tick (120/3/60/2).
+            // With 2 output machines and a target rate of 240 items/sec over 6 copies,
+            // each machine produces at 1/3 items/tick (240/6/60/2).
             // A stack of 16 items takes 48 ticks per machine.
-            // With 2 swings per cycle, total duration = 96 ticks.
-            expect(result.crafting_cycle_plan.total_duration.ticks).toBe(96);
+            // With 4 swings per cycle, total duration = 192 ticks.
+            expect(result.crafting_cycle_plan.total_duration.ticks).toBe(192);
             const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
-            for (const inserter of [1, 6]) {
+            for (const inserter of [1, 7]) {
                 const transferCounts = result.crafting_cycle_plan.entity_transfer_map.getOrThrow(keys.find(k => k.id === EntityId.forInserter(inserter).id)!);
-                expect(transferCounts.total_transfer_count.toDecimal()).toBe(2);
+                expect(transferCounts.total_transfer_count.toDecimal()).toBe(4);
             }
         });
 
         it("plans the same cycle duration for a doubled target rate over doubled copies", () => {
-            // - Original: 120 items/sec, 3 copies → per-machine rate = 120/3/60/2 = 1/3 items/tick
-            // - Modified: 240 items/sec, 6 copies → per-machine rate = 240/6/60/2 = 1/3 items/tick
+            // - Original: 240 items/sec, 6 copies → per-machine rate = 240/6/60/2 = 1/3 items/tick
+            // - Modified: 480 items/sec, 12 copies → per-machine rate = 480/12/60/2 = 1/3 items/tick
             const modifiedResult = generateClockForConfig({
                 ...config,
                 target_output: { ...config.target_output, items_per_second: config.target_output.items_per_second * 2, copies: config.target_output.copies * 2 },
