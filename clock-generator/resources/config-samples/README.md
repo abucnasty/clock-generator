@@ -59,6 +59,7 @@ Conventions:
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | science/electromagnetic-science | yes (2026-10-16, 12 legendary beacons) | selected clock exact: 352 in every period of 704 ticks (batched swings, 2 output swings per cycle; 30.0 a second a copy, 330 over 11 copies). Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game | in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests |
 | science/electromagnetic-science-auto | the same scaffold | the same build with the enable control of both output inserters on `AUTO` (`electromagnetic-science-auto.json`); `terminal_swing_count` and `lcm` have no `AUTO` value and are kept. Selected clock exact: 352 in every period after the first; from a staged start (empty machines) the first period makes 288 | in `test:game` |
+| science/metallurgic-science | yes (2026-10-21) | the owner's build: a cryogenic plant, an assembler 3 and two foundries, all legendary, with 5, 4, 8 and 9 legendary beacons. The config's speeds are the game's, 68.875, 40.3125, 180.75 and 191.481, where the tooltip's 68.9, 180.8 and 191.5 had been, and its packs go into a chest that removes them, where a chest of 480 had filled up. The science foundry has 1 tick to spare a period of 320. As is, the selected clock (observed windows, 3 output swings) recorded on the scaffold with the ore belt drained: 240 a period, and 240 again within a period or two after the tungsten ore was cut for two periods, the output blocked for four and the coal cut for two. The simulator calls it "no recovery" from the loss of ore, so here it is more pessimistic than the game. With "Backed-up belts" on the selected clock (observed windows, 2 output swings, a subtick clock of 640 ticks) is stable, and recorded 480 in 51 of 56 periods and 496 in the other 5: in the game the science foundry runs at its full speed, 481.5 a period, where the simulator holds it to 480 | not in `test:game`: that test asks for the same output in every period, and the game moves a hand more in about 1 period in 11 |
 | everything else | no | | |
 
 ## TODO: scaffold backfill
@@ -72,20 +73,9 @@ In the order they would settle the most:
 1. **science/logistic-science** (shared-inserter, sample): the 1-swing label of the shared-inserter and sample configs
    flipped from unstable to stable. Direct-insert has its scaffold (Status above).
 2. **science/production-science** (shared): its rate changed in the sweep.
-3. **science/metallurgic-science**: the selected clock changed and rates moved, and changed again on 2026-10-09 from the
-   planned 1-swing clock to the full-hand one (both 45 a second). The planned clock only passed the long run because
-   that run under-counted a fractional period; counted right, the simulator moves 32 too many in periods 40 to 120,
-   the tail of a start-up surplus of 48 that is gone by period 160. Simulator only, and in the simulator both clocks
-   stop for good around period 1160 (34 minutes) once the carbon machine runs out of coal: this build needs a
-   recording more than any other. Changed once more on 2026-10-11, when the ranking stopped putting full-hand output
-   swings first where a machine has spare speed: the two clocks tie at 45 a second and neither meets goal 1, so the
-   fewest wake-ups decide, and the planned 1-swing subtick clock (1,368 a minute) is selected over the full-hand one
-   (1,716). That selected a clock the long run calls unstable over one that holds its output and has no recovery, so
-   the ranking now parts two clocks equally near the target by whether they hold (GOALS.md, "Wake-ups"), and the
-   full-hand subtick clock is selected again, from the same day.
-4. **intermediates/processing-units** (belt export): rates moved slightly.
-5. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
-6. **science/military-science**, **intermediates/flying-robot-frame**,
+3. **intermediates/processing-units** (belt export): rates moved slightly.
+4. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
+5. **science/military-science**, **intermediates/flying-robot-frame**,
    **intermediates/lithium-plates**, **intermediates/electric-engine-unit**,
    **gleba/biochamber-fuel**, **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 

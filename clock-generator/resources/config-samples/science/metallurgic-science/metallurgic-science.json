@@ -188,9 +188,10 @@
   ],
   "chests": [
     {
+      "type": "infinity-chest",
       "id": 1,
-      "storage_size": 480,
-      "item_filter": "metallurgic-science-pack"
+      "item_filter": [],
+      "remove_unfiltered_items": true
     }
   ],
   "overrides": {
