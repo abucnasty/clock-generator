@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.0
+Date: 2026-10-21
   Features:
     - captures pickups over the hood of an underground exit: lane 1 unmirrored, lane 2 mirrored, half-tile reach
     - captures the pickup layout (side, front or over the hood) apart from the reach and the supply; older underground captures need recapture
