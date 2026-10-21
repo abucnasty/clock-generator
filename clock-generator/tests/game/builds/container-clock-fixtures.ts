@@ -1,6 +1,8 @@
 import path from "path";
 import {expect} from "vitest";
 import {Config, ConfigSchema} from "../../../src/config";
+import "../../../src/data/factorio-data-file";
+import {FactorioDataService} from "../../../src/data";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {Recording} from "../../../src/verification/recording";
@@ -26,8 +28,37 @@ export interface ContainerClockCase {
 export const CONTAINER_CRAFTING_SPEED = 3.125;
 /** Products a second: 80% of the machine for both recipes (gears 0.5 s, circuits 0.5 s, one product a craft) */
 export const CONTAINER_TARGET = 5;
-/** The standard protocol: a cut of one input, an output block and a cut of another (the only one again for gears) */
-export const CONTAINER_INTERVENTIONS: [number, number, number][] = [[66, 68, 84], [84, 88, 104], [104, 106, 132]];
+/** The clock's period in ticks, as generated (gears 192, circuits 384): the cuts are sized by it */
+const PERIOD_TICKS = {"iron-gear-wheel": 192, "electronic-circuit": 384} as const;
+/** What a craft takes of each input */
+const INPUTS = {"iron-gear-wheel": [["iron-plate", 2]], "electronic-circuit": [["iron-plate", 1], ["copper-cable", 3]]} as const;
+
+/**
+ * The periods until a cut input's stock in the container has run out: the most of it the container holds, over what
+ * the machine takes of it a period at the target. A cut of two periods, as the belt-fed families have, changes nothing
+ * here: the container holds thousands of items.
+ */
+export function containerDrainPeriods(variant: ContainerClockCase, item: string): number {
+    const container = variant.container;
+    const slots = FactorioDataService.containerSlots(container.type as string, (container.quality as string | undefined) ?? "normal");
+    const filters = (container.slot_filters ?? []) as {slot: number; item: string}[];
+    const taking = slots - filters.filter(filter => filter.item !== item).length;
+    const stock = taking * FactorioDataService.findItemOrThrow(item).stack_size;
+    const per_craft = INPUTS[variant.recipe].find(([name]) => name === item)![1];
+    const per_period = CONTAINER_TARGET * PERIOD_TICKS[variant.recipe] / 60 * per_craft;
+    return Math.ceil(stock / per_period);
+}
+
+/**
+ * The standard protocol, with the cuts long enough to empty the container: a cut of one input, an output block and a
+ * cut of another (the only one again for gears), each followed until the output is back (30 periods judged).
+ */
+export function containerInterventions(variant: ContainerClockCase): [number, number, number][] {
+    const [first, second] = variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"];
+    const cut1 = containerDrainPeriods(variant, first) + 8, cut2 = containerDrainPeriods(variant, second) + 8;
+    const release1 = 66 + cut1, block = release1 + 30, unblock = block + 4, cut = unblock + 20, release2 = cut + cut2;
+    return [[66, release1, block], [block, unblock, cut], [cut, release2, release2 + 30]];
+}
 
 const filtered = (from: number, to: number, item: string) =>
     Array.from({length: to - from + 1}, (_, index) => ({slot: from + index, item}));
@@ -133,7 +164,7 @@ export function containerClockScenario(variant: ContainerClockCase): PickupClock
     return {
         name: variant.name, speed: BELT_SPEEDS[0], backed: false,
         config: () => containerClockConfig(variant), scaffold: () => containerClockScaffold(variant),
-        interventions: CONTAINER_INTERVENTIONS,
+        interventions: containerInterventions(variant),
         probeFile: path.join(__dirname, "container-clock-probe.lua"),
         probe: {family: "container", cuts: variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"]} as PickupClockScenario["probe"],
         controls: path.join(__dirname, "container-clock-controls.json"),
