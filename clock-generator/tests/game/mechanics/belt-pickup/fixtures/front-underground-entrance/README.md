@@ -216,7 +216,17 @@ covers 228 native first-hand controls, including the 24 exit controls; six origi
 remain explicitly skipped in favor of their paired compact controls. Setup attempts with an incorrectly connected
 gate are excluded from these counts.
 
-## Reproduce
+## Generated clocks
+
+The [front clock controls](../../../../builds/README.md#front-pickup-operating-clocks) run generated clocks on the
+supplied compact scaffold at all four speeds, both mirroring states, moving and backed-up supply, electronic
+circuits (iron plate and copper cable) and gears (iron plate on both lanes), at 6/s: 32 runs of 63 baseline periods
+and three 24-period disturbances, on Factorio 2.1.21 (2026-10-20). The assembler runs at crafting speed 50 (two
+legendary speed modules, four legendary beacons). All 32 clocks are stable, and all 32 hold their target in every
+baseline period and get back to it after every disturbance. 29 of them are byte-identical to the
+[over-the-hood exit](../over-the-hood-underground-exit/README.md)'s clocks of the same speed, mirroring, supply and
+family; the original electromagnetic-plant scaffold has no clock control.
+
 
 From `clock-generator/`, with the [game setup](../../../../README.md#setup):
 

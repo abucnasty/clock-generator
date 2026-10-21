@@ -91,7 +91,8 @@ Other unsupported inline pickups remain unclassified. Swapping the lane
 ingredients changes the selected item to accumulators while retaining lane 2 and
 the same grab offsets, supporting lane preference over fixed recipe order for this orientation. Flipping only
 the inserter with those swapped ingredients selects lane 1 supercapacitors, again at `0,1,2,3`; the simulator matches
-with explicit `near_lane: 1`. Moving front-exit pickups and other cardinal orientations remain unverified.
+with explicit `near_lane: 1`. A front exit cannot carry moving supply: its input stands on the exit's output tile.
+Other cardinal orientations remain unverified.
 
 An [inline underground entrance case](../tests/game/mechanics/belt-pickup/fixtures/front-underground-entrance/README.md)
 checks an unmirrored inserter east of an eastbound entrance. It selects lane 1 accumulators with both moving and
@@ -135,13 +136,17 @@ the normal moving entrance's four delayed phases. Sixteen fresh controls check a
 phases from both physical near sides. This collection constraint is calibrated for through supply and
 legendary stack inserters; other prototypes/qualities remain separate calibrations.
 Capture geometry and collection replay alone do not establish absolute arrival or generated-clock parity.
+Generated clocks are checked in the game separately: the ordinary side pickups, the over-the-hood exit and the
+front entrance and exit each have native clock controls ([experiments](belt-pickup/experiments.md#generated-clocks-and-drops)).
 
 Scope remains one controlled through supply. Pickups from a side-loaded tile, with one side stream or two
 merging onto the pickup lane, are out of scope and refused, as are pickups from a splitter; see the
 [experiment history](belt-pickup/experiments.md#side-loaded-pickups-and-merges). A belt fed through a splitter further
 upstream is modelled as a plain belt, which is wrong when the splitter's other output takes items. Sparse supply, shared upstream
 withdrawals, bends, other inserters/qualities/orientations and arbitrary relative lane phases remain unverified.
-Moving front-exit supply awaits a suitable fixture.
+A moving front exit cannot be built: the inserter on the exit's output tile blocks the belt. A config that says
+moving supply gets a clock for moving belts there anyway; on the backed-up exit the game holds and recovers it
+at every tier ([generated clocks](belt-pickup/experiments.md#generated-clocks-and-drops)).
 
 ### Captured pickup provenance
 

@@ -117,6 +117,9 @@ its timing is not tested. Measuring them is follow-up F7.
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
 | Over-the-hood same-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
+| Front entrance clocks, both families, mirroring states and supplies | Tested | Tested | Tested | Tested |
+| Front exit clocks, backed up, both mirroring states | Tested | Tested | Tested | Tested |
+| Front exit clocks on a moving config (the belt backed up in the game), both mirroring states | Tested | Tested | Tested | Tested |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 
@@ -140,6 +143,18 @@ every inserter always enabled, the plant's own limit: the pickup was never the b
 backed-up supply, moved 352 a period under moving supply, in the model as in the game. The a2 recapture's own clocks (43 of 48 exact,
 41 stable), the earlier post-fix recapture (46 of 48 exact, 42 stable after the lane-phase audit) and the original
 39 recordings remain separate historical evidence. The belt-drop rows also compare finite receiving stock, including the normal-speed second hand.
+
+The front clocks are verified on **48 configurations** (`tests/game/builds/front-clock-controls.json`, roadmap C2): the
+front entrance on the owner's compact assembler scaffold (32: both families, mirroring states and supplies) and the
+front exit on the electromagnetic plant, backed up (8) and on a moving config (8). All 32 entrance clocks are stable and
+exact in baseline and recovery. The backed-up exit's are exact at turbo, express and fast; at normal, in both mirroring
+states, every alternative fails and the selected fractional clock (holds false) misses natively, 128, 128, 96 repeating
+against 176, the generator's own as-built repeat, as the normal backed-up side undergrounds miss. **A moving config on
+the front exit is safe on this layout:** the input stands on the exit's output tile, so the belt is backed up in the
+game whatever the config says, and the clock made for moving belts holds and recovers exactly at every tier. That
+includes the express clocks the generator calls "no recovery" and the normal ones it calls "unstable", both judged
+from moving lane-phase starts ([1,5] or [5,1]; [0,3]) this exit cannot have; at normal it moves the 176 the
+backed-up config's own clock misses.
 
 ## Tick-pattern matrix
 

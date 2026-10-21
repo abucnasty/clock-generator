@@ -123,10 +123,25 @@ The untouched other lane stays stationary in different-item controls. A candidat
 
 All 24 controls were captured twice. Final pairing/speed-checked evidence is local under
 `work/belt-speed-coverage/front-final-entrance-02/front-exit-*`; the earlier sweep is `front-exit-01/`.
-These are first-hand observations, not repeated-hand, complete phase, or generated-clock verification. Moving
-front-exit supply still awaits the user's new scaffold; no moving exit result is claimed.
+These are first-hand observations, not repeated-hand or complete phase verification. Moving front-exit supply
+cannot be built in this geometry; generated clocks, including those of a moving config, are below.
 
-## Reproduce
+## Generated clocks
+
+The [front clock controls](../../../../builds/README.md#front-pickup-operating-clocks) run this fixture's generated
+clocks at all four speeds and both mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s
+normal), 63 baseline periods and the three ordinary disturbances, on Factorio 2.1.21 (2026-10-20).
+
+| Config | Turbo | Express | Fast | Normal |
+| --- | --- | --- | --- | --- |
+| Backed up | stable, exact | stable, exact | stable, exact | unstable (holds false): misses natively, 128, 128, 96 against 176 |
+| Moving (the belt is backed up in the game) | stable, exact | "no recovery", exact | stable, exact | "unstable", exact |
+
+Both mirroring states agree in every cell. A moving config gets a clock made for moving belts; its express and
+normal verdicts come from moving lane-phase starts this exit cannot have, and on the backed-up exit every one of
+them holds its target in all 63 baseline periods and after every disturbance. **A moving config is safe on this
+layout.** At normal it does better than the backed-up config's own clock, whose alternatives all fail.
+
 
 From `clock-generator/`, with `.env` configured:
 
