@@ -167,6 +167,25 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // for tick (#265; the comparison's recordings were not kept in the repository):
         wake_ups_open: "the game counts a foundry's held product entering its output, the simulator the make: ",
     },
+    // Two logistic science assemblers (legendary, 4 legendary productivity modules, 10 legendary beacons: 63.0078) fed
+    // transport belts by one foundry (8 beacons) between them, whose plates and gears come from two casting foundries (6
+    // beacons each) on molten iron from infinity pipes; each assembler takes inserters from a turbo belt of its own and
+    // puts its packs onto another. 6 copies of it make 240 a second. The owner's build of 2026-10-21.
+    "logistic science with direct insertion": {
+        scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-direct-insert-scaffold.txt"),
+        config: ConfigPaths.LOGISTIC_SCIENCE_DI,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 2400,
+    },
+    "logistic science with direct insertion (belts are backed up)": {
+        scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-direct-insert-scaffold.txt"),
+        config: ConfigPaths.LOGISTIC_SCIENCE_DI,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 2400,
+        backed_up_belts: true,
+    },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
     // copies. Its clock of 792 ticks takes two periods more than the others to settle.
     "advanced circuit": {

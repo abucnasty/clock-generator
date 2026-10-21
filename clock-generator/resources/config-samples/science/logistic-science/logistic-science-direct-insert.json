@@ -1,65 +1,87 @@
 {
   "target_output": {
     "recipe": "logistic-science-pack",
-    "items_per_second": 120,
-    "copies": 3
+    "items_per_second": 240,
+    "copies": 6
   },
   "machines": [
     {
       "id": 1,
-      "recipe": "logistic-science-pack",
-      "productivity": 100,
-      "crafting_speed": 62.999999523163
+      "recipe": "casting-iron",
+      "productivity": 150,
+      "crafting_speed": 157.075,
+      "type": "machine"
     },
     {
       "id": 2,
-      "recipe": "transport-belt",
-      "productivity": 50,
-      "crafting_speed": 236.80000305176
+      "recipe": "logistic-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.00781250000001,
+      "type": "machine"
     },
     {
       "id": 3,
-      "recipe": "casting-iron",
-      "productivity": 150,
-      "crafting_speed": 191.4999961853
+      "recipe": "transport-belt",
+      "productivity": 50,
+      "crafting_speed": 186.75,
+      "type": "machine"
     },
     {
       "id": 4,
       "recipe": "casting-iron-gear-wheel",
       "productivity": 150,
-      "crafting_speed": 191.4999961853
+      "crafting_speed": 157.075,
+      "type": "machine"
     },
     {
       "id": 5,
       "recipe": "logistic-science-pack",
       "productivity": 100,
-      "crafting_speed": 62.999999523163
+      "crafting_speed": 63.00781250000001,
+      "type": "machine"
     }
   ],
   "inserters": [
     {
       "source": {
         "type": "machine",
-        "id": 1
+        "id": 2
       },
       "sink": {
         "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "logistic-science-pack"
+      ],
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3,
+        "near_lane": 2,
+        "pickup_length": 1
+      },
+      "sink": {
+        "type": "machine",
         "id": 2
       },
       "stack_size": 16,
-      "overrides": {}
+      "id": 2
     },
     {
       "source": {
         "type": "machine",
-        "id": 2
+        "id": 1
       },
       "sink": {
         "type": "machine",
-        "id": 1
+        "id": 3
       },
       "stack_size": 16,
-      "overrides": {}
+      "id": 3
     },
     {
       "source": {
@@ -71,7 +93,7 @@
         "id": 2
       },
       "stack_size": 16,
-      "overrides": {}
+      "id": 4
     },
     {
       "source": {
@@ -80,81 +102,110 @@
       },
       "sink": {
         "type": "machine",
-        "id": 2
-      },
-      "stack_size": 16,
-      "overrides": {}
-    },
-    {
-      "source": {
-        "type": "belt",
         "id": 3
       },
-      "sink": {
-        "type": "machine",
-        "id": 1
-      },
       "stack_size": 16,
-      "overrides": {}
+      "id": 5
     },
     {
       "source": {
         "type": "machine",
-        "id": 5
-      },
-      "sink": {
-        "type": "belt",
-        "id": 2
-      },
-      "stack_size": 16
-    },
-    {
-      "source": {
-        "type": "machine",
-        "id": 2
-      },
-      "sink": {
-        "type": "machine",
-        "id": 5
-      },
-      "stack_size": 16
-    },
-    {
-      "source": {
-        "type": "belt",
         "id": 3
       },
       "sink": {
         "type": "machine",
         "id": 5
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "belt",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "logistic-science-pack"
+      ],
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 4,
+        "near_lane": 1,
+        "pickup_length": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "id": 8
     }
   ],
   "belts": [
     {
-      "id": 2,
-      "type": "transport-belt",
+      "id": 1,
+      "type": "turbo-transport-belt",
       "lanes": [
         {
           "ingredient": "logistic-science-pack",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "logistic-science-pack",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
           "stack_size": 4
         }
       ]
     },
     {
       "id": 3,
-      "type": "transport-belt",
+      "type": "turbo-transport-belt",
       "lanes": [
         {
           "ingredient": "inserter",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "inserter",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
           "stack_size": 4
         }
       ]
     }
   ],
-  "overrides": {
-    "terminal_swing_count": 2,
-    "lcm": 4
-  }
+  "chests": []
 }

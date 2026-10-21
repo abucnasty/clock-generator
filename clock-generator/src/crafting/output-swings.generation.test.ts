@@ -11,9 +11,10 @@ describe("generateClockForConfig", () => {
     // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,
     // so a run of one test by name would generate every build in the file first.
 
-    // 4 output swings per 64 tick cycle is the optimal clock; the planner alone only reaches 2 swings
+    // the planner alone reaches 4 output swings on this build; the override asks for 2
     describe("forced output swing count", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_DI);
+        const loaded = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_DI);
+        const config = { ...loaded, overrides: { ...loaded.overrides, terminal_swing_count: 2 } };
         let alternatives: ClockAlternative[];
 
         beforeAll(() => {
@@ -21,7 +22,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("uses the terminal_swing_count override as-is instead of backing off, for every clock alternative", () => {
-            expect(config.overrides?.terminal_swing_count).toBe(2);
+            expect(config.overrides.terminal_swing_count).toBe(2);
             // batched swings is the plan's own run, with the backoff that run has
             expect(alternatives[0].id).toBe("planned-belt-slack");
             expect(alternatives[0].result.swing_backoff_report?.triggered).toBe(false);
