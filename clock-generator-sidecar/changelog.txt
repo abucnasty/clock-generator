@@ -1,14 +1,14 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.0
   Features:
-    - captures an inserter upstream of an underground exit and facing with belt travel as an over-the-hood pickup: lane 1 unmirrored, lane 2 mirrored, half-tile reach
-    - captures the physical side/front pickup layout in model format 2, separately from exposed length and supply motion; older underground captures need recapture
-    - exports persistent pickup classification, native source identity and versioned supported model declarations, so old unsupported captures can be retained and distinguished from manual belt settings
-    - captures the preferred lane and half-tile pickup length for an inserter centered downstream of an underground entrance and facing back into it: lane 2 when mirrored, lane 1 otherwise
+    - captures pickups over the hood of an underground exit: lane 1 unmirrored, lane 2 mirrored, half-tile reach
+    - captures the pickup layout (side, front or over the hood) apart from the reach and the supply; older underground captures need recapture
+    - exports each pickup's classification and source, so a pickup the Clock Generator does not support stays marked through saves and imports
+    - captures the preferred lane and half-tile reach in front of an underground entrance: lane 2 mirrored, lane 1 otherwise
   Changes:
-    - an inserter that picks up from a belt tile that another belt side-loads onto is marked unsupported in the JSON, with a warning. Side-loading and splitters are out of scope for the Clock Generator. Earlier versions exported it as an ordinary belt pickup
+    - a pickup from a belt tile that another belt side-loads onto is marked unsupported, as a splitter pickup is; earlier versions exported it as an ordinary belt pickup
   Bugfixes:
-    - exports each inserter's prototype and quality, and its filter mode when its filters are a blacklist; filters that are switched off are no longer exported. Earlier versions left them out, so the Clock Generator ran every inserter as a legendary stack inserter and read a blacklist as the items to move
+    - exports each inserter's kind and quality, and its filter mode for a blacklist; filters switched off are no longer exported. Earlier versions made the Clock Generator run every inserter as a legendary stack inserter
 ---------------------------------------------------------------------------------------------------
 Version: 0.10.0
 Date: 2026-10-18
