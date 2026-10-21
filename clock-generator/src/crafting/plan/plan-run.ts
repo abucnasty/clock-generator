@@ -761,7 +761,8 @@ function warmUp(
     const { new_simulation_context, resettable_registry } = controlled;
     logger.log("Warming up simulation...");
     logger.log("Executing Warmup Step");
-    resettable_registry.resetAll();
+    // the clocks start here, on a cold build at its tick 0
+    resettable_registry.resetAll(true);
     return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
         const warmup_step = new WarmupStep(new_simulation_context, warmup_period,
             isPurelyClocked(config, duration.ticks)
@@ -795,7 +796,7 @@ export function coldControlledTrialBuild(
     for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
         state_machine.removePlugins(build.history_plugins);
     }
-    controlled.resettable_registry.resetAll();
+    controlled.resettable_registry.resetAll(true);
     return context;
 }
 
@@ -851,9 +852,11 @@ function simulate(
     state_transition_history.clear();
     inventory_transfer_history.recording = true;
     state_transition_history.recording = true;
-    inventory_transfer_history.ticks_before_run = simulation_context.tick_provider.getCurrentTick() - build.relative_tick.start;
+    const ticks_before_run = simulation_context.tick_provider.getCurrentTick() - build.relative_tick.start;
+    inventory_transfer_history.ticks_before_run = ticks_before_run;
     build.relative_tick.start = simulation_context.tick_provider.getCurrentTick();
-    resettable_registry.resetAll();
+    // with no warm-up the clocks start with the recorded run; after one they have run since the warm-up started them
+    resettable_registry.resetAll(ticks_before_run === 0);
 
     const simulate_periods = options.simulate_periods ?? 1;
     const recorded_duration = Duration.ofTicks(duration.ticks * simulate_periods);

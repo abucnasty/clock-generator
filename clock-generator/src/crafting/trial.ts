@@ -10,7 +10,7 @@ import { StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, verdictOf } from "./backpressure-loss";
-import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
+import { CIRCUIT_LATENCY_TICKS, SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
@@ -863,7 +863,10 @@ function buildAsBuiltConfig(
         }
         const ranges = windows.get(entity_key);
         if (ranges && ranges.length > 0) {
-            return { mode: "CLOCKED", ranges, period_duration_ticks: period, decider_build_order: decider_build_order.get(entity_key) };
+            // moved by the latency: the clock's start leaves as many ticks dark (a fuel clock of its own, above, is moved
+            // by none, so nothing of its start is dark)
+            return { mode: "CLOCKED", ranges, period_duration_ticks: period, decider_build_order: decider_build_order.get(entity_key),
+                latency_ticks: CIRCUIT_LATENCY_TICKS };
         }
         return current?.mode === "NEVER" ? current : { mode: "ALWAYS" };
     };

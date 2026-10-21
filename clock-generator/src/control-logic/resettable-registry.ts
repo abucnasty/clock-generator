@@ -22,10 +22,11 @@ export class ResettableRegistry {
     }
 
     /**
-     * Reset all registered objects.
+     * Reset all registered objects. `starts_clock`: the reset is the start of the clocks, which a run puts on its build
+     * as its warm-up starts, rather than a later step's.
      */
-    public resetAll(): void {
-        this.resettables.forEach(r => r.reset());
+    public resetAll(starts_clock: boolean = false): void {
+        this.resettables.forEach(r => r.reset(starts_clock));
     }
 
     /**
