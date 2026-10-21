@@ -125,7 +125,8 @@ The historical timing examples above describe turbo fixtures.
 
 The production [backed-up queue](../src/state/backed-up-pickup-lane.ts) matches held quantities and exposed stock
 in all 48 ordinary backed-up captures, including both physical near sides, after a single full-stock seed.
-Native arm-arrival/drop boundaries remain inputs to that comparison. The legendary stack inserter also retains
+That comparison is given the game's arm arrival and drop; run from placement with neither, the whole simulation
+reproduces those captures too (see [Starting on supplied belts](#starting-on-supplied-belts)). The legendary stack inserter also retains
 its radial collection reach between grabs. Advance it toward the selected stack by the prototype's extension
 speed (0.25 tile per tick at legendary); collect when within one more extension step. The physical layout
 places each stack relative to the pivot. Keep reach while a partial hand waits or controls change; discard its
@@ -135,7 +136,8 @@ This matches all 198 side-pickup arrival phases and all 96 ordinary/reflected re
 the normal moving entrance's four delayed phases. Sixteen fresh controls check all eight normal entrance
 phases from both physical near sides. This collection constraint is calibrated for through supply and
 legendary stack inserters; other prototypes/qualities remain separate calibrations.
-Capture geometry and collection replay alone do not establish absolute arrival or generated-clock parity.
+Collection replay alone does not establish generated-clock parity; absolute arrival from placement is the startup
+contract below, for side and over-the-hood pickups (front pickups are measured from their first hand only).
 Generated clocks are checked in the game separately: the ordinary side pickups, the over-the-hood exit and the
 front entrance and exit each have native clock controls ([experiments](belt-pickup/experiments.md#generated-clocks-and-drops)).
 
@@ -147,6 +149,50 @@ withdrawals, bends, other inserters/qualities/orientations and arbitrary relativ
 A moving front exit cannot be built: the inserter on the exit's output tile blocks the belt. A config that says
 moving supply gets a clock for moving belts there anyway; on the backed-up exit the game holds and recovers it
 at every tier ([generated clocks](belt-pickup/experiments.md#generated-clocks-and-drops)).
+
+### Starting on supplied belts
+
+A run of a clock starts as the harness's staged start does, and the simulator predicts every hand from there: the
+first one included, with no arm arrival, drop or later lane state taken from the game. Recorded in Factorio 2.1.21
+(roadmap C1, [experiments](belt-pickup/experiments.md#startup-from-placement)).
+
+- **Placement.** A cold start (`cold_start`, `runClockOnBuild` and `simulateClockOnly`) has every machine, buffer and
+  hand empty, every bar at 0 and the supplies full; a recipe that makes its own ingredient gets
+  `overrides.loop_seed_items` once. The clock starts with the run, at its tick 0; there is no free run before it. Every
+  inserter starts idle with an empty hand over its pickup and runs its own state machine (pickup, swing, drop, swing
+  back) from the first tick.
+- **The arm.** A new hand needs no travel to its first stack: the calibrated legendary stack inserter's collection
+  reach starts each hand at the first stack it collects, and moves at the prototype's extension speed between the
+  grabs of one hand (above).
+- **A backed-up supply** is a full queue of full stacks, a quarter tile apart, at rest at the endpoint: the same at every
+  start, so it has no phase.
+- **A moving supply** has every slot of each pickup lane filled, moving at the tier's speed `u` (in 1/32 tile a tick:
+  normal 1, fast 2, express 3, turbo 4). Its phase `p` (0-7, in 1/32 tile) puts the stacks at tick `t` at `p - u·t` mod 8.
+  A trial starts at phase 0 unless an internal run option (`moving_pickup_phases`) names others; the lane-phase checks
+  sample the rest. In the game the phase is wherever the stream stands when the clock starts.
+- **The frame.** The simulator's tick `t` of a run is the clock's; its `held[i]` (after tick `i + 1`) is the
+  recorder's sample `i + 4` of a staged start, and a lane at native phase `q` (read off the pickup tile at the
+  placement tick) is at model phase `q - 4u` mod 8. Measured at all four tiers; status labels lead by a tick, so the
+  frame is set by held counts, never by status edges. Probes that release an input by script at tick `g` see its first
+  stack at `g + 2`.
+- **The clock's start.** A clock of the game counts from 1 at its start, and a window decider is open for its window's
+  clock values only, so for the first `CIRCUIT_LATENCY_TICKS` (2) ticks after the clock starts no window reaches an
+  inserter. The simulator moves every window by that latency, so a window that ends in the period's last two positions,
+  or a start inside a window, carries into ticks 0-1 of each period; at the clock's start those ticks stay dark
+  (`ClockedEnableControl.reset`). A run starts its clocks as its warm-up starts (or the judged run, with no warm-up); a
+  later step and a loss trial's continuation are no start. A fuel inserter's clock of its own is moved by no latency in
+  the simulator and so leaves nothing dark. Recorded on 57 clocked cold starts: the 48 side-pickup cold starts of the
+  generator's selected clocks (four tiers, both near sides, straight belt and both underground ends, moving and backed
+  up), and nine more started inside an input window, with the deciders or the inserters built in reverse, or the build
+  moved, on side pickups and over the hood. In the 11 where the start matters the game follows the rule; the simulator
+  holds what both clocked inserters held in every tick in 56 of 57 (in the other one later hand comes a tick early, a
+  separate case: [experiments](belt-pickup/experiments.md#startup-from-placement)).
+
+Not covered: a belt state a harness protocol leaves behind (the speed-coverage calibration's surplus stock is a
+harness state, not a placement); front pickups, whose first hands are measured from the game's arrival; machine-level
+start-up dips; inserters other than the legendary stack inserter; and convergence from other live states (one modelled
+cold start, see [stability](stability.md)). Never checked tick for tick in the game: a subtick clock's first ticks and a
+fuel inserter's own clock (see [experiments](belt-pickup/experiments.md#startup-from-placement)).
 
 ### Captured pickup provenance
 
@@ -229,7 +275,7 @@ Without these two rules the clock version 0.9.0 selected for the accumulator bui
 
 That one tick decides whether a clock holds when its windows are as long as the hands they are made for. Under a clock for the advanced circuit build with windows of 4 ticks for the inserters that take off a belt, the game made 608 and 624 of 704 a period in turn, where the simulator made 704. One of the two plants had fallen two hands of plastic and of cable behind the other. Its output stood over the output block for the ticks before every output window, the plastic and the cable inserter whose windows opened in those ticks took their hands a tick after the output inserter had cleared it, and a window that was a tick short for it lost a hand: 192 of 256 plastic, 384 of 512 cable and 264 of 352 products a period. With this rule and the output block above, a run of the simulator that starts in the state the game was recorded in holds what every machine and every inserter of the game held, tick for tick, for the 36,372 ticks the recording goes on, and so it does for the recording of the clock tightened by hand that holds 704.
 
-That clock has two states, and the game was in both: one plant made its 352 a period and the other 264, under the same windows. Which one a machine ends up in is decided by what it holds when the clock starts. In the earlier filled-start generator, with machines full of ingredients and emptied of products, the simulator held 704 from every place in the period and classified the clock as meeting goal 1. In that investigation, starting the plants short of ingredients instead fell short from 12 of 108 starts, where the tightened clock and the clock from version 0.5.0 got back to 704 from all 108. Those observations are historical evidence, not the current startup contract. Current clock trials start with full input supplies, empty machines, buffers and hands, phase 0 and the configured one-time loop seed (default 200); planning still uses a separate prepared build. Optional extended checks sample other cold clock phases and competing-taker orders actually listed in `assessment.start_dependence.starts`, not filled or free-running builds. Neither those samples nor the loss trials prove convergence from every live inventory or build order (see [stability](stability.md)).
+That clock has two states, and the game was in both: one plant made its 352 a period and the other 264, under the same windows. Which one a machine ends up in is decided by what it holds when the clock starts. In the earlier filled-start generator, with machines full of ingredients and emptied of products, the simulator held 704 from every place in the period and classified the clock as meeting goal 1. In that investigation, starting the plants short of ingredients instead fell short from 12 of 108 starts, where the tightened clock and the clock from version 0.5.0 got back to 704 from all 108. Those observations are historical evidence, not the current startup contract. Current clock trials start with full input supplies, empty machines, buffers and hands, phase 0 and the configured one-time loop seed (default 200), and with the clock's first latency ticks dark (see [Starting on supplied belts](#starting-on-supplied-belts)); planning still uses a separate prepared build. Optional extended checks sample other cold clock phases and competing-taker orders actually listed in `assessment.start_dependence.starts`, not filled or free-running builds. Neither those samples nor the loss trials prove convergence from every live inventory or build order (see [stability](stability.md)).
 
 ### Products a machine cannot put out
 

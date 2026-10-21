@@ -108,6 +108,12 @@ const EnableControlOverrideClockedSchema = z.object({
      * the game can have.
      */
     decider_build_order: z.number().int().nonnegative().optional(),
+    /**
+     * Ticks of circuit latency the ranges carry: set by the check of an exported clock, which moves the windows of its
+     * deciders by the latency. A clock of the game counts from its start, so in that many ticks after it starts no
+     * window has reached an inserter yet. Left out, nothing is dark at the start.
+     */
+    latency_ticks: z.number().int().nonnegative().optional(),
 });
 
 // ============================================================================

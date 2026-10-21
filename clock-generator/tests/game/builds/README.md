@@ -176,6 +176,41 @@ machine at its output block: the output inserter puts the products onto a belt, 
 first stack a tick after they are taken, and the simulator does too. `known_differences` is empty; a cell listed there
 would be held only on its last eight periods.
 
+### Clocked cold starts
+
+[pickup-clock-cold-start-controls.json](pickup-clock-cold-start-controls.json) records 57 clocked cold starts in
+Factorio 2.1.21 (roadmap C1, 2026-10-20), each 16 periods from the harness's staged start, with nothing written to a
+belt: the game's own lane phase at placement, read off the pickup tile.
+
+- **The matrix, 48:** every electromagnetic side pickup fixture at 4 tiers × straight belt, underground entrance and
+  exit × moving and backed-up supply, on the generator's selected clock, at near lane 1 and at near lane 2. Near lane 2
+  is the cell reflected (`reflectOrdinaryPickup`) with its plant mirrored as well, without which its fluid inputs miss
+  the reflected pipes and nothing is made; the config names lane 2 near and keeps the near lane's item.
+- **The deciding cases, 9,** of the rule that a clock's first two ticks are dark: the express entrance started 30 ticks
+  into an input window, the backed turbo entrance 10 ticks in, and two over-the-hood clocks 123 and 174 ticks in, near
+  lane 1 and 2 (the windows rotated, `rotate`); the express entrance with the clock's deciders built in the mirror order
+  (`decider_order`), with the inserters built in reverse (`build_order`), and moved (`position`); and the two over-hood
+  clocks unrotated.
+
+Each run keeps its clock (windows, period, terminal swings and the hash of the exported clock), the lane phases at
+placement and in the model's frame (native - 4 × the tier's speed), and what the game's output and input inserters
+moved in each period and held in each tick of the model's frame (model `held[i]` = sample `i + 4`), as sha256.
+`pickup-clock-cold-start.game.test.ts` records them again: the same clock, a cold cell, the clock a tick behind the
+probe, every period on the placement lattice, and both series as kept. Its probe
+(`pickup-clock-cold-start-probe.lua`) only observes. The runs, the scratch fixture they came from and their analyses
+are with the evidence in `work/belt-pickup-parity/c1/`.
+
+`pickup-clock-cold-start.generation.test.ts` runs the simulator from each cold start and holds both clocked inserters'
+counts in every tick and their items in every period: 57 of 57, the input of one held only by its output (a hand back
+from its swing as the output block is lifted, a tick early in the simulator, once). On the engine before the clock's
+start rule the 11 runs where a window the latency carries over the period's end reaches ticks 0-1 fail, and the
+other 46 pass.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/belt-clock-cold-start-new \
+  npm run test:game -- tests/game/builds/pickup-clock-cold-start.game.test.ts -t 'express-underground-entrance-moving-l1'
+```
+
 ## Over-the-hood operating clocks
 
 `over-hood-pickup-clock.game.test.ts` enumerates 32 controls: electronic circuits with different lane
