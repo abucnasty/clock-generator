@@ -23,10 +23,10 @@ export const BLOCKED_OUTPUT_TARGET = 5;
 export const BLOCKED_OUTPUT_OUTLET_TILES = 10;
 /**
  * The output alone is blocked, for 24 periods (the over-hood outage): at 16 items a period the stack-4 lane takes about
- * ten periods to fill. Baseline before period 64, recovery judged from 6 periods after the release to period 120 (the
- * runner counts at least 130 periods).
+ * ten periods to fill. Baseline before period 64, recovery judged from 6 periods after the release to period 130: the
+ * harness records to two periods past the last intervention's end, and the runner wants 130 counted periods.
  */
-export const BLOCKED_OUTPUT_INTERVENTIONS: [number, number, number][] = [[66, 90, 120]];
+export const BLOCKED_OUTPUT_INTERVENTIONS: [number, number, number][] = [[66, 90, 130]];
 
 export function blockedOutputClockCases(): BlockedOutputClockCase[] {
     return BELT_SPEEDS.flatMap(speed => ([1, 2, 3, 4] as const).map(stackSize => ({
