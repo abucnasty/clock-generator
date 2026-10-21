@@ -4,7 +4,8 @@
 # About 2 minutes with 6 processes, and 8 GB at the start: run `free -g` first. BACKED_UP=1 turns "Backed-up belts" on. SEARCH=1 turns "Search for fewer wake-ups" on, which runs the four searches for every sample and takes
 # about 4 minutes: without it they only run where no other clock is stable. START_DEPENDENCE=1 tries every clock from
 # the other starts too (docs/stability.md, "How a clock is started"). PROCESSING_UNITS_BELT_EXPORT is left out,
-# which takes more than 5 minutes by itself: FULL=1 sweeps it too, for the sweep before a pull request.
+# which takes more than 5 minutes by itself: FULL=1 sweeps it too, for the sweep before a pull request. The samples
+# that exist to be refused (ExpectedRefusals in src/config/config-paths.ts) are left out.
 #
 # Run it before and after a change to the simulator or the planner, then scripts/compare-sweeps.py.
 # For the sweep of another commit, build a worktree of it and name it:
@@ -15,6 +16,6 @@
 here=$(cd "$(dirname "$0")" && pwd)
 out=$(mkdir -p "$1" && cd "$1" && pwd)
 [ -n "$CLOCK_GENERATOR_ROOT" ] && CLOCK_GENERATOR_ROOT=$(cd "$CLOCK_GENERATOR_ROOT" && pwd) && export CLOCK_GENERATOR_ROOT
-node -e 'const { dist } = require(process.argv[1] + "/lib"); console.log(Object.keys(dist("config/config-paths.js").ConfigPaths).filter(key => process.env.FULL === "1" || key !== "PROCESSING_UNITS_BELT_EXPORT").join("\n"))' "$here" \
+node -e 'console.log(require(process.argv[1] + "/lib").sampleKeys().join("\n"))' "$here" \
     | xargs -P "${2:-6}" -I{} node "$here/sweep-sample.js" "$out" {} > /dev/null 2>&1
 ls "$out" | wc -l
