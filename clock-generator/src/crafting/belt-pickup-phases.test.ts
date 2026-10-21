@@ -1,10 +1,9 @@
-import fs from "fs";
-import path from "path";
 import {expect, test} from "vitest";
 import {Config} from "../config";
 import {OpenRange} from "../data-types";
 import {backpressureLossOf, runAsBuiltCheck, runClockOnBuild} from "./trial";
 import {SerializableClockWindows} from "./clock";
+import {readControls} from "../../tests/game/builds/clock-controls";
 
 interface NativeControl {
     config: Config;
@@ -16,10 +15,8 @@ interface NativeControl {
     clock_windows: SerializableClockWindows;
     windows: {phase_units_256: [number[], number[]]}[];
 }
-const native = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/over-hood-lane-phase-control.json"), "utf8")) as NativeControl;
-const express = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/over-hood-express-lane-phase-control.json"), "utf8")) as NativeControl;
+const {over_hood_turbo_trace: native, over_hood_express_trace: express} =
+    readControls<{over_hood_turbo_trace: NativeControl; over_hood_express_trace: NativeControl}>("lane-phase-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 function outputWithPhases(window: NativeControl["windows"][number]): number[] {

@@ -70,7 +70,7 @@ export function overHoodClockScenario(variant: OverHoodClockCase): PickupClockSc
         config: () => overHoodClockConfig(variant), scaffold: () => overHoodClockScaffold(variant),
         probe: {family: "compact", machine_name: "assembling-machine-3", output_to_belt: true,
             ingredients: ["iron-plate", variant.family === "different-items" ? "copper-cable" : "iron-plate"]},
-        controls: path.join(__dirname, "over-hood-a5-clock-controls.json"),
+        controls: path.join(__dirname, "over-hood-clock-controls.json"),
         validateRecording(recording) {
             const input = recording.inserters.find(inserter => inserter.source.type === "belt" && inserter.sink.type === "machine")!;
             expect(input.source).toMatchObject({near_lane: variant.mirrored ? 2 : 1, pickup_layout: "over-hood-exit",

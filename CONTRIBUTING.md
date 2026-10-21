@@ -9,7 +9,12 @@ Use descriptive branch names such as `fix/moving-belt-pickup` or `refactor/game-
 - `clock-generator/tests/game/builds/`: generated-clock throughput and recovery checks.
 - `clock-generator/src/harness/`: reusable recording infrastructure used by the CLI and tests.
 - Simulator regressions stay near their implementation. They may read game fixtures without launching Factorio.
-- Full raw recordings and generated probe sources belong in ignored `work/<topic>/<run>/`, rather than beside committed fixtures.
+- Full raw recordings and generated probe sources belong in the ignored `clock-generator/.scratch/<topic>/<run>/`, rather than beside committed fixtures.
+- `clock-generator/scripts/`: sweeps and capture helpers, and the tools for checking an engine change, each with its usage in its header:
+  - `blast/blast.sh`: the blast radius: every sample and fixture generated, every alternative's exported clock hashed, cached by a key of the engine's content (`blast.sh key`, `before`, `run`, `compare`).
+  - `native/run-lane.sh`: one Factorio lane over a list of game test cases, at most four harness Factorio processes on the machine; `native/expected-from-blast.py` and `native/check.cjs` check a capture's clocks against the blast's.
+  - `classify/features.py` and `summarize.py`: the windows a native recording lifted from a full machine, by when the input's hand grew.
+  - `worktree/setup.sh` gives a worktree its own `node_modules`; `worktree/orphans.sh` lists or stops a worktree's leftover vitest and harness Factorio processes.
 
 The [game verification guide](clock-generator/tests/game/README.md) explains setup, fixture conventions, capture commands and measured evidence.
 
@@ -55,7 +60,7 @@ worker count and machine load. Save a fresh report for each run, for example fro
 ```bash
 npm run test:generation -- src/crafting/automation-science.generation.test.ts \
   --maxWorkers=1 --reporter=default --reporter=json \
-  --outputFile=../work/test-results/generation-after.json
+  --outputFile=.scratch/test-results/generation-after.json
 ```
 
 Compare elapsed time and CPU time as well as test names and outcomes. Use a single worker to isolate work

@@ -273,7 +273,7 @@ describe("transitions (belt to machine)", () => {
         // machine they put into down from its block: the first items a tick later in 1,158 cases of 1,170 where the
         // inserter that took the products was enabled before, also where the machine finished a craft the tick before
         // (44 of 44). Where that inserter's window opened too, the game updates the inserter of the last built decider
-        // first (roadmap M3): in the tick of the take where the taker's decider was built after this one's, a tick later
+        // first (#268): in the tick of the take where the taker's decider was built after this one's, a tick later
         // where before, 9,189 of 9,189 windows over fifteen runs, each clock also built in reverse and renumbered.
         test("takes its first items a tick later when its window opens in the tick the products are taken", () => {
             const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(machineWithGears(), 2);
@@ -367,7 +367,7 @@ describe("transitions (belt to machine)", () => {
             expect(firstPickupLook(2)).toBe(1);
         })
 
-        // A belt-fed inserter goes by the same order (roadmap M3): where M2 found the taker's drop target deciding it
+        // A belt-fed inserter goes by the same order (#268): where #267 found the taker's drop target deciding it
         // (a tick later in 1,327 of 1,327 windows where the taker drops onto a belt, in the tick in 602 of 602 where
         // into a machine or a chest), each was the order the generator builds the deciders in; built the other way,
         // the same windows flip, onto a belt and into a machine alike (chemical science: 82 and 166 swap sides).

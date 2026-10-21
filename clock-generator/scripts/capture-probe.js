@@ -1,5 +1,5 @@
 // One manual capture using the same Lua composition and backed-up transformation as the game regressions.
-// Run from clock-generator/: npm run probe -- --fixture=same-item --geometry=underground-exit --out=../work/probes/run-01
+// Run from clock-generator/: npm run probe -- --fixture=same-item --geometry=underground-exit --out=.scratch/probes/run-01
 const fs = require("node:fs");
 const path = require("node:path");
 const { parseArgs } = require("node:util");

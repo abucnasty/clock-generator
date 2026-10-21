@@ -10,6 +10,7 @@ import {composeProbeSource} from "../helpers/probe-source";
 import {speedCapture} from "../helpers/belt-speed-fixtures";
 import {pickupClockConfig, pickupClockScaffold, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
+import {readControls} from "./clock-controls";
 
 interface Stack {at: number; count: number; item: string}
 interface Lane {length: number; stacks: Stack[] | Record<string, Stack>}
@@ -21,7 +22,7 @@ interface Control {
     clock_windows: SerializableClockWindows;
     phases: {offset: number; items_per_period: number[]; initial_stacks: {position: number; count: number; item: string}[][]}[];
 }
-const controls = JSON.parse(fs.readFileSync(path.join(__dirname, "pickup-clock-startup-controls.json"), "utf8")) as Record<string, Control>;
+const controls = readControls<{backed_up_start: {cases: Record<string, Control>}}>("pickup-clock-start-controls.json").backed_up_start.cases;
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 const stockOf = (lanes: Lane[]) => lanes.map(lane => Object.values(lane.stacks).map(stack =>
     ({position: Math.round(stack.at * 256), count: stack.count, item: stack.item})));

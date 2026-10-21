@@ -142,7 +142,7 @@ describe("the belt a clock is made for", () => {
     // One belt inserter that takes two ingredients off a belt split between them. Since the belt window-end trim,
     // batched swings move exactly the expected output as built (32, where the untrimmed windows moved 48), but the
     // verdict is "no recovery"; full-hand output swings holds it without the slack. The game agrees with the batched
-    // simulation: recorded on 2026-10-20 (record-clock.js, work/belt-pickup-parity/a2-native-01/clock-belt-batched),
+    // simulation: recorded on 2026-10-20 (record-clock.js, #265; the recording was not kept in the repository),
     // 460 of 499 periods moved exactly 32 and the rest alternated 16 and 48 in the periods the simulator names
     // (offset by the recording start), every 16 paired with a 48 ten periods on.
     describe("automation science, with backed-up belts", () => {
@@ -179,7 +179,7 @@ describe("the belt a clock is made for", () => {
     // At normal speed a backed-up belt refills a pickup slower than a stack a tick: every clock planned for backed-up
     // supply closes its windows before the hand is full, and the selected fractional clock moved 128, 128, 96 of 176 in
     // the game, as its holds false said. The clock planned with the belts moving, given the slack and checked on the
-    // backed-up belts, holds: recorded on 2026-10-20 (A8), 176 in every period and after every disturbance, at the
+    // backed-up belts, holds: recorded on 2026-10-20 (#275), 176 in every period and after every disturbance, at the
     // side underground entrance and exit and the front exit alike.
     describe("the normal side underground exit, with backed-up belts", () => {
         let generated: ClockAlternativesResult;

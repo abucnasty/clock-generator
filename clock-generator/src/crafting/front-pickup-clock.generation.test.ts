@@ -1,30 +1,20 @@
-import fs from "fs";
-import path from "path";
 import {createHash} from "crypto";
 import {expect, test} from "vitest";
 import {generateClockAlternatives} from "./generate-blueprint";
 import {encodeBlueprintFile} from "../blueprints/serde";
 import {frontClockConfig, frontEntranceClockCases, frontExitClockCases} from "../../tests/game/builds/front-clock-fixtures";
+import {readControls} from "../../tests/game/builds/clock-controls";
 
-interface ExpectedClock {
-    period: number;
-    expected: number;
-    verdict: string;
-    selection: {id: string; holds: boolean; rate: number; supply: string};
-    clock_sha256: string;
-    /** The in-game recording of this selection */
-    native_control: string;
-}
-interface NativeClock {expected: number; baseline: number[]; recovery: {recovered: number[]}[]}
-const directory = path.join(__dirname, "../../tests/game/builds");
-const controls = JSON.parse(fs.readFileSync(path.join(directory, "front-clock-generation-controls.json"), "utf8")) as Record<string, ExpectedClock>;
+// each selection pinned beside the in-game recording of its clock
+const controls = readControls("front-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 const cases = [...frontEntranceClockCases("different-items"), ...frontEntranceClockCases("same-item"),
     ...frontExitClockCases(true), ...frontExitClockCases(false)];
 for (const variant of cases) {
     test(`front pickup default: ${variant.name}`, async () => {
-        const expected = controls[variant.name];
+        const {generation, native} = controls.cases[variant.name];
+        const expected = generation!;
         const generated = generateClockAlternatives(await frontClockConfig(variant), {logger: quiet});
         const selected = generated.alternatives[generated.selected_index];
         const result = selected.result;
@@ -37,7 +27,6 @@ for (const variant of cases) {
         expect(selected.verdict).toBe(expected.verdict);
         expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
             supply: selected.belt?.kind}).toEqual(expected.selection);
-        const native = (JSON.parse(fs.readFileSync(path.join(directory, expected.native_control), "utf8")) as Record<string, NativeClock>)[variant.name];
         expect(native.expected).toBe(expected.expected);
         // The front exit's inserter stands on the exit's output tile: its belt is backed up in the game whatever the
         // config says. Only a recording made under the selection's own supply speaks to its holds verdict.

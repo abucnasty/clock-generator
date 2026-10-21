@@ -38,7 +38,7 @@ has a measured lane-change arm-travel counterexample. The older turbo/express re
 From `clock-generator/`, with `.env` pointing at Factorio and the staging save:
 
 ```bash
-npm run probe -- --fixture=same-item --geometry=underground-exit --out=../work/belt-pickup/same-item-run-01
+npm run probe -- --fixture=same-item --geometry=underground-exit --out=.scratch/belt-pickup/same-item-run-01
 ```
 
 The command composes shared Lua with this scenario and retains `probe.generated.lua`, `blueprint.txt`,
@@ -76,10 +76,9 @@ scaffold), and test recovery after two ingredient cuts and a filled/restored out
 exact output after a six-period recovery allowance, without resetting the clock or machine. All six passed with
 the fallback implementation: 16 gears per 160 ticks (6/second), with a 26-tick input window on every geometry.
 The underground window was 28 ticks before the correction; since the belt window-end trim the input window is
-23 ticks, ending one rotation before the last return swing, re-recorded in the a2 controls. See
+23 ticks, ending one rotation before the last return swing, re-recorded in #265. See
 [the simulator findings](../../../../../../docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints)
-for the general rules and measured scope; raw investigation captures and analysis remain local under
-`work/same-item-pickup/investigation/`.
+for the general rules and measured scope; the raw investigation captures and analysis (#216) were not kept.
 
 ## Scaffold screenshots
 

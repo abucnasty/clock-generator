@@ -22,6 +22,18 @@ const FACTORIO = process.env.FACTORIO_PATH;
 const SAVE = process.env.FACTORIO_HARNESS_SAVE;
 /** Also open the game with graphics, joined as a spectator, and run the builds in it at a speed that can be followed; set by `npm run test:game:watch` */
 const WATCH = !!process.env.FACTORIO_HARNESS_WATCH;
+/**
+ * A folder to keep each build's evidence in, written before the assertions so a failing build keeps it too: the
+ * recording (`<build>.json`), the simulator's run of the same clock (`<build>.simulated.json`), a meta file with the
+ * selected clock, the comparison's issues, the config and the harness's reports (`<build>.meta.json`), and the game's
+ * write data with every inserter's unit number and position (`<build>-game/script-output/inserter-positions.json`).
+ * Without it the recordings go to a temporary folder that is removed afterwards.
+ */
+const KEEP = process.env.SCAFFOLD_CAPTURE_DIR ? path.resolve(process.env.SCAFFOLD_CAPTURE_DIR) : null;
+/** Writes every inserter's unit number and position as the game has them, right before the recording starts */
+const INSERTER_POSITIONS_LUA = "local entities = ... local out = {} for _, e in pairs(entities) do if e.valid and e.type == \"inserter\" then "
+    + "out[#out + 1] = { unit_number = e.unit_number, x = e.position.x, y = e.position.y } end end "
+    + "helpers.write_file(\"inserter-positions.json\", helpers.table_to_json(out))";
 /** As fast as the machine allows */
 const UNWATCHED_SPEED = 1000;
 /** Well under that: remote play can't keep up with the game rendering that fast */
@@ -152,7 +164,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // the game and 5 in the simulator, because the game counts a held product when it enters the output and
         // the simulator when it is made (docs/simulator.md). The gap crossed the tolerance only once the trim cut
         // the build's total wake-ups 100 -> 75 a minute; the trimmed belt inserter itself matches the game tick
-        // for tick (work/belt-pickup-parity/belted-buffer-wakeups/REPORT.md):
+        // for tick (#265; the comparison's recordings were not kept in the repository):
         wake_ups_open: "the game counts a foundry's held product entering its output, the simulator the make: ",
     },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
@@ -308,7 +320,7 @@ async function record(options: HarnessOptions): Promise<HarnessResult> {
 // the game with graphics takes a few seconds to close
 afterAll(async () => {
     await session?.close();
-    if (scratch) {
+    if (scratch && !KEEP) {
         fs.rmSync(scratch, { recursive: true, force: true });
     }
 }, 60_000);
@@ -318,7 +330,11 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
     for (const [name, build] of Object.entries(BUILDS)) {
         test(`one copy of the ${name} build moves the expected output every clock period`, async context => {
             context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
-            scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "scaffold-recordings-"));
+            if (KEEP) {
+                fs.mkdirSync(KEEP, { recursive: true });
+            }
+            scratch ??= KEEP ?? fs.mkdtempSync(path.join(os.tmpdir(), "scaffold-recordings-"));
+            const base = path.join(scratch, name.replace(/ /g, "-"));
 
             const loaded = await loadConfigFromFile(build.config);
             const config = build.backed_up_belts ? { ...loaded, overrides: { ...loaded.overrides, backed_up_belts: true } } : loaded;
@@ -348,7 +364,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 factorio: FACTORIO!,
                 save: SAVE!,
                 blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
-                out: path.join(scratch, `${name.replace(/ /g, "-")}.json`),
+                out: `${base}.json`,
                 ticks: RECORDED_TICKS,
                 warmup_ticks: build.staged_start ? 0 : build.warmup_ticks,
                 settle_ticks: build.staged_start ? undefined : build.settle_ticks,
@@ -361,6 +377,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 watch: WATCH,
                 timeout_seconds: WATCH ? 3600 : 900,
                 log: () => { },
+                ...(KEEP && { work_dir: `${base}-game`, lua: INSERTER_POSITIONS_LUA }),
             });
 
             if (build.staged_start) {
@@ -368,7 +385,31 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 // inserters are placed in), and the clock is wired in that tick to count its period from the first sample
                 result.recording.clock = { values: Array.from({ length: result.recording.sample_count }, (_, tick) => tick % period) };
             }
+
+            // the simulator against the game, entity by entity: a run of the same clock, half as long again as the
+            // recording and judged on what follows its first third, moves what the game moved through every inserter
+            // and finishes what it finished in every machine (asserted below, once the evidence is kept)
+            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, RECORDED_TICKS * 1.5, period);
+            const compared = compareRecordings(
+                {
+                    recording: result.recording,
+                    match: matchRecordingToConfig(result.recording, config),
+                    from_sample: build.staged_start ? Math.floor(result.recording.sample_count / 3) : undefined,
+                },
+                { recording: simulated_run, match: matchOfSimulatedRecording(simulated_run), from_sample: Math.floor(simulated_run.sample_count / 3) },
+                config,
+                { expected_output_per_period: expected },
+            );
             const periods = outputPerPeriod(result.recording, recipesMaking(config, config.target_output.recipe));
+            if (KEEP) {
+                fs.writeFileSync(`${base}.simulated.json`, JSON.stringify(simulated_run));
+                fs.writeFileSync(`${base}.meta.json`, JSON.stringify({
+                    name, label: selected.label, verdict: selected.verdict, period, expected, clock_windows: selected.result.clock_windows,
+                    simulation_ticks: selected.result.simulation_duration.ticks, backed_up_belts: !!build.backed_up_belts,
+                    staged_start: !!build.staged_start, issues: compared.issues, config, harness_build: result.build,
+                    harness_start: result.start, periods,
+                }, null, 1));
+            }
             expect(periods.length, `the recording of ${result.recording.sample_count} ticks holds whole clock periods`).toBeGreaterThan(1);
             // the first period is left out: the build may still be settling into the clock
             const checked = periods.slice(1);
@@ -392,20 +433,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     `the simulator counts ${figures} wake-ups a minute, by where the clock starts, where the game shows ${recorded.toFixed(1)}`).toBe(true);
             }
 
-            // the simulator against the game, entity by entity: a run of the same clock, half as long again as the
-            // recording and judged on what follows its first third, moves what the game moved through every inserter
-            // and finishes what it finished in every machine
-            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, RECORDED_TICKS * 1.5, period);
-            const compared = compareRecordings(
-                {
-                    recording: result.recording,
-                    match: matchRecordingToConfig(result.recording, config),
-                    from_sample: build.staged_start ? Math.floor(result.recording.sample_count / 3) : undefined,
-                },
-                { recording: simulated_run, match: matchOfSimulatedRecording(simulated_run), from_sample: Math.floor(simulated_run.sample_count / 3) },
-                config,
-                { expected_output_per_period: expected },
-            );
+            // the simulator against the game, entity by entity (compared above)
             const known = (build.moved_open?.inserter_ids ?? []).map(id => `Inserter ${id} (`);
             // an issue names its inserter at its start or, for one about how the config describes the build, after a sentence
             const issues = compared.issues.filter(issue => !known.some(name => issue.startsWith(name) || issue.includes(`. ${name}`)));

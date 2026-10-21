@@ -102,8 +102,7 @@ Sidecar captures lane 1 preference unmirrored or lane 2 mirrored, with half-tile
 without warnings. Both same-item lanes remain present in the exported belt config.
 
 These results cover one moving first hand in each mirroring state. Repeated hands and other orientations remain
-separate cases. Raw captures are retained locally under
-`work/belt-pickup/front-entrance-same-item-moving-01/` and `front-entrance-same-item-mirrored-moving-01/`.
+separate cases. The raw captures (#237) were not kept; the results above are their record.
 The mirrored blueprint was checked to differ from the unmirrored same-item blueprint only in the input mirror flag.
 
 ## Same item on backed-up lanes
@@ -130,8 +129,7 @@ Sidecar captures and exports the same mirroring-selected preference and half-til
 The rule remains simple: try the preferred lane first; use the other matching lane when needed. Moving supply
 needs the fourth grab from the other lane in this fixture. Backed-up supply provides all four grabs from the
 preferred lane, with the same filling offsets. These measurements cover first hands only.
-Raw captures are retained under `work/belt-pickup/front-entrance-same-item-backed-up-01/` and
-`front-entrance-same-item-mirrored-backed-up-01/`.
+The raw captures (#237) were not kept; the measurements above are their record.
 
 ## Four-speed controls
 
@@ -178,9 +176,8 @@ Same-item backed-up hands can use the other lane to fill the fourth grab at fast
 
 This sweep measures 60 different-item and 30 same-item first hands across the original and compact layouts.
 The six skipped original-plant normal moving combinations are covered by paired compact controls, rather than
-mislabelled as moving while their supply is blocked. Captures are local under
-`work/belt-speed-coverage/front-final-entrance-02/front-entrance-*`; compact normal smoke evidence is also in
-`front-compact-smoke-02/`. These are first-hand speed controls; repeated hands and other cardinal orientations remain separate coverage dimensions.
+mislabelled as moving while their supply is blocked. The captures and the compact normal smoke run (#245) were
+not kept; the results above are their record. These are first-hand speed controls; repeated hands and other cardinal orientations remain separate coverage dimensions.
 The additional compact moving phase sweep is described below. No generated-clock or new simulator behavior
 is claimed by this sweep.
 
@@ -210,8 +207,7 @@ the same phase; delay 8 supplies the otherwise missing phase. The other speeds n
 Each of the six ingredient/mirroring variants observes all 2/8/4/8 phases; this does not claim every arbitrary
 lane-to-lane phase offset, repeated-hand timing or other orientation.
 
-Phase captures are local under `work/belt-speed-coverage/front-phase-final-01/` and
-`front-phase-express-8-01/`. Their observed-phase audit is `front-phase-coverage-01.json`. The front suite now
+The phase captures and their observed-phase audit (#245) were not kept; the counts above are their record. The front suite now
 covers 228 native first-hand controls, including the 24 exit controls; six original-plant normal moving variants
 remain explicitly skipped in favor of their paired compact controls. Setup attempts with an incorrectly connected
 gate are excluded from these counts.
@@ -244,10 +240,8 @@ two flipped cases. The game test composes `probe.lua`, captures hand/lane observ
 simulator and checks Sidecar capture/export without warnings. Temporary test captures are removed afterward unless `BELT_SPEED_CAPTURE_DIR` names a fresh evidence directory.
 For the same-item command, `-t 'mirrored=true'` selects its two flipped cases, and `-t 'backed-up supply'`
 selects just the two backed-up controls.
-Raw captures with matching configs and the committed probe are retained
-locally under `work/belt-pickup/front-entrance-user-07/` (moving) and `front-entrance-user-08/` (backed up).
-Flipped captures are under `work/belt-pickup/front-entrance-mirrored-moving-01/` and
-`front-entrance-mirrored-backed-up-01/`. The flipped blueprint was checked to differ from the supplied scaffold
+The raw captures, made with matching configs and the committed probe, and the flipped captures (#220) were not
+kept. The flipped blueprint was checked to differ from the supplied scaffold
 only in the input inserter's mirror flag before the optional drain removal.
 These exploratory captures used Sidecar 0.10.0; the game regressions rerun all four cases with 0.11.0 to check capture/export.
 The same-item captures and regressions use Sidecar 0.11.0.
@@ -255,7 +249,7 @@ The same-item captures and regressions use Sidecar 0.11.0.
 For a retained four-speed capture, use a new directory on every run:
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-entrance-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/front-entrance-new \
   npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts \
   tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
 ```
@@ -278,12 +272,11 @@ configurations do not calibrate the replacement's module-boosted crafting throug
 
 The independent natural-output smoke makes no inventory or held-item edits and clears no inventories. Over
 600 ticks it crafts **53 circuits**, observes the output inserter carrying circuits, deposits the first stack at
-tick **310**, and observes circuits on the next belt at tick **326**. Passing evidence is retained locally under
-`work/belt-speed-coverage/compact-user-replacement-02/` (32 base controls and output smoke) and
-`work/belt-speed-coverage/compact-user-replacement-phases-01/` (130 phase/swap controls).
+tick **310**, and observes circuits on the next belt at tick **326**. The passing captures (#245: 32 base controls
+and output smoke, 130 phase/swap controls) were not kept; the counts above are their record.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/compact-output-new npm run test:game -- tests/game/mechanics/belt-pickup/compact-front-output.game.test.ts
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/compact-output-new npm run test:game -- tests/game/mechanics/belt-pickup/compact-front-output.game.test.ts
 ```
 
 ![Supplied compact normal-belt entrance scaffold with its connected circuit output](compact-normal-scaffold.jpg)
@@ -295,7 +288,7 @@ available; the helper launches a headless server and graphical client.
 Run only the additional phase controls with fresh retained evidence:
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/front-phases-new \
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/front-phases-new \
   npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts \
   tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts -t 'release [1-8]:'
 ```

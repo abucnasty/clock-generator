@@ -85,9 +85,9 @@ test repeated throughput and interruptions; a turbo recovery counterexample expo
 
 ## Evidence and reproduction
 
-Final base evidence is retained locally under `work/belt-speed-coverage/over-hood-base-02/`, with 174 shifted
-controls under `work/belt-speed-coverage/over-hood-phase-01/`; `over-hood-base-01/`
-contains the two setup pilots, and `inline-exit-pilot-01/` the original ungated orientation pilot. The first native
+The final base evidence and the 174 shifted controls (#245) are pinned in [expectations.json](expectations.json) and
+[phase-expectations.json](phase-expectations.json); their raw captures, the two setup pilots and the original ungated
+orientation pilot were not kept. The first native
 matrix pass had 12 host-assertion failures in express moving cases: an incoming stack entered the exposed
 window and was grabbed in the same tick, while the prior visible tail remained. The observer now tracks both
 endpoints' real IDs. An independent audit confirms all **336 grabs** (including 170 incoming-stack witnesses).
@@ -97,13 +97,13 @@ chosen-lane ID withdrawal and none from the opposite lane.
 
 ```bash
 # Native matrix; use a fresh retained directory.
-BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/over-hood-new npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts
+BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/over-hood-new npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts
 
 # Native shifted phases only; use another fresh directory.
-OVER_HOOD_PHASES=1 BELT_SPEED_CAPTURE_DIR=../work/belt-speed-coverage/over-hood-phases-new npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts -t 'release-'
+OVER_HOOD_PHASES=1 BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/over-hood-phases-new npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts -t 'release-'
 
-# Combined frozen evidence replay: no Factorio process starts.
-OVER_HOOD_PHASES=1 OVER_HOOD_REPLAY_DIR=../work/belt-speed-coverage/over-hood-base-02 OVER_HOOD_PHASE_REPLAY_DIR=../work/belt-speed-coverage/over-hood-phase-01 npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts
+# Combined replay of captures made locally, such as the two above: no Factorio process starts.
+OVER_HOOD_PHASES=1 OVER_HOOD_REPLAY_DIR=.scratch/belt-speed-coverage/over-hood-new OVER_HOOD_PHASE_REPLAY_DIR=.scratch/belt-speed-coverage/over-hood-phases-new npm run test:game -- tests/game/mechanics/belt-pickup/over-the-hood-underground-exit.game.test.ts
 ```
 
 In replay mode, a missing root for any selected case fails explicitly instead of starting Factorio.

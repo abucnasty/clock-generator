@@ -78,8 +78,8 @@ The capture command builds the engine, reads `.env`, composes shared Lua with th
 backed-up blueprint transformation as the tests. Choose a new directory for each run:
 
 ```bash
-npm run probe -- --fixture=same-item --geometry=underground-exit --out=../work/belt-pickup/same-item-run-01
-npm run probe -- --fixture=backed-up --item=supercapacitor --geometry=underground-entrance --out=../work/belt-pickup/backed-up-run-01
+npm run probe -- --fixture=same-item --geometry=underground-exit --out=.scratch/belt-pickup/same-item-run-01
+npm run probe -- --fixture=backed-up --item=supercapacitor --geometry=underground-entrance --out=.scratch/belt-pickup/backed-up-run-01
 ```
 
 Each directory contains `blueprint.txt`, `config.json`, `probe.generated.lua`, `recording.json`, and `game/`
@@ -91,8 +91,10 @@ The Lua probes clear machine inventories to isolate pickups. Their detailed repo
 motion; use the build tests for production throughput/recovery. Probe ticks start when custom Lua is installed,
 before any settling and final recorder start. Empty Lua arrays may serialize as `{}`.
 
-Game tests clean up their own temporary recordings even on assertion failure. Manual captures retain artifacts;
-full raw captures belong under ignored `work/<topic>/<run>/`. Commit reproducible inputs, concise provenance and
+Game tests clean up their own temporary recordings even on assertion failure, unless a capture folder is named:
+`SCAFFOLD_CAPTURE_DIR` keeps each scaffold build's recording, the simulator's run of it, a meta file with the comparison
+and the inserters' positions in the game, and the `*_CAPTURE_DIR` variables of the other tests keep theirs. Manual
+captures retain artifacts; full raw captures belong under the ignored `clock-generator/.scratch/<topic>/<run>/`. Commit reproducible inputs, concise provenance and
 small intentionally chosen evidence cuts only. Existing compact evidence under `src/state` and
 `src/verification/fixtures` can remain beside its simulator tests.
 
@@ -121,7 +123,7 @@ npm run screenshots -- --all
 
 The default captures only missing or stale images. It compares the blueprint SHA-256, JPEG quality, and capture
 recipe with [generated provenance](mechanics/screenshots.generated.json); a current image skips Factorio entirely.
-Use `--refresh` to force regeneration, or `--work-dir=../work/mechanics-screenshots/run-01` to retain raw output in
+Use `--refresh` to force regeneration, or `--work-dir=.scratch/mechanics-screenshots/run-01` to retain raw output in
 a chosen empty directory. The default work directory is a fresh timestamped folder under that same ignored path.
 
 This requires the graphical Factorio executable and a desktop display: `game.take_screenshot` does nothing in a

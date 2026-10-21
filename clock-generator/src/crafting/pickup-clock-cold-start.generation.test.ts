@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import {createHash} from "crypto";
 import {describe, expect, test} from "vitest";
 import {runClockOnBuild} from "./trial";
@@ -8,6 +6,7 @@ import {OpenRange} from "../data-types";
 import {Config} from "../config";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
 import {overHoodClockCases, overHoodClockConfig} from "../../tests/game/builds/over-hood-clock-fixtures";
+import {readControls} from "../../tests/game/builds/clock-controls";
 
 interface ColdStartClock {
     period: number;
@@ -44,8 +43,7 @@ interface ColdStartControls {
     runs: Record<string, ColdStartRun>;
 }
 
-const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-cold-start-controls.json"), "utf8")) as ColdStartControls;
+const controls = readControls<{cold_start: ColdStartControls}>("pickup-clock-start-controls.json").cold_start;
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 const sha = (series: number[]) => createHash("sha256").update(JSON.stringify(series)).digest("hex");
 

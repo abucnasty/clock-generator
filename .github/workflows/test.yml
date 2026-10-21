@@ -103,15 +103,15 @@ jobs:
       - name: Generation tests
         run: >-
           npm run test:generation -- --reporter=default
-          --reporter=json --outputFile.json=../work/test-results/generation.json
-          --reporter=junit --outputFile.junit=../work/test-results/generation.xml
+          --reporter=json --outputFile.json=.scratch/test-results/generation.json
+          --reporter=junit --outputFile.junit=.scratch/test-results/generation.xml
 
       - name: Generation timing report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: generation-test-results
-          path: work/test-results/generation.*
+          path: clock-generator/.scratch/test-results/generation.*
           if-no-files-found: ignore
           retention-days: 14
 

@@ -82,7 +82,7 @@ for (const backedUpBelts of [false, true]) {
             // The backed-up fixture required more settling time than the moving one in the initial recordings.
             // Moving supply needs five periods: with the trimmed windows, 2400 ticks (~3.4 periods of 704)
             // left the first recorded period at 320/352 and 3 periods at 304+320, while 5 periods recorded
-            // 60/60 exact (work/belt-pickup-parity/a2-native-01/settle-experiment/settle-{2400,2112,3520}.json).
+            // 60/60 exact (#265's settle experiment at 2400, 2112 and 3520 ticks; its recordings were not kept).
             settle_ticks = backedUpBelts ? 10 * period : 5 * period;
             clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
             scratch = fs.mkdtempSync(path.join(os.tmpdir(), "moving-pickup-"));

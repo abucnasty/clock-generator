@@ -1,22 +1,12 @@
-import fs from "fs";
-import path from "path";
 import {describe, expect, test} from "vitest";
 import {generateClockAlternatives} from "./generate-blueprint";
 import {rotateRanges, SerializableClockWindows} from "./clock";
 import {backpressureLossOf, simulateClockOnly} from "./trial";
 import {OpenRange} from "../data-types";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
+import {readControls} from "../../tests/game/builds/clock-controls";
 
-interface NativeClockControl {
-    generationVerdict: string;
-    period: number;
-    expected: number;
-    baseline: number[];
-    recovery: {recovered: number[]}[];
-}
-
-const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-a8-controls.json"), "utf8")) as Record<string, NativeClockControl>;
+const controls = readControls("pickup-clock-controls.json").cases;
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 interface StartupControl {
@@ -25,20 +15,18 @@ interface StartupControl {
     clock_windows: SerializableClockWindows;
     phases: {offset: number; items_per_period: number[]}[];
 }
-const startupControls = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-startup-controls.json"), "utf8")) as Record<string, StartupControl>;
-const movingPhases = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-moving-phase-controls.json"), "utf8")) as
-    {cases: Record<string, {phases: Record<string, [number, number]>; bins: number[]}>};
-const recoveryPhases = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-recovery-phase-controls.json"), "utf8")) as
-    {cases: Record<string, {phases: Record<string, [number, number]>}>};
+const startupControls = readControls<{backed_up_start: {cases: Record<string, StartupControl>}}>("pickup-clock-start-controls.json")
+    .backed_up_start.cases;
+const {moving_phase: movingPhases, recovery_phase: recoveryPhases} = readControls<{
+    moving_phase: {cases: Record<string, {phases: Record<string, [number, number]>; bins: number[]}>};
+    recovery_phase: {cases: Record<string, {phases: Record<string, [number, number]>}>};
+}>("lane-phase-controls.json");
 
 // The native controls witness the selected default, including its failures. A different default must be
 // rechecked in the game; matching the requested rate in the simulator alone does not replace that evidence.
 for (const family of ["electromagnetic", "same-item"] as const) describe(`native-checked ${family} defaults`, () => {
     for (const variant of pickupClockSpeedCases(family)) test(variant.name, async () => {
-        const native = controls[variant.name];
+        const native = controls[variant.name]?.native;
         expect(native, "every ordinary speed/layout/supply combination has a native control").toBeDefined();
         const config = await pickupClockConfig(variant);
         const result = generateClockAlternatives(config, {logger: quiet});
@@ -54,7 +42,7 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         if (startup) {
             // The fixed windows stay as a check of the simulator against the game's measured cold starts (a
             // fully jammed start at offset 1287 alternates 144/208 natively), independent of the selection:
-            // the generator now selects the clock planned with the belts moving here (A8), which the branches
+            // the generator now selects the clock planned with the belts moving here (#275), which the branches
             // below judge on its own recording.
             for (const phase of startup.phases) {
                 const windows = Object.fromEntries(Object.entries(startup.clock_windows).map(([id, ranges]) =>
@@ -74,7 +62,7 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         }
         if (movingPhases.cases[variant.name]) {
             // These warm native runs still pass. The verifier finds a cold lane-phase start the clock fails from,
-            // and the game fails from it too (normal-underground-lane-phase-controls.json): the retained warm
+            // and the game fails from it too (lane-phase-controls.json, normal_underground): the retained warm
             // run started at another phase.
             expect(meetsTarget).toBe(true);
             expect(selected.assessment.holds).toBe(false);
