@@ -86,4 +86,19 @@ describe('the live connection check', () => {
         expect(render(restacked)).toBeNull();
         expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: restacked });
     });
+
+    it.each([
+        { change: 'the belt type', edit: (config: Config) => ({ ...config, belts: [{ ...config.belts[0], type: 'transport-belt' }] }) },
+        { change: 'the target rate', edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, items_per_second: 2 } }) },
+        { change: 'the copies', edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, copies: 3 } }) },
+        { change: 'the productivity', edit: (config: Config) => ({ ...config, machines: [{ ...config.machines[0], productivity: 50 }] }) },
+    ])('shows no lane warning checked before $change changed', async ({ edit }) => {
+        stub.askEngine.mockResolvedValue(refused);
+        render(blacklisting());
+        await vi.runAllTimersAsync();
+        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
+        const edited = edit(blacklisting()) as Config;
+        expect(render(edited)).toBeNull();
+        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: edited });
+    });
 });
