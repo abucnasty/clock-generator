@@ -69,7 +69,7 @@ The [lane model](../src/state/belt-pickup-lane.ts) stores only holes and partial
 supply. [Belt pickup logic](../src/control-logic/inserter/modes/pickup/belt-pickup-logic.ts) chooses the physical lane. No whole-belt
 simulation or extra search dimension is involved.
 
-Calibration: Factorio 2.1.21, legendary stack inserters, four-item belt stacks, turbo/express belts, and pickups
+Calibration: Factorio 2.1.21, legendary stack inserters, four-item belt stacks, all four belt speeds (#245), and pickups
 from both sides of an eastward belt. Belt pickup timing is calibrated with 16-item hands on four-item belt stacks
 only: pickup from one- to three-item stacks was never measured, and the 8- and 12-item hands of the same-item probes
 are seeded checks on moving turbo and express belts. Both are [Not tested](belt-pickup/experiments.md#belt-stack-sizes-and-hand-sizes);
@@ -135,7 +135,7 @@ history from repeat detection once the hand is empty/full, since the next hand i
 This matches all 198 side-pickup arrival phases and all 96 ordinary/reflected repeated-hand controls, including
 the normal moving entrance's four delayed phases. Sixteen fresh controls check all eight normal entrance
 phases from both physical near sides. This collection constraint is calibrated for through supply and
-legendary stack inserters; other prototypes/qualities remain separate calibrations.
+legendary stack inserters; a belt pickup by any other inserter is refused (#260).
 Collection replay alone does not establish generated-clock parity; absolute arrival from placement is the startup
 contract below, for side and over-the-hood pickups (front pickups are measured from their first hand only).
 Generated clocks are checked in the game separately: the ordinary side pickups, the over-the-hood exit and the
@@ -145,7 +145,7 @@ Scope remains one controlled through supply. Pickups from a side-loaded tile, wi
 merging onto the pickup lane, are out of scope and refused, as are pickups from a splitter; see the
 [experiment history](belt-pickup/experiments.md#side-loaded-pickups-and-merges). A belt fed through a splitter further
 upstream is modelled as a plain belt, which is wrong when the splitter's other output takes items. Sparse supply, shared upstream
-withdrawals, bends, other inserters/qualities/orientations and arbitrary relative lane phases remain unverified.
+withdrawals, bends, other orientations and arbitrary relative lane phases remain unverified.
 A moving front exit cannot be built: the inserter on the exit's output tile blocks the belt. A config that says
 moving supply gets a clock for moving belts there anyway; on the backed-up exit the game holds and recovers it
 at every tier ([generated clocks](belt-pickup/experiments.md#generated-clocks-and-drops)). The reverse also holds

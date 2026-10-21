@@ -113,16 +113,18 @@ its timing is not tested. Measuring them is follow-up F7.
 
 | Scenario | Turbo | Express | Fast | Normal (transport) |
 | --- | --- | --- | --- | --- |
-| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested | Tested | Tested |
+| Electromagnetic clocks, all three geometries: moving/backed-up throughput and recovery | Tested | Tested — generator result mismatch | Tested | Tested |
 | Same-item gear clocks, all three geometries: throughput and recovery | Tested | Tested | Tested | Tested |
 | Over-the-hood mixed-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
 | Over-the-hood same-item clocks, both mirroring states and supplies | Tested | Tested | Tested | Tested |
 | Front entrance clocks, both families, mirroring states and supplies | Tested | Tested | Tested | Tested |
-| Front exit clocks, backed up, both mirroring states | Tested | Tested | Tested | Tested |
-| Front exit clocks on a moving config (the belt backed up in the game), both mirroring states | Tested | Tested | Tested | Tested |
+| Front exit clocks, different items, backed up, both mirroring states | Tested | Tested | Tested | Tested |
+| Front exit clocks, different items, on a moving config (the belt backed up in the game), both mirroring states | Tested | Tested — generator result mismatch | Tested | Tested — generator result mismatch |
 | Belt drops, finite source and retained output stock, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 | Blocked output behind a belt drop, chest-fed: throughput and recovery, stack sizes 1–4 | Tested | Tested | Tested | Tested |
+
+The mismatches: the express moving side underground entrance and exit hold and recover in the game, where the generator says "no recovery" from lane phase [1,5], which the capture cannot set up (#269); the front exit on a moving config holds and recovers in the game at express and normal, where the generator says "no recovery" and "unstable" from lane phases of a moving belt, which the exit's backed-up belt does not have (#274). Each verdict is the cautious side.
 
 The ordinary clocks are verified on **48 configurations** across all four speeds
 (`tests/game/builds/pickup-clock-controls.json`, each entry with the PR that recorded it): the recapture after the belt
@@ -165,7 +167,7 @@ from moving lane-phase starts ([1,5] or [5,1]; [0,3]) this exit cannot have; at 
 backed-up config's own clock misses.
 
 **Recovery through a blocked output** is verified on **16 configurations**
-(`tests/game/builds/blocked-output-clock-controls.json`, recorded 2026-10-21): iron gears in a legendary assembler 3
+(`tests/game/builds/blocked-output-clock-controls.json`, recorded in #277): iron gears in a legendary assembler 3
 (crafting speed 3.125) fed from an infinity chest, its output inserter dropping onto a belt that runs ten tiles to a
 loader, at every tier and belt stack size 1–4 (the force's `belt_stack_size_bonus`, set as the belt-drop calibration
 sets it; the chest-fed input keeps the stack size away from any pickup), 5 gears a second. The loader is removed for 24
@@ -242,7 +244,7 @@ agrees with all **42 backed-up first hands**, conditioned on native arrival; fro
 the whole simulation reproduces all 42 and all 216 moving ones as well ([startup](#startup-from-placement)). Production pickup-mode comparisons
 also match held items, quantities and exposed stock for all 258 controls. Sidecar captures the explicit
 over-the-hood layout. First-hand agreement does not establish generated-clock parity: the operating-clock
-controls below expose a recovery failure when the lanes acquire different phases.
+controls below exposed a recovery failure when the lanes acquire different phases (#254), fixed by #255, #269 and #272.
 
 ### Related belt-drop calibration
 
@@ -314,7 +316,7 @@ with two overlapping detailed recorder periods. Electromagnetic targets scale wi
 | Normal straight | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | false | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal undergrounds | false | Stable | 176 / 1,408 ticks | 176 throughout; fully jammed cold offset 1287 (fixed windows): 144/208 | Planned with the belts moving, checked on the backed-up belts (#275); every clock planned for backed-up supply misses |
-| Normal undergrounds | true | Unstable | 176 / 1,408 ticks | Warm: 176 throughout | Historical recovery alternation resolved; a modeled cold lane-phase start alternates 192/160 and has not been reproduced natively |
+| Normal undergrounds | true | Unstable | 176 / 1,408 ticks | Warm: 176 throughout | Historical recovery alternation resolved; rejected from cold lane phase [3,0], where the game never settles either (#266) |
 
 All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-four
 ordinary defaults are correctly marked stable, the two normal backed-up undergrounds among them since #275; the two
@@ -323,8 +325,8 @@ undergrounds keep a cautious "no recovery" from a lane phase the capture cannot 
 additional cold-start controls cover both normal backed-up undergrounds at offsets
 0 and 1287, matching all 16 output periods each. A full lane can still move: these controls verify stationary
 initial stock and empty machines/hands before comparing the simulator. The [build report](../../tests/game/builds/README.md)
-links current controls and preserves the original 39-run summaries. Broader startup timing remains a separate
-verification gate; warm throughput alone does not establish it.
+links current controls and preserves the original 39-run summaries. Startup is predicted from placement and
+checked on 57 clocked cold starts (#273; see [startup](#startup-from-placement)).
 
 **Over-the-hood clock recovery.** The earlier mixed-item turbo default produced 64 circuits per 640 ticks before an
 interruption, in both mirroring states. After one ingredient is interrupted, recovery repeatedly contains
@@ -342,9 +344,9 @@ periods, so their recovery counts are retained without certifying recovery.
 The [replacement controls](../../tests/game/builds/over-hood-clock-history-controls.json) (#255) verify the new turbo
 clock at **32 circuits / 320 ticks** in both mirroring states. Unmirrored recovery holds target throughout the
 assessed windows; mirrored recovery takes seven periods after the final interruption, then holds 32 for the
-remaining 18 periods. That transient differs from the old clock's persistent shortfall. Express keeps its
-original clock but is now marked **no recovery**. A changed fast candidate remains unstable and misses
-native target periods. This fixes the three false-stable verdicts without changing the pickup timing rule.
+remaining 18 periods. That transient differs from the old clock's persistent shortfall. In #255 express kept its
+original clock but was marked **no recovery**, and a changed fast candidate stayed unstable and missed
+native target periods; all 16 mixed-item builds are stable since #269 and #272. This fixes the three false-stable verdicts without changing the pickup timing rule.
 
 Since #269 an observed-windows clock holds when its own windows hold, not when the run they were observed in does, and
 nine mixed-item selections change to observed windows; six had no stable default (fast in both mirroring states and
