@@ -185,7 +185,9 @@ would be held only on its last eight periods.
 
 [pickup-clock-start-controls.json](pickup-clock-start-controls.json) (`cold_start`) records 57 clocked cold starts in
 Factorio 2.1.21 (#273, 2026-10-20, frozen head `98f362ce`), each 16 periods from the harness's staged start, with nothing written to a
-belt: the game's own lane phase at placement, read off the pickup tile.
+belt: the game's own lane phase at placement, read off the pickup tile. The four normal backed-up side underground runs (entrance and
+exit, near lanes 1 and 2) were recorded again on the clock #275 selects for them, planned with the belts moving; the
+game follows the simulator tick for tick from placement on it, as it did on the fractional clock before.
 
 - **The matrix, 48:** every electromagnetic side pickup fixture at 4 tiers × straight belt, underground entrance and
   exit × moving and backed-up supply, on the generator's selected clock, at near lane 1 and at near lane 2. Near lane 2
