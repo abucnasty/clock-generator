@@ -10,6 +10,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `over-hood-pickup-clock.game.test.ts`, `front-pickup-clock.game.test.ts`: the over-the-hood exit and the front
   underground entrance and exit, throughput and recovery.
 - `blocked-output-clock.game.test.ts`: a chest-fed machine whose output belt is blocked, at belt stack sizes 1–4.
+- `container-clock.game.test.ts`: a car, a tank or a cargo wagon between its supplies and a machine, with cuts that last until the container is empty.
 
 From `clock-generator/`, select a file or case:
 
@@ -385,4 +386,30 @@ checks it against its native summary beside it.
 BELT_SPEED_CAPTURE_DIR=.scratch/blocked-output-new \
   npm run test:game -- tests/game/builds/blocked-output-clock.game.test.ts \
   -t '^blocked output clock: blocked-output-express-stack-3$'
+```
+
+## Containers between two inserters
+
+`container-clock.game.test.ts` enumerates 6 controls ([container-clock-fixtures.ts](container-clock-fixtures.ts)): a
+cargo wagon of normal and of legendary quality (40 and 100 slots) and one with 10 slots filtered to iron plates and 30
+to copper plates, making iron gears; a legendary wagon, a car and a tank whose slots are split by filters between iron
+plates and copper cable, making electronic circuits. Infinity chests feed the container, one legendary stack inserter
+takes from it into a legendary assembler 3 (crafting speed 3.125) and the output inserter drops into a disposal chest,
+at 5 a second. The slot filters and the wagon's quality come with the blueprint; the wagon stands on rails. The probe
+([container-clock-probe.lua](container-clock-probe.lua)) counts the output inserter's drops per period.
+
+**Cuts that empty the container.** A container between two inserters is a buffer: a 2-period cut, as the belt-fed
+families have, does not disturb it. So each supply cut lasts until the container's stock of the cut input is gone (its
+slots and stack sizes from the game data, plus 8 periods; up to 321 periods for the legendary wagon), the output block
+lasts 4 periods (the disposal chest is filled), and recovery is judged over 40 periods after each disturbance, the first
+6 after the release left out. Do not compare these recordings period for period with the 2-period families.
+
+[container-clock-controls.json](container-clock-controls.json) holds the 6 native summaries, recorded on Factorio 2.1.21
+at commit `000ad913`. **All 6 selected clocks are stable, meet exact baseline output (63 periods), drop to 0 in every
+disturbance and are exact in all 33 judged periods after each.** `container-clock.generation.test.ts` pins each
+selection and its exported clock and checks it against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/container-clock.game.test.ts -t '^container clock: container-car-mixed$'
 ```
