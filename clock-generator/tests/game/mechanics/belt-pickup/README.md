@@ -20,7 +20,7 @@ removed side-loading measurements.
 | Front-facing underground entrance, moving/backed-up and observed arrival phases | [Front entrance](fixtures/front-underground-entrance/README.md) | `front-underground-entrance.game.test.ts`, `front-underground-entrance-fallback.game.test.ts` |
 | Capture support and stale/unsupported metadata | [Capture boundary](../../../../docs/belt-pickup/capture.md) | `pickup-capture.game.test.ts` |
 | Belt-drop stack sizes and finite output stock | [All-speed drop controls](../belt-drop/fixtures/turbo-stacks/README.md) | `../belt-drop/turbo-stacks.game.test.ts` |
-| Generated-clock throughput and recovery | [Build checks](../../builds/README.md) | `../../builds/moving-pickup.game.test.ts`, `../../builds/same-item-pickup-clock.game.test.ts` |
+| Generated-clock throughput and recovery | [Build checks](../../builds/README.md) | `../../builds/moving-pickup.game.test.ts`, `../../builds/same-item-pickup-clock.game.test.ts`, `../../builds/over-hood-pickup-clock.game.test.ts`, `../../builds/front-pickup-clock.game.test.ts`, `../../builds/blocked-output-clock.game.test.ts`, `../../builds/pickup-clock-cold-start.game.test.ts` |
 
 All four belt speeds now have side-pickup, front-entrance, backed-up front-exit, over-the-hood exit and drop
 measurements. Passing a capture regression can preserve a **known simulator counterexample**.
@@ -34,7 +34,7 @@ paired compact assembler because the original plant's tunnel exceeds normal unde
 The over-the-hood matrix has 84 baseline first hands and 174 delayed moving controls, covering both mirrors,
 moving/backed-up supply, original/swapped/same-item lanes and all observed aligned arrival phases. Compact controls
 cover all four speeds, with original-plant counterparts at the three speeds that can pair its longer tunnel.
-Independent lane alignment and repeated hands remain unverified. Sidecar still warns unsupported/inline.
+Independent lane alignment and repeated hands remain unverified. Sidecar 0.11.0 captures this approach as `over-hood-exit`.
 
 ## Run a targeted check
 

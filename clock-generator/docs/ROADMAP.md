@@ -11,13 +11,12 @@ When the generator refuses a config because it does not model something yet, the
 | Id | Name | What it delivers | Status |
 |---|---|---|---|
 | M0 | Ship what is built | Release 0.13.0: clocks are ranked by wake-ups counted at the start of a craft, which is when an inserter waiting to fill a machine is woken, not at a productivity payout. | Released as 0.13.0 |
-| M0.5 | Foundations | Release 0.14.0: Factorio 2.1.21 game data, refusals that say why, filters on belts and chests, long chains that no longer overflow, a check of copies, and inserter kind and quality. | Release 0.14.0 |
-| M1 | Calibration | Three cells that were unstable are placed in the game with the generator's best clock. The generator's rate model is compared with what machines really finish, and cells whose fluid input is dropped are checked. The result is a verdict per cell and a written finding. It is a finding, not a release. | Not started |
-| M2 | Containers | Cars and cargo wagons as chests, with wagon slots by quality taken from the game data. A rocket silo works as a chest, holding one rocket by weight, never as a machine. Checked on cells farmed from real bases. | Not started |
+| M0.5 | Foundations | Release 0.14.0: Factorio 2.1.21 game data, refusals that say why, filters on belts and chests, long chains that no longer overflow, a check of copies, and inserter kind and quality. | Released as 0.14.0 |
+| M1 | Calibration | Cells farmed from real bases are placed in the game with the generator's best clock. The generator's rate model is compared with what machines really finish, and cells whose fluid input is dropped are checked. The result is a verdict per cell and a written finding. It is a finding, not a release. | Done (#189): five real cells are samples with their scaffolds |
+| M2 | Containers | Cars and cargo wagons as chests, with wagon slots by quality taken from the game data. A rocket silo works as a chest, holding one rocket by weight, never as a machine. Checked on cells farmed from real bases. | Next, in 0.20.0 |
 | M3 | Recyclers and quality tiers | Machines that drop their output directly in front of them, recycler recipes with expected amounts, and a progress bar per quality tier for quality drills and recyclers, scaled by productivity. | Not started |
-| M4 | Stability on real cells | Whatever M1 finds: the rate model fixed, or the search extended, so multi-machine Space Age cells and moving belts are clocked at their as-built rate in the game. | Not started |
-| M5 | Backpressure rule | Finding out why single-foundry cells do not recover after backpressure, then keeping, changing or dropping the rule with game recordings as evidence. | Not started |
-| M6 | Validation resumes | The advice on which inserters are worth clocking is checked again on fresh saves of real bases, with the latest release. | Blocked on M1 to M4 |
+| M4 | Stability on real cells | Whatever M1 finds: the rate model fixed, or the search extended, so multi-machine Space Age cells and moving belts are clocked at their as-built rate in the game. | In progress: 0.19.0 does it for belt pickups |
+| M5 | Backpressure rule | Finding out why single-foundry cells do not recover after backpressure, then keeping, changing or dropping the rule with game recordings as evidence. | In progress: 0.19.0 proves recovery by an exact repeat of the simulated state and checks belt builds in the game after three disturbances |
 
 The tools that build the test scaffolds live in a separate repository and are not part of this roadmap.
 
@@ -30,6 +29,14 @@ The tools that build the test scaffolds live in a separate repository and are no
 - A config holding several copies of one unit is checked.
 - Inserters have a kind and a quality in the config, and their swing comes from the game data.
 
+### Releases since 0.14.0
+
+- 0.15.0: `copies` may be a fraction, for a build that holds part of a block.
+- 0.16.0: clocks are judged from the start a game build has (belts full, machines empty); shorter-period clocks are offered where one ingredient lengthens the period; a belt drop may name its lane and position.
+- 0.17.0: the web app is rebuilt: several saved builds, examples, import previews, and an inspector of the selected clock.
+- 0.18.0: belt pickups are modelled from the stacks within reach, with the pickup layout (straight belt or underground) chosen per inserter and captured by Sidecar.
+- 0.19.0, in flight: belt pickups match the game at all four belt speeds (normal, fast, express and turbo) in every pickup layout in scope, and a clock is called stable only where the game agrees. Its plan is [roadmap/0.19.0.md](roadmap/0.19.0.md).
+
 ## Follow-ups
 
 Each follow-up becomes a GitHub issue. Until then, it is listed here.
@@ -41,3 +48,5 @@ Each follow-up becomes a GitHub issue. Until then, it is listed here.
 - F5: moving trains, including a wagon on a moving train.
 - F6: spoilage-removal inserters clocked from the spoil time.
 - F7: belt pickup and drop timing for inserters other than the legendary stack inserter. Until it is measured, a belt pickup by another kind or quality is refused, and a belt drop by one is "not checked". With it, belt pickup at belt stack sizes 1–3 and with hands other than 16, which the generator warns about until then.
+- F8: the capture contract. First measure whether two output inserters sharing a lane change a verdict; only if they do, capture belt identity and drop positions, version the capture's facts apart from the target and operating assumptions, and prune the search with them where results stay the same.
+- F9: a Pickup details panel for a belt-fed inserter: its layout, speed, supply, lane, hand and stack size from the config and capture, and a timeline of its grabs and waits from the simulation, with measured examples kept apart from the current run.

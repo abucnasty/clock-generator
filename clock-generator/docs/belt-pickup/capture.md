@@ -66,6 +66,14 @@ capture declaration; it does not fabricate another native capture. Manual config
 no surviving import provenance retain the existing explicit/default geometry rules. Manual assumptions do not
 establish support for an unsupported source.
 
+## Inserter kind, quality and filter mode
+
+Sidecar 0.11.0 exports each inserter's `prototype` and `quality`, and `filter_mode` when its filters are a blacklist;
+filters that are switched off are not exported. Belt timing is calibrated on the legendary stack inserter alone, so a
+belt pickup by any other inserter is refused, and so is a blacklist (#260); other kinds and qualities keep working on
+chests and machines. An export without `prototype` comes from an older Sidecar: every inserter is read as a legendary
+stack inserter and its filters as the items it moves, and the import says so and asks for a recapture.
+
 ## Older mods and saved data
 
 At the Sidecar import boundary, missing model declarations become `unclassified` even if the export names the
