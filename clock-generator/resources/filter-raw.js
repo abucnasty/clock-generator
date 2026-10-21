@@ -11,6 +11,11 @@
 // (every folder beside base in the data folder: space-age, quality, elevated-rails, recycler), as the harness does
 // (src/harness/factorio-harness.ts, prepareWorkDir). `factorio --version` gives the version line. Nothing in the
 // install is written to. The dump itself is not committed (resources/.gitignore).
+//
+// The dump holds an item's `weight` only where a mod sets it; the game works out the rest when it loads, from the
+// recipes. So the weights come from the running game of the same install: `node resources/dump-item-weights.js
+// <out.json>` writes every item's weight as the game holds it, and `--weights=<out.json>` hands them to this script,
+// which checks them against the weights the dump does name.
 const fs = require("fs/promises");
 const path = require("path");
 
@@ -18,8 +23,9 @@ const { parseLocale, buildNames } = require("./locale-names");
 
 // The game's data folder, for the English locale files; FACTORIO_DATA_DIR names another install
 const FACTORIO_DATA_DIR = process.env.FACTORIO_DATA_DIR ?? "/Applications/factorio.app/Contents/data";
-// later mods win, as in the game
-const LOCALE_MODS = ["core", "base", "elevated-rails", "quality", "space-age"];
+// later mods win, as in the game; an install whose recycler is a mod folder of its own (2.1 on Linux) has the
+// recycling recipes' names there
+const LOCALE_MODS = ["core", "base", "elevated-rails", "quality", "recycler", "space-age"];
 
 const raw_list = new Set([
     "recipe",
@@ -48,6 +54,11 @@ async function main() {
     }
     const rawData = JSON.parse(await fs.readFile(dump, "utf-8"));
     const filtered = mapRawDataToFilteredFactorioData(rawData);
+    const weights_file = argValue("weights");
+    if (!weights_file) {
+        throw new Error("--weights=<the item weights of the running game, from resources/dump-item-weights.js> is required");
+    }
+    filtered["item_weight"] = itemWeights(rawData, filtered, JSON.parse(await fs.readFile(weights_file, "utf-8")));
     const table = await readLocale(FACTORIO_DATA_DIR);
     const { names, fallbackIds, fallbackCount } = buildNames(rawData, filtered, table);
     filtered["names"] = names;
@@ -127,6 +138,43 @@ function mapRawDataToFilteredFactorioData(rawData) {
 
     filtered["inserter_research"] = inserterResearch(rawData.technology ?? {});
 
+    // the vehicles and wagons an inserter can fill or empty, with the slots of their trunk or cargo inventory
+    filtered["container"] = {};
+    for (const category of ["car", "cargo-wagon"]) {
+        for (const [name, container] of Object.entries(rawData[category] ?? {})) {
+            filtered["container"][name] = {
+                name: container.name,
+                type: category,
+                inventory_size: container.inventory_size,
+                quality_affects_inventory_size: container.quality_affects_inventory_size ?? false,
+            };
+        }
+    }
+
+    // what a quality does to a cargo wagon's slots (the game's default is 1)
+    filtered["quality_inventory"] = {};
+    for (const [name, quality] of Object.entries(rawData.quality ?? {})) {
+        if (!quality.hidden) {
+            filtered["quality_inventory"][name] = {
+                cargo_wagon_inventory_size_multiplier: quality.cargo_wagon_inventory_size_multiplier ?? 1,
+            };
+        }
+    }
+
+    // the rocket silos: the recipe they are fixed to, their speed, and the weight a rocket lifts (the silo's own, else the
+    // game's default)
+    const default_lift_weight = rawData["utility-constants"]?.default?.default_rocket_lift_weight;
+    filtered["rocket_silo"] = {};
+    for (const [name, silo] of Object.entries(rawData["rocket-silo"] ?? {})) {
+        filtered["rocket_silo"][name] = {
+            name: silo.name,
+            fixed_recipe: silo.fixed_recipe,
+            crafting_speed: silo.crafting_speed,
+            module_slots: silo.module_slots ?? 0,
+            lift_weight: silo.lift_weight ?? default_lift_weight,
+        };
+    }
+
     filtered["item"] = {};
 
     for (const category of item_categories) {
@@ -145,6 +193,34 @@ function mapRawDataToFilteredFactorioData(rawData) {
     };
 
     return filtered;
+}
+
+/**
+ * The weight of every item the generator knows, as the running game holds it. Where the dump names a weight, the game's
+ * must be that weight (the game keeps it in 1/65536 parts, so a value such as 1,000,000 / 300 can differ in its last
+ * digits); an item the game has no weight for is refused.
+ */
+function itemWeights(rawData, filtered, game_weights) {
+    const named = {};
+    for (const prototypes of Object.values(rawData)) {
+        for (const [name, prototype] of Object.entries(prototypes ?? {})) {
+            if (prototype && typeof prototype === "object" && "stack_size" in prototype && typeof prototype.weight === "number") {
+                named[name] = prototype.weight;
+            }
+        }
+    }
+    const weights = {};
+    for (const name of Object.keys(filtered.item).sort()) {
+        const weight = game_weights[name];
+        if (typeof weight !== "number") {
+            throw new Error(`The running game gave no weight for ${name}`);
+        }
+        if (name in named && Math.abs(named[name] - weight) > 1 / 65536) {
+            throw new Error(`${name} weighs ${named[name]} in the dump and ${weight} in the game`);
+        }
+        weights[name] = weight;
+    }
+    return weights;
 }
 
 function mapAsInserter(struct) {
