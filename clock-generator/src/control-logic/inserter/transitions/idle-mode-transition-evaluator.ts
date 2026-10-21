@@ -174,8 +174,20 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         }
 
         if (EntityState.isChest(this.sink_state)) {
-            // Chest accepts items if it has available space
-            return !this.sink_state.isFull();
+            // Chest accepts items if it has available space: for a chest of mixed items, for the item in the hand or one
+            // the inserter moves
+            const sink = this.sink_state;
+            if (!EntityState.isSlotContainer(sink) && !EntityState.isRocketSilo(sink)) {
+                return !sink.isFull();
+            }
+            const held = this.inserter_state.held_item;
+            if (held !== null) {
+                return !sink.isFull(held.item_name);
+            }
+            for (const item of this.inserter_state.inserter.filtered_items) {
+                if (!sink.isFull(item)) return true;
+            }
+            return false;
         }
 
         return false;

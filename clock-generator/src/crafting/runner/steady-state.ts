@@ -33,6 +33,9 @@ function ownStateKey(state: EntityState, tick: number): string {
     if (EntityState.isBelt(state)) {
         return BeltState.stateKey(state, tick);
     }
+    if (EntityState.isSlotContainer(state) || EntityState.isRocketSilo(state)) {
+        return state.slotKey();
+    }
     return "";
 }
 

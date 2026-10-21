@@ -67,9 +67,14 @@ function machineSpec(machine: Config['machines'][number]): string {
 }
 
 function chestSpec(chest: ChestConfig): string {
-    return chest.type === 'buffer-chest'
-        ? `chest|${chest.type}|${chest.storage_size}|${chest.item_filter}`
-        : `chest|${chest.type}|${JSON.stringify(chest.item_filter)}|${chest.remove_unfiltered_items ?? false}`;
+    if (chest.type === 'buffer-chest') {
+        return `chest|${chest.type}|${chest.storage_size}|${chest.item_filter}`;
+    }
+    if (chest.type === 'infinity-chest') {
+        return `chest|${chest.type}|${JSON.stringify(chest.item_filter)}|${chest.remove_unfiltered_items ?? false}`;
+    }
+    const { id: _id, ...settings } = chest;
+    return `chest|${chest.type}|${JSON.stringify(settings)}`;
 }
 
 function drillSpec(drill: MiningDrillConfig): string {
@@ -112,7 +117,8 @@ function unitsOf(config: Config): { nodes: UnitNode[]; edges: UnitEdge[]; compon
         nodes.set(key, { key, kind: 'machine', id: machine.id, spec: machineSpec(machine) });
     }
     for (const chest of config.chests ?? []) {
-        if (chest.type === 'buffer-chest') {
+        // a chest that holds what it holds is part of a unit; an infinity chest is a supply or a sink outside it
+        if (chest.type !== 'infinity-chest') {
             const key = nodeKey('chest', chest.id);
             nodes.set(key, { key, kind: 'chest', id: chest.id, spec: chestSpec(chest) });
         }

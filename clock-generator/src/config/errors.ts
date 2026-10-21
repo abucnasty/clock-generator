@@ -21,10 +21,8 @@ export interface ConfigValidationIssue {
  * types it takes.
  */
 export const NOT_SUPPORTED_YET: Readonly<Record<string, string>> = {
-    "car": "a car as a chest comes with roadmap milestone M2 (containers)",
-    "tank": "a tank as a chest comes with roadmap milestone M2 (containers)",
-    "cargo-wagon": "a cargo wagon as a chest comes with roadmap milestone M2 (containers); a wagon on a moving train is follow-up F5",
-    "rocket-silo": "a rocket silo as a chest comes with roadmap milestone M2 (containers)",
+    "rocket-silo": "a rocket silo as a machine, crafting rocket parts and launching, comes with phase 2 of roadmap milestone M2 "
+        + "(containers); a rocket silo is taken as a chest: list it under `chests` with type \"rocket-silo\"",
     "recycler": "recyclers come with roadmap milestone M3 (recyclers and quality tiers)",
     "lab": "labs are not modelled: they consume no recipe",
 };

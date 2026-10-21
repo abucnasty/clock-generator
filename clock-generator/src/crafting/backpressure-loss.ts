@@ -207,7 +207,7 @@ function switchOf(context: SimulationContext, loss: BackpressureLoss): { cut(): 
     for (const state of context.state_registry.getAllStates()) {
         if (EntityState.isBelt(state)) {
             sets.push(loss.kind === "supply" ? state.supply.withheld : state.supply.refused);
-        } else if (EntityState.isInfinityChest(state) || EntityState.isBufferChest(state)) {
+        } else if (EntityState.isInfinityChest(state) || EntityState.isFiniteChest(state)) {
             if (loss.kind === "supply" && EntityState.isInfinityChest(state)) {
                 sets.push(state.supply.withheld);
             }
