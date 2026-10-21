@@ -236,6 +236,24 @@ function export.to_table(result)
                 item_filter = #filters > 0 and filters or nil,
                 remove_unfiltered_items = chest.remove_unfiltered_items == true
             })
+        elseif chest.chest_type == "rocket-silo" then
+            table.insert(output.chests, {
+                type = "rocket-silo",
+                id = i,
+                recipe_quality = chest.recipe_quality,
+                crafting_speed = chest.crafting_speed,
+                productivity = chest.productivity,
+                contents = #chest.contents > 0 and chest.contents or nil,
+            })
+        elseif chest.chest_type == "car" or chest.chest_type == "tank" or chest.chest_type == "cargo-wagon" then
+            -- a car's or a tank's quality does not change its slots: only a wagon's is exported
+            table.insert(output.chests, {
+                type = chest.chest_type,
+                id = i,
+                quality = chest.chest_type == "cargo-wagon" and chest.quality or nil,
+                slot_filters = #chest.slot_filters > 0 and chest.slot_filters or nil,
+                contents = #chest.contents > 0 and chest.contents or nil,
+            })
         else
             -- Buffer chest format
             table.insert(output.chests, {

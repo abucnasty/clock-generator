@@ -14,7 +14,7 @@ data:extend({
             border_color = { r = 1, g = 0.2, b = 0.2 },
             cursor_box_type = "copy",
             mode = { "buildable-type", "same-force" },
-            entity_type_filters = { "assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "container", "logistic-container", "infinity-container", "linked-container", "decider-combinator" }
+            entity_type_filters = { "assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo", "decider-combinator" }
         },
         alt_select = {
             border_color = { r = 1, g = 1, b = 0 },
