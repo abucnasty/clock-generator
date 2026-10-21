@@ -1,4 +1,11 @@
-// node resources/filter-raw.js [--dump=<data-raw-dump.json>] [--version="<the game's version line>"]
+// node resources/filter-raw.js [--dump=<data-raw-dump.json>] --weights=<item-weights.json> --version="<the game's version line>"
+//
+// A data refresh, in order, with the harness's install (FACTORIO_PATH in .env):
+//   1. the dump: `factorio --config <config.ini> --mod-directory <mods> --dump-data`, as below;
+//   2. the weights: `npm run build`, then `node resources/dump-item-weights.js <item-weights.json>`;
+//   3. this script, with FACTORIO_DATA_DIR set to that install's data folder (for the locale):
+//      `node resources/filter-raw.js --dump=<dump> --weights=<item-weights.json> --version="$(factorio --version | head -1)"`;
+//   4. a check that what did not change in the game did not change in data-filtered.json (a diff of each key).
 //
 // Reduces Factorio's data dump to what the generator reads (resources/data-filtered.json) and records the game it came
 // from beside it (resources/data-version.json). How to make the dump, with the Factorio install the generator is to
