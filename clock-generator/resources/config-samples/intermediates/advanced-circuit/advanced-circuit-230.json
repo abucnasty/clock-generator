@@ -121,7 +121,7 @@
       "id": 6,
       "source": {
         "type": "belt",
-        "id": 2
+        "id": 5
       },
       "sink": {
         "type": "machine",
@@ -155,7 +155,7 @@
       },
       "sink": {
         "type": "belt",
-        "id": 3
+        "id": 6
       },
       "stack_size": 16,
       "filters": [
@@ -215,6 +215,26 @@
         },
         {
           "ingredient": "coal",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "advanced-circuit",
           "stack_size": 4
         }
       ]
