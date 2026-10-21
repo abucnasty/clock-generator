@@ -375,8 +375,32 @@ by `pickup-clock-cold-start.generation.test.ts` against `tests/game/builds/picku
 
 One later hand differs: on the backed turbo entrance started inside a window, a hand that comes back from its swing in
 the tick the output inserter takes the machine's products off its output block waits a tick in the game and not in
-the simulator (5 input ticks once in 16 periods; output exact). It is not the start; it is held as a known difference
-and listed in the roadmap's follow-ups.
+the simulator (5 input ticks once in 16 periods; output exact). It is not the start; it is held as a known difference,
+below.
+
+**A hand back from its swing as its machine's block is lifted** (roadmap M4, 2026-10-20). Every retained recording was
+searched for such hands (656 recordings, about 40,000 returns from a swing), and that start was recorded once more with
+the clock's deciders reversed: the machine at its output block as its last tick left it, and another inserter's take
+bringing it below in the tick the belt-fed hand is back at the belt. The hand shows "waiting for space", and its first
+stack comes:
+
+| The taker drops | The taker's decider, against the hand's | Hands | First stack |
+| --- | --- | --- | --- |
+| onto a belt | built first (the pickup fixture; the belted-moving electromagnetic science recovery runs) | 55 | a tick after the take |
+| onto a belt | built after (the fixture's start above, its deciders reversed) | 1 | a tick after the take |
+| into a chest | built after (agricultural science, its deciders as exported) | 52 | in the tick of the take |
+| into a chest | built first (agricultural science, its deciders reversed) | 27 | a tick after the take |
+
+A hand that comes a tick late shows "waiting for source items" in the tick of the take. Six more were held up by another
+wait and are left out; no recording has such a hand whose taker drops into a machine, and the inserters' build order and
+a craft finished in the tick before decide nothing. The simulator takes the first stack in the tick of the take every
+time: right for agricultural science's clock as the generator exports it, a tick early wherever the taker drops onto a
+belt. A rule by the taker's drop target, and for a chest the decider order (the game updates the last built first, as
+for windows that open together), matches all 135; tried in the simulator it moves no selected clock in the 214 blast
+jobs (18 change other alternatives only) and no clocked native control but this hand, which it makes exact. Every such
+hand a tick later would move agricultural science's selected clock, which the game's 52 hands contradict. The simulator
+keeps its rule in 0.19.0: no recording varies the drop target alone, and for windows that open together the drop target
+once stood in for the decider order.
 
 **Clock latencies never checked tick for tick in the game.** The simulator gives the window deciders of the period
 clock two ticks of latency, pinned tick for tick on whole-tick clocks by the runs above, A3's staged runs and M1's 128
@@ -393,7 +417,14 @@ lane-phase cells. Two kinds of clock rest on the blueprint's encoding alone:
   (or a modulo of the one clock), so the game's fuel windows would open two ticks later than the simulator's. The
   recorder does not record a fuel clock, and the comparisons check fuel swings by their spacing and state shares only,
   so nothing pins it. A two-tick dark start of these clocks moves no clock the generator selects (166 of 166 blast jobs
-  identical with and without it).
+  identical with and without it). Nor does the whole latency: with the fuel windows moved by the encoding's two ticks
+  and their start dark, in every check that stands for the game, no clock, verdict or selection changes in any of the
+  214 blast jobs (2026-10-20); only the simulator's wake-up figure does, in 7 of the 8 jobs with such a clock (four
+  samples at both supplies; for a selected clock at most biochamber fuel's, 2.07 to 4.14 a minute), none of which has a
+  build. No retained recording has a fuel inserter on a clock of its own (none of the 17 scaffold builds has one). A
+  check needs such a build recorded from a staged start, where every clock starts with the one lock, so the fuel clock's
+  position at each sample follows from the start, and a comparison of each fuel window's first enabled sample with the
+  window's start, which the comparisons do not make.
 
 ## Side-loaded pickups and merges
 
