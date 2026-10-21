@@ -204,6 +204,28 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         settle_ticks: 4800,
         backed_up_belts: true,
     },
+    // One of the three copies of the owner's inserter build of 2026-10-21, 240 inserters a second over the three: an
+    // inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear assembler, which two
+    // more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line of its own; the ore, so the
+    // plates, gears and the circuits from infinity chests, is uncommon. The output inserter runs all the time.
+    "logistic science with inserter crafting": {
+        scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-inserter-crafting-scaffold.txt"),
+        config: ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 2400,
+    },
+    "logistic science with inserter crafting (belts are backed up)": {
+        scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-inserter-crafting-scaffold.txt"),
+        config: ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 2400,
+        backed_up_belts: true,
+        wake_ups_open: "the clock leaves five inserters enabled its whole period of 36 ticks (the plates, gear plates and circuits), and the game "
+            + "wakes them more often than the simulator, for a reason not yet found: 8,678.6 wake-ups a minute against 5,103.8 to 5,268.8 "
+            + "by where the clock starts, on 2026-10-21. Without the switch the game and the simulator agree: ",
+    },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
     // copies. Its clock of 792 ticks takes two periods more than the others to settle.
     "advanced circuit": {
