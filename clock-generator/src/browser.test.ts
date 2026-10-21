@@ -76,6 +76,7 @@ describe("the light entry", () => {
             "config/copies-value.ts",
             "config/migrate-belt-supply.ts",
             "crafting/rank.ts",
+            "crafting/why-not-stable.ts",
             "data-types/fraction.ts",
             "data-types/map-extended.ts",
             "data-types/option.ts",

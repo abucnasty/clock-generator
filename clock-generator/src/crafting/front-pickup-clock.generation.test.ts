@@ -28,6 +28,7 @@ for (const variant of cases) {
         expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
             supply: selected.belt?.kind}).toEqual(expected.selection);
         expect(native.expected).toBe(expected.expected);
+        expect(generated.why_not_stable?.cause).toBe(expected.why_not_stable);
         // The front exit's inserter stands on the exit's output tile: its belt is backed up in the game whatever the
         // config says. Only a recording made under the selection's own supply speaks to its holds verdict.
         const recorded_supply = variant.endpoint === "exit" || variant.backed ? "backed_up" : "moving";

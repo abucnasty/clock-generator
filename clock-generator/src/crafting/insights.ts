@@ -1,11 +1,12 @@
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
-import type { BackpressureLossVerdict } from "./backpressure-loss";
+import { MAX_RECOVERY_PERIODS, type BackpressureLossVerdict } from "./backpressure-loss";
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
+import type { SpareTime } from "./why-not-stable";
 import { FactorioDataService } from "../data";
 import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPickups } from "../config/pickup-calibration";
 import type { Config } from "../config/schema";
@@ -35,6 +36,8 @@ export interface ClockInsight {
     table?: { columns: string[]; rows: string[][] };
     /** Drop ticks of the plan and of the exported clock per inserter, for drawing them against each other */
     swing_comparison?: SwingComparison;
+    /** The spare-time insight's tightest machine, in numbers (see whyNotStable) */
+    spare_time?: SpareTime;
 }
 
 export interface SwingComparison {
@@ -98,6 +101,8 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: SerializableSt
             rows: machines.map(it => [it.entity.label, `${round(it.working)}`, `${round(it.spare)}`,
                 it.facts ? `${round(it.facts.ticks_per_craft)}` : ""]),
         },
+        spare_time: { machine: tightest.entity.label, spare_ticks: tightest.spare, working_ticks: tightest.working,
+            recovery_periods: MAX_RECOVERY_PERIODS },
     };
 }
 

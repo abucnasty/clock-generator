@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
     backpressureLossesOf, judgeRecovery, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossTrialsPartOfTheWay, lossTrialsUntilStopped,
-    MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS,
+    LossOutcome, MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, reportOf, verdictOf,
 } from "./backpressure-loss";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { loadConfigFromFile } from "../config/loader";
@@ -57,6 +57,33 @@ describe("judging what a build made after a loss", () => {
 });
 
 // Automation science: copper plates and gear wheels off one belt into a machine, the packs onto another
+describe("the verdict of a clock's losses", () => {
+    const outcome = (loss: LossOutcome["loss"], recovers: boolean, failed_pickup_phases?: LossOutcome["failed_pickup_phases"]): LossOutcome => ({
+        loss, bin_ticks: 100, periods_per_bin: 1, expected_per_bin: 10, trials: [], recovers,
+        recovered_after_bins: recovers ? 1 : null, stopped_after_ticks: 50, ticks: 1000, ...(failed_pickup_phases && { failed_pickup_phases }),
+    });
+
+    it("names the losses it does not get back from, and apart those it only misses from another lane phase of a moving belt", () => {
+        const report = reportOf(100, 10, outcome({ kind: "none" }, true), [
+            outcome({ kind: "supply", item: "coal" }, false),
+            outcome({ kind: "supply", item: "iron-plate" }, true),
+            outcome({ kind: "supply", item: "copper-plate" }, false, { "inserter:2": [1, 5] }),
+            outcome({ kind: "output", item: "iron-gear-wheel" }, true),
+        ]);
+        expect(verdictOf(report)).toEqual({
+            survives: false,
+            broken_by: ["coal stops arriving", "copper-plate stops arriving"],
+            broken_at_other_lane_phases: ["copper-plate stops arriving"],
+            recovered_after_periods: null,
+        });
+    });
+
+    it("has none apart for a clock that gets back from every loss", () => {
+        const report = reportOf(100, 10, outcome({ kind: "none" }, true), [outcome({ kind: "supply", item: "coal" }, true)]);
+        expect(verdictOf(report)).toEqual({ survives: true, broken_by: [], broken_at_other_lane_phases: [], recovered_after_periods: 1 });
+    });
+});
+
 describe("the losses a build can have", () => {
     let config: Config;
 

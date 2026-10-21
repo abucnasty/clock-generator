@@ -87,6 +87,24 @@ function planSelection(clocks: ClockAlternativeView[], pending = false) {
 }
 
 describe('selection after generation', () => {
+    it('keeps the clocks that could not be made in the order of their tasks, whichever finishes first', async () => {
+        await initialize();
+        Render().runSimulation(config, debug, false);
+        const planner = workers[0];
+        const runId = plan(planner);
+        const finish = (taskId: string) => {
+            const worker = workers.find(worker => worker.requests('task').some(request => request.taskId === taskId && request.runId === runId))!;
+            worker.send({ type: 'task-completed', runId, taskId, run: null,
+                notMade: [{ id: taskId, label: taskId === 'one' ? 'One' : 'Two', reason: `no ${taskId} passes the clock-only check` }] });
+        };
+        finish('two');
+        finish('one');
+        expect(Render().isRunning).toBe(false);
+        expect(Render().notMade.map(clock => clock.label)).toEqual(['One', 'Two']);
+        // a new run starts without them
+        Render().runSimulation(config, debug, false);
+        expect(Render().notMade).toEqual([]);
+    });
     it.each([false, true])('keeps the first display alias when duplicate workers finish in either order (later first: %s)', async laterFirst => {
         await initialize();
         Render().runSimulation(config, debug, false);

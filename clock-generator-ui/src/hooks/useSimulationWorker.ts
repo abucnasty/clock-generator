@@ -2,7 +2,7 @@ import type { ValidationDiagnostic } from '../utils/buildValidation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
-import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
+import type { ClockAlternativeContext, ClockAlternativeTask, NotMadeClock } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
 import type { GeneratedFor } from '../utils/resultsStaleness';
@@ -71,6 +71,8 @@ interface UseSimulationWorkerResult {
     pendingAlternatives: string[];
     /** Labels of the searches that were not run, because a clock made without one can be selected as stable */
     skippedSearches: string[];
+    /** The alternatives that could not be made, with the generator's reasons, in the order of their tasks */
+    notMade: NotMadeClock[];
     /**
      * True when the searches ran because the run asked for them, by the switch or by Search deeper, not because they
      * were needed
@@ -174,6 +176,8 @@ interface Generation {
     skipped: ClockAlternativeTask[];
     /** Primary run first, then one per task in display order */
     runs: (ClockAlternativeRunView | null)[];
+    /** The alternatives of each run that could not be made, in the order of `runs` */
+    notMade: NotMadeClock[][];
     running: Map<Worker, ClockAlternativeTask>;
     done: Set<string>;
     idle: Worker[];
@@ -193,7 +197,7 @@ interface Generation {
 /** The result fields published together, including the clocks of an in-progress run. */
 type ResultsView = Pick<UseSimulationWorkerResult,
     'generationAssumptions' | 'alternatives' | 'selectedAlternativeIndex' | 'pendingAlternatives' |
-    'skippedSearches' | 'searchedDeeper' | 'pickRule' | 'generatedFor' | 'stoppedEarly' | 'pickGone'>;
+    'skippedSearches' | 'notMade' | 'searchedDeeper' | 'pickRule' | 'generatedFor' | 'stoppedEarly' | 'pickGone'>;
 
 /** The labels of the searches a generation did not run; a fallback that was not needed is not one of them */
 const skippedSearchesOf = (generation: Generation): string[] =>
@@ -201,7 +205,7 @@ const skippedSearchesOf = (generation: Generation): string[] =>
 
 const emptyResults = (): ResultsView => ({
     generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0, pendingAlternatives: [],
-    skippedSearches: [], searchedDeeper: false, pickRule: null, generatedFor: null, stoppedEarly: false, pickGone: null,
+    skippedSearches: [], notMade: [], searchedDeeper: false, pickRule: null, generatedFor: null, stoppedEarly: false, pickGone: null,
 });
 
 /** The kept results, opened once for the page (StrictMode mounts the hook twice) */
@@ -228,7 +232,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setResultsView(next);
     }, []);
     const {
-        generationAssumptions, alternatives, selectedAlternativeIndex, pendingAlternatives, skippedSearches,
+        generationAssumptions, alternatives, selectedAlternativeIndex, pendingAlternatives, skippedSearches, notMade,
         searchedDeeper, pickRule, generatedFor, stoppedEarly, pickGone,
     } = resultsView;
     const [lastStop, setLastStop] = useState<RunStop | null>(null);
@@ -340,6 +344,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             selectedAlternativeIndex: user_index >= 0 ? user_index : combined.selected_index,
             pendingAlternatives: generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(task => task.label),
             skippedSearches: skippedSearchesOf(generation),
+            notMade: generation.notMade.flat(),
         });
     }, [updateResults]);
 
@@ -350,6 +355,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         alternatives: resultsViewRef.current.alternatives,
         pickRule: generation.pickRule,
         skippedSearches: skippedSearchesOf(generation),
+        notMade: generation.notMade.flat(),
         searchedDeeper: generation.searchedDeeper,
         stopped,
         lean: false,
@@ -376,6 +382,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             selectedAlternativeIndex: index,
             pendingAlternatives: [],
             skippedSearches: results.skippedSearches,
+            notMade: results.notMade ?? [],
             searchedDeeper: results.searchedDeeper,
             pickRule: results.pickRule,
             generatedFor: results.generatedFor,
@@ -525,6 +532,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 generation.context = response.context;
                 generation.tasks = response.tasks;
                 generation.runs = [null, ...response.tasks.map(() => null)];
+                generation.notMade = [[], ...response.tasks.map(() => [])];
                 generation.waiting = response.tasks.filter(task => task.only_when_needed);
                 generation.queue = orderAlternativeTasks(response.tasks.filter(task => !task.only_when_needed));
                 generation.primaryPending = true;
@@ -535,6 +543,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 break;
             case 'primary-completed':
                 generation.runs[0] = response.primary;
+                generation.notMade[0] = response.notMade ?? [];
                 generation.primaryPending = false;
                 generation.completed++;
                 generation.idle.push(worker);
@@ -543,6 +552,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 break;
             case 'task-completed': {
                 generation.runs[1 + generation.tasks.findIndex(task => task.id === response.taskId)] = response.run;
+                generation.notMade[1 + generation.tasks.findIndex(task => task.id === response.taskId)] = response.notMade ?? [];
                 generation.running.delete(worker);
                 generation.idle.push(worker);
                 generation.completed++;
@@ -697,7 +707,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
-            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [], assumptions: null,
+            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [], notMade: [], assumptions: null,
             running: new Map(), done: new Set(), idle: [], completed: 0, primaryPending: false, assessedSignatures: [],
             previous: shownRef.current, generatedFor: run.generatedFor, pickRule: rule, searchedDeeper: run.searchedDeeper,
         };
@@ -868,6 +878,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         pickRule,
         pendingAlternatives,
         skippedSearches,
+        notMade,
         searchedDeeper,
         validation,
         validate,

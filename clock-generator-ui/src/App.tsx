@@ -164,6 +164,7 @@ function App() {
         pickRule,
         pendingAlternatives,
         skippedSearches,
+        notMade,
         searchedDeeper,
         validation,
         validate,
@@ -1337,6 +1338,7 @@ function App() {
                                 pickRule={pickRule}
                                 pending={pendingAlternatives}
                                 skippedSearches={skippedSearches}
+                                notMade={notMade}
                                 searchedDeeper={searchedDeeper}
                                 keptOn={config.overrides?.search_for_fewer_wake_ups === true}
                                 canSearchDeeper={!busy}

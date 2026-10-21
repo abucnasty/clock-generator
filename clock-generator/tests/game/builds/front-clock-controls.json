@@ -1,5 +1,5 @@
 {
-  "meaning": "The front underground entrance and exit clocks (48): `native` is the capture's summary, `generation` the selection front-pickup-clock.generation.test.ts pins, with the sha256 of its exported clock. `recorded` is the recording that is current: the PR that recorded it in the game, the commit that added it and the frozen engine head its clock was generated and recorded on (null where the run was on an uncommitted tree).",
+  "meaning": "The front underground entrance and exit clocks (48): `native` is the capture's summary, `generation` the selection front-pickup-clock.generation.test.ts pins, with the sha256 of its exported clock and, where the selection does not meet goal 1, `why_not_stable`: the cause the generation gives for it. `recorded` is the recording that is current: the PR that recorded it in the game, the commit that added it and the frozen engine head its clock was generated and recorded on (null where the run was on an uncommitted tree).",
   "cases": {
     "front-entrance-express-mirrored-backed-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b"},
@@ -169,7 +169,7 @@
     "front-exit-express-mirrored-moving-config-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b"},
       "native": {"generationVerdict":"no recovery","target":22.5,"period":1408,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[96,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[144,0,0,0,496],"recovered":[528,528,528,528,528]},{"cut":104,"during":[96,0,432],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
-      "generation": {"period":1408,"expected":528,"verdict":"no recovery","selection":{"id":"derived","holds":true,"rate":22.5,"supply":"moving"},"clock_sha256":"018f3a762d007a307ea68561724ddd472b34200eb7e283d900436ba0f41d6a08"}
+      "generation": {"period":1408,"expected":528,"verdict":"no recovery","selection":{"id":"derived","holds":true,"rate":22.5,"supply":"moving"},"clock_sha256":"018f3a762d007a307ea68561724ddd472b34200eb7e283d900436ba0f41d6a08","why_not_stable":"moving lane phases"}
     },
     "front-exit-express-unmirrored-backed-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b"},
@@ -179,7 +179,7 @@
     "front-exit-express-unmirrored-moving-config-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b"},
       "native": {"generationVerdict":"no recovery","target":22.5,"period":1408,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[96,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[144,0,0,0,496],"recovered":[528,528,528,528,528]},{"cut":104,"during":[96,0,432],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
-      "generation": {"period":1408,"expected":528,"verdict":"no recovery","selection":{"id":"derived","holds":true,"rate":22.5,"supply":"moving"},"clock_sha256":"29da987a5ea135db54abf867fb25f83b3fa89807a9cb0e7b2f3ba8dad77e454d"}
+      "generation": {"period":1408,"expected":528,"verdict":"no recovery","selection":{"id":"derived","holds":true,"rate":22.5,"supply":"moving"},"clock_sha256":"29da987a5ea135db54abf867fb25f83b3fa89807a9cb0e7b2f3ba8dad77e454d","why_not_stable":"moving lane phases"}
     },
     "front-exit-fast-mirrored-backed-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b"},
@@ -209,7 +209,7 @@
     "front-exit-normal-mirrored-moving-config-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b"},
       "native": {"generationVerdict":"unstable","target":7.5,"period":1408,"expected":176,"baseline":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176],"recovery":[{"cut":66,"during":[32,0,144],"recovered":[176,176,176,176,176]},{"cut":84,"during":[132,0,0,0,172],"recovered":[176,176,176,176,176]},{"cut":104,"during":[32,0,144],"recovered":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176]}]},
-      "generation": {"period":1408,"expected":176,"verdict":"unstable","selection":{"id":"swings-1","holds":false,"rate":7.5,"supply":"moving"},"clock_sha256":"8d676fb0fbfe0a1ad92be2cb9f4a36d4c82702f84f69851895a8010b62487f18"}
+      "generation": {"period":1408,"expected":176,"verdict":"unstable","selection":{"id":"swings-1","holds":false,"rate":7.5,"supply":"moving"},"clock_sha256":"8d676fb0fbfe0a1ad92be2cb9f4a36d4c82702f84f69851895a8010b62487f18","why_not_stable":"moving lane phases"}
     },
     "front-exit-normal-unmirrored-backed-different-items": {
       "recorded": {"pr":275,"commit":"29e24031","frozen_head":"6588a59b"},
@@ -219,7 +219,7 @@
     "front-exit-normal-unmirrored-moving-config-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b"},
       "native": {"generationVerdict":"unstable","target":7.5,"period":1408,"expected":176,"baseline":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176],"recovery":[{"cut":66,"during":[32,0,144],"recovered":[176,176,176,176,176]},{"cut":84,"during":[132,0,0,0,172],"recovered":[176,176,176,176,176]},{"cut":104,"during":[32,0,144],"recovered":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176]}]},
-      "generation": {"period":1408,"expected":176,"verdict":"unstable","selection":{"id":"swings-1","holds":false,"rate":7.5,"supply":"moving"},"clock_sha256":"f405f2012f3b777a7c7717739009f37d8bdd32b2f8ddfde5280447fe19c16609"}
+      "generation": {"period":1408,"expected":176,"verdict":"unstable","selection":{"id":"swings-1","holds":false,"rate":7.5,"supply":"moving"},"clock_sha256":"f405f2012f3b777a7c7717739009f37d8bdd32b2f8ddfde5280447fe19c16609","why_not_stable":"moving lane phases"}
     },
     "front-exit-turbo-mirrored-backed-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b"},

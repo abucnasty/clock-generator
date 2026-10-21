@@ -1,6 +1,7 @@
 import { Cancel, CheckCircle, RemoveCircleOutline } from '@mui/icons-material';
-import { Alert, Box, Button, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
+import type { WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import {
     beltLine,
@@ -18,6 +19,7 @@ import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import type { GenerationAssumptions } from '../worker/types';
 import { startCheckSummary } from '../utils/modelAssumptions';
+import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -46,6 +48,8 @@ interface ResultSummaryCardProps {
     stoppedEarly?: boolean;
     /** What to warn of for the selected clock; null when nothing */
     rateWarning: string | null;
+    /** Why the recommended clock does not meet goal 1 (the engine's `why_not_stable`); null when it does */
+    whyNotStable?: WhyNotStable | null;
     /** The clocks are for an earlier build */
     stale: boolean;
     /**
@@ -191,6 +195,10 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     return (
         <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
+            {props.whyNotStable && <Alert severity="warning" sx={{ mb: 1 }} data-why-not-stable={props.whyNotStable.cause}>
+                <AlertTitle>{WHY_NOT_STABLE_TITLE[props.whyNotStable.cause]}</AlertTitle>
+                {props.whyNotStable.message}
+            </Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
             {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>

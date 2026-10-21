@@ -4,6 +4,7 @@
  * storage itself is `resultsStore.ts`.
  */
 
+import type { NotMadeClock } from 'clock-generator/browser';
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import type { PickRule } from './recommendedClock';
 import type { GeneratedFor } from './resultsStaleness';
@@ -40,6 +41,8 @@ export interface KeptResults {
     alternatives: ClockAlternativeView[];
     pickRule: PickRule | null;
     skippedSearches: string[];
+    /** The alternatives that could not be made, with the generator's reasons; missing from results kept before they were */
+    notMade?: NotMadeClock[];
     searchedDeeper: boolean;
     /** The player stopped the run before every clock was tried */
     stopped: boolean;

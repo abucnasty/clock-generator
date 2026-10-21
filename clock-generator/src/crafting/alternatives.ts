@@ -20,6 +20,7 @@ import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCoun
 import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
 import { START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
 import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
+import { NotMadeClock, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 
 
@@ -69,6 +70,10 @@ export interface ClockAlternativesResult {
     start_dependence_checked: boolean;
     /** What the generator says of start dependence for the build: that it was not checked, or how many clocks depend on the start */
     start_dependence_note: string;
+    /** The alternatives that could not be made, each with the generator's reason, in the order they were tried */
+    not_made: NotMadeClock[];
+    /** Why the selected clock does not meet goal 1, in one of three causes (see whyNotStable); null when it is stable */
+    why_not_stable: WhyNotStable | null;
 }
 
 /** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
@@ -547,13 +552,16 @@ function runAlternative(
     /** Signatures of clocks another run assesses: a run that makes one of them again is merged away, so it skips assessing it */
     assessed?: ReadonlySet<string>,
     verification_cache?: Map<string, VerificationAssessment>,
+    on_not_made?: (clock: NotMadeClock) => void,
 ): ClockAlternativeRun | null {
     const copies = config.target_output.copies ?? 1;
     let result: BlueprintGenerationResult;
     try {
         result = definition.run();
     } catch (error) {
-        logger.log(`Clock alternative "${definition.label}" could not be generated: ${error instanceof Error ? error.message : error}`);
+        const reason = error instanceof Error ? error.message : String(error);
+        logger.log(`Clock alternative "${definition.label}" could not be generated: ${reason}`);
+        on_not_made?.({ id: definition.id, label: definition.label, reason });
         return null;
     }
     const { id } = definition;
@@ -676,7 +684,7 @@ export function planClockAlternatives(
             ...(definition.fallback === true ? { fallback: true } : {}),
         }));
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
-    const primary = runAlternative(definition, config, logger, options.on_progress_detail);
+    const primary = runAlternative(definition, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
     return { primary, context, tasks };
 }
 
@@ -705,7 +713,7 @@ export function runClockAlternativeTask(
     const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
         .find(it => it.id === task_id);
     assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
-    return runAlternative(definition, config, logger, options.on_progress_detail, new Set(assessed_signatures));
+    return runAlternative(definition, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, options.on_not_made);
 }
 
 /** The start dependence of a build's clocks in a line: that it was not checked, or which clocks depend on the start */
@@ -751,8 +759,14 @@ export function generateClockAlternatives(
     let total: number | null = null;
     const report = (detail?: string) => options.on_progress?.({ step: current_step, detail, completed, total });
 
+    const not_made: NotMadeClock[] = [];
+    const on_not_made = (clock: NotMadeClock) => {
+        not_made.push(clock);
+        options.on_not_made?.(clock);
+    };
+
     report();
-    const plan = planClockAlternatives(config, { ...options, on_progress_detail: report });
+    const plan = planClockAlternatives(config, { ...options, on_progress_detail: report, on_not_made });
     completed++;
 
     const stable_by_id = new Map<string, boolean>();
@@ -770,7 +784,7 @@ export function generateClockAlternatives(
         for (const definition of made) {
             current_step = definition.label;
             report();
-            const run = runAlternative(definition, config, logger, report, undefined, verification_cache);
+            const run = runAlternative(definition, config, logger, report, undefined, verification_cache, on_not_made);
             completed++;
             runs[1 + definitions.indexOf(definition)] = run;
             if (run) {
@@ -807,5 +821,23 @@ export function generateClockAlternatives(
         ...combined,
         skipped_searches: searches_run ? [] : searches.map(it => it.label),
         ...startDependenceSummary(config, combined.alternatives),
+        not_made,
+        why_not_stable: whyNotStableOf(config, combined.alternatives, combined.selected_index, not_made),
     };
+}
+
+/** Why the selected clock of a generation does not meet goal 1, from its alternatives (see whyNotStable) */
+export function whyNotStableOf(
+    config: Config,
+    alternatives: readonly ClockAlternative[],
+    selected_index: number,
+    not_made: readonly NotMadeClock[],
+): WhyNotStable | null {
+    const clocks = alternatives.map(alternative => whyNotStableClockOf({ ...alternative,
+        as_built: alternative.result.stability_check.as_built, expected_output_items: alternative.result.stability_check.expected_output_items }));
+    return whyNotStable(clocks, selected_index, {
+        target_items_per_second: config.target_output.items_per_second,
+        backed_up_belts: config.overrides?.backed_up_belts === true,
+        not_made,
+    });
 }
