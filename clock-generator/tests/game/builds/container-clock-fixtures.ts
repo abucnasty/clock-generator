@@ -51,13 +51,13 @@ export function containerDrainPeriods(variant: ContainerClockCase, item: string)
 
 /**
  * The standard protocol, with the cuts long enough to empty the container: a cut of one input, an output block and a
- * cut of another (the only one again for gears), each followed until the output is back (30 periods judged).
+ * cut of another (the only one again for gears), each followed until the output is back (40 periods, the first 6 after a release not judged).
  */
 export function containerInterventions(variant: ContainerClockCase): [number, number, number][] {
     const [first, second] = variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"];
     const cut1 = containerDrainPeriods(variant, first) + 8, cut2 = containerDrainPeriods(variant, second) + 8;
-    const release1 = 66 + cut1, block = release1 + 30, unblock = block + 4, cut = unblock + 20, release2 = cut + cut2;
-    return [[66, release1, block], [block, unblock, cut], [cut, release2, release2 + 30]];
+    const release1 = 66 + cut1, block = release1 + 40, unblock = block + 4, cut = unblock + 40, release2 = cut + cut2;
+    return [[66, release1, block], [block, unblock, cut], [cut, release2, release2 + 40]];
 }
 
 const filtered = (from: number, to: number, item: string) =>
