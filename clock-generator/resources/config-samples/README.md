@@ -315,8 +315,11 @@ target of 230 a second, for which no clock holds.
 
 That one is kept as a second sample, `advanced-circuit-230.json` (`ADVANCED_CIRCUIT_230`), with the subtick clock
 that was exported for it then. It is the same build as the one at 240 and uses the same scaffold: the same five
-machines, nine inserters and three belts, numbered differently. Its config differs in three things only: the target
-rate, the coal inserter set to always enabled, and `ignored_lcm_ingredients` for coal. So the same machines hold 240
+machines and nine inserters, numbered differently. Its config differs in four things only: the target rate, the coal
+inserter set to always enabled, `ignored_lcm_ingredients` for coal, and its belts. It puts both plants' electronic
+circuits on one belt and both plants' products on another. The sample at 240 gives each plant its own input belt
+and its own output belt, as the scaffold does: each input line has its own feeders, and the two output lines meet
+only past both plants. Splitting them changes none of the 240 sample's clocks. So the same machines hold 240
 a second under a stable clock, and until 2026-10-11 no clock held 230: the nearest made 217.3 on a clock rounded to
 550 ticks. At 230 the clock period is not a whole number of ticks (550.957), and that is where the gap was thought to
 be: in planning a clock whose period is not whole, not in the build
