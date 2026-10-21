@@ -8,10 +8,11 @@ import {BELT_SPEEDS, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * Recovery through a blocked output at belt stack sizes 1-4 (roadmap C3). A legendary assembler 3 makes iron gears from
- * an infinity chest of iron plates; its output inserter drops onto a belt that runs OUTLET_TILES tiles to a loader into an
- * infinity chest. The stack size is the force's (`belt_stack_size_bonus`, set by the probe as B5 does), which would also
- * change what a belt-fed input finds on its belt: the input here is fed from a chest, so only the drop sees it.
+ * Recovery through a blocked output at belt stack sizes 1-4. A legendary assembler 3 makes iron gears from an infinity
+ * chest of iron plates; its output inserter drops onto a belt that runs OUTLET_TILES tiles to a loader into an infinity
+ * chest. The stack size is the force's (`belt_stack_size_bonus`, set by the probe as the belt-drop calibration of PR #251
+ * does), which would also change what a belt-fed input finds on its belt: the input here is fed from a chest, so only the
+ * drop sees it.
  */
 export interface BlockedOutputClockCase {name: string; speed: FixtureBeltSpeed; stackSize: 1 | 2 | 3 | 4}
 

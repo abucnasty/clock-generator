@@ -1,7 +1,8 @@
--- Observe a generated clock on the chest-fed blocked-output fixture. The force's belt stack size is set first (B5's
--- way: only belt_stack_size_bonus changes, research is checked unchanged); output is counted per clock period from the
--- output inserter's drops; for each intervention the output loader is removed and rebuilt at its release, so the belt
--- fills from its end back to the drop. Interventions happen only after 64 untouched periods.
+-- Observe a generated clock on the chest-fed blocked-output fixture. The force's belt stack size is set first (as the
+-- belt-drop calibration of PR #251 does: only belt_stack_size_bonus changes, research is checked unchanged); output is
+-- counted per clock period from the output inserter's drops; for each intervention the output loader is removed and
+-- rebuilt at its release, so the belt fills from its end back to the drop. Interventions happen only after 64 untouched
+-- periods.
 local entities, surface = ...
 local machine = capture.find_one(entities, function(entity) return entity.name == "assembling-machine-3" end, "machine")
 local input = capture.find_one(entities, function(entity)
