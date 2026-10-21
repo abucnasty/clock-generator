@@ -39,4 +39,14 @@ async function loadSample(key, backed_up_belts = false) {
     return config;
 }
 
-module.exports = { ROOT, dist, quiet, loadSample };
+/**
+ * The keys of the samples the sweeps take: every sample but those that exist to be refused (older builds have no
+ * such list), and PROCESSING_UNITS_BELT_EXPORT only with FULL=1 (see sweep.sh).
+ */
+function sampleKeys() {
+    const { ConfigPaths, ExpectedRefusals = {} } = dist("config/config-paths.js");
+    return Object.keys(ConfigPaths)
+        .filter(key => !(key in ExpectedRefusals) && (process.env.FULL === "1" || key !== "PROCESSING_UNITS_BELT_EXPORT"));
+}
+
+module.exports = { ROOT, dist, quiet, loadSample, sampleKeys };

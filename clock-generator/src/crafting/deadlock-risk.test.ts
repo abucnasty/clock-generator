@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { ConfigPaths } from "../config/config-paths";
+import { ConfigPaths, isExpectedRefusal } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { deadlockRiskNote, describeSharedItem, sharedItemDeadlockRisks } from "./deadlock-risk";
@@ -58,13 +58,9 @@ describe("the deadlock risk of two inserters that bring the same item", () => {
 
     it("is on no other sample that generates", async () => {
         const with_risk: string[] = [];
-        for (const [key, path] of Object.entries(ConfigPaths)) {
-            try {
-                if (risksOf(await loadConfigFromFile(path)).length > 0) {
-                    with_risk.push(key);
-                }
-            } catch {
-                // a sample that is not a whole config has no build to read
+        for (const [key, path] of Object.entries(ConfigPaths).filter(([key]) => !isExpectedRefusal(key))) {
+            if (risksOf(await loadConfigFromFile(path)).length > 0) {
+                with_risk.push(key);
             }
         }
         expect(with_risk).toEqual(["UTILITY_SCIENCE"]);

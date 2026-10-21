@@ -122,8 +122,8 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
      * own, as it is updated after the take, and a tick later when it was built before (`windowOpeningTakeDecider`,
      * `decider_build_order`). Recorded in Factorio 2.1.21 on windows that open with the taker's on a machine at its
      * block, from a belt and from a machine, onto a belt and into a machine or a chest, in 9,189 of 9,189 over fifteen
-     * runs, each clock built in its own order, in reverse and renumbered (roadmap M3); where the drop target seemed to
-     * decide (M2) it was the order the generator builds the deciders in. Where either order is not known, a tick
+     * runs, each clock built in its own order, in reverse and renumbered (PR #268); where the drop target seemed to
+     * decide (PR #267) it was the order the generator builds the deciders in. Where either order is not known, a tick
      * later.
      */
     private wokenThisTick(window_opens: boolean): boolean {

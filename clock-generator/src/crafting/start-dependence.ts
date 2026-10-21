@@ -31,7 +31,7 @@ export interface ClockStart {
  * The cold start of the staged scaffold (machines, buffers and hands empty, the clock from tick 0) with the clock
  * standing 0, 30, 300, 700 and 1000 ticks into its period, the cold start with the competing inserters served in the
  * order of ascending config ids and in two random orders, and the cold start with the clock's window deciders built in
- * reverse order, as a build put down by robots can have them (roadmap M3). The first is the one every clock is judged on.
+ * reverse order, as a build put down by robots can have them (PR #268). The first is the one every clock is judged on.
  */
 export const CLOCK_STARTS: readonly ClockStart[] = [
     ...COLD_START_SHIFTS.map(shift => ({

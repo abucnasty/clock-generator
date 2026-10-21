@@ -36,11 +36,10 @@ export function actsInTheTickTheBlockIsLifted(sink: { outputBlockedAfterLastTick
  * in that tick, without the tick a hand woken by products being taken waits (`belt_grab_decided`).
  *
  * Recorded in Factorio 2.1.21 on the normal moving underground pickups from cold starts at chosen lane phases: in all
- * 102 resumes from such a wait in A3's runs the game took its first stack in the tick after the craft start, a tick
- * before a simulator that kept the extra tick (work/belt-pickup-parity/a3-native-rounds.md, section 8.5). With it the
- * simulator follows the game from each of the 64 lane-phase starts of both builds, tick for tick with the rule for a
- * window that opens on a machine at its output block (`wokenThisTick`;
- * tests/game/builds/normal-underground-lane-phase-controls.json).
+ * 102 resumes from such a wait in the game runs behind PR #266 the game took its first stack in the tick after the
+ * craft start, a tick before a simulator that kept the extra tick. With it the simulator follows the game from each
+ * of the 64 lane-phase starts of both builds, tick for tick with the rule for a window that opens on a machine at its
+ * output block (`wokenThisTick`; tests/game/builds/normal-underground-lane-phase-controls.json).
  */
 export function wokenByItsMachinesCraftStart(sink: { outputBlockedAfterLastTick: boolean; startedCraftInLastTick: boolean }): boolean {
     return sink.startedCraftInLastTick && !sink.outputBlockedAfterLastTick;

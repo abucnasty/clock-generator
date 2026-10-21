@@ -7,7 +7,7 @@ const CONFIG_SAMPLES_DIR = path.resolve(__dirname, '../../resources/config-sampl
 
 /**
  * Named general-build samples used by clock generation and sample sweeps.
- * Use these with `loadConfigFromFile()` to load configurations.
+ * Use these with `loadConfigFromFile()` to load configurations. A few exist to be refused (`ExpectedRefusals`).
  * 
  * @example
  * ```typescript
@@ -33,7 +33,6 @@ export const ConfigPaths = {
     PRODUCTION_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science-belt-fed.json'),
     PRODUCTION_SCIENCE_SHARED: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science-shared-whole-swings.json'),
     PRODUCTION_SCIENCE_SHARED_JSON: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science-shared.json'),
-    PRODUCTIVITY_MODULE: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'productivity-module', 'productivity-module.json'),
     SAMPLE_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-sample.json'),
     STONE_BRICKS_DIRECT_INSERT: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'stone-bricks', 'stone-bricks-direct-insert.json'),
     STONE_BRICKS_DIRECT_INSERT_2_1: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'stone-bricks', 'stone-bricks-direct-insert-2-1.json'),
@@ -69,3 +68,33 @@ export const ConfigPaths = {
     REAL_STUPIDFATHOBBIT_CELL06: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell06', 'stupidfathobbit-cell06.json'),
     REAL_ATLAN_CELL29: path.join(CONFIG_SAMPLES_DIR, 'real', 'atlan', 'cell29', 'atlan-cell29.json'),
 } as const;
+
+/** A sample kept to be refused: why it is kept, and the error generating a clock from it must fail with */
+export interface ExpectedRefusal {
+    /** Why the sample exists */
+    readonly reason: string;
+    /** Part of the message of the error that generating a clock from it throws */
+    readonly error: string;
+}
+
+/**
+ * The samples of `ConfigPaths` that exist to be refused, not to generate a clock from, by key. Generating each must
+ * fail with its error (`expected-refusals.test.ts`); code that walks every sample leaves these out.
+ */
+export const ExpectedRefusals = {
+    BAD_ACCUMULATOR_CONFIG: {
+        reason: "The coverage check's deliberate fixture (PR #53): a machine with no inserters",
+        error: 'Missing inserter coverage',
+    },
+    REAL_STUPIDFATHOBBIT_CELL02: {
+        reason: 'A real cell (PR #189) whose inserter 12 puts electronic circuits on belt 3 for the rest of a utility science '
+            + 'design the config does not include, so the belt needs an export rate: refused until 0.20.0 measures it',
+        error: 'Inserter 12 puts electronic-circuit onto belt 3, but nothing in the config takes it off. '
+            + 'Make it an export belt with a consumption rate (items/s) on that lane.',
+    },
+} as const satisfies Partial<Record<keyof typeof ConfigPaths, ExpectedRefusal>>;
+
+/** Whether the sample of a `ConfigPaths` key is one of the expected refusals */
+export function isExpectedRefusal(key: string): key is keyof typeof ExpectedRefusals {
+    return key in ExpectedRefusals;
+}

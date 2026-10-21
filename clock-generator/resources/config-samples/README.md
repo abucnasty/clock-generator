@@ -1,7 +1,8 @@
 # Sample configurations and scaffolds
 
 One folder per build, grouped by what it makes: `science/`, `intermediates/`, `gleba/`, `smelting/`. A folder holds
-the build's config(s) as JSON and, where one exists, its scaffold. `src/config/config-paths.ts` names the general samples used by sweeps.
+the build's config(s) as JSON and, where one exists, its scaffold. `src/config/config-paths.ts` names the general samples used by sweeps;
+two of them exist to be refused ([below](#samples-that-are-refused)).
 
 A **scaffold** is a blueprint string of exactly one copy of the build without a clock: the machines and inserters the
 config describes, in the ideal environment for a clock to be added to them. That environment is the scaffold's own:
@@ -84,16 +85,21 @@ In the order they would settle the most:
 4. **intermediates/processing-units** (belt export): rates moved slightly.
 5. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
 6. **science/military-science**, **intermediates/flying-robot-frame**,
-   **intermediates/lithium-plates**, **intermediates/electric-engine-unit**, **intermediates/productivity-module**,
+   **intermediates/lithium-plates**, **intermediates/electric-engine-unit**,
    **gleba/biochamber-fuel**, **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 
-The `accumulator-bad-config.json` sample is a deliberately invalid config for the validator and needs no scaffold.
+## Samples that are refused
 
-`intermediates/productivity-module` is not a whole config yet: it has no belts, though its output inserter drops on
-belt 1, and no inserters bring iron plates and copper cables to its electronic circuit machine, coal to its plastic
-machine or copper plates to its cable machine. Validating it stops at "Entity with ID belt:1 does not exist", and
-with the belt added at the four missing inserters. It needs the build it was exported from before it can be
-generated, let alone recorded.
+Two samples exist to be refused, not to generate a clock from, and need no scaffold. `ExpectedRefusals` in
+`src/config/config-paths.ts` lists each with the reason it is kept and the error generating it must fail with;
+`src/config/expected-refusals.test.ts` checks both, and the sweeps leave them out.
+
+- `intermediates/accumulator/accumulator-bad-config.json` (`BAD_ACCUMULATOR_CONFIG`) is the coverage check's
+  deliberately invalid config (PR #53): its machine has no inserters. It fails with "Missing inserter coverage".
+- `real/stupidfathobbit/cell02` (`REAL_STUPIDFATHOBBIT_CELL02`) is a real cell (PR #189). Its inserter 12 puts
+  electronic circuits on belt 3 for the rest of a utility science design the config does not include, so the belt
+  needs an export rate. It fails with "Inserter 12 puts electronic-circuit onto belt 3, but nothing in the config
+  takes it off" until 0.20.0 measures that rate.
 
 ## Backpressure loss
 
