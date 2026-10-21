@@ -1,6 +1,7 @@
 import { Config } from "../../config";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
+import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { SimulationContext } from "../sequence/simulation-context";
 import { SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
@@ -22,8 +23,8 @@ export interface ConfigValidation {
 
 /**
  * Checks that a clock can be planned for the config and returns that plan, without generating any clock: every
- * ingredient and output has an inserter, the machines can reach the target rate, and every belt that is filled is
- * planned for. Costs one prepare run (the machines crafting until output blocked; a second with the belts backed up
+ * ingredient and output has an inserter, the machines can reach the target rate, no belt lane is asked for more than it
+ * carries, and every belt that is filled is planned for. Costs one prepare run (the machines crafting until output blocked; a second with the belts backed up
  * where they move, which the output swings are counted on) instead of the hundreds of simulations a generation does. Throws with the reason when the config is not valid.
  *
  * A generation can still end up with another plan than this one: it lowers the output swings when the planned
@@ -38,6 +39,8 @@ export function validateConfig(config: Config, options: { logger?: Logger } = {}
     new PrepareStep(simulation_context).execute();
 
     const { crafting_cycle_plan, output_inserters, all_output_inserters } = planCraftingCycle(config, simulation_context, logger);
+    // the planner has accepted the target: now no belt lane may be asked for more than it carries
+    assertLaneCapacity(config);
     const { recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);
     const cycle_ticks = crafting_cycle_plan.total_duration.ticks;
     // the hands one output machine gives up a cycle, over all the inserters that take from it

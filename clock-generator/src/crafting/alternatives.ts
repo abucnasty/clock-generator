@@ -2,6 +2,7 @@ import assert from "../common/assert";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
+import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
 import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
@@ -660,6 +661,7 @@ export function planClockAlternatives(
     const result = definition.run();
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
+    warnLanesSharedByCopies(config, logger);
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
         planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,

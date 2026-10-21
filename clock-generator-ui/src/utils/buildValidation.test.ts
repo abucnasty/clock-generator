@@ -92,3 +92,11 @@ it('lists the engine warning for a belt pickup whose timing is not tested as adv
     expect(both.map(({ source, blocksGeneration }) => ({ source, blocksGeneration })))
         .toEqual([{ source: 'engine', blocksGeneration: true }, { source: 'calibration', blocksGeneration: false }]);
 });
+
+it('lists the engine warning for lanes the copies would share over capacity as advice that never blocks generation', () => {
+    const text = 'If the 3 copies share lane 1 of belt 1, they take 2.40 times what it carries (3 × 96 = 288 a second, of 120).';
+    const input = { fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 3 }], chestIssues: [], coverageText: () => '' };
+    expect(buildValidationIssues({ ...input, laneSharedByCopies: text })).toEqual([{ id: 'lanes-shared-by-copies', text, severity: 'warning',
+        blocksGeneration: false, source: 'lanes', target: { kind: 'validation-issue', id: 'lanes-shared-by-copies' } }]);
+    expect(buildValidationIssues({ ...input, laneSharedByCopies: null })).toEqual([]);
+});

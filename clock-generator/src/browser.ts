@@ -71,6 +71,8 @@ export {
     InserterCoverageIssue,
     InserterCoverageIssueKind,
     InserterFixOption,
+    LaneCapacityError,
+    LaneCapacityIssue,
 } from './config/errors';
 
 export { validateCopies, findRepeatedUnits } from './config/copies-validator';
@@ -90,6 +92,7 @@ export {
 } from './config/inserter-coverage-validator';
 export { insertersScopeProblem } from './config/inserter-scope';
 export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/pickup-calibration';
+export { laneCapacityIssues, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
 export type { UncalibratedBeltPickup } from './config/pickup-calibration';
 
 // ============================================================================

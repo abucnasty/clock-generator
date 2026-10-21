@@ -184,12 +184,12 @@ it('warns live of a belt pickup whose timing is not tested, as generation logs i
         return (answer as { answer: LiveCoverage }).answer;
     };
 
-    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null });
+    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null });
     const warning = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
     const untested = await live(gears(2));
-    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning });
+    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null });
     expect(buildValidationIssues({ fieldProblems: [], coverage: untested.issues, scopeRefusal: untested.refusal, pickupNotTested: untested.pickupNotTested,
         chests: [], inserters: [], machines: gears(2).machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
@@ -202,4 +202,36 @@ it('warns live of a belt pickup whose timing is not tested, as generation logs i
     expect(primary?.alternatives[0].insights.filter(insight => insight.id === 'belt-pickup-not-tested')).toHaveLength(1);
     const warned = posted.flatMap(response => response.type === 'log' ? response.messages : []).filter(message => message.level === 'warn');
     expect(warned.map(message => message.message)).toEqual([warning]);
+});
+
+it('warns live of a lane the copies would ask too much of if they shared it, as advice that does not block', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    // 100 copies of a gear assembler taking 1.5 iron plates a second off a lane that carries 120
+    const config = {
+        target_output: { recipe: 'iron-gear-wheel', items_per_second: 75, copies: 100 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
+        inserters: [
+            { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
+            { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 } },
+        ],
+        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
+        chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
+    } as Config;
+    const answer = await send({ type: 'query', requestId: 70, query: { kind: 'inserter-coverage', config } });
+    const live = (answer as { answer: LiveCoverage }).answer;
+    const warning = 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
+        + 'The config cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
+        + 'belts of their own is not affected.';
+    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning });
+    expect(buildValidationIssues({ fieldProblems: [], coverage: live.issues, laneSharedByCopies: live.laneSharedByCopies,
+        chests: [], inserters: [], machines: config.machines, chestIssues: [], coverageText: () => '' })
+        .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
+        .toEqual([{ source: 'lanes', severity: 'warning', blocksGeneration: false, text: warning }]);
+    expect(await send({ type: 'validate', requestId: 71, config })).toMatchObject({ type: 'validated' });
 });

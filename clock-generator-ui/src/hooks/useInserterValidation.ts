@@ -5,15 +5,18 @@ import type { LiveCoverage } from '../worker/types';
 
 /**
  * Only routes, carried items, recipes and fuel can change connection coverage; an inserter's kind and filter mode can put
- * it out of scope; a lane's and an inserter's stack size can put a belt pickup outside its calibration.
+ * it out of scope; a lane's and an inserter's stack size can put a belt pickup outside its calibration; the target,
+ * productivity, a belt's type and a drop's lane change what a lane is asked for against what it carries.
  */
 function coverageKey(config: Config): string {
     return JSON.stringify({
-        machines: config.machines.map(({ id, recipe, type, fuel }) => [id, recipe, type, fuel]),
-        belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => [lane.ingredient, lane.stack_size])]),
+        target: config.target_output,
+        machines: config.machines.map(({ id, recipe, type, fuel, productivity }) => [id, recipe, type, fuel, productivity]),
+        belts: config.belts.map(({ id, type, lanes }) => [id, type, lanes.map(lane => [lane.ingredient, lane.stack_size,
+            'consumption_per_second' in lane ? lane.consumption_per_second : null])]),
         chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter : [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]]),
         inserters: config.inserters.map(({ id, source, sink, filters, filter_mode, prototype, quality, stack_size }) =>
-            [id, source.type, source.id, sink.type, sink.id, filters, filter_mode, prototype, quality, stack_size,
+            [id, source.type, source.id, sink.type, sink.id, sink.type === 'belt' ? sink.drop?.lane : null, filters, filter_mode, prototype, quality, stack_size,
                 source.type === 'belt' && source.pickup_capture?.status === 'unsupported' ? source.pickup_capture.reason : null]),
         drills: config.drills?.configs.map(({ target, mined_item_name }) => [target.id, mined_item_name]),
     });

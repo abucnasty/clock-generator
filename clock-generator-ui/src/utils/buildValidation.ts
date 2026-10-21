@@ -12,8 +12,11 @@ export interface BuildValidationIssue extends Problem {
     id: string;
     severity: 'error' | 'warning';
     blocksGeneration: boolean;
-    /** 'calibration': the engine's warning that a belt pickup's timing is not tested, shown as plain text */
-    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration';
+    /**
+     * 'calibration': the engine's warning that a belt pickup's timing is not tested; 'lanes': its warning that the copies
+     * summed would ask a lane for more than it carries. Both shown as plain text.
+     */
+    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes';
     fieldTarget?: FocusTarget;
     coverage?: InserterCoverageIssue;
     chest?: OutputChestIssue;
@@ -41,6 +44,8 @@ interface Input {
     scopeRefusal?: string | null;
     /** The live warning for belt pickups outside 16-item hands on 4-item belt stacks: advice, never blocking */
     pickupNotTested?: string | null;
+    /** The live warning for lanes the copies would ask too much of if they shared them: advice, never blocking */
+    laneSharedByCopies?: string | null;
     failure?: { message: string; diagnostics?: ValidationDiagnostic[] };
 }
 
@@ -95,6 +100,11 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
     if (input.pickupNotTested) {
         const id = 'belt-pickup-not-tested';
         add({ id, text: input.pickupNotTested, severity: 'warning', blocksGeneration: false, source: 'calibration',
+            target: { kind: 'validation-issue', id } });
+    }
+    if (input.laneSharedByCopies) {
+        const id = 'lanes-shared-by-copies';
+        add({ id, text: input.laneSharedByCopies, severity: 'warning', blocksGeneration: false, source: 'lanes',
             target: { kind: 'validation-issue', id } });
     }
     return [...found.values()];
