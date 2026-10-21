@@ -9,28 +9,28 @@
       "id": 1,
       "recipe": "carbon",
       "productivity": 200,
-      "crafting_speed": 68.89999866485596,
+      "crafting_speed": 68.875,
       "type": "machine"
     },
     {
       "id": 2,
       "recipe": "tungsten-carbide",
       "productivity": 100,
-      "crafting_speed": 40.312498807907104,
+      "crafting_speed": 40.3125,
       "type": "machine"
     },
     {
       "id": 3,
       "recipe": "metallurgic-science-pack",
       "productivity": 150,
-      "crafting_speed": 180.79999923706055,
+      "crafting_speed": 180.75,
       "type": "machine"
     },
     {
       "id": 4,
       "recipe": "tungsten-plate",
       "productivity": 150,
-      "crafting_speed": 191.49999618530273,
+      "crafting_speed": 191.481,
       "type": "machine"
     }
   ],
@@ -80,7 +80,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -95,7 +96,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -110,7 +112,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 2
+        "id": 2,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -125,7 +128,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
