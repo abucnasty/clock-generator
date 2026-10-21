@@ -7,6 +7,8 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `scaffold-recordings.game.test.ts`: the catalog of complete sample builds, including wake-up/recording comparisons.
 - `moving-pickup.game.test.ts`: different-item pickup geometry, moving/backed-up supply and recovery.
 - `same-item-pickup-clock.game.test.ts`: same-item lane fallback, throughput and recovery.
+- `over-hood-pickup-clock.game.test.ts`, `front-pickup-clock.game.test.ts`: the over-the-hood exit and the front
+  underground entrance and exit, throughput and recovery.
 
 From `clock-generator/`, select a file or case:
 
@@ -314,3 +316,41 @@ BELT_SPEED_CAPTURE_DIR=../work/over-hood-clock-new \
 Use the generation cache and replay variables above with a fresh capture directory. Optional
 `BELT_CLOCK_TRACE_PICKUPS=1` retains 64 ticks of native held/stock and machine-inventory snapshots before the first disturbance
 and after each restoration; it does not feed observations into the simulator.
+
+## Front pickup operating clocks
+
+`front-pickup-clock.game.test.ts` enumerates 48 controls ([front-clock-fixtures.ts](front-clock-fixtures.ts)):
+
+- **Front entrance, 32:** the owner's [compact scaffold](../mechanics/belt-pickup/fixtures/front-underground-entrance/compact-normal-scaffold.txt)
+  at four speeds, both mirroring states, moving/backed-up supply, electronic circuits from iron plate and copper
+  cable and gears from iron on both lanes, at 6/s. Its assembler runs at crafting speed 50 (two legendary speed
+  modules and four legendary beacons), productivity 0. Like the over-the-hood builds it keeps producing through the
+  ordinary short outages on its stock, so its three disturbances last 24 periods.
+- **Front exit, backed up, 8:** the electromagnetic-plant [fixture](../mechanics/belt-pickup/fixtures/front-underground-exit/README.md)
+  at four speeds and both mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s normal)
+  and the ordinary disturbances.
+- **Front exit on a moving config, 8:** the same eight builds generated with `backed_up_belts: false`. The input
+  stands on the exit's output tile, so the belt is backed up in the game whatever the config says; recovery is
+  assessed as for backed-up supply.
+
+[front-clock-controls.json](front-clock-controls.json) holds the 48 native summaries, recorded on Factorio 2.1.21
+from clocks generated after A5 (`5cb7c83b`), each with 63 untouched baseline periods and three disturbances that cut
+output. **46 meet exact baseline and recovery output.** All 32 entrance clocks are stable and exact. Six backed-up
+exit clocks are stable and exact; the normal backed-up exit, in both mirroring states, selects a fractional clock
+with holds false (5.45 of 7.5/s) that misses natively, 128, 128, 96 repeating against 176, the generator's own
+as-built repeat. All eight moving-config exit clocks hold and recover exactly on the backed-up exit, including
+the express ones the generator calls "no recovery" and the normal ones it calls "unstable": both verdicts come
+from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
+
+The portable `front-pickup-clock.generation.test.ts` pins each selection, its exact exported clock
+([front-clock-generation-controls.json](front-clock-generation-controls.json)), and checks it against its native
+summary: a baseline miss under the selection's own supply needs holds false; a stable clock, or a moving-config
+clock on the backed-up exit, needs an exact baseline and its last recovery periods at target. 29 of the 32
+entrance clocks are byte-identical to the over-the-hood pins of the same speed, mirroring, supply and family;
+the builds differ in the game, so each has its own control.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/front-clock-new \
+  npm run test:game -- tests/game/builds/front-pickup-clock.game.test.ts \
+  -t '^operating clock: front-exit-normal-unmirrored-backed-different-items$'
+```
