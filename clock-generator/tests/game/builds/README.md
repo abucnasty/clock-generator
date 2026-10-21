@@ -9,6 +9,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `same-item-pickup-clock.game.test.ts`: same-item lane fallback, throughput and recovery.
 - `over-hood-pickup-clock.game.test.ts`, `front-pickup-clock.game.test.ts`: the over-the-hood exit and the front
   underground entrance and exit, throughput and recovery.
+- `blocked-output-clock.game.test.ts`: a chest-fed machine whose output belt is blocked, at belt stack sizes 1–4.
 
 From `clock-generator/`, select a file or case:
 
@@ -359,4 +360,31 @@ the builds differ in the game, so each has its own control.
 BELT_SPEED_CAPTURE_DIR=../work/front-clock-new \
   npm run test:game -- tests/game/builds/front-pickup-clock.game.test.ts \
   -t '^operating clock: front-exit-normal-unmirrored-backed-different-items$'
+```
+
+## Blocked output at belt stack sizes 1–4
+
+`blocked-output-clock.game.test.ts` enumerates 16 controls ([blocked-output-clock-fixtures.ts](blocked-output-clock-fixtures.ts)):
+iron gears at 5/s in a legendary assembler 3 (crafting speed 3.125, no modules or beacons), fed by a legendary stack
+inserter from an infinity chest of iron plates; the output stack inserter drops onto a belt of the case's tier that
+runs ten tiles to a loader into an infinity chest. The probe ([blocked-output-clock-probe.lua](blocked-output-clock-probe.lua))
+sets the belt stack size with `force.belt_stack_size_bonus`, as the [belt-drop calibration](../mechanics/belt-drop/README.md)
+does, and checks research unchanged; the input is chest-fed, so the stack size reaches the drop only. Its one
+disturbance is the output alone: the loader is removed at period 66 and rebuilt at period 90, and recovery is judged
+from period 96 to 130. The capture runner takes the scenario's own probe, intervention and hardware check
+(a chest-fed input, crafting speed 3.125, every drop the case's stack size, hands of 15 at stack size 3 and 16 otherwise).
+
+[blocked-output-clock-controls.json](blocked-output-clock-controls.json) holds the 16 native summaries, recorded on
+Factorio 2.1.21 on `b9fd341b`. **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery
+output (33 periods).** Output stops one to ten periods into the block, once the belt behind the drop is full (about 39
+stacks), where the simulator holds the output inserter at once; the periods judged after the release are the same in
+both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-and-drops)). The portable
+`blocked-output-clock.generation.test.ts` pins each selection and its exported clock
+([blocked-output-clock-generation-controls.json](blocked-output-clock-generation-controls.json)) and checks it against
+its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=../work/blocked-output-new \
+  npm run test:game -- tests/game/builds/blocked-output-clock.game.test.ts \
+  -t '^blocked output clock: blocked-output-express-stack-3$'
 ```
