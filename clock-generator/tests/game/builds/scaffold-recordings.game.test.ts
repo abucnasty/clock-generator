@@ -186,6 +186,24 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         settle_ticks: 2400,
         backed_up_belts: true,
     },
+    // A real cell (#189): two electromagnetic plants making advanced circuits from one copper cable foundry and two
+    // plastic chemical plants, whose coal comes on one belt; 90 a second. Its electronic circuits come from infinity
+    // chests.
+    "composite cell 07": {
+        scaffold: path.join(SAMPLES, "real", "composite04", "cell07", "composite04-cell07-scaffold.txt"),
+        config: ConfigPaths.REAL_COMPOSITE04_CELL07,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 4800,
+    },
+    "composite cell 07 (belts are backed up)": {
+        scaffold: path.join(SAMPLES, "real", "composite04", "cell07", "composite04-cell07-scaffold.txt"),
+        config: ConfigPaths.REAL_COMPOSITE04_CELL07,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 4800,
+        backed_up_belts: true,
+    },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
     // copies. Its clock of 792 ticks takes two periods more than the others to settle.
     "advanced circuit": {
