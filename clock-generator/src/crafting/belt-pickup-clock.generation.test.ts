@@ -16,7 +16,7 @@ interface NativeClockControl {
 }
 
 const controls = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/pickup-clock-a4-controls.json"), "utf8")) as Record<string, NativeClockControl>;
+    "../../tests/game/builds/pickup-clock-a8-controls.json"), "utf8")) as Record<string, NativeClockControl>;
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 interface StartupControl {
@@ -54,8 +54,8 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         if (startup) {
             // The fixed windows stay as a check of the simulator against the game's measured cold starts (a
             // fully jammed start at offset 1287 alternates 144/208 natively), independent of the selection:
-            // since the belt window trim the generator selects fractional here, which the branches below judge
-            // on its own parity recording.
+            // the generator now selects the clock planned with the belts moving here (A8), which the branches
+            // below judge on its own recording.
             for (const phase of startup.phases) {
                 const windows = Object.fromEntries(Object.entries(startup.clock_windows).map(([id, ranges]) =>
                     [id, rotateRanges(ranges.map(range => OpenRange.from(range.start, range.end)), phase.offset, startup.period)
@@ -94,7 +94,9 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         } else if (meetsTarget) {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
-            expect(selected.belt?.kind).toBe(variant.backed ? "backed_up" : "moving");
+            // a backed-up config gets a clock for a moving belt only as the fallback, where no other clock is stable
+            // (the normal underground entrance and exit, whose backed-up belts refill slower than a stack a tick)
+            expect(selected.belt?.kind).toBe(variant.backed && selected.id !== "planned-moving-belt" ? "backed_up" : "moving");
         } else {
             // A fallback requiring backed-up supply is not a verified clock for moving input.
             expect(selected.verdict !== "stable" || selected.belt?.kind !== (variant.backed ? "backed_up" : "moving"),

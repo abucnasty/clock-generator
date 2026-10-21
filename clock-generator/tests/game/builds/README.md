@@ -94,10 +94,14 @@ its observations with new clock results. Always pair a replay with the summaries
 
 ## Post-fix ordinary clock verification
 
-The current default expectations are [pickup-clock-a4-controls.json](pickup-clock-a4-controls.json), recorded on
-Factorio 2.1.21. The two express moving underground configurations were re-recorded on their first clock made for
-moving supply (roadmap A4, `54af3542`: observed windows at 3 output swings, in place of a clock for backed-up belts),
-with 63 untouched baseline periods and three effective disturbances; the other 46 are copied unchanged from
+The current default expectations are [pickup-clock-a8-controls.json](pickup-clock-a8-controls.json), recorded on
+Factorio 2.1.21. The two normal backed-up underground configurations were re-recorded on the clock the generator now
+makes for them last, when no other clock can be selected as stable (roadmap A8, `6588a59b`: planned with the belts
+moving, given belt pickup slack and checked on the backed-up belts, in place of a fractional clock that missed), with
+63 untouched baseline periods and three effective disturbances; the other 46 are copied unchanged from
+[pickup-clock-a4-controls.json](pickup-clock-a4-controls.json). There the two express moving underground configurations
+were re-recorded on their first clock made for moving supply (roadmap A4, `54af3542`: observed windows at 3 output
+swings, in place of a clock for backed-up belts); the other 46 are copied unchanged from
 [pickup-clock-m2-controls.json](pickup-clock-m2-controls.json). There the fast straight moving electromagnetic
 configuration was re-recorded after a belt-fed window's first stack was tied to where its machine's products go
 (roadmap M2, `7950f77c`): the only clock of the 48 whose exported blueprint and schedule changed (one output swing per
@@ -106,15 +110,14 @@ cycle at 704 ticks again, in place of planned belt slack at 3520). Its other 47 
 the belt hand's resume after a craft start was fixed (roadmap M1, `aae515e9`) and the other 28 were copied from
 [pickup-clock-a2-controls.json](pickup-clock-a2-controls.json), recorded after the belt window-end trim
 (`b654e895`); the two normal moving underground copies carry the generator's "unstable" verdict for the same clock.
-The m2, m1 and a2 files, and before them [pickup-clock-parity-controls.json](pickup-clock-parity-controls.json) (engine
+The a4, m2, m1 and a2 files, and before them [pickup-clock-parity-controls.json](pickup-clock-parity-controls.json) (engine
 commit `4f2d4e35`), stay as the historical evidence of the clocks they recorded.
 
 | Result | Cases | Interpretation |
 | --- | --- | --- |
-| Stable, exact baseline and recovery | 42 | The selected clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early periods from the coverage protocol's calibration state; the clock since M1 runs exact from the first period |
+| Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early periods from the coverage protocol's calibration state; the clock since M1 runs exact from the first period. It also includes the normal backed-up underground entrance/exit (roadmap A8): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the fractional clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock planned with the belts moving and checked on the backed-up belts holds; the cold-start controls below still check the simulator against the measured starts with fixed windows |
 | Exact baseline and recovery in these warm recordings, generator says unstable | 2 | Normal moving underground entrance/exit: the generator finds the clock failing from cold lane phase [3,0], and the game never settles from it either, nor from four other phases, among them the exit's natural one, where it cycles at 143 a period against 176 ("Normal underground lane phases" below). The warm runs started at a phase that holds |
 | Exact baseline and recovery, generator says no recovery | 2 | Express moving underground entrance/exit (roadmap A4): every loss the generator tries fails from lane phase [1,5] alone, which the capture cannot set up ([pickup-clock-recovery-phase-controls.json](pickup-clock-recovery-phase-controls.json)). Their clocks before, made for backed-up belts, moved 352 a period against 528 under moving supply; with every inserter always enabled the game moves 704 to 716 through this pickup |
-| Baseline missed, generator says unstable | 2 | Normal backed-up underground entrance/exit: the fractional selection (holds false) misses natively, and the cold-start controls below check the simulator against the measured starts |
 
 No failing captured ordinary default is marked stable for its actual supply. These checks do not close broader
 startup timing or over-the-hood operating clocks.
@@ -335,10 +338,13 @@ and after each restoration; it does not feed observations into the simulator.
 
 [front-clock-controls.json](front-clock-controls.json) holds the 48 native summaries, recorded on Factorio 2.1.21
 from clocks generated after A5 (`5cb7c83b`), each with 63 untouched baseline periods and three disturbances that cut
-output. **46 meet exact baseline and recovery output.** All 32 entrance clocks are stable and exact. Six backed-up
-exit clocks are stable and exact; the normal backed-up exit, in both mirroring states, selects a fractional clock
-with holds false (5.45 of 7.5/s) that misses natively, 128, 128, 96 repeating against 176, the generator's own
-as-built repeat. All eight moving-config exit clocks hold and recover exactly on the backed-up exit, including
+output; the two normal backed-up exits were recorded again on A8's clock (`6588a59b`). **All 48 meet exact baseline and
+recovery output.** All 32 entrance clocks are stable and exact. All eight backed-up exit clocks are stable and exact.
+At normal, in both mirroring states, every clock planned for backed-up supply fails (the fractional clock selected
+before, holds false at 5.45 of 7.5/s, missed natively, 128, 128, 96 repeating against 176, the generator's own
+as-built repeat); the selection is the clock planned with the belts moving and checked on the backed-up belts, which
+the generator makes last, only when no other clock can be selected as stable (roadmap A8), the same clock as the
+moving config's. All eight moving-config exit clocks hold and recover exactly on the backed-up exit, including
 the express ones the generator calls "no recovery" and the normal ones it calls "unstable": both verdicts come
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
 

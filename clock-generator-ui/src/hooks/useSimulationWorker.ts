@@ -165,9 +165,12 @@ interface Generation {
     context: ClockAlternativeContext | null;
     tasks: ClockAlternativeTask[];
     queue: ClockAlternativeTask[];
-    /** The searches that wait for every other task: whether they run is decided from the runs of those */
+    /**
+     * The searches that wait for every other task, and the fallbacks that wait for them too: whether they run is
+     * decided from the runs before them
+     */
     waiting: ClockAlternativeTask[];
-    /** The searches that were not run */
+    /** The searches and fallbacks that were not run */
     skipped: ClockAlternativeTask[];
     /** Primary run first, then one per task in display order */
     runs: (ClockAlternativeRunView | null)[];
@@ -191,6 +194,10 @@ interface Generation {
 type ResultsView = Pick<UseSimulationWorkerResult,
     'generationAssumptions' | 'alternatives' | 'selectedAlternativeIndex' | 'pendingAlternatives' |
     'skippedSearches' | 'searchedDeeper' | 'pickRule' | 'generatedFor' | 'stoppedEarly' | 'pickGone'>;
+
+/** The labels of the searches a generation did not run; a fallback that was not needed is not one of them */
+const skippedSearchesOf = (generation: Generation): string[] =>
+    generation.skipped.filter(task => !task.fallback).map(task => task.label);
 
 const emptyResults = (): ResultsView => ({
     generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0, pendingAlternatives: [],
@@ -332,7 +339,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             alternatives: combined.alternatives,
             selectedAlternativeIndex: user_index >= 0 ? user_index : combined.selected_index,
             pendingAlternatives: generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(task => task.label),
-            skippedSearches: generation.skipped.map(task => task.label),
+            skippedSearches: skippedSearchesOf(generation),
         });
     }, [updateResults]);
 
@@ -342,7 +349,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         generationAssumptions: generation.assumptions === null ? null : { ...generation.assumptions, complete: !stopped },
         alternatives: resultsViewRef.current.alternatives,
         pickRule: generation.pickRule,
-        skippedSearches: generation.skipped.map(task => task.label),
+        skippedSearches: skippedSearchesOf(generation),
         searchedDeeper: generation.searchedDeeper,
         stopped,
         lean: false,
@@ -427,14 +434,16 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [busyWorkersFor, progressStore, replace, setShown, updateResults]);
 
     const dispatchTasks = useCallback((generation: Generation) => {
-        if (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0 && !generation.primaryPending) {
-            // every clock made without a search is in: the searches run when none of them can be selected as stable
-            const searches = generation.waiting;
-            generation.waiting = [];
+        while (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0 && !generation.primaryPending) {
+            // every clock made before them is in: the searches run when none of them can be selected as stable, and
+            // after them the fallbacks (a clock for another belt than the config's), when still none can
+            const searches = generation.waiting.filter(task => !task.fallback);
+            const stage = searches.length > 0 ? searches : generation.waiting;
+            generation.waiting = generation.waiting.filter(task => !stage.includes(task));
             if (searchesAreNeeded(generation.runs, it => it.ranking)) {
-                generation.queue = orderAlternativeTasks(searches);
+                generation.queue = orderAlternativeTasks(stage);
             } else {
-                generation.skipped = searches;
+                generation.skipped = [...generation.skipped, ...stage];
             }
             publishAlternatives(generation);
         }

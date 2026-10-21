@@ -125,17 +125,21 @@ its timing is not tested. Measuring them is follow-up F7.
 
 The ordinary clocks are verified on **48 configurations** across all four speeds: the a2 recapture after the belt
 window-end trim, with the 20 electromagnetic clocks the M1 resume fix changed recorded again, and the fast straight
-moving clock the M2 window rule changed recorded once more, and the two express moving underground clocks A4 changed
-(`tests/game/builds/pickup-clock-a4-controls.json`).
-**46 meet exact baseline and recovery output**, 42 of them marked stable; the turbo moving straight clock no longer
+moving clock the M2 window rule changed recorded once more, the two express moving underground clocks A4 changed, and
+the two normal backed-up underground clocks A8 changed (`tests/game/builds/pickup-clock-a8-controls.json`).
+**All 48 meet exact baseline and recovery output**, 44 of them marked stable; the turbo moving straight clock no longer
 over-produces in its early periods. The two normal moving
 underground defaults hold their baseline in these warm recordings and got back to target after every loss, but the
 generator says "unstable": it finds the clock failing from cold lane phase [3,0], and a native sweep of all 64 lane
 phases shows the game never settling from it or from four other phases, the exit's natural one among them, where
 it cycles at 143 a period against 176 (`tests/game/builds/normal-underground-lane-phase-controls.json`, roadmap M1).
-The two normal backed-up underground defaults select a fractional
-clock whose baseline misses natively, matching holds false; their fully jammed cold-start controls alternate
-144/208 items at offset 1287 as fixed-window simulator checks. The two express moving underground defaults are
+The two normal backed-up underground defaults are the clock planned with the belts moving, given belt pickup slack
+and checked on the backed-up belts (A8): 176 in every baseline period and after every disturbance. A backed-up belt
+at normal speed refills the pickup slower than a stack a tick, so every clock planned for backed-up supply closes its
+windows before the hand is full; the fractional clock selected before missed natively (128, 128, 96 against 176),
+matching its holds false. The generator makes the moving-belt clock last, only when no other clock can be selected as
+stable. Their fully jammed cold-start controls alternate 144/208 items at offset 1287 as fixed-window simulator
+checks. The two express moving underground defaults are
 observed windows at 3 output swings, made for moving supply (A4): exact baseline and recovery in the game, while the
 generator says "no recovery", its loss trials failing from lane phase [1,5] alone, which the capture cannot set up
 (`pickup-clock-recovery-phase-controls.json`). Through this half-tile pickup the game moves 704 to 716 a period with
@@ -146,10 +150,12 @@ backed-up supply, moved 352 a period under moving supply, in the model as in the
 
 The front clocks are verified on **48 configurations** (`tests/game/builds/front-clock-controls.json`, roadmap C2): the
 front entrance on the owner's compact assembler scaffold (32: both families, mirroring states and supplies) and the
-front exit on the electromagnetic plant, backed up (8) and on a moving config (8). All 32 entrance clocks are stable and
-exact in baseline and recovery. The backed-up exit's are exact at turbo, express and fast; at normal, in both mirroring
-states, every alternative fails and the selected fractional clock (holds false) misses natively, 128, 128, 96 repeating
-against 176, the generator's own as-built repeat, as the normal backed-up side undergrounds miss. **A moving config on
+front exit on the electromagnetic plant, backed up (8) and on a moving config (8). All 48 are exact in baseline and
+recovery. All 32 entrance clocks are stable. The backed-up exit's are stable at every tier; at normal, in both
+mirroring states, every clock planned for backed-up supply fails (the fractional clock selected before, holds false,
+missed natively, 128, 128, 96 repeating against 176, the generator's own as-built repeat), and the selection is the
+clock planned with the belts moving and checked on the backed-up belts (A8), the same clock the moving config gets,
+which moves 176 in every period. **A moving config on
 the front exit is safe on this layout:** the input stands on the exit's output tile, so the belt is backed up in the
 game whatever the config says, and the clock made for moving belts holds and recovers exactly at every tier. That
 includes the express clocks the generator calls "no recovery" and the normal ones it calls "unstable", both judged
@@ -285,12 +291,13 @@ with two overlapping detailed recorder periods. Electromagnetic targets scale wi
 | Fast undergrounds | false | Stable | 176 / 704 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | false | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
-| Normal undergrounds | false | Unstable | 176 / 1,408 ticks | Warm: 176; fully jammed cold offset 1287: 144/208 | Correctly rejects startup-sensitive clock |
+| Normal undergrounds | false | Stable | 176 / 1,408 ticks | 176 throughout; fully jammed cold offset 1287 (fixed windows): 144/208 | Planned with the belts moving, checked on the backed-up belts (A8); every clock planned for backed-up supply misses |
 | Normal undergrounds | true | Unstable | 176 / 1,408 ticks | Warm: 176 throughout | Historical recovery alternation resolved; a modeled cold lane-phase start alternates 192/160 and has not been reproduced natively |
 
-All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-two
-ordinary defaults are correctly marked stable; two are startup-sensitive, two are rejected on modeled lane phases
-that have not been reproduced natively, and two select a fallback for a different supply condition. Four
+All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-four
+ordinary defaults are correctly marked stable, the two normal backed-up undergrounds among them since A8; the two
+normal moving undergrounds are rejected on lane phases the game fails from too (M1), and the two express moving
+undergrounds keep a cautious "no recovery" from a lane phase the capture cannot set up (A4). Four
 additional cold-start controls cover both normal backed-up undergrounds at offsets
 0 and 1287, matching all 16 output periods each. A full lane can still move: these controls verify stationary
 initial stock and empty machines/hands before comparing the simulator. The [build report](../../tests/game/builds/README.md)

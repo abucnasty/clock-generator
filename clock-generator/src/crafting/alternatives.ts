@@ -13,7 +13,7 @@ import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
-import { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
+import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
 import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
@@ -101,9 +101,14 @@ export interface ClockAlternativeTask {
     label: string;
     /**
      * True for a search the config does not ask for on every build: it waits for the tasks without this, and only
-     * runs when `searchesAreNeeded` says so of their runs and the primary one.
+     * runs when `searchesAreNeeded` says so of their runs and the primary one. Also true for a fallback.
      */
     only_when_needed: boolean;
+    /**
+     * A clock for a belt other than the one the config describes: it waits for the searches too, and only runs when
+     * `searchesAreNeeded` says so of every run before it, theirs included. It is not listed among the skipped searches.
+     */
+    fallback?: boolean;
 }
 
 
@@ -117,6 +122,9 @@ export interface ClockAlternativesPlan {
 /** The id of the alternative made without belt pickup slack on purpose: batched swings for a backed-up belt */
 const WITHOUT_BELT_PICKUP_SLACK_ID = "planned";
 
+/** The id of the alternative made for a moving belt on a config whose belts are backed up */
+const FOR_A_MOVING_BELT_ID = "planned-moving-belt";
+
 
 interface AlternativeDefinition {
     id: string;
@@ -127,11 +135,16 @@ interface AlternativeDefinition {
     planned_on?: Config;
     /** One of the four searches: it makes its clock by trying many, which takes most of the time of a generation */
     search?: boolean;
+    /**
+     * A clock for a belt other than the one the config describes: it waits for the searches as well, and is only made
+     * when no clock made before it, theirs included, can be selected as stable. It is not one of the searches.
+     */
+    fallback?: boolean;
 }
 
-/** Whether a search waits until it is known that no clock made without one can be selected as stable */
+/** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
 function onlyWhenNeeded(definition: AlternativeDefinition, config: Config): boolean {
-    return definition.search === true && config.overrides?.search_for_fewer_wake_ups !== true;
+    return definition.fallback === true || (definition.search === true && config.overrides?.search_for_fewer_wake_ups !== true);
 }
 
 
@@ -226,6 +239,12 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
             + "(belt pickup slack), long enough for one more full hand at one belt stack a tick. On a moving belt, and more so on "
             + "one with gaps, a pickup can come late; the extra ticks let it finish instead of the inserter being switched off "
             + `holding a partial hand.${pickup}`;
+        if (config.overrides?.backed_up_belts === true) {
+            return `${moving} The config says the input belts are backed up: this clock is planned with the belts moving, so a hand `
+                + "is given the time moving stacks take to come into reach, and it is checked with the belts backed up. A backed-up "
+                + "belt refills a pickup at its own speed, which can be slower than a stack a tick. It is only made when no clock "
+                + "made for a backed-up belt can be selected as stable.";
+        }
         return moving;
     }
     const backed_up = " Made for a backed-up belt: its belt inserters get only the windows they need with backed-up supply at the pickup, "
@@ -346,8 +365,18 @@ function alternativeDefinitionsFor(
     // Supply still matters for always-enabled and fuel pickups, even when the clock has no belt windows.
     const offer_backed_up_belt = config.overrides?.backed_up_belts !== true
         && config.inserters.some(inserter => inserter.source.type === "belt");
+    // the reverse for a config whose belts are backed up, as a fallback: made where no clock for them can be selected as stable
+    const offer_moving_belt = config.overrides?.backed_up_belts === true
+        && config.inserters.some(inserter => inserter.source.type === "belt");
 
     return [
+        ...(offer_moving_belt ? [{
+            id: FOR_A_MOVING_BELT_ID,
+            label: `${BATCHED_SWINGS_LABEL}, moving belt`,
+            description: BATCHED_SWINGS_DESCRIPTION,
+            run: () => generateClockWithSwingBackoff(base_config, quiet, movingBeltClock),
+            fallback: true,
+        }] : []),
         ...(offer_backed_up_belt ? [{
             id: WITHOUT_BELT_PICKUP_SLACK_ID,
             label: `${BATCHED_SWINGS_LABEL}, backed-up belt`,
@@ -640,7 +669,10 @@ export function planClockAlternatives(
             ? leanPeriodItems(result.serializable_transfer_plan, config.overrides?.ignored_lcm_ingredients) : [],
     };
     const tasks = alternativeDefinitions(config, context, {})
-        .map(definition => ({ id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config) }));
+        .map(definition => ({
+            id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config),
+            ...(definition.fallback === true ? { fallback: true } : {}),
+        }));
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
     const primary = runAlternative(definition, config, logger, options.on_progress_detail);
     return { primary, context, tasks };
@@ -702,7 +734,8 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
  *
  * The four searches come last and only run when none of the clocks made before them can be selected as stable
  * (`searchesAreNeeded`), unless the config asks for them on every build (`overrides.search_for_fewer_wake_ups`).
- * The alternatives are listed in the same order either way.
+ * After them, on a config whose belts are backed up, a clock made for a moving belt, when still none can. The
+ * alternatives are listed in the same order either way.
  *
  * Runs everything in sequence; the UI runs the tasks from planClockAlternatives in parallel workers instead.
  */
@@ -745,8 +778,10 @@ export function generateClockAlternatives(
         }
     };
 
-    const searches = definitions.filter(definition => onlyWhenNeeded(definition, config));
-    const first = definitions.filter(definition => !searches.includes(definition));
+    const waiting = definitions.filter(definition => onlyWhenNeeded(definition, config));
+    const searches = waiting.filter(definition => definition.fallback !== true);
+    const fallbacks = waiting.filter(definition => definition.fallback === true);
+    const first = definitions.filter(definition => !waiting.includes(definition));
     total = 1 + first.length;
     generate(first);
     const searches_run = searches.length > 0 && searchesAreNeeded(runs, it => it.ranking);
@@ -757,9 +792,18 @@ export function generateClockAlternatives(
         logger.log(`Not searched (${searches.map(it => it.label).join(", ")}): a clock made without a search is stable. `
             + "Set overrides.search_for_fewer_wake_ups to search for one with fewer wake-ups.");
     }
+    // last, a clock for another belt than the config's, where nothing made so far can be selected as stable
+    if (fallbacks.length > 0 && searchesAreNeeded(runs, it => it.ranking)) {
+        total += fallbacks.length;
+        generate(fallbacks);
+    }
 
     current_step = "Done";
     report();
     const combined = combineClockAlternativeRuns(runs, it => it.ranking);
-    return { ...combined, skipped_searches: searches_run ? [] : searches.map(it => it.label), ...startDependenceSummary(config, combined.alternatives) };
+    return {
+        ...combined,
+        skipped_searches: searches_run ? [] : searches.map(it => it.label),
+        ...startDependenceSummary(config, combined.alternatives),
+    };
 }
