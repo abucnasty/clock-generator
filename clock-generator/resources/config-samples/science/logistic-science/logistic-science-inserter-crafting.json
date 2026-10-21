@@ -9,40 +9,40 @@
       "id": 1,
       "recipe": "inserter",
       "productivity": 0,
-      "crafting_speed": 74.000000953674
+      "crafting_speed": 73.984375
     },
     {
       "id": 2,
       "recipe": "iron-plate",
       "productivity": 50,
-      "crafting_speed": 86.149997711182,
+      "crafting_speed": 86.1655,
       "type": "furnace"
     },
     {
       "id": 3,
       "recipe": "iron-plate",
       "productivity": 50,
-      "crafting_speed": 86.149997711182,
+      "crafting_speed": 86.1655,
       "type": "furnace"
     },
     {
       "id": 4,
       "recipe": "iron-gear-wheel",
       "productivity": 100,
-      "crafting_speed": 40.312498807907
+      "crafting_speed": 40.3125
     },
     {
       "id": 5,
       "recipe": "iron-plate",
       "productivity": 50,
-      "crafting_speed": 86.149997711182,
+      "crafting_speed": 86.1655,
       "type": "furnace"
     },
     {
       "id": 6,
       "recipe": "iron-plate",
       "productivity": 50,
-      "crafting_speed": 86.149997711182,
+      "crafting_speed": 91.875,
       "type": "furnace"
     }
   ],
@@ -50,7 +50,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -64,7 +65,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -78,7 +80,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 4,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -92,7 +95,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 4,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -148,7 +152,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 2
+        "id": 2,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -210,6 +215,10 @@
         {
           "ingredient": "iron-ore",
           "stack_size": 4
+        },
+        {
+          "ingredient": "iron-ore",
+          "stack_size": 4
         }
       ]
     },
@@ -217,6 +226,10 @@
       "id": 2,
       "type": "turbo-transport-belt",
       "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        },
         {
           "ingredient": "electronic-circuit",
           "stack_size": 4
@@ -232,9 +245,20 @@
           "stack_size": 4
         }
       ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "iron-ore",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "iron-ore",
+          "stack_size": 4
+        }
+      ]
     }
-  ],
-  "overrides": {
-    "terminal_swing_count": 5
-  }
+  ]
 }
