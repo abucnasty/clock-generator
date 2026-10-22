@@ -1,7 +1,7 @@
 import data from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
 import { FactorioDataService } from 'clock-generator/browser';
-import { containerSlotCount, paintSlotFilters, slotRange } from './containerSlotFilters';
+import { containerSlotCount, paintSlotFilters, shownSlotFilter, slotRange } from './containerSlotFilters';
 import { QUALITIES } from './configForm/formData';
 
 FactorioDataService.initialize(JSON.parse(data));
@@ -32,5 +32,13 @@ describe('inventory filter editing', () => {
         const pasted = paintSlotFilters(filters, [2], filters[1].item);
         expect(pasted).toEqual([{ slot: 2, item: 'lithium' }, { slot: 5, item: 'lithium' }]);
         expect(paintSlotFilters(pasted, [2], 'lithium')).toEqual(pasted);
+    });
+
+    it('paints a marker as a blocked slot that remembers it, and shows a blocked slot of unknown marker as No item', () => {
+        const painted = paintSlotFilters([{ slot: 1, item: 'iron-plate' }], [2, 3], 'deconstruction-planner');
+        expect(painted).toEqual([{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true, _marker: 'deconstruction-planner' }, { slot: 3, blocked: true, _marker: 'deconstruction-planner' }]);
+        expect(painted.map(shownSlotFilter)).toEqual(['iron-plate', 'deconstruction-planner', 'deconstruction-planner']);
+        expect(shownSlotFilter({ slot: 4, blocked: true })).toBe('no-item');
+        expect(paintSlotFilters(painted, [2], 'coal')[1]).toEqual({ slot: 2, item: 'coal' });
     });
 });

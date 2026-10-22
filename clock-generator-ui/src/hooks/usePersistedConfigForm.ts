@@ -40,6 +40,7 @@ import {
     type InserterFormData,
     type MachineFormData,
 } from '../utils/configForm/formData';
+import { formSlotFilters } from '../utils/containerSlotFilters';
 
 /** Migrate legacy inserter data to include id field */
 function migrateInserters(inserters: unknown[]): InserterFormData[] {
@@ -59,9 +60,11 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
         if (c.type === ChestType.INFINITY_CHEST) {
             return { ...(c as InfinityChestFormData), _uuid: uuid };
         }
-        // a car, a tank, a cargo wagon or a rocket silo is kept as it is
+        // a car, a tank, a cargo wagon or a rocket silo is kept as it is, a slot filtered to a marker read as blocked
         if (c.type !== undefined && (CONTAINER_CHEST_TYPES as string[]).includes(c.type)) {
-            return { ...(c as ContainerChestFormData), _uuid: uuid };
+            const container = c as ContainerChestFormData;
+            return { ...container, ...('slot_filters' in container && Array.isArray(container.slot_filters)
+                && { slot_filters: formSlotFilters(container.slot_filters) }), _uuid: uuid } as ContainerChestFormData;
         }
         // Default to buffer chest (handles legacy data without type)
         return {

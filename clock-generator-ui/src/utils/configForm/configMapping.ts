@@ -2,12 +2,14 @@ import type { Config, RuleSet } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { withDefaultPickupType } from '../pickupGeometry';
 import { isContainerChest } from './formData';
+import { formSlotFilters } from '../containerSlotFilters';
 import type {
     BeltLaneFormData,
     ChestFormData,
     ConfigFormData,
     ContainerChestFormData,
     EnableControlOverride,
+    SlotFilterFormData,
     LatchConfig,
 } from './formData';
 
@@ -84,7 +86,8 @@ export function configToFormData(imported: Config): ConfigFormData {
         chests: (imported.chests ?? []).map((raw): ChestFormData => {
             // a car, a tank, a cargo wagon or a rocket silo is kept as it is: the form does not edit it yet
             if (raw.type !== undefined && raw.type !== ChestType.BUFFER_CHEST && raw.type !== ChestType.INFINITY_CHEST) {
-                return { ...raw, _uuid: crypto.randomUUID() } as ChestFormData;
+                return { ...raw, ...('slot_filters' in raw && raw.slot_filters && { slot_filters: formSlotFilters(raw.slot_filters) }),
+                    _uuid: crypto.randomUUID() } as ChestFormData;
             }
             const c = raw as { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; item_filter: string | { item_name: string; request_count: number }[] };
             // Handle infinity chest
@@ -134,11 +137,14 @@ function toConfig<T extends { _uuid: string }>({ _uuid: _, ...rest }: T) { void 
 
 /**
  * A car, a tank, a cargo wagon or a rocket silo as the config takes it: its rows of slot filters and contents without an
- * item yet are left out, and so are the fields left unset
+ * item yet are left out, a blocked slot is `blocked: true` without the marker painted on it, and the fields left unset
+ * are left out
  */
 function containerConfig(chest: ContainerChestFormData): ContainerChestFormData {
     const named = <T extends { item: string }>(rows: T[] | undefined) => rows?.filter(row => row.item.trim() !== '');
-    const rows = { ...('slot_filters' in chest && { slot_filters: named(chest.slot_filters) }), contents: named<{ item: string }>(chest.contents) };
+    const slot_filters = 'slot_filters' in chest ? chest.slot_filters?.flatMap((row): SlotFilterFormData[] => row.blocked
+        ? [{ slot: row.slot, blocked: true }] : row.item.trim() !== '' ? [row] : []) : undefined;
+    const rows = { ...('slot_filters' in chest && { slot_filters }), contents: named<{ item: string }>(chest.contents) };
     return Object.fromEntries(Object.entries({ ...chest, ...rows }).filter(([, value]) => value !== undefined)) as unknown as ContainerChestFormData;
 }
 
