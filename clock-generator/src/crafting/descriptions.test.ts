@@ -5,6 +5,7 @@ import { SignalId } from "../blueprints/components";
 import { EntityId, ReadableEntityRegistry } from "../entities";
 import { clockDescriptionLines, deciderWindows, plannedDescriptionLines, shownPeriodTicks, unplannedDescriptionLines } from "./descriptions";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
+import { GENERATOR } from "../generator";
 
 describe("the description of an enabling combinator", () => {
     const machine = (id: number, recipe: string) => ({ entity_id: EntityId.forMachine(id), metadata: { recipe: { name: recipe } } });
@@ -103,10 +104,25 @@ describe("the description of an enabling combinator", () => {
 
 describe("the description of the clock", () => {
     it("gives the rate of every copy and of one, and how to wire the rest", () => {
-        expect(clockDescriptionLines({ item_name: "iron-plate", items_per_second: 120, copies: 7, period_text: "Period 336 ticks; counts 1–336", drills: true })).toEqual([
+        expect(clockDescriptionLines({ item_name: "iron-plate", items_per_second: 120, copies: 7, period_text: "Period 336 ticks; counts 1–336", drills: true,
+            not_clocked: { inserters: [], drills: [] } })).toEqual([
             "Clock for [item=iron-plate] 120/s over 7 copies (17.143/s each). Period 336 ticks; counts 1–336",
             "Wire every other combinator's output to the inserters and drills it names, in every copy; set them Enable if Anything > 0",
+            `Made by Clock Generator ${GENERATOR.version}: clock-generator-self.vercel.app`,
         ]);
+    });
+
+    it("lists the inserters and drills not on the clock before the generator's line, when that fits", () => {
+        const lines = (inserters: number[]) => clockDescriptionLines({ item_name: "iron-plate", items_per_second: 80, copies: 1,
+            period_text: "Period 72 ticks; counts 1–72", drills: false, not_clocked: { inserters, drills: [1] } });
+        expect(lines([5, 8, 11]).slice(2)).toEqual([
+            "Not on the clock, so not wired: inserters 5, 8, 11; drill 1",
+            `Made by Clock Generator ${GENERATOR.version}: clock-generator-self.vercel.app`,
+        ]);
+        // too many to fit: left out, and the generator's line stays last
+        const many = lines(Array.from({ length: 120 }, (_, index) => index + 1));
+        expect(many).toHaveLength(3);
+        expect(many[2]).toMatch(/^Made by Clock Generator /);
     });
 
     it("gives the period of a clock of whole ticks of a fractional period as the ticks it counts", () => {

@@ -22,12 +22,14 @@ export type Direction = typeof Direction[keyof typeof Direction];
 
 /**
  * What the generator puts in a combinator's blueprint tags, for tools to read instead of its description (which is for
- * the player, and changes): the config ids of the inserters and of the mining drills a combinator switches on. A
- * blueprint string keeps the tags; an entity built in the game does not.
+ * the player, and changes): the config ids of the inserters and of the mining drills a combinator switches on, and on
+ * the clock decider the generator that made it. A blueprint string keeps the tags; an entity built in the game does not.
  */
 export interface ClockGeneratorTags {
     inserters?: number[];
     drills?: number[];
+    /** On the clock decider: the generator that made the clock, its version and where to find it */
+    generator?: { name: string; version: string; site: string; source: string };
 }
 
 export interface Entity {

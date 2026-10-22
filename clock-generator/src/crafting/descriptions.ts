@@ -6,7 +6,8 @@
  */
 import Fraction from "../data-types/fraction";
 import { OpenRange } from "../data-types";
-import { SignalId } from "../blueprints/components";
+import { MAX_PLAYER_DESCRIPTION_BYTES, SignalId } from "../blueprints/components";
+import { GENERATOR, GENERATOR_SITE_TEXT } from "../generator";
 import { ChestType } from "../common/entity-types";
 import { Entity, EntityId, EntityType, ReadableEntityRegistry } from "../entities";
 import { DRILL_ITEMS_PER_SWING } from "./sequence/cycle/swing-counts";
@@ -241,22 +242,48 @@ export function unplannedDescriptionLines(
     ];
 }
 
-/** The clock decider's description. `period_text` says how it counts; the wiring line says what to do with the rest */
+/** The line that says which generator made a clock, the clock decider's last: "Made by Clock Generator 0.20.0: clock-generator-self.vercel.app" */
+export function generatorLine(): string {
+    return `Made by ${GENERATOR.name} ${GENERATOR.version}: ${GENERATOR_SITE_TEXT}`;
+}
+
+/** "inserters 5, 8, 11; drill 1" */
+function idsText(inserters: number[], drills: number[]): string {
+    const part = (ids: number[], noun: string) => ids.length === 0 ? [] : [`${plural(ids.length, noun)} ${ids.join(", ")}`];
+    return [...part(inserters, "inserter"), ...part(drills, "drill")].join("; ");
+}
+
+/**
+ * The clock decider's description: the rate and how it counts the period, how to wire the rest, the inserters and drills
+ * that are not on the clock when that line fits, and last which generator made it. The generator's line is never the one
+ * Factorio's 500 bytes cut: the line before it is left out when the two do not fit.
+ */
 export function clockDescriptionLines(args: {
     item_name: string;
     items_per_second: number;
     copies: number;
     period_text: string;
     drills: boolean;
+    /** The config's inserters and drills that no combinator switches on */
+    not_clocked: { inserters: number[]; drills: number[] };
 }): string[] {
     const item = itemIcons([args.item_name]);
     const rate = args.copies === 1
         ? `${formatRate(args.items_per_second)}/s`
         : `${formatRate(args.items_per_second)}/s over ${formatRate(args.copies)} copies (${formatRate(args.items_per_second / args.copies)}/s each)`;
-    return [
+    const lines = [
         `Clock for ${item} ${rate}. ${args.period_text}`,
         `Wire every other combinator's output to the ${args.drills ? "inserters and drills" : "inserters"} it names${args.copies > 1 ? ", in every copy" : ""}; set them Enable if Anything > 0`,
     ];
+    const not_clocked = idsText(args.not_clocked.inserters, args.not_clocked.drills);
+    const with_not_clocked = not_clocked === "" ? lines : [...lines, `Not on the clock, so not wired: ${not_clocked}`];
+    const fits = (candidate: string[]) => new TextEncoder().encode(candidate.join("\n")).length <= MAX_PLAYER_DESCRIPTION_BYTES;
+    return fits([...with_not_clocked, generatorLine()]) ? [...with_not_clocked, generatorLine()] : [...lines, generatorLine()];
+}
+
+/** The lines the generator adds to a clock blueprint's own description, so whoever finds it can find the generator */
+export function generatorDescriptionLines(): string[] {
+    return [`Made by ${GENERATOR.name} ${GENERATOR.version}: ${GENERATOR.site}`, `Source: ${GENERATOR.source}`];
 }
 
 /** The lock filter: one line, since it is part of the clock */

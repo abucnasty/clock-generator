@@ -15,6 +15,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Container slots filtered to No item or Deconstruction planner stay blocked, including when pasted from Sidecar; a config marks such a slot `blocked: true`. The inventory editor can block all remaining unfiltered slots at once.
 - A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo. Sidecar 0.12.0 exports it, and the web form shows its chest.
 - A build's product can leave through the car, wagon or chest its machine fills, and a container used as a hub by several machines warms up and gets a clock.
+- Every clock says which generator made it, with the version and the site, in the blueprint's description, on the clock combinator and in its tags. The clock combinator also lists the inserters and drills that are not on the clock, when there is room.
 
 ### Changed
 - The clock's combinators read in plain terms: each names what it switches on by its two ends as icons, the item and the config id, then its swings and windows a period, with the windows when there are three or fewer. The clock's own combinators say to leave them. Swings no longer show as fractions such as 6000000000000001/400000000000000.

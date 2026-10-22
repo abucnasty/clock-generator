@@ -10,9 +10,20 @@ import { InventoryTransferHistory } from "./sequence/inventory-transfer-history"
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
 import {
-    clockDescriptionLines, deciderWindows, formatRate, lockFilterDescription, PART_OF_THE_CLOCK, plannedDescriptionLines,
-    shownPeriodTicks, unplannedDescriptionLines,
+    clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, lockFilterDescription, PART_OF_THE_CLOCK,
+    plannedDescriptionLines, shownPeriodTicks, unplannedDescriptionLines,
 } from "./descriptions";
+import { GENERATOR } from "../generator";
+
+/** The config's inserters and drills that are not among those with windows: no combinator switches them on */
+function notClocked(entity_registry: ReadableEntityRegistry, clocked: EntityId[]): { inserters: number[]; drills: number[] } {
+    const on_the_clock = new Set(clocked.map(it => it.id));
+    const numbers = (is: (entity: Entity) => boolean) => entity_registry.getAll()
+        .filter(entity => is(entity) && !on_the_clock.has(entity.entity_id.id))
+        .map(entity => entity.entity_id.number)
+        .sort((a, b) => a - b);
+    return { inserters: numbers(Entity.isInserter), drills: numbers(Entity.isDrill) };
+}
 
 /** What the lines of an enabling combinator say about the clock it reads */
 interface PeriodText {
@@ -432,7 +443,12 @@ export function createSignalPerInserterBlueprint(
                         ? `Period ${period.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${merged_clock_ticks} on ${SignalId.toDescriptionString(counted_signal)} (${merged_clock_ticks! / total_duration.ticks} periods, for the fuel clocks); ${SignalId.toDescriptionString(SignalId.clock)} = that mod ${total_duration.ticks}`
                         : `Period ${period.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${counted_ticks}`,
             drills: sortedEntityIds.some(entityId => EntityId.isDrill(entityId)),
+            not_clocked: notClocked(entityRegistry, [
+                ...sortedEntityIds.flatMap(entityId => [entityId, ...(history.merged_entities.get(entityId.id) ?? [])]),
+                ...fuel_inserter_clocks.map(inserter_clock => inserter_clock.inserter_id),
+            ]),
         }))
+        .setTags({ generator: { ...GENERATOR } })
         .build();
 
     // One lock for every clock, under the clock: switched on, it stops them and the filters pass nothing
@@ -582,7 +598,7 @@ export function createSignalPerInserterBlueprint(
     ];
     const blueprint = new BlueprintBuilder()
         .setLabel(blueprint_label)
-        .setDescription(`${targetRateDescription(cycle)}\nClock period: ${formatRate(total_duration.ticks)} ticks`)
+        .setDescription([targetRateDescription(cycle), `Clock period: ${formatRate(total_duration.ticks)} ticks`, ...generatorDescriptionLines()].join("\n"))
         .setEntities(entities)
         .setWires(wires.concat(fuel_wires))
         .build();

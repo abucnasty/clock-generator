@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import { OpenRange } from "../data-types";
 import { lockWires, mergedClockTicks, splitRepeatingRanges, WIRE_REACH_TILES } from "./blueprint";
 import { PART_OF_THE_CLOCK } from "./descriptions";
+import { GENERATOR } from "../generator";
+import fs from "fs";
+import path from "path";
 import { Entity, EntityType, Position } from "../blueprints/components";
 import { ConstantCombinatorEntity } from "../blueprints/entity/constant-combinator";
 
@@ -240,7 +243,22 @@ describe("the target rate in a blueprint", async () => {
         (blueprint.entities ?? []).map(entity => entity.player_description ?? "").find(text => text.startsWith("Clock for"))!;
 
     it("is in the description of the blueprint, with the clock period", () => {
-        expect(rocket_fuel.description).toBe("Target: 60 [item=rocket-fuel] per second\nClock period: 128 ticks");
+        expect(rocket_fuel.description).toBe([
+            "Target: 60 [item=rocket-fuel] per second",
+            "Clock period: 128 ticks",
+            `Made by Clock Generator ${GENERATOR.version}: https://clock-generator-self.vercel.app`,
+            "Source: https://github.com/abucnasty/clock-generator",
+        ].join("\n"));
+    });
+
+    it("says on the clock decider which generator made it, in its last line and in its tags", () => {
+        const clock = (rocket_fuel.entities ?? []).find(entity => (entity.player_description ?? "").startsWith("Clock for"))!;
+        expect((clock.player_description ?? "").split("\n").at(-1)).toBe(`Made by Clock Generator ${GENERATOR.version}: clock-generator-self.vercel.app`);
+        expect(clock.tags).toEqual({ clock_generator: { generator: {
+            name: "Clock Generator", version: GENERATOR.version,
+            site: "https://clock-generator-self.vercel.app", source: "https://github.com/abucnasty/clock-generator",
+        } } });
+        expect(GENERATOR.version).toBe(JSON.parse(fs.readFileSync(path.join(__dirname, "../../package.json"), "utf8")).version);
     });
 
     it("is on the clock combinator, with the period and how the one clock counts", () => {
