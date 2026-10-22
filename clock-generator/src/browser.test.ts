@@ -76,6 +76,7 @@ describe("the light entry", () => {
             "config/copies-value.ts",
             "config/migrate-belt-supply.ts",
             "config/migrate-blocked-slots.ts",
+            "config/migrate-mining-productivity.ts",
             "crafting/rank.ts",
             "crafting/why-not-stable.ts",
             "data-types/fraction.ts",

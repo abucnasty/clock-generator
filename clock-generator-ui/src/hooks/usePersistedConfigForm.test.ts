@@ -19,6 +19,14 @@ describe('readSavedConfig', () => {
         expect(serializeConfig(form)).not.toContain('non_moving_belts');
     });
 
+    it("reads a build saved with one mining productivity level as each drill's productivity", () => {
+        const drill = { id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, target: { type: 'machine', id: 1 } };
+        const saved = JSON.stringify({ ...createDefaultConfig(), drills: { mining_productivity_level: 12, configs: [drill, { ...drill, id: 2 }] } });
+        const form = readSavedConfig(saved)!;
+        expect(form.drills?.configs.map(row => row.productivity)).toEqual([120, 120]);
+        expect(serializeConfig(form)).not.toContain('mining_productivity_level');
+    });
+
     it('reads the saved form state with the legacy fields migrated', () => {
         const saved = JSON.stringify({
             target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },

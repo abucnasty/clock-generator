@@ -33,7 +33,7 @@ The simulator stops a drill into a machine at the larger of the stack and the au
 
 ## Mining productivity
 
-The mining productivity level is the number of levels researched, 10% each, as the game gives them: the force's bonus in 10% steps, which Sidecar exports from 0.12.0 on (`force.mining_drill_productivity_bonus` x 10). The harness save's research, mining productivity 3 at level 8000, is 7,999 levels.
+Each drill has its own productivity (`productivity` of its config, in percent, as a machine's; since 0.20.0). In the game a drill's `productivity_bonus` is the force's mining productivity research bonus (`force.mining_drill_productivity_bonus`, 10% a level researched) and its productivity modules' together, not capped, and its bonus bar moves by its mining step times that bonus in every tick: recorded in the drills family with no modules and with four legendary productivity modules 3 and no research (+100%), and checked in the game with modules on top of research when the level went (+70% and four legendary productivity modules 3: +170%; +440% and two of them: +490%; +70% and three normal productivity modules 1: +82%). Sidecar exports it per drill from 0.12.0 on (`productivity_bonus` x 100). A config with the former `mining_productivity_level` is read as each drill's productivity, the level x 10%. The harness save's research, mining productivity 3 at level 8000, is 7,999 levels, +79,990%.
 
 ## The first tick
 
@@ -43,7 +43,7 @@ The game's drill has no mining target in its first tick, so it mines a tick afte
 
 Recorded in Factorio 2.1.21 by two families of game tests:
 
-- **The drills family** (`tests/game/mechanics/drills/`, [README](../tests/game/mechanics/drills/README.md); #308, the stop asserted in #310). 17 builds of a big mining drill, with the research set by script: 0.25, 0.34, 0.43, 0.93 and 1.35 items a tick into a car emptied by an inserter and into an assembling machine that crafts or never crafts, built last, moved to another chunk, and disabled by its circuit while it holds items. Driven by the game's takes, the simulator's drill has the game's bars, waits and drops in every tick; the simulator's run of the whole build equals the game's in every tick where the build's other entities are modelled as the game has them. The stop into a machine is the 114 on rail and 214 on landfill above.
+- **The drills family** (`tests/game/mechanics/drills/`, [README](../tests/game/mechanics/drills/README.md); #308, the stop asserted in #310). 18 builds of a big mining drill, with the research set by script: 0.0167, 0.25, 0.34, 0.43, 0.93 and 1.35 items a tick, one with four productivity modules and no research, into a car emptied by an inserter and into an assembling machine that crafts or never crafts, built last, moved to another chunk, and disabled by its circuit while it holds items. Driven by the game's takes, the simulator's drill has the game's bars, waits and drops in every tick; the simulator's run of the whole build equals the game's in every tick where the build's other entities are modelled as the game has them. The stop into a machine is the 114 on rail and 214 on landfill above.
 - **The containers family** (`tests/game/mechanics/containers/`, [README](../tests/game/mechanics/containers/README.md); #299). A big mining drill on iron ore into a car (4,000 ore in its 80 slots), into a car with five slots filtered to copper plates (3,750 ore, the five slots empty), into a steel chest (2,400) and into a rocket silo (500 ore in its rocket inventory, nothing in its input slots), each emptied by one stack inserter, at two places. The containers end as the simulator has them, slot for slot, with every hand equal, and fill by the simulator's amounts in every tick from the drill's first drop.
 
 The stop into a machine was changed in #310 to the larger of the stack and the insertion limit, + 64, after the drills family's stops (the previous rule added one craft's ingredients to the limit and gave 115 and 264).
@@ -52,6 +52,6 @@ The stop into a machine was changed in #310 to the larger of the stack and the i
 
 - The first-tick offset above is not modelled.
 - Some builds of the drills family are compared through the drill alone: a yellow inserter taking from a car leaves with what is there where the simulator's waits to fill its hand, and an assembler starts its next craft a tick later in the simulator than in the game.
-- The drills family's research levels are set by script, and the containers family uses the harness save's 7,999 levels; no other level is recorded.
+- The drills family's research levels are set by script, and the containers family uses the harness save's 7,999 levels; no other level is recorded. One build of the drills family has productivity modules.
 - A drill that drops into something the Sidecar does not export is listed as left out ([game-data-and-scope.md](game-data-and-scope.md)).
 - Two inserters acting on one container in the same tick are a known limit of the containers rule, listed in `src/rules-of-the-game.ts` and [simulator.md](simulator.md#cars-wagons-and-rocket-silos-as-chests).

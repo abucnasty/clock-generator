@@ -46,7 +46,7 @@ function entityChanges(kind: LabelKind, many: string, generated: { id?: number }
 /**
  * What changed in the build since the clocks were made for `generated`, in the form's words and in the form's order:
  * "Recipe (logistic-science-pack → automation-science-pack)", "Items per second (240 → 200)", "Copies (1 → 2)", then
- * per kind of entity, the drills' productivity level, the belt answer, the deeper search, the other overrides, and
+ * per kind of entity (a drill's productivity is its own), drills turned on or off, the belt answer, the deeper search, the other overrides, and
  * "other settings" for anything else. `recipeLabel` gives a recipe's game name.
  */
 export function buildChangesOf(generated: Config, current: Config, recipeLabel: (id: string) => string = (id) => id): string[] {
@@ -68,11 +68,7 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
             changes.push(change);
         }
     }
-    const levelBefore = generated.drills?.mining_productivity_level ?? 0;
-    const levelAfter = current.drills?.mining_productivity_level ?? 0;
-    if (levelBefore !== levelAfter) {
-        changes.push(`Mining productivity level (${levelBefore} → ${levelAfter})`);
-    } else if (Boolean(generated.drills) !== Boolean(current.drills) && !changes.some((it) => it.startsWith('Drills'))) {
+    if (Boolean(generated.drills) !== Boolean(current.drills) && !changes.some((it) => it.startsWith('Drills'))) {
         changes.push(`Mining drills (${onOff(Boolean(generated.drills))} → ${onOff(Boolean(current.drills))})`);
     }
     if (beltsText(generated) !== beltsText(current)) {

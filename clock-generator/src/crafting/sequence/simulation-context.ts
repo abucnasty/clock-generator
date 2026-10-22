@@ -9,7 +9,6 @@ import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { FactorioDataService } from "../../data";
 import { MiningDrill } from "../../entities/drill/mining-drill";
-import { MiningProductivity } from "../../entities/drill/mining-productivity";
 import { DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
 import { DebugPluginFactory } from "./debug";
@@ -133,9 +132,8 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
     const drills = config.drills
 
     if (drills) {
-        const mining_productivity = MiningProductivity.fromLevel(drills.mining_productivity_level)
-        drills.configs.forEach((drill_config, index) => {
-            entity_registry.add(MiningDrill.fromConfig(mining_productivity, drill_config))
+        drills.configs.forEach(drill_config => {
+            entity_registry.add(MiningDrill.fromConfig(drill_config))
         })
     }
 

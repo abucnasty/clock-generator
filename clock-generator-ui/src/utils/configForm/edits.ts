@@ -370,19 +370,8 @@ export function removeChest(prev: ConfigFormData, index: number): ConfigFormData
 }
 
 // Drills
-export function updateDrillsConfig(prev: ConfigFormData, field: 'mining_productivity_level', value: number): ConfigFormData {
-    if (!prev.drills) return prev;
-    return {
-        ...prev,
-        drills: {
-            ...prev.drills,
-            [field]: value,
-        },
-    };
-}
-
 export function addDrill(prev: ConfigFormData): ConfigFormData {
-    const currentDrills = prev.drills ?? { mining_productivity_level: 0, configs: [] };
+    const currentDrills = prev.drills ?? { configs: [] };
     return {
         ...prev,
         drills: {
@@ -395,6 +384,7 @@ export function addDrill(prev: ConfigFormData): ConfigFormData {
                     type: 'electric-mining-drill' as const,
                     mined_item_name: '',
                     speed_bonus: 0,
+                    productivity: 0,
                     target: { type: 'machine' as const, id: 1 },
                 },
             ],

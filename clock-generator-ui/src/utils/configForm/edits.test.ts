@@ -249,23 +249,21 @@ describe('chests', () => {
 describe('drills', () => {
     it('turns drills on with the first drill added, and keeps them on with none left', () => {
         const added = edits.addDrill(createDefaultConfig());
-        expect(added.drills?.mining_productivity_level).toBe(0);
         expect(added.drills?.configs).toHaveLength(1);
         // the stored build keeps an empty drills entry, which the generator reads as no drills
-        expect(edits.removeDrill(added, 0).drills).toEqual({ mining_productivity_level: 0, configs: [] });
+        expect(edits.removeDrill(added, 0).drills).toEqual({ configs: [] });
     });
 
-    it('sets the mining productivity level only when drills are enabled', () => {
-        expect(edits.updateDrillsConfig(form(), 'mining_productivity_level', 3).drills!.mining_productivity_level).toBe(3);
-        const config = createDefaultConfig();
-        expect(edits.updateDrillsConfig(config, 'mining_productivity_level', 3)).toBe(config);
+    it('sets a drill\'s own productivity', () => {
+        const config = edits.addDrill(edits.addDrill(createDefaultConfig()));
+        const updated = edits.updateDrill(config, 1, { productivity: 490 });
+        expect(updated.drills!.configs.map(drill => drill.productivity)).toEqual([0, 490]);
     });
 
     it('adds an electric drill for machine 1, enabling drills first', () => {
         const config = edits.addDrill(createDefaultConfig());
         expect(config.drills).toEqual({
-            mining_productivity_level: 0,
-            configs: [{ id: 1, _uuid: expect.any(String), type: 'electric-mining-drill', mined_item_name: '', speed_bonus: 0, target: { type: 'machine', id: 1 } }],
+            configs: [{ id: 1, _uuid: expect.any(String), type: 'electric-mining-drill', mined_item_name: '', speed_bonus: 0, productivity: 0, target: { type: 'machine', id: 1 } }],
         });
     });
 

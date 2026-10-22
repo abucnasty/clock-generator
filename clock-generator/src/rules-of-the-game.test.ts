@@ -36,7 +36,7 @@ describe("the rules of the game", () => {
         const machineInto = (recipe: string) => createEntityRegistryFromConfig(ConfigSchema.parse({
             target_output: { recipe, items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
             machines: [{ id: 1, recipe, crafting_speed: 0.5, productivity: 0 }],
-            drills: { mining_productivity_level: 44, configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, target: { type: "machine", id: 1 } }] } }));
+            drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, productivity: 440, target: { type: "machine", id: 1 } }] } }));
 
         // recorded in the game (the drills mechanics family, #308): a big mining drill on stone into an assembling
         // machine 1 stopped at 114 on rail (1 stone a craft, limit 3) and at 214 on landfill (50 a craft, limit 150),

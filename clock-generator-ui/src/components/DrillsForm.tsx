@@ -36,13 +36,12 @@ import { EntityTypeField } from './EntityFields';
 import { drillsListed, focusLeaves } from '../utils/drillsSection';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
+const PRODUCTIVITY_COMMAND = '/c game.print(game.player.selected.productivity_bonus * 100)';
 
 interface DrillsFormProps {
-    miningProductivityLevel: number;
     drills: DrillFormData[];
     resourceNames: string[];
     machineIds: number[];
-    onUpdateProductivityLevel: (value: number) => void;
     /** Adds a drill, and turns drills on in the build if they were not */
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
@@ -117,7 +116,7 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
                     <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete=""><Delete /></IconButton>
                 </Box>
                 <EntitySettings label={label} actionContainerId={`settings-actions-drill-${drill.id}`} summary={<Typography variant="body2">
-                    Speed bonus {Number((drill.speed_bonus * 100).toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
+                    Speed bonus {Number((drill.speed_bonus * 100).toFixed(2))}% · Productivity {Number(drill.productivity.toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
                 </Typography>} tabs={[{ label: 'Enable control', content: <EnableControlFormContent
                     key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
                     currentOverride={drill.overrides?.enable_control} sinkType="machine" availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
@@ -143,6 +142,19 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
                                 sx={{ minWidth: 0, flex: '1 1 140px' }}
                                 size="small"
                             />
+                            <TextField
+                                label="Productivity (%)"
+                                type="number"
+                                value={drill.productivity}
+                                onChange={(e) =>
+                                    onUpdate(index, {
+                                        productivity: Math.max(0, parseFloat(e.target.value) || 0),
+                                    })
+                                }
+                                inputProps={{ min: 0, step: 10 }}
+                                sx={{ minWidth: 0, flex: '1 1 140px' }}
+                                size="small"
+                            />
                     </Box>
                 </EntitySettings>
             </Box>
@@ -151,15 +163,13 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
 }
 
 /**
- * The build's mining drills. With none (and no productivity level to keep), the section is one "Add mining drill" row:
- * a build without drills and one with drills turned off are the same to the generator.
+ * The build's mining drills. With none, the section is one "Add mining drill" row: a build without drills and one with
+ * drills turned off are the same to the generator.
  */
 function DrillsFormComponent({
-    miningProductivityLevel,
     drills,
     resourceNames,
     machineIds,
-    onUpdateProductivityLevel,
     onAdd,
     onUpdate,
     onRemove,
@@ -175,8 +185,8 @@ function DrillsFormComponent({
         afterAdd(() => onDuplicate(index));
         announce(`Added ${addedLabel()}, a copy of ${entityLabel('drill', drills[index].id)}.`);
     };
-    // the section does not fold while the focus is in it: not under the level field typed down to 0, nor under a click
-    // on its Add button (which a fold before the click would swallow)
+    // the section does not fold while the focus is in it: not under a click on its Add button (which a fold before the
+    // click would swallow)
     const [focusInSection, setFocusInSection] = useState(false);
     // but deleting the last drill folds it, as before: the focus then goes to the Add row
     const [drillCountBefore, setDrillCountBefore] = useState(drills.length);
@@ -184,7 +194,7 @@ function DrillsFormComponent({
         setDrillCountBefore(drills.length);
         if (drills.length < drillCountBefore) setFocusInSection(false);
     }
-    const listed = drillsListed({ drillCount: drills.length, miningProductivityLevel, focusInSection });
+    const listed = drillsListed({ drillCount: drills.length, focusInSection });
 
     const add = () => {
         afterAdd(onAdd);
@@ -208,27 +218,18 @@ function DrillsFormComponent({
                             To get the speed bonus of a mining drill in Factorio, hover over the drill and run this command:
                         </Typography>
                         <HelpCommand command={SPEED_BONUS_COMMAND} />
+                        <Typography variant="body2" sx={{ my: 1 }}>
+                            Its productivity, in percent, is its mining productivity research and its productivity modules together:
+                        </Typography>
+                        <HelpCommand command={PRODUCTIVITY_COMMAND} />
                     </>
                 ),
             }}
             // with none, the Add row below is the one add
             actions={listed && (
-                <>
-                        <TextField
-                            label="Mining productivity level"
-                            type="number"
-                            value={miningProductivityLevel}
-                            onChange={(e) =>
-                                onUpdateProductivityLevel(parseInt(e.target.value) || 0)
-                            }
-                            inputProps={{ min: 0 }}
-                            sx={{ width: 180, my: 0.75 }}
-                            size="small"
-                        />
                 <Button startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">
                     Add mining drill
                 </Button>
-                </>
             )}
         >
             {!listed ? (

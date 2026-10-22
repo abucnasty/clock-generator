@@ -10,7 +10,7 @@ import {DrillStateMachine} from "../../../../src/control-logic/drill/drill-state
 import {DrillChestWorkingMode} from "../../../../src/control-logic/drill/modes/chest-working-mode";
 import {DrillWorkingMode} from "../../../../src/control-logic/drill/modes/working-mode";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {MiningProductivity, miningDrillMaxInsertion} from "../../../../src/entities";
+import {miningDrillMaxInsertion} from "../../../../src/entities";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {EntityState, MachineState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
@@ -28,6 +28,8 @@ interface DrillCase {
     ticks: number;
     /** Legendary speed modules 3 in the drill: 4 move its bar 0.25 a tick, 3 0.198 */
     modules: number;
+    /** Legendary productivity modules 3 in the drill after the speed modules, +25% each */
+    productivity_modules?: number;
     sink: "car" | "landfill" | "rail";
     /** The inserter that empties the car or takes the landfill */
     taker?: "inserter" | "stack-inserter";
@@ -61,6 +63,8 @@ export function drillCases(): DrillCase[] {
         carCase("car-l45", 45, 4, "stack-inserter", 600),
         carCase("car-l8-3m", 8, 3, "inserter", 900),
         {...carCase("car-none", 3, 4, "stack-inserter", 600), research: "none"},
+        // the drill's own productivity: 4 legendary productivity modules 3 and no research, +100% (0.0167 a tick)
+        {...carCase("car-prod4-none", 3, 0, "stack-inserter", 900), research: "none", productivity_modules: 4},
         // into an assembler: landfill takes 50 stone a craft (0.83 a tick); rail never crafts
         machineCase("landfill-l8", 8, "landfill", 900, {simulated: true}),
         machineCase("landfill-l45", 45, "landfill", 900),
@@ -88,8 +92,10 @@ const STOP = {landfill: 214, rail: 114} as const;
 const STOP_REACHED = new Set(["landfill-l45", "landfill-l45-drill-last", "landfill-l45-moved", "rail-l28", "rail-l45", "rail-l8-gated"]);
 
 export function drillBlueprint(variant: DrillCase): string {
-    const drill = {name: "big-mining-drill", position: {x: 0.5, y: 0.5}, direction: 4, items: [{id: {name: "speed-module-3", quality: "legendary"},
-        items: {in_inventory: Array.from({length: variant.modules}, (_, stack) => ({inventory: 2, stack}))}}]};
+    const modules = (name: string, count: number, first: number) => count ? [{id: {name, quality: "legendary"},
+        items: {in_inventory: Array.from({length: count}, (_, stack) => ({inventory: 2, stack: first + stack}))}}] : [];
+    const drill = {name: "big-mining-drill", position: {x: 0.5, y: 0.5}, direction: 4, items: [...modules("speed-module-3", variant.modules, 0),
+        ...modules("productivity-module-3", variant.productivity_modules ?? 0, variant.modules)]};
     // the owner's car build's geometry (the containers family), 78 of the car's 80 slots filtered to copper plates
     const sink = variant.sink === "car"
         ? {name: "car", position: {x: 4.668, y: 1.008}, orientation: 0.25,
@@ -102,10 +108,12 @@ export function drillBlueprint(variant: DrillCase): string {
         entities: entities.map((entity, index) => ({entity_number: index + 1, ...entity}))}} as unknown as FactorioBlueprintFile);
 }
 
-/** The build as a config, at `level` levels of mining productivity (what the sidecar exports for the game's research) */
-export function drillConfig(variant: DrillCase, level: number): Config {
-    const drills = {mining_productivity_level: level, configs: [{id: 1, type: "big-mining-drill", mined_item_name: RESOURCE[variant.sink],
-        speed_bonus: 1.25 * variant.modules, target: variant.sink === "car" ? {type: "chest", id: 1} : {type: "machine", id: 1}}]};
+/**
+ * The build as a config, the drill at `productivity` percent and `speed_bonus` (what the sidecar exports for it: the
+ * drill's `productivity_bonus` x 100 and `speed_bonus`)
+ */
+export function drillConfig(variant: DrillCase, productivity: number, speed_bonus: number): Config {
+    const drills = {configs: [{id: 1, type: "big-mining-drill", mined_item_name: RESOURCE[variant.sink], speed_bonus, productivity, target: variant.sink === "car" ? {type: "chest", id: 1} : {type: "machine", id: 1}}]};
     const source = variant.sink === "car" ? {type: "chest", id: 1} : {type: "machine", id: 1};
     const inserters = variant.taker ? [{id: 1, source, sink: {type: "chest", id: 10}, prototype: variant.taker, quality: "normal"}] : [];
     const disposal = {type: "infinity-chest", id: 10, item_filter: [], remove_unfiltered_items: true};
@@ -185,18 +193,22 @@ for (const variant of drillCases()) test(`drills at low research: ${variant.name
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/drills-probe.json"), "utf8"));
         const log = Object.values(report.log) as Row[];
 
-        // the level: the sidecar exports the force's bonus in 10% steps, and the engine gives the game's bonus for it
-        const recording = JSON.parse(fs.readFileSync(path.join(scratch, "recording.json"), "utf8"));
-        const exported: number = recording.config.drills.mining_productivity_level;
-        expect(exported, "the exported level").toBe(Math.round(report.research.bonus * 10));
-        expect(MiningProductivity.fromLevel(exported).productivity.normalized).toBeCloseTo(report.drill.productivity_bonus, 9);
-        const config = drillConfig(variant, exported);
+        // the productivity: the drill's is the force's research bonus and its productivity modules' together, and the
+        // config is what the sidecar exports for it (the drill is exported only once it has dropped: README.md)
+        const module_bonus = 0.25 * (variant.productivity_modules ?? 0);
+        expect(report.drill.productivity_bonus, "the drill's productivity").toBeCloseTo(report.research.bonus + module_bonus, 9);
+        const exported = report.drill.productivity_bonus * 100;
+        // legendary speed modules 3 give +125% each, productivity modules 3 -15%
+        const speed_bonus = 1.25 * variant.modules - 0.15 * (variant.productivity_modules ?? 0);
+        expect(report.drill.speed_bonus, "the speed bonus").toBeCloseTo(speed_bonus, 9);
+        const config = drillConfig(variant, exported, speed_bonus);
 
         // the drill against the game's, every tick; into a machine, the drill's stop is where the game's stopped
         const {ticks: replay, machine_stop} = replayDrill(config, log);
         const simulated = variant.simulated ? simulateDrillBuild(config, log.length - 1) : undefined;
         const game_max = Math.max(...log.map(row => row.n));
-        fs.writeFileSync(path.join(scratch, "comparison.json"), JSON.stringify({exported, bonus: report.research.bonus, machine_stop,
+        fs.writeFileSync(path.join(scratch, "comparison.json"), JSON.stringify({exported, bonus: report.research.bonus,
+            drill_bonus: report.drill.productivity_bonus, machine_stop,
             game_max, game: log, replay, simulated}) + "\n");
         if (machine_stop !== undefined) {
             expect(machine_stop, "the drill's stop").toBe(STOP[variant.sink as "landfill" | "rail"]);

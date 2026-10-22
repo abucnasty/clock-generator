@@ -28,6 +28,7 @@ local function extract_mining_drill_data(entity)
         return nil
     end
 
+    -- the force's mining productivity research and the drill's productivity modules together: what its bonus bar uses
     local total_productivity = entity.productivity_bonus or 0
 
     -- Speed bonus from modules/beacons (this is what clock-generator expects)
@@ -386,15 +387,9 @@ end
 -- Main Extraction Orchestrator
 --- - Extract data from all selected entities, separating machines, drills, inserters, and belts
 ---@param entities LuaEntity[]
----@param force LuaForce? The player's force (for researched bonuses)
+---@param force LuaForce? The player's force; not read: each entity's bonuses, research included, are read from the entity
 ---@return ExtractionResult
 function extraction.extract_all_entities(entities, force)
-    -- the levels of mining productivity researched, 10% each: the force's bonus, whatever research gave it
-    local mining_productivity_level = 0
-    if force then
-        mining_productivity_level = math.floor(force.mining_drill_productivity_bonus * 10 + 0.5)
-    end
-
     local result = {
         machines = {},
         drills = {},
@@ -403,8 +398,7 @@ function extraction.extract_all_entities(entities, force)
         chests = {},
         unit_number_to_id = {},
         belt_unit_number_to_id = {},
-        chest_unit_number_to_id = {},
-        mining_productivity_level = mining_productivity_level
+        chest_unit_number_to_id = {}
     }
 
     -- First pass: extract machines and build unit_number -> id mapping

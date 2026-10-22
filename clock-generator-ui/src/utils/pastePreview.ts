@@ -61,7 +61,7 @@ export function pastePreview(current: ConfigFormData, incoming: PastedEntities, 
 
 /** Apply the exact preview policy as one edit, leaving retained form rows and their UI identity untouched. */
 export function applyPaste(current: ConfigFormData, incoming: PastedEntities, selections: ImportSelections,
-    target?: TargetValues, miningProductivityLevel?: number): ConfigFormData {
+    target?: TargetValues): ConfigFormData {
     const replacing = (category: PasteCategory) => replacesCategory(incoming, selections, category);
     const withUuid = <T,>(row: T) => ({ ...row, _uuid: crypto.randomUUID() });
     return {
@@ -73,9 +73,6 @@ export function applyPaste(current: ConfigFormData, incoming: PastedEntities, se
             : current.inserters,
         belts: replacing('belts') ? incoming.belts.map(withUuid) : current.belts,
         chests: replacing('chests') ? incoming.chests.map(withUuid) : current.chests,
-        ...(replacing('drills') && { drills: {
-            mining_productivity_level: miningProductivityLevel ?? current.drills?.mining_productivity_level ?? 0,
-            configs: incoming.drills.map(withUuid),
-        } }),
+        ...(replacing('drills') && { drills: { configs: incoming.drills.map(withUuid) } }),
     };
 }

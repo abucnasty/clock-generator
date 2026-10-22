@@ -10,8 +10,8 @@ import { DrillsForm } from '../components/DrillsForm';
 const config: Config = {
     target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
-    drills: { mining_productivity_level: 8000, configs: [
-        { id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 17.5, target: { type: 'chest', id: 1 } }] },
+    drills: { configs: [
+        { id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 17.5, productivity: 80000, target: { type: 'chest', id: 1 } }] },
     belts: [],
     inserters: [{ id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 16 }],
     chests: [{ id: 1, type: 'car' }],
@@ -25,8 +25,8 @@ it("keeps a drill's chest target through the form and a saved build", () => {
 
 it("shows a drill's chest target read-only", () => {
     const form = configToFormData(config);
-    const html = renderToStaticMarkup(<DrillsForm miningProductivityLevel={8000} drills={form.drills!.configs} resourceNames={['iron-ore']}
-        machineIds={[1]} onUpdateProductivityLevel={() => { }} onAdd={() => { }} onUpdate={() => { }} onRemove={() => { }}
+    const html = renderToStaticMarkup(<DrillsForm drills={form.drills!.configs} resourceNames={['iron-ore']}
+        machineIds={[1]} onAdd={() => { }} onUpdate={() => { }} onRemove={() => { }}
         onReorder={() => { }} onDuplicate={() => { }} />);
     expect(html).toMatch(/aria-label="Target chest"[^>]*readonly|readonly[^>]*aria-label="Target chest"/i);
     expect(html).not.toContain('aria-label="Target machine"');

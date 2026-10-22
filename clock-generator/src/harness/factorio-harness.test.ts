@@ -296,8 +296,8 @@ describe("the most ticks one run in Factorio records", () => {
 });
 
 describe("the resource the harness puts under a blueprint's drills", () => {
-    const drills = (...mined: string[]) => ({ drills: { mining_productivity_level: 1, configs: mined.map((mined_item_name, index) => ({
-        id: index + 1, type: "big-mining-drill" as const, mined_item_name, speed_bonus: 0, target: { type: "chest" as const, id: 1 } })) } });
+    const drills = (...mined: string[]) => ({ drills: { configs: mined.map((mined_item_name, index) => ({
+        id: index + 1, type: "big-mining-drill" as const, mined_item_name, speed_bonus: 0, productivity: 10, target: { type: "chest" as const, id: 1 } })) } });
     const config = (...mined: string[]) => ({ target_output: { recipe: "iron-plate", items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [], ...drills(...mined) });
 
     it("is what the config's drills mine, or what is asked", () => {

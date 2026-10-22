@@ -97,7 +97,15 @@ const MOVING_PICKUP_FEATURE: SidecarFeature = {
         && "type" in inserter.source && inserter.source.type === "belt"),
     missing: () => "Physical belt pickup geometry was not exported. Update Sidecar and recapture these inputs; a straight-belt default does not establish their support.",
 };
-export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE];
+/** Before 0.12.0 one mining productivity level for every drill, read as each drill's productivity: no modules in it */
+export const DRILL_PRODUCTIVITY_FEATURE: SidecarFeature = {
+    name: "drill-productivity", since: "0.12.0",
+    appliesTo: input => (input.drills ?? []).length > 0,
+    missing: () => "The mining drills' productivity modules were not exported, so each drill's productivity is the "
+        + "mining productivity research only. Check each drill's productivity by hand.",
+};
+export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE,
+    DRILL_PRODUCTIVITY_FEATURE];
 
 /** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
 const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";
@@ -154,10 +162,11 @@ export function checkSidecarImport(
     pipeline: ImportPipeline = SIDECAR_IMPORT_PIPELINE,
     chests: readonly unknown[] = [],
     inserters: readonly unknown[] = [],
+    drills: readonly unknown[] = [],
 ): Option<string> {
     const version = sidecarVersionOf(sidecar_version);
     return Option.map(
-        pipeline.run({ sidecar_version: version, machines, chests, inserters }),
+        pipeline.run({ sidecar_version: version, machines, chests, inserters, drills }),
         missing => {
             const update = missing === NOTHING_MISSING_MESSAGE
                 ? `You can update the mod to ${LATEST_SIDECAR_VERSION} when you like.`

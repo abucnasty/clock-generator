@@ -16,8 +16,9 @@ gets its first input. The sidecar exports a car empty, whatever it holds when se
 
 The rate is within the machines: the furnaces make 2 × 86.1655 / 3.2 × 1.5 = 80.78 plates a second at most, so 80 uses
 99.0% of them. The drill mines 2.5 × (1 + 17.5) = 46.25 ore a second before mining productivity. The harness's research
-is mining productivity 3 at level 8000, exported as level 7,999, so the drill makes about 37,000 ore a second against the
-53.3 the furnaces take: it never limits anything, and the car, 80 stacks of 50 ore, is always full while the drill runs.
+is mining productivity 3 at level 8000, 7,999 levels, so the drill's productivity is +79,990% and it makes about 37,000
+ore a second against the 53.3 the furnaces take: it never limits anything, and the car, 80 stacks of 50 ore, is always
+full while the drill runs.
 
 ## In the game
 

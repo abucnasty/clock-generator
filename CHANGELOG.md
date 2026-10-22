@@ -16,6 +16,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo. Sidecar 0.12.0 exports it, and the web form shows its chest.
 - A build's product can leave through the car, wagon or chest its machine fills, and a container used as a hub by several machines warms up and gets a clock.
 
+### Changed
+- Each mining drill has its own productivity, its mining research and productivity modules together, in place of one mining productivity level for all drills. Sidecar 0.12.0 exports it, and older configs, saved builds and exports load with the level as each drill's productivity.
+
 ### Fixed
 - Mining drills mine by their progress bars, as in the game, so a drill making less than one item a tick works, and the mining productivity level gives 10% a level instead of one level less.
 - A mining drill fills a machine up to the larger of a stack and the insertion limit, plus 64, as in the game, instead of one craft's ingredients more.

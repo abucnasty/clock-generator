@@ -96,7 +96,10 @@ export function assertCarHardware(recording: Recording, config: Config): void {
     expect(cars).toHaveLength(1);
     expect(recording.inserters.filter(inserter => inserter.source.type === "chest" && inserter.sink.type === "machine")).toHaveLength(2);
     expect(recording.inserters.filter(inserter => inserter.sink.type === "belt")).toHaveLength(2);
-    expect((recording.config.drills as {configs: {target: {type: string}}[]}).configs.map(drill => drill.target.type)).toEqual(["chest"]);
+    const drills = (recording.config.drills as {configs: {target: {type: string}; productivity: number}[]}).configs;
+    expect(drills.map(drill => drill.target.type)).toEqual(["chest"]);
+    // the sidecar's export of the drill's productivity (the harness save's research, no modules) is the config's
+    expect(drills[0].productivity).toBeCloseTo(config.drills!.configs[0].productivity, 6);
 }
 
 export async function carScenario(variant: CarCase): Promise<PickupClockScenario> {

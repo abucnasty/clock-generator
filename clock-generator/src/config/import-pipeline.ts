@@ -22,6 +22,7 @@ export interface ImportInput {
     machines: readonly ImportedMachine[];
     chests?: readonly unknown[];
     inserters?: readonly unknown[];
+    drills?: readonly unknown[];
 }
 
 export type ImportStep = (input: ImportInput) => Option<string>;

@@ -303,17 +303,19 @@ prototype, the quality and a blacklist from 0.11.0 on.
 
 ### Mining Drill Support
 
-For direct-insertion mining setups. A drill's `speed_bonus` comes from `/c game.print(game.player.selected.speed_bonus)`:
+For direct-insertion mining setups. A drill's `speed_bonus` comes from `/c game.print(game.player.selected.speed_bonus)`
+and its `productivity`, in percent (its mining productivity research and its productivity modules together), from
+`/c game.print(game.player.selected.productivity_bonus * 100)`:
 
 ```json
 "drills": {
-  "mining_productivity_level": 50,
   "configs": [
     {
       "id": 1,
       "type": "electric-mining-drill",
       "mined_item_name": "stone",
       "speed_bonus": 2.5,
+      "productivity": 500,
       "target": { "type": "machine", "id": 1 }
     }
   ]
@@ -427,13 +429,13 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
 
 ```json
 "drills": {
-  "mining_productivity_level": 50,
   "configs": [
     {
       "id": 1,
       "type": "electric-mining-drill",
       "mined_item_name": "iron-ore",
       "speed_bonus": 0.5,
+      "productivity": 500,
       "target": { "type": "machine", "id": 1 },
       "overrides": { "enable_control": { "mode": "ALWAYS" } }
     }

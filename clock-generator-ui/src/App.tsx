@@ -212,7 +212,6 @@ function App() {
         updateChest,
         switchChestType,
         removeChest,
-        updateDrillsConfig,
         addDrill,
         updateDrill,
         removeDrill,
@@ -805,10 +804,6 @@ function App() {
         onAddChest: addChest,
         onAddDrill: addDrill,
     };
-    const updateMiningProductivityLevel = useCallback(
-        (value: number) => updateDrillsConfig('mining_productivity_level', value),
-        [updateDrillsConfig]
-    );
     const handleExcludeChange = useCallback((items: string[]) => {
         // an out-of-date plan numbers the inserters as they were, which a delete or reorder has since moved
         if (validation.status === 'valid' && checkStatus === 'valid') {
@@ -1270,11 +1265,9 @@ function App() {
 
                                 {/* outside the toggle: the diagram does not show the drills' settings */}
                                 <DrillsForm
-                                    miningProductivityLevel={config.drills?.mining_productivity_level ?? 0}
                                     drills={drillConfigs}
                                     resourceNames={resourceNames}
                                     machineIds={machineIds}
-                                    onUpdateProductivityLevel={updateMiningProductivityLevel}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={undoable.removeDrill}

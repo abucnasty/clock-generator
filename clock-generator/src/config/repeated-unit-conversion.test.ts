@@ -48,8 +48,8 @@ describe('complete repeated-unit conversion', () => {
                 ...Array.from({ length: 6 }, (_, i) => ({ id: i + 1, type: 'buffer-chest' as const, storage_size: 2, item_filter: 'iron-plate' })),
                 { id: 7, type: 'infinity-chest', item_filter: [{ item_name: 'coal', request_count: 50 }] },
             ],
-            drills: { mining_productivity_level: 4, configs: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, type: 'electric-mining-drill' as const,
-                mined_item_name: 'iron-ore', speed_bonus: 0, target: { type: 'machine' as const, id: i + 1 }, overrides: { enable_control: { mode: 'AUTO' as const } } })) },
+            drills: { configs: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, type: 'electric-mining-drill' as const,
+                mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 40, target: { type: 'machine' as const, id: i + 1 }, overrides: { enable_control: { mode: 'AUTO' as const } } })) },
             belts: [{ id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] }],
             inserters: Array.from({ length: 6 }, (_, i) => [
                 { id: i * 3 + 1, source: { type: 'chest' as const, id: 7 }, sink: { type: 'machine' as const, id: i + 1 }, filters: ['coal'], overrides: { enable_control: { mode: 'ALWAYS' as const } } },

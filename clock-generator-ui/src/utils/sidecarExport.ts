@@ -1,3 +1,5 @@
+import { migrateMiningProductivityLevel } from 'clock-generator/light';
+
 /**
  * What text pasted or opened as a file holds, read before the engine checks its entities: an export of the Clock
  * Generator Sidecar mod, or the reason it is not one. Only the shape is read here; the engine checks each entry.
@@ -20,7 +22,6 @@ interface SidecarExport {
     legacy: boolean;
     machines: unknown[];
     drills: unknown[];
-    miningProductivityLevel?: number;
     inserters: unknown[];
     belts: unknown[];
     chests: unknown[];
@@ -60,16 +61,16 @@ export function readSidecarExport(text: string): SidecarExportRead {
         return { kind: 'problem', problem: 'build-file' };
     }
     if (isObject(value) && 'machines' in value) {
-        // drills are { mining_productivity_level, configs }, or a bare list in older exports
-        const drills = value.drills;
-        const drillConfigs = isObject(drills) ? listOf(drills.configs) : listOf(drills);
-        const level = isObject(drills) && typeof drills.mining_productivity_level === 'number' ? drills.mining_productivity_level : undefined;
+        // drills are { configs }, each with its own productivity; before 0.12.0 { mining_productivity_level, configs },
+        // read as each drill's productivity, and before that a bare list, whose drills get none: 0
+        const drills = migrateMiningProductivityLevel(value.drills);
+        const drillConfigs = isObject(drills) ? listOf(drills.configs)
+            : listOf(drills).map(drill => isObject(drill) && !('productivity' in drill) ? { ...drill, productivity: 0 } : drill);
         const read: SidecarExport = {
             kind: 'export',
             legacy: false,
             machines: listOf(value.machines),
             drills: drillConfigs,
-            miningProductivityLevel: level,
             inserters: listOf(value.inserters),
             belts: listOf(value.belts),
             chests: listOf(value.chests),

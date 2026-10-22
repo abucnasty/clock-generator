@@ -62,9 +62,9 @@ function drillInto(name: string, container: Record<string, unknown>, chest: Reco
         name, ticks: 400,
         entities: [{name: "big-mining-drill", position: {x: 0.5, y: 0.5}, direction: 4, items: modules}, container,
             inserterEntity(taker_x, 0.5, 12), chestEntity(taker_x + 1, 0.5)],
-        // the harness save's research: mining productivity 3 at level 8000 is 7,999 levels, as the sidecar exports it
-        config: {...idle, drills: {mining_productivity_level: 7999, configs: [{id: 1, type: "big-mining-drill", mined_item_name: "iron-ore",
-            speed_bonus: 5, target: {type: "chest", id: 1}}]},
+        // the harness save's research: mining productivity 3 at level 8000 is 7,999 levels, +79,990%
+        config: {...idle, drills: {configs: [{id: 1, type: "big-mining-drill", mined_item_name: "iron-ore",
+            speed_bonus: 5, productivity: 79990, target: {type: "chest", id: 1}}]},
             chests: [chest, disposal(10)],
             inserters: [{id: 1, source: {type: "chest", id: 1}, sink: {type: "chest", id: 10}, stack_size: 16}]},
         probe: {fill_ticks: 30},

@@ -322,7 +322,8 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
         guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,
-            Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : []),
+            Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : [],
+            Array.isArray(pasted.drills) ? pasted.drills : []),
         suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
     };
 }

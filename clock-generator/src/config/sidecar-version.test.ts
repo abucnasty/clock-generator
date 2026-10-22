@@ -160,3 +160,10 @@ describe('an older capture without inserter identity', () => {
         expect(Option.toNullable(checkSidecarImport('0.10.0', [{ recipe: 'iron-gear-wheel' }]))).not.toContain(recapture);
     });
 });
+
+it("tells a paste with drills from a sidecar before 0.12.0 that the drills' productivity modules are not in it", () => {
+    const drills = [{ id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 70, target: { type: 'chest', id: 1 } }];
+    expect(Option.toNullable(checkSidecarImport('0.11.0', [], undefined, [], [], drills))).toContain("productivity modules were not exported");
+    expect(Option.toNullable(checkSidecarImport('0.11.0', [], undefined, [], [], []))).not.toContain('productivity modules');
+    expect(checkSidecarImport('0.12.0', [], undefined, [], [], drills)).toEqual(Option.none());
+});

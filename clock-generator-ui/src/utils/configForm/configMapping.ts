@@ -114,13 +114,13 @@ export function configToFormData(imported: Config): ConfigFormData {
         }),
         drills: imported.drills
             ? {
-                mining_productivity_level: imported.drills.mining_productivity_level,
                 configs: imported.drills.configs.map((d) => ({
                     id: d.id,
                     _uuid: crypto.randomUUID(),
                     type: d.type,
                     mined_item_name: d.mined_item_name,
                     speed_bonus: d.speed_bonus,
+                    productivity: d.productivity,
                     target: d.target,
                     overrides: d.overrides?.enable_control ? {
                         enable_control: mapEnableControlOverride(d.overrides.enable_control),

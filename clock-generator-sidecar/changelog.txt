@@ -3,9 +3,9 @@ Version: 0.12.0
   Features:
     - exports cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, the slot filters of a car, tank or wagon, and a silo's recipe quality, crafting speed and productivity. They are exported empty, whatever they hold when selected
     - exports a mining drill that drops into a chest, a car, a tank, a cargo wagon or a rocket silo
+    - exports each mining drill's productivity, its research and productivity modules together, in place of one mining productivity level for every drill
   Bugfixes:
-    - exports the mining productivity level from the force's mining productivity bonus, 10% a level; earlier versions exported mining productivity 3's level less one, which was wrong until mining productivity 1 and 2 were researched
-    - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine
+    - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine. One that has not dropped into its car or tank yet is listed too: let it run and select it again
     - the selection tool selects linked belts; earlier versions skipped them, though the sidecar reads them as pieces of a belt
     - an inserter that drops onto a belt or into a chest not in the JSON (empty, or outside the selection) is listed as left out; earlier versions exported it as dropping onto the first belt or into the first chest
 ---------------------------------------------------------------------------------------------------
