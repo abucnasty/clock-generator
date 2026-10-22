@@ -72,7 +72,7 @@ class LastTwoTicks {
 }
 
 /** Position of a tick in a (possibly fractional) clock period; float error is snapped as the game's integer clock would be */
-function clockPosition(tick: number, period: number): number {
+export function clockPosition(tick: number, period: number): number {
     const position = tick % period;
     const nearest = Math.round(position);
     const snapped = Math.abs(position - nearest) < 1e-6 ? nearest : position;

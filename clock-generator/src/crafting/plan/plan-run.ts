@@ -1,7 +1,6 @@
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
 import { Config } from "../../config";
-import { EnableControlMode } from "../../common/enable-control-types";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
@@ -53,6 +52,7 @@ import { factorioDrillState, factorioInserterState, factorioMachineState } from 
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
+import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
 /**
@@ -245,6 +245,11 @@ export interface BlueprintGenerationResult {
      * windows only reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
      */
     output_feeders?: { inserter_ids: string[]; window_count_without_feeder_windows: number };
+    /**
+     * Each drill that drops into a chest: the windows the clock gives it, from the windows of the inserters that take
+     * from the chest (see chestDrillWindows), or why it stays always enabled. Absent when the build has none.
+     */
+    chest_drills?: ChestDrillClock[];
 }
 
 /**
@@ -1267,6 +1272,12 @@ export function exportClock(
         simulation_context, target_production_rate, crafting_cycle_plan, recipe_lcm, computed_lcm, serializable_transfer_plan,
         duration, recorded_duration, final_history, state_transition_history, stability_check, used_terminal_swing_count,
     } = plan.run;
+    // the windows of the drills into chests, from their takers' as the clock-only check made them (see runAsBuiltCheck)
+    const chest_drill_clock = chestDrillWindows(plan.config, windows, duration.ticks);
+    windows = chest_drill_clock.windows;
+    for (const drill of chest_drill_clock.drills) {
+        plan.logger.log(chestDrillClockLine(drill));
+    }
     const item_names = new Map(plan.item_names);
     for (const [key, name] of extras.item_names ?? []) {
         item_names.set(key, name);
@@ -1349,6 +1360,7 @@ export function exportClock(
         serializable_transfer_plan,
         computed_lcm,
         derived_clock_windows: extras.derived_clock_windows,
+        ...(chest_drill_clock.drills.length > 0 ? { chest_drills: chest_drill_clock.drills } : {}),
     };
 }
 
@@ -2142,14 +2154,12 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
         }
     });
 
-    // Process drill overrides (explicit id field). A drill into a chest is always enabled: nothing gates it (the
-    // schema refuses an override on it), so it gets no clock windows and no combinator, as a drill set to ALWAYS
+    // Process drill overrides (explicit id field). A drill into a chest without one is always enabled in the planning
+    // run; its windows are made from its takers' afterwards (see chestDrillWindows)
     if (config.drills !== undefined) {
         config.drills.configs.forEach((drill_config) => {
             const entity_id = EntityId.forDrill(drill_config.id).id;
-            const enable_control_override = drill_config.target.type === "chest"
-                ? { mode: EnableControlMode.ALWAYS }
-                : drill_config.overrides?.enable_control;
+            const enable_control_override = drill_config.overrides?.enable_control;
             if (enable_control_override !== undefined) {
                 map.set(entity_id, enable_control_override);
             }
@@ -2202,7 +2212,7 @@ function configureInventoryTransferPlugins(
         const sink_machine = simulation_context.entity_registry.getEntityByIdOrThrow(
             it.drill_state.drill.sink_id
         );
-        // a drill into a chest is always enabled, so it never ends a run of transfers to record
+        // a drill into a chest has no transfers to record: its windows are made from its takers' (see chestDrillWindows)
         if (!Entity.isMachine(sink_machine)) {
             return;
         }

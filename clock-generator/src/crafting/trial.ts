@@ -19,6 +19,7 @@ import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, start
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 import { canonicalVerificationJson } from "./verification-signature";
 import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider-order";
+import { withChestDrillWindows } from "./chest-drill-windows";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -615,6 +616,8 @@ export function runAsBuiltCheck(
     passed?: { run: AsBuiltRun; long_run_ticks: number },
     pickup_phase_cycles: boolean = false,
 ): AsBuiltRun {
+    // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
+    decider_windows = withChestDrillWindows(config, decider_windows, period);
     const step = Math.max(1, Math.floor(period / start_phases));
     const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
     const result = passed !== undefined ? passed.run.result : runClockOnBuild(config, decider_windows, period, logger);
