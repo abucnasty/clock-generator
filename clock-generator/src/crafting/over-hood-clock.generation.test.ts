@@ -1,7 +1,7 @@
 import {createHash} from "crypto";
 import {expect, test} from "vitest";
 import {generateClockAlternatives} from "./generate-blueprint";
-import {encodeBlueprintFile} from "../blueprints/serde";
+import {clockIdentity} from "./clock-identity";
 import {overHoodClockCases, overHoodClockConfig} from "../../tests/game/builds/over-hood-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
@@ -18,8 +18,8 @@ for (const family of ["different-items", "same-item"] as const) for (const varia
         const result = selected.result;
         const period = result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks;
         const exported = result.subtick ?? result;
-        const clock = {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule};
-        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control")
+        const clock = clockIdentity(exported);
+        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control (its identity: no text or metadata)")
             .toBe(expected.clock_sha256);
         expect(period).toBe(expected.period);
         expect(selected.verdict).toBe(expected.verdict);

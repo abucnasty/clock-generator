@@ -10,6 +10,7 @@ import {
     DeciderCombinatorConditionBuilder,
     DeciderCombinatorOutputBuilder,
     Direction,
+    ClockGeneratorTags,
     Entity,
     EntityType,
     Position,
@@ -31,6 +32,13 @@ class DeciderCombinatorEntityBuilder {
     private direction: Direction | undefined = undefined;
     private control_behavior: ControlBehavior = {};
     private player_description: string | undefined = undefined;
+    private tags: ClockGeneratorTags | undefined = undefined;
+
+    /** The generator's tags (ClockGeneratorTags), which tools read in place of the description */
+    public setTags(tags: ClockGeneratorTags): DeciderCombinatorEntityBuilder {
+        this.tags = tags;
+        return this;
+    }
 
     public setPosition(position: Position): DeciderCombinatorEntityBuilder {
         this.position = position;
@@ -63,7 +71,8 @@ class DeciderCombinatorEntityBuilder {
             player_description: this.player_description,
             position: this.position,
             ...(this.direction !== undefined ? { direction: this.direction } : {}),
-            control_behavior: this.control_behavior
+            control_behavior: this.control_behavior,
+            ...(this.tags !== undefined ? { tags: { clock_generator: this.tags } } : {}),
         };
     }
 }

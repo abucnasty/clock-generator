@@ -253,7 +253,7 @@
           "rate": 26,
           "supply": null
         },
-        "clock_sha256": "32306bca9e4085ad579f44c29637513b227e94a649d03753c4eef843e87b5a97"
+        "clock_sha256": "aa28f7e772e8659fa9ef8e6c83ed58281a394ad069bfb6e177fa1dab182631b9"
       }
     },
     "steel-wagon-belt-slack-fill-last": {
@@ -508,7 +508,7 @@
           "rate": 26,
           "supply": null
         },
-        "clock_sha256": "32306bca9e4085ad579f44c29637513b227e94a649d03753c4eef843e87b5a97"
+        "clock_sha256": "aa28f7e772e8659fa9ef8e6c83ed58281a394ad069bfb6e177fa1dab182631b9"
       }
     },
     "steel-wagon-lean-iron-ore": {
@@ -765,7 +765,7 @@
           "rate": 26.000000000000004,
           "supply": null
         },
-        "clock_sha256": "b7dc78194f8444aa6806c3f21aae8a571b86691c5bc3d07126c57105947bdcf5"
+        "clock_sha256": "2aef9fef1efa43c5ae6b7faff6476e20e55d3142acf1225b7bbb6d852d3e94ac"
       }
     }
   }

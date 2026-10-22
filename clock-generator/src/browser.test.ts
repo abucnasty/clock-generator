@@ -33,7 +33,8 @@ function importsReachedFrom(entry: string): { file: string, specifier: string }[
         seen.add(file);
         for (const specifier of importsOf(fs.readFileSync(file, "utf-8"))) {
             found.push({ file: path.relative(__dirname, file), specifier });
-            if (specifier.startsWith(".")) {
+            // a JSON file (the engine's package.json, for its version) imports nothing
+            if (specifier.startsWith(".") && !specifier.endsWith(".json")) {
                 visit(resolveSource(file, specifier));
             }
         }

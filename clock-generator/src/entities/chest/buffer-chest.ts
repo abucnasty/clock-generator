@@ -35,6 +35,8 @@ export class BufferChest implements Chest {
          * The stack size of the filtered item (cached for capacity calculations).
          */
         public readonly item_stack_size: number,
+        /** The chest's prototype name in the game data, for labels only (the config's `prototype`) */
+        public readonly prototype?: string,
     ) {}
 
     /**
@@ -68,5 +70,6 @@ function fromConfig(config: BufferChestConfig): BufferChest {
         config.storage_size,
         config.item_filter,
         item.stack_size,
+        config.prototype,
     );
 }

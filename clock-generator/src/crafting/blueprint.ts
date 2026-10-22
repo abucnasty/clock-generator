@@ -1,22 +1,45 @@
-import Fraction from "../data-types/fraction";
 import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
-import { Direction, Entity as CircuitEntity, Position, SignalId, Wire, WireConnection } from "../blueprints/components";
+import { Direction, Entity as CircuitEntity, fitPlayerDescription, Position, SignalId, Wire, WireConnection } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";
 import { ArithmeticCombinatorEntity } from "../blueprints/entity/arithmetic-combinator";
 import { ConstantCombinatorEntity } from "../blueprints/entity/constant-combinator";
 import { Duration, OpenRange } from "../data-types";
-import { ReadableEntityRegistry, Inserter, EntityId, EntityType, Entity } from "../entities";
+import { ReadableEntityRegistry, Inserter, EntityId, Entity } from "../entities";
 import { InventoryTransfer } from "./sequence/inventory-transfer";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
+import {
+    clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, lockFilterDescription, PART_OF_THE_CLOCK,
+    plannedDescriptionLines, shownPeriodTicks, unplannedDescriptionLines,
+} from "./descriptions";
+import { GENERATOR } from "../generator";
+
+/** The config's inserters and drills that are not among those with windows: no combinator switches them on */
+function notClocked(entity_registry: ReadableEntityRegistry, clocked: EntityId[]): { inserters: number[]; drills: number[] } {
+    const on_the_clock = new Set(clocked.map(it => it.id));
+    const numbers = (is: (entity: Entity) => boolean) => entity_registry.getAll()
+        .filter(entity => is(entity) && !on_the_clock.has(entity.entity_id.id))
+        .map(entity => entity.entity_id.number)
+        .sort((a, b) => a - b);
+    return { inserters: numbers(Entity.isInserter), drills: numbers(Entity.isDrill) };
+}
+
+/** What the lines of an enabling combinator say about the clock it reads */
+interface PeriodText {
+    /** The period as its lines give it (shownPeriodTicks) */
+    ticks: string;
+    /** The scale of a subtick clock, whose windows are in 1/scale ticks */
+    subtick_scale?: number;
+}
 
 function createDeciderCombinatorForTransfers(
     inventory_transfers: InventoryTransfer[],
     entity_id: EntityId,
     entity_registry: ReadableEntityRegistry,
     cycle: CraftingCyclePlan,
-    number_of_cycles: number,
+    cycles_in_period: number,
+    period: PeriodText,
     position: Position,
     mapRanges: (ranges: OpenRange[]) => OpenRange[] = ranges => ranges,
     modulo?: { split: ModuloRanges; signal: SignalId },
@@ -40,152 +63,45 @@ function createDeciderCombinatorForTransfers(
     }
 
     const entity_ids = [entity_id, ...merged_entity_ids];
+    const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));
 
     if (swing_counts) {
-        description_lines = inserterSwingCountDescriptionLines(
+        description_lines = plannedDescriptionLines(
             entity_ids,
             entity_registry,
             items,
-            swing_counts.total_transfer_count,
-            swing_counts.total_transfer_count.multiply(number_of_cycles)
-        )
+            swing_counts.total_transfer_count.multiply(cycles_in_period),
+            deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, period.subtick_scale),
+            period.ticks,
+        );
     }
 
     if (!swing_counts && inserter_clock && Entity.isInserter(entity)) {
-        description_lines = unplannedInserterClockDescriptionLines(entity_ids, entity_registry, items, inserter_clock);
+        // the window repeats every modulus ticks on the clock, or on the modulo the decider reads when that is its length
+        const signal = modulo && modulo.split.modulus === inserter_clock.modulus ? modulo.signal : SignalId.clock;
+        const [window] = clockValueRanges(wholeRanges([inserter_clock.window]));
+        description_lines = unplannedDescriptionLines(entity_ids, entity_registry, items, inserter_clock, window, signal);
     }
 
-    const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));
     const outputs = Array.from(items).map(item_name => SignalId.item(item_name));
 
-    const deciderCombinator = (modulo
+    const decider = (modulo
         ? DeciderCombinatorEntity.fromSignalRanges([
             { signal: modulo.signal, ranges: clockValueRanges(modulo.split.repeating) },
             { signal: SignalId.clock, ranges: clockValueRanges(modulo.split.remaining) },
         ], outputs)
         : DeciderCombinatorEntity.fromRanges(SignalId.clock, clockValueRanges(ranges), outputs))
         .setPosition(position)
-        .setMultiLinePlayerDescription(modulo
-            ? description_lines.concat(`Repeats every ${modulo.split.modulus} ticks: ${SignalId.toDescriptionString(modulo.signal)} is the clock modulo ${modulo.split.modulus}`)
-            : description_lines)
-        .build();
+        .setMultiLinePlayerDescription(description_lines);
 
-    // the inserters its description names, which are wired to it
-    const inserter_ids = description_lines.length > 0 && Entity.isInserter(entity) ? entity_ids.map(it => it.number) : [];
-    return { combinator: deciderCombinator, inserter_ids }
-}
-
-/** The machines an inserter or drill works with, as their recipes: "from" the one it empties, "into" the one it fills */
-function machineRecipesText(entity_id: EntityId, entity_registry: ReadableEntityRegistry): string {
-    const entity = entity_registry.getEntityById(entity_id);
-    const recipeIcon = (machine_id: EntityId): string | null => {
-        const machine = entity_registry.getEntityById(machine_id);
-        return machine !== null && Entity.isMachine(machine) ? `[recipe=${machine.metadata.recipe.name}]` : null;
-    };
-    if (entity === null) {
-        return "";
+    // the inserters or drills its description names, which are wired to it
+    const named = description_lines.length > 0 ? entity_ids.map(it => it.number) : [];
+    const inserter_ids = Entity.isInserter(entity) ? named : [];
+    if (named.length > 0) {
+        const ascending = named.slice().sort((a, b) => a - b);
+        decider.setTags(Entity.isInserter(entity) ? { inserters: ascending } : { drills: ascending });
     }
-    const source = Entity.isInserter(entity) ? recipeIcon(entity.source.entity_id) : null;
-    const sink = Entity.isInserter(entity)
-        ? recipeIcon(entity.sink.entity_id)
-        : Entity.isDrill(entity) ? recipeIcon(entity.sink_id) : null;
-    return [source ? `from ${source}` : "", sink ? `into ${sink}` : ""].filter(text => text !== "").join(" ");
-}
-
-/**
- * The first lines of the description of a combinator: the entities wired to it, what they carry and the recipes of
- * the machines they work with. Entities with the same windows share a combinator; when their machines differ, each
- * gets a line of its own.
- */
-export function entityDescriptionHeaderLines(
-    entity_ids: EntityId[],
-    entity_registry: ReadableEntityRegistry,
-    item_icons: string,
-    kind?: string,
-): string[] {
-    const sorted_ids = entity_ids.slice().sort((a, b) => a.number - b.number);
-    const name = EntityId.isDrill(entity_ids[0]) ? "Drill" : "Inserter";
-    const numbers_by_machines = new Map<string, number[]>();
-    sorted_ids.forEach(entity_id => {
-        const machines = machineRecipesText(entity_id, entity_registry);
-        numbers_by_machines.set(machines, (numbers_by_machines.get(machines) ?? []).concat(entity_id.number));
-    });
-    const header = `${name}${sorted_ids.length > 1 ? "s" : ""} ${sorted_ids.map(it => it.number).join(", ")} for ${item_icons}`;
-    const suffix = kind ? ` (${kind})` : "";
-    if (numbers_by_machines.size === 1) {
-        const [machines] = numbers_by_machines.keys();
-        return [`${header}${machines ? ` ${machines}` : ""}${suffix}`];
-    }
-    return [`${header}${suffix}`].concat(Array.from(numbers_by_machines.entries())
-        .filter(([machines]) => machines !== "")
-        .map(([machines, numbers]) => `- ${numbers.join(", ")}: ${machines}`));
-}
-
-/**
- * An inserter outside the plan, one that only fills a fuel slot or takes a by-product away, has a clock of its own
- * instead of swing counts
- */
-function unplannedInserterClockDescriptionLines(
-    inserter_ids: EntityId[],
-    entity_registry: ReadableEntityRegistry,
-    item_names: Set<string>,
-    inserter_clock: InserterClock,
-    /** The signal that is the clock modulo the fuel clock's ticks, when the fuel clock is part of the one clock */
-    fuel_clock_signal?: SignalId,
-): string[] {
-    const item_icons = Array.from(item_names).map(item_name => SignalId.toDescriptionString(SignalId.item(item_name)));
-    const window = inserter_clock.window;
-    const clock_line = `- looks every ${inserter_clock.modulus} ticks, enabled for ticks ${window.start_inclusive}-${window.end_inclusive} of each`;
-    const plan_line = "- not part of the swing counts, so it does not change the length of the clock";
-
-    if (inserter_clock.kind === "fuel") {
-        return [
-            ...entityDescriptionHeaderLines(inserter_ids, entity_registry, item_icons.join("|"), "fuel"),
-            "Fills the fuel slot, which holds at most a few items:",
-            clock_line.replace("looks", "swings"),
-            !inserter_clock.own_clock
-                ? plan_line
-                : fuel_clock_signal
-                    ? `- on a fuel clock: ${SignalId.toDescriptionString(fuel_clock_signal)} is the clock modulo ${inserter_clock.modulus}, not the clock of the swing counts`
-                    : `- on the fuel clock of ${inserter_clock.modulus} ticks, not the clock of the swing counts`,
-            "- skips a swing while the fuel slot is full",
-        ];
-    }
-    return [
-        ...entityDescriptionHeaderLines(inserter_ids, entity_registry, item_icons.join("|"), "by-product"),
-        `Takes the ${item_icons.join("|")} made on the side, which nothing uses:`,
-        clock_line,
-        plan_line,
-        "- ignores the machine's output outside the window",
-        "- takes what is ready and swings once its hand is full",
-    ];
-}
-
-function inserterSwingCountDescriptionLines(
-    entity_ids: EntityId[],
-    entity_registry: ReadableEntityRegistry,
-    item_names: Set<string>,
-    swing_count_per_cycle: Fraction,
-    total_swings: Fraction
-): string[] {
-    const item_icons = Array.from(item_names).map(item_name => SignalId.toDescriptionString(SignalId.item(item_name)));
-
-    const lines = entityDescriptionHeaderLines(
-        entity_ids,
-        entity_registry,
-        item_icons.length === 1 ? item_icons[0] : `(${item_icons.join("|")})`,
-    )
-
-    lines.push("Swing Counts:")
-    lines.push(`- per cycle: ${swing_count_per_cycle}`)
-    lines.push(`- total: ${total_swings}`)
-
-    return lines
-}
-
-/** A number with at most 3 decimals and no trailing zeros: 380, 53, 452.83 */
-function formatRate(value: number): string {
-    return String(Number(value.toFixed(3)));
+    return { combinator: decider.build(), inserter_ids }
 }
 
 /**
@@ -202,25 +118,6 @@ function targetRateDescription(cycle: CraftingCyclePlan): string {
     const each = formatRate(target.machine_production_rate.amount_per_second.toDecimal());
     return `Target: ${total} ${item_icon} per second over ${target.copies} copies (${each} each)`;
 }
-
-function generateClockDescriptionLines(
-    final_output_item_name: string,
-    cycle: CraftingCyclePlan,
-    total_duration: Duration,
-): string[] {
-
-    const cycle_count = total_duration.ticks / cycle.total_duration.ticks;
-    const output_item_icon = SignalId.toDescriptionString(SignalId.item(final_output_item_name))
-
-    return [
-        `Clock for ${output_item_icon}:`,
-        `- ${targetRateDescription(cycle)}`,
-        `- Cycle Duration: ${formatRate(cycle.total_duration.ticks)} ticks`,
-        `- Cycle Count: ${formatRate(cycle_count)} cycles`,
-        `- Total Duration: ${formatRate(total_duration.ticks)} ticks`
-    ]
-}
-
 
 /**
  * A clock for a fractional period p/q ticks: a normal clock counts p ticks, and two arithmetic
@@ -282,19 +179,6 @@ export function lockWires(lock: ConstantCombinatorEntity, receivers: CircuitEnti
         connect(receiver);
     }
     return wires;
-}
-
-/**
- * The lines of the description of a lock filter. The combinators after it see the clock a tick after it counts;
- * every window is read through exactly one filter, so all of them are a tick later and none is out of step.
- */
-function lockFilterDescription(clock_name: string, extra_lines: string[] = []): string[] {
-    return [
-        `Clock lock filter: disables the clock when ${SignalId.toDescriptionString(SignalId.lock)} is active`,
-        `- Passes the ${clock_name} to the combinators beside it only while the lock is off, and outputs nothing while it is on`,
-        `- The combinators beside it see the ${clock_name} one tick after it counts`,
-        ...extra_lines,
-    ];
 }
 
 /** Decider constants are whole numbers; fractional bounds (from a fractional period's wrap) are rounded inward */
@@ -452,6 +336,8 @@ export function createSignalPerInserterBlueprint(
     final_output_item_name: string,
     cycle: CraftingCyclePlan,
     total_duration: Duration,
+    /** The whole number of crafting cycles the period is made of (the recipe LCM), which the swings of a cycle are multiplied by */
+    cycles_in_period: number,
     history: InventoryTransferHistory,
     entityRegistry: ReadableEntityRegistry,
     subtick_clock?: SubtickClock,
@@ -480,6 +366,10 @@ export function createSignalPerInserterBlueprint(
     const counted_ticks = merged_clock_ticks ?? (subtick_clock ? subtick_clock.period_ticks : total_duration.ticks);
 
     const clock_x = x;
+    const period: PeriodText = {
+        ticks: shownPeriodTicks(total_duration.ticks, subtick_clock !== undefined),
+        ...(subtick_clock ? { subtick_scale: subtick_clock.scale } : {}),
+    };
 
     const subtick_combinators = subtick_clock ? [
         ArithmeticCombinatorEntity.withConstant({
@@ -488,10 +378,7 @@ export function createSignalPerInserterBlueprint(
             constant: subtick_clock.scale,
             output: SignalId.clock,
             position: Position.fromXY(x += 1, 0),
-            description: [
-                `Subtick clock, step 1 of 2: the clock period is ${total_duration.ticks.toFixed(3)} ticks, which a counter of whole ticks cannot hold`,
-                `- The clock counts ${subtick_clock.period_ticks} ticks, which are ${subtick_clock.scale} periods; this multiplies it by ${subtick_clock.scale} to count in 1/${subtick_clock.scale} ticks`,
-            ],
+            description: [`${PART_OF_THE_CLOCK} Subtick clock: ${SignalId.toDescriptionString(SignalId.clock)} × ${subtick_clock.scale}`],
         }),
         ArithmeticCombinatorEntity.withConstant({
             input: SignalId.clock,
@@ -499,10 +386,7 @@ export function createSignalPerInserterBlueprint(
             constant: subtick_clock.period_ticks,
             output: SignalId.clock,
             position: Position.fromXY(x += 1, 0),
-            description: [
-                `Subtick clock, step 2 of 2: where the clock is in its period of ${total_duration.ticks.toFixed(3)} ticks, in 1/${subtick_clock.scale} ticks`,
-                `- Every combinator of the swing counts reads this, with its windows in the same unit`,
-            ],
+            description: [`${PART_OF_THE_CLOCK} Subtick clock: ${SignalId.toDescriptionString(SignalId.clock)} mod ${subtick_clock.period_ticks}, the position in 1/${subtick_clock.scale} ticks`],
         }),
     ] : [];
 
@@ -530,34 +414,8 @@ export function createSignalPerInserterBlueprint(
     const fuel_clocks_by_modulus = new Map<number, InserterClock[]>();
     fuel_inserter_clocks.forEach(inserter_clock =>
         fuel_clocks_by_modulus.set(inserter_clock.modulus, (fuel_clocks_by_modulus.get(inserter_clock.modulus) ?? []).concat(inserter_clock)));
-    // What reads each modulo of the clock, so its combinator can say what it is there for
-    const namesOf = (entity_ids: EntityId[]): string => {
-        const numbers = (type: EntityType) => entity_ids.filter(it => it.type === type).map(it => it.number).sort((x, y) => x - y);
-        const inserters = numbers(EntityType.INSERTER);
-        const drills = numbers(EntityType.DRILL);
-        return [
-            inserters.length > 0 ? `inserter${inserters.length > 1 ? "s" : ""} ${inserters.join(", ")}` : "",
-            drills.length > 0 ? `drill${drills.length > 1 ? "s" : ""} ${drills.join(", ")}` : "",
-        ].filter(Boolean).join(" and ");
-    };
-    const moduloDescription = (modulus: number): string[] => {
-        const signal = SignalId.toDescriptionString(modulo_signals.get(modulus)!);
-        const lines = [`${signal} counts ${CLOCK_FIRST_VALUE} to ${modulus}, ${counted_ticks / modulus} times in the ${counted_ticks} ticks the clock counts`];
-        if (modulus === period_modulus) {
-            lines.push(`- The clock period: every combinator of the swing counts reads it`);
-        }
-        const window_readers = sortedEntityIds
-            .filter(entityId => splits.get(entityId)?.modulus === modulus)
-            .flatMap(entityId => [entityId, ...(history.merged_entities.get(entityId.id) ?? [])]);
-        if (window_readers.length > 0) {
-            lines.push(`- Read by ${namesOf(window_readers)}, whose windows repeat every ${modulus} ticks: one set of windows instead of ${total_duration.ticks / modulus}`);
-        }
-        if (merged_clock_ticks !== null && fuel_moduli.includes(modulus)) {
-            const fuel_readers = (fuel_clocks_by_modulus.get(modulus) ?? []).map(it => it.inserter_id);
-            lines.push(`- Fuel clock: ${namesOf(fuel_readers)} may fill a fuel slot once every ${modulus} ticks`);
-        }
-        return lines;
-    };
+    const moduloDescription = (modulus: number): string[] =>
+        [`${PART_OF_THE_CLOCK} ${SignalId.toDescriptionString(modulo_signals.get(modulus)!)} = ${SignalId.toDescriptionString(counted_signal)} mod ${modulus}`];
     const modulo_combinators = moduli.map(modulus => ArithmeticCombinatorEntity.withConstant({
         input: counted_signal,
         operation: "%",
@@ -573,24 +431,24 @@ export function createSignalPerInserterBlueprint(
         .clock(counted_ticks, counted_signal, Array.from(modulo_signals.values()))
         .setPosition(Position.fromXY(clock_x, 0))
         .setDirection(Direction.SOUTH)
-        .setMultiLinePlayerDescription(
-            generateClockDescriptionLines(
-                final_output_item_name,
-                cycle,
-                total_duration
-            ).concat(subtick_clock
-                ? [`- Subtick clock: counts ${subtick_clock.period_ticks} ticks; the next two combinators give the position in 1/${subtick_clock.scale} ticks`]
-                : []
-            ).concat(period_modulus !== null
-                ? [
-                    `- Counts ${merged_clock_ticks} ticks on ${SignalId.toDescriptionString(counted_signal)}: ${merged_clock_ticks! / total_duration.ticks} times the total duration, so the fuel clocks of ${fuel_moduli.join(" and ")} ticks fit it too`,
-                    `- ${SignalId.toDescriptionString(SignalId.clock)} is that count modulo ${total_duration.ticks}`,
-                ]
-                : []
-            ).concat([
-                `- Counts ${CLOCK_FIRST_VALUE} to ${counted_ticks}, never 0; stops at ${CLOCK_FIRST_VALUE} while ${SignalId.toDescriptionString(SignalId.lock)} is on`,
-            ])
-        )
+        .setMultiLinePlayerDescription(clockDescriptionLines({
+            item_name: final_output_item_name,
+            items_per_second: cycle.production_rate.total_production_rate.amount_per_second.toDecimal(),
+            copies: cycle.production_rate.copies,
+            period_text: subtick_clock
+                ? `Period ${period.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${subtick_clock.period_ticks} (${subtick_clock.scale} periods), read in 1/${subtick_clock.scale} ticks`
+                : !Number.isInteger(total_duration.ticks)
+                    ? `Period ${period.ticks} ticks (${formatRate(total_duration.ticks)} rounded down: runs a little fast); counts ${CLOCK_FIRST_VALUE}–${period.ticks}`
+                    : period_modulus !== null
+                        ? `Period ${period.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${merged_clock_ticks} on ${SignalId.toDescriptionString(counted_signal)} (${merged_clock_ticks! / total_duration.ticks} periods, for the fuel clocks); ${SignalId.toDescriptionString(SignalId.clock)} = that mod ${total_duration.ticks}`
+                        : `Period ${period.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${counted_ticks}`,
+            drills: sortedEntityIds.some(entityId => EntityId.isDrill(entityId)),
+            not_clocked: notClocked(entityRegistry, [
+                ...sortedEntityIds.flatMap(entityId => [entityId, ...(history.merged_entities.get(entityId.id) ?? [])]),
+                ...fuel_inserter_clocks.map(inserter_clock => inserter_clock.inserter_id),
+            ]),
+        }))
+        .setTags({ generator: { ...GENERATOR } })
         .build();
 
     // One lock for every clock, under the clock: switched on, it stops them and the filters pass nothing
@@ -605,9 +463,7 @@ export function createSignalPerInserterBlueprint(
     const main_filter = DeciderCombinatorEntity
         .lockFilter(subtick_clock ? [SignalId.clock] : [])
         .setPosition(Position.fromXY(x += 1, 0))
-        .setMultiLinePlayerDescription(lockFilterDescription("clock", subtick_clock
-            ? [`- Adds ${CLOCK_FIRST_VALUE} to the subtick clock, which counts from ${CLOCK_FIRST_VALUE} like the other clocks`]
-            : []))
+        .setMultiLinePlayerDescription(lockFilterDescription("clock"))
         .build();
 
     sortedEntityIds.forEach(entityId => {
@@ -619,7 +475,8 @@ export function createSignalPerInserterBlueprint(
             entityId,
             entityRegistry,
             cycle,
-            total_duration.ticks / cycle.total_duration.ticks,
+            cycles_in_period,
+            period,
             Position.fromXY(x, 0),
             subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRangesInPeriod,
             split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
@@ -662,7 +519,9 @@ export function createSignalPerInserterBlueprint(
                     Array.from(items).map(item_name => SignalId.item(item_name)),
                 )
                 .setPosition(Position.fromXY(x += 1, 0))
-                .setMultiLinePlayerDescription(unplannedInserterClockDescriptionLines(inserters.map(it => it.entity_id), entityRegistry, items, inserter_clock, fuel_clock_signal))
+                .setMultiLinePlayerDescription(unplannedDescriptionLines(inserters.map(it => it.entity_id), entityRegistry, items, inserter_clock,
+                    clockValueRanges(window)[0], fuel_clock_signal ?? null))
+                .setTags({ inserters: inserters.map(it => it.entity_id.number).sort((a, b) => a - b) })
                 .build();
             window_deciders.push(window_decider);
             inserters_of.set(window_decider, inserters.map(it => it.entity_id.number));
@@ -676,11 +535,7 @@ export function createSignalPerInserterBlueprint(
             .clock(modulus)
             .setPosition(Position.fromXY(x += 1, 0))
             .setDirection(Direction.SOUTH)
-            .setMultiLinePlayerDescription([
-                `Fuel clock: counts ${CLOCK_FIRST_VALUE} to ${modulus}`,
-                "- for the inserters that fill fuel slots, which are not part of the swing counts",
-                "- a clock of its own, so a fuel slot is looked at no more often than it has to be",
-            ])
+            .setMultiLinePlayerDescription([`${PART_OF_THE_CLOCK} Fuel clock: counts ${CLOCK_FIRST_VALUE}–${modulus}`])
             .build();
         const fuel_filter = DeciderCombinatorEntity
             .lockFilter()
@@ -743,7 +598,8 @@ export function createSignalPerInserterBlueprint(
     ];
     const blueprint = new BlueprintBuilder()
         .setLabel(blueprint_label)
-        .setDescription(`${targetRateDescription(cycle)}\nClock period: ${formatRate(total_duration.ticks)} ticks`)
+        // the game keeps 500 bytes of a blueprint's description too (recorded in Factorio 2.1.21)
+        .setDescription(fitPlayerDescription([targetRateDescription(cycle), `Clock period: ${formatRate(total_duration.ticks)} ticks`, ...generatorDescriptionLines()]))
         .setEntities(entities)
         .setWires(wires.concat(fuel_wires))
         .build();

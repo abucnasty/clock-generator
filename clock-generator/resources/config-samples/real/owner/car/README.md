@@ -7,8 +7,9 @@ a loader empties into a disposal chest. The target is 80 plates a second from on
 
 - `car-scaffold.txt`: the owner's blueprint as given. The loader and disposal chest are part of it.
 - `car.sidecar-export.json`: what Sidecar 0.12.0 exported from the blueprint built in the harness game.
-- `car.json`: that export as the paste reads it (each list through its schema), with the target added. No field was
-  edited.
+- `car.json`: that export as the paste reads it (each list through its schema), with the target added and each machine's
+  `prototype` (`electric-furnace` for both machines) taken from the scaffold, as the sidecar exports it since this
+  export was taken; it only names the machines in the clock's descriptions. No other field was edited.
 
 The harness game has no ore, so the harness puts iron ore under the drill before it builds it (`drill_resource`, from the
 config's drill). The export was taken after a warm-up of 3600 ticks without a clock, as a furnace has no recipe until it

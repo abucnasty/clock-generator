@@ -195,6 +195,21 @@ function helpers.get_recipe_or_previous(entity)
     return recipe
 end
 
+---The quality name of the recipe a machine is set to, or of a furnace's previous recipe; nil when it has none
+---@param entity LuaEntity
+---@return string|nil
+function helpers.get_recipe_quality(entity)
+    local recipe, quality = entity.get_recipe()
+    if recipe and quality then
+        return type(quality) == "string" and quality or quality.name
+    end
+    if not recipe and entity.type == "furnace" and entity.previous_recipe and entity.previous_recipe.quality then
+        local previous = entity.previous_recipe.quality
+        return type(previous) == "string" and previous or previous.name
+    end
+    return nil
+end
+
 ---Resolve a RecipeID union type to a LuaRecipePrototype
 ---@param recipe_id LuaRecipePrototype|LuaRecipe|string
 ---@return LuaRecipePrototype|nil

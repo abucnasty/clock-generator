@@ -4,6 +4,7 @@ import { ChestType } from 'clock-generator/light';
 import { configToFormData, formDataToConfig } from './configMapping';
 import { planRepeatedUnitConversion } from 'clock-generator/browser';
 import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
+import { machineIconName } from './formData';
 
 const imported = {
     target_output: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
@@ -131,6 +132,41 @@ describe('formDataToConfig', () => {
         const config = formDataToConfig(form);
         expect(JSON.stringify(config)).not.toContain('_forced_always');
         expect(config.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
+    });
+});
+
+describe('the labels a config gives its machines and chests', () => {
+    it('keeps a machine\'s prototype and qualities and a buffer chest\'s prototype through the form', () => {
+        const labelled = {
+            ...imported,
+            machines: [{ id: 1, recipe: 'iron-plate', productivity: 0, crafting_speed: 2, type: 'furnace', prototype: 'electric-furnace', quality: 'legendary', recipe_quality: 'normal' }],
+            chests: [{ type: ChestType.BUFFER_CHEST, id: 1, storage_size: 2, item_filter: 'copper-plate', prototype: 'steel-chest' }],
+        } as unknown as Config;
+        const config = formDataToConfig(configToFormData(labelled));
+        expect(config.machines).toEqual(labelled.machines);
+        expect(config.chests).toEqual(labelled.chests);
+    });
+
+    it('keeps where the inserters, drills, machines and chests stand, and the way inserters and drills face', () => {
+        const at = { position: { x: 2.5, y: -1.5 } };
+        const placed = {
+            ...imported,
+            machines: imported.machines.map(m => ({ ...m, ...at })),
+            inserters: imported.inserters.map((ins, index) => ({ id: index + 1, ...ins, ...at, direction: 8 })),
+            chests: [...imported.chests!.map(c => ({ ...c, ...at })), { type: ChestType.CAR, id: 3, ...at }],
+            drills: { configs: imported.drills!.configs.map(d => ({ ...d, ...at, direction: 4 })) },
+        } as unknown as Config;
+        const config = formDataToConfig(configToFormData(placed));
+        expect(config.machines.map(m => m.position)).toEqual(placed.machines.map(() => at.position));
+        expect(config.inserters.map(ins => [ins.position, ins.direction])).toEqual(placed.inserters.map(() => [at.position, 8]));
+        expect(config.chests!.map(c => (c as { position?: unknown }).position)).toEqual(placed.chests!.map(() => at.position));
+        expect(config.drills!.configs.map(d => [d.position, d.direction])).toEqual([[at.position, 4]]);
+    });
+
+    it('draws a machine by its prototype, else by its type', () => {
+        expect(machineIconName({ prototype: 'foundry', type: 'machine' })).toBe('foundry');
+        expect(machineIconName({ type: 'furnace' })).toBe('electric-furnace');
+        expect(machineIconName(undefined)).toBe('assembling-machine-3');
     });
 });
 

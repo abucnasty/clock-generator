@@ -51,6 +51,14 @@ describe('installFactsOf', () => {
         expect(input.inserter_combinators[0].inserter_ids).toEqual([3, 1]);
     });
 
+    it('finds the drills of a combinator by its tags, whatever its description says', () => {
+        const tagged = blueprint('Clock for [item=stone-brick] 4/s', '[entity=electric-mining-drill] [item=stone] → …', 'Drill 9 for [item=stone]');
+        const entities = (tagged as unknown as { entities: Record<string, unknown>[] }).entities;
+        entities[1].tags = { clock_generator: { drills: [2, 1] } };
+        entities[2].tags = { clock_generator: { inserters: [9] } };
+        expect(factsOf({ schedule: schedule([[9]]), blueprint: tagged }).drills).toEqual([[1, 2]]);
+    });
+
     it('finds a clocked drill by its combinator, also when every inserter is always on', () => {
         const facts = factsOf({
             schedule: schedule([]),

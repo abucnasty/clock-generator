@@ -12,7 +12,7 @@ interface ColdStartClock {
     period: number;
     terminal_swings: number;
     clock_windows: SerializableClockWindows;
-    /** sha256 of the exported clock, `{blueprint, schedule}`, as the blast and the other pins hash it */
+    /** sha256 of the exported clock's identity (`clockIdentity`: no text or metadata), as the blast and the other pins hash it */
     clock_sha256: string;
 }
 interface ColdStartRun {

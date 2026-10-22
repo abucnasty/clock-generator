@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compare two blast-radius runs: per job, the selected clock's hash, id, verdict, holds, rate and supply, and how many
-alternatives' exported clocks changed.
+alternatives' exported clocks changed. The clock hash is of the clock's identity (no text); alternatives whose text alone
+changed (text_sha256, where both sides have it) are counted apart.
 
 usage: compare.py <before> <after> [--json out.json]
 
@@ -41,6 +42,9 @@ for key in sorted(before):
     alt_b = {x['id']: x['clock_sha256'] for x in b['alternatives']}
     alt_a = {x['id']: x['clock_sha256'] for x in a['alternatives']}
     alt_changed = sorted(i for i in set(alt_b) | set(alt_a) if alt_b.get(i) != alt_a.get(i))
+    text_b = {x['id']: x.get('text_sha256') for x in b['alternatives']}
+    text_a = {x['id']: x.get('text_sha256') for x in a['alternatives']}
+    text_only = sorted(i for i in set(alt_b) & set(alt_a) if alt_b[i] == alt_a[i] and text_b[i] and text_a[i] and text_b[i] != text_a[i])
     alt_verdicts = sorted(f"{x['id']}:{y['verdict']}->{x['verdict']}" for x in a['alternatives'] for y in b['alternatives']
                           if x['id'] == y['id'] and (x['verdict'] != y['verdict'] or x['holds'] != y['holds']))
     rows.append({
@@ -49,12 +53,14 @@ for key in sorted(before):
         'before': {f: sb[f] for f in fields + ['clock_sha256']}, 'after': {f: sa[f] for f in fields + ['clock_sha256']},
         'wake_ups': [sb.get('wake_ups'), sa.get('wake_ups')],
         'alternatives_hash_changed': alt_changed, 'alternative_verdict_changes': alt_verdicts,
+        'alternatives_text_only_changed': text_only,
     })
 
 hash_changed = [r for r in rows if r.get('selected_hash_changed')]
 verdict_only = [r for r in rows if r['status'] == 'ok' and not r['selected_hash_changed'] and r['selected_fields_changed']]
 alt_only = [r for r in rows if r['status'] == 'ok' and not r['selected_hash_changed'] and not r['selected_fields_changed'] and (r['alternatives_hash_changed'] or r['alternative_verdict_changes'])]
-print(f"jobs {len(rows)}; selected clock hash changed: {len(hash_changed)}; selection fields changed without a hash change: {len(verdict_only)}; only other alternatives changed: {len(alt_only)}")
+text_only = sum(len(r.get('alternatives_text_only_changed', [])) for r in rows)
+print(f"jobs {len(rows)}; selected clock hash changed: {len(hash_changed)}; selection fields changed without a hash change: {len(verdict_only)}; only other alternatives changed: {len(alt_only)}; alternatives whose text alone changed: {text_only}")
 for title, group in [('selected clock hash changed', hash_changed), ('selected verdict/holds changed, same clock', verdict_only), ('only other alternatives changed', alt_only)]:
     print(f'\n## {title}')
     for r in group:
@@ -67,6 +73,10 @@ if checks:
           + (f"; NOT AS EXPECTED: {failed}" if failed else '') + (f"; changed since before: {changed}" if changed else ''))
 errors = [r for r in rows if r['status'] not in ('ok', 'refusal')]
 print('\nerrors/missing:', [(r['key'], r['status'], r.get('same_error')) for r in errors])
+# Factorio keeps 500 bytes of a description (2.1.21): no alternative may need one cut
+cut = sorted(f"{key}:{alt['id']} ({alt['descriptions_cut']})" for key, j in after.items() if not is_check(j) and 'error' not in j
+             for alt in j.get('alternatives', []) if alt.get('descriptions_cut'))
+print('descriptions cut (after):', cut if cut else 'none')
 if only_after:
     print('only in after:', only_after)
 if '--json' in sys.argv:

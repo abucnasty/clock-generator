@@ -136,6 +136,17 @@ end
 ---entity that is not exported), each with the name of what it drops into, nil for the ground
 ---@param result ExtractionResult
 ---@return {drill: DrillData, target_name: string|nil}[]
+---Where an entity stands, as a plain {x, y} for the JSON (the clock generator keeps it for tools; nothing reads it); nil
+---for an entity no longer valid
+---@param entity LuaEntity|nil
+---@return {x: number, y: number}|nil
+function export.position_of(entity)
+    if not entity or not entity.valid then
+        return nil
+    end
+    return { x = entity.position.x, y = entity.position.y }
+end
+
 function export.left_out_drills(result)
     local left_out = {}
     for _, drill in ipairs(result.drills) do
@@ -180,7 +191,12 @@ function export.to_table(result, options)
             crafting_speed = machine.crafting_speed,
             productivity = machine.productivity,
             type = machine.type,
-            energy_consumption_bonus = machine.energy_consumption_bonus
+            energy_consumption_bonus = machine.energy_consumption_bonus,
+            position = export.position_of(machine.entity),
+            -- for labels only: the generator names the machine by its icon and keeps its qualities
+            prototype = machine.name,
+            quality = machine.quality,
+            recipe_quality = machine.recipe_quality
         })
     end
     
@@ -212,7 +228,9 @@ function export.to_table(result, options)
                 mined_item_name = drill.mined_item_name,
                 speed_bonus = drill.speed_bonus,
                 productivity = drill.productivity,
-                target = target
+                target = target,
+                position = export.position_of(drill.entity),
+                direction = drill.entity.valid and drill.entity.direction or nil
             })
         end
     end
@@ -229,7 +247,9 @@ function export.to_table(result, options)
             -- inserter but the legendary stack inserter. Without them it would run every inserter as that one.
             prototype = inserter.inserter_type,
             quality = inserter.quality,
-            stack_size = inserter.stack_size
+            stack_size = inserter.stack_size,
+            position = export.position_of(inserter.entity),
+            direction = inserter.entity.valid and inserter.entity.direction or nil
         }
 
         -- Only the filters set on the inserter itself are exported. Which items it moves is worked out by the
@@ -268,7 +288,8 @@ function export.to_table(result, options)
                 id = i,
                 -- Missing filters default to [] in the config; avoid ambiguous JSON for an empty Lua table.
                 item_filter = #filters > 0 and filters or nil,
-                remove_unfiltered_items = chest.remove_unfiltered_items == true
+                remove_unfiltered_items = chest.remove_unfiltered_items == true,
+                position = chest.position
             })
         elseif chest.chest_type == "rocket-silo" then
             table.insert(output.chests, {
@@ -278,6 +299,7 @@ function export.to_table(result, options)
                 crafting_speed = chest.crafting_speed,
                 productivity = chest.productivity,
                 contents = #chest.contents > 0 and chest.contents or nil,
+                position = chest.position,
             })
         elseif chest.chest_type == "car" or chest.chest_type == "tank" or chest.chest_type == "cargo-wagon" then
             -- a car's or a tank's quality does not change its slots: only a wagon's is exported
@@ -287,6 +309,7 @@ function export.to_table(result, options)
                 quality = chest.chest_type == "cargo-wagon" and chest.quality or nil,
                 slot_filters = #chest.slot_filters > 0 and chest.slot_filters or nil,
                 contents = #chest.contents > 0 and chest.contents or nil,
+                position = chest.position,
             })
         else
             -- Buffer chest format
@@ -294,7 +317,9 @@ function export.to_table(result, options)
                 type = "buffer-chest",
                 id = i,
                 storage_size = chest.storage_size,
-                item_filter = chest.item_filter
+                item_filter = chest.item_filter,
+                prototype = chest.name,
+                position = chest.position
             })
         end
     end

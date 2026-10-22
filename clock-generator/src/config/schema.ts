@@ -22,6 +22,18 @@ import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivit
 // Machine Configuration
 // ============================================================================
 
+/**
+ * Where an entity stands in the game, as the sidecar reads it (tile centres are at .5). Kept for tools: no engine
+ * decision reads it, and copies of a build differ in it.
+ */
+const MapPositionSchema = z.object({ x: z.number(), y: z.number() });
+
+/** The direction an entity faces, one of the game's 16 (0 north, 4 east, 8 south, 12 west). Kept for tools, as its position */
+const DirectionSchema = z.number().int().min(0).max(15);
+
+/** The qualities of the game, for the fields that name one */
+const MachineQualitySchema = z.enum(["normal", "uncommon", "rare", "epic", "legendary"]);
+
 export const MachineConfigurationSchema = z.object({
     id: z.number().int().positive(),
     recipe: z.string(),
@@ -30,6 +42,18 @@ export const MachineConfigurationSchema = z.object({
     type: z.enum(Object.values(MachineType)).optional(),
     energy_consumption_bonus: z.number().min(-80).optional(),
     fuel: z.string().optional(),
+    /**
+     * The machine's prototype name in the game data ("electric-furnace", "assembling-machine-3"), which the clock's
+     * descriptions show as its icon; without it they name the machine by its id. No decision of the engine reads it:
+     * what the machine does comes from `type`, `crafting_speed` and `productivity`. Sidecar 0.12.0 exports it.
+     */
+    prototype: z.string().optional(),
+    /** The machine's quality, which its crafting speed already counts; kept for labels. Sidecar 0.12.0 exports it. */
+    quality: MachineQualitySchema.optional(),
+    /** The quality of the recipe the machine is set to; kept for labels. Sidecar 0.12.0 exports it. */
+    recipe_quality: MachineQualitySchema.optional(),
+    /** Where the machine stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
 });
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -296,7 +320,10 @@ export const MiningDrillConfigSchema = z.object({
      */
     productivity: z.number().min(0),
     target: DrillTargetConfigSchema,
-    overrides: MiningDrillOverridesConfigSchema.optional()
+    overrides: MiningDrillOverridesConfigSchema.optional(),
+    /** Where the drill stands and the way it faces (MapPositionSchema, DirectionSchema). Sidecar 0.12.0 exports them. */
+    position: MapPositionSchema.optional(),
+    direction: DirectionSchema.optional(),
 });
 
 export type MiningDrillConfig = z.infer<typeof MiningDrillConfigSchema>;
@@ -431,7 +458,10 @@ export const InserterConfigSchema = z.object({
      * blacklist is refused rather than stripped and read as the items to move.
      */
     filter_mode: z.enum(["whitelist", "blacklist"]).optional(),
-    overrides: InserterOverridesConfigSchema.optional()
+    overrides: InserterOverridesConfigSchema.optional(),
+    /** Where the inserter stands and the way it faces (MapPositionSchema, DirectionSchema). Sidecar 0.12.0 exports them. */
+    position: MapPositionSchema.optional(),
+    direction: DirectionSchema.optional(),
 });
 
 /** Input may omit pickup length; schema parsing and entity construction both resolve it to 1. */
@@ -497,7 +527,11 @@ export const BufferChestConfigSchema = z.object({
      * The single item type this chest is filtered to hold.
      * Chests only support one item type for simplicity.
      */
-    item_filter: z.string()
+    item_filter: z.string(),
+    /** The chest's prototype name in the game data ("steel-chest"), which the clock's descriptions show as its icon; without it they name it by its id. Sidecar 0.12.0 exports it. */
+    prototype: z.string().optional(),
+    /** Where the chest stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
 });
 
 export type BufferChestConfig = z.infer<typeof BufferChestConfigSchema>;
@@ -527,7 +561,9 @@ export const InfinityChestConfigSchema = z.object({
     id: z.number().int().positive(),
     item_filter: z.array(InfinityFilterConfigSchema).default([]),
     /** Remove incoming items that are not configured supplies. Omitted in legacy builds. */
-    remove_unfiltered_items: z.boolean().optional()
+    remove_unfiltered_items: z.boolean().optional(),
+    /** Where the chest stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
 });
 
 export type InfinityChestConfig = z.infer<typeof InfinityChestConfigSchema>;
@@ -577,6 +613,8 @@ const slotContainerFields = {
     /** What the container holds when the build starts, slot by slot; empty without it */
     contents: z.array(SlotContentConfigSchema).optional(),
     storage_size: storageSizeRefused,
+    /** Where it stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
 };
 
 /** A car as a chest: the slots of its trunk, from the game data */
@@ -620,6 +658,8 @@ export const RocketSiloConfigSchema = z.object({
     /** What it holds when the build starts, placed as an inserter would place it */
     contents: z.array(ItemCountConfigSchema).optional(),
     storage_size: storageSizeRefused,
+    /** Where it stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
 });
 
 export type RocketSiloConfig = z.infer<typeof RocketSiloConfigSchema>;

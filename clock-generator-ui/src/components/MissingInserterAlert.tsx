@@ -2,6 +2,7 @@ import { Alert, AlertTitle, Box, Button, Menu, MenuItem, Stack, Typography } fro
 import { memo, useId, useMemo, useState } from 'react';
 import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import type { BeltFormData, ChestFormData, MachineFormData } from '../hooks/useConfigForm';
+import { machineIconName } from '../hooks/useConfigForm';
 import { useGameNames } from '../hooks/useGameNames';
 import { entityLabel } from '../utils/entityLabel';
 import { coverageIssueElementId } from '../utils/firstProblem';
@@ -170,7 +171,7 @@ export const MissingInserterAlert = memo(function MissingInserterAlert({ issues,
                         ...(index > 0 && { borderTop: '1px solid', borderColor: 'divider' }),
                         '@media (max-width: 650px)': { gridTemplateColumns: '1fr', gap: 0.5 } }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                        <EntityBadge id={machineId} size="small"><FactorioIcon name={machine?.type === 'biochamber' ? 'biochamber' : machine?.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3'} size={22} alt="" /></EntityBadge>
+                        <EntityBadge id={machineId} size="small"><FactorioIcon name={machineIconName(machine)} size={22} alt="" /></EntityBadge>
                         <Box sx={{ minWidth: 0 }}>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>{entityLabel('machine', machineId)}</Typography>
                             <Typography variant="caption" component="div" noWrap><GameName id={missing[0].recipe} kind="recipe" /></Typography>

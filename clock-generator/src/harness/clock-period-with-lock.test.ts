@@ -53,7 +53,7 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
             { logger: quiet, fuel_consumption_view: false },
         );
         const blueprint = encodeBlueprintFile({ blueprint: result.subtick!.blueprint });
-        const fuel_clocks = entitiesOf(blueprint).filter(entity => /^Fuel clock/.test(entity.player_description ?? ""));
+        const fuel_clocks = entitiesOf(blueprint).filter(entity => (entity.player_description ?? "").includes("Fuel clock:"));
         expect(fuel_clocks.length).toBeGreaterThan(0);
         expect(clockPeriodTicks(blueprint)).toBe(result.subtick!.clock.period_ticks);
     });
@@ -74,7 +74,7 @@ describe("the schedule of a generated clock", () => {
         ...(result.subtick ? [result.subtick] : []),
     ];
 
-    it("is what the descriptions of its combinators say", async () => {
+    it("is what the tags of its combinators say", async () => {
         const rocket_fuel = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
         const configs = [
             await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE),

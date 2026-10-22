@@ -1,7 +1,9 @@
 ---@class MachineData
 ---@field entity LuaEntity
 ---@field name string Machine entity name
+---@field quality string The machine's quality name
 ---@field recipe string Recipe name (for machines/furnaces)
+---@field recipe_quality string|nil The quality name of its recipe, nil when it has none
 ---@field crafting_speed number Effective crafting speed with bonuses (for machines/furnaces)
 ---@field productivity number Productivity bonus as percentage (0-100+)
 ---@field type "machine"|"furnace"|"biochamber"|"mining-drill" Entity type category
@@ -44,12 +46,15 @@
 ---@class BufferChestData
 ---@field chest_type "buffer-chest" The chest type discriminator
 ---@field unit_number number The unit number of the chest entity
+---@field name string The chest's prototype name (steel-chest, ...)
+---@field position {x: number, y: number} Where the chest stands
 ---@field storage_size number Number of inventory slots
 ---@field item_filter string The single item type this chest holds
 
 ---@class InfinityChestData
 ---@field chest_type "infinity-chest" The chest type discriminator
 ---@field unit_number number The unit number of the chest entity
+---@field position {x: number, y: number} Where the chest stands
 ---@field item_filters InfinityFilterData[] The configured infinity filters, not current inventory
 ---@field remove_unfiltered_items boolean Whether unfiltered incoming items are removed
 

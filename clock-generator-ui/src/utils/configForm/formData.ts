@@ -20,6 +20,17 @@ export interface MachineFormData {
     /** Energy consumption effect in percent; only used by biochambers. */
     energy_consumption_bonus?: number;
     fuel?: Config['machines'][number]['fuel'];
+    /** The machine's prototype name ("electric-furnace"), shown as its icon; Sidecar exports it */
+    prototype?: string;
+    quality?: Config['machines'][number]['quality'];
+    recipe_quality?: Config['machines'][number]['recipe_quality'];
+    /** Where it stands in the game; Sidecar exports it, nothing reads it */
+    position?: Config['machines'][number]['position'];
+}
+
+/** The icon of a machine: its prototype when the config has it, else one for its type */
+export function machineIconName(machine: Pick<MachineFormData, 'prototype' | 'type'> | undefined): string {
+    return machine?.prototype ?? (machine?.type === 'biochamber' ? 'biochamber' : machine?.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3');
 }
 
 // Enable rule types come from the engine's config schema
@@ -55,6 +66,9 @@ export interface InserterFormData {
     /** How the game reads `filters`; a blacklist with filters is refused by the engine, so it is kept as captured */
     filter_mode?: Config['inserters'][number]['filter_mode'];
     overrides?: InserterOverrides;
+    /** Where it stands and the way it faces in the game; Sidecar exports them, nothing reads them */
+    position?: Config['inserters'][number]['position'];
+    direction?: Config['inserters'][number]['direction'];
     /** UI-only, never part of the exported config: set when Exclude from LCM forced this inserter's rule to ALWAYS
      *  (its items are all excluded), so that including one of them again may take that ALWAYS away. Replacing the
      *  rule clears it. */
@@ -115,6 +129,9 @@ export interface DrillFormData {
     /** A machine, picked in the form; or a chest, kept as the config gives it (shown, not edited) */
     target: { type: 'machine'; id: number } | { type: 'chest'; id: number };
     overrides?: DrillOverrides;
+    /** Where it stands and the way it faces in the game; Sidecar exports them, nothing reads them */
+    position?: { x: number; y: number };
+    direction?: number;
 }
 
 // Infinity chest filter for item_name + request_count pairs
@@ -148,6 +165,10 @@ export interface BufferChestFormData extends ChestSettingsMemory {
     _uuid: string;
     storage_size: number;
     item_filter: string;
+    /** The chest's prototype name ("steel-chest"); Sidecar exports it */
+    prototype?: string;
+    /** Where it stands in the game; Sidecar exports it, nothing reads it */
+    position?: { x: number; y: number };
 }
 
 // Infinity chest form data
@@ -158,6 +179,8 @@ export interface InfinityChestFormData extends ChestSettingsMemory {
     _uuid: string;
     item_filter: InfinityFilterFormData[];
     remove_unfiltered_items?: boolean;
+    /** Where it stands in the game; Sidecar exports it, nothing reads it */
+    position?: { x: number; y: number };
 }
 
 /**

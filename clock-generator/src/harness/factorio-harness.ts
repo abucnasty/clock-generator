@@ -5,6 +5,7 @@ import net from "net";
 import os from "os";
 import path from "path";
 import zlib from "zlib";
+import { ClockGeneratorTags } from "../blueprints/components";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import { Config } from "../config";
 import { ClockSchedule } from "../crafting/blueprint";
@@ -298,17 +299,24 @@ function decodeBlueprintString(blueprint: string): any {
 
 /**
  * A generated clock given only as a blueprint string, as `npm run record -- --clock=` takes it, with its schedule read
- * back from the descriptions of its combinators: "Inserters 1, 2 for ..." names the inserters one enables, and the
- * clock is the decider described as "Clock for ..." (see clockPeriodTicks). A clock from the generator itself comes
- * with its schedule (BlueprintGenerationResult.schedule) and needs none of this.
+ * back from its combinators: the inserters each enables from its tags (ClockGeneratorTags), or, in a string from before
+ * the tags, from its description ("Inserters 1, 2 for ..."); the clock is the decider described as "Clock for ..." (see
+ * clockPeriodTicks). A clock from the generator itself comes with its schedule (BlueprintGenerationResult.schedule) and
+ * needs none of this.
  */
 export function clockOfBlueprintString(blueprint: string): GeneratedClock {
     const counted_ticks = clockPeriodTicks(blueprint);
     if (counted_ticks === null) {
         throw new Error("The clock blueprint has no clock the generator made: no decider described as \"Clock for ...\" that counts a period");
     }
-    const entities: { entity_number: number; player_description?: string }[] = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    const entities: { entity_number: number; player_description?: string; tags?: { clock_generator?: ClockGeneratorTags } }[] =
+        decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    const tagged = entities.some(entity => entity.tags?.clock_generator !== undefined);
     const inserter_combinators = entities.flatMap(entity => {
+        if (tagged) {
+            const inserter_ids = entity.tags?.clock_generator?.inserters ?? [];
+            return inserter_ids.length > 0 ? [{ entity_number: entity.entity_number, inserter_ids }] : [];
+        }
         const named = /^Inserters? ([\d, ]+) for/.exec(entity.player_description ?? "");
         return named ? [{ entity_number: entity.entity_number, inserter_ids: named[1].split(",").map(id => Number(id.trim())) }] : [];
     });

@@ -19,4 +19,6 @@ export interface MachineMetadata {
     energy_consumption_bonus?: number;
     /** Fuel item to burn. Only used by fuel-burning types; defaults to their first accepted fuel. */
     fuel?: string;
+    /** The machine's prototype name in the game data, for labels only (the config's `prototype`) */
+    prototype?: string;
 }

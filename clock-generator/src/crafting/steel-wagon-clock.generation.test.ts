@@ -1,7 +1,7 @@
 import {createHash} from "crypto";
 import {beforeAll, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
-import {encodeBlueprintFile} from "../blueprints/serde";
+import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import {steelWagonCases} from "../../tests/game/builds/steel-wagon-clock-fixtures";
@@ -23,6 +23,19 @@ test("steel wagon: the clock with belt slack is selected, and the drill into the
     }
 });
 
+test("steel wagon: no description shows a float as a fraction (the period is a whole number of crafting cycles)", () => {
+    // the period of 11520/13 ticks over a cycle of 480/13 was once divided as doubles, 24.000000000000004, and inserter 4's
+    // 5/8 swings a cycle came out as "6000000000000001/400000000000000" swings a period
+    for (const alternative of generated.alternatives) {
+        const blueprints = [alternative.result.blueprint, alternative.result.modulo_blueprint, alternative.result.subtick?.blueprint];
+        for (const blueprint of blueprints.filter(it => it !== undefined)) {
+            for (const text of [blueprint.description, ...blueprint.entities.map(entity => entity.player_description)]) {
+                expect(text ?? "", `${alternative.id}: ${text}`).not.toMatch(/\d{8,}\/\d+/);
+            }
+        }
+    }
+});
+
 for (const variant of steelWagonCases()) {
     test(`steel wagon clock: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];
@@ -30,8 +43,8 @@ for (const variant of steelWagonCases()) {
         const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
         const result = chosen.result;
         const exported = result.subtick ?? result;
-        const clock = {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule};
-        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control")
+        const clock = clockIdentity(exported);
+        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control (its identity: no text or metadata)")
             .toBe(expected.clock_sha256);
         expect(result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks).toBe(expected.period);
         expect(chosen.verdict).toBe(expected.verdict);

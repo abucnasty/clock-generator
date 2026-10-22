@@ -16,7 +16,7 @@ export interface ClockInstallFacts {
     drills: number[][];
 }
 
-/** The first line of a drill's combinator description, "Drills 1, 2 for [item=iron-ore] …" (`entityDescriptionHeaderLines`) */
+/** The first line of a drill's combinator description in a clock from before the tags, "Drills 1, 2 for [item=iron-ore] …" */
 const DRILL_HEADER = /^Drills? (\d+(?:, \d+)*) for /;
 /** A drill's key in the clock's wake windows, "drill:2" */
 const DRILL_ID = /^drill:(\d+)$/;
@@ -29,9 +29,9 @@ const ordered = (rows: number[][]) => rows
 /**
  * The install facts of a generated clock, from the same data the in-game harness wires from: whether the string is a
  * book (`blueprintFileFor` makes one when there is a modulo blueprint) and which inserters each combinator switches on.
- * The schedule leaves drills out, so a drill's combinator is found by the description the engine gives it, which is
- * what the player reads in the game; a drill that is always on has none. A combinator that switches nothing on (a part
- * of the clock) has no row.
+ * The schedule leaves drills out, so a drill's combinator is found by its tags (the drills it switches on), or, in a
+ * clock from before the tags, by its description; a drill that is always on has none. A combinator that switches
+ * nothing on (a part of the clock) has no row.
  */
 export function installFactsOf(
     result: Pick<BlueprintGenerationResult, 'modulo_blueprint' | 'schedule' | 'blueprint' | 'clock_windows'>,
@@ -39,6 +39,10 @@ export function installFactsOf(
     const described = result.blueprint.entities.flatMap(entity => {
         if (entity.name !== 'decider-combinator') {
             return [];
+        }
+        const tagged = entity.tags?.clock_generator;
+        if (tagged !== undefined) {
+            return tagged.drills !== undefined && tagged.drills.length > 0 ? [tagged.drills] : [];
         }
         const header = DRILL_HEADER.exec(entity.player_description ?? '');
         return header ? [header[1].split(', ').map(Number)] : [];

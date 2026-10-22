@@ -116,6 +116,7 @@ local function extract_vehicle_or_silo_data(entity)
         return {
             chest_type = "rocket-silo",
             unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
             recipe_quality = recipe_quality and recipe_quality.name or "normal",
             crafting_speed = entity.crafting_speed,
             productivity = math.min(productivity, 3.0) * 100,
@@ -131,6 +132,7 @@ local function extract_vehicle_or_silo_data(entity)
         -- the car's and the tank's prototype names are their chest types
         chest_type = entity.type == "car" and entity.name or "cargo-wagon",
         unit_number = entity.unit_number,
+        position = { x = entity.position.x, y = entity.position.y },
         quality = entity.quality and entity.quality.name or "normal",
         slot_filters = filters,
         contents = contents,
@@ -166,6 +168,7 @@ local function extract_chest_data(entity)
         return {
             chest_type = "infinity-chest",
             unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
             item_filters = filters,
             remove_unfiltered_items = entity.remove_unfiltered_items
         }
@@ -184,6 +187,8 @@ local function extract_chest_data(entity)
         return {
             chest_type = "buffer-chest",
             unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
+            name = entity.name,
             storage_size = storage_size,
             item_filter = first_item.name
         }
@@ -331,7 +336,9 @@ local function extract_crafting_machine_data(entity)
     local data = {
         entity = entity,
         name = entity.name,
+        quality = entity.quality and entity.quality.name or "normal",
         recipe = recipe.name,
+        recipe_quality = helpers.get_recipe_quality(entity),
         crafting_speed = entity.crafting_speed,
         productivity = total_productivity * 100,
         type = entity_type,

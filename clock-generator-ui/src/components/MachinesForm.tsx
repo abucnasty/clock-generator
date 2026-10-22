@@ -13,6 +13,7 @@ import {
 import { memo, useState } from 'react';
 import type { Config, MachineTargetRate } from 'clock-generator/browser';
 import type { MachineFormData } from '../hooks/useConfigForm';
+import { machineIconName } from '../hooks/useConfigForm';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useMachineTargetRates } from '../hooks/useMachineTargetRates';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
@@ -128,7 +129,7 @@ function MachinesFormComponent({
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}
                         displayLabel={<EntityBadge id={machine.id}>
-                            <FactorioIcon name={machine.type === 'biochamber' ? 'biochamber' : machine.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3'} size={28} alt="" />
+                            <FactorioIcon name={machineIconName(machine)} size={28} alt="" />
                         </EntityBadge>}>
                         {(dragHandle) => (
                             <MachineRow
