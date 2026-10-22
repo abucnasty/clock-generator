@@ -1,5 +1,5 @@
 // The blast radius: generate every sample config (as it is and with backed-up belts) and every pickup, over-hood, front
-// and blocked-output fixture, and hash every alternative's exported clock as over-hood-clock.generation.test.ts does
+// and blocked-output fixture and every container config, and hash every alternative's exported clock as over-hood-clock.generation.test.ts does
 // (sha256 of {blueprint, schedule}, subtick ?? result); the samples that exist to be refused (ExpectedRefusals in
 // src/config/config-paths.ts) are checked instead: each must fail with its error, as it is and backed up. Run by
 // scripts/blast/blast.sh, which installs it into the worktree's tests/game/builds/.scratch/ (gitignored), where its
@@ -7,7 +7,7 @@
 // Env: BLAST_OUT (folder; one JSON per job, and _jobs.json, the job list with each config's sha256), BLAST_CLAIMS
 // (folder shared by parallel processes, default <BLAST_OUT>/.claims: a job is claimed by creating <claims>/<job>),
 // BLAST_MODE (generate, the default, or jobs: write _jobs.json only), BLAST_ONLY (comma list of job names),
-// BLAST_GROUPS (default config,config-backed,pickup,overhood,front,blocked,refusal), BLAST_SKIP (default
+// BLAST_GROUPS (default config,config-backed,pickup,overhood,front,blocked,containers,refusal), BLAST_SKIP (default
 // REAL_THAELN_CELL09; "" runs it).
 import fs from 'fs'; import path from 'path'; import { createHash } from 'crypto';
 import { test } from 'vitest';
@@ -29,7 +29,7 @@ const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefi
 // Thaeln's cell 09 is out of scope for 0.19.0 (owner, 2026-10-20) and takes ~1,000 s alone: skipped unless BLAST_SKIP
 // is set ("" runs it)
 const SKIP = (process.env.BLAST_SKIP ?? 'REAL_THAELN_CELL09').split(',').filter(Boolean);
-const GROUPS = (process.env.BLAST_GROUPS || 'config,config-backed,pickup,overhood,front,blocked,refusal').split(',');
+const GROUPS = (process.env.BLAST_GROUPS || 'config,config-backed,pickup,overhood,front,blocked,containers,refusal').split(',');
 const { ConfigPaths } = configPaths;
 // the samples that exist to be refused, by ConfigPaths key, with the error each must fail with; a worktree from before
 // the list has none, and its config groups keep every sample
@@ -57,6 +57,14 @@ async function blockedJobs(): Promise<Job[]> {
     return blocked.blockedOutputClockCases()
         .map((variant: any) => ({ group: 'blocked', name: variant.name, config: async () => blocked.blockedOutputClockConfig(variant) }));
 }
+/** The container configs (a car, a tank, a cargo wagon between two inserters); none in a worktree from before them */
+async function containerJobs(): Promise<Job[]> {
+    const file = path.join(__dirname, '..', 'container-clock-fixtures.ts');
+    if (!fs.existsSync(file)) return [];
+    const containers = await import(file);
+    return containers.containerClockCases()
+        .map((variant: any) => ({ group: 'containers', name: variant.name, config: async () => containers.containerClockConfig(variant) }));
+}
 // as the scaffold recordings generate a backed-up variant: overrides.backed_up_belts
 const backedUp = (config: any) => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
 const samples = Object.entries(ConfigPaths).filter(([name]) => !(name in REFUSALS));
@@ -71,7 +79,7 @@ const baseJobs: Job[] = [
         ({ group: 'overhood', name: variant.name, config: async () => overHoodClockConfig(variant) }))),
 ];
 async function loadJobs(): Promise<Job[]> {
-    return [...baseJobs, ...await frontJobs(), ...await blockedJobs()]
+    return [...baseJobs, ...await frontJobs(), ...await blockedJobs(), ...await containerJobs()]
         .sort((a, b) => (SLOW.includes(b.name) ? 1 : 0) - (SLOW.includes(a.name) ? 1 : 0))
         .filter(job => GROUPS.includes(job.group) && !SKIP.includes(job.name) && (!ONLY || ONLY.includes(job.name)));
 }

@@ -12,6 +12,7 @@ import {
     type EntityKind,
     type InserterFormData,
     type MachineFormData,
+    isContainerChest,
 } from './formData';
 
 // Plain edits of the form state: each takes the state and returns the edited state, for `setConfig`
@@ -293,6 +294,8 @@ export function updateChest(prev: ConfigFormData, index: number, updates: Partia
 /** The same chest conversion for a dialog draft and the committed form. */
 export function switchedChest(chest: ChestFormData, newType: ChestType, disposal = false): ChestFormData {
     if (chest.type === newType) return chest;
+    // a car, a tank, a wagon or a silo is not switched to another type in the form yet
+    if (isContainerChest(chest) || (newType !== ChestType.BUFFER_CHEST && newType !== ChestType.INFINITY_CHEST)) return chest;
     if (chest.type === ChestType.INFINITY_CHEST) {
         return {
             type: ChestType.BUFFER_CHEST, id: chest.id, _uuid: chest._uuid,

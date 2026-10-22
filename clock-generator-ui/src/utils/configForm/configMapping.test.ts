@@ -157,3 +157,16 @@ describe('imported inserter metadata', () => {
         expect(configToFormData(file).inserters[0].stack_size).toBe(stack_size);
     });
 });
+
+describe('cars, tanks, cargo wagons and rocket silos', () => {
+    it('keeps them through the form as the config gives them', () => {
+        const chests = [
+            { id: 1, type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }], contents: [{ slot: 2, item: 'coal', count: 50 }] },
+            { id: 2, type: ChestType.TANK },
+            { id: 3, type: ChestType.CARGO_WAGON, quality: 'legendary' as const },
+            { id: 4, type: ChestType.ROCKET_SILO, recipe_quality: 'rare' as const, crafting_speed: 2, contents: [{ item: 'iron-plate', count: 100 }] },
+        ];
+        const config = { ...imported, chests } as unknown as Config;
+        expect(formDataToConfig(configToFormData(config)).chests).toEqual(chests);
+    });
+});

@@ -62,7 +62,60 @@ local function is_chest_entity(entity)
     end
     local t = entity.type
     return t == "container" or t == "logistic-container" or
-        t == "linked-container" or t == "infinity-container"
+        t == "linked-container" or t == "infinity-container" or
+        t == "car" or t == "cargo-wagon" or t == "rocket-silo"
+end
+
+---The slots of an inventory: the filter of each filtered slot and the contents of each slot that holds something
+---@param inventory LuaInventory
+---@return {slot: number, item: string}[] filters, {slot: number, item: string, count: number}[] contents
+local function slots_of(inventory)
+    local filters, contents = {}, {}
+    for slot = 1, #inventory do
+        local filter = inventory.supports_filters() and inventory.get_filter(slot) or nil
+        if filter then
+            table.insert(filters, { slot = slot, item = type(filter) == "table" and filter.name or filter })
+        end
+        local stack = inventory[slot]
+        if stack.valid_for_read then
+            table.insert(contents, { slot = slot, item = stack.name, count = stack.count })
+        end
+    end
+    return filters, contents
+end
+
+---A car, a tank, a cargo wagon or a rocket silo, taken as a chest
+---@param entity LuaEntity
+---@return table
+local function extract_vehicle_or_silo_data(entity)
+    if entity.type == "rocket-silo" then
+        local contents = {}
+        for _, index in ipairs({ defines.inventory.rocket_silo_rocket, defines.inventory.crafter_input }) do
+            local inventory = entity.get_inventory(index)
+            for _, content in pairs(inventory and inventory.get_contents() or {}) do
+                table.insert(contents, { item = content.name, count = content.count })
+            end
+        end
+        local _, recipe_quality = entity.get_recipe()
+        return {
+            chest_type = "rocket-silo",
+            unit_number = entity.unit_number,
+            recipe_quality = recipe_quality and recipe_quality.name or "normal",
+            crafting_speed = entity.crafting_speed,
+            productivity = (entity.productivity_bonus or 0) * 100,
+            contents = contents,
+        }
+    end
+    local index = entity.type == "car" and defines.inventory.car_trunk or defines.inventory.cargo_wagon
+    local filters, contents = slots_of(entity.get_inventory(index))
+    return {
+        -- the car's and the tank's prototype names are their chest types
+        chest_type = entity.type == "car" and entity.name or "cargo-wagon",
+        unit_number = entity.unit_number,
+        quality = entity.quality and entity.quality.name or "normal",
+        slot_filters = filters,
+        contents = contents,
+    }
 end
 
 ---Extract data from a chest (buffer chest or infinity chest)
@@ -75,6 +128,10 @@ local function extract_chest_data(entity)
 
     if not is_chest_entity(entity) then
         return nil
+    end
+
+    if entity.type == "car" or entity.type == "cargo-wagon" or entity.type == "rocket-silo" then
+        return extract_vehicle_or_silo_data(entity)
     end
 
     -- Infinity settings exist even when the inventory is empty (a disposal chest usually is).

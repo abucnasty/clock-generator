@@ -34,7 +34,22 @@ export type BeltStrategy = typeof BeltStrategy[keyof typeof BeltStrategy];
 
 export const ChestType = {
     BUFFER_CHEST: "buffer-chest",
-    INFINITY_CHEST: "infinity-chest"
+    INFINITY_CHEST: "infinity-chest",
+    /** A car, a tank or a cargo wagon: slots of the game data's size, filtered or free, holding mixed items */
+    CAR: "car",
+    TANK: "tank",
+    CARGO_WAGON: "cargo-wagon",
+    /** A rocket silo as a chest: its rocket inventory by weight, and its recipe's ingredients in its input slots */
+    ROCKET_SILO: "rocket-silo",
 } as const;
 
 export type ChestType = typeof ChestType[keyof typeof ChestType];
+
+/** The chest types whose slots come from a container prototype of the game data, named by the type */
+export const SlotContainerType = {
+    CAR: ChestType.CAR,
+    TANK: ChestType.TANK,
+    CARGO_WAGON: ChestType.CARGO_WAGON,
+} as const;
+
+export type SlotContainerType = typeof SlotContainerType[keyof typeof SlotContainerType];

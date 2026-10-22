@@ -136,7 +136,7 @@ export class TimelineRecorder {
         } else if (EntityState.isChest(state)) {
             entity.items = state.chest.getItemFilters();
             const constant = EntityState.isInfinityChest(state);
-            for (const item of entity.items) add({ id: `stock:${item}`, label: constant ? "Configured supply" : "Contents", group: "inventory", unit: "items", item, ...(constant ? {} : { limit: state.getCapacity() }) }, () => state.getCurrentQuantity(item));
+            for (const item of entity.items) add({ id: `stock:${item}`, label: constant ? "Configured supply" : "Contents", group: "inventory", unit: "items", item, ...(constant ? {} : { limit: state.getCapacity(item) }) }, () => state.getCurrentQuantity(item));
             if (EntityState.isInfinityChest(state)) entity.note = state.chest.remove_unfiltered_items
                 ? (entity.items.length ? "Configured items are a constant supply. Unfiltered incoming items are removed." : "All incoming items are removed. This chest supplies no items.")
                 : "Infinity chest contents are a configured supply, not a finite inventory.";

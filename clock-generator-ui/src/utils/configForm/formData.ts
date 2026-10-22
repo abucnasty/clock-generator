@@ -145,8 +145,16 @@ export interface InfinityChestFormData extends ChestSettingsMemory {
     remove_unfiltered_items?: boolean;
 }
 
+/**
+ * A car, a tank, a cargo wagon or a rocket silo, kept as the config gives it: the web form shows and saves it, and does
+ * not edit it yet
+ */
+type ChestConfig = NonNullable<Config['chests']>[number];
+export type ContainerChestFormData = Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>
+    & ChestSettingsMemory & { _uuid: string };
+
 // Discriminated union for chest types
-export type ChestFormData = BufferChestFormData | InfinityChestFormData;
+export type ChestFormData = BufferChestFormData | InfinityChestFormData | ContainerChestFormData;
 
 // Type guards - handle legacy data without type field (default to buffer chest)
 export function isBufferChest(chest: ChestFormData): chest is BufferChestFormData {
@@ -155,6 +163,23 @@ export function isBufferChest(chest: ChestFormData): chest is BufferChestFormDat
 
 export function isInfinityChest(chest: ChestFormData): chest is InfinityChestFormData {
     return chest.type === ChestType.INFINITY_CHEST;
+}
+
+export function isContainerChest(chest: ChestFormData): chest is ContainerChestFormData {
+    return !isBufferChest(chest) && !isInfinityChest(chest);
+}
+
+/** The items a car, a tank, a cargo wagon or a rocket silo names: what it starts with and what its slots are filtered to */
+export function containerItems(chest: ContainerChestFormData | Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>): string[] {
+    const filtered = 'slot_filters' in chest ? (chest.slot_filters ?? []).map(filter => filter.item) : [];
+    return Array.from(new Set([...(chest.contents ?? []).map(content => content.item), ...filtered]));
+}
+
+/** The items a chest of a config names: a buffer chest's filter, an infinity chest's supplies, a container's items */
+export function chestConfigItems(chest: ChestConfig): string[] {
+    if (chest.type === ChestType.BUFFER_CHEST) return [chest.item_filter];
+    if (chest.type === ChestType.INFINITY_CHEST) return chest.item_filter.map(filter => filter.item_name);
+    return containerItems(chest);
 }
 
 /** The kinds of entity of the form, which number their entities each on their own */

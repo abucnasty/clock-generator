@@ -56,4 +56,27 @@ describe("a result's chance in the 2.1 data", () => {
         const seed = RecipeMetadata.fromRecipeName("jellynut-processing").outputs.find(it => it.name === "jellynut-seed")!;
         expect(expectedAmount(seed)).toBeCloseTo(0.02, 9);
     });
+
+    it("gives a car and a tank 80 slots at every quality, and a cargo wagon 40 to 100 by its quality", () => {
+        // measured in the game: get_inventory_size of each prototype at each quality, and built cars and tanks
+        for (const quality of ["normal", "uncommon", "rare", "epic", "legendary"]) {
+            expect(FactorioDataService.containerSlots("car", quality)).toBe(80);
+            expect(FactorioDataService.containerSlots("tank", quality)).toBe(80);
+        }
+        expect(["normal", "uncommon", "rare", "epic", "legendary"].map(quality => FactorioDataService.containerSlots("cargo-wagon", quality)))
+            .toEqual([40, 50, 60, 70, 100]);
+        expect(() => FactorioDataService.containerSlots("wooden-chest", "normal")).toThrow("wooden-chest is not a container of the game data");
+    });
+
+    it("has the rocket silo fixed to its rocket part recipe, and every item's weight as the game holds it", () => {
+        expect(FactorioDataService.findRocketSiloOrThrow("rocket-silo")).toEqual({
+            name: "rocket-silo", fixed_recipe: "rocket-part", crafting_speed: 1, module_slots: 4, lift_weight: 1_000_000,
+        });
+        expect(FactorioDataService.findRecipeOrThrow("rocket-part").ingredients.map(it => [it.name, it.amount]))
+            .toEqual([["processing-unit", 1], ["low-density-structure", 1], ["rocket-fuel", 1]]);
+        // the game keeps weights in 1/65536 parts: a processing unit weighs 1,000,000 / 300 so held
+        expect(FactorioDataService.itemWeightOrThrow("processing-unit")).toBe(218453333 / 65536);
+        expect(FactorioDataService.itemWeightOrThrow("iron-plate")).toBe(1000);
+        expect(FactorioDataService.itemWeightOrThrow("rocket-fuel")).toBe(10000);
+    });
 });

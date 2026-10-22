@@ -27,13 +27,16 @@ export {
     BELT_STRATEGIES,
     LANE_CONSUMPTION_TOOLTIP,
     beltStrategyUpdate,
+    containerItems,
     isBufferChest,
+    isContainerChest,
     isInfinityChest,
 } from '../utils/configForm/formData';
 export type {
     BeltFormData,
     BeltLaneFormData,
     BeltStrategyFormValue,
+    BufferChestFormData,
     ChestFormData,
     Condition,
     DrillFormData,

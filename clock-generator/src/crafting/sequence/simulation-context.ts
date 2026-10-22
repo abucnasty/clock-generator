@@ -6,7 +6,7 @@ import { InserterStateMachine } from "../../control-logic/inserter/inserter-stat
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
 import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { ControlLogic } from "../../control-logic";
-import { Belt, Chest, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
+import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { MiningProductivity } from "../../entities/drill/mining-productivity";
 import { assertIsMachineState, DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, MachineState, WritableEntityStateRegistry } from "../../state";
@@ -121,7 +121,7 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
 
     if (chests) {
         chests.forEach(chestConfig => {
-            entity_registry.add(Chest.fromConfig(chestConfig))
+            entity_registry.add(Chest.fromConfig(chestConfig, itemsPutInto(config, chestConfig.id, entity_registry)))
         })
     }
 
@@ -139,6 +139,35 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
     }
 
     return entity_registry;
+}
+
+/**
+ * The items the build's inserters put into a chest: an inserter's filters, else what its source gives (a machine's
+ * products, a belt's lanes, a chest's configured items). A chest of mixed items can give these on.
+ */
+function itemsPutInto(config: Config, chest_id: number, entity_registry: EntityRegistry): string[] {
+    const items = new Set<string>();
+    for (const inserter of config.inserters) {
+        if (inserter.sink.type !== "chest" || inserter.sink.id !== chest_id) continue;
+        if (inserter.filters && inserter.filters.length > 0) {
+            inserter.filters.forEach(item => items.add(item));
+            continue;
+        }
+        const source = inserter.source;
+        if (source.type === "machine") {
+            const machine = entity_registry.getEntityById(EntityId.forMachine(source.id));
+            if (machine !== null && Entity.isMachine(machine)) machine.outputs.forEach(output => items.add(output.item_name));
+        } else if (source.type === "belt") {
+            const belt = entity_registry.getEntityById(EntityId.forBelt(source.id));
+            if (belt !== null && Entity.isBelt(belt)) belt.lanes.forEach(lane => items.add(lane.ingredient_name));
+        } else if (source.type === "chest") {
+            const chest = config.chests?.find(it => it.id === source.id);
+            if (chest?.type === "buffer-chest") items.add(chest.item_filter);
+            else if (chest?.type === "infinity-chest") chest.item_filter.forEach(filter => items.add(filter.item_name));
+            else if (chest !== undefined) (chest.contents ?? []).forEach(content => items.add(content.item));
+        }
+    }
+    return Array.from(items);
 }
 
 function createSimulationContextFromConfig(

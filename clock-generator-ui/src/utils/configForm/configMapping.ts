@@ -79,7 +79,12 @@ export function configToFormData(imported: Config): ConfigFormData {
             ...(b.strategy !== undefined && { strategy: b.strategy }),
             lanes: b.lanes as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData],
         })),
-        chests: (imported.chests ?? []).map((c: { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; item_filter: string | { item_name: string; request_count: number }[] }): ChestFormData => {
+        chests: (imported.chests ?? []).map((raw): ChestFormData => {
+            // a car, a tank, a cargo wagon or a rocket silo is kept as it is: the form does not edit it yet
+            if (raw.type !== undefined && raw.type !== ChestType.BUFFER_CHEST && raw.type !== ChestType.INFINITY_CHEST) {
+                return { ...raw, _uuid: crypto.randomUUID() } as ChestFormData;
+            }
+            const c = raw as { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; item_filter: string | { item_name: string; request_count: number }[] };
             // Handle infinity chest
             if (c.type === ChestType.INFINITY_CHEST) {
                 return {

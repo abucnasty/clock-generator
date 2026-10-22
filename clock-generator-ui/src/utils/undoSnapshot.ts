@@ -31,6 +31,10 @@ const KINDS: Record<EntityKind, { one: LabelKind; many: string }> = {
 const CHEST_TYPE_NAMES: Record<ChestType, string> = {
     [ChestType.BUFFER_CHEST]: 'Buffer chest',
     [ChestType.INFINITY_CHEST]: 'Infinity chest',
+    [ChestType.CAR]: 'Car',
+    [ChestType.TANK]: 'Tank',
+    [ChestType.CARGO_WAGON]: 'Cargo wagon',
+    [ChestType.ROCKET_SILO]: 'Rocket silo',
 };
 
 /**

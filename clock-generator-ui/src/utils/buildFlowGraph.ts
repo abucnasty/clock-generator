@@ -2,7 +2,7 @@ import { effectiveInserterStackSize } from './inserterMetadata';
 import dagre from '@dagrejs/dagre';
 import { MarkerType, type Node, type Edge } from '@xyflow/react';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
-import { isBufferChest } from '../hooks/useConfigForm';
+import { containerItems, isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { describeEnableRule } from './enableRuleLabel';
 import { entityLabel } from './entityLabel';
@@ -282,9 +282,13 @@ export function buildFlowGraph(
         if (isBufferChest(chest)) {
             iconName = 'steel-chest';
             filterIcons = chest.item_filter ? [chest.item_filter] : undefined;
-        } else {
+        } else if (isInfinityChest(chest)) {
             iconName = 'infinity-chest';
             const items = chest.item_filter.map(f => f.item_name).filter(Boolean);
+            filterIcons = items.length > 0 ? items : undefined;
+        } else {
+            iconName = chest.type;
+            const items = containerItems(chest);
             filterIcons = items.length > 0 ? items : undefined;
         }
         pushEntityNode({
@@ -293,8 +297,8 @@ export function buildFlowGraph(
             label: entityLabel('chest', chest.id),
             iconName,
             filterIcons,
-            ...(!isBufferChest(chest) && chest.remove_unfiltered_items && { sublabel: filterIcons?.length ? 'Removes unfiltered items' : 'Removes all incoming items' }),
-        }, !isBufferChest(chest) && chest.remove_unfiltered_items ? 'removes unfiltered incoming items' : filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
+            ...(isInfinityChest(chest) && chest.remove_unfiltered_items && { sublabel: filterIcons?.length ? 'Removes unfiltered items' : 'Removes all incoming items' }),
+        }, isInfinityChest(chest) && chest.remove_unfiltered_items ? 'removes unfiltered incoming items' : filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
     });
 
     // --- Inserter nodes + edges ---

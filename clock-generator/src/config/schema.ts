@@ -521,9 +521,92 @@ export const InfinityChestConfigSchema = z.object({
 
 export type InfinityChestConfig = z.infer<typeof InfinityChestConfigSchema>;
 
+const QualityNameSchema = z.enum(["normal", "uncommon", "rare", "epic", "legendary"]);
+
+/** `storage_size` on a chest whose slots come from the game data: refused, not read as an override */
+const storageSizeRefused = z.custom<never>(() => false, {
+    error: "`storage_size` is refused on a car, a tank, a cargo wagon or a rocket silo: their slots come from the game "
+        + "data (a cargo wagon's by its `quality`)",
+}).optional();
+
+const SlotFilterConfigSchema = z.object({
+    /** The slot, from 1 */
+    slot: z.number().int().positive(),
+    /** The only item the slot takes */
+    item: z.string().min(1),
+});
+
+export const SlotContentConfigSchema = z.object({
+    /** The slot, from 1 */
+    slot: z.number().int().positive(),
+    item: z.string().min(1),
+    /** At most the item's stack size */
+    count: z.number().int().positive(),
+});
+
+export type SlotContentConfig = z.infer<typeof SlotContentConfigSchema>;
+
+const slotContainerFields = {
+    id: z.number().int().positive(),
+    /** Slots that take one item only; the other slots take any item */
+    slot_filters: z.array(SlotFilterConfigSchema).optional(),
+    /** What the container holds when the build starts, slot by slot; empty without it */
+    contents: z.array(SlotContentConfigSchema).optional(),
+    storage_size: storageSizeRefused,
+};
+
+/** A car as a chest: the slots of its trunk, from the game data */
+export const CarConfigSchema = z.object({ type: z.literal(ChestType.CAR), ...slotContainerFields });
+/** A tank as a chest: the slots of its trunk, from the game data */
+export const TankConfigSchema = z.object({ type: z.literal(ChestType.TANK), ...slotContainerFields });
+/** A cargo wagon standing still, as a chest: its slots from the game data and its quality */
+export const CargoWagonConfigSchema = z.object({
+    type: z.literal(ChestType.CARGO_WAGON),
+    ...slotContainerFields,
+    /** The wagon's quality (default "normal"), which sets its slots */
+    quality: QualityNameSchema.optional(),
+});
+
+export type CarConfig = z.infer<typeof CarConfigSchema>;
+export type TankConfig = z.infer<typeof TankConfigSchema>;
+export type CargoWagonConfig = z.infer<typeof CargoWagonConfigSchema>;
+export type SlotContainerConfig = CarConfig | TankConfig | CargoWagonConfig;
+
+export const ItemCountConfigSchema = z.object({
+    item: z.string().min(1),
+    count: z.number().int().positive(),
+});
+
+/**
+ * A rocket silo as a chest. It takes any item into its rocket inventory, as far as the rocket lifts its weight, and its
+ * recipe's ingredients into its input slots, up to the automated insertion limit. No craft is run.
+ */
+export const RocketSiloConfigSchema = z.object({
+    type: z.literal(ChestType.ROCKET_SILO),
+    id: z.number().int().positive(),
+    /**
+     * The quality of its rocket part recipe (default "normal"). Of any other quality, the ingredients the build brings
+     * (all of normal quality) go into the rocket inventory instead of the input slots.
+     */
+    recipe_quality: QualityNameSchema.optional(),
+    /** Its crafting speed with modules and beacons (default the game data's, 1), which sets the insertion limit */
+    crafting_speed: z.number().positive().optional(),
+    /** Its productivity; no craft is run, so it changes nothing yet */
+    productivity: z.number().min(0).optional(),
+    /** What it holds when the build starts, placed as an inserter would place it */
+    contents: z.array(ItemCountConfigSchema).optional(),
+    storage_size: storageSizeRefused,
+});
+
+export type RocketSiloConfig = z.infer<typeof RocketSiloConfigSchema>;
+
 export const ChestConfigSchema = z.discriminatedUnion("type", [
     BufferChestConfigSchema,
-    InfinityChestConfigSchema
+    InfinityChestConfigSchema,
+    CarConfigSchema,
+    TankConfigSchema,
+    CargoWagonConfigSchema,
+    RocketSiloConfigSchema,
 ]);
 
 export type ChestConfig = z.infer<typeof ChestConfigSchema>;

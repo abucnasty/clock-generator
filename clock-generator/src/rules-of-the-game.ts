@@ -95,3 +95,26 @@ export { fuelHandRoomTicks } from "./crafting/clock";
  * `crafting/belt-near-lane.test.ts` (10.7, 26.8 and 32.1).
  */
 export { wakeUps, wakeUpsOfStock } from "./crafting/wake-ups";
+
+/**
+ * 13. Where an item goes in a container of mixed items (docs/simulator.md "Cars, wagons and rocket silos as chests"):
+ * first into the slots filtered to it, in slot order, then topping up the free slots that hold it, then into empty free
+ * slots in slot order; a slot filtered to another item never takes it (`SlotInventoryState.addQuantity`).
+ * 14. What an inserter takes from one (the same section): the item of the last slot that holds one it may take, from
+ * that slot backwards, a hand that holds some only more of its item (`SlotInventoryState.lastItemAmong`,
+ * `ChestPickupLogic`). Cases of both: `state/slot-inventory.test.ts`, `crafting/container-chest.test.ts`; against the
+ * game, `tests/game/mechanics/containers` (339 of 339 hands, 120 of 120 slots, at two places and in both build orders).
+ *
+ * Known limit, a stand-in: which of two inserters acting on one container in the same tick goes first. The game serves
+ * the last built first; the simulator serves the lowest config id first, as for clock deciders (rule 5). Built the
+ * other way, two of the five recorded builds split the container differently in the game.
+ */
+export { SlotInventoryState } from "./state/slot-inventory";
+
+/**
+ * 15. A rocket silo as a chest (the same section): its fixed recipe's ingredients, of that recipe's quality, go into its
+ * input slots, a whole hand while under the automated insertion limit (rule 2); everything else goes into its rocket
+ * inventory while the rocket lifts its weight (in the game's 1/65536 parts), and only that inventory gives. No craft is
+ * run. Cases: `state/rocket-silo-state.test.ts`; against the game, `tests/game/mechanics/containers`.
+ */
+export { RocketSiloInventoryState } from "./state/rocket-silo-inventory";

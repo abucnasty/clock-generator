@@ -83,6 +83,30 @@ export interface InserterResearch {
   bulk_inserter_capacity_bonus: number
 }
 
+/** A vehicle or wagon an inserter can fill or empty: the slots of its trunk or cargo inventory */
+export interface ContainerPrototype {
+  name: string
+  /** The prototype's type in the game: "car" (the car and the tank) or "cargo-wagon" */
+  type: string
+  inventory_size: number
+  /** Whether the entity's quality multiplies its slots (the cargo wagon's, by the quality's multiplier) */
+  quality_affects_inventory_size: boolean
+}
+
+/** What a quality does to an inventory whose prototype lets quality change its size */
+export interface QualityInventory {
+  cargo_wagon_inventory_size_multiplier: number
+}
+
+/** A rocket silo: the recipe it is fixed to, its speed, and the weight a rocket lifts */
+export interface RocketSiloPrototype {
+  name: string
+  fixed_recipe: RecipeName
+  crafting_speed: number
+  module_slots: number
+  lift_weight: number
+}
+
 export interface FactorioData {
   "recipe": Record<RecipeName, Recipe>
   "item": Record<ItemName, Item>
@@ -91,4 +115,9 @@ export interface FactorioData {
   "inserter": Record<InserterPrototypeName, InserterPrototype>
   "quality": Record<QualityName, QualitySpec>
   "inserter_research": InserterResearch
+  "container": Record<string, ContainerPrototype>
+  "quality_inventory": Record<QualityName, QualityInventory>
+  "rocket_silo": Record<string, RocketSiloPrototype>
+  /** Every item's weight as the running game holds it (in 1/65536 parts; resources/dump-item-weights.js) */
+  "item_weight": Record<ItemName, number>
 }

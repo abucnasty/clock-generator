@@ -22,6 +22,10 @@ const WaitUntilSourceIsOutputBlockedInterceptor: InserterInterceptor = (inserter
         if (EntityState.isInfinityChest(source_state)) {
             return AlwaysEnabledControl;
         }
+        // A chest of mixed items that nothing fills gives what it starts with
+        if ((EntityState.isSlotContainer(source_state) || EntityState.isRocketSilo(source_state)) && source_state.chest.items_put_in.length === 0) {
+            return AlwaysEnabledControl;
+        }
         // Buffer chests: wait until chest is full (buffered and ready)
         return EnableControl.latched({
             base: EnableControl.lambda(() => {

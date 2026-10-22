@@ -255,13 +255,13 @@ export class EnableControlFactory {
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
                 // Enable when chest has space for at least one stack and source has items
-                const available_space = sink_state.getAvailableSpace();
+                const available_space = sink_state.getAvailableSpace(source_item_name);
                 const source_quantity = source_state.inventoryState.getQuantity(source_item_name);
                 return available_space >= stack_size && source_quantity >= stack_size;
             }),
             release: EnableControl.lambda(() => {
                 // Release when chest is full
-                return sink_state.isFull();
+                return sink_state.isFull(source_item_name);
             })
         });
     }

@@ -46,9 +46,10 @@ function helpers.get_target_type(entity)
         return "belt"
     end
     
-    -- Containers/Chests
+    -- Containers/Chests; a car, a tank, a cargo wagon and a rocket silo are chests to the Clock Generator
     if entity_type == "container" or entity_type == "logistic-container" or 
-       entity_type == "linked-container" or entity_type == "infinity-container" then
+       entity_type == "linked-container" or entity_type == "infinity-container" or
+       entity_type == "car" or entity_type == "cargo-wagon" or entity_type == "rocket-silo" then
         return "chest"
     end
     
