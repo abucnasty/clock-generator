@@ -8,7 +8,7 @@ import { generateClockAlternatives } from './alternatives';
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 // a big mining drill on iron ore, as the owner's car build has it: 4 speed modules and 4 beacons (speed bonus 17.5);
-// at the harness's research (mining productivity 3 at level 8000) it mines 617 ore a tick
+// at 8000 levels of research it mines 617 ore a tick (its bar moves 0.77 a tick, its bonus bar 616.7)
 const drill = (target: { type: 'chest' | 'machine'; id: number }, overrides?: object) => ({
     id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 17.5, target, ...(overrides ? { overrides } : {}),
 });
@@ -43,13 +43,18 @@ describe('a drill that drops into a chest', () => {
         expect(held).toBeLessThan(618);
     });
 
-    it('fills the car in slot order, the first slots first', () => {
-        const context = run(build([{ id: 1, type: 'car' }]), 1);
+    it('fills the car in slot order, the first slots first, a tick after it mines', () => {
+        // the first tick mines 616 (the bonus bar's whole units; the mining bar has not wrapped) into the drill, the
+        // second drops them
+        const first = run(build([{ id: 1, type: 'car' }]), 1);
+        expect(first.state_registry.getAllStates().find(EntityState.isSlotContainer)!.getCurrentQuantity('iron-ore')).toBe(0);
+        expect(first.drills[0].drill_state.inventoryState.getQuantity('iron-ore')).toBe(616);
+        const context = run(build([{ id: 1, type: 'car' }]), 2);
         const car = context.state_registry.getAllStates().find(EntityState.isSlotContainer)!;
         const filled = car.inventoryState.slots.map(slot => slot.count);
-        expect(car.getCurrentQuantity('iron-ore')).toBe(617);
+        expect(car.getCurrentQuantity('iron-ore')).toBe(616);
         expect(filled.slice(0, 12)).toEqual(new Array(12).fill(50));
-        expect(filled[12]).toBe(17);
+        expect(filled[12]).toBe(16);
         expect(filled.slice(13).every(count => count === 0)).toBe(true);
     });
 
