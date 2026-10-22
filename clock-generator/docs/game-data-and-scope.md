@@ -18,5 +18,7 @@ What the generator does not model is refused by name, with where it is on the ro
 - Latches and sensors switching an inserter: not modelled and not compared; such an inserter is one to clock.
 - A drop onto a belt that side-loads onto another downstream is modelled as a drop onto that belt, with that belt's room. Where the merge backs up, the game moves less than the simulator (a pickup from a side-loaded belt tile is refused). The sidecar does not mark such a drop yet.
 
+Spoilage is not simulated (follow-up F6 for spoilage-removal inserters; `0.24/l2` in [roadmap/0.24.0.md](roadmap/0.24.0.md) for what a stable verdict means for a build whose items spoil). A loss longer than an item's spoil time spoils a loop in the game whatever the clock does, so recovery verdicts from longer losses do not carry over to builds whose items spoil.
+
 What the generator runs without its timing having been checked in the game is generated with a warning instead: a belt pickup from a lane whose `stack_size` is not 4, or with a hand other than 16 (an inserter's `stack_size`, or an item that stacks to less). Belt pickup timing is calibrated with 16-item hands on four-item belt stacks only (`src/config/pickup-calibration.ts`, [experiments](belt-pickup/experiments.md#belt-stack-sizes-and-hand-sizes)); the warning is in the log, among the clocks' insights and in the web form's Build validation, and measuring these is follow-up F7.
 

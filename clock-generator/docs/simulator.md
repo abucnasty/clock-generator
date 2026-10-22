@@ -144,7 +144,7 @@ front entrance and exit each have native clock controls ([experiments](belt-pick
 Scope remains one controlled through supply. Pickups from a side-loaded tile, with one side stream or two
 merging onto the pickup lane, are out of scope and refused, as are pickups from a splitter; see the
 [experiment history](belt-pickup/experiments.md#side-loaded-pickups-and-merges). A belt fed through a splitter further
-upstream is modelled as a plain belt, which is wrong when the splitter's other output takes items. Sparse supply, shared upstream
+upstream is modelled as a plain belt, which is wrong when the splitter's other output takes items: moving supply arrives slower and backed-up refill can lag. Sparse supply, shared upstream
 withdrawals, bends, other orientations and arbitrary relative lane phases remain unverified.
 A moving front exit cannot be built: the inserter on the exit's output tile blocks the belt. A config that says
 moving supply gets a clock for moving belts there anyway; on the backed-up exit the game holds and recovers it
@@ -315,3 +315,9 @@ Since 0.20.0 a car, a tank, a cargo wagon and a rocket silo are chests of mixed 
   the target. The machine's inserters into the container are planned through it, with the same items a cycle. A product
   that passes through a second container on its way out is refused.
 - **Known limit: a drill under one item a tick** (follow-up F-d). A drill mines its rate a tick, floored, into a chest as into a machine: one that makes less than one item a tick mines nothing in the simulator, and its build runs to the tick limit. The game mines by a progress bar. At the harness's research (mining productivity 3 at level 8000) a drill makes hundreds a tick, so the limit does not show there.
+
+### Other known limits
+
+- **A window that opens on a machine at its output block** follows hold-up rules with unexplained exceptions (see "When a waiting inserter acts"). One of them (#276): when another inserter takes a machine's products off its output block in the tick a belt hand comes back from its swing, the simulator has the hand take its first stack in that tick. In the game it comes a tick later when the taker drops onto a belt (56 of 56 hands), and by the decider order when it drops into a chest (79 of 79). The game's rule, tried in the simulator, moves no selected clock. Whether the model takes it on is decided before `later/swing-back` ([later.md](roadmap/later.md)).
+- **A fuel inserter's own clock** runs with no circuit latency in the simulator, while its blueprint encodes the usual two ticks (#276). Neither has been checked in the game. Adding the two ticks changes no clock, verdict or selection, only the wake-up figures of four fuel samples, none of which has a build.
+- **The burner energy model** is checked on outcomes only (total burn against the configured rate), never tick by tick against the game.
