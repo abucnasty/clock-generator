@@ -2,13 +2,14 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import {expect, test} from "vitest";
-import {Config, ConfigSchema} from "../../../../src/config";
+import {CargoWagonConfigSchema, Config, ConfigSchema} from "../../../../src/config";
 import {FactorioBlueprintFile} from "../../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../../src/blueprints/serde";
 import {CompositeControlLogic, TickControlLogic} from "../../../../src/control-logic";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {drillResourceOf, recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {EntityState} from "../../../../src/state";
+import {SlotContainer} from "../../../../src/entities/chest/slot-container";
 import {composeProbeSource} from "../../helpers/probe-source";
 
 /**
@@ -72,6 +73,7 @@ function drillInto(name: string, container: Record<string, unknown>, chest: Reco
 export function containerMechanicCases(): ContainerMechanicCase[] {
     const silo_contents = {rocket: [["iron-plate", 100], ["copper-plate", 40], ["iron-gear-wheel", 20]], input: [["processing-unit", 10], ["low-density-structure", 10]]};
     const car_contents = [[1, "iron-plate", 40], [2, "copper-plate", 100], [5, "iron-gear-wheel", 30], [9, "iron-plate", 100]];
+    const blocked_filters = Array.from({length: 39}, (_, index) => ({slot: index + 2, item: index % 2 ? "no-item" : "deconstruction-planner"}));
     return [
         // the ingredients stop at the insertion limit, a whole hand in; iron plates fill the rocket to its lift weight
         siloSink("silo-sink-normal", ["processing-unit", "low-density-structure", "iron-plate"]),
@@ -116,6 +118,16 @@ export function containerMechanicCases(): ContainerMechanicCase[] {
             {type: "buffer-chest", id: 1, storage_size: 48, item_filter: "iron-ore"}, 4.5), warmup_ticks: 60, probe: {}},
         // a rocket silo east of the drill: what the drill gives it, by weight into the rocket inventory if anything
         drillInto("drill-into-silo", {name: "rocket-silo", position: {x: 7.5, y: 0.5}}, {type: "rocket-silo", id: 1}, 12.5),
+        {
+            name: "wagon-blocked-slots", ticks: 500,
+            entities: [...Array.from({length: 9}, (_, index) => ({name: "straight-rail", position: {x: 1, y: -7 + 2 * index}, direction: 0})),
+                {name: "cargo-wagon", position: {x: 1, y: 0.5}, orientation: 0,
+                    inventory: {filters: blocked_filters.map(filter => ({index: filter.slot, name: filter.item}))}},
+                chestEntity(-1.5, 0.5, "iron-plate"), inserterEntity(-0.5, 0.5, 12)],
+            config: {...idle, chests: [{type: "cargo-wagon", id: 1, slot_filters: blocked_filters}, supply(10, "iron-plate")],
+                inserters: [{id: 1, source: {type: "chest", id: 10}, sink: {type: "chest", id: 1}, stack_size: 16}]},
+            probe: {sidecar: true},
+        },
         {
             // a car of mixed items emptied by an unfiltered inserter: the last slot's item first, a hand across stacks
             name: "car-source", ticks: 400,
@@ -234,6 +246,18 @@ for (const variant of containerMechanicCases()) test(`containers as chests: ${va
         fs.writeFileSync(path.join(scratch, "comparison.json"), JSON.stringify({order, position: position ?? null, game, simulated,
             rocket_parts: report.rocket_parts, drill: report.drill}, null, 2) + "\n");
         if (report.rocket_parts !== undefined) expect(report.rocket_parts, "the silo crafted nothing").toBe(0);
+        if (variant.probe.sidecar) {
+            // Recorder uses the real Sidecar extraction/export pipeline when it starts this capture.
+            const recording = JSON.parse(fs.readFileSync(path.join(scratch, 'recording.json'), 'utf8'));
+            const exported = (Object.values(recording.config.chests) as { type: string }[]).find(chest => chest.type === 'cargo-wagon');
+            const expected = config.chests!.find(chest => chest.type === 'cargo-wagon')!;
+            expect(exported).toMatchObject({ slot_filters: expected.slot_filters });
+            const imported = SlotContainer.fromConfig(CargoWagonConfigSchema.parse(exported), ['iron-plate']);
+            expect(imported.getCapacity('iron-plate')).toBe(100);
+            expect(imported.contents).toEqual([]);
+            expect(game.slots?.[0]).toBe('iron-plate:100');
+            expect(game.slots?.slice(1).every(slot => slot === '')).toBe(true);
+        }
         if (order === "descending") {
             // a drill's container fills by the same amounts a tick, from the tick the drill first drops: the game mines by
             // a progress bar, the simulator by the rate a tick floored, so the totals may part by a few items

@@ -13,6 +13,7 @@ import { NearLaneSelect } from './NearLaneSelect';
 import { PickupTypeSelect } from './PickupTypeSelect';
 import { NumberField } from './NumberField';
 import { EntitySelector } from './EntitySelector';
+import { isContainerChest } from '../utils/configForm/formData';
 
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start' };
 
@@ -21,6 +22,7 @@ export interface InserterEditorProps {
     label: string;
     layout: 'row' | 'stacked';
     machines: MachineFormData[];
+    inserters: InserterFormData[];
     belts: BeltFormData[];
     chests: ChestFormData[];
     itemNames: string[];
@@ -36,7 +38,7 @@ export interface InserterEditorProps {
 }
 
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
-export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
+export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
     const row = layout === 'row';
     const capacity = effectiveInserterStackSize(value);
     const timing = inserterTimingLabels(value);
@@ -45,17 +47,26 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     const { itemLabel, recipeLabel } = useGameNames();
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
-    const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }), [options, machines, belts, chests, itemLabel, recipeLabel]);
-    const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo), [value, machines, belts, chests, getRecipeInfo]);
-    const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo]);
+    const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo }), [options, machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo]);
+    const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo, inserters), [value, machines, belts, chests, getRecipeInfo, inserters]);
+    const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo, inserters) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo, inserters]);
     const filterChange = (result: ReturnType<typeof setFilterSlot>) => {
         onChange({ filters: result.filters });
         if (result.becameExplicit) announce(`${label}'s filters are now set by hand.`);
     };
+    const routeOption = (side: 'source' | 'sink') => {
+        const option = findOption(ownOptions, value[side].type, value[side].id);
+        const chest = option?.type === 'chest' ? chests.find(chest => chest.id === option.id) : undefined;
+        if (!option || !chest || !isContainerChest(chest) || usesBlacklist(value)) return option;
+        // Show this route's items in the field: a silo's incoming ingredients can differ from its outgoing cargo.
+        const items = usesAutomaticFilters(value.filters) ? inferred : value.filters?.filter(Boolean) ?? [];
+        return { ...option, ingredientIcons: items.length ? items : undefined,
+            sublabel: items.length ? items.map(itemLabel).join(', ') : 'No items inferred' };
+    };
     const picker = (side: 'source' | 'sink', name: string) => (
         <EntitySelector label={name} ariaLabel={`${name}, ${label}`} options={ownOptions}
             sx={row ? { flex: '1 1 160px', minWidth: 0 } : { width: '100%' }}
-            readOnly={value.sink.drop !== undefined} value={findOption(ownOptions, value[side].type, value[side].id)}
+            readOnly={value.sink.drop !== undefined} value={routeOption(side)}
             error={!findOption(ownOptions, value[side].type, value[side].id)}
             helperText={value.sink.drop && side === 'sink' ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}` : undefined}
             onChange={option => onChange(endpointUpdate(value, side, { type: option.type, id: option.id }))}
@@ -71,7 +82,7 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
                 <FilterSlotSelector compact={row} label={row ? `Filters · ${filtersLabel(value, 'Automatic', 'Explicit')}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
-                {!row && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? 'Automatic filters' : usesBlacklist(value) ? BLACKLIST_NOTE : 'Explicit · Set by hand'}</Typography>}
+                {!row && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? inferred.length ? 'Automatic filters · From source and destination' : 'Automatic · No items inferred' : usesBlacklist(value) ? BLACKLIST_NOTE : 'Explicit · Set by hand'}</Typography>}
                 {row && usesBlacklist(value) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{BLACKLIST_NOTE}</Typography>}
                 {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: row ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                     <Button size="small" color="inherit" onClick={() => {

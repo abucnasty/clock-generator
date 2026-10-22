@@ -73,6 +73,7 @@ describe("the light entry", () => {
             "common/belt-pickup-layout.ts",
             "common/enable-control-types.ts",
             "common/entity-types.ts",
+            "common/slot-filter.ts",
             "config/copies-value.ts",
             "config/migrate-belt-supply.ts",
             "crafting/rank.ts",

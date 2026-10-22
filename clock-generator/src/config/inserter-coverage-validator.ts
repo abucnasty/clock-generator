@@ -3,6 +3,7 @@ import { FactorioDataService } from '../data/factorio-data-service';
 import { BurnerEnergySource, MachineType } from '../entities';
 import { InserterCoverageError, InserterCoverageIssue, InserterFixOption } from './errors';
 import { assertInsertersInScope } from './inserter-scope';
+import { isBlockedSlotFilter } from '../common/slot-filter';
 
 // ============================================================================
 // Item-source coverage helpers
@@ -46,6 +47,7 @@ export function chestAcceptsItem(chest: ChestConfig, itemName: string): boolean 
         return true;
     }
     // a slot filtered to another item does not take it; one free slot is enough
+    if (isBlockedSlotFilter(itemName)) return false;
     const filtered = new Map((chest.slot_filters ?? []).map(filter => [filter.slot, filter.item]));
     return (chest.slot_filters ?? []).some(filter => filter.item === itemName)
         || !isEverySlotFiltered(chest.type, ('quality' in chest ? chest.quality : undefined) ?? 'normal', filtered.size);
