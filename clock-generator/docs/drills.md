@@ -23,7 +23,7 @@ The two tolerances were measured by setting the bars by script: they hold at bon
 Each tick an enabled drill first drops what it holds. An item it mines is held and dropped in the next tick.
 
 - **Into a machine** up to the drill's limit (the automated insertion limit + 64, `src/rules-of-the-game.ts` rule 3; see "The stop into a machine" below).
-- **Into a chest** as far as it has room (since 0.20.0, a drill's `target` of type `chest`; `src/rules-of-the-game.ts` rule 16). The drill drops what it mines as far as the chest has room, by the chest's own rules: the free slots of a car, a tank or a wagon in slot order, the rocket inventory of a silo by weight, a buffer chest of its item. What does not fit stays in the drill, which mines no more until it has dropped it: a full chest stops the drill. A drill into a full chest that gets room puts in what it held in that tick and what it mines then in the next (5, then 11, in the containers family's filtered car).
+- **Into a chest** as far as it has room (since 0.20.0, a drill's `target` of type `chest`; `src/rules-of-the-game.ts` rule 16). There is no cap on a tick's drop: a drill holding 25,000 ore fills a legendary steel chest's 6,000 in one tick. The drill drops what it mines as far as the chest has room, by the chest's own rules: the free slots of a car, a tank or a wagon in slot order, the rocket inventory of a silo by weight, a buffer chest of its item. What does not fit stays in the drill, which mines no more until it has dropped it: a full chest stops the drill. A drill into a full chest that gets room puts in what it held in that tick and what it mines then in the next (5, then 11, in the containers family's filtered car).
 
 ## Waiting while it holds anything
 
@@ -31,7 +31,24 @@ While a drill still holds anything after dropping, it waits, and its bars stand 
 
 ## A drill disabled by its circuit
 
-A drill disabled by its circuit neither drops nor mines, and keeps what it holds and both bars. Nothing gates a drill into a chest: it is always enabled and gets no clock window.
+A drill disabled by its circuit neither drops nor mines, and keeps what it holds and both bars, also while an inserter takes from the chest it waits on. Its circuit reaches it in the same tick as an inserter's: a constant combinator wired to both, they act in the same tick after it changes, the drill built first or last.
+
+A drill that reads its resources (Read resources, on by default on a wired drill) puts the ore under it on its own circuit wire, so "Anything > 0" is always true there and the drill is never disabled. A clock's drill is set to Enable if Anything > 0 with Read resources off, as the clock's wiring line says.
+
+## A drill into a chest on a clock
+
+Since 0.20.0 a drill into a chest is clocked just in time (`src/crafting/chest-drill-windows.ts`), unless its config sets it to ALWAYS or CLOCKED. Its windows are made after the inserters', from the windows of the inserters that take its item out of the chest, and change nothing of theirs:
+
+- each window ends the tick before a take, and the first ends before the first take after the period's longest stretch without one; where what is taken between two windows would not fit in the chest's room for the item, another window is put in;
+- each window is as long as the ticks the drill needs to mine what is taken until the next window, plus the smallest margin that passes a replay of the engine's drill against the takes (each window's hands taken in its first tick, before the drill, from an empty chest and hold, until the state at a period's start repeats or the chest has filled and the drill has mined a few times at its top);
+- what a window mines in its last tick is held while the drill is disabled and dropped first in its next window, so in the steady state a window costs no extra tick for the drop. A window of one tick that has to mine when the hold runs out brings less than a period's takes, which the chest covers or the window is two ticks;
+- a clock that does not meet goal 1 with these windows (the clock-only check or a backpressure loss) is made again with them a tick longer, then with the drill always enabled; the first that does is kept, and the result says why a drill stays always enabled. It stays so where nothing times it too: no inserter of the plan takes its item out of the chest, another drill or an inserter fills the chest with the same item.
+
+The windows are not part of the swing counts and do not stretch the period. The wake-ups count inserters only, so a drill's window changes them only through what the inserters do: a clocked drill's first ore comes up to a period later than an always-on drill's, and on the steel wagon the furnaces then run at another phase against the clock (81.6 against 84.1 wake-ups a minute on its selected clock), while each disabled tick saves the drill's own update. The owner's car (617 ore a tick against 64 a 72-tick period) gets one tick a period, the steel wagon (a period of 886.15 ticks) a window of two positions, enabled 1 or 2 ticks a period, 1.08 on average.
+
+### The fill time and the extra tick
+
+From an empty hold, a drill fills a chest's room in ceil(room / rate) + 1 enabled ticks from 10 items a tick up (the bars decide it below): what a tick mines drops in the drill's next enabled tick, so filling takes one tick more than the mining ticks. A window whose hold already covers the chest's room fills it in its one tick, mining nothing.
 
 ## The stop into a machine
 
@@ -56,11 +73,15 @@ The game's drill has no mining target in its first tick, so it mines a tick afte
 Recorded in Factorio 2.1.21 by two families of game tests:
 
 - **The drills family** (`tests/game/mechanics/drills/`, [README](../tests/game/mechanics/drills/README.md); #308, the stop asserted in #310). 18 builds of a big mining drill, with the research set by script: 0.0167, 0.25, 0.34, 0.43, 0.93 and 1.35 items a tick, one with four productivity modules and no research, into a car emptied by an inserter and into an assembling machine that crafts or never crafts, built last, moved to another chunk, and disabled by its circuit while it holds items. Driven by the game's takes, the simulator's drill has the game's bars, waits and drops in every tick; the simulator's run of the whole build equals the game's in every tick where the build's other entities are modelled as the game has them. The stop into a machine is the 114 on rail and 214 on landfill above. Six more builds set the drill's bars by script near a whole item, on iron ore at two mining steps, built last and moved, and on scrap and tungsten ore; the simulator's bonus bar gives the game's bar and items in every trial (`remainder.game.test.ts`).
+- **The drill-into-chest builds of the drills family** (`tests/game/mechanics/drills/chest.game.test.ts`; 0.20.0). A big mining drill into a legendary steel chest (6,000 ore of room) at 0.425 to 25,000 ore a tick, filled from empty with the drill always enabled, and refilled from full after takes of all, 1,000, 100 and 10 ore with the drill enabled 1, 2 or 3 ticks by its circuit; built last and moved. The simulator's drill gives the game's chest count and bars in every tick.
 - **The containers family** (`tests/game/mechanics/containers/`, [README](../tests/game/mechanics/containers/README.md); #299). A big mining drill on iron ore into a car (4,000 ore in its 80 slots), into a car with five slots filtered to copper plates (3,750 ore, the five slots empty), into a steel chest (2,400) and into a rocket silo (500 ore in its rocket inventory, nothing in its input slots), each emptied by one stack inserter, at two places. The containers end as the simulator has them, slot for slot, with every hand equal, and fill by the simulator's amounts in every tick from the drill's first drop.
 
 The stop into a machine was changed in #310 to the larger of the stack and the insertion limit, + 64, after the drills family's stops (the previous rule added one craft's ingredients to the limit and gave 115 and 264).
 
 ## Known limits
+
+- A chest drill's windows are made from the takes the plan gives its takers: the steel wagon's ore taker takes 320 ore a period in the clock-only run where the plan gives it 160. The clock-only check, the loss trials and the fallback decide goal 1; the windows can be longer than they need where the plan undercounts.
+- The recording harness wires a clocked drill only in a build with one drill.
 
 - The first-tick offset above is not modelled.
 - A mining bar that moves a mining time or more in a tick (several items a tick from the mining bar, on scrap a mining speed of 30 a second) is not recorded; the simulator makes one item a tick from it at most.
