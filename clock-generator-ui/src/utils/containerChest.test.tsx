@@ -9,6 +9,7 @@ import type { ChestFormData, ConfigFormData } from './configForm/formData';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { decodeShareLink, encodeShareLink, readShareHash } from './shareLink';
 import { ChestFields } from '../components/EntityFields';
+import { paintSlotFilters } from './containerSlotFilters';
 
 FactorioDataService.initialize(JSON.parse(factorioData));
 
@@ -36,7 +37,7 @@ const CONTAINERS = {
     tank: { type: ChestType.TANK, contents: [{ slot: 80, item: 'iron-plate', count: 100 }] },
     wagon: { type: ChestType.CARGO_WAGON, quality: 'legendary', slot_filters: [{ slot: 100, item: 'iron-plate' }] },
     silo: { type: ChestType.ROCKET_SILO, recipe_quality: 'rare', crafting_speed: 2.5, productivity: 10, contents: [{ item: 'iron-plate', count: 100 }] },
-    blockedCar: { type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, item: 'deconstruction-planner' }, { slot: 3, item: 'no-item' }] },
+    blockedCar: { type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true }, { slot: 3, blocked: true }] },
 };
 
 const containerOf = (form: ConfigFormData) => form.chests[0];
@@ -150,12 +151,35 @@ describe('the fields of each type', () => {
         expect(wagon).toContain('Remove filter for slot 100');
     });
 
-    it('identifies both blocking filters and offers a way to block the remaining slots', () => {
+    it('shows a slot blocked in the config as No item, and offers a way to block the remaining slots', () => {
         const html = render(CONTAINERS.blockedCar);
-        expect(html).toContain('Slot 2: Blocked (deconstruction-planner)');
+        expect(html).toContain('Slot 2: Blocked (no-item)');
         expect(html).toContain('Slot 3: Blocked (no-item)');
         expect(html).toContain('Block unfiltered slots');
         expect(html).toContain('2 blocked');
         expect(() => validateConfig(ConfigSchema.parse(build(CONTAINERS.blockedCar)))).not.toThrow();
+    });
+
+    it('keeps the marker painted on a blocked slot in the form and saved builds, and saves it as blocked: true', () => {
+        const car = form(CONTAINERS.car);
+        if (car.type !== ChestType.CAR) throw new Error('not a car');
+        const painted = { ...car, slot_filters: paintSlotFilters(paintSlotFilters(car.slot_filters ?? [], [2], 'deconstruction-planner'), [3], 'no-item') };
+        const html = renderToStaticMarkup(<ChestFields chest={painted} itemNames={['iron-plate']} dialog={false} onChange={() => {}} onSwitchType={() => {}} />);
+        expect(html).toContain('Slot 2: Blocked (deconstruction-planner)');
+        expect(html).toContain('Slot 3: Blocked (no-item)');
+        const saved = readSavedConfig(serializeConfig({ ...configToFormData(build(CONTAINERS.car)), chests: [painted] }))!;
+        expect(containerOf(saved)).toMatchObject({ slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true, _marker: 'deconstruction-planner' }, { slot: 3, blocked: true, _marker: 'no-item' }] });
+        expect(formDataToConfig(saved).chests![0]).toEqual({ ...build(CONTAINERS.car).chests![0],
+            slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true }, { slot: 3, blocked: true }] });
+    });
+
+    it('reads a saved build or config that names a marker as a slot item as a blocked slot, keeping the marker', () => {
+        const drafted = build({ type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, item: 'deconstruction-planner' }, { slot: 3, item: 'no-item' }] });
+        const expected = [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true, _marker: 'deconstruction-planner' }, { slot: 3, blocked: true, _marker: 'no-item' }];
+        expect(containerOf(configToFormData(drafted))).toMatchObject({ slot_filters: expected });
+        expect(containerOf(readSavedConfig(JSON.stringify({ ...drafted, chests: drafted.chests!.map(chest => ({ ...chest, _uuid: 'x' })) }))!)).toMatchObject({ slot_filters: expected });
+        expect(render(drafted.chests![0])).toContain('Slot 2: Blocked (deconstruction-planner)');
+        expect(formDataToConfig(configToFormData(drafted)).chests![0]).toEqual(build(CONTAINERS.blockedCar).chests![0]);
+        expect(ConfigSchema.parse(drafted).chests![0]).toEqual(build(CONTAINERS.blockedCar).chests![0]);
     });
 });

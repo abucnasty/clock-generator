@@ -73,7 +73,8 @@ function drillInto(name: string, container: Record<string, unknown>, chest: Reco
 export function containerMechanicCases(): ContainerMechanicCase[] {
     const silo_contents = {rocket: [["iron-plate", 100], ["copper-plate", 40], ["iron-gear-wheel", 20]], input: [["processing-unit", 10], ["low-density-structure", 10]]};
     const car_contents = [[1, "iron-plate", 40], [2, "copper-plate", 100], [5, "iron-gear-wheel", 30], [9, "iron-plate", 100]];
-    const blocked_filters = Array.from({length: 39}, (_, index) => ({slot: index + 2, item: index % 2 ? "no-item" : "deconstruction-planner"}));
+    // the game blocks a slot with a no-item or deconstruction planner filter; the config marks it blocked
+    const blocked_markers = Array.from({length: 39}, (_, index) => ({index: index + 2, name: index % 2 ? "no-item" : "deconstruction-planner"}));
     return [
         // the ingredients stop at the insertion limit, a whole hand in; iron plates fill the rocket to its lift weight
         siloSink("silo-sink-normal", ["processing-unit", "low-density-structure", "iron-plate"]),
@@ -122,9 +123,9 @@ export function containerMechanicCases(): ContainerMechanicCase[] {
             name: "wagon-blocked-slots", ticks: 500,
             entities: [...Array.from({length: 9}, (_, index) => ({name: "straight-rail", position: {x: 1, y: -7 + 2 * index}, direction: 0})),
                 {name: "cargo-wagon", position: {x: 1, y: 0.5}, orientation: 0,
-                    inventory: {filters: blocked_filters.map(filter => ({index: filter.slot, name: filter.item}))}},
+                    inventory: {filters: blocked_markers}},
                 chestEntity(-1.5, 0.5, "iron-plate"), inserterEntity(-0.5, 0.5, 12)],
-            config: {...idle, chests: [{type: "cargo-wagon", id: 1, slot_filters: blocked_filters}, supply(10, "iron-plate")],
+            config: {...idle, chests: [{type: "cargo-wagon", id: 1, slot_filters: blocked_markers.map(({index}) => ({slot: index, blocked: true as const}))}, supply(10, "iron-plate")],
                 inserters: [{id: 1, source: {type: "chest", id: 10}, sink: {type: "chest", id: 1}, stack_size: 16}]},
             probe: {sidecar: true},
         },
@@ -249,9 +250,11 @@ for (const variant of containerMechanicCases()) test(`containers as chests: ${va
         if (variant.probe.sidecar) {
             // Recorder uses the real Sidecar extraction/export pipeline when it starts this capture.
             const recording = JSON.parse(fs.readFileSync(path.join(scratch, 'recording.json'), 'utf8'));
-            const exported = (Object.values(recording.config.chests) as { type: string }[]).find(chest => chest.type === 'cargo-wagon');
+            const exported = (Object.values(recording.config.chests) as { type: string, slot_filters: object[] }[]).find(chest => chest.type === 'cargo-wagon');
             const expected = config.chests!.find(chest => chest.type === 'cargo-wagon')!;
+            // Sidecar exports both game markers as blocked slots, naming no item
             expect(exported).toMatchObject({ slot_filters: expected.slot_filters });
+            expect(exported!.slot_filters.every(filter => !('item' in filter))).toBe(true);
             const imported = SlotContainer.fromConfig(CargoWagonConfigSchema.parse(exported), ['iron-plate']);
             expect(imported.getCapacity('iron-plate')).toBe(100);
             expect(imported.contents).toEqual([]);

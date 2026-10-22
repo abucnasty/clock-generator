@@ -15,6 +15,7 @@ import { MachineStatus } from "../state/entity-status";
 import { MachineType } from "../entities";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
+import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 
 // ============================================================================
 // Machine Configuration
@@ -537,12 +538,25 @@ const storageSizeRefused = z.custom<never>(() => false, {
         + "data (a cargo wagon's by its `quality`)",
 }).optional();
 
-const SlotFilterConfigSchema = z.object({
-    /** The slot, from 1 */
-    slot: z.number().int().positive(),
-    /** The only item the slot takes; no-item or deconstruction-planner blocks the slot */
-    item: z.string().min(1),
-});
+const BOTH_IN_SLOT_FILTER = "a slot filter names an item or is `blocked: true`, not both";
+
+/** A slot that takes one item only, or none at all; a filter named as no-item or deconstruction-planner is read as blocked */
+const SlotFilterConfigSchema = z.preprocess(migrateBlockedSlotFilter, z.union([
+    z.object({
+        /** The slot, from 1 */
+        slot: z.number().int().positive(),
+        /** The only item the slot takes */
+        item: z.string().min(1),
+        blocked: z.never({ error: BOTH_IN_SLOT_FILTER }).optional(),
+    }),
+    z.object({
+        /** The slot, from 1 */
+        slot: z.number().int().positive(),
+        /** The slot takes no item, as with the game's no-item or deconstruction planner filter */
+        blocked: z.literal(true),
+        item: z.never({ error: BOTH_IN_SLOT_FILTER }).optional(),
+    }),
+]));
 
 export const SlotContentConfigSchema = z.object({
     /** The slot, from 1 */
@@ -556,7 +570,7 @@ export type SlotContentConfig = z.infer<typeof SlotContentConfigSchema>;
 
 const slotContainerFields = {
     id: z.number().int().positive(),
-    /** Slots that take one item only; the other slots take any item */
+    /** Slots that take one item only, or none when blocked; the other slots take any item */
     slot_filters: z.array(SlotFilterConfigSchema).optional(),
     /** What the container holds when the build starts, slot by slot; empty without it */
     contents: z.array(SlotContentConfigSchema).optional(),

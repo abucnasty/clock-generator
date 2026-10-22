@@ -66,11 +66,11 @@ describe('automatic filters through containers', () => {
         expect(render(1)).toContain('value="Chest 1 - lithium"');
     });
 
-    it('never advertises blocking markers as available items or automatic filters', () => {
+    it('never advertises blocked slots as available items or automatic filters', () => {
         const form = build('car');
         const chest = form.chests[0];
         if (chest.type !== 'car') throw new Error('not a car');
-        chest.slot_filters = [{ slot: 1, item: 'no-item' }, { slot: 2, item: 'deconstruction-planner' }];
+        chest.slot_filters = [{ slot: 1, blocked: true, _marker: 'deconstruction-planner' }, { slot: 2, blocked: true }];
         expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo)).toEqual([]);
         expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo, form.inserters)).toEqual(['lithium']);
     });

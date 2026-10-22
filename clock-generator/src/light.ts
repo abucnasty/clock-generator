@@ -8,7 +8,6 @@
  */
 
 export { ChestType } from "./common/entity-types";
-export { BLOCKED_SLOT_FILTERS, isBlockedSlotFilter } from "./common/slot-filter";
 
 export {
     EnableControlMode,
@@ -34,6 +33,7 @@ export { Option } from "./data-types/option";
 export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-value";
 export { fraction } from "./data-types/fraction";
 export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
+export { BLOCKED_SLOT_MARKERS } from "./config/migrate-blocked-slots";
 
 export { BELT_PICKUP_LAYOUTS, BELT_PICKUP_LAYOUT_LABELS, pickupLengthForLayout } from "./common/belt-pickup-layout";
 export type { BeltPickupLayout } from "./common/belt-pickup-layout";

@@ -1,5 +1,5 @@
 import { SlotContainerType } from "../../common/entity-types";
-import { isBlockedSlotFilter } from "../../common/slot-filter";
+import { BLOCKED_SLOT, SlotFilter } from "../../common/slot-filter";
 import { SlotContainerConfig, SlotContentConfig } from "../../config/schema";
 import { FactorioDataService, ItemName } from "../../data";
 import { EntityId } from "../entity-id";
@@ -17,8 +17,8 @@ export class SlotContainer implements Chest {
         public readonly entity_id: EntityId,
         public readonly chest_type: SlotContainerType,
         public readonly quality: string,
-        /** One entry per slot: the item it is filtered to, or null for a free slot */
-        public readonly slot_filters: readonly (ItemName | null)[],
+        /** One entry per slot: the item it is filtered to, null for a free slot, or BLOCKED_SLOT when it takes none */
+        public readonly slot_filters: readonly SlotFilter[],
         /** What it holds when the build starts, by slot (from 1) */
         public readonly contents: readonly SlotContentConfig[],
         /** The items the build's inserters put into it */
@@ -34,7 +34,6 @@ export class SlotContainer implements Chest {
         const capacity = (name: ItemName) => this.slot_filters.filter(filter => filter === null || filter === name).length
             * FactorioDataService.findItemOrThrow(name).stack_size;
         if (item !== undefined) {
-            if (isBlockedSlotFilter(item)) return 0;
             return capacity(item);
         }
         return Math.max(0, ...this.getItemFilters().map(capacity));
@@ -44,15 +43,15 @@ export class SlotContainer implements Chest {
     public getItemFilters(): ItemName[] {
         const items = [
             ...this.contents.map(content => content.item),
-            ...this.slot_filters.filter((filter): filter is ItemName => filter !== null),
+            ...this.slot_filters.filter((filter): filter is ItemName => typeof filter === "string"),
             ...this.items_put_in,
         ];
-        return Array.from(new Set(items)).filter(item => !isBlockedSlotFilter(item));
+        return Array.from(new Set(items));
     }
 
     /** Any item of the game with a slot it may go into */
     public acceptsItem(item: ItemName): boolean {
-        return !isBlockedSlotFilter(item) && FactorioDataService.hasItem(item) && this.slot_filters.some(filter => filter === null || filter === item);
+        return FactorioDataService.hasItem(item) && this.slot_filters.some(filter => filter === null || filter === item);
     }
 
     public toString(): string {
@@ -64,7 +63,7 @@ function fromConfig(config: SlotContainerConfig, items_put_in: readonly ItemName
     const quality = ("quality" in config ? config.quality : undefined) ?? "normal";
     const slots = FactorioDataService.containerSlots(config.type, quality);
     const where = `Chest ${config.id} (${config.type})`;
-    const filters: (ItemName | null)[] = new Array(slots).fill(null);
+    const filters: SlotFilter[] = new Array(slots).fill(null);
     for (const filter of config.slot_filters ?? []) {
         if (filter.slot > slots) {
             throw new Error(`${where}: slot filter ${filter.slot} is past its ${slots} slots`);
@@ -72,7 +71,11 @@ function fromConfig(config: SlotContainerConfig, items_put_in: readonly ItemName
         if (filters[filter.slot - 1] !== null) {
             throw new Error(`${where}: slot ${filter.slot} is filtered twice`);
         }
-        if (!isBlockedSlotFilter(filter.item)) FactorioDataService.findItemOrThrow(filter.item);
+        if (filter.blocked) {
+            filters[filter.slot - 1] = BLOCKED_SLOT;
+            continue;
+        }
+        FactorioDataService.findItemOrThrow(filter.item);
         filters[filter.slot - 1] = filter.item;
     }
     const seen = new Set<number>();
@@ -84,14 +87,14 @@ function fromConfig(config: SlotContainerConfig, items_put_in: readonly ItemName
             throw new Error(`${where}: slot ${content.slot} is given contents twice`);
         }
         seen.add(content.slot);
-        if (isBlockedSlotFilter(content.item)) {
-            throw new Error(`${where}: ${content.item} blocks a slot and cannot be starting contents`);
-        }
         const stack = FactorioDataService.findItemOrThrow(content.item).stack_size;
         if (content.count > stack) {
             throw new Error(`${where}: ${content.count} ${content.item} in slot ${content.slot}, more than a stack of ${stack}`);
         }
         const filter = filters[content.slot - 1];
+        if (filter === BLOCKED_SLOT) {
+            throw new Error(`${where}: slot ${content.slot} is blocked and cannot hold ${content.item}`);
+        }
         if (filter !== null && filter !== content.item) {
             throw new Error(`${where}: slot ${content.slot} is filtered to ${filter} and cannot hold ${content.item}`);
         }

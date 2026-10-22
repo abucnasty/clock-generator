@@ -1,10 +1,9 @@
 import { Block, ContentCopy, DeleteOutline, FilterAlt } from '@mui/icons-material';
-import { BLOCKED_SLOT_FILTERS, isBlockedSlotFilter } from 'clock-generator/light';
 import { Box, Button, ButtonBase, Tooltip, Typography } from '@mui/material';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useGameNames } from '../hooks/useGameNames';
 import { useAnnounce } from '../hooks/useMessages';
-import { containerSlotCount, paintSlotFilters, slotRange } from '../utils/containerSlotFilters';
+import { BLOCK_MARKERS, containerSlotCount, isBlockMarker, paintSlotFilters, shownSlotFilter, slotRange } from '../utils/containerSlotFilters';
 import type { SlotContainerFormData, SlotFilterFormData } from '../utils/configForm/formData';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
@@ -25,8 +24,8 @@ const NO_FILTERS: SlotFilterFormData[] = [];
 export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
     const filters = chest.slot_filters ?? NO_FILTERS;
     const count = containerSlotCount(chest);
-    const filterOptions = [...new Set([...BLOCKED_SLOT_FILTERS, ...itemNames])];
-    const blockPriority = { label: 'Block slots', ids: [...BLOCKED_SLOT_FILTERS] };
+    const filterOptions = [...new Set([...BLOCK_MARKERS, ...itemNames])];
+    const blockPriority = { label: 'Block slots', ids: [...BLOCK_MARKERS] };
     const name = entityLabel('chest', chest.id);
     const { itemLabel } = useGameNames();
     const announce = useAnnounce();
@@ -40,10 +39,10 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
     const buttons = useRef<(HTMLButtonElement | null)[]>([]);
     const pointerType = useRef('');
     const visibleFilters = stroke ? paintSlotFilters(filters, slotRange(stroke.from, stroke.to), stroke.item) : filters;
-    const bySlot = new Map(visibleFilters.map(filter => [filter.slot, filter.item]));
+    const bySlot = new Map(visibleFilters.map(filter => [filter.slot, shownSlotFilter(filter)]));
     const outside = filters.filter(filter => filter.slot < 1 || filter.slot > count || !Number.isInteger(filter.slot));
     const filled = Array.from({ length: count }, (_, i) => i + 1).filter(slot => bySlot.get(slot));
-    const blocked = filled.filter(slot => isBlockedSlotFilter(bySlot.get(slot))).length;
+    const blocked = visibleFilters.filter(filter => filter.blocked && filter.slot >= 1 && filter.slot <= count).length;
     const currentSlot = Math.min(focusSlot, count);
     const rowStart = Math.floor((currentSlot - 1) / columns) * columns + 1;
 
@@ -111,7 +110,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
             <Button size="small" color="inherit" disabled={!brush || filled.length === count}
                 onClick={() => paint(slotRange(1, count).filter(slot => !bySlot.get(slot)))}>Fill unfiltered slots</Button>
             <Button size="small" color="inherit" startIcon={<Block />} disabled={filled.length === count}
-                onClick={() => paint(slotRange(1, count).filter(slot => !bySlot.get(slot)), isBlockedSlotFilter(brush) ? brush : BLOCKED_SLOT_FILTERS[0])}>
+                onClick={() => paint(slotRange(1, count).filter(slot => !bySlot.get(slot)), isBlockMarker(brush) ? brush : BLOCK_MARKERS[0])}>
                 Block unfiltered slots
             </Button>
             <Button size="small" color="inherit" startIcon={<DeleteOutline />} disabled={filters.length === 0}
@@ -125,7 +124,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
             {Array.from({ length: count }, (_, index) => {
                 const slot = index + 1;
                 const item = bySlot.get(slot);
-                const isBlocked = isBlockedSlotFilter(item);
+                const isBlocked = isBlockMarker(item);
                 const description = isBlocked ? `Blocked (${itemLabel(item!)})` : item ? `${itemLabel(item)} filter` : 'Unfiltered';
                 const base = insetSlotSx({ open: picker?.slot === slot || Boolean(stroke && slot >= Math.min(stroke.from, stroke.to) && slot <= Math.max(stroke.from, stroke.to)) });
                 return <Tooltip key={slot} disableInteractive enterDelay={600} disableHoverListener={Boolean(stroke)}
@@ -167,7 +166,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
                             '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'text.primary', outlineOffset: 1, zIndex: 1 } }]}>
                         {item && <>
                             <FactorioIcon name={item} size={24} alt="" />
-                            {isBlocked && item !== BLOCKED_SLOT_FILTERS[0] && <Block aria-hidden sx={{ position: 'absolute', top: 1, left: 1, fontSize: 10, color: 'text.secondary' }} />}
+                            {isBlocked && item !== BLOCK_MARKERS[0] && <Block aria-hidden sx={{ position: 'absolute', top: 1, left: 1, fontSize: 10, color: 'text.secondary' }} />}
                             {!isBlocked && <FilterAlt aria-hidden sx={{ position: 'absolute', top: 1, left: 1, fontSize: 10, color: 'text.secondary' }} />}
                         </>}
                         <Box component="span" aria-hidden sx={{ position: 'absolute', bottom: 0, right: 2, fontSize: 9, lineHeight: 1.2, color: 'text.secondary' }}>{slot}</Box>
@@ -181,7 +180,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
         {outside.length > 0 && <Box>
             <Typography variant="body2">Some filters are outside this inventory. Change the quality or remove them.</Typography>
             {outside.map((filter, index) => <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Typography variant="caption">Slot {filter.slot}: {itemLabel(filter.item)}</Typography>
+                <Typography variant="caption">Slot {filter.slot}: {itemLabel(shownSlotFilter(filter))}</Typography>
                 <Button size="small" color="inherit" onClick={() => onChange(filters.filter(row => row !== filter))}>Remove filter for slot {filter.slot}</Button>
             </Box>)}
         </Box>}

@@ -6,7 +6,7 @@ import type {
     RuleSet,
     ValueReference,
 } from 'clock-generator/browser';
-import { ChestType, isBlockedSlotFilter } from 'clock-generator/light';
+import { ChestType, type BLOCKED_SLOT_MARKERS } from 'clock-generator/light';
 
 export interface MachineFormData {
     id: number;
@@ -164,10 +164,14 @@ export interface InfinityChestFormData extends ChestSettingsMemory {
  */
 type ChestConfig = NonNullable<Config['chests']>[number];
 type ContainerChestConfig = Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>;
-export type ContainerChestFormData = ContainerChestConfig & ChestSettingsMemory & { _uuid: string };
+type ConfigSlotFilter = NonNullable<Extract<ContainerChestConfig, { slot_filters?: unknown }>['slot_filters']>[number];
+export type BlockedSlotMarker = typeof BLOCKED_SLOT_MARKERS[number];
+/** A slot filter as the form keeps it: a blocked slot remembers the marker painted on it, which the config leaves out */
+export type SlotFilterFormData = Exclude<ConfigSlotFilter, { blocked: true }> | (Extract<ConfigSlotFilter, { blocked: true }> & { _marker?: BlockedSlotMarker });
+type WithFormSlotFilters<T> = T extends { slot_filters?: unknown } ? Omit<T, 'slot_filters'> & { slot_filters?: SlotFilterFormData[] } : T;
+export type ContainerChestFormData = WithFormSlotFilters<ContainerChestConfig> & ChestSettingsMemory & { _uuid: string };
 export type SlotContainerFormData = Exclude<ContainerChestFormData, { type: typeof ChestType.ROCKET_SILO }>;
 export type RocketSiloFormData = Extract<ContainerChestFormData, { type: typeof ChestType.ROCKET_SILO }>;
-export type SlotFilterFormData = NonNullable<SlotContainerFormData['slot_filters']>[number];
 export type SlotContentFormData = NonNullable<SlotContainerFormData['contents']>[number];
 export type ItemCountFormData = NonNullable<RocketSiloFormData['contents']>[number];
 export type QualityName = NonNullable<RocketSiloFormData['recipe_quality']>;
@@ -221,8 +225,8 @@ export function isRocketSilo(chest: ChestFormData): chest is RocketSiloFormData 
 
 /** The items a car, a tank, a cargo wagon or a rocket silo names: what it starts with and what its slots are filtered to */
 export function containerItems(chest: ContainerChestFormData | Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>): string[] {
-    const filtered = 'slot_filters' in chest ? (chest.slot_filters ?? []).map(filter => filter.item) : [];
-    return Array.from(new Set([...(chest.contents ?? []).map(content => content.item), ...filtered])).filter(item => !isBlockedSlotFilter(item));
+    const filtered = 'slot_filters' in chest ? (chest.slot_filters ?? []).flatMap(filter => filter.blocked ? [] : [filter.item]) : [];
+    return Array.from(new Set([...(chest.contents ?? []).map(content => content.item), ...filtered]));
 }
 
 /** The items a chest of a config names: a buffer chest's filter, an infinity chest's supplies, a container's items */

@@ -10,7 +10,7 @@ silo's rocket inventory and input slots. The probe ([probe.lua](probe.lua)) puts
 | `silo-sink-rare` | with a rare rocket part recipe, the normal ingredients and the plates share the rocket inventory to its lift weight |
 | `silo-source` | an inserter takes from the rocket inventory, the last slot first; one filtered to processing units takes none from the input slots |
 | `wagon-sink` | a wagon with five slots filtered to copper filled by two feeders to the last slot |
-| `wagon-blocked-slots` | a wagon with 39 slots blocked by No item or Deconstruction planner fills its one free slot; Sidecar preserves both blocking filters and exports the full wagon empty |
+| `wagon-blocked-slots` | a wagon with 39 slots blocked by No item or Deconstruction planner fills its one free slot; Sidecar exports both blocking filters as blocked slots and the full wagon empty |
 | `car-source` | a car of mixed items emptied by an unfiltered inserter: the last slot's item first, a hand across stacks |
 | `drill-into-car` | a big mining drill on iron ore fills a car (the owner's car build's geometry) to its 80 stacks and waits for room |
 | `drill-into-filtered-car` | the same with five car slots filtered to copper plates: the ore fills the 75 free slots only |
@@ -40,8 +40,8 @@ build; the ascending order is recorded but not asserted. `CONTAINERS_CAPTURE_DIR
 
 `wagon-blocked-slots` was also recorded in Factorio 2.1.23: the game and simulator agree on every hand and slot,
 with 100 iron plates in the free slot and no items in the 39 blocked slots. The recording's config uses the real
-Sidecar extraction/export path: it retains 20 Deconstruction planner filters and 19 No item filters, and exports
-the wagon with no starting contents.
+Sidecar extraction/export path: it exports the 20 Deconstruction planner filters and 19 No item filters as 39 blocked
+slots, and the wagon with no starting contents.
 
 Recorded in Factorio 2.1.21: 5 of 5 equal the simulator, in place and moved, and the four drill builds 4 of 4 (since 0.20.0). Built ascending, the three builds without
 two inserters on one container in a tick are unchanged, and `silo-sink-rare` and `wagon-sink` split the container the
