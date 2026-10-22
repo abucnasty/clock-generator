@@ -45,7 +45,6 @@ Each follow-up becomes a GitHub issue. Until then, it is listed here.
 - F2: item byproducts that come out beside a fluid.
 - F3: a game recording of products finished and productivity payouts for fluid products, made before any such cell is scored.
 - F4: quality upcycling loops.
-- F5: moving trains, including a wagon on a moving train.
 - F6: spoilage-removal inserters clocked from the spoil time.
 - F7: belt pickup and drop timing for inserters other than the legendary stack inserter. Until it is measured, a belt pickup by another kind or quality is refused, and a belt drop by one is "not checked". With it, belt pickup at belt stack sizes 1–3 and with hands other than 16, which the generator warns about until then.
 - F8: the capture contract. First measure whether two output inserters sharing a lane change a verdict; only if they do, capture belt identity and drop positions, version the capture's facts apart from the target and operating assumptions, and prune the search with them where results stay the same.

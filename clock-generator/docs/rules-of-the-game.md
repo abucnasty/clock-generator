@@ -1,10 +1,10 @@
 # The rules of the game
 
-This page was split out of GOALS.md on 2026-10-15; GOALS.md holds the goals. Of the twelve rules `src/rules-of-the-game.ts` indexes, rules 1 to 4 are below; rules 5 to 11 are the simulator rules in [simulator.md](simulator.md) and rule 12 is in [wake-ups.md](wake-ups.md).
+This page was split out of GOALS.md on 2026-10-15; GOALS.md holds the goals. Of the fifteen rules `src/rules-of-the-game.ts` indexes, rules 1 to 4 are below; rules 5 to 11 and 13 to 15 are the simulator rules in [simulator.md](simulator.md) and rule 12 is in [wake-ups.md](wake-ups.md).
 
 ## The rules of the game, indexed
 
-Each rule of the game below is one named function, and `clock-generator/src/rules-of-the-game.ts` names all twelve: where each lives, the GOALS.md section it comes from, and the test that holds its recorded cases. The recorded figures travel with the code, as numbers in those tests and in the comments next to the functions; none of those tests reads a recording.
+Each rule of the game below is one named function, and `clock-generator/src/rules-of-the-game.ts` names all fifteen: where each lives, the GOALS.md section it comes from, and the test that holds its recorded cases. The recorded figures travel with the code, as numbers in those tests and in the comments next to the functions; none of those tests reads a recording.
 
 ## Crafting Constraints
 
