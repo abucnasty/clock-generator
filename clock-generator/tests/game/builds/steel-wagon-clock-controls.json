@@ -1,11 +1,11 @@
 {
-  "meaning": "Native summaries of the steel wagon clock family (steel-wagon-clock-fixtures.ts) in Factorio 2.1.21: the owner's steel build around one cargo wagon, which a big mining drill fills with iron ore, two furnaces take from and put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt. The selected clock (planned-belt-slack-subtick) is recorded in two build orders, and the clock planned without iron ore in its period (planned-lean-iron-ore-subtick) once; each with the clock steel-wagon-clock.generation.test.ts pins. The harness puts iron ore under the drill. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are sized to empty it of steel, as in the container family: the drill stopped (disabled by script) until the wagon has run dry, the output blocked for 4 periods, the drill stopped again, each followed for 40 periods, the first 6 after a release not judged. Do not compare these period for period with the 2-period families. The drill is no supply that stops in the generator's checks; here it is stopped as the supply cut.",
+  "meaning": "Native summaries of the steel wagon clock family (steel-wagon-clock-fixtures.ts) in Factorio 2.1.21: the owner's steel build around one cargo wagon, which a big mining drill fills with iron ore, two furnaces take from and put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt. The selected clock (planned-belt-slack-subtick) is recorded in two build orders, and the clock planned without iron ore in its period (planned-lean-iron-ore-subtick) once; each with the clock steel-wagon-clock.generation.test.ts pins. Each clock enables the drill a window of two positions a period, 1.08 ticks on average, before the inserter that takes the ore (since 0.20.0). The harness puts iron ore under the drill. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are sized to empty it of steel, as in the container family: the drill stopped (disabled by script) until the wagon has run dry, the output blocked for 4 periods, the drill stopped again, each followed for 40 periods, the first 6 after a release not judged. Do not compare these period for period with the 2-period families. The drill is no supply that stops in the generator's checks; here it is stopped as the supply cut.",
   "cases": {
     "steel-wagon-belt-slack": {
       "recorded": {
         "pr": 0,
-        "commit": "c30309ec",
-        "frozen_head": "c30309ec",
+        "commit": "1571a1be",
+        "frozen_head": "1571a1be",
         "note": "recorded before the PR was opened; pr is set when it is"
       },
       "native": {
@@ -82,7 +82,7 @@
           {
             "cut": 66,
             "during": [
-              1488,
+              1072,
               0,
               0,
               0,
@@ -91,7 +91,7 @@
               0,
               0,
               0,
-              4880
+              4752
             ],
             "recovered": [
               4992,
@@ -177,7 +177,7 @@
           {
             "cut": 159,
             "during": [
-              2304,
+              2032,
               0,
               0,
               0,
@@ -186,7 +186,7 @@
               0,
               0,
               0,
-              4864
+              4752
             ],
             "recovered": [
               4992,
@@ -253,14 +253,14 @@
           "rate": 26,
           "supply": null
         },
-        "clock_sha256": "aa28f7e772e8659fa9ef8e6c83ed58281a394ad069bfb6e177fa1dab182631b9"
+        "clock_sha256": "6f6500388f7d40872ec64a5094be2e69cf35d8f07c27a0e7dfbb43e643045a7e"
       }
     },
     "steel-wagon-belt-slack-fill-last": {
       "recorded": {
         "pr": 0,
-        "commit": "c30309ec",
-        "frozen_head": "c30309ec",
+        "commit": "1571a1be",
+        "frozen_head": "1571a1be",
         "note": "recorded before the PR was opened; pr is set when it is"
       },
       "native": {
@@ -337,7 +337,7 @@
           {
             "cut": 66,
             "during": [
-              1488,
+              1072,
               0,
               0,
               0,
@@ -346,7 +346,7 @@
               0,
               0,
               0,
-              4880
+              4752
             ],
             "recovered": [
               4992,
@@ -432,7 +432,7 @@
           {
             "cut": 159,
             "during": [
-              2304,
+              2032,
               0,
               0,
               0,
@@ -441,7 +441,7 @@
               0,
               0,
               0,
-              4864
+              4752
             ],
             "recovered": [
               4992,
@@ -508,14 +508,14 @@
           "rate": 26,
           "supply": null
         },
-        "clock_sha256": "aa28f7e772e8659fa9ef8e6c83ed58281a394ad069bfb6e177fa1dab182631b9"
+        "clock_sha256": "6f6500388f7d40872ec64a5094be2e69cf35d8f07c27a0e7dfbb43e643045a7e"
       }
     },
     "steel-wagon-lean-iron-ore": {
       "recorded": {
         "pr": 0,
-        "commit": "c30309ec",
-        "frozen_head": "c30309ec",
+        "commit": "1571a1be",
+        "frozen_head": "1571a1be",
         "note": "recorded before the PR was opened; pr is set when it is"
       },
       "native": {
@@ -593,7 +593,6 @@
             "cut": 66,
             "during": [
               1664,
-              80,
               0,
               0,
               0,
@@ -602,7 +601,8 @@
               0,
               0,
               0,
-              1552
+              0,
+              1504
             ],
             "recovered": [
               1664,
@@ -689,7 +689,7 @@
             "cut": 160,
             "during": [
               1664,
-              640,
+              560,
               0,
               0,
               0,
@@ -698,7 +698,7 @@
               0,
               0,
               0,
-              1568
+              1504
             ],
             "recovered": [
               1664,
@@ -765,7 +765,7 @@
           "rate": 26.000000000000004,
           "supply": null
         },
-        "clock_sha256": "2aef9fef1efa43c5ae6b7faff6476e20e55d3142acf1225b7bbb6d852d3e94ac"
+        "clock_sha256": "9eb224fb8e7a473e3f4bb4e16780caf137fb8ed7d788dea171b7dbc319c4a29d"
       }
     }
   }

@@ -449,7 +449,8 @@ BELT_SPEED_CAPTURE_DIR=.scratch/lithium-silo-new BELT_CLOCK_CALIBRATE=1 \
 build (`REAL_OWNER_CAR`, its README in the sample's folder): a big mining drill drops iron ore into a car, two furnaces take
 it out, 80 plates a second. The harness puts the ore under the drill. The selected clock (3 output swings, 72 ticks) is
 recorded as built and with the two inserters that take from the car built after the output inserters; the clock with 1
-output swing is a second check. The probe ([car-clock-probe.lua](car-clock-probe.lua)) counts the drops of the two output
+output swing is a second check. Each clock enables the drill one tick a period, the tick before the two inserters that take
+from the car; the harness wires it with its resource reading off. The probe ([car-clock-probe.lua](car-clock-probe.lua)) counts the drops of the two output
 inserters per period. The car holds 4,000 ore, so the cuts are those of the container family: the drill is stopped
 (disabled by script) until the car has run dry (71 periods), the output blocked for 4, the drill stopped again, each
 followed for 40 periods, the first 6 after a release not judged. A drill is no supply that stops in the generator's
@@ -457,7 +458,7 @@ checks; here it is stopped as the supply cut. Do not compare these recordings pe
 families.
 
 [car-clock-controls.json](car-clock-controls.json) holds the 3 native summaries, recorded on Factorio 2.1.21 at commit
-`e284c865`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the drill stopped) and are
+`1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the drill stopped) and are
 exact in all 33 judged periods after each; the two build orders are equal in every period.**
 `car-clock.generation.test.ts` pins each clock and checks it against its native summary.
 
@@ -476,7 +477,8 @@ ore under the drill and builds the wagon after its rails. The selected clock (pl
 11,520 ticks for 13 periods) is recorded as built and with the two inserters that put into the wagon built after every
 other entity; the clock planned without iron ore in its period is a second check, recorded as its subtick clock (3,840
 ticks for 13 periods): the capture exports an alternative's subtick clock where it has one, so the clock rounded to 295
-ticks is not recorded. The probe ([steel-wagon-clock-probe.lua](steel-wagon-clock-probe.lua)) counts the drops of the
+ticks is not recorded. Each clock enables the drill a window of two positions a period, 1.08 ticks on average, before
+the inserter that takes the ore; the harness wires it with its resource reading off. The probe ([steel-wagon-clock-probe.lua](steel-wagon-clock-probe.lua)) counts the drops of the
 inserter from the wagon to the belt per period, and also keeps the wagon's contents at each period's start and each
 furnace's ticks with a full output. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are those of the
 container family: the drill is stopped (disabled by script) until the wagon has run dry of steel (9 and 10 periods), the
@@ -485,7 +487,7 @@ drill is no supply that stops in the generator's checks; here it is stopped as t
 recordings period for period with the 2-period families.
 
 [steel-wagon-clock-controls.json](steel-wagon-clock-controls.json) holds the 3 native summaries, recorded on Factorio
-2.1.21 at commit `c30309ec`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the
+2.1.21 at commit `1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the
 drill stopped) and are exact in all 33 judged periods after each; the two build orders are equal in every period.** A
 full plate or steel filter stops a furnace a few ticks a period in some states, with no steel lost (the sample's README).
 `steel-wagon-clock.generation.test.ts` pins each clock and checks it against its native summary.
