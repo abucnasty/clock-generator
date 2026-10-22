@@ -99,7 +99,10 @@ export function assertSteelWagonHardware(recording: Recording, config: Config): 
     expect(recording.inserters.filter(inserter => inserter.source.type === "machine" && inserter.sink.type === "chest")).toHaveLength(2);
     expect(recording.inserters.filter(inserter => inserter.source.type === "chest" && inserter.sink.type === "machine")).toHaveLength(2);
     expect(recording.inserters.filter(inserter => inserter.source.type === "chest" && inserter.sink.type === "belt")).toHaveLength(1);
-    expect((recording.config.drills as {configs: {target: {type: string}}[]}).configs.map(drill => drill.target.type)).toEqual(["chest"]);
+    const drills = (recording.config.drills as {configs: {target: {type: string}; productivity: number}[]}).configs;
+    expect(drills.map(drill => drill.target.type)).toEqual(["chest"]);
+    // the sidecar's export of the drill's productivity (the harness save's research, no modules) is the config's
+    expect(drills[0].productivity).toBeCloseTo(config.drills!.configs[0].productivity, 6);
 }
 
 /** The capture's period of each alternative recorded, in ticks: its subtick clock's (13 periods of 886.15 ticks; 13 of 295.38) */
