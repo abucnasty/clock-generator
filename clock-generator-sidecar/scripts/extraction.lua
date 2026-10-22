@@ -96,13 +96,19 @@ local function extract_vehicle_or_silo_data(entity)
                 table.insert(contents, { item = content.name, count = content.count })
             end
         end
-        local _, recipe_quality = entity.get_recipe()
+        local recipe, recipe_quality = entity.get_recipe()
+        -- As for machines: modules and beacons, plus the force's research productivity for the recipe, capped at 300%
+        local productivity = entity.productivity_bonus or 0
+        local force_recipe = recipe and entity.force and entity.force.recipes[recipe.name]
+        if force_recipe then
+            productivity = productivity + (force_recipe.productivity_bonus or 0)
+        end
         return {
             chest_type = "rocket-silo",
             unit_number = entity.unit_number,
             recipe_quality = recipe_quality and recipe_quality.name or "normal",
             crafting_speed = entity.crafting_speed,
-            productivity = (entity.productivity_bonus or 0) * 100,
+            productivity = math.min(productivity, 3.0) * 100,
             contents = contents,
         }
     end
