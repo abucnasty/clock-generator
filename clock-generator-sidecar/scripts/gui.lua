@@ -100,13 +100,14 @@ end
 
 ---What is at the end an inserter is left out for, as a locale table
 ---@param target InserterTargetRef|nil
+---@param pickup boolean Whether the end is the one the inserter takes from
 ---@return table
-local function left_out_target(target)
+local function left_out_target(target, pickup)
     if not target then
         return { "clock-generator-sidecar.left-out-nothing" }
     end
     if target.type == "belt" or target.type == "chest" then
-        return { "clock-generator-sidecar.left-out-" .. target.type }
+        return { "clock-generator-sidecar.left-out-" .. target.type .. (pickup and "" or "-drop") }
     end
     local prototype = target.name and prototypes.entity[target.name]
     if not prototype then
@@ -146,7 +147,7 @@ local function add_left_out_inserters(frame, left_out)
                 "clock-generator-sidecar.left-out-inserter",
                 inserter.inserter_type,
                 where,
-                { left.pickup and "clock-generator-sidecar.left-out-takes-from" or "clock-generator-sidecar.left-out-drops-into", left_out_target(left.target) }
+                { left.pickup and "clock-generator-sidecar.left-out-takes-from" or "clock-generator-sidecar.left-out-drops-into", left_out_target(left.target, left.pickup) }
             }
         })
         label.style.single_line = false

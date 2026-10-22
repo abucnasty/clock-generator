@@ -551,8 +551,8 @@ function extraction.extract_all_entities(entities, force)
             table.insert(ingredients, ingredient)
         end
         table.sort(ingredients)
-        -- a belt with nothing on it is not described, as before: an inserter that takes from it is left out of the export,
-        -- and one that drops onto it points at the first belt (see resolve_target_id in export.lua)
+        -- a belt with nothing on it is not described, as before: an inserter that takes from it or drops onto it is left
+        -- out of the export (see resolve_target_id in export.lua)
         if #ingredients > 0 then
             local lanes = {}
             if not lane_ingredient[1] and not lane_ingredient[2] then

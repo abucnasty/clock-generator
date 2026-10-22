@@ -13,6 +13,10 @@ local RECORDING_FORMAT_VERSION = 1
 local CLOCK_SIGNAL = { type = "virtual", name = "signal-clock" }
 local CLOCK_DESCRIPTION_PREFIX = "Clock for"
 local MAX_WAIT_TICKS = 100000
+-- The recorder keeps an inserter that drops onto an empty belt or into an empty chest, which the sidecar leaves out:
+-- an output belt is often empty when a build is recorded, and a recording is matched to its config by the type of what
+-- an inserter drops into, never by its id
+local RECORDING_EXPORT = { keep_unexported_sinks = true }
 
 local status_names = {}
 for name, value in pairs(defines.entity_status) do
@@ -201,7 +205,7 @@ end
 ---@return table[] inserters, table[] machines, table[] drills
 local function build_tracks(result)
     local inserters = {}
-    for _, exported in ipairs(export.exported_inserters(result)) do
+    for _, exported in ipairs(export.exported_inserters(result, RECORDING_EXPORT)) do
         local entity = exported.inserter.entity
         table.insert(inserters, {
             entity = entity,
@@ -486,10 +490,11 @@ local LEFT_OUT_REASONS = {
 
 ---The inserters the export leaves out, each with the end it is left out for and why
 ---@param result ExtractionResult
+---@param options ExportOptions|nil The recorder's (RECORDING_EXPORT), or nil for the sidecar's
 ---@return table[]
-local function left_out_inserters(result)
+local function left_out_inserters(result, options)
     local out = {}
-    for _, left in ipairs(export.left_out_inserters(result)) do
+    for _, left in ipairs(export.left_out_inserters(result, options)) do
         local inserter = left.inserter
         local target = left.target
         table.insert(out, {
@@ -539,12 +544,15 @@ function recorder.describe(force, entities)
         return out
     end
     return {
-        config = export.to_table(result),
+        config = export.to_table(result, RECORDING_EXPORT),
         inserters = infos(inserters),
         machines = infos(machines),
         drills = infos(drills),
-        left_out = left_out_inserters(result),
+        left_out = left_out_inserters(result, RECORDING_EXPORT),
         left_out_drills = left_out_drills(result),
+        -- what the sidecar gives a player for the same selection: its JSON and the inserters it lists as left out, which
+        -- include the ones that drop onto an empty belt or into an empty chest
+        sidecar = { config = export.to_table(result), left_out = left_out_inserters(result) },
     }
 end
 
@@ -585,7 +593,7 @@ function recorder.start(force, entities, player_index, options)
         last_clock = nil,
         start_game_tick = game.tick,
         sample_count = 0,
-        config = export.to_table(result),
+        config = export.to_table(result, RECORDING_EXPORT),
         inserters = inserters,
         machines = machines,
         drills = drills,
