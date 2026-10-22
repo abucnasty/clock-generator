@@ -10,7 +10,7 @@ import { InventoryTransferHistory } from "./sequence/inventory-transfer-history"
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
 import {
-    clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, lockFilterDescription, PART_OF_THE_CLOCK,
+    chestDrillDescriptionLines, clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, lockFilterDescription, PART_OF_THE_CLOCK,
     plannedDescriptionLines, shownPeriodTicks, unplannedDescriptionLines,
 } from "./descriptions";
 import { GENERATOR } from "../generator";
@@ -81,6 +81,13 @@ function createDeciderCombinatorForTransfers(
         const signal = modulo && modulo.split.modulus === inserter_clock.modulus ? modulo.signal : SignalId.clock;
         const [window] = clockValueRanges(wholeRanges([inserter_clock.window]));
         description_lines = unplannedDescriptionLines(entity_ids, entity_registry, items, inserter_clock, window, signal);
+    }
+
+    if (!swing_counts && Entity.isDrill(entity)) {
+        // a drill into a chest: its windows are made from the takes out of the chest, outside the swing counts
+        description_lines = chestDrillDescriptionLines(entity_ids, entity_registry, items,
+            deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, period.subtick_scale),
+            period.ticks);
     }
 
     const outputs = Array.from(items).map(item_name => SignalId.item(item_name));

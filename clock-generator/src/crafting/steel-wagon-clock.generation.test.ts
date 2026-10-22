@@ -16,11 +16,13 @@ beforeAll(async () => {
     generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON), {logger: quiet});
 }, 180_000);
 
-test("steel wagon: the clock with belt slack is selected, and the drill into the wagon gets no window", () => {
-    expect(generated.alternatives[generated.selected_index].id).toBe("planned-belt-slack-subtick");
-    for (const alternative of generated.alternatives) {
-        expect(Object.keys(alternative.result.clock_windows).filter(id => id.startsWith("drill:"))).toEqual([]);
-    }
+test("steel wagon: the clock with belt slack is selected, and the drill into the wagon is enabled before the ore is taken", () => {
+    const selected = generated.alternatives[generated.selected_index];
+    expect(selected.id).toBe("planned-belt-slack-subtick");
+    // a period of 886.15 ticks: a window of two whole positions is enabled 1 or 2 ticks a period, 1.08 on average
+    expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 346, end: 347}]);
+    expect(Math.min(...selected.result.clock_windows["inserter:5"].map(range => range.start))).toBeLessThanOrEqual(348);
+    expect(selected.result.chest_drills?.[0].enabled_ticks).toBeCloseTo(1.078, 3);
 });
 
 test("steel wagon: no description shows a float as a fraction (the period is a whole number of crafting cycles)", () => {

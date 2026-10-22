@@ -215,6 +215,42 @@ export function plannedDescriptionLines(
     ];
 }
 
+/** The windows' line: "in 1 window per 72-tick period: open 28–28" */
+function windowsText(windows: DeciderWindows, period_text: string): string {
+    const listed = windows.listed === null ? "" : `: open ${windows.listed.map(range => `${range.start_inclusive}–${range.end_inclusive}`).join(", ")}`;
+    return `${windows.count} ${plural(windows.count, "window")} per ${period_text}-tick period${listed}`;
+}
+
+/** What a decider's windows say beyond when they open: a repeat on a modulo of the clock, a subtick clock */
+function unusualWindowLines(windows: DeciderWindows): string[] {
+    return [
+        ...(windows.repeat ? [`Windows repeat every ${windows.repeat.modulus} ticks: ${SignalId.toDescriptionString(windows.repeat.signal)} = clock mod ${windows.repeat.modulus}`] : []),
+        ...(windows.subtick_scale ? [`Reads the subtick clock: windows in 1/${windows.subtick_scale} ticks`] : []),
+    ];
+}
+
+/**
+ * The description of a drill into a chest, whose windows are made from the takes out of the chest (see
+ * chestDrillWindows), outside the swing counts:
+ * "[entity=big-mining-drill] [item=iron-ore] → [entity=car]  (drill 1)", "Open in 1 window per 72-tick period: open 28–28".
+ */
+export function chestDrillDescriptionLines(
+    drill_ids: EntityId[],
+    registry: ReadableEntityRegistry,
+    item_names: Iterable<string>,
+    windows: DeciderWindows,
+    period_text: string,
+): string[] {
+    const { first, routes } = identityLines(drill_ids, registry, itemIcons(item_names));
+    return [
+        first,
+        `Tops the chest up just in time, ${windowsText(windows, period_text)}`,
+        ...unusualWindowLines(windows),
+        "Outside the swing counts: timed by the takes out of the chest",
+        ...routes,
+    ];
+}
+
 /**
  * The description of a fuel or by-product inserter, on a clock of its own beside the plan. `signal` is what its window is
  * read on: a modulo of the one clock, the clock itself, or null for a fuel clock on a network of its own.
@@ -277,7 +313,7 @@ export function clockDescriptionLines(args: {
         : `${formatRate(args.items_per_second)}/s over ${formatRate(args.copies)} copies (${formatRate(args.items_per_second / args.copies)}/s each)`;
     const lines = [
         `Clock for ${item} ${rate}. ${args.period_text}`,
-        `Wire every other combinator's output to the ${args.drills ? "inserters and drills" : "inserters"} it names${args.copies > 1 ? ", in every copy" : ""}; set them Enable if Anything > 0`,
+        `Wire every other combinator's output to the ${args.drills ? "inserters and drills" : "inserters"} it names${args.copies > 1 ? ", in every copy" : ""}; set them Enable if Anything > 0${args.drills ? ", drills with Read resources off" : ""}`,
     ];
     const not_clocked = idsText(args.not_clocked.inserters, args.not_clocked.drills);
     const with_not_clocked = not_clocked === "" ? lines : [...lines, `Not on the clock, so not wired: ${not_clocked}`];

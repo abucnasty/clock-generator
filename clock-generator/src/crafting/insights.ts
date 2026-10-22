@@ -436,3 +436,39 @@ export function clockInsights(result: BlueprintGenerationResult, holds: boolean,
     ];
     return insights.filter((it): it is ClockInsight => it !== null);
 }
+
+/**
+ * What the clock gives each drill that drops into a chest (see chestDrillWindows): windows that keep the chest's takers
+ * supplied just in time, or why it stays always enabled. None for a build without such a drill.
+ */
+export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "chest_drills" | "simulation_duration">): ClockInsight[] {
+    const drills = result.chest_drills ?? [];
+    if (drills.length === 0) {
+        return [];
+    }
+    const clocked = drills.filter(drill => drill.enabled_ticks !== null);
+    const period = Number(result.simulation_duration.ticks.toFixed(2));
+    return [{
+        id: "chest-drill-windows",
+        scope: "clock",
+        title: clocked.length === drills.length ? "The drills into chests are enabled just in time"
+            : clocked.length === 0 ? "The drills into chests are always enabled" : "Some drills into chests are always enabled",
+        what: drills.map(drill => {
+            const into = `Drill ${drill.drill_id} drops ${drill.item.replace(/-/g, " ")} into chest ${drill.chest_id}`;
+            if (drill.enabled_ticks === null) {
+                return `${into} and is always enabled: ${drill.always_enabled_because}.`;
+            }
+            const ticks = Number(drill.enabled_ticks.toFixed(2));
+            return `${into} and is enabled ${ticks} tick${ticks === 1 ? "" : "s"} of the ${period}-tick period, in ${drill.window_count} window${drill.window_count === 1 ? "" : "s"}.`;
+        }).join(" "),
+        why: "A drill mines into a hold of its own and, each tick it is enabled, first drops what it holds into the chest, as far "
+            + "as the chest has room. What it mines in its last enabled tick stays in the hold while it is disabled and drops "
+            + "first in its next window. Disabled, it keeps its hold and its progress.",
+        explanation: "Each window ends the tick before an inserter takes from the chest, and is as long as the drill needs to mine "
+            + "what is taken until its next window, checked by running the drill against the takes. The windows are not part of "
+            + "the swing counts and do not change the inserters' windows; the clock-only check and the backpressure losses are run "
+            + "with them. A clock that does not hold with them is made again with them a tick longer, then with the drill always "
+            + "enabled. A drill stays always enabled where nothing times it: no inserter of the plan takes its item out of the "
+            + "chest, something else fills the chest with the same item, or the config sets it so.",
+    }];
+}

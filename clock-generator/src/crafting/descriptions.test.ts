@@ -116,7 +116,7 @@ describe("the description of the clock", () => {
         expect(clockDescriptionLines({ item_name: "iron-plate", items_per_second: 120, copies: 7, period_text: "Period 336 ticks; counts 1–336", drills: true,
             not_clocked: { inserters: [], drills: [] } })).toEqual([
             "Clock for [item=iron-plate] 120/s over 7 copies (17.143/s each). Period 336 ticks; counts 1–336",
-            "Wire every other combinator's output to the inserters and drills it names, in every copy; set them Enable if Anything > 0",
+            "Wire every other combinator's output to the inserters and drills it names, in every copy; set them Enable if Anything > 0, drills with Read resources off",
             `Made by Clock Generator ${GENERATOR.version}: clock-generator-self.vercel.app`,
         ]);
     });

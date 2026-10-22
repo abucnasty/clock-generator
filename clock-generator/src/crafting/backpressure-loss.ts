@@ -298,12 +298,17 @@ export function runLossTrials(
     const dropped = () => output_inserters.reduce((sum, state) => sum + state.items_dropped, 0);
 
     // What the build does: every item an inserter moves and every product a machine finishes is counted, and a
-    // machine that crafts moves its bars. A drill puts into a machine without a count, which the stock shows.
+    // machine that crafts moves its bars. A drill puts into a machine without a count, which the stock shows; a drill
+    // into a chest fills it while every inserter may idle, so its hold and its chest are watched too.
     const inserter_states = context.inserters.map(it => it.inserter_state);
     const machine_states = context.machines.map(it => it.machine_state);
     const watch_stock = context.drills.length > 0;
+    const chest_drills = context.drills.flatMap(it => {
+        const sink = context.state_registry.getStateByEntityId(it.drill_state.drill.sink_id);
+        return sink !== null && EntityState.isChest(sink) ? [{ drill: it.drill_state, chest: sink }] : [];
+    });
     // asked every tick of a loss: the two buffers are swapped instead of built anew
-    const slots = inserter_states.length * 2 + machine_states.length * (watch_stock ? 4 : 3);
+    const slots = inserter_states.length * 2 + machine_states.length * (watch_stock ? 4 : 3) + chest_drills.length * 2;
     let seen = new Float64Array(slots);
     let last_seen = new Float64Array(slots);
     let seen_before = false;
@@ -323,6 +328,10 @@ export function runLossTrials(
             if (watch_stock) {
                 current[at++] = state.inventoryState.getTotalQuantity();
             }
+        }
+        for (let index = 0; index < chest_drills.length; index++) {
+            current[at++] = chest_drills[index].drill.inventoryState.getTotalQuantity();
+            current[at++] = chest_drills[index].chest.getCurrentQuantity();
         }
         let changed = !seen_before;
         seen_before = true;

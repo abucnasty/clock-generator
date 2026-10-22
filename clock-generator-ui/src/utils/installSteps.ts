@@ -60,15 +60,17 @@ export const INSTALL_COPY = {
         detail: 'Open the inserter, find Circuit network connection, choose Enable/disable, and set the condition to '
             + 'Anything > 0. The combinator puts out one of the inserter\'s item only while the clock is in a wake '
             + 'window, so the inserter works only then.',
-        drills: ' A mining drill is wired and set the same way.',
+        drills: ' A mining drill is wired and set the same way, with Read resources off: a drill that reads its resources '
+            + 'puts its ore on the wire, and Anything > 0 then keeps it on.',
     },
     drills: {
         title: 'Wire each combinator\'s output to its mining drills, and set them to switch on with it.',
         detail: 'A combinator whose description ends its first line with "(drill 1)" switches that mining drill on. With '
             + 'a green wire, connect its output to each drill in the wiring reference; the numbers are the ones on Configure. '
             + 'Then open the drill, find Circuit network connection, choose Enable/disable, and set the condition to '
-            + 'Anything > 0. The Clock, the Clock lock and every combinator described "Part of the clock" are the clock '
-            + 'itself: leave them.',
+            + 'Anything > 0, with Read resources off: a drill that reads its resources puts its ore on the wire, and '
+            + 'Anything > 0 then keeps it on. The Clock, the Clock lock and every combinator described "Part of the clock" '
+            + 'are the clock itself: leave them.',
     },
     others: {
         title: 'Leave the other inserters alone.',

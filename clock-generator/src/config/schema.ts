@@ -301,7 +301,13 @@ const DrillTargetConfigSchema = z.discriminatedUnion("type", [DrillTargetMachine
  * Overrides configuration for mining drills.
  */
 const MiningDrillOverridesConfigSchema = z.object({
-    enable_control: EnableControlOverrideConfigSchema.optional()
+    enable_control: EnableControlOverrideConfigSchema.optional(),
+    /**
+     * For a drill into a chest on the windows the generator makes for it (no enable control, or AUTO): ticks each window
+     * starts earlier than the fewest that keep the chest's takers supplied. The generator tries 1 when a clock does not
+     * hold with the fewest.
+     */
+    extra_window_ticks: z.number().int().min(0).optional()
 });
 
 export const MiningDrillConfigSchema = z.object({
@@ -811,11 +817,12 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
             context.addIssue({ code: "custom", path: ["drills", "configs", index, "target", "id"],
                 message: `Drill ${drill.id} drops into chest ${chest_id}, which is not in the config` });
         }
-        // nothing gates a drill into a chest: it runs always, as a supply that never stops
+        // a drill into a chest is on the windows the generator makes for it (AUTO), on its own (CLOCKED) or always on;
+        // a condition needs an inserter's hand to read, and a drill that never runs fills nothing
         const mode = drill.overrides?.enable_control?.mode;
-        if (mode !== undefined && mode !== EnableControlMode.ALWAYS) {
+        if (mode === EnableControlMode.CONDITIONAL || mode === EnableControlMode.NEVER) {
             context.addIssue({ code: "custom", path: ["drills", "configs", index, "overrides", "enable_control"],
-                message: `Drill ${drill.id} drops into a chest and is always enabled; its enable control can only be ALWAYS` });
+                message: `Drill ${drill.id} drops into a chest; its enable control can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
         }
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it
