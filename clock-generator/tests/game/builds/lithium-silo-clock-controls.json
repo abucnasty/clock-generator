@@ -1,0 +1,721 @@
+{
+  "meaning": "Native summaries of the lithium silo clock family (lithium-silo-clock-fixtures.ts) in Factorio 2.1.21: the owner's lithium plate build with a rocket silo as a chest, on its selected clock (3 output swings) in two build orders, on 1 output swing and on 7, each with the clock lithium-silo-clock.generation.test.ts pins. The standard protocol: the holmium plates cut for 2 periods, the output blocked for 4, the holmium plates cut again; the silo, which holds at most 250 lithium, is empty in each cut. The harness warms the build up for 3600 ticks without a clock, so the silo is full when the clock starts. The clock with 7 output swings does not hold in the game: two output inserters drop onto belts that side-load onto the shared output belt, which the config describes as one belt.",
+  "cases": {
+    "lithium-silo-swings-3": {
+      "recorded": {
+        "pr": 0,
+        "commit": "759e9a50",
+        "frozen_head": "759e9a50",
+        "note": "recorded before the PR was opened; pr is set when it is"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 80,
+        "period": 1080,
+        "expected": 1440,
+        "baseline": [
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              1216,
+              0,
+              704
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              912,
+              40,
+              0,
+              0,
+              1672
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          },
+          {
+            "cut": 104,
+            "during": [
+              992,
+              0,
+              704
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            88,
+            104
+          ],
+          [
+            104,
+            106,
+            132
+          ]
+        ]
+      },
+      "generation": {
+        "period": 1080,
+        "expected": 1440,
+        "verdict": "stable",
+        "selection": {
+          "id": "swings-3",
+          "holds": true,
+          "rate": 80,
+          "supply": null
+        },
+        "clock_sha256": "d9e23f5c82fbc84dd2e6ef6cf5f3c67bb2255eb8d1caf9fa11a7fca5ac1ee091"
+      }
+    },
+    "lithium-silo-swings-3-fill-last": {
+      "recorded": {
+        "pr": 0,
+        "commit": "759e9a50",
+        "frozen_head": "759e9a50",
+        "note": "recorded before the PR was opened; pr is set when it is"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 80,
+        "period": 1080,
+        "expected": 1440,
+        "baseline": [
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              1216,
+              0,
+              704
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              912,
+              40,
+              0,
+              0,
+              1672
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          },
+          {
+            "cut": 104,
+            "during": [
+              992,
+              0,
+              704
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            88,
+            104
+          ],
+          [
+            104,
+            106,
+            132
+          ]
+        ]
+      },
+      "generation": {
+        "period": 1080,
+        "expected": 1440,
+        "verdict": "stable",
+        "selection": {
+          "id": "swings-3",
+          "holds": true,
+          "rate": 80,
+          "supply": null
+        },
+        "clock_sha256": "d9e23f5c82fbc84dd2e6ef6cf5f3c67bb2255eb8d1caf9fa11a7fca5ac1ee091"
+      }
+    },
+    "lithium-silo-swings-1": {
+      "recorded": {
+        "pr": 0,
+        "commit": "759e9a50",
+        "frozen_head": "759e9a50",
+        "note": "recorded before the PR was opened; pr is set when it is"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 80,
+        "period": 1080,
+        "expected": 1440,
+        "baseline": [
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440,
+          1440
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              960,
+              0,
+              864
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              888,
+              0,
+              0,
+              0,
+              1928
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          },
+          {
+            "cut": 104,
+            "during": [
+              640,
+              0,
+              864
+            ],
+            "recovered": [
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440,
+              1440
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            88,
+            104
+          ],
+          [
+            104,
+            106,
+            132
+          ]
+        ]
+      },
+      "generation": {
+        "period": 1080,
+        "expected": 1440,
+        "verdict": "stable",
+        "selection": {
+          "id": "swings-1",
+          "holds": true,
+          "rate": 80,
+          "supply": null
+        },
+        "clock_sha256": "9cea0b99dc2bf4f344ba5a8911d63564d3e3d1394337fe2f023597f54a1dc76b"
+      }
+    },
+    "lithium-silo-swings-7": {
+      "recorded": {
+        "pr": 0,
+        "commit": "759e9a50",
+        "frozen_head": "759e9a50",
+        "note": "recorded before the PR was opened; pr is set when it is"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 80,
+        "period": 7560,
+        "expected": 10080,
+        "baseline": [
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472,
+          9600,
+          9504,
+          9504,
+          9440,
+          9472
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              1888,
+              0,
+              8768
+            ],
+            "recovered": [
+              9504,
+              9440,
+              9472,
+              9600,
+              9504,
+              9504,
+              9440,
+              9472,
+              9600
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              1048,
+              0,
+              0,
+              0,
+              9160
+            ],
+            "recovered": [
+              9472,
+              9440,
+              9600,
+              9536,
+              9472,
+              9472,
+              9440,
+              9600,
+              9536
+            ]
+          },
+          {
+            "cut": 104,
+            "during": [
+              1920,
+              0,
+              8768
+            ],
+            "recovered": [
+              9472,
+              9472,
+              9440,
+              9600,
+              9536,
+              9472,
+              9472,
+              9440,
+              9600,
+              9536,
+              9472,
+              9472,
+              9440,
+              9600,
+              9536,
+              9472,
+              9472,
+              9440,
+              9600
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            88,
+            104
+          ],
+          [
+            104,
+            106,
+            132
+          ]
+        ]
+      },
+      "generation": {
+        "period": 7560,
+        "expected": 10080,
+        "verdict": "stable",
+        "selection": {
+          "id": "swings-7",
+          "holds": true,
+          "rate": 80,
+          "supply": null
+        },
+        "clock_sha256": "4aff7de0b82d7d097060f0677871c6f1373b95c09e39ebb3b938414428444c10"
+      }
+    }
+  }
+}
