@@ -25,8 +25,8 @@ export { AutomatedInsertionLimit } from "./entities/machine/input/automated-inse
 /**
  * 3. Mining drill limit (GOALS.md "Constraint Exceptions"): a drill fills a machine past the automated insertion limit,
  * to the limit + 64, and was observed to stop at 114 items at the least, the stack of stone + 64. The function takes
- * the stack where the limit is below it, and a craft's amount on top. Cases: `rules-of-the-game.test.ts` pins the
- * function on the stone brick sample, whose furnaces have a limit above the stack; the 114 has no table yet.
+ * the stack where the limit is below it. Cases: `rules-of-the-game.test.ts`, the game's stops of the drills mechanics
+ * family (114 on rail, 214 on landfill) and the stone brick sample, whose furnaces have a limit above the stack.
  */
 export { miningDrillMaxInsertion } from "./entities/drill/mining-drill-ext";
 

@@ -136,6 +136,8 @@ describe("a drill into a machine", () => {
     it("drops up to its stop, keeps the rest and waits; at the stop it mines on until it holds an item", () => {
         // 7,999 levels: 199 ore in the first tick, more than the stop
         const { drill, machine, progress, stop, count, held } = machineBuild(7999);
+        // the game's stop on rail (stack 50, limit 3): 50 + 64 (rail-l28, rail-l45, rail-l8-gated of the drills family)
+        expect(stop).toBe(114);
         drill.executeForTick();
         expect([count(), held()]).toEqual([0, 199]);
         drill.executeForTick();
