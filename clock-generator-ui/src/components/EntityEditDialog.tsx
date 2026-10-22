@@ -25,6 +25,7 @@ import type {
     MachineFormData,
 } from '../hooks/useConfigForm';
 import { isBufferChest, isContainerChest, isInfinityChest } from '../hooks/useConfigForm';
+import { chestTypeIcon } from '../utils/configForm/formData';
 import type { BufferChestFormData } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { entityLabel } from '../utils/entityLabel';
@@ -184,7 +185,7 @@ export function EntityEditDialog({
                 const idx = chests.findIndex(c => c.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const c = chests[idx];
-                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: isInfinityChest(c) ? 'infinity-chest' : 'steel-chest' };
+                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: chestTypeIcon(c.type) };
             }
             case 'inserter': {
                 const idx = inserters.findIndex(i => i.id === entityId);
@@ -257,8 +258,12 @@ export function EntityEditDialog({
             case 'drill': return changedFields(draft as DrillFormData, entity as DrillFormData, DRILL_FIELDS);
             case 'chest': {
                 const chest = (value: ChestFormData) => ({ ...value, remove_unfiltered_items: isInfinityChest(value) ? value.remove_unfiltered_items : undefined, storage_size: isBufferChest(value) ? value.storage_size : undefined });
-                // a car, a tank, a wagon or a silo has no fields the dialog edits yet
-                if (isContainerChest(draft as ChestFormData)) return {};
+                // a car, a tank, a wagon or a silo: every field it has, or the chest it was switched from had
+                if (isContainerChest(draft as ChestFormData) || isContainerChest(entity as ChestFormData)) {
+                    const keys = [...new Set([...Object.keys(draft), ...Object.keys(entity)])]
+                        .filter(key => key !== '_uuid' && key !== '_chest_settings') as (keyof ChestFormData)[];
+                    return changedFields(draft as ChestFormData, entity as ChestFormData, keys);
+                }
                 type Fields = Record<(typeof CHEST_FIELDS)[number], unknown>;
                 return changedFields(chest(draft as ChestFormData) as unknown as Fields, chest(entity as ChestFormData) as unknown as Fields, CHEST_FIELDS) as Partial<BufferChestFormData>;
             }
@@ -290,8 +295,11 @@ export function EntityEditDialog({
             case 'chest': {
                 const chest = draft as ChestFormData;
                 if (chest.type !== (entity as ChestFormData).type) onSwitchChestType(entityIndex, chest.type);
-                const rest = { ...edits } as Partial<ChestFormData>;
+                // a car, a tank, a wagon or a silo, or a chest switched to or from one, is saved as the draft has it
+                const container = isContainerChest(chest) || isContainerChest(entity as ChestFormData);
+                const rest = (container ? { ...chest } : { ...edits }) as Partial<ChestFormData>;
                 delete rest.type;
+                delete rest._uuid;
                 onUpdateChest(entityIndex, rest);
                 break;
             }

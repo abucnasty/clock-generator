@@ -1,7 +1,7 @@
 import { idList, selectionLabel } from './bulkEdit';
 import { ChestType } from 'clock-generator/light';
 import * as edits from './configForm/edits';
-import { isInfinityChest, type ConfigFormData, type EntityKind } from './configForm/formData';
+import { CHEST_TYPE_LABELS, type ConfigFormData, type EntityKind } from './configForm/formData';
 import { deleteButtonLabel, entityLabel, type LabelKind } from './entityLabel';
 import type { MessageInput } from './messages';
 import { exampleTitle, type ExampleBuild } from './exampleBuilds';
@@ -26,15 +26,6 @@ const KINDS: Record<EntityKind, { one: LabelKind; many: string }> = {
     belts: { one: 'belt', many: 'Belts' },
     chests: { one: 'chest', many: 'Chests' },
     drills: { one: 'drill', many: 'Drills' },
-};
-
-const CHEST_TYPE_NAMES: Record<ChestType, string> = {
-    [ChestType.BUFFER_CHEST]: 'Buffer chest',
-    [ChestType.INFINITY_CHEST]: 'Infinity chest',
-    [ChestType.CAR]: 'Car',
-    [ChestType.TANK]: 'Tank',
-    [ChestType.CARGO_WAGON]: 'Cargo wagon',
-    [ChestType.ROCKET_SILO]: 'Rocket silo',
 };
 
 /**
@@ -218,8 +209,8 @@ export function describeChestSwitch(form: ConfigFormData, index: number, newType
     if (!chest) {
         return null;
     }
-    const type = isInfinityChest(chest) ? ChestType.INFINITY_CHEST : ChestType.BUFFER_CHEST;
-    return type === newType ? null : `${entityLabel('chest', chest.id)} changed to ${CHEST_TYPE_NAMES[newType]}.`;
+    const type = chest.type ?? ChestType.BUFFER_CHEST;
+    return type === newType ? null : `${entityLabel('chest', chest.id)} changed to ${CHEST_TYPE_LABELS[newType]}.`;
 }
 
 /** "Imported 3 machines, 1 inserter from Factorio." */

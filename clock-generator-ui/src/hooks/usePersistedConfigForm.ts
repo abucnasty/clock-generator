@@ -28,10 +28,12 @@ import {
 } from '../utils/buildLibrary';
 import { useNotify } from './useMessages';
 import {
+    CONTAINER_CHEST_TYPES,
     createDefaultConfig,
     type BeltFormData,
     type ChestFormData,
     type ConfigFormData,
+    type ContainerChestFormData,
     type DrillFormData,
     type InfinityChestFormData,
     type InfinityFilterFormData,
@@ -56,6 +58,10 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
         // If already has a valid type, return as-is (with uuid)
         if (c.type === ChestType.INFINITY_CHEST) {
             return { ...(c as InfinityChestFormData), _uuid: uuid };
+        }
+        // a car, a tank, a cargo wagon or a rocket silo is kept as it is
+        if (c.type !== undefined && (CONTAINER_CHEST_TYPES as string[]).includes(c.type)) {
+            return { ...(c as ContainerChestFormData), _uuid: uuid };
         }
         // Default to buffer chest (handles legacy data without type)
         return {
