@@ -10,7 +10,7 @@ import {DrillStateMachine} from "../../../../src/control-logic/drill/drill-state
 import {DrillChestWorkingMode} from "../../../../src/control-logic/drill/modes/chest-working-mode";
 import {DrillWorkingMode} from "../../../../src/control-logic/drill/modes/working-mode";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {MiningProductivity} from "../../../../src/entities";
+import {MiningProductivity, miningDrillMaxInsertion} from "../../../../src/entities";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {EntityState, MachineState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
@@ -80,6 +80,12 @@ export function drillCases(): DrillCase[] {
 }
 
 const RESOURCE = {car: "iron-ore", landfill: "stone", rail: "stone"} as const;
+/**
+ * The game's stop into the assembler: the larger of the stack (50) and the automated insertion limit (3 for rail, 150
+ * for landfill), + 64; and the builds whose machine reaches it in the game
+ */
+const STOP = {landfill: 214, rail: 114} as const;
+const STOP_REACHED = new Set(["landfill-l45", "landfill-l45-drill-last", "landfill-l45-moved", "rail-l28", "rail-l45", "rail-l8-gated"]);
 
 export function drillBlueprint(variant: DrillCase): string {
     const drill = {name: "big-mining-drill", position: {x: 0.5, y: 0.5}, direction: 4, items: [{id: {name: "speed-module-3", quality: "legendary"},
@@ -119,8 +125,8 @@ interface Tick {t: number; n: number; p?: number; b?: number}
  * The simulator's drill driven by the game's sink, tick by tick: in each tick the sink loses what the game's took from
  * it (the taker's hand growth, or a craft's ingredients when the machine's count falls), before the drill, and the
  * drill is disabled where the game's was. Game row k is the simulator's k-th tick (the game's drill has no mining
- * target in the recording's first tick). Into a machine, also the machine's level at which a drill stops by GOALS.md
- * "Constraint Exceptions" (the larger of the stack and the automated insertion limit, + 64).
+ * target in the recording's first tick). Into a machine, also the drill's stop (`miningDrillMaxInsertion`, rule 3 of
+ * the rules of the game: the larger of the stack and the automated insertion limit, + 64).
  */
 export function replayDrill(config: Config, log: Row[]): {ticks: Tick[]; machine_stop?: number} {
     const context = SimulationContext.fromConfig(config);
@@ -130,7 +136,8 @@ export function replayDrill(config: Config, log: Row[]): {ticks: Tick[]; machine
     let enabled = true;
     const drill = DrillStateMachine.create({drill_state, sink_state: sink, enable_control: {isEnabled: () => enabled}});
     const mode = Array.from(drill.modes).find(it => it instanceof DrillWorkingMode || it instanceof DrillChestWorkingMode)!;
-    const input = EntityState.isMachine(sink) ? sink.machine.inputs.getOrThrow(item.name) : undefined;
+    const machine = EntityState.isMachine(sink) ? sink.machine : undefined;
+    const input = machine?.inputs.getOrThrow(item.name);
     const count = () => EntityState.isChest(sink) ? sink.getCurrentQuantity(item.name) : (sink as MachineState).inventoryState.getItemOrThrow(item.name).quantity;
     const ticks: Tick[] = [{t: 0, n: count(), p: 0, b: 0}];
     for (let k = 1; k < log.length; k++) {
@@ -140,7 +147,7 @@ export function replayDrill(config: Config, log: Row[]): {ticks: Tick[]; machine
         drill.executeForTick();
         ticks.push({t: k, n: count(), p: mode.progress.mining_progress, b: mode.progress.bonus_progress});
     }
-    return {ticks, ...(input && {machine_stop: Math.max(item.stack_size, input.automated_insertion_limit.quantity) + 64})};
+    return {ticks, ...(machine && {machine_stop: miningDrillMaxInsertion(drill_state.drill, machine)})};
 }
 
 /** The simulator's run of the whole build: every entity simulated, the drill always enabled */
@@ -185,15 +192,18 @@ for (const variant of drillCases()) test(`drills at low research: ${variant.name
         expect(MiningProductivity.fromLevel(exported).productivity.normalized).toBeCloseTo(report.drill.productivity_bonus, 9);
         const config = drillConfig(variant, exported);
 
-        // the drill against the game's, every tick; into a machine until the game's reaches the drill's stop, which
-        // is rule 3 of the rules of the game and not this family's (README.md)
+        // the drill against the game's, every tick; into a machine, the drill's stop is where the game's stopped
         const {ticks: replay, machine_stop} = replayDrill(config, log);
-        const reached = machine_stop === undefined ? -1 : log.findIndex(row => row.n >= machine_stop);
-        const until = reached === -1 ? log.length : reached;
         const simulated = variant.simulated ? simulateDrillBuild(config, log.length - 1) : undefined;
+        const game_max = Math.max(...log.map(row => row.n));
         fs.writeFileSync(path.join(scratch, "comparison.json"), JSON.stringify({exported, bonus: report.research.bonus, machine_stop,
-            compared_until: until, game: log, replay, simulated}) + "\n");
-        for (let k = 1; k < until; k++) {
+            game_max, game: log, replay, simulated}) + "\n");
+        if (machine_stop !== undefined) {
+            expect(machine_stop, "the drill's stop").toBe(STOP[variant.sink as "landfill" | "rail"]);
+            expect(game_max, "the game's machine at most at the drill's stop").toBeLessThanOrEqual(machine_stop);
+            if (STOP_REACHED.has(variant.name)) expect(game_max, "the game's machine reaches the drill's stop").toBe(machine_stop);
+        }
+        for (let k = 1; k < log.length; k++) {
             expect(replay[k].n, `the sink's count at tick ${k}`).toBe(log[k].n);
             expect(Math.abs(replay[k].p! - log[k].p), `the mining bar at tick ${k}: ${replay[k].p} against ${log[k].p}`).toBeLessThan(1e-6);
             expect(Math.abs(replay[k].b! - log[k].b), `the bonus bar at tick ${k}: ${replay[k].b} against ${log[k].b}`).toBeLessThan(1e-6);

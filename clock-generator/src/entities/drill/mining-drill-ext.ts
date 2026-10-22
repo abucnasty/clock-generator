@@ -15,6 +15,5 @@ export function miningDrillMaxInsertion(
     const automated_insertion_limit = machine_input.automated_insertion_limit.quantity;
     const mined_item_stack_size = mined_item.stack_size;
     const max_insertion_per_tick = Math.max(mined_item_stack_size, automated_insertion_limit);
-    const amount_per_craft = machine_input.consumption_rate.amount_per_craft
-    return max_insertion_per_tick + 64 + amount_per_craft;
+    return max_insertion_per_tick + 64;
 }
