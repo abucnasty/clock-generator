@@ -108,6 +108,7 @@ function fromConfig(config: MachineConfiguration): Machine {
         type: config.type ?? "machine",
         energy_consumption_bonus: config.energy_consumption_bonus,
         fuel: config.fuel,
+        ...(config.prototype !== undefined ? { prototype: config.prototype } : {}),
     });
 }
 

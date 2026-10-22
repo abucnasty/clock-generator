@@ -10,8 +10,9 @@ and 10 blocked (a deconstruction planner in the game). The target is 26 steel pl
 
 - `steel-wagon-scaffold.txt`: the owner's blueprint as given. The loader and disposal chest are part of it.
 - `steel-wagon.sidecar-export.json`: what Sidecar 0.12.0 exported from the blueprint built in the harness game.
-- `steel-wagon.json`: that export as the paste reads it (each list through its schema), with the target added. No field
-  was edited.
+- `steel-wagon.json`: that export as the paste reads it (each list through its schema), with the target added and each
+  machine's `prototype` (`electric-furnace` for both machines) taken from the scaffold, as the sidecar exports it since
+  this export was taken; it only names the machines in the clock's descriptions. No other field was edited.
 
 The harness game has no ore, so the harness puts iron ore under the drill before it builds it, and it builds the wagon
 after its rails. The export was taken after a warm-up of 3600 ticks without a clock. The sidecar exports a wagon empty,

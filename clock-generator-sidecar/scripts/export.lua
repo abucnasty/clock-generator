@@ -180,7 +180,11 @@ function export.to_table(result, options)
             crafting_speed = machine.crafting_speed,
             productivity = machine.productivity,
             type = machine.type,
-            energy_consumption_bonus = machine.energy_consumption_bonus
+            energy_consumption_bonus = machine.energy_consumption_bonus,
+            -- for labels only: the generator names the machine by its icon and keeps its qualities
+            prototype = machine.name,
+            quality = machine.quality,
+            recipe_quality = machine.recipe_quality
         })
     end
     
@@ -294,7 +298,8 @@ function export.to_table(result, options)
                 type = "buffer-chest",
                 id = i,
                 storage_size = chest.storage_size,
-                item_filter = chest.item_filter
+                item_filter = chest.item_filter,
+                prototype = chest.name
             })
         end
     end

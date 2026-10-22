@@ -3,6 +3,7 @@ Version: 0.12.0
   Features:
     - exports cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, the slot filters of a car, tank or wagon, and a silo's recipe quality, crafting speed and productivity. They are exported empty, whatever they hold when selected
     - exports a mining drill that drops into a chest, a car, a tank, a cargo wagon or a rocket silo
+    - exports each machine's prototype, quality and recipe quality, and each chest's prototype, which the Clock Generator shows as icons in a clock's descriptions
     - exports each mining drill's productivity, its research and productivity modules together, in place of one mining productivity level for every drill
   Bugfixes:
     - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine. One that has not dropped into its car or tank yet is listed too: let it run and select it again

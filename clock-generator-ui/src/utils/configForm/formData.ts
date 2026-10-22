@@ -20,6 +20,15 @@ export interface MachineFormData {
     /** Energy consumption effect in percent; only used by biochambers. */
     energy_consumption_bonus?: number;
     fuel?: Config['machines'][number]['fuel'];
+    /** The machine's prototype name ("electric-furnace"), shown as its icon; Sidecar exports it */
+    prototype?: string;
+    quality?: Config['machines'][number]['quality'];
+    recipe_quality?: Config['machines'][number]['recipe_quality'];
+}
+
+/** The icon of a machine: its prototype when the config has it, else one for its type */
+export function machineIconName(machine: Pick<MachineFormData, 'prototype' | 'type'> | undefined): string {
+    return machine?.prototype ?? (machine?.type === 'biochamber' ? 'biochamber' : machine?.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3');
 }
 
 // Enable rule types come from the engine's config schema
@@ -148,6 +157,8 @@ export interface BufferChestFormData extends ChestSettingsMemory {
     _uuid: string;
     storage_size: number;
     item_filter: string;
+    /** The chest's prototype name ("steel-chest"); Sidecar exports it */
+    prototype?: string;
 }
 
 // Infinity chest form data

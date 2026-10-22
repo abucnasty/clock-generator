@@ -27,6 +27,10 @@ describe("the description of an enabling combinator", () => {
         inserter(4, wagon, belt),
         inserter(5, belt, EntityId.forMachine(3)),
         inserter(6, chest, EntityId.forMachine(2)),
+        { entity_id: EntityId.forMachine(4), metadata: { recipe: { name: "steel-plate" }, prototype: "electric-furnace" } },
+        { entity_id: EntityId.forChest(3), chest_type: "buffer-chest", prototype: "steel-chest" },
+        inserter(7, EntityId.forMachine(4), EntityId.forChest(3)),
+        inserter(8, EntityId.forChest(3), EntityId.forMachine(4)),
         { entity_id: EntityId.forDrill(1), meta: { type: "big-mining-drill" }, sink_id: EntityId.forMachine(1) },
     ];
     const registry = {
@@ -48,6 +52,11 @@ describe("the description of an enabling combinator", () => {
         expect(planned([EntityId.forInserter(2)])[0])
             .toBe("machine 1 [recipe=rocket-fuel-from-jelly] → [entity=turbo-transport-belt]  [item=jelly]  (inserter 2)");
         expect(planned([EntityId.forInserter(6)])[0]).toBe("chest 2 → machine 2 [recipe=jellynut-processing]  [item=jelly]  (inserter 6)");
+    });
+
+    it("names a machine and a chest the config gives a prototype by their icons, the machine it fills with its recipe", () => {
+        expect(planned([EntityId.forInserter(7)])[0]).toBe("[entity=electric-furnace] → [entity=steel-chest]  [item=jelly]  (inserter 7)");
+        expect(planned([EntityId.forInserter(8)])[0]).toBe("[entity=steel-chest] → [entity=electric-furnace] [recipe=steel-plate]  [item=jelly]  (inserter 8)");
     });
 
     it("says once what the inserters of one combinator share, listing the machines that differ only by their ids", () => {

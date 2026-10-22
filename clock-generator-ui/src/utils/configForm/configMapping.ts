@@ -58,6 +58,9 @@ export function configToFormData(imported: Config): ConfigFormData {
             type: m.type,
             energy_consumption_bonus: m.energy_consumption_bonus,
             ...(m.fuel !== undefined && { fuel: m.fuel }),
+            ...(m.prototype !== undefined && { prototype: m.prototype }),
+            ...(m.quality !== undefined && { quality: m.quality }),
+            ...(m.recipe_quality !== undefined && { recipe_quality: m.recipe_quality }),
         })),
         inserters: imported.inserters.map((ins, index) => ({
             id: ins.id ?? (index + 1),
@@ -89,7 +92,7 @@ export function configToFormData(imported: Config): ConfigFormData {
                 return { ...raw, ...('slot_filters' in raw && raw.slot_filters && { slot_filters: formSlotFilters(raw.slot_filters) }),
                     _uuid: crypto.randomUUID() } as ChestFormData;
             }
-            const c = raw as { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; item_filter: string | { item_name: string; request_count: number }[] };
+            const c = raw as { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; prototype?: string; item_filter: string | { item_name: string; request_count: number }[] };
             // Handle infinity chest
             if (c.type === ChestType.INFINITY_CHEST) {
                 return {
@@ -110,6 +113,7 @@ export function configToFormData(imported: Config): ConfigFormData {
                 _uuid: crypto.randomUUID(),
                 storage_size: c.storage_size ?? 1,
                 item_filter: c.item_filter as string,
+                ...(c.prototype !== undefined && { prototype: c.prototype }),
             };
         }),
         drills: imported.drills

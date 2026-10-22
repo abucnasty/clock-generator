@@ -9,7 +9,7 @@ import { OpenRange } from "../data-types";
 import { MAX_PLAYER_DESCRIPTION_BYTES, SignalId } from "../blueprints/components";
 import { GENERATOR, GENERATOR_SITE_TEXT } from "../generator";
 import { ChestType } from "../common/entity-types";
-import { Entity, EntityId, EntityType, ReadableEntityRegistry } from "../entities";
+import { Chest, Entity, EntityId, EntityType, ReadableEntityRegistry } from "../entities";
 import { DRILL_ITEMS_PER_SWING } from "./sequence/cycle/swing-counts";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
 
@@ -50,8 +50,12 @@ interface End {
 }
 
 function prototypeOf(entity: Entity): string | null {
+    if (Entity.isMachine(entity)) {
+        return entity.metadata.prototype ?? null;
+    }
     if (Entity.isChest(entity)) {
-        return entity.chest_type === ChestType.BUFFER_CHEST ? null : entity.chest_type;
+        // a chest of the config is any container; only its prototype, when the config has it, says which
+        return entity.chest_type === ChestType.BUFFER_CHEST ? (entity as Chest & { prototype?: string }).prototype ?? null : entity.chest_type;
     }
     if (Entity.isBelt(entity)) {
         return entity.prototype ?? null;

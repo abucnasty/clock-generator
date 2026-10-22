@@ -10,56 +10,64 @@
       "recipe": "lithium",
       "productivity": 200,
       "crafting_speed": 53.122,
-      "type": "machine"
+      "type": "machine",
+      "prototype": "cryogenic-plant"
     },
     {
       "id": 2,
       "recipe": "lithium",
       "productivity": 200,
       "crafting_speed": 53.122,
-      "type": "machine"
+      "type": "machine",
+      "prototype": "cryogenic-plant"
     },
     {
       "id": 3,
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace"
+      "type": "furnace",
+      "prototype": "electric-furnace"
     },
     {
       "id": 4,
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace"
+      "type": "furnace",
+      "prototype": "electric-furnace"
     },
     {
       "id": 5,
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace"
+      "type": "furnace",
+      "prototype": "electric-furnace"
     },
     {
       "id": 6,
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace"
+      "type": "furnace",
+      "prototype": "electric-furnace"
     },
     {
       "id": 7,
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace"
+      "type": "furnace",
+      "prototype": "electric-furnace"
     },
     {
       "id": 8,
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace"
+      "type": "furnace",
+      "prototype": "electric-furnace"
     }
   ],
   "inserters": [

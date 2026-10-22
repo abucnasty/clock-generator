@@ -4,6 +4,7 @@ import { ChestType } from 'clock-generator/light';
 import { configToFormData, formDataToConfig } from './configMapping';
 import { planRepeatedUnitConversion } from 'clock-generator/browser';
 import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
+import { machineIconName } from './formData';
 
 const imported = {
     target_output: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
@@ -131,6 +132,25 @@ describe('formDataToConfig', () => {
         const config = formDataToConfig(form);
         expect(JSON.stringify(config)).not.toContain('_forced_always');
         expect(config.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
+    });
+});
+
+describe('the labels a config gives its machines and chests', () => {
+    it('keeps a machine\'s prototype and qualities and a buffer chest\'s prototype through the form', () => {
+        const labelled = {
+            ...imported,
+            machines: [{ id: 1, recipe: 'iron-plate', productivity: 0, crafting_speed: 2, type: 'furnace', prototype: 'electric-furnace', quality: 'legendary', recipe_quality: 'normal' }],
+            chests: [{ type: ChestType.BUFFER_CHEST, id: 1, storage_size: 2, item_filter: 'copper-plate', prototype: 'steel-chest' }],
+        } as unknown as Config;
+        const config = formDataToConfig(configToFormData(labelled));
+        expect(config.machines).toEqual(labelled.machines);
+        expect(config.chests).toEqual(labelled.chests);
+    });
+
+    it('draws a machine by its prototype, else by its type', () => {
+        expect(machineIconName({ prototype: 'foundry', type: 'machine' })).toBe('foundry');
+        expect(machineIconName({ type: 'furnace' })).toBe('electric-furnace');
+        expect(machineIconName(undefined)).toBe('assembling-machine-3');
     });
 });
 

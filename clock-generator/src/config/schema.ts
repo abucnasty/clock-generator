@@ -22,6 +22,9 @@ import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivit
 // Machine Configuration
 // ============================================================================
 
+/** The qualities of the game, for the fields that name one */
+const MachineQualitySchema = z.enum(["normal", "uncommon", "rare", "epic", "legendary"]);
+
 export const MachineConfigurationSchema = z.object({
     id: z.number().int().positive(),
     recipe: z.string(),
@@ -30,6 +33,16 @@ export const MachineConfigurationSchema = z.object({
     type: z.enum(Object.values(MachineType)).optional(),
     energy_consumption_bonus: z.number().min(-80).optional(),
     fuel: z.string().optional(),
+    /**
+     * The machine's prototype name in the game data ("electric-furnace", "assembling-machine-3"), which the clock's
+     * descriptions show as its icon; without it they name the machine by its id. No decision of the engine reads it:
+     * what the machine does comes from `type`, `crafting_speed` and `productivity`. Sidecar 0.12.0 exports it.
+     */
+    prototype: z.string().optional(),
+    /** The machine's quality, which its crafting speed already counts; kept for labels. Sidecar 0.12.0 exports it. */
+    quality: MachineQualitySchema.optional(),
+    /** The quality of the recipe the machine is set to; kept for labels. Sidecar 0.12.0 exports it. */
+    recipe_quality: MachineQualitySchema.optional(),
 });
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -497,7 +510,9 @@ export const BufferChestConfigSchema = z.object({
      * The single item type this chest is filtered to hold.
      * Chests only support one item type for simplicity.
      */
-    item_filter: z.string()
+    item_filter: z.string(),
+    /** The chest's prototype name in the game data ("steel-chest"), which the clock's descriptions show as its icon; without it they name it by its id. Sidecar 0.12.0 exports it. */
+    prototype: z.string().optional(),
 });
 
 export type BufferChestConfig = z.infer<typeof BufferChestConfigSchema>;

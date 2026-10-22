@@ -184,6 +184,7 @@ local function extract_chest_data(entity)
         return {
             chest_type = "buffer-chest",
             unit_number = entity.unit_number,
+            name = entity.name,
             storage_size = storage_size,
             item_filter = first_item.name
         }
@@ -331,7 +332,9 @@ local function extract_crafting_machine_data(entity)
     local data = {
         entity = entity,
         name = entity.name,
+        quality = entity.quality and entity.quality.name or "normal",
         recipe = recipe.name,
+        recipe_quality = helpers.get_recipe_quality(entity),
         crafting_speed = entity.crafting_speed,
         productivity = total_productivity * 100,
         type = entity_type,
