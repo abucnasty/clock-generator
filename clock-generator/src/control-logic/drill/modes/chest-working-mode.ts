@@ -1,18 +1,21 @@
 import assert from "../../../common/assert";
 import { ChestState, DrillState, DrillStatus, EntityState } from "../../../state";
 import { DrillMode } from "./drill-mode";
+import { MiningProgress } from "./mining-progress";
 
 /**
- * A drill working into a chest of any type: it drops what it has mined as far as the chest has room, by the chest's own
- * rules (slots for a car, a tank or a wagon; weight and routing for a rocket silo; one item for a buffer chest). What
- * does not fit stays in the drill, which mines no more until it is dropped: a full chest stops the drill.
- *
- * It mines by the same per-tick amount as a drill into a machine (`DrillWorkingMode`): the production rate a tick,
- * floored, so a drill making less than one item a tick mines nothing here (a known limit).
+ * A drill working into a chest of any type. Each tick it first drops what it holds as far as the chest has room, by
+ * the chest's own rules (slots for a car, a tank or a wagon; weight and routing for a rocket silo; one item for a buffer
+ * chest); while it still holds anything it waits, its bars still; else it mines by its progress bars
+ * (`MiningProgress`), as a drill into a machine does (`DrillWorkingMode`), and holds what they complete until the next
+ * tick's drop. The chest is not checked before mining: into a full chest the drill mines on until it holds an item.
  */
 export class DrillChestWorkingMode implements DrillMode {
 
     public readonly status = DrillStatus.WORKING;
+
+    /** Its bars, kept while it waits or is disabled */
+    public readonly progress: MiningProgress;
 
     constructor(
         private readonly state: DrillState,
@@ -22,21 +25,26 @@ export class DrillChestWorkingMode implements DrillMode {
             assert(sink_state.chest.item_filter === state.drill.item.name,
                 `Drill ${state.drill.entity_id.id} mines ${state.drill.item.name} into buffer chest ${sink_state.entity_id.id}, which holds ${sink_state.chest.item_filter}`);
         }
+        this.progress = new MiningProgress(state.drill);
     }
 
     public onEnter(fromMode: DrillMode): void { }
     public onExit(toMode: DrillMode): void { }
 
+    /** Its bars, which it keeps while it waits or is disabled */
+    public stateKey(): string {
+        return this.progress.stateKey();
+    }
+
     public executeForTick(): void {
-        const item_name = this.state.drill.item.name;
-        const drill_inventory = this.state.inventoryState;
         if (this.drop() > 0) {
             // what it mined before is still in the drill: no room in the chest, so it mines nothing
             return;
         }
-        const amount_this_tick = Math.floor(this.state.drill.production_rate.amount_per_tick.toDecimal());
-        drill_inventory.addQuantity(item_name, amount_this_tick);
-        this.drop();
+        const mined = this.progress.mine();
+        if (mined > 0) {
+            this.state.inventoryState.addQuantity(this.state.drill.item.name, mined);
+        }
     }
 
     /** Drops what the drill holds as far as the chest has room; returns what is still held */

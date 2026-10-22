@@ -62,7 +62,8 @@ function drillInto(name: string, container: Record<string, unknown>, chest: Reco
         name, ticks: 400,
         entities: [{name: "big-mining-drill", position: {x: 0.5, y: 0.5}, direction: 4, items: modules}, container,
             inserterEntity(taker_x, 0.5, 12), chestEntity(taker_x + 1, 0.5)],
-        config: {...idle, drills: {mining_productivity_level: 8000, configs: [{id: 1, type: "big-mining-drill", mined_item_name: "iron-ore",
+        // the harness save's research: mining productivity 3 at level 8000 is 7,999 levels, as the sidecar exports it
+        config: {...idle, drills: {mining_productivity_level: 7999, configs: [{id: 1, type: "big-mining-drill", mined_item_name: "iron-ore",
             speed_bonus: 5, target: {type: "chest", id: 1}}]},
             chests: [chest, disposal(10)],
             inserters: [{id: 1, source: {type: "chest", id: 1}, sink: {type: "chest", id: 10}, stack_size: 16}]},
@@ -152,9 +153,6 @@ export function containerMechanicBlueprint(variant: ContainerMechanicCase, order
     return encodeBlueprintFile({blueprint: {item: "blueprint", label: `Containers ${variant.name}`, version: 562949955649536,
         entities: entities.map((entity, index) => ({entity_number: index + 1, ...entity}))}} as unknown as FactorioBlueprintFile);
 }
-
-/** Items a drill's container may part by between the game and the simulator in a tick of its fill (measured: 4 at most) */
-const DRILL_FILL_TOLERANCE = 16;
 
 /** The hand each time it was at its fullest, before items left it */
 function handsOf(changes: string[]): string[] {
@@ -262,16 +260,17 @@ for (const variant of containerMechanicCases()) test(`containers as chests: ${va
             expect(game.slots?.slice(1).every(slot => slot === '')).toBe(true);
         }
         if (order === "descending") {
-            // a drill's container fills by the same amounts a tick, from the tick the drill first drops: the game mines by
-            // a progress bar, the simulator by the rate a tick floored, so the totals may part by a few items
+            // a drill's container fills by the same amounts a tick, from the tick the drill first drops: the game's drill
+            // has no mining target in the recording's first tick, so it drops a tick after the simulator's
             const {fill: game_fill, ...game_rest} = game, {fill: simulated_fill, ...simulated_rest} = simulated;
             if (variant.warmup_ticks === undefined) expect(simulated_rest).toEqual(game_rest);
             // started warm, the game's taker is in another phase of its swings than the simulator's, which starts empty:
             // what the container holds is compared
             else expect(simulated_rest.chest).toEqual(game_rest.chest);
             if (game_fill && simulated_fill) {
-                const from = game_fill.findIndex(total => total > 0);
-                game_fill.slice(from).forEach((total, tick) => expect(Math.abs(total - simulated_fill[tick]), `tick ${tick} of the fill`).toBeLessThanOrEqual(DRILL_FILL_TOLERANCE));
+                const from = game_fill.findIndex(total => total > 0), simulated_from = simulated_fill.findIndex(total => total > 0);
+                expect(from - simulated_from, "the game's first drop, a tick after the simulator's").toBe(1);
+                expect(simulated_fill.slice(simulated_from, simulated_from + game_fill.length - from)).toEqual(game_fill.slice(from));
             }
         }
     } finally {if (!retained) fs.rmSync(scratch, {recursive: true, force: true});}

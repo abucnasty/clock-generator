@@ -8,6 +8,7 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Staged start](staged-start/README.md): saturated belts and fresh cell inserters built in a controlled order.
 - [Clock wiring](clock-wiring/README.md): replacing inserter conditions inherited from a real build.
 - [Containers](containers/README.md): cars, wagons and rocket silos as chests, against the simulator inserter by inserter.
+- [Drills](drills/README.md): mining drills at a low research level, their progress bars against the simulator tick by tick.
 
 The [screenshot catalog](screenshots.json) references 14 local fixture blueprints and 3 shared sample
 blueprints. Their [generated provenance](screenshots.generated.json) records source hashes, Factorio version,

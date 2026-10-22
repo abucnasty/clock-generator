@@ -389,9 +389,10 @@ end
 ---@param force LuaForce? The player's force (for researched bonuses)
 ---@return ExtractionResult
 function extraction.extract_all_entities(entities, force)
-    local mining_productivity_level = 1
-    if force and force.technologies['mining-productivity-3'] then
-        mining_productivity_level = force.technologies['mining-productivity-3'].level - 1
+    -- the levels of mining productivity researched, 10% each: the force's bonus, whatever research gave it
+    local mining_productivity_level = 0
+    if force then
+        mining_productivity_level = math.floor(force.mining_drill_productivity_bonus * 10 + 0.5)
     end
 
     local result = {

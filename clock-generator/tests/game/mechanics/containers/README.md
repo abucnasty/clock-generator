@@ -19,19 +19,11 @@ silo's rocket inventory and input slots. The probe ([probe.lua](probe.lua)) puts
 
 The harness puts the drill's ore under it (`drill_resource`, from the config's drill), as the save has none. Each drill
 build has one inserter emptying the container, as the recorder records only a build with an inserter or a machine. The
-drill builds also compare the container's total at the end of each of their first 30 ticks, from the tick the game's
-drill first drops, and allow 16 items a tick between the game and the simulator (`DRILL_FILL_TOLERANCE`). What they
-differ by, recorded in Factorio 2.1.21:
-
-- **The start, 2 ticks.** The game's drill has no mining target in the recording's first tick, mines from the next, and
-  its first ore is in the container a tick after that; the simulator's drill drops in its first tick. Not modelled; the
-  totals are aligned on the first drop.
-- **Up to 4 items (car), 1 (silo): per-tick rounding, follow-up F-d.** The game's mining bar moves a quarter a tick and
-  a tick makes 200.2 ore at the harness's research; the game puts in the bar's whole items (199, 200, 200, 201, ...), the
-  simulator the rate floored (200), which falls 4 behind in 20 ticks.
-- **11 items (filtered car), not a known rule.** With the car full the drill stops. When the inserter takes 16, the
-  game's drill puts in 5 that tick and 11 the next; the simulator's puts in 16 in that tick, as it drops what it held and
-  then mines and drops again. Seen once; it changes neither the container's end state nor any hand.
+configs give the harness save's research as Sidecar exports it, 7,999 levels of mining productivity. The drill builds
+also compare the container's total at the end of each of their first 30 ticks, from the tick the drill first drops: equal
+in every tick. The game's drill has no mining target in the recording's first tick, so its first drop is a tick after
+the simulator's; not modelled. When the full filtered car gets room (the inserter takes 16), the drill puts in the 5 it
+held in that tick and 11 of what it mines then in the next, as the simulator's does ([drills](../drills/README.md)).
 
 No silo crafts: its sinks lack rocket fuel or have a recipe of another quality, and its source holds no fuel. The
 blueprint builds the inserters in descending config id, so the game serves inserter 1 first in a tick, as the

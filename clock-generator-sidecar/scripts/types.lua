@@ -85,6 +85,6 @@
 ---@field unit_number_to_id table<number, number> Maps entity unit_number to machine ID
 ---@field belt_unit_number_to_id table<number, number> Maps belt unit_number to belt ID
 ---@field chest_unit_number_to_id table<number, number> Maps chest unit_number to chest ID
----@field mining_productivity_level number The researched mining productivity level
+---@field mining_productivity_level number The levels of mining productivity researched: the force's mining productivity bonus in 10% steps
 
 return {}

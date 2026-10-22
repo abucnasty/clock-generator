@@ -121,13 +121,21 @@ export { RocketSiloInventoryState } from "./state/rocket-silo-inventory";
 
 /**
  * 16. A mining drill into a chest (docs/simulator.md "Cars, wagons and rocket silos as chests"): it drops what it
- * mines as far as the chest has room, by the chest's own rules (13, 15: free slots for a car, weight for a silo's
+ * holds as far as the chest has room, by the chest's own rules (13, 15: free slots for a car, weight for a silo's
  * rocket inventory); what does not fit stays in the drill, which mines no more until it has dropped it, so a full chest
  * stops it. Nothing gates it: it is always enabled. Cases: `crafting/drill-into-chest.test.ts`; against the game,
  * `tests/game/mechanics/containers` (a car, a car with filtered slots, a steel chest and a rocket silo, at two places).
- *
- * Known limit (follow-up F-d): a drill mines the rate a tick, floored, into a chest as into a machine, so one that makes
- * under one item a tick mines nothing in the simulator. The game mines by a progress bar; at the harness's research
- * (+79,990% mining productivity) the totals part by at most 11 items a tick.
  */
 export { DrillChestWorkingMode } from "./control-logic/drill/modes/chest-working-mode";
+
+/**
+ * 17. A mining drill's progress (docs/simulator.md "Mining drills"): each tick an enabled drill first drops what it
+ * holds (into a machine up to its limit, 3; into a chest by 16); while it still holds anything it waits, its bars
+ * still; else it mines: its mining bar moves by its crafting rate a tick, its bonus bar by that times its mining
+ * productivity (10% a level researched), a wrap of either is an item, and what it mines is dropped in the next tick.
+ * The sink is not checked before mining. A drill disabled by its circuit keeps what it holds and both bars. The bars
+ * are doubles summed tick by tick, as in the game. Cases: `control-logic/drill/modes/drill-working-modes.test.ts`;
+ * against the game, `tests/game/mechanics/drills` (0.34 to 1.35 items a tick into a car and into a machine, built
+ * last, moved and circuit-disabled) and the containers family's drill fills (200 a tick).
+ */
+export { MiningProgress } from "./control-logic/drill/modes/mining-progress";

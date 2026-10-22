@@ -2,12 +2,21 @@ import { assertIsMachineState, DrillState, DrillStatus, EntityState, MachineStat
 import { DrillMode } from "./drill-mode";
 import { Item } from "../../../data";
 import { miningDrillMaxInsertion } from "../../../entities";
+import { MiningProgress } from "./mining-progress";
 
+/**
+ * A drill working into a machine. Each tick it first drops what it holds, into the machine up to the drill's stop
+ * (`miningDrillMaxInsertion`); while it still holds anything it waits, its bars still; else it mines by its progress
+ * bars (`MiningProgress`) and holds what they complete until the next tick's drop. The machine is not checked before
+ * mining: at its stop, the drill mines on until it holds an item.
+ */
 export class DrillWorkingMode implements DrillMode {
 
     public readonly status = DrillStatus.WORKING;
 
     private readonly sink_state: MachineState
+    /** Its bars, kept while it waits or is disabled */
+    public readonly progress: MiningProgress;
 
     constructor(
         private readonly state: DrillState,
@@ -15,48 +24,34 @@ export class DrillWorkingMode implements DrillMode {
     ) {
         assertIsMachineState(sink_state);
         this.sink_state = sink_state;
+        this.progress = new MiningProgress(state.drill);
     }
 
     public onEnter(fromMode: DrillMode): void { }
     public onExit(toMode: DrillMode): void { }
 
-    /**
-     * HACK alert!! 
-     * 
-     * this currently makes a very large assumption that the drill will mine much more than 1 item per tick
-     * 
-     * this should be implemented using the same logic that an assembly machine uses for crafting progress and
-     * bonus progress but is simplified for now
-     */
+    /** Its bars, which it keeps while it waits or is disabled */
+    public stateKey(): string {
+        return this.progress.stateKey();
+    }
+
     public executeForTick(): void {
-
-        if (!this.sink_is_under_insertion_limit) {
-            // cannot insert into the machine
-            return;
-        }
+        const item_name = this.mined_item.name;
         const drill_inventory = this.state.inventoryState;
-        const drill_item_quantity = drill_inventory.getItemOrThrow(this.mined_item.name).quantity
-        const sink_inventory_state = this.sink_state.inventoryState;
-
-
-        const max_amount_to_transfer = this.mining_insertion_limit - this.sink_current_inventory_quantity;
-        if (drill_item_quantity >= max_amount_to_transfer) {
-            drill_inventory.removeQuantity(this.mined_item.name, max_amount_to_transfer);
-            sink_inventory_state.addQuantity(this.mined_item.name, max_amount_to_transfer);
+        const held = drill_inventory.getItemOrThrow(item_name).quantity;
+        const drop = Math.min(held, Math.max(0, this.mining_insertion_limit - this.sink_current_inventory_quantity));
+        if (drop > 0) {
+            drill_inventory.removeQuantity(item_name, drop);
+            this.sink_state.inventoryState.addQuantity(item_name, drop);
+        }
+        if (held - drop > 0) {
+            // what it mined before is still in the drill: the machine is at the drill's stop, so it mines nothing
             return;
         }
-
-        // perform mining operation
-
-        // this is a hack to just floor the value instead of adjusting the crafting and bonus progress
-        const amount_this_tick = Math.floor(this.state.drill.production_rate.amount_per_tick.toDecimal())
-        drill_inventory.addQuantity(this.mined_item.name, amount_this_tick);
-
-        const available_quantity = drill_inventory.getItemOrThrow(this.mined_item.name).quantity;
-
-        const amount_to_transfer = Math.min(max_amount_to_transfer, available_quantity)
-        drill_inventory.removeQuantity(this.mined_item.name, amount_to_transfer);
-        sink_inventory_state.addQuantity(this.mined_item.name, amount_to_transfer);
+        const mined = this.progress.mine();
+        if (mined > 0) {
+            drill_inventory.addQuantity(item_name, mined);
+        }
     }
 
     private get mining_insertion_limit(): number {
@@ -71,16 +66,6 @@ export class DrillWorkingMode implements DrillMode {
     }
 
     private get sink_current_inventory_quantity(): number {
-        const sink_state = this.sink_state;
-        const sink_inventory = sink_state.inventoryState;
-        const inventory_item = sink_inventory.getItemOrThrow(this.mined_item.name);
-        return inventory_item.quantity;
+        return this.sink_state.inventoryState.getItemOrThrow(this.mined_item.name).quantity;
     }
-
-    private get sink_is_under_insertion_limit(): boolean {
-        const limit = this.mining_insertion_limit;
-        return this.sink_current_inventory_quantity < limit;
-    }
-
-
 }
