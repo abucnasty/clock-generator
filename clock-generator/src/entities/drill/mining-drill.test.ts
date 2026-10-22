@@ -16,7 +16,7 @@ describe("MiningDrill", () => {
     };
 
     test("sets productivity from level", () => {
-        const level = 8000
+        const level = 7999
         const mining_prod = MiningProductivity.fromLevel(level)
         const drill = MiningDrill.fromConfig(mining_prod, test_config);
 

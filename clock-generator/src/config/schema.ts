@@ -296,9 +296,9 @@ export type MiningDrillConfig = z.infer<typeof MiningDrillConfigSchema>;
 
 export const DrillsConfigSchema = z.object({
     /**
-     * The mining productivity level to apply to all mining drills.
-     * The value here is the current researched level and can be set in-game by running the command:
-     * `/c game.player.force.technologies['mining-productivity-3'].level = X+1`
+     * The levels of mining productivity researched, applied to all mining drills: each gives +10% mining productivity,
+     * as in the game. It is the force's bonus in 10% steps, which the sidecar exports and the game shows with:
+     * `/c game.print(game.player.force.mining_drill_productivity_bonus * 10)`
      */
     mining_productivity_level: z.number().int().min(0),
     configs: z.array(MiningDrillConfigSchema)
