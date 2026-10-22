@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.12.0
   Features:
-    - exports cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, the slot filters and contents of a car, tank or wagon, and a silo's recipe quality, crafting speed and productivity (a silo is exported empty, whatever it holds when selected)
+    - exports cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, the slot filters of a car, tank or wagon, and a silo's recipe quality, crafting speed and productivity. They are exported empty, whatever they hold when selected
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.0
 Date: 2026-10-21
