@@ -72,3 +72,33 @@ differ in the last bit.
 DRILLS_CAPTURE_DIR=.scratch/remainder-run \
   npm run test:game -- tests/game/mechanics/drills/remainder.game.test.ts
 ```
+
+## A drill into a chest
+
+`chest.game.test.ts` records a big mining drill with 4 legendary speed modules 3 (its bar moves 0.25 a tick) dropping
+into a legendary steel chest (120 slots, 6,000 iron ore of room), at mining productivity 3 levels 8 to 1,000,000 set by
+script as above: 0.425, 1.35, 10.2, 100, 200, 1,000, 2,500 and 25,000 ore a tick. Its probe
+([chest-probe.lua](chest-probe.lua)) puts both bars at 0 and logs every tick the chest's count, both bars, whether the
+drill is disabled, and what it takes.
+
+| Build | What it checks |
+| --- | --- |
+| `fill-l<level>` | the chest empty, the drill always enabled, until the chest is full and 60 ticks on |
+| `gated-l<level>` | the chest full; every 30 ticks the probe takes all of it, 1,000, 100 or 10 ore, and a constant combinator on the drill's circuit condition enables it for 1, 2 or 3 ticks from the period's fifth tick: 24 windows of every take, length and hold |
+| `fill-l40000-drill-last`, `gated-l100000-drill-last` | the drill built after the chest |
+| `gated-l100000-moved` | the build at (203, -141), another chunk |
+
+The simulator's drill (`DrillChestWorkingMode`, the steel chest as a buffer chest of iron ore with its slots) is driven
+by the probe: in tick k the chest has lost what the probe took in row k - 1 (it takes after the tick's entities), and
+the drill is enabled where the game's was not disabled in row k - 1. The chest's count and both bars equal the game's in
+every tick. Also asserted:
+
+- **No cap on a tick's drop.** From 6,000 ore a tick (`fill-l1000000`) the drill fills the chest in its second tick.
+- **The fill time.** From 10 ore a tick up the chest is full at tick ceil(6,000 / rate) + 1: what a tick mines drops in
+  the next enabled tick, so filling from an empty hold takes one tick more than the mining ticks.
+- **A window whose hold covers the room** fills the chest in its first tick (`gated`, from 2,500 ore a tick).
+
+```bash
+DRILLS_CAPTURE_DIR=.scratch/chest-run \
+  npm run test:game -- tests/game/mechanics/drills/chest.game.test.ts -t 'gated-l7999$'
+```
