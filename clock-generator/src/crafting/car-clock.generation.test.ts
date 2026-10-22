@@ -16,10 +16,15 @@ beforeAll(async () => {
     generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR), {logger: quiet});
 }, 120_000);
 
-test("car: the clock with 3 output swings is selected, and the drill into the car gets no window", () => {
-    expect(generated.alternatives[generated.selected_index].id).toBe("swings-3");
+test("car: the clock with 3 output swings is selected, and the drill into the car is enabled the tick before the takers", () => {
+    const selected = generated.alternatives[generated.selected_index];
+    expect(selected.id).toBe("swings-3");
+    // 617 ore a tick against 64 a 72-tick period: a window of one tick, which drops what the drill holds
+    expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 27, end: 27}]);
+    expect(selected.result.clock_windows["inserter:1"][0].start).toBe(28);
     for (const alternative of generated.alternatives) {
-        expect(Object.keys(alternative.result.clock_windows).filter(id => id.startsWith("drill:"))).toEqual([]);
+        // a clock that does not meet goal 1 with the drill's window is the one with the drill always enabled
+        expect(alternative.result.clock_windows["drill:1"]?.length ?? 0, alternative.id).toBe(alternative.verdict === "stable" ? 1 : 0);
     }
 });
 

@@ -75,4 +75,20 @@ describe("an inserter the config sets to always enabled", () => {
         expect(Object.keys(result.clock_windows).filter(id => id.startsWith("drill:"))).not.toContain("drill:1");
         expect(result.stability_check.as_built?.holds).toBe(true);
     });
+
+    it("holds for a drill into a chest, which otherwise gets windows from the inserters that empty the chest", async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR);
+        const clocked = generateClockForConfig(sample, { logger: quiet, verify_as_built: true });
+        expect(Object.keys(clocked.clock_windows)).toContain("drill:1");
+
+        const config: Config = { ...sample, drills: { ...sample.drills!, configs: sample.drills!.configs.map(drill => ({ ...drill, overrides: ALWAYS })) } };
+        const result = generateClockForConfig(config, { logger: quiet, verify_as_built: true });
+        expect(Object.keys(result.clock_windows)).not.toContain("drill:1");
+        expect(result.blueprint.entities.filter(entity => (entity.player_description ?? "").startsWith("Drill"))).toHaveLength(0);
+        expect(result.chest_drills).toEqual([{ drill_id: 1, chest_id: 1, item: "iron-ore", planned: false, enabled_ticks: null, window_count: 0,
+            always_enabled_because: "the config sets it to always enabled" }]);
+        // the inserters' windows are the same either way: the drill's are made after them
+        const { "drill:1": _drill, ...inserters } = clocked.clock_windows;
+        expect(result.clock_windows).toEqual(inserters);
+    });
 });

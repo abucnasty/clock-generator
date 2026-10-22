@@ -106,16 +106,26 @@ describe('the config of a drill into a chest', () => {
         expect(parsed.error!.issues[0].message).toBe('Drill 1 drops into chest 2, which is not in the config');
     });
 
-    it('refuses an enable control on it but ALWAYS', () => {
-        expect(parse({ type: 'chest', id: 1 }, { enable_control: { mode: 'ALWAYS' } }).success).toBe(true);
-        const parsed = parse({ type: 'chest', id: 1 }, { enable_control: { mode: 'NEVER' } });
-        expect(parsed.success).toBe(false);
-        expect(parsed.error!.issues[0].message).toContain('drops into a chest and is always enabled');
+    it('takes AUTO, CLOCKED and ALWAYS as its enable control', () => {
+        for (const enable_control of [{ mode: 'AUTO' }, { mode: 'ALWAYS' }, { mode: 'CLOCKED', ranges: [{ start: 1, end: 2 }], period_duration_ticks: 72 }]) {
+            expect(parse({ type: 'chest', id: 1 }, { enable_control }).success, enable_control.mode).toBe(true);
+        }
+        expect(parse({ type: 'chest', id: 1 }, { extra_window_ticks: 1 }).success).toBe(true);
+    });
+
+    it('refuses CONDITIONAL and NEVER on it', () => {
+        const conditional = { mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [{ left: { type: 'CONSTANT', value: 1 }, operator: '>', right: { type: 'CONSTANT', value: 0 } }] } };
+        for (const enable_control of [conditional, { mode: 'NEVER' }]) {
+            const parsed = parse({ type: 'chest', id: 1 }, { enable_control });
+            expect(parsed.success, enable_control.mode).toBe(false);
+            expect(parsed.error!.issues.map(issue => issue.message)).toContain(
+                `Drill 1 drops into a chest; its enable control can be AUTO, CLOCKED or ALWAYS, not ${enable_control.mode}`);
+        }
     });
 });
 
 describe('a clock for a drill into a car between two furnaces', () => {
-    it('leaves the drill always enabled, with no window, and holds 80 plates a second', () => {
+    it('enables the drill a tick a period on the clocks that meet goal 1, and leaves it always enabled on the others', () => {
         const config = ConfigSchema.parse({
             target_output: { recipe: 'iron-plate', items_per_second: 80, copies: 1 },
             machines: [1, 2].map(id => ({ id, recipe: 'iron-plate', crafting_speed: 86.18, productivity: 50, type: 'furnace' })),
@@ -130,7 +140,27 @@ describe('a clock for a drill into a car between two furnaces', () => {
         expect(selected.assessment.holds).toBe(true);
         expect(selected.assessment.items_per_second).toBeCloseTo(80, 6);
         for (const alternative of alternatives) {
-            expect(Object.keys(alternative.result.clock_windows).filter(id => id.startsWith('drill:'))).toEqual([]);
+            const drill = alternative.result.clock_windows['drill:1'];
+            if (alternative.verdict === 'stable') {
+                // the tick before the takers' first window: 617 ore a tick, more than a period takes
+                const first_take = Math.min(...alternative.result.clock_windows['inserter:1'].map(range => range.start));
+                expect(drill, alternative.id).toEqual([{ start: first_take - 1, end: first_take - 1 }]);
+                expect(alternative.insights.find(it => it.id === 'chest-drill-windows')?.what).toContain('is enabled 1 tick of the');
+            } else {
+                // made again with the drill a tick longer, then always enabled: today's clock
+                expect(drill, alternative.id).toBeUndefined();
+                expect(alternative.result.chest_drills?.[0].always_enabled_because, alternative.id)
+                    .toBe('the clock does not meet goal 1 with its fewest windows, nor with them a tick longer');
+            }
         }
+        // the decider of the drill, in the pattern of the inserters outside the plan
+        const decider = selected.result.blueprint.entities.find(entity => (entity.player_description ?? '').startsWith('Drill 1 for'));
+        const window = selected.result.clock_windows['drill:1'][0];
+        expect(decider?.player_description?.split('\n')).toEqual([
+            'Drill 1 for [item=iron-ore] into [entity=car]',
+            `- enabled for tick ${window.start} of the clock`,
+            '- not part of the swing counts, so it does not change the length of the clock',
+        ]);
+        expect(selected.result.schedule.inserter_combinators.flatMap(it => it.inserter_ids).sort()).toEqual([1, 2, 3, 4]);
     }, 60_000);
 });
