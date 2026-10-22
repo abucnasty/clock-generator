@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "../../../config";
 import { SimulationContext } from "../../../crafting/sequence/simulation-context";
-import { MiningDrill, miningDrillMaxInsertion, MiningProductivity } from "../../../entities";
+import { MiningDrill, miningDrillMaxInsertion } from "../../../entities";
 import { EntityState, MachineState } from "../../../state";
 import { EnableControl } from "../../enable-control";
 import { DrillStateMachine } from "../drill-state-machine";
@@ -19,9 +19,10 @@ const idle = { target_output: { recipe: "iron-gear-wheel", items_per_second: 1, 
     machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [] };
 
 /** A drill on iron ore into a car whose first `filtered` slots are filtered to copper plates */
-function carBuild(level: number, speed_bonus: number, filtered: number) {
+/** `productivity` is the drill's, in percent */
+function carBuild(productivity: number, speed_bonus: number, filtered: number) {
     const config = ConfigSchema.parse({ ...idle,
-        drills: { mining_productivity_level: level, configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus, target: { type: "chest", id: 1 } }] },
+        drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus, productivity, target: { type: "chest", id: 1 } }] },
         chests: [{ type: "car", id: 1, slot_filters: Array.from({ length: filtered }, (_, index) => ({ slot: index + 1, item: "copper-plate" })) }] });
     const context = SimulationContext.fromConfig(config);
     const drill = context.drills[0];
@@ -33,10 +34,10 @@ function carBuild(level: number, speed_bonus: number, filtered: number) {
 }
 
 /** A drill on stone into an assembling machine on rail (which never crafts here: nothing else feeds it) */
-function machineBuild(level: number, enable_control?: EnableControl) {
+function machineBuild(productivity: number, enable_control?: EnableControl) {
     const config = ConfigSchema.parse({ target_output: { recipe: "rail", items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
         machines: [{ id: 1, recipe: "rail", crafting_speed: 0.5, productivity: 0 }],
-        drills: { mining_productivity_level: level, configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, target: { type: "machine", id: 1 } }] } });
+        drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, productivity, target: { type: "machine", id: 1 } }] } });
     const context = SimulationContext.fromConfig(config);
     const drill_state = context.drills[0].drill_state;
     const machine = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id) as MachineState;
@@ -49,8 +50,8 @@ function machineBuild(level: number, enable_control?: EnableControl) {
 
 describe("a drill's progress bars", () => {
     it("move by the drill's crafting rate a tick and by that times its productivity; a wrap is an item", () => {
-        // the recording's research: mining productivity 3 at level 8, the sidecar's 7 levels, +70%
-        const drill = carBuild(7, 5, 78).drill.drill_state.drill;
+        // the recording's research: mining productivity 3 at level 8, 7 levels, +70%
+        const drill = carBuild(70, 5, 78).drill.drill_state.drill;
         const progress = new MiningProgress(drill);
         const items = Array.from({ length: 8 }, () => progress.mine());
         // bars of 0.25 and 0.175 a tick: the mining bar wraps at the 4th and 8th tick, the bonus bar at the 6th
@@ -62,8 +63,8 @@ describe("a drill's progress bars", () => {
     it("are doubles summed tick by tick: a step of 0.198 wraps at the 97th tick, as in the game, not at the 96th", () => {
         // 3 speed modules: 2.5 x 4.75 / 60 a tick, 19 items in exactly 96 ticks; the game's bar reads 0.9999999999999986
         // after its 96th tick and wraps in its 97th (car-l8-3m)
-        const drill = MiningDrill.fromConfig(MiningProductivity.fromLevel(0),
-            { id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 3.75, target: { type: "chest", id: 1 } });
+        const drill = MiningDrill.fromConfig(
+            { id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 3.75, productivity: 0, target: { type: "chest", id: 1 } });
         const progress = new MiningProgress(drill);
         let mined = 0;
         for (let tick = 1; tick <= 96; tick++) mined += progress.mine();
@@ -93,7 +94,7 @@ describe("a drill into a chest", () => {
         0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.775, 0.95, 0.125, 0.3];
 
     it("drops what it mined a tick later, and waits while it holds what the car has no room for (car-l8)", () => {
-        const { drill, car, progress, held } = carBuild(7, 5, 78);
+        const { drill, car, progress, held } = carBuild(70, 5, 78);
         for (let tick = 1; tick <= 291; tick++) {
             const taken = takes.get(tick);
             if (taken) car.inventoryState.removeQuantity("iron-ore", taken);
@@ -113,13 +114,13 @@ describe("a drill into a chest", () => {
     });
 
     it("puts in what it held when a full car gets room, and what it mines that tick in the next (5, then 11)", () => {
-        // drill-into-filtered-car at the harness's research (7,999 levels: 200.2 ore a tick) into a car with 3,750 ore of
+        // drill-into-filtered-car at the harness's research (7,999 levels, +79,990%: 200.2 ore a tick) into a car with 3,750 ore of
         // room, a stack inserter taking 16 every 8 ticks from tick 3
         const totals = [0, 0, 199, 383, 583, 784, 984, 1184, 1384, 1585, 1785, 1969, 2169, 2370, 2570, 2770, 2970, 3171, 3371, 3555,
             3750, 3750, 3750, 3750, 3750, 3750, 3750, 3739, 3750, 3750, 3750, 3750, 3750, 3750];
         const mining = [0, 0.25, 0.5, 0.75, 0, 0.25, 0.5, 0.75, 0, 0.25, 0.5, 0.75, 0, 0.25, 0.5, 0.75, 0, 0.25, 0.5, 0.75, 0.75,
             0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0, 0, 0, 0, 0, 0, 0];
-        const { drill, car, progress, held } = carBuild(7999, 5, 5);
+        const { drill, car, progress, held } = carBuild(79990, 5, 5);
         for (let tick = 1; tick < totals.length; tick++) {
             if ((tick - 3) % 8 === 0) car.inventoryState.removeQuantity("iron-ore", 16);
             drill.executeForTick();
@@ -134,8 +135,8 @@ describe("a drill into a chest", () => {
 
 describe("a drill into a machine", () => {
     it("drops up to its stop, keeps the rest and waits; at the stop it mines on until it holds an item", () => {
-        // 7,999 levels: 199 ore in the first tick, more than the stop
-        const { drill, machine, progress, stop, count, held } = machineBuild(7999);
+        // +79,990% (7,999 levels): 199 ore in the first tick, more than the stop
+        const { drill, machine, progress, stop, count, held } = machineBuild(79990);
         // the game's stop on rail (stack 50, limit 3): 50 + 64 (rail-l28, rail-l45, rail-l8-gated of the drills family)
         expect(stop).toBe(114);
         drill.executeForTick();
@@ -151,8 +152,8 @@ describe("a drill into a machine", () => {
         expect(count()).toBe(stop - 1);
         expect(held()).toBeGreaterThan(0);
         expect(progress.mining_progress).not.toBe(bars[0]);
-        // 1.35 a tick (44 levels): the machine at its stop takes nothing, yet the drill mines until it holds an item
-        const slow = machineBuild(44);
+        // 1.35 a tick (+440%, 44 levels): the machine at its stop takes nothing, yet the drill mines until it holds an item
+        const slow = machineBuild(440);
         slow.machine.inventoryState.addQuantity("stone", slow.stop);
         slow.drill.executeForTick();
         expect([slow.count(), slow.held(), slow.progress.mining_progress]).toEqual([slow.stop, 1, 0.25]);
@@ -162,7 +163,7 @@ describe("a drill into a machine", () => {
 
     it("disabled, neither drops nor mines, and keeps what it holds and both bars", () => {
         let enabled = true;
-        const { drill, progress, count, held } = machineBuild(44, { isEnabled: () => enabled });
+        const { drill, progress, count, held } = machineBuild(440, { isEnabled: () => enabled });
         drill.executeForTick();
         drill.executeForTick();
         const [mining, bonus, holding, dropped] = [progress.mining_progress, progress.bonus_progress, held(), count()];

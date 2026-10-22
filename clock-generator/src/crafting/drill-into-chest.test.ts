@@ -10,7 +10,7 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 // a big mining drill on iron ore, as the owner's car build has it: 4 speed modules and 4 beacons (speed bonus 17.5);
 // at 8000 levels of research it mines 617 ore a tick (its bar moves 0.77 a tick, its bonus bar 616.7)
 const drill = (target: { type: 'chest' | 'machine'; id: number }, overrides?: object) => ({
-    id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 17.5, target, ...(overrides ? { overrides } : {}),
+    id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 17.5, productivity: 80000, target, ...(overrides ? { overrides } : {}),
 });
 const stack = (source: object, sink: object) => ({ source, sink, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 });
 
@@ -19,7 +19,7 @@ function build(chests: object[], inserters: object[] = []): Config {
     return ConfigSchema.parse({
         target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
-        drills: { mining_productivity_level: 8000, configs: [drill({ type: 'chest', id: 1 })] },
+        drills: { configs: [drill({ type: 'chest', id: 1 })] },
         inserters, belts: [], chests,
     });
 }
@@ -93,7 +93,7 @@ describe('the config of a drill into a chest', () => {
         inserters: [], belts: [], chests: [{ id: 1, type: 'car' }],
     };
     const parse = (target: { type: 'chest' | 'machine'; id: number }, overrides?: object) =>
-        ConfigSchema.safeParse({ ...base, drills: { mining_productivity_level: 8000, configs: [drill(target, overrides)] } });
+        ConfigSchema.safeParse({ ...base, drills: { configs: [drill(target, overrides)] } });
 
     it('takes a chest as the target', () => {
         expect(parse({ type: 'chest', id: 1 }).success).toBe(true);
@@ -119,7 +119,7 @@ describe('a clock for a drill into a car between two furnaces', () => {
         const config = ConfigSchema.parse({
             target_output: { recipe: 'iron-plate', items_per_second: 80, copies: 1 },
             machines: [1, 2].map(id => ({ id, recipe: 'iron-plate', crafting_speed: 86.18, productivity: 50, type: 'furnace' })),
-            drills: { mining_productivity_level: 8000, configs: [drill({ type: 'chest', id: 1 })] },
+            drills: { configs: [drill({ type: 'chest', id: 1 })] },
             inserters: [stack({ type: 'chest', id: 1 }, { type: 'machine', id: 1 }), stack({ type: 'chest', id: 1 }, { type: 'machine', id: 2 }),
                 stack({ type: 'machine', id: 1 }, { type: 'belt', id: 1 }), stack({ type: 'machine', id: 2 }, { type: 'belt', id: 1 })],
             belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }],

@@ -210,14 +210,14 @@ describe("parseConfig", () => {
                             "id": 1,
                             "mined_item_name": "iron-ore",
                             "speed_bonus": 0.5,
+                            "productivity": 500,
                             "target": {
                                 "id": 1,
                                 "type": "machine"
                             },
                             "type": "electric-mining-drill"
                         }
-                    ],
-                    "mining_productivity_level": 50
+                    ]
                 },
                 "inserters": [],
                 "machines": [],
@@ -231,13 +231,13 @@ describe("parseConfig", () => {
             const config = await parseConfig(json);
 
             expect(config.drills).toBeDefined();
-            expect(config.drills?.mining_productivity_level).toBe(50);
             expect(config.drills?.configs).toHaveLength(1);
             expect(config.drills?.configs[0]).toEqual({
                 id: 1,
                 type: "electric-mining-drill",
                 mined_item_name: "iron-ore",
                 speed_bonus: 0.5,
+                productivity: 500,
                 target: { type: "machine", id: 1 }
             });
         });
@@ -516,14 +516,14 @@ describe("parseConfig", () => {
                                 }
                             },
                             "speed_bonus": 0.5,
+                            "productivity": 500,
                             "target": {
                                 "id": 1,
                                 "type": "machine"
                             },
                             "type": "electric-mining-drill"
                         }
-                    ],
-                    "mining_productivity_level": 50
+                    ]
                 },
                 "inserters": [],
                 "machines": [],
@@ -559,14 +559,14 @@ describe("parseConfig", () => {
                                 }
                             },
                             "speed_bonus": 0.5,
+                            "productivity": 500,
                             "target": {
                                 "id": 1,
                                 "type": "machine"
                             },
                             "type": "electric-mining-drill"
                         }
-                    ],
-                    "mining_productivity_level": 50
+                    ]
                 },
                 "inserters": [],
                 "machines": [],
@@ -629,14 +629,14 @@ describe("parseConfig", () => {
                             "id": 1,
                             "mined_item_name": "iron-ore",
                             "speed_bonus": 0,
+                            "productivity": 0,
                             "target": {
                                 "id": 1,
                                 "type": "machine"
                             },
                             "type": "${drillType}"
                         }
-                    ],
-                    "mining_productivity_level": 0
+                    ]
                 },
                 "inserters": [],
                 "machines": [],
@@ -717,14 +717,14 @@ describe("parseConfig", () => {
                             "id": 1,
                             "mined_item_name": "iron-ore",
                             "speed_bonus": 0,
+                            "productivity": 0,
                             "target": {
                                 "id": 1,
                                 "type": "machine"
                             },
                             "type": "invalid-drill-type"
                         }
-                    ],
-                    "mining_productivity_level": 0
+                    ]
                 },
                 "inserters": [],
                 "machines": [],
@@ -864,14 +864,14 @@ describe("parseConfig", () => {
                             "id": 1,
                             "mined_item_name": "iron-ore",
                             "speed_bonus": 0,
+                            "productivity": 0,
                             "target": {
                                 "id": 1,
                                 "type": "machine"
                             },
                             "type": "electric-mining-drill"
                         }
-                    ],
-                    "mining_productivity_level": 0
+                    ]
                 },
                 "inserters": [],
                 "machines": [
@@ -891,7 +891,7 @@ describe("parseConfig", () => {
 
             const config = await parseConfig(json);
             expect(config.machines[0].productivity).toBe(0);
-            expect(config.drills?.mining_productivity_level).toBe(0);
+            expect(config.drills?.configs[0].productivity).toBe(0);
             expect(config.drills?.configs[0].speed_bonus).toBe(0);
         });
     });

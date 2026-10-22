@@ -16,6 +16,7 @@ import { MachineType } from "../entities";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
+import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
 
 // ============================================================================
 // Machine Configuration
@@ -288,21 +289,22 @@ export const MiningDrillConfigSchema = z.object({
      * `/c game.print(game.player.selected.speed_bonus)`
      */
     speed_bonus: z.number(),
+    /**
+     * The drill's mining productivity in percent, as a machine's: the force's mining productivity research and the
+     * drill's productivity modules together, as the game gives it and its bonus bar uses it (not capped). The sidecar
+     * exports it; the game shows it with: `/c game.print(game.player.selected.productivity_bonus * 100)`
+     */
+    productivity: z.number().min(0),
     target: DrillTargetConfigSchema,
     overrides: MiningDrillOverridesConfigSchema.optional()
 });
 
 export type MiningDrillConfig = z.infer<typeof MiningDrillConfigSchema>;
 
-export const DrillsConfigSchema = z.object({
-    /**
-     * The levels of mining productivity researched, applied to all mining drills: each gives +10% mining productivity,
-     * as in the game. It is the force's bonus in 10% steps, which the sidecar exports and the game shows with:
-     * `/c game.print(game.player.force.mining_drill_productivity_bonus * 10)`
-     */
-    mining_productivity_level: z.number().int().min(0),
+/** The mining drills. A config with the former `mining_productivity_level` is read as each drill's productivity once. */
+export const DrillsConfigSchema = z.preprocess(migrateMiningProductivityLevelStep, z.object({
     configs: z.array(MiningDrillConfigSchema)
-});
+}));
 
 // ============================================================================
 // Inserter Configuration

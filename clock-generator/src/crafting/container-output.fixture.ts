@@ -15,8 +15,8 @@ export function steelHub(items_per_second = 26): Config {
             { id: 1, recipe: 'steel-plate', crafting_speed: 105.875, productivity: 300, type: 'furnace' },
             { id: 2, recipe: 'iron-plate', crafting_speed: 80.0375, productivity: 50, type: 'furnace' },
         ],
-        drills: { mining_productivity_level: 7999, configs: [
-            { id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 15.8244, target: { type: 'chest', id: 2 } }] },
+        drills: { configs: [
+            { id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 15.8244, productivity: 79990, target: { type: 'chest', id: 2 } }] },
         inserters: [
             stack({ type: 'chest', id: 2 }, { type: 'machine', id: 1 }, ['iron-plate']),
             stack({ type: 'machine', id: 1 }, { type: 'chest', id: 2 }, ['steel-plate']),
