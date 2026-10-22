@@ -337,6 +337,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 7200,
     },
+    // The owner's lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
+    // 80 a second from one copy. The warm-up fills the silo, which the config exports empty.
+    "lithium plates through a rocket silo": {
+        scaffold: path.join(SAMPLES, "real", "owner", "lithium-silo", "lithium-silo-scaffold.txt"),
+        config: ConfigPaths.REAL_OWNER_LITHIUM_SILO,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 2400,
+        wake_ups_open: "a chest end wakes no one in the simulator, so the inserters that fill the silo count 0 where the game's states give "
+            + "10 a minute each, as their cryogenic plants wake them (to be measured for every container): ",
+    },
     "iron bacteria cultivation": {
         scaffold: path.join(SAMPLES, "gleba", "iron-bacteria-cultivation", "iron-bacteria-cultivation-scaffold.txt"),
         config: ConfigPaths.IRON_BACTERIA_CULTIVATION,
