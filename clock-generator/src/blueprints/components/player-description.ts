@@ -1,4 +1,4 @@
-/** Factorio does not keep more than this many bytes of the description of a combinator. */
+/** Factorio does not keep more than this many bytes of the description of a combinator, nor of a blueprint (2.1.21). */
 export const MAX_PLAYER_DESCRIPTION_BYTES = 500;
 
 const ELLIPSIS = "...";
@@ -43,4 +43,9 @@ export function fitPlayerDescription(lines: readonly string[], limit: number = M
         return truncateToBytes(lines[0] ?? "", limit - byteLength(ELLIPSIS)) + ELLIPSIS;
     }
     return kept.join("\n") + "\n" + ELLIPSIS;
+}
+
+/** Whether fitPlayerDescription had to cut a description: what it keeps then ends in an ellipsis */
+export function wasCut(description: string): boolean {
+    return description.endsWith(ELLIPSIS);
 }

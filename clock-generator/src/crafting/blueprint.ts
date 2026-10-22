@@ -1,5 +1,5 @@
 import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
-import { Direction, Entity as CircuitEntity, Position, SignalId, Wire, WireConnection } from "../blueprints/components";
+import { Direction, Entity as CircuitEntity, fitPlayerDescription, Position, SignalId, Wire, WireConnection } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";
 import { ArithmeticCombinatorEntity } from "../blueprints/entity/arithmetic-combinator";
 import { ConstantCombinatorEntity } from "../blueprints/entity/constant-combinator";
@@ -598,7 +598,8 @@ export function createSignalPerInserterBlueprint(
     ];
     const blueprint = new BlueprintBuilder()
         .setLabel(blueprint_label)
-        .setDescription([targetRateDescription(cycle), `Clock period: ${formatRate(total_duration.ticks)} ticks`, ...generatorDescriptionLines()].join("\n"))
+        // the game keeps 500 bytes of a blueprint's description too (recorded in Factorio 2.1.21)
+        .setDescription(fitPlayerDescription([targetRateDescription(cycle), `Clock period: ${formatRate(total_duration.ticks)} ticks`, ...generatorDescriptionLines()]))
         .setEntities(entities)
         .setWires(wires.concat(fuel_wires))
         .build();

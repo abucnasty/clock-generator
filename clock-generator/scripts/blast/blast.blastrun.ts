@@ -15,6 +15,7 @@ import { test } from 'vitest';
 import { generateClockAlternatives } from '../../../../src/crafting/generate-blueprint';
 import { encodeBlueprintFile } from '../../../../src/blueprints/serde';
 import { clockIdentity } from '../../../../src/crafting/clock-identity';
+import * as playerDescription from '../../../../src/blueprints/components/player-description';
 import { loadConfigFromFile } from '../../../../src/config/loader';
 import * as configPaths from '../../../../src/config/config-paths';
 import { pickupClockConfig, pickupClockSpeedCases } from '../pickup-clock-speed-coverage';
@@ -118,6 +119,16 @@ async function writeJobList(jobs: Job[]) {
     fs.renameSync(tmp, file);
 }
 
+/** Combinator descriptions Factorio's 500 bytes cut, in an alternative's plain, modulo and subtick blueprints (null in a
+ * worktree from before the count) */
+function descriptionsCut(result: any): number | null {
+    const wasCut = (playerDescription as any).wasCut as ((description: string) => boolean) | undefined;
+    if (!wasCut) return null;
+    return [result.blueprint, result.modulo_blueprint, result.subtick?.blueprint]
+        .flatMap((blueprint: any) => blueprint?.entities ?? [])
+        .filter((entity: any) => wasCut(entity.player_description ?? '')).length;
+}
+
 /** Every alternative of a config, each exported clock hashed, and the selected one */
 function clocksOf(config: any) {
     const generated = generateClockAlternatives(config, { logger: quiet });
@@ -128,7 +139,7 @@ function clocksOf(config: any) {
             id: a.id, verdict: a.verdict, holds: a.assessment.holds, rate: a.assessment.items_per_second,
             supply: a.belt?.kind ?? null, period: a.result.subtick?.clock.period_ticks ?? a.result.simulation_duration.ticks,
             wake_ups: a.assessment.wake_ups?.wake_ups_per_minute ?? a.result.stability_check?.as_built?.wake_ups?.wake_ups_per_minute ?? null,
-            clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
+            clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), descriptions_cut: descriptionsCut(a.result), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
         };
     };
     return {
