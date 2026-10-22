@@ -12,6 +12,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `blocked-output-clock.game.test.ts`: a chest-fed machine whose output belt is blocked, at belt stack sizes 1–4.
 - `container-clock.game.test.ts`: a car, a tank or a cargo wagon between its supplies and a machine, with cuts that last until the container is empty.
 - `lithium-silo-clock.game.test.ts`: the owner's lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
+- `car-clock.game.test.ts`: the owner's iron plate build, a car taken as a chest between a big mining drill and two furnaces.
 
 From `clock-generator/`, select a file or case:
 
@@ -439,4 +440,27 @@ against its native summary.
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/lithium-silo-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/lithium-silo-clock.game.test.ts -t '^lithium silo clock: lithium-silo-swings-3$'
+```
+
+## A car between a mining drill and two furnaces
+
+`car-clock.game.test.ts` enumerates 3 controls ([car-clock-fixtures.ts](car-clock-fixtures.ts)) on the owner's iron plate
+build (`REAL_OWNER_CAR`, its README in the sample's folder): a big mining drill drops iron ore into a car, two furnaces take
+it out, 80 plates a second. The harness puts the ore under the drill. The selected clock (3 output swings, 72 ticks) is
+recorded as built and with the two inserters that take from the car built after the output inserters; the clock with 1
+output swing is a second check. The probe ([car-clock-probe.lua](car-clock-probe.lua)) counts the drops of the two output
+inserters per period. The car holds 4,000 ore, so the cuts are those of the container family: the drill is stopped
+(disabled by script) until the car has run dry (71 periods), the output blocked for 4, the drill stopped again, each
+followed for 40 periods, the first 6 after a release not judged. A drill is no supply that stops in the generator's
+checks; here it is stopped as the supply cut. Do not compare these recordings period for period with the 2-period
+families.
+
+[car-clock-controls.json](car-clock-controls.json) holds the 3 native summaries, recorded on Factorio 2.1.21 at commit
+`e284c865`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the drill stopped) and are
+exact in all 33 judged periods after each; the two build orders are equal in every period.**
+`car-clock.generation.test.ts` pins each clock and checks it against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/car-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/car-clock.game.test.ts -t '^car clock: car-swings-3$'
 ```

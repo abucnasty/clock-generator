@@ -18,3 +18,11 @@ The rate is within the machines: the furnaces make 2 × 86.1655 / 3.2 × 1.5 = 8
 99.0% of them. The drill mines 2.5 × (1 + 17.5) = 46.25 ore a second before mining productivity. The harness's research
 is mining productivity 3 at level 8000, exported as level 7,999, so the drill makes about 37,000 ore a second against the
 53.3 the furnaces take: it never limits anything, and the car, 80 stacks of 50 ore, is always full while the drill runs.
+
+## In the game
+
+The selected clock (3 output swings, 72 ticks) and the clock with 1 output swing move 96 plates in each of 63 periods in
+the game, and get back to it after the drill is stopped until the car has run dry (71 periods), the output is blocked for
+4 and the drill is stopped again (`tests/game/builds/car-clock-controls.json`). Building the two inserters that take from
+the car after the output inserters changed nothing in any period. The simulator counts 200.0 wake-ups a minute for the
+selected clock from the scaffold's cold start, where the game's states give 3.8; the difference is not explained yet.
