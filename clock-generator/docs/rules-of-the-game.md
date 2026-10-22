@@ -43,6 +43,8 @@ Mining drills are an exception to the insertion limit rule as defined in the fun
 
 The actual limit of how much the drill can insert into a machine per tick is the automated insertion limit + 64, however, in practice it is observed that the mining drill will stop at a minimum of 114 items the assumption is due to the stack size of stone being 50 + 64 = 114.
 
+The rest of the drill's mechanics are on [drills.md](drills.md).
+
 Fuel consumption also deviates from the automated insertion rule as it has its own logic for determining when to insert into a fuel slot of a target entity. A machine that burns fuel fast is topped up to more than 5 items: to the fuel that holds this many times its energy buffer, rounded up to whole items. That is the fuel for 192 ticks at its full energy consumption. In the words of a Factorio developer, a burner does not obey the inserter limit if the fuel does not give it energy for at least 3 seconds of work, with the example of a buffer of 0.4 MJ times 180 ticks. Biochambers were tested in steps of +495% to +1427% energy consumption, whose slots were filled up to 5 to 13 nutrients in Factorio 2.1, all fit it.
 
 Sources:
