@@ -9,6 +9,7 @@ local harness = {}
 local CLOCK_DESCRIPTION_PREFIX = "Clock for"
 -- the tag the caller gives each schedule combinator of a generated clock: the config ids of the inserters it enables
 local INSERTERS_TAG = "clock_generator_inserters"
+local DRILLS_TAG = "clock_generator_drills"
 local COMBINATOR_TYPES = {
     ["decider-combinator"] = true,
     ["arithmetic-combinator"] = true,
@@ -420,12 +421,34 @@ local function wire_clock(state, clock)
         end
     end
 
-    local report = { wired = {}, not_wired = {}, running_free = {} }
+    -- a clocked drill is the build's one mining drill: the harness wires drills only in a build with one
+    local drills = {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid and entity.type == "mining-drill" then
+            table.insert(drills, entity)
+        end
+    end
+
+    local report = { wired = {}, wired_drills = {}, not_wired = {}, running_free = {} }
     local wired_units = {}
     for _, combinator in pairs(combinators) do
         table.insert(state.entities, combinator)
         local ids = tags[combinator.unit_number] and tags[combinator.unit_number][INSERTERS_TAG]
-        if ids then
+        local drill_ids = tags[combinator.unit_number] and tags[combinator.unit_number][DRILLS_TAG]
+        if drill_ids then
+            if #drills ~= 1 then
+                error("the clock enables drill " .. table.concat(drill_ids, ", ") .. ", and the build has " .. #drills .. " mining drills: the harness wires a drill only in a build with one")
+            end
+            local drill = drills[1]
+            local output = combinator.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
+            output.connect_to(drill.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.player)
+            local behavior = drill.get_or_create_control_behavior()
+            behavior.circuit_enable_disable = true
+            behavior.circuit_condition = ANYTHING_POSITIVE
+            for _, id in ipairs(drill_ids) do
+                table.insert(report.wired_drills, { drill = id, unit_number = drill.unit_number })
+            end
+        elseif ids then
             local output = combinator.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
             for _, id in ipairs(ids) do
                 local inserter = by_unit_number[clock.inserters[tostring(id)] or -1]

@@ -3,7 +3,7 @@ import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
     assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltInserters, MAX_RECORDED_TICKS,
-    factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledInserterIds,
+    factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
 
@@ -57,6 +57,19 @@ describe("clockOfBlueprintString", () => {
             inserter_combinators: [{ entity_number: 2, inserter_ids: [3, 4, 6, 7] }, { entity_number: 3, inserter_ids: [12] }],
         });
         expect(scheduledInserterIds(schedule)).toEqual([3, 4, 6, 7, 12]);
+    });
+
+    it("reads the drills a clock enables off the descriptions of their combinators, which the schedule does not list", () => {
+        const blueprint = encodeBlueprintFile({
+            blueprint: {
+                entities: [
+                    { entity_number: 1, player_description: "Drill 1 for [item=iron-ore] into [entity=car]\n- enabled for tick 27 of the clock" },
+                    { entity_number: 2, player_description: "Drills 2, 3 for [item=stone] into [recipe=stone-brick]\nSwing Counts:" },
+                    { entity_number: 3, player_description: "Inserter 1 for [item=iron-ore] into [recipe=iron-plate]" },
+                ],
+            },
+        } as any);
+        expect(scheduledDrillIds(blueprint)).toEqual([1, 2, 3]);
     });
 
     it("refuses a blueprint without a clock the generator made", () => {
