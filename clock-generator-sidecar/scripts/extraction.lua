@@ -89,13 +89,9 @@ end
 ---@return table
 local function extract_vehicle_or_silo_data(entity)
     if entity.type == "rocket-silo" then
+        -- The silo's contents are not exported (owner, 2026-10-21): they are a snapshot of a running build, and a silo that
+        -- starts full makes the inserters filling it take turns instead of inserting together; the build starts empty
         local contents = {}
-        for _, index in ipairs({ defines.inventory.rocket_silo_rocket, defines.inventory.crafter_input }) do
-            local inventory = entity.get_inventory(index)
-            for _, content in pairs(inventory and inventory.get_contents() or {}) do
-                table.insert(contents, { item = content.name, count = content.count })
-            end
-        end
         local recipe, recipe_quality = entity.get_recipe()
         -- As for machines: modules and beacons, plus the force's research productivity for the recipe, capped at 300%
         local productivity = entity.productivity_bonus or 0
