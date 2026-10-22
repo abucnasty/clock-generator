@@ -141,14 +141,95 @@ local function cell_inserter_flags(ghosts)
     return flags
 end
 
+---Ore a tile is given under a drill: enough that no recording runs it out (a big drill at 50% drain takes 0.39 a tick)
+local DRILL_ORE_PER_TILE = 1000000000
+
+---The offset from the blueprint's positions to the world's, from the ghosts that a build of it made: the one that puts
+---every ghost on an entity of the blueprint of the same name
+---@param blueprint_entities BlueprintEntity[]
+---@param ghosts LuaEntity[]
+---@return MapPosition|nil
+local function blueprint_offset(blueprint_entities, ghosts)
+    local by_name = {}
+    for _, entity in pairs(blueprint_entities) do
+        by_name[entity.name] = by_name[entity.name] or {}
+        table.insert(by_name[entity.name], entity.position)
+    end
+    local built = {}
+    for _, ghost in pairs(ghosts) do
+        if ghost.valid and ghost.type == "entity-ghost" then
+            table.insert(built, ghost)
+        end
+    end
+    if #built == 0 then
+        return nil
+    end
+    local function on_blueprint(ghost, dx, dy)
+        for _, at in pairs(by_name[ghost.ghost_name] or {}) do
+            if math.abs(at.x + dx - ghost.position.x) < 0.01 and math.abs(at.y + dy - ghost.position.y) < 0.01 then
+                return true
+            end
+        end
+        return false
+    end
+    for _, at in pairs(by_name[built[1].ghost_name] or {}) do
+        local dx, dy = built[1].position.x - at.x, built[1].position.y - at.y
+        local all = true
+        for _, ghost in ipairs(built) do
+            if not on_blueprint(ghost, dx, dy) then
+                all = false
+                break
+            end
+        end
+        if all then
+            return { x = dx, y = dy }
+        end
+    end
+    return nil
+end
+
+---Create the resource on every tile under each mining drill of the blueprint, which has to be on its ore to be built: a
+---scaffold with a drill is built where the save may have none
+---@param surface LuaSurface
+---@param blueprint_entities BlueprintEntity[]
+---@param offset MapPosition
+---@param resource string
+---@return LuaEntity[] ores
+local function place_drill_ore(surface, blueprint_entities, offset, resource)
+    local ores = {}
+    for _, entity in pairs(blueprint_entities) do
+        local prototype = prototypes.entity[entity.name]
+        if prototype and prototype.type == "mining-drill" then
+            local width, height = prototype.tile_width, prototype.tile_height
+            local direction = entity.direction or 0
+            if direction == defines.direction.east or direction == defines.direction.west then
+                width, height = height, width
+            end
+            local left = math.floor(entity.position.x + offset.x - width / 2 + 0.5)
+            local top = math.floor(entity.position.y + offset.y - height / 2 + 0.5)
+            for x = left, left + width - 1 do
+                for y = top, top + height - 1 do
+                    local ore = surface.create_entity({ name = resource, position = { x + 0.5, y + 0.5 }, amount = DRILL_ORE_PER_TILE })
+                    if not ore then
+                        error("could not create " .. resource .. " under the " .. entity.name .. " at " .. x .. ", " .. y)
+                    end
+                    table.insert(ores, ore)
+                end
+            end
+        end
+    end
+    return ores
+end
+
 ---Build a blueprint string as real entities
 ---@param surface LuaSurface
 ---@param force LuaForce
 ---@param blueprint string
 ---@param position_for fun(half_width: number, half_height: number): MapPosition where the middle of the blueprint goes
 ---@param stage_cell_inserters boolean|nil leave the inserters of the cell (those with an end on a crafting machine) as ghosts, to be built later
----@return LuaEntity[] entities, string[] failed names of the entities that could not be built, table<uint, Tags> tags of the blueprint's entities by unit number, LuaEntity[] staged the ghosts left unbuilt, MapPosition position where the middle of the blueprint went
-local function build_blueprint(surface, force, blueprint, position_for, stage_cell_inserters)
+---@param drill_resource string|nil the resource to create under every mining drill of the blueprint before it is built
+---@return LuaEntity[] entities, string[] failed names of the entities that could not be built, table<uint, Tags> tags of the blueprint's entities by unit number, LuaEntity[] staged the ghosts left unbuilt, MapPosition position where the middle of the blueprint went, LuaEntity[] ores the ore put under the drills
+local function build_blueprint(surface, force, blueprint, position_for, stage_cell_inserters, drill_resource)
     local inventory = game.create_inventory(1)
     local stack = inventory[1]
     if stack.import_stack(blueprint) < 0 or not stack.is_blueprint or not stack.is_blueprint_setup() then
@@ -166,13 +247,44 @@ local function build_blueprint(surface, force, blueprint, position_for, stage_ce
     surface.request_to_generate_chunks(position, math.ceil(math.max(half_width, half_height) / 32) + 1)
     surface.force_generate_chunk_requests()
 
-    local ghosts = stack.build_blueprint({
-        surface = surface,
-        force = force,
-        position = position,
-        build_mode = defines.build_mode.forced,
-        skip_fog_of_war = false,
-    })
+    local function build_ghosts()
+        return stack.build_blueprint({
+            surface = surface,
+            force = force,
+            position = position,
+            build_mode = defines.build_mode.forced,
+            skip_fog_of_war = false,
+        })
+    end
+    local ghosts = build_ghosts()
+    local ores = {}
+    local blueprint_entities = stack.get_blueprint_entities() or {}
+    local has_drill = false
+    for _, entity in pairs(blueprint_entities) do
+        local prototype = prototypes.entity[entity.name]
+        has_drill = has_drill or (prototype ~= nil and prototype.type == "mining-drill")
+    end
+    if has_drill and drill_resource then
+        -- a drill's ghost is not made without its ore: the ghosts of the rest tell where the blueprint went, the ore is
+        -- put under each drill, and the blueprint is built again
+        local resource = prototypes.entity[drill_resource]
+        if not resource or resource.type ~= "resource" then
+            inventory.destroy()
+            error("drill_resource \"" .. tostring(drill_resource) .. "\" is not a resource")
+        end
+        local offset = blueprint_offset(blueprint_entities, ghosts)
+        if not offset then
+            inventory.destroy()
+            error("could not tell where the blueprint was built, to put ore under its drills")
+        end
+        for _, ghost in pairs(ghosts) do
+            if ghost.valid then
+                ghost.destroy()
+            end
+        end
+        ores = place_drill_ore(surface, blueprint_entities, offset, drill_resource)
+        ghosts = build_ghosts()
+    end
     inventory.destroy()
 
     local staged_flags = stage_cell_inserters and cell_inserter_flags(ghosts) or {}
@@ -200,7 +312,24 @@ local function build_blueprint(surface, force, blueprint, position_for, stage_ce
             ghost.revive()
         end
     end
-    return entities, failed, tags, staged, position
+    -- a drill with no ore under it gets no ghost, so it is in no list of what failed: name it
+    local drills_built = 0
+    for _, entity in pairs(entities) do
+        if entity.type == "mining-drill" then
+            drills_built = drills_built + 1
+        end
+    end
+    for _, entity in pairs(blueprint_entities) do
+        local prototype = prototypes.entity[entity.name]
+        if prototype and prototype.type == "mining-drill" then
+            if drills_built > 0 then
+                drills_built = drills_built - 1
+            else
+                table.insert(failed, entity.name .. (drill_resource and "" or " (no ore under it: the build needs drill_resource)"))
+            end
+        end
+    end
+    return entities, failed, tags, staged, position, ores
 end
 
 ---@param entities LuaEntity[]
@@ -499,7 +628,7 @@ local function staged_tick(state)
 end
 
 ---Build the blueprint and pause the game, after the warm-up when one is asked for
----@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, warmup_ticks: number?, speed: number?} speed: the game's speed from here on; it stays what it is when absent
+---@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, warmup_ticks: number?, speed: number?, drill_resource: string?} speed: the game's speed from here on; it stays what it is when absent. drill_resource: the ore put under every mining drill of the blueprint
 ---@return table report
 function harness.build(job)
     local surface = game.surfaces[job.surface or "nauvis"]
@@ -508,7 +637,7 @@ function harness.build(job)
         error("no surface \"" .. tostring(job.surface) .. "\" or force \"" .. tostring(job.force) .. "\"")
     end
 
-    local entities, failed, _, staged_ghosts, origin = build_blueprint(surface, force, job.blueprint, function(half_width)
+    local entities, failed, _, staged_ghosts, origin, ores = build_blueprint(surface, force, job.blueprint, function(half_width)
         if job.position then
             return job.position
         end
@@ -518,7 +647,7 @@ function harness.build(job)
             right = math.max(right or -math.huge, entity.bounding_box.right_bottom.x)
         end
         return { x = right and (math.ceil(right) + 16 + half_width) or 0, y = 0 }
-    end, job.staged ~= nil)
+    end, job.staged ~= nil, job.drill_resource)
     if #entities == 0 then
         error("nothing of the blueprint could be built")
     end
@@ -529,6 +658,8 @@ function harness.build(job)
         entities = entities,
         ready = false,
         origin = origin,
+        -- the ore put under the drills, removed with the build
+        ores = ores,
     }
     if job.staged then
         state.staged = start_staged_fill(job.staged, staged_ghosts, origin, surface)
@@ -619,6 +750,11 @@ function harness.clear()
         })
         for _, item in pairs(spilled) do
             item.destroy()
+        end
+    end
+    for _, ore in pairs(state.ores or {}) do
+        if ore.valid then
+            ore.destroy()
         end
     end
     storage.harness = nil

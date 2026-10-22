@@ -4,6 +4,7 @@ import { encodeBlueprintFile } from "../blueprints/serde";
 import {
     assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltInserters, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledInserterIds,
+    drillResourceOf,
 } from "./factorio-harness";
 
 describe("factorioDataDir", () => {
@@ -291,5 +292,22 @@ describe("the most ticks one run in Factorio records", () => {
         await expect(run(600, { blueprint: clock(100_000, ONE_BASED) })).rejects.toThrow("records 100000");
         // within the limit the run goes on, to where it finds no Factorio
         await expect(run(70_848, { clock: swapped, config: {} })).rejects.toThrow("Factorio not found");
+    });
+});
+
+describe("the resource the harness puts under a blueprint's drills", () => {
+    const drills = (...mined: string[]) => ({ drills: { mining_productivity_level: 1, configs: mined.map((mined_item_name, index) => ({
+        id: index + 1, type: "big-mining-drill" as const, mined_item_name, speed_bonus: 0, target: { type: "chest" as const, id: 1 } })) } });
+    const config = (...mined: string[]) => ({ target_output: { recipe: "iron-plate", items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [], ...drills(...mined) });
+
+    it("is what the config's drills mine, or what is asked", () => {
+        expect(drillResourceOf({ config: config("iron-ore", "iron-ore") })).toBe("iron-ore");
+        expect(drillResourceOf({ config: config("iron-ore"), drill_resource: "copper-ore" })).toBe("copper-ore");
+        expect(drillResourceOf({ config: config() })).toBeUndefined();
+        expect(drillResourceOf({})).toBeUndefined();
+    });
+
+    it("is refused when the config's drills mine more than one", () => {
+        expect(() => drillResourceOf({ config: config("iron-ore", "stone") })).toThrow("The config's drills mine iron-ore, stone");
     });
 });

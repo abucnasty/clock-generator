@@ -106,6 +106,12 @@ export interface HarnessOptions {
     unclocked: boolean;
     surface?: string;
     position?: { x: number; y: number };
+    /**
+     * The resource the harness creates under every mining drill of the blueprint before it builds it, as a drill is only
+     * built on its ore and the save may have none there. Absent, it is what the config's drills mine when they all mine
+     * one; a blueprint with drills that mine more than one is refused.
+     */
+    drill_resource?: string;
     /** Lua run right before the recording starts, as a chunk called with (entities, surface, area) */
     lua?: string;
     /** Scratch folder for Factorio's write data; a temporary folder that is removed afterwards when absent */
@@ -601,6 +607,18 @@ type SessionOptions = Pick<HarnessOptions, "factorio" | "save" | "work_dir" | "w
 type BuildOptions = Omit<HarnessOptions, "factorio" | "save" | "work_dir" | "watch" | "watch_debug">;
 
 /** Throws when the build cannot be recorded as asked. Nothing of the game is needed to tell */
+/** The resource to put under the blueprint's drills: as asked, else the one the config's drills mine */
+export function drillResourceOf(options: Pick<BuildOptions, "drill_resource" | "config">): string | undefined {
+    if (options.drill_resource !== undefined) {
+        return options.drill_resource;
+    }
+    const mined = new Set((options.config?.drills?.configs ?? []).map(drill => drill.mined_item_name));
+    if (mined.size > 1) {
+        throw new Error(`The config's drills mine ${Array.from(mined).sort().join(", ")}: the harness puts one resource under its drills, so pass drill_resource`);
+    }
+    return mined.size === 1 ? Array.from(mined)[0] : undefined;
+}
+
 function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
@@ -773,6 +791,7 @@ export class HarnessSession {
             clock: replaces_clock ? "remove" : "keep",
             warmup_ticks: options.warmup_ticks,
             speed: options.game_speed,
+            drill_resource: drillResourceOf(options),
         });
         const not_built = Object.values<string>(build.failed);
         if (not_built.length > 0) {
@@ -863,6 +882,7 @@ export class HarnessSession {
                 clock: "remove",
                 warmup_ticks: staged.trial_build_ticks ?? 900,
                 speed: options.game_speed,
+                drill_resource: drillResourceOf(options),
             });
             await this.waitFor("the trial build", deadline, status => status.ready);
             const described = await this.call("harness_describe");
@@ -909,6 +929,7 @@ export class HarnessSession {
             position,
             clock: replaces_clock ? "remove" : "keep",
             speed: options.game_speed,
+            drill_resource: drillResourceOf(options),
             staged: { saturation_ticks: staged.saturation_ticks, cap_ticks: staged.saturation_cap_ticks },
         });
         const not_built = Object.values<string>(build.failed);
