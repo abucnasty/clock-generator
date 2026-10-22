@@ -26,7 +26,7 @@ Packages are named `later/<code>` and come in no fixed order.
 
 ### The swing-back hand
 
-**`later/swing-back`** (#276): when another inserter takes a machine's products off its output block in the tick a belt hand comes back from its swing, the simulator has the hand take its first stack in that tick. In the game it comes a tick later when the taker drops onto a belt (56 of 56 hands), and by the decider order when it drops into a chest (79 of 79). The game's rule, tried in the simulator, moves no selected clock. 0.19.0 records it as a known limit.
+**`later/swing-back`** (#276): when another inserter takes a machine's products off its output block in the tick a belt hand comes back from its swing, the simulator has the hand take its first stack in that tick. In the game it comes a tick later when the taker drops onto a belt (56 of 56 hands), and by the decider order when it drops into a chest (79 of 79). The game's rule, tried in the simulator, moves no selected clock. It is recorded as a known limit in [simulator.md](../simulator.md#other-known-limits).
 
 ## Decisions before they start
 
