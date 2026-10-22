@@ -95,7 +95,7 @@ Two samples exist to be refused, not to generate a clock from, and need no scaff
 - `real/stupidfathobbit/cell02` (`REAL_STUPIDFATHOBBIT_CELL02`) is a real cell (PR #189). Its inserter 12 puts
   electronic circuits on belt 3 for the rest of a utility science design the config does not include, so the belt
   needs an export rate. It fails with "Inserter 12 puts electronic-circuit onto belt 3, but nothing in the config
-  takes it off" until 0.20.0 measures that rate.
+  takes it off" until 0.21.0 measures that rate.
 
 ## Backpressure loss
 
