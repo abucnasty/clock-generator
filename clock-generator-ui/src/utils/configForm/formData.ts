@@ -6,7 +6,7 @@ import type {
     RuleSet,
     ValueReference,
 } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/light';
+import { ChestType, isBlockedSlotFilter } from 'clock-generator/light';
 
 export interface MachineFormData {
     id: number;
@@ -221,7 +221,7 @@ export function isRocketSilo(chest: ChestFormData): chest is RocketSiloFormData 
 /** The items a car, a tank, a cargo wagon or a rocket silo names: what it starts with and what its slots are filtered to */
 export function containerItems(chest: ContainerChestFormData | Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>): string[] {
     const filtered = 'slot_filters' in chest ? (chest.slot_filters ?? []).map(filter => filter.item) : [];
-    return Array.from(new Set([...(chest.contents ?? []).map(content => content.item), ...filtered]));
+    return Array.from(new Set([...(chest.contents ?? []).map(content => content.item), ...filtered])).filter(item => !isBlockedSlotFilter(item));
 }
 
 /** The items a chest of a config names: a buffer chest's filter, an infinity chest's supplies, a container's items */

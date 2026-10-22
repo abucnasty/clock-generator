@@ -36,6 +36,7 @@ const CONTAINERS = {
     tank: { type: ChestType.TANK, contents: [{ slot: 80, item: 'iron-plate', count: 100 }] },
     wagon: { type: ChestType.CARGO_WAGON, quality: 'legendary', slot_filters: [{ slot: 100, item: 'iron-plate' }] },
     silo: { type: ChestType.ROCKET_SILO, recipe_quality: 'rare', crafting_speed: 2.5, productivity: 10, contents: [{ item: 'iron-plate', count: 100 }] },
+    blockedCar: { type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, item: 'deconstruction-planner' }, { slot: 3, item: 'no-item' }] },
 };
 
 const containerOf = (form: ConfigFormData) => form.chests[0];
@@ -123,7 +124,8 @@ describe('the fields of each type', () => {
         for (const container of [CONTAINERS.car, CONTAINERS.tank, CONTAINERS.wagon]) {
             const html = render(container);
             expect(html).toContain('Filtered slots');
-            expect(html).toContain('Add filtered slot');
+            expect(html).toContain('Fill unfiltered slots');
+            expect(html).toContain('Shift + right-click copies');
             expect(html).toContain('Contents');
             expect(html.includes('aria-label="Quality, Chest 1"')).toBe(container === CONTAINERS.wagon);
         }
@@ -135,5 +137,25 @@ describe('the fields of each type', () => {
         for (const label of ['Recipe quality', 'Crafting Speed', 'Productivity (%)', 'Add contents']) expect(html).toContain(label);
         expect(html).not.toContain('Filtered slots');
         expect(html).toContain('Rare');
+    });
+
+    it('shows the whole inventory and keeps filters beyond a downgraded wagon visible for correction', () => {
+        const car = render(CONTAINERS.car);
+        expect(car).toContain('Slot 80: Unfiltered');
+        expect(car).not.toContain('Slot 81:');
+        const wagon = render({ ...CONTAINERS.wagon, quality: 'normal' });
+        expect(wagon).toContain('Slot 40: Unfiltered');
+        expect(wagon).not.toContain('Slot 41:');
+        expect(wagon).toContain('Some filters are outside this inventory');
+        expect(wagon).toContain('Remove filter for slot 100');
+    });
+
+    it('identifies both blocking filters and offers a way to block the remaining slots', () => {
+        const html = render(CONTAINERS.blockedCar);
+        expect(html).toContain('Slot 2: Blocked (deconstruction-planner)');
+        expect(html).toContain('Slot 3: Blocked (no-item)');
+        expect(html).toContain('Block unfiltered slots');
+        expect(html).toContain('2 blocked');
+        expect(() => validateConfig(ConfigSchema.parse(build(CONTAINERS.blockedCar)))).not.toThrow();
     });
 });

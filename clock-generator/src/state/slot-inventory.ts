@@ -1,4 +1,5 @@
 import { FactorioDataService, ItemName } from "../data";
+import { isBlockedSlotFilter } from "../common/slot-filter";
 import { InventoryItem, InventoryState, WritableInventoryState } from "./inventory-state";
 
 /** One slot of an inventory: the only item it takes when it is filtered, and what it holds */
@@ -81,6 +82,7 @@ export class SlotInventoryState implements WritableInventoryState {
 
     /** How many of the item go in now: the room in the slots that take it, and what the weight left allows */
     public roomFor(item: ItemName): number {
+        if (isBlockedSlotFilter(item)) return 0;
         const stack = this.stackSize(item);
         let room = this.growing ? Infinity : 0;
         if (!this.growing) {
@@ -98,6 +100,7 @@ export class SlotInventoryState implements WritableInventoryState {
 
     /** The items the slots take in all, the others empty: the slots filtered to it and the unfiltered ones */
     public capacityFor(item: ItemName): number {
+        if (isBlockedSlotFilter(item)) return 0;
         if (this.growing) {
             return this.weight_limit === null ? Infinity : Math.floor(this.weight_limit / this.weightOf(item));
         }
@@ -119,7 +122,7 @@ export class SlotInventoryState implements WritableInventoryState {
     /** Puts a slot's contents in as they are, for a container that does not start empty */
     public placeInSlot(slot_index: number, item: ItemName, count: number): void {
         const slot = this.slots[slot_index];
-        if (slot === undefined || slot.item !== null || (slot.filter !== null && slot.filter !== item) || count > this.stackSize(item)) {
+        if (isBlockedSlotFilter(item) || slot === undefined || slot.item !== null || (slot.filter !== null && slot.filter !== item) || count > this.stackSize(item)) {
             throw new Error(`Slot ${slot_index + 1} cannot hold ${count} ${item}`);
         }
         slot.item = item;
