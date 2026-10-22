@@ -28,7 +28,7 @@ describe('installSteps', () => {
     it('wires a clocked drill in a step of its own when every inserter runs all the time', () => {
         const steps = installSteps({ book: false, wiring: [], drills: [[2]] });
         expect(ids(steps)).toEqual(['import', 'place', 'drills', 'others', 'lock']);
-        expect(detailOf(steps, 'drills')).toContain('Drill 1 for');
+        expect(detailOf(steps, 'drills')).toContain('(drill 1)');
         expect(detailOf(steps, 'drills')).toContain('Anything > 0');
     });
 
@@ -58,7 +58,7 @@ describe('installSteps', () => {
 
     it('names the clock lock among the parts to leave, and points the description to the list', () => {
         const wire = detailOf(installSteps(plain), 'wire');
-        expect(wire).toContain('Clock lock,');
+        expect(wire).toContain('the Clock lock and every combinator described "Part of the clock"');
         expect(wire).toContain('The combinator\'s description names the same inserters; this list has all of it.');
         expect(wire).not.toMatch(/500 bytes/);
     });

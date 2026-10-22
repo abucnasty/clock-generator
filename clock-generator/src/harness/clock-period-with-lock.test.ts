@@ -53,7 +53,7 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
             { logger: quiet, fuel_consumption_view: false },
         );
         const blueprint = encodeBlueprintFile({ blueprint: result.subtick!.blueprint });
-        const fuel_clocks = entitiesOf(blueprint).filter(entity => /^Fuel clock/.test(entity.player_description ?? ""));
+        const fuel_clocks = entitiesOf(blueprint).filter(entity => (entity.player_description ?? "").includes("Fuel clock:"));
         expect(fuel_clocks.length).toBeGreaterThan(0);
         expect(clockPeriodTicks(blueprint)).toBe(result.subtick!.clock.period_ticks);
     });

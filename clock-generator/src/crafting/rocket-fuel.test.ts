@@ -41,9 +41,9 @@ describe("generateClockForConfig", () => {
 
             const described = by_product.blueprint.entities
                 .map(entity => entity.player_description ?? "")
-                .find(description => description.includes("(by-product)"));
-            expect(described).toContain("Inserter 11 for [item=jellynut-seed]");
-            expect(described).toContain("looks every");
+                .find(description => description.startsWith("By-product: "));
+            expect(described).toContain("[item=jellynut-seed]  (inserter 11)");
+            expect(described).toContain("of every 32 ticks; outside the main plan");
         });
 
         it("has no fuel plan and no fuel consumption view, as no machine burns fuel", () => {
@@ -139,7 +139,7 @@ describe("generateClockForConfig", () => {
 
             it("counts one clock long enough for the period and every fuel clock to fit a whole number of times", () => {
                 expect(clocks).toHaveLength(1);
-                expect(entities.filter(entity => (entity.player_description ?? "").startsWith("Fuel clock"))).toHaveLength(0);
+                expect(entities.filter(entity => (entity.player_description ?? "").includes("Fuel clock:"))).toHaveLength(0);
                 // the clock counts 1 to its period, so its condition's constant is the period
                 const counted_to = Number(/"constant":(\d+)/.exec(behavior(clocks[0]))![1]);
                 [period, ...fuel_moduli].forEach(ticks => expect(counted_to % ticks).toBe(0));
@@ -169,9 +169,8 @@ describe("generateClockForConfig", () => {
                 expect(nutrient_deciders).toHaveLength(2);
                 nutrient_deciders.forEach(decider => {
                     const description = decider.player_description ?? "";
-                    expect(description).toContain("(fuel)");
-                    expect(description).toContain("swings every");
-                    expect(description).toContain("fuel clock");
+                    expect(description).toMatch(/^Fuel: /);
+                    expect(description).toMatch(/Open \[virtual-signal=signal-[A-Z]\] 1–\d+, once every \d+ ticks/);
                     // reads a modulo of the one clock
                     expect(behavior(decider)).not.toContain('"name":"signal-T"');
                 });

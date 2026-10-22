@@ -13,7 +13,7 @@ import { CONTAINER_OUTPUT_PATH_REFUSAL } from "../../../config/errors";
  * it is kept at 16 for every build so that a drill's plan does not move when an inserter's prototype does. Nothing in the
  * game data says what a drill's unit should be; whether it should follow the hand of the inserters beside it is open.
  */
-const DRILL_ITEMS_PER_SWING = 16;
+export const DRILL_ITEMS_PER_SWING = 16;
 
 export interface ItemTransfer {
     item_name: string;

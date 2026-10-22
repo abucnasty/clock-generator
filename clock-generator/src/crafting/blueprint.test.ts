@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { OpenRange } from "../data-types";
-import { entityDescriptionHeaderLines, lockWires, mergedClockTicks, splitRepeatingRanges, WIRE_REACH_TILES } from "./blueprint";
+import { lockWires, mergedClockTicks, splitRepeatingRanges, WIRE_REACH_TILES } from "./blueprint";
+import { PART_OF_THE_CLOCK } from "./descriptions";
 import { Entity, EntityType, Position } from "../blueprints/components";
 import { ConstantCombinatorEntity } from "../blueprints/entity/constant-combinator";
-import { EntityId, ReadableEntityRegistry } from "../entities";
+
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { generateClockForConfig } from "./generate-blueprint";
@@ -86,73 +87,30 @@ describe("splitRepeatingRanges", () => {
     });
 });
 
-describe("entityDescriptionHeaderLines", () => {
-    const machine = (id: number, recipe: string) => ({ entity_id: EntityId.forMachine(id), metadata: { recipe: { name: recipe } } });
-    const inserter = (id: number, source: EntityId, sink: EntityId) =>
-        ({ entity_id: EntityId.forInserter(id), source: { entity_id: source }, sink: { entity_id: sink } });
-    const belt = EntityId.forBelt(1);
-    const entities = [
-        machine(1, "rocket-fuel-from-jelly"),
-        machine(2, "jellynut-processing"),
-        inserter(1, belt, EntityId.forMachine(1)),
-        inserter(2, EntityId.forMachine(1), belt),
-        inserter(3, belt, EntityId.forMachine(2)),
-        inserter(6, EntityId.forMachine(2), EntityId.forMachine(1)),
-        inserter(10, belt, EntityId.forMachine(1)),
-        { entity_id: EntityId.forDrill(1), sink_id: EntityId.forMachine(1) },
-    ];
-    const registry = {
-        getEntityById: (id: EntityId) => entities.find(entity => entity.entity_id.id === id.id) ?? null,
-    } as unknown as ReadableEntityRegistry;
-    const header = (ids: EntityId[], kind?: string) => entityDescriptionHeaderLines(ids, registry, "[item=jelly]", kind);
-
-    it("names the recipe of the machine an inserter fills", () => {
-        expect(header([EntityId.forInserter(3)])).toEqual(["Inserter 3 for [item=jelly] into [recipe=jellynut-processing]"]);
-    });
-
-    it("names the recipe of the machine an inserter empties", () => {
-        expect(header([EntityId.forInserter(2)])).toEqual(["Inserter 2 for [item=jelly] from [recipe=rocket-fuel-from-jelly]"]);
-    });
-
-    it("names both recipes of an inserter between two machines", () => {
-        expect(header([EntityId.forInserter(6)]))
-            .toEqual(["Inserter 6 for [item=jelly] from [recipe=jellynut-processing] into [recipe=rocket-fuel-from-jelly]"]);
-    });
-
-    it("lists the inserters sharing a combinator in one line when their machines have the same recipe", () => {
-        expect(header([EntityId.forInserter(10), EntityId.forInserter(1)], "fuel"))
-            .toEqual(["Inserters 1, 10 for [item=jelly] into [recipe=rocket-fuel-from-jelly] (fuel)"]);
-    });
-
-    it("gives each recipe a line when the inserters sharing a combinator work with different machines", () => {
-        expect(header([EntityId.forInserter(10), EntityId.forInserter(3), EntityId.forInserter(1)])).toEqual([
-            "Inserters 1, 3, 10 for [item=jelly]",
-            "- 1, 10: into [recipe=rocket-fuel-from-jelly]",
-            "- 3: into [recipe=jellynut-processing]",
-        ]);
-    });
-
-    it("names the recipe of the machine a drill fills", () => {
-        expect(header([EntityId.forDrill(1)])).toEqual(["Drill 1 for [item=jelly] into [recipe=rocket-fuel-from-jelly]"]);
-    });
-});
-
 describe("combinator descriptions of the rocket fuel biochambers", async () => {
     const result = generateClockForConfig(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL), { logger: quiet });
     const first_lines = (result.blueprint.entities ?? [])
         .map(entity => (entity.player_description ?? "").split("\n")[0])
-        .filter(line => line.startsWith("Inserter"));
+        .filter(line => line.includes("(inserter") || / inserters/.test(line));
 
-    it("name the recipes of the machines of every inserter", () => {
+    it("name the two ends of every inserter, the machines by their recipes where the config has no prototype", () => {
         expect(first_lines.sort()).toEqual([
-            "Inserter 11 for [item=jellynut-seed] from [recipe=jellynut-processing] (by-product)",
-            "Inserter 12 for [item=nutrients] into [recipe=jellynut-processing] (fuel)",
-            "Inserter 3 for [item=jellynut] into [recipe=jellynut-processing]",
-            "Inserters 1, 5 for [item=bioflux] into [recipe=rocket-fuel-from-jelly]",
-            "Inserters 10, 13 for [item=nutrients] into [recipe=rocket-fuel-from-jelly] (fuel)",
-            "Inserters 2, 4 for [item=rocket-fuel] from [recipe=rocket-fuel-from-jelly]",
-            "Inserters 6, 7, 8, 9 for [item=jelly] from [recipe=jellynut-processing] into [recipe=rocket-fuel-from-jelly]",
+            "2 inserters: [entity=turbo-transport-belt] → machines 1, 3 [recipe=rocket-fuel-from-jelly]  [item=bioflux]  (1, 5)",
+            "2 inserters: machines 1, 3 [recipe=rocket-fuel-from-jelly] → [entity=turbo-transport-belt]  [item=rocket-fuel]  (2, 4)",
+            "4 inserters: machine 2 [recipe=jellynut-processing] → machines 1, 3 [recipe=rocket-fuel-from-jelly]  [item=jelly]  (6, 7, 8, 9)",
+            "By-product: machine 2 [recipe=jellynut-processing] → [entity=turbo-transport-belt]  [item=jellynut-seed]  (inserter 11)",
+            "Fuel: 2 inserters: [entity=turbo-transport-belt] → machines 1, 3 [recipe=rocket-fuel-from-jelly]  [item=nutrients]  (10, 13)",
+            "Fuel: [entity=turbo-transport-belt] → machine 2 [recipe=jellynut-processing]  [item=nutrients]  (inserter 12)",
+            "[entity=turbo-transport-belt] → machine 2 [recipe=jellynut-processing]  [item=jellynut]  (inserter 3)",
         ]);
+    });
+
+    it("give the fuel and by-product windows as their conditions read them", () => {
+        const texts = (result.blueprint.entities ?? []).map(entity => entity.player_description ?? "");
+        expect(texts.find(text => text.includes("(inserter 11)"))!.split("\n")[1])
+            .toBe("Clears it: open [virtual-signal=signal-clock] 7–11 of every 32 ticks; outside the main plan");
+        expect(texts.find(text => text.includes("(10, 13)"))!.split("\n")[1])
+            .toBe("Open [virtual-signal=signal-B] 1–8, once every 192 ticks; does not swing while the fuel slot is full");
     });
 });
 
@@ -268,7 +226,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
         const blueprint = result.subtick!.blueprint;
         const fuel_moduli = Array.from(new Set(Object.values(result.unplanned_inserter_clocks!)
             .filter(clock => clock.own_clock).map(clock => clock.modulus)));
-        const fuel_clocks = blueprint.entities.filter(entity => (entity.player_description ?? "").startsWith("Fuel clock"));
+        const fuel_clocks = blueprint.entities.filter(entity => (entity.player_description ?? "").startsWith(`${PART_OF_THE_CLOCK} Fuel clock:`));
         expect(fuel_clocks).toHaveLength(fuel_moduli.length);
         expect(fuel_clocks.map(clock => constantOf(clock)).sort()).toEqual([...fuel_moduli].sort());
         // nothing counts on the signal of the one clock
@@ -285,21 +243,21 @@ describe("the target rate in a blueprint", async () => {
         expect(rocket_fuel.description).toBe("Target: 60 [item=rocket-fuel] per second\nClock period: 128 ticks");
     });
 
-    it("is on the clock combinator", () => {
+    it("is on the clock combinator, with the period and how the one clock counts", () => {
         expect(clockDescription(rocket_fuel).split("\n").slice(0, 2)).toEqual([
-            "Clock for [item=rocket-fuel]:",
-            "- Target: 60 [item=rocket-fuel] per second",
+            "Clock for [item=rocket-fuel] 60/s. Period 128 ticks; counts 1–2688 on [virtual-signal=signal-T] (21 periods, for the fuel clocks); [virtual-signal=signal-clock] = that mod 128",
+            "Wire every other combinator's output to the inserters it names; set them Enable if Anything > 0",
         ]);
     });
 
-    it("says on each modulo of the clock what reads it", () => {
+    it("says on each modulo of the clock that it is part of the clock, and what it counts", () => {
         const modulo_descriptions = (rocket_fuel.entities ?? [])
             .filter(entity => entity.name === "arithmetic-combinator")
             .map(entity => entity.player_description ?? "");
         expect(modulo_descriptions).toEqual([
-            "[virtual-signal=signal-clock] counts 1 to 128, 21 times in the 2688 ticks the clock counts\n- The clock period: every combinator of the swing counts reads it",
-            "[virtual-signal=signal-B] counts 1 to 192, 14 times in the 2688 ticks the clock counts\n- Fuel clock: inserters 10, 13 may fill a fuel slot once every 192 ticks",
-            "[virtual-signal=signal-C] counts 1 to 224, 12 times in the 2688 ticks the clock counts\n- Fuel clock: inserter 12 may fill a fuel slot once every 224 ticks",
+            "Part of the clock: do not wire or change. [virtual-signal=signal-clock] = [virtual-signal=signal-T] mod 128",
+            "Part of the clock: do not wire or change. [virtual-signal=signal-B] = [virtual-signal=signal-T] mod 192",
+            "Part of the clock: do not wire or change. [virtual-signal=signal-C] = [virtual-signal=signal-T] mod 224",
         ]);
     });
 
@@ -423,9 +381,9 @@ describe("the count of a clock", async () => {
             expect(else_outputs).toEqual([]);
             // the harness and the recorder find the clock and the inserters' combinators by what their descriptions start with
             const lines = (filter.player_description ?? "").split("\n");
-            expect(lines[0]).toBe("Clock lock filter: disables the clock when [virtual-signal=signal-lock] is active");
+            expect(lines[0]).toMatch(/^Part of the clock: do not wire or change\. Passes the (fuel )?clock while \[virtual-signal=signal-lock\] is off$/);
             expect(lines[0].startsWith("Clock for")).toBe(false);
-            expect(lines.length).toBeGreaterThanOrEqual(3);
+            expect(lines).toHaveLength(1);
             expect(lines.some(line => /^Inserters? ([\d, ]+) for/.test(line))).toBe(false);
         }
     });
@@ -479,7 +437,7 @@ describe("the count of a clock", async () => {
         const clock = blueprint.entities.find(entity => (entity.player_description ?? "").startsWith("Clock for"))!;
         expect(deciderOf(clock).conditions[0]).toMatchObject({ first_signal: { name: "signal-clock" }, comparator: "<", constant: period });
         expect(Math.max(...conditionsOf(blueprint).flatMap(it => it.constant === undefined ? [] : [it.constant]))).toBe(period);
-        expect((clock.player_description ?? "").split("\n").at(-1)).toBe(`- Counts 1 to ${period}, never 0; stops at 1 while [virtual-signal=signal-lock] is on`);
+        expect((clock.player_description ?? "").split("\n")[0]).toContain(`Period ${period} ticks; counts 1–${period}`);
     });
 
     it("is, with no modulo and no fuel clock, a clock, the lock and a filter, like the example it follows", () => {
@@ -522,13 +480,13 @@ describe("the count of a clock", async () => {
         const filters = deciders(blueprint).filter(isFilter);
         const sourced = filters.map(filter => sources(filter).map(it => it.name === "arithmetic-combinator"
             ? `${it.name} ${(it.control_behavior as { arithmetic_conditions: { operation: string; second_constant: number } }).arithmetic_conditions.operation} ${(it.control_behavior as { arithmetic_conditions: { second_constant: number } }).arithmetic_conditions.second_constant}`
-            : (it.player_description ?? "").split(":")[0]));
+            : (it.player_description ?? "").split(". ")[0]));
         const arithmetic = blueprint.entities.filter(it => it.name === "arithmetic-combinator");
         const last_arithmetic = arithmetic.length === 0 ? null : arithmetic.reduce((last, it) => it.position.x > last.position.x ? it : last);
         const wired = (filter: Entity) => sources(filter).map(numberOf);
         if (last_arithmetic === null) {
             // a plain clock: the filter reads the clock
-            expect(sourced).toEqual([["Clock for [item=agricultural-science-pack]"]]);
+            expect(sourced).toEqual([["Clock for [item=agricultural-science-pack] 250/s over 5 copies (50/s each)"]]);
         } else if (blueprint === blueprints[1][1]) {
             // modulos of the one clock: the filter reads the last of them
             expect(filters.map(wired)).toEqual([[numberOf(last_arithmetic)]]);
@@ -537,8 +495,8 @@ describe("the count of a clock", async () => {
             // and each fuel clock is read by the filter after it
             const [main, ...fuel] = filters;
             expect(wired(main)).toEqual([numberOf(last_arithmetic)]);
-            expect(last_arithmetic.player_description).toContain("step 2 of 2");
-            fuel.forEach(filter => expect(sources(filter).map(it => (it.player_description ?? "").split(":")[0])).toEqual(["Fuel clock"]));
+            expect(last_arithmetic.player_description).toContain("the position in 1/");
+            fuel.forEach(filter => expect(sources(filter).map(it => it.player_description ?? "")).toEqual([expect.stringMatching(/^Part of the clock: do not wire or change\. Fuel clock: /)]));
             const green = networksOf(blueprint, false);
             const clock = blueprint.entities.find(it => (it.player_description ?? "").startsWith("Clock for"))!;
             expect(networkOf(green, main, 2).has(`${numberOf(clock)}:4`)).toBe(false);

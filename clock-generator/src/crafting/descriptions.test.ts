@@ -1,0 +1,117 @@
+import { describe, expect, it } from "vitest";
+import { fraction } from "../data-types/fraction";
+import { OpenRange } from "../data-types";
+import { SignalId } from "../blueprints/components";
+import { EntityId, ReadableEntityRegistry } from "../entities";
+import { clockDescriptionLines, deciderWindows, plannedDescriptionLines, shownPeriodTicks, unplannedDescriptionLines } from "./descriptions";
+import { InserterClock } from "./sequence/unplanned-inserter-clock";
+
+describe("the description of an enabling combinator", () => {
+    const machine = (id: number, recipe: string) => ({ entity_id: EntityId.forMachine(id), metadata: { recipe: { name: recipe } } });
+    const inserter = (id: number, source: EntityId, sink: EntityId) =>
+        ({ entity_id: EntityId.forInserter(id), source: { entity_id: source }, sink: { entity_id: sink } });
+    const belt = EntityId.forBelt(1);
+    const wagon = EntityId.forChest(1);
+    const chest = EntityId.forChest(2);
+    const entities = [
+        machine(1, "rocket-fuel-from-jelly"),
+        machine(2, "jellynut-processing"),
+        machine(3, "rocket-fuel-from-jelly"),
+        { entity_id: belt, prototype: "turbo-transport-belt" },
+        { entity_id: wagon, chest_type: "cargo-wagon" },
+        { entity_id: chest, chest_type: "buffer-chest" },
+        inserter(1, belt, EntityId.forMachine(1)),
+        inserter(2, EntityId.forMachine(1), belt),
+        inserter(3, belt, EntityId.forMachine(2)),
+        inserter(4, wagon, belt),
+        inserter(5, belt, EntityId.forMachine(3)),
+        inserter(6, chest, EntityId.forMachine(2)),
+        { entity_id: EntityId.forDrill(1), meta: { type: "big-mining-drill" }, sink_id: EntityId.forMachine(1) },
+    ];
+    const registry = {
+        getEntityById: (id: EntityId) => entities.find(entity => entity.entity_id.id === id.id) ?? null,
+    } as unknown as ReadableEntityRegistry;
+    const values = (ranges: OpenRange[]) => ranges.map(range => OpenRange.from(range.start_inclusive + 1, range.end_inclusive + 1));
+    const two_windows = deciderWindows([OpenRange.from(26, 38), OpenRange.from(71, 83)], values);
+    const planned = (ids: EntityId[], swings = fraction(2), windows = two_windows) =>
+        plannedDescriptionLines(ids, registry, ["jelly"], swings, windows, "144");
+
+    it("names both ends by their icons, the machine it fills with its recipe, and lists a few windows", () => {
+        expect(planned([EntityId.forInserter(4)])).toEqual([
+            "[entity=cargo-wagon] → [entity=turbo-transport-belt]  [item=jelly]  (inserter 4)",
+            "2 swings in 2 windows per 144-tick period: open 27–39, 72–84",
+        ]);
+    });
+
+    it("names a machine the config has no prototype for, and a plain chest, by their ids, a machine with its recipe", () => {
+        expect(planned([EntityId.forInserter(2)])[0])
+            .toBe("machine 1 [recipe=rocket-fuel-from-jelly] → [entity=turbo-transport-belt]  [item=jelly]  (inserter 2)");
+        expect(planned([EntityId.forInserter(6)])[0]).toBe("chest 2 → machine 2 [recipe=jellynut-processing]  [item=jelly]  (inserter 6)");
+    });
+
+    it("says once what the inserters of one combinator share, listing the machines that differ only by their ids", () => {
+        expect(planned([EntityId.forInserter(5), EntityId.forInserter(1)])).toEqual([
+            "2 inserters: [entity=turbo-transport-belt] → machines 1, 3 [recipe=rocket-fuel-from-jelly]  [item=jelly]  (1, 5)",
+            "2 swings each in 2 windows per 144-tick period: open 27–39, 72–84",
+        ]);
+    });
+
+    it("gives each route a line after the counts when the inserters of one combinator work with different machines", () => {
+        expect(planned([EntityId.forInserter(3), EntityId.forInserter(1)])).toEqual([
+            "2 inserters  [item=jelly]  (1, 3)",
+            "2 swings each in 2 windows per 144-tick period: open 27–39, 72–84",
+            "- 1: [entity=turbo-transport-belt] → machine 1 [recipe=rocket-fuel-from-jelly]",
+            "- 3: [entity=turbo-transport-belt] → machine 2 [recipe=jellynut-processing]",
+        ]);
+    });
+
+    it("gives a drill's items, not the plan's unit of 16, from the drill to the machine it fills", () => {
+        expect(planned([EntityId.forDrill(1)], fraction(15))[0]).toBe("[entity=big-mining-drill] [item=jelly] → machine 1 [recipe=rocket-fuel-from-jelly]  (drill 1)");
+        expect(planned([EntityId.forDrill(1)], fraction(15))[1]).toBe("Mines 240 in 2 windows per 144-tick period: open 27–39, 72–84");
+    });
+
+    it("gives a count that is not whole to 3 decimals, and one swing as one", () => {
+        expect(planned([EntityId.forInserter(4)], fraction(285, 2))[1]).toMatch(/^142\.5 swings in /);
+        expect(planned([EntityId.forInserter(4)], fraction(1))[1]).toMatch(/^1 swing in /);
+    });
+
+    it("lists no windows past three, nor repeating ones, and says what is unusual", () => {
+        const four = deciderWindows([0, 10, 20, 30].map(at => OpenRange.from(at, at + 2)), values);
+        expect(planned([EntityId.forInserter(4)], fraction(4), four)[1]).toBe("4 swings in 4 windows per 144-tick period");
+        const repeating = deciderWindows([OpenRange.from(0, 2)], values, { modulus: 48, signal: SignalId.virtual("signal-A") });
+        expect(planned([EntityId.forInserter(4)], fraction(3), repeating).slice(1)).toEqual([
+            "3 swings in 1 window per 144-tick period",
+            "Windows repeat every 48 ticks: [virtual-signal=signal-A] = clock mod 48",
+        ]);
+        const subtick = deciderWindows([OpenRange.from(0, 2)], values, undefined, 13);
+        expect(planned([EntityId.forInserter(4)], fraction(3), subtick)[2]).toBe("Reads the subtick clock: windows in 1/13 ticks");
+    });
+
+    it("gives a fuel and a by-product inserter their windows as the conditions read them", () => {
+        const fuel: InserterClock = { inserter_id: EntityId.forInserter(1), kind: "fuel", modulus: 192, own_clock: true, window: OpenRange.from(0, 7) };
+        expect(unplannedDescriptionLines([EntityId.forInserter(1)], registry, ["nutrients"], fuel, OpenRange.from(1, 8), null)).toEqual([
+            "Fuel: [entity=turbo-transport-belt] → machine 1 [recipe=rocket-fuel-from-jelly]  [item=nutrients]  (inserter 1)",
+            "Open [virtual-signal=signal-clock] 1–8 of the fuel clock, once every 192 ticks; does not swing while the fuel slot is full",
+        ]);
+        const by_product: InserterClock = { inserter_id: EntityId.forInserter(2), kind: "by-product", modulus: 32, own_clock: false, window: OpenRange.from(6, 10) };
+        expect(unplannedDescriptionLines([EntityId.forInserter(2)], registry, ["jellynut-seed"], by_product, OpenRange.from(7, 11), SignalId.clock)).toEqual([
+            "By-product: machine 1 [recipe=rocket-fuel-from-jelly] → [entity=turbo-transport-belt]  [item=jellynut-seed]  (inserter 2)",
+            "Clears it: open [virtual-signal=signal-clock] 7–11 of every 32 ticks; outside the main plan",
+        ]);
+    });
+});
+
+describe("the description of the clock", () => {
+    it("gives the rate of every copy and of one, and how to wire the rest", () => {
+        expect(clockDescriptionLines({ item_name: "iron-plate", items_per_second: 120, copies: 7, period_text: "Period 336 ticks; counts 1–336", drills: true })).toEqual([
+            "Clock for [item=iron-plate] 120/s over 7 copies (17.143/s each). Period 336 ticks; counts 1–336",
+            "Wire every other combinator's output to the inserters and drills it names, in every copy; set them Enable if Anything > 0",
+        ]);
+    });
+
+    it("gives the period of a clock of whole ticks of a fractional period as the ticks it counts", () => {
+        expect(shownPeriodTicks(82.28571428571429, false)).toBe("82");
+        expect(shownPeriodTicks(886.1538461538462, true)).toBe("886.154");
+        expect(shownPeriodTicks(72, false)).toBe("72");
+    });
+});

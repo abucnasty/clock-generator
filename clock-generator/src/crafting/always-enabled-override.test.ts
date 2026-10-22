@@ -13,11 +13,9 @@ const alwaysEnabled = (config: Config): string[] => config.inserters
     .filter(it => it.mode === "ALWAYS")
     .map(it => it.id);
 
-/** The inserters each combinator of the blueprint names, e.g. "Inserters 1, 2, 9, 10 for ..." */
-const inserterCombinators = (result: BlueprintGenerationResult): number[][] => result.blueprint.entities
-    .map(entity => /^Inserters? ([\d, ]+) /.exec(entity.player_description ?? ""))
-    .filter(match => match !== null)
-    .map(match => match[1].split(", ").map(Number));
+/** The inserters each combinator of the blueprint switches on, from its schedule */
+const inserterCombinators = (result: BlueprintGenerationResult): number[][] =>
+    result.schedule.inserter_combinators.map(combinator => combinator.inserter_ids.slice().sort((a, b) => a - b));
 
 // GOALS.md: an inserter that is set to "always" enabled is to get no combinator in the blueprint
 describe("an inserter the config sets to always enabled", () => {
@@ -61,7 +59,7 @@ describe("an inserter the config sets to always enabled", () => {
         const result = generateClockForConfig(config, { logger: quiet, verify_as_built: true });
         expect(Object.keys(result.unplanned_inserter_clocks ?? {})).toEqual([]);
         expect(Object.keys(result.clock_windows)).not.toContain("inserter:3");
-        expect(result.blueprint.entities.filter(entity => (entity.player_description ?? "").startsWith("Fuel clock"))).toHaveLength(0);
+        expect(result.blueprint.entities.filter(entity => (entity.player_description ?? "").includes("Fuel clock:"))).toHaveLength(0);
         expect(result.stability_check.as_built?.holds).toBe(true);
     });
 

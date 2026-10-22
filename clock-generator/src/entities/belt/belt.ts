@@ -19,6 +19,8 @@ export interface Belt extends Entity{
     readonly lanes: readonly Lane[]
     readonly belt_speed: BeltSpeed
     readonly strategy: BeltStrategy
+    /** The belt's prototype name from the config ("turbo-transport-belt"), for labels; absent for a belt built in code */
+    readonly prototype?: string
 }
 
 export const BeltSpeed = {
@@ -150,8 +152,14 @@ export class BeltBuilder {
     private belt_speed?: BeltSpeed;
     private strategy: BeltStrategy = BeltStrategy.NORMAL;
     private id?: EntityId;
+    private prototype?: string;
 
     constructor() { }
+
+    setPrototype(prototype: string): BeltBuilder {
+        this.prototype = prototype;
+        return this;
+    }
 
     setId(id: number): BeltBuilder {
         this.id = EntityId.forBelt(id);
@@ -184,12 +192,13 @@ export class BeltBuilder {
             lanes: this.lanes,
             belt_speed: this.belt_speed!,
             strategy: this.strategy,
+            ...(this.prototype !== undefined ? { prototype: this.prototype } : {}),
         };
     }
 }
 
 function fromConfig(config: BeltConfig): Belt {
-    const builder = new BeltBuilder().setId(config.id).setStrategy(config.strategy ?? BeltStrategy.NORMAL)
+    const builder = new BeltBuilder().setId(config.id).setStrategy(config.strategy ?? BeltStrategy.NORMAL).setPrototype(config.type)
 
     switch(config.type) {
         case "express-transport-belt":
