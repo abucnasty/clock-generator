@@ -27,6 +27,11 @@ export const NOT_SUPPORTED_YET: Readonly<Record<string, string>> = {
     "lab": "labs are not modelled: they consume no recipe",
 };
 
+/** The refusal of a build whose target product passes through more than one container on its way out */
+export const CONTAINER_OUTPUT_PATH_REFUSAL = "the target product passes through more than one container on its way out of the build, "
+    + "which is not modelled yet (roadmap milestone M2, containers): the generator models a product taken out of the machine "
+    + "that makes it, or out of the one container that machine's inserters put it into";
+
 /**
  * What the generator leaves out on purpose, not on the roadmap. A config or capture naming one of these is refused
  * with the reason, never modelled as the nearest thing the generator does support.
