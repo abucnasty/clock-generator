@@ -72,6 +72,15 @@ Fluids are not cut, as the simulator leaves them out. The harness has no setting
 
 The trials do not catch the clock that led to this rule. The advanced circuit clock with windows of 4 ticks gets back from all 48 of its trials in the simulator, and made 608 and 624 of 704 in the game. That is a known gap. From the staged start the check of 12 start phases does fail that clock, at the start phase 88 (544 of 704), so the clock is no longer taken for one that meets goal 1; the loss trials are only run on clocks that hold, and still do not see it. The trials are not to be changed until they fail that one clock: a check that is tuned to a build is no longer a check for any build.
 
+### What a stable verdict proves
+
+A clock called stable is proven only where its check reports `long_run_proven` or `start_phases_proven` (#258), and then only under the simulator's mechanics. Everywhere else the verdict rests on a sample. The lane phases, the loss grid and the start-dependence starts described above are samples too.
+
+**Sampled, not proven:**
+- The default start phases are a sample; every phase is checked only with `CLOCK_PROOF_PHASES=1`.
+- Long runs that never repeat, such as agricultural science and metallurgic science's fractional period.
+- The order of competing takers was recorded on one scaffold; that config ids follow the game's update order is assumed.
+
 ## Active Inserter Windows
 
 An active inserter window is defined as a period where an inserter receives a signal from a decider combinator telling it to be enabled. During that window it has the ability to actively do work and transfer materials from a source to a sink.
