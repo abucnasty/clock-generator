@@ -1,5 +1,7 @@
 # Mining drills at a low research level
 
+The drill's mechanics and how the simulator models them are on [the drills page](../../../../docs/drills.md).
+
 `drills.game.test.ts` records 17 builds of a big mining drill in the game, unclocked, at a research level the probe
 ([probe.lua](probe.lua)) sets by script in the harness's copy of the save: mining productivity 1 and 2 researched and 3
 at level 8, 28 or 45 (7, 27 or 44 levels, +70% to +440%), or none of them (+0%). With 4 legendary speed modules 3 its bar

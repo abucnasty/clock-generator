@@ -27,6 +27,7 @@ export { AutomatedInsertionLimit } from "./entities/machine/input/automated-inse
  * to the limit + 64, and was observed to stop at 114 items at the least, the stack of stone + 64. The function takes
  * the stack where the limit is below it. Cases: `rules-of-the-game.test.ts`, the game's stops of the drills mechanics
  * family (114 on rail, 214 on landfill) and the stone brick sample, whose furnaces have a limit above the stack.
+ * The drill's mechanics as a whole: docs/drills.md.
  */
 export { miningDrillMaxInsertion } from "./entities/drill/mining-drill-ext";
 
@@ -129,7 +130,7 @@ export { RocketSiloInventoryState } from "./state/rocket-silo-inventory";
 export { DrillChestWorkingMode } from "./control-logic/drill/modes/chest-working-mode";
 
 /**
- * 17. A mining drill's progress (docs/simulator.md "Mining drills"): each tick an enabled drill first drops what it
+ * 17. A mining drill's progress (docs/drills.md): each tick an enabled drill first drops what it
  * holds (into a machine up to its limit, 3; into a chest by 16); while it still holds anything it waits, its bars
  * still; else it mines: its mining bar moves by its crafting rate a tick, its bonus bar by that times its mining
  * productivity (10% a level researched), a wrap of either is an item, and what it mines is dropped in the next tick.
