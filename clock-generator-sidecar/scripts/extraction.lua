@@ -109,7 +109,10 @@ local function extract_vehicle_or_silo_data(entity)
         }
     end
     local index = entity.type == "car" and defines.inventory.car_trunk or defines.inventory.cargo_wagon
-    local filters, contents = slots_of(entity.get_inventory(index))
+    -- Its slot filters are part of the build; its contents are not exported (owner, 2026-10-21), as a silo's: they are a
+    -- snapshot of a running build, so the build starts empty
+    local filters = slots_of(entity.get_inventory(index))
+    local contents = {}
     return {
         -- the car's and the tank's prototype names are their chest types
         chest_type = entity.type == "car" and entity.name or "cargo-wagon",
