@@ -75,7 +75,7 @@ it('keeps the shared editor focused on controls without repeating the category e
 
 it('normalizes omitted filters and strips empty UI slots without losing the disposal switch', () => {
     const parsed = ConfigSchema.parse({ ...config, chests: [{ id: 1, type: 'infinity-chest', remove_unfiltered_items: true }] });
-    expect(parsed.chests![0].item_filter).toEqual([]);
+    expect((parsed.chests![0] as { item_filter: unknown }).item_filter).toEqual([]);
     const form = configToFormData(parsed);
     form.chests[0] = { ...form.chests[0], type: 'infinity-chest', item_filter: [{ item_name: '', request_count: 1 }] };
     expect(formDataToConfig(form).chests![0]).toEqual({ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true });

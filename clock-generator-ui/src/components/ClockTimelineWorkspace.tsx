@@ -16,6 +16,7 @@ import { TimelinePauses } from './TimelinePauses';
 import { EntitySelector } from './EntitySelector';
 import { entitySelectorKey, type EntitySelectorOption } from '../utils/entitySelector';
 import { configToFormData } from '../utils/configForm/configMapping';
+import { chestConfigItems } from '../utils/configForm/formData';
 import { entityOptionsOf } from '../utils/inserterOptions';
 import { entityLabel } from '../utils/entityLabel';
 import { craftingCycles, craftingCycleAt, craftingCycleIndex, craftingCycleRange } from '../utils/craftingCycles';
@@ -50,7 +51,7 @@ function entityOptions(config: Config | null | undefined, clock: ClockAlternativ
     });
     for (const machine of config?.machines ?? []) entities.set(`machine:${machine.id}`, { ...entities.get(`machine:${machine.id}`), id: `machine:${machine.id}`, type: 'machine', recipe: machine.recipe, items: entities.get(`machine:${machine.id}`)?.items ?? [], signals: [] });
     for (const belt of config?.belts ?? []) entities.set(`belt:${belt.id}`, { id: `belt:${belt.id}`, type: 'belt', items: belt.lanes.map(lane => lane.ingredient), signals: [] });
-    for (const chest of config?.chests ?? []) entities.set(`chest:${chest.id}`, { id: `chest:${chest.id}`, type: 'chest', items: typeof chest.item_filter === 'string' ? [chest.item_filter] : chest.item_filter.map(filter => filter.item_name), signals: [] });
+    for (const chest of config?.chests ?? []) entities.set(`chest:${chest.id}`, { id: `chest:${chest.id}`, type: 'chest', items: chestConfigItems(chest), signals: [] });
     for (const [index, inserter] of (config?.inserters ?? []).entries()) {
         const id = `inserter:${inserter.id ?? index + 1}`;
         if (!entities.has(id)) entities.set(id, { id, type: 'inserter', source: `${inserter.source.type}:${inserter.source.id}`, sink: `${inserter.sink.type}:${inserter.sink.id}`, items: inserter.filters ?? [], signals: [] });

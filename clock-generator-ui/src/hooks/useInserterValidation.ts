@@ -14,7 +14,9 @@ function coverageKey(config: Config): string {
         machines: config.machines.map(({ id, recipe, type, fuel, productivity }) => [id, recipe, type, fuel, productivity]),
         belts: config.belts.map(({ id, type, lanes }) => [id, type, lanes.map(lane => [lane.ingredient, lane.stack_size,
             'consumption_per_second' in lane ? lane.consumption_per_second : null])]),
-        chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter : [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]]),
+        chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter
+            : chest.type === 'infinity-chest' ? [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]
+                : [chest.contents ?? [], 'slot_filters' in chest ? chest.slot_filters ?? [] : []]]),
         inserters: config.inserters.map(({ id, source, sink, filters, filter_mode, prototype, quality, stack_size }) =>
             [id, source.type, source.id, sink.type, sink.id, sink.type === 'belt' ? sink.drop?.lane : null, filters, filter_mode, prototype, quality, stack_size,
                 source.type === 'belt' && source.pickup_capture?.status === 'unsupported' ? source.pickup_capture.reason : null]),

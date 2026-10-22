@@ -24,7 +24,8 @@ import type {
     InserterFormData,
     MachineFormData,
 } from '../hooks/useConfigForm';
-import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
+import { isBufferChest, isContainerChest, isInfinityChest } from '../hooks/useConfigForm';
+import type { BufferChestFormData } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES } from '../utils/a11yLabels';
@@ -256,7 +257,10 @@ export function EntityEditDialog({
             case 'drill': return changedFields(draft as DrillFormData, entity as DrillFormData, DRILL_FIELDS);
             case 'chest': {
                 const chest = (value: ChestFormData) => ({ ...value, remove_unfiltered_items: isInfinityChest(value) ? value.remove_unfiltered_items : undefined, storage_size: isBufferChest(value) ? value.storage_size : undefined });
-                return changedFields(chest(draft as ChestFormData), chest(entity as ChestFormData), CHEST_FIELDS);
+                // a car, a tank, a wagon or a silo has no fields the dialog edits yet
+                if (isContainerChest(draft as ChestFormData)) return {};
+                type Fields = Record<(typeof CHEST_FIELDS)[number], unknown>;
+                return changedFields(chest(draft as ChestFormData) as unknown as Fields, chest(entity as ChestFormData) as unknown as Fields, CHEST_FIELDS) as Partial<BufferChestFormData>;
             }
             default: return {};
         }
