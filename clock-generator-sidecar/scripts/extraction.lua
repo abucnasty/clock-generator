@@ -66,16 +66,24 @@ local function is_chest_entity(entity)
         t == "car" or t == "cargo-wagon" or t == "rocket-silo"
 end
 
----The slots of an inventory: the filter of each filtered slot and the contents of each slot that holds something
+---The game's filters that block a slot: no item may go into it
+local BLOCKING_FILTERS = { ["no-item"] = true, ["deconstruction-planner"] = true }
+
+---The slots of an inventory: the filter of each filtered slot (blocked for the game's blocking filters) and the
+---contents of each slot that holds something
 ---@param inventory LuaInventory
----@return {slot: number, item: string}[] filters, {slot: number, item: string, count: number}[] contents
+---@return ({slot: number, item: string}|{slot: number, blocked: true})[] filters, {slot: number, item: string, count: number}[] contents
 local function slots_of(inventory)
     local filters, contents = {}, {}
     for slot = 1, #inventory do
         local filter = inventory.supports_filters() and inventory.get_filter(slot) or nil
         if filter then
-            -- Keep no-item and deconstruction-planner too: they reserve slots that inserters cannot fill.
-            table.insert(filters, { slot = slot, item = type(filter) == "table" and filter.name or filter })
+            local name = type(filter) == "table" and filter.name or filter
+            if BLOCKING_FILTERS[name] then
+                table.insert(filters, { slot = slot, blocked = true })
+            else
+                table.insert(filters, { slot = slot, item = name })
+            end
         end
         local stack = inventory[slot]
         if stack.valid_for_read then

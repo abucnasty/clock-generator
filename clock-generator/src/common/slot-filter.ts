@@ -1,6 +1,4 @@
-/** These inventory filters reserve a slot that inserters cannot use. Keep their original names in config exports. */
-export const BLOCKED_SLOT_FILTERS = ['no-item', 'deconstruction-planner'] as const;
+/** A slot's filter in the simulation: the only item it takes, null for a free slot, or BLOCKED_SLOT for none at all */
+export const BLOCKED_SLOT: unique symbol = Symbol("blocked slot");
 
-export function isBlockedSlotFilter(item: string | null | undefined): boolean {
-    return item === 'no-item' || item === 'deconstruction-planner';
-}
+export type SlotFilter = string | null | typeof BLOCKED_SLOT;

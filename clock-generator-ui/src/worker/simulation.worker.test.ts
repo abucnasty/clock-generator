@@ -10,7 +10,7 @@ import { buildValidationIssues } from '../utils/buildValidation';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
-it('keeps blocked container slots through Sidecar paste, save/reload and engine validation', async () => {
+it.each(['blocked', 'markers'] as const)('keeps blocked container slots through Sidecar paste (%s), save/reload and engine validation', async spelling => {
     vi.resetModules();
     const posted: WorkerResponse[] = [];
     const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
@@ -18,7 +18,9 @@ it('keeps blocked container slots through Sidecar paste, save/reload and engine 
     await import('./simulation.worker');
     const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
     await send({ type: 'initialize', factorioData });
-    const slot_filters = [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, item: i % 2 ? 'no-item' : 'deconstruction-planner' }))];
+    // Sidecar exports both game markers as blocked slots; an export of the 0.20.0 drafts named the marker as the item
+    const slot_filters = [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => spelling === 'blocked'
+        ? { slot: i + 2, blocked: true } : { slot: i + 2, item: i % 2 ? 'no-item' : 'deconstruction-planner' })];
     const result = await send({ type: 'query', requestId: 200, query: {
         kind: 'pasted-entities', sidecar_version: '0.12.0', suggested_target: undefined, drills: [], belts: [],
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
@@ -38,7 +40,8 @@ it('keeps blocked container slots through Sidecar paste, save/reload and engine 
     const form = applyPaste(createDefaultConfig(), pasted, { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
     const config = formDataToConfig(readSavedConfig(serializeConfig(form))!);
     config.target_output = { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
-    expect(config.chests![0]).toMatchObject({ type: 'car', slot_filters });
+    expect(config.chests![0]).toEqual({ id: 1, type: 'car',
+        slot_filters: [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, blocked: true }))] });
     expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
 });
 
