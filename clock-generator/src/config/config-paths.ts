@@ -69,6 +69,8 @@ export const ConfigPaths = {
     REAL_ATLAN_CELL29: path.join(CONFIG_SAMPLES_DIR, 'real', 'atlan', 'cell29', 'atlan-cell29.json'),
     /** The owner's lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */
     REAL_OWNER_LITHIUM_SILO: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'lithium-silo', 'lithium-silo.json'),
+    /** The owner's iron plate build, 80 a second: a big mining drill drops ore into a car, which two furnaces empty */
+    REAL_OWNER_CAR: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'car', 'car.json'),
 } as const;
 
 /** A sample kept to be refused: why it is kept, and the error generating a clock from it must fail with */
