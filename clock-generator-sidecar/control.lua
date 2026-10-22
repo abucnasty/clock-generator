@@ -74,7 +74,8 @@ local function on_gui_click(event)
             local result = player_data.extraction_result
             if #result.machines > 0 or #result.drills > 0 or #result.inserters > 0 or #result.belts > 0 or #result.chests > 0 then
                 local json = export.to_json(result)
-                gui.create_copy_popup(player, json, export.left_out_inserters(result), export.to_table(result).pickup_warnings)
+                gui.create_copy_popup(player, json, export.left_out_inserters(result), export.to_table(result).pickup_warnings,
+                    export.left_out_drills(result))
             else
                 player.print("[Clock Generator Sidecar] No data found. Please select entities first.")
             end

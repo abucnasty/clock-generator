@@ -2,6 +2,9 @@
 Version: 0.12.0
   Features:
     - exports cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, the slot filters of a car, tank or wagon, and a silo's recipe quality, crafting speed and productivity. They are exported empty, whatever they hold when selected
+    - exports a mining drill that drops into a chest, a car, a tank, a cargo wagon or a rocket silo
+  Bugfixes:
+    - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.0
 Date: 2026-10-21
