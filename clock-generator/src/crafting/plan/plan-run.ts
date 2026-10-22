@@ -1282,6 +1282,7 @@ export function exportClock(
             target_production_rate.machine_production_rate.item,
             crafting_cycle_plan,
             duration,
+            recipe_lcm,
             InventoryTransferHistory.removeDuplicateEntities(new InventoryTransferHistory(new Map(
                 Array.from(clocked.entries()).map(([key, ranges]) => [
                     entity_ids.get(key)!,

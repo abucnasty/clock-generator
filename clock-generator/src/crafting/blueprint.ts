@@ -452,6 +452,8 @@ export function createSignalPerInserterBlueprint(
     final_output_item_name: string,
     cycle: CraftingCyclePlan,
     total_duration: Duration,
+    /** The whole number of crafting cycles the period is made of (the recipe LCM), which the swings of a cycle are multiplied by */
+    cycles_in_period: number,
     history: InventoryTransferHistory,
     entityRegistry: ReadableEntityRegistry,
     subtick_clock?: SubtickClock,
@@ -619,7 +621,7 @@ export function createSignalPerInserterBlueprint(
             entityId,
             entityRegistry,
             cycle,
-            total_duration.ticks / cycle.total_duration.ticks,
+            cycles_in_period,
             Position.fromXY(x, 0),
             subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRangesInPeriod,
             split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
