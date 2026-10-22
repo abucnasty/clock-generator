@@ -5,6 +5,7 @@ import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator } from "../mode";
 import { DrillDisabledMode } from "./modes/disabled-mode";
 import { DrillMode } from "./modes/drill-mode";
 import { DrillWorkingMode } from "./modes/working-mode";
+import { DrillChestWorkingMode } from "./modes/chest-working-mode";
 import { DrillDisabledModeTransitionEvaluator } from "./transitions/disabled-mode-transition-evaluator";
 import { DrillWorkingModeTransitionEvaluator } from "./transitions/working-mode-transition-evaluator";
 
@@ -31,7 +32,10 @@ function create(args: {
 }): DrillStateMachine {
     const { drill_state, initial_mode_status = DrillStatus.WORKING, sink_state, enable_control = AlwaysEnabledControl, plugins } = args;
 
-    const working_mode = new DrillWorkingMode(drill_state, sink_state);
+    // a drill into a chest drops by the chest's rules; into a machine, by the machine's insertion limit
+    const working_mode = EntityState.isChest(sink_state)
+        ? new DrillChestWorkingMode(drill_state, sink_state)
+        : new DrillWorkingMode(drill_state, sink_state);
     const disabled_mode = new DrillDisabledMode();
 
 

@@ -7,9 +7,10 @@ import { MachineStateMachine } from "../../control-logic/machine/machine-state-m
 import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
+import { FactorioDataService } from "../../data";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { MiningProductivity } from "../../entities/drill/mining-productivity";
-import { assertIsMachineState, DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, MachineState, WritableEntityStateRegistry } from "../../state";
+import { DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
 import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
@@ -167,6 +168,12 @@ function itemsPutInto(config: Config, chest_id: number, entity_registry: EntityR
             else if (chest !== undefined) (chest.contents ?? []).forEach(content => items.add(content.item));
         }
     }
+    // a drill that drops into the chest puts in what it mines
+    for (const drill of config.drills?.configs ?? []) {
+        if (drill.target.type === "chest" && drill.target.id === chest_id) {
+            items.add(FactorioDataService.getResourceOrThrow(drill.mined_item_name).minable.result);
+        }
+    }
     return Array.from(items);
 }
 
@@ -257,7 +264,7 @@ export function cloneSimulationContextWithInterceptors(
     context: SimulationContext,
     interceptors: {
         inserter?: InserterInterceptor,
-        drill?: (drill_state: DrillState, sink_state: MachineState) => EnableControl,
+        drill?: (drill_state: DrillState, sink_state: EntityState) => EnableControl,
     } = {}
 ): SimulationContext {
 
@@ -287,7 +294,6 @@ export function cloneSimulationContextWithInterceptors(
     if (interceptors.drill) {
         new_drills = context.drills.map(drill_state_machine => {
             const sink_state = entity_state_registry.getStateByEntityIdOrThrow(drill_state_machine.drill_state.drill.sink_id);
-            assertIsMachineState(sink_state);
             const enable_control = interceptors.drill!(drill_state_machine.drill_state, sink_state);
             return DrillStateMachine.create({
                 drill_state: drill_state_machine.drill_state,

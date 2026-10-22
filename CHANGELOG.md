@@ -12,6 +12,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Added
 - Cars, tanks, cargo wagons and rocket silos can be chests, with mixed items, filtered slots and wagon slots by quality; a silo fills its rocket by weight. The web form adds and edits them, and Sidecar 0.12.0 exports them.
+- A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo. Sidecar 0.12.0 exports it, and the web form shows its chest.
 
 ## [0.19.0] - 2026-10-21
 
