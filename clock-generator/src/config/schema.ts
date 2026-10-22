@@ -532,7 +532,7 @@ const storageSizeRefused = z.custom<never>(() => false, {
 const SlotFilterConfigSchema = z.object({
     /** The slot, from 1 */
     slot: z.number().int().positive(),
-    /** The only item the slot takes */
+    /** The only item the slot takes; no-item or deconstruction-planner blocks the slot */
     item: z.string().min(1),
 });
 

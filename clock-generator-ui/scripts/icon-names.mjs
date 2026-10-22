@@ -74,7 +74,8 @@ function sourceNames(known) {
 export function iconNames() {
     const data = JSON.parse(readFileSync(FACTORIO_DATA_FILE, 'utf8'));
     const names = dataNames(data);
-    const required = [...sourceNames(names), ...Object.keys(data['mining-drill']), ...minedNames(data)];
+    // FactorioIcon renders the No item marker as an inline SVG, so it needs no PNG asset.
+    const required = [...sourceNames(names), ...Object.keys(data['mining-drill']), ...minedNames(data)].filter(name => name !== 'no-item');
     return {
         requested: new Set([...names].map(iconFileName)),
         required: new Set(required.map(iconFileName)),

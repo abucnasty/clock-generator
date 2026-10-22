@@ -30,6 +30,14 @@ function build(type: 'car' | 'tank' | 'cargo-wagon' | 'rocket-silo' = 'rocket-si
 }
 
 describe('automatic filters through containers', () => {
+    it('never advertises blocking markers as available items or automatic filters', () => {
+        const form = build('car');
+        const chest = form.chests[0];
+        if (chest.type !== 'car') throw new Error('not a car');
+        chest.slot_filters = [{ slot: 1, item: 'no-item' }, { slot: 2, item: 'deconstruction-planner' }];
+        expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo)).toEqual([]);
+        expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo, form.inserters)).toEqual(['lithium']);
+    });
     it.each(['car', 'tank', 'cargo-wagon', 'rocket-silo'] as const)('follows incoming supply through an empty %s', type => {
         const form = build(type);
         expect(inferInserterItems(form.inserters[1], form.machines, form.belts, form.chests, recipeInfo, form.inserters)).toEqual(['lithium']);

@@ -10,7 +10,40 @@ import { buildValidationIssues } from '../utils/buildValidation';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
+it('keeps blocked container slots through Sidecar paste, save/reload and engine validation', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    const slot_filters = [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, item: i % 2 ? 'no-item' : 'deconstruction-planner' }))];
+    const result = await send({ type: 'query', requestId: 200, query: {
+        kind: 'pasted-entities', sidecar_version: '0.12.0', suggested_target: undefined, drills: [], belts: [],
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
+        chests: [
+            { id: 1, type: 'car', slot_filters },
+            { id: 2, type: 'infinity-chest', item_filter: [{ item_name: 'iron-plate', request_count: 200 }] },
+            { id: 3, type: 'infinity-chest', remove_unfiltered_items: true },
+        ],
+        inserters: [
+            { id: 1, source: { type: 'chest', id: 2 }, sink: { type: 'chest', id: 1 }, prototype: 'stack-inserter', quality: 'legendary' },
+            { id: 2, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary' },
+            { id: 3, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 3 }, prototype: 'stack-inserter', quality: 'legendary' },
+        ],
+    } });
+    expect(result.type).toBe('answer');
+    const pasted = (result as { answer: PastedEntities }).answer;
+    const form = applyPaste(createDefaultConfig(), pasted, { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
+    const config = formDataToConfig(readSavedConfig(serializeConfig(form))!);
+    config.target_output = { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
+    expect(config.chests![0]).toMatchObject({ type: 'car', slot_filters });
+    expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
+});
+
 it('uses the real engine for typed Check/generation recovery and recomputed conversion, separating planning refusal from query failure', async () => {
+    vi.resetModules();
     const posted: WorkerResponse[] = [];
     const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
     vi.stubGlobal('self', port);

@@ -1,4 +1,5 @@
-import { ContentCopy, DeleteOutline, FilterAlt } from '@mui/icons-material';
+import { Block, ContentCopy, DeleteOutline, FilterAlt } from '@mui/icons-material';
+import { BLOCKED_SLOT_FILTERS, isBlockedSlotFilter } from 'clock-generator/light';
 import { Box, Button, ButtonBase, Tooltip, Typography } from '@mui/material';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useGameNames } from '../hooks/useGameNames';
@@ -24,6 +25,8 @@ const NO_FILTERS: SlotFilterFormData[] = [];
 export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
     const filters = chest.slot_filters ?? NO_FILTERS;
     const count = containerSlotCount(chest);
+    const filterOptions = [...new Set([...BLOCKED_SLOT_FILTERS, ...itemNames])];
+    const blockPriority = { label: 'Block slots', ids: [...BLOCKED_SLOT_FILTERS] };
     const name = entityLabel('chest', chest.id);
     const { itemLabel } = useGameNames();
     const announce = useAnnounce();
@@ -40,6 +43,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
     const bySlot = new Map(visibleFilters.map(filter => [filter.slot, filter.item]));
     const outside = filters.filter(filter => filter.slot < 1 || filter.slot > count || !Number.isInteger(filter.slot));
     const filled = Array.from({ length: count }, (_, i) => i + 1).filter(slot => bySlot.get(slot));
+    const blocked = filled.filter(slot => isBlockedSlotFilter(bySlot.get(slot))).length;
     const currentSlot = Math.min(focusSlot, count);
     const rowStart = Math.floor((currentSlot - 1) / columns) * columns + 1;
 
@@ -90,19 +94,26 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
         containerType: 'inline-size', containerName: 'inventory-filters' }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 1 }}>
             <Typography variant="subtitle2">Filtered slots</Typography>
-            <Typography variant="caption" color="text.secondary">{filled.length} / {count} filtered · Other slots accept any item</Typography>
+            <Typography variant="caption" color="text.secondary">{filled.length} / {count} filtered{blocked > 0 ? ` · ${blocked} blocked` : ''} · Unfiltered slots accept any item</Typography>
         </Box>
         <Typography id={helpId} variant="caption" color="text.secondary">
             Choose an item, then click or drag across slots. Shift + right-click copies; Shift + click pastes. Right-click or Delete clears.
         </Typography>
+        <Typography variant="caption" color="text.secondary">
+            No item and Deconstruction planner block a slot so inserters cannot fill it.
+        </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
-            <ItemSelector value={brush} options={itemNames} label="Filter item" inputAriaLabel={`Filter item, ${name}`}
+            <ItemSelector value={brush} options={filterOptions} priority={blockPriority} label="Filter item" inputAriaLabel={`Filter item, ${name}`}
                 onChange={setBrush} minWidth={0} sx={{ flex: '1 1 180px', maxWidth: 300, minWidth: 0 }} />
             <Button size="small" color="inherit" disabled={!brush} onClick={() => paint(slotRange(rowStart, Math.min(rowStart + columns - 1, count)))}>
                 Fill row {Math.floor((currentSlot - 1) / columns) + 1}
             </Button>
             <Button size="small" color="inherit" disabled={!brush || filled.length === count}
                 onClick={() => paint(slotRange(1, count).filter(slot => !bySlot.get(slot)))}>Fill unfiltered slots</Button>
+            <Button size="small" color="inherit" startIcon={<Block />} disabled={filled.length === count}
+                onClick={() => paint(slotRange(1, count).filter(slot => !bySlot.get(slot)), isBlockedSlotFilter(brush) ? brush : BLOCKED_SLOT_FILTERS[0])}>
+                Block unfiltered slots
+            </Button>
             <Button size="small" color="inherit" startIcon={<DeleteOutline />} disabled={filters.length === 0}
                 onClick={() => { onChange([]); announce(`Cleared all slot filters, ${name}.`); }}>Clear filters</Button>
         </Box>
@@ -114,11 +125,13 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
             {Array.from({ length: count }, (_, index) => {
                 const slot = index + 1;
                 const item = bySlot.get(slot);
+                const isBlocked = isBlockedSlotFilter(item);
+                const description = isBlocked ? `Blocked (${itemLabel(item!)})` : item ? `${itemLabel(item)} filter` : 'Unfiltered';
                 const base = insetSlotSx({ open: picker?.slot === slot || Boolean(stroke && slot >= Math.min(stroke.from, stroke.to) && slot <= Math.max(stroke.from, stroke.to)) });
                 return <Tooltip key={slot} disableInteractive enterDelay={600} disableHoverListener={Boolean(stroke)}
-                    title={`Slot ${slot}: ${item ? `${itemLabel(item)} only` : 'Any item'}. Shift + right-click to copy; right-click to clear.`}>
+                    title={`Slot ${slot}: ${isBlocked ? `${itemLabel(item!)} blocks this slot; inserters cannot fill it` : item ? `${itemLabel(item)} only` : 'Any item'}. Shift + right-click to copy; right-click to clear.`}>
                     <ButtonBase ref={element => { buttons.current[index] = element; }}
-                        aria-label={`Slot ${slot}: ${item ? `${itemLabel(item)} filter` : 'Unfiltered'}`}
+                        aria-label={`Slot ${slot}: ${description}`}
                         aria-haspopup={!brush ? 'dialog' : undefined} aria-keyshortcuts="Control+c Meta+c Control+v Meta+v Delete"
                         tabIndex={slot === currentSlot ? 0 : -1} onFocus={() => setFocusSlot(slot)}
                         onPointerDown={event => {
@@ -152,7 +165,11 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
                         sx={[...(Array.isArray(base) ? base : [base]), { width: '100%', height: 'auto', aspectRatio: '1', touchAction: 'pan-y',
                             userSelect: 'none', bgcolor: item ? 'action.selected' : undefined,
                             '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'text.primary', outlineOffset: 1, zIndex: 1 } }]}>
-                        {item && <><FactorioIcon name={item} size={24} alt="" /><FilterAlt aria-hidden sx={{ position: 'absolute', top: 1, left: 1, fontSize: 10, color: 'text.secondary' }} /></>}
+                        {item && <>
+                            <FactorioIcon name={item} size={24} alt="" />
+                            {isBlocked && item !== BLOCKED_SLOT_FILTERS[0] && <Block aria-hidden sx={{ position: 'absolute', top: 1, left: 1, fontSize: 10, color: 'text.secondary' }} />}
+                            {!isBlocked && <FilterAlt aria-hidden sx={{ position: 'absolute', top: 1, left: 1, fontSize: 10, color: 'text.secondary' }} />}
+                        </>}
                         <Box component="span" aria-hidden sx={{ position: 'absolute', bottom: 0, right: 2, fontSize: 9, lineHeight: 1.2, color: 'text.secondary' }}>{slot}</Box>
                     </ButtonBase>
                 </Tooltip>;
@@ -169,7 +186,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
             </Box>)}
         </Box>}
         {picker && <FilterItemPicker anchor={picker.anchor} label={`Choose a slot filter, ${name}`} initialItem={bySlot.get(picker.slot)}
-            itemNames={itemNames} onClose={() => setPicker(null)} onClear={bySlot.get(picker.slot) ? () => { paint([picker.slot], null); setPicker(null); } : undefined}
+            itemNames={filterOptions} priority={blockPriority} onClose={() => setPicker(null)} onClear={bySlot.get(picker.slot) ? () => { paint([picker.slot], null); setPicker(null); } : undefined}
             onApply={item => { setBrush(item); paint([picker.slot], item); setPicker(null); }} />}
     </Box>;
 }

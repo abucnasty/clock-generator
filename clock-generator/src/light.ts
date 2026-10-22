@@ -8,6 +8,7 @@
  */
 
 export { ChestType } from "./common/entity-types";
+export { BLOCKED_SLOT_FILTERS, isBlockedSlotFilter } from "./common/slot-filter";
 
 export {
     EnableControlMode,

@@ -95,6 +95,7 @@ function ChestsFormComponent({
                             <Typography variant="body2" sx={{ mb: 1 }}>
                                 <strong>Cars, tanks and cargo wagons</strong> hold mixed items, a stack a slot, and can fill
                                 up or run dry. A filtered slot takes only its item. A wagon's slots depend on its quality.
+                                No item and Deconstruction planner block slots so inserters cannot fill them.
                                 A wagon is taken as standing still: moving trains are not simulated.
                             </Typography>
                             <Typography variant="body2">

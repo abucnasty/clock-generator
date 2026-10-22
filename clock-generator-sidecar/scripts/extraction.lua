@@ -74,6 +74,7 @@ local function slots_of(inventory)
     for slot = 1, #inventory do
         local filter = inventory.supports_filters() and inventory.get_filter(slot) or nil
         if filter then
+            -- Keep no-item and deconstruction-planner too: they reserve slots that inserters cannot fill.
             table.insert(filters, { slot = slot, item = type(filter) == "table" and filter.name or filter })
         end
         local stack = inventory[slot]

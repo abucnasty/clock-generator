@@ -1,6 +1,6 @@
 import { Add, Delete } from '@mui/icons-material';
 import { Box, Button, FormControl, IconButton, InputLabel, MenuItem, Select, Typography } from '@mui/material';
-import { ChestType } from 'clock-generator/light';
+import { ChestType, isBlockedSlotFilter } from 'clock-generator/light';
 import type { ReactNode } from 'react';
 import {
     QUALITIES, isRocketSilo,
@@ -25,11 +25,15 @@ export function ContainerChestSummary({ chest }: { chest: ContainerChestFormData
     const contents = (chest.contents ?? []).filter(row => row.item.trim() !== '');
     const items = contents.reduce((total, row) => total + row.count, 0);
     const stock = items === 0 ? 'Starts empty' : `Starts with ${items} ${items === 1 ? 'item' : 'items'}`;
+    const filters = !isRocketSilo(chest) ? (chest.slot_filters ?? []).filter(row => row.item.trim() !== '') : [];
+    const blocked = filters.filter(row => isBlockedSlotFilter(row.item)).length;
+    const filtered = filters.length - blocked;
     const details = isRocketSilo(chest)
         ? [`Speed ${chest.crafting_speed ?? 1}×`, `Productivity ${chest.productivity ?? 0}%`, `${qualityLabel(chest.recipe_quality)} recipe`, stock]
         : [
             ...(chest.type === ChestType.CARGO_WAGON ? [`${qualityLabel(chest.quality)} quality`] : []),
-            `${(chest.slot_filters ?? []).filter(row => row.item.trim() !== '').length} filtered slots`,
+            `${filtered} filtered ${filtered === 1 ? 'slot' : 'slots'}`,
+            ...(blocked ? [`${blocked} blocked`] : []),
             stock,
         ];
     return <Typography variant="caption">{details.join(' · ')}</Typography>;
