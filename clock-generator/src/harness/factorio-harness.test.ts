@@ -59,7 +59,7 @@ describe("clockOfBlueprintString", () => {
         expect(scheduledInserterIds(schedule)).toEqual([3, 4, 6, 7, 12]);
     });
 
-    it("reads the drills a clock enables off the descriptions of their combinators, which the schedule does not list", () => {
+    it("reads the drills a clock enables off the tags of their combinators, or the descriptions of a string from before the tags", () => {
         const blueprint = encodeBlueprintFile({
             blueprint: {
                 entities: [
@@ -70,6 +70,16 @@ describe("clockOfBlueprintString", () => {
             },
         } as any);
         expect(scheduledDrillIds(blueprint)).toEqual([1, 2, 3]);
+        // a clock with tags names them there, whatever its descriptions say
+        const tagged = encodeBlueprintFile({
+            blueprint: {
+                entities: [
+                    { entity_number: 1, player_description: "[entity=big-mining-drill] [item=iron-ore] → [entity=car]  (drill 1)", tags: { clock_generator: { drills: [1] } } },
+                    { entity_number: 2, player_description: "Drill 4 for [item=stone]", tags: { clock_generator: { inserters: [2] } } },
+                ],
+            },
+        } as any);
+        expect(scheduledDrillIds(tagged)).toEqual([1]);
     });
 
     it("refuses a blueprint without a clock the generator made", () => {

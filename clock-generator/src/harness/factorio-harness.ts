@@ -338,7 +338,7 @@ function clockPeriodOf(schedule: ClockSchedule): number {
 
 /**
  * The clock blueprint with each schedule combinator tagged with the config ids of the inserters it enables, and each
- * window combinator of drills with the config ids of those ("Drill 1 for ..." in its description: the schedule lists
+ * window combinator of drills with the config ids of those (its `clock_generator.drills` tag: the schedule lists
  * inserters only). The mod reads the tags off the ghosts it builds the clock from, to wire each combinator to its
  * inserters and drills.
  */
@@ -350,7 +350,7 @@ function withInserterTags(clock: GeneratedClock): string {
         if (ids !== undefined) {
             entity.tags = { ...entity.tags, [INSERTERS_TAG]: ids };
         }
-        const drill_ids = scheduledDrillIdsOf(entity.player_description);
+        const drill_ids = scheduledDrillIdsOf(entity);
         if (drill_ids.length > 0) {
             entity.tags = { ...entity.tags, [DRILLS_TAG]: drill_ids };
         }
@@ -358,9 +358,15 @@ function withInserterTags(clock: GeneratedClock): string {
     return encodeBlueprintFile(file);
 }
 
-/** The config ids of the drills a combinator of a clock enables, by its description: "Drills 1, 2 for ..." */
-function scheduledDrillIdsOf(description: string | undefined): number[] {
-    const named = /^Drills? ([\d, ]+) for/.exec(description ?? "");
+/**
+ * The config ids of the drills a combinator of a clock enables: its `clock_generator.drills` tag, or, in a string from
+ * before the tags, its description ("Drills 1, 2 for ...")
+ */
+function scheduledDrillIdsOf(entity: { player_description?: string; tags?: { clock_generator?: ClockGeneratorTags } }): number[] {
+    if (entity.tags?.clock_generator !== undefined) {
+        return entity.tags.clock_generator.drills ?? [];
+    }
+    const named = /^Drills? ([\d, ]+) for/.exec(entity.player_description ?? "");
     return named ? named[1].split(",").map(id => Number(id.trim())) : [];
 }
 
@@ -376,8 +382,8 @@ function assertDrillsWireable(clock: GeneratedClock, config: Config): void {
 
 /** Config drill ids the window combinators of a clock blueprint enable */
 export function scheduledDrillIds(blueprint: string): number[] {
-    const entities: { player_description?: string }[] = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
-    return Array.from(new Set(entities.flatMap(entity => scheduledDrillIdsOf(entity.player_description)))).sort((a, b) => a - b);
+    const entities: { player_description?: string; tags?: { clock_generator?: ClockGeneratorTags } }[] = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    return Array.from(new Set(entities.flatMap(scheduledDrillIdsOf))).sort((a, b) => a - b);
 }
 
 /** The build as a recording without samples, matched to the config by structure, as a recording is */
