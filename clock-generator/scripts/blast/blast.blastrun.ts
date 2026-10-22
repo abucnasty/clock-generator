@@ -119,14 +119,15 @@ async function writeJobList(jobs: Job[]) {
     fs.renameSync(tmp, file);
 }
 
-/** Combinator descriptions Factorio's 500 bytes cut, in an alternative's plain, modulo and subtick blueprints (null in a
- * worktree from before the count) */
+/** Descriptions Factorio's 500 bytes cut, the blueprints' own and their combinators', in an alternative's plain, modulo
+ * and subtick blueprints (null in a worktree from before the count); compare.py lists any */
 function descriptionsCut(result: any): number | null {
     const wasCut = (playerDescription as any).wasCut as ((description: string) => boolean) | undefined;
     if (!wasCut) return null;
-    return [result.blueprint, result.modulo_blueprint, result.subtick?.blueprint]
-        .flatMap((blueprint: any) => blueprint?.entities ?? [])
-        .filter((entity: any) => wasCut(entity.player_description ?? '')).length;
+    const blueprints = [result.blueprint, result.modulo_blueprint, result.subtick?.blueprint].filter(Boolean);
+    return blueprints.filter((blueprint: any) => wasCut(blueprint.description ?? '')).length
+        + blueprints.flatMap((blueprint: any) => blueprint.entities ?? [])
+            .filter((entity: any) => wasCut(entity.player_description ?? '')).length;
 }
 
 /** Every alternative of a config, each exported clock hashed, and the selected one */

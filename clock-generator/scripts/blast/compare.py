@@ -73,6 +73,10 @@ if checks:
           + (f"; NOT AS EXPECTED: {failed}" if failed else '') + (f"; changed since before: {changed}" if changed else ''))
 errors = [r for r in rows if r['status'] not in ('ok', 'refusal')]
 print('\nerrors/missing:', [(r['key'], r['status'], r.get('same_error')) for r in errors])
+# Factorio keeps 500 bytes of a description (2.1.21): no alternative may need one cut
+cut = sorted(f"{key}:{alt['id']} ({alt['descriptions_cut']})" for key, j in after.items() if not is_check(j) and 'error' not in j
+             for alt in j.get('alternatives', []) if alt.get('descriptions_cut'))
+print('descriptions cut (after):', cut if cut else 'none')
 if only_after:
     print('only in after:', only_after)
 if '--json' in sys.argv:
