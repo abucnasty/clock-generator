@@ -2,19 +2,21 @@ import { Close, Delete } from '@mui/icons-material';
 import { Box, Button, FormControl, IconButton, InputAdornment, InputLabel, MenuItem, Select, TextField, Tooltip, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import type { ReactNode } from 'react';
-import { ChestType } from 'clock-generator/light';
+import type { ChestType } from 'clock-generator/light';
 import { useGameNames } from '../hooks/useGameNames';
-import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, isBufferChest, isInfinityChest,
+import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, isBufferChest, isContainerChest, isInfinityChest,
     type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue, type ChestFormData, type MachineFormData } from '../hooks/useConfigForm';
 import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { ChestFilterSlotSelector } from './ChestFilterSlotSelector';
+import { ContainerChestFields } from './ContainerChestFields';
 import { HelpButton } from './HelpButton';
 import { InfinityChestSettings } from './InfinityChestSettings';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { MACHINE_TYPE_LABELS } from './entityTypes';
+import { CHEST_TYPES, CHEST_TYPE_LABELS, chestTypeIcon } from '../utils/configForm/formData';
 
 /** Controlled type fields shared by the list and diagram editors. Draft ownership stays with the caller. */
 export function EntityTypeField<T extends string>({ label, value, options, nameOf, iconOf = value => value, icons = true,
@@ -124,9 +126,8 @@ export function ChestFields({ chest, itemNames, onChange, onSwitchType, dialog =
 }) {
     return <>
         <EntityTypeField label={dialog ? 'Chest Type' : 'Type'} value={chest.type}
-            options={[{ value: ChestType.BUFFER_CHEST }, { value: ChestType.INFINITY_CHEST }]} first={!dialog}
-            nameOf={type => type === ChestType.BUFFER_CHEST ? 'Buffer chest' : 'Infinity chest'}
-            iconOf={type => type === ChestType.BUFFER_CHEST ? 'steel-chest' : 'infinity-chest'} icons={dialog}
+            options={CHEST_TYPE_OPTIONS} first={!dialog}
+            nameOf={type => CHEST_TYPE_LABELS[type]} iconOf={chestTypeIcon} icons={dialog}
             inputAriaLabel={SELECT_NAMES.chestType} onChange={onSwitchType} sx={dialog ? { width: '100%' } : { minWidth: 0, flex: '1 1 160px' }} />
         {isBufferChest(chest) && <Box sx={dialog ? { display: 'flex', flexWrap: 'wrap', gap: 2 } : { display: 'contents' }}>
             <ChestFilterSlotSelector filters={[{ item_name: chest.item_filter, quantity: 1 }]} itemNames={itemNames}
@@ -149,5 +150,8 @@ export function ChestFields({ chest, itemNames, onChange, onSwitchType, dialog =
                 }}
                 onRemoveFilter={index => onChange({ item_filter: chest.item_filter.filter((_, i) => i !== index) })} />
         </InfinityChestSettings></Box>}
+        {isContainerChest(chest) && <ContainerChestFields chest={chest} itemNames={itemNames} onChange={onChange} dialog={dialog} />}
     </>;
 }
+
+const CHEST_TYPE_OPTIONS = CHEST_TYPES.map(value => ({ value }));

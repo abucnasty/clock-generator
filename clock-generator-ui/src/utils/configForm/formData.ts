@@ -120,9 +120,21 @@ export interface InfinityFilterFormData {
     request_count: number;
 }
 
+/** A car's, a tank's, a cargo wagon's or a rocket silo's settings, kept while the chest is switched to another type */
+export interface ContainerSettingsMemory {
+    slot_filters?: SlotFilterFormData[];
+    slot_contents?: SlotContentFormData[];
+    quality?: QualityName;
+    recipe_quality?: QualityName;
+    crafting_speed?: number;
+    productivity?: number;
+    silo_contents?: ItemCountFormData[];
+}
+
 /** Form-only settings retained while switching chest types; never sent to the backend. */
 interface ChestSettingsMemory {
-    _chest_settings?: { infinity_filters?: InfinityFilterFormData[]; remove_unfiltered_items?: boolean; buffer_filter?: string; storage_size?: number };
+    _chest_settings?: { infinity_filters?: InfinityFilterFormData[]; remove_unfiltered_items?: boolean; buffer_filter?: string; storage_size?: number;
+        container?: ContainerSettingsMemory };
 }
 
 // Buffer chest form data
@@ -146,12 +158,45 @@ export interface InfinityChestFormData extends ChestSettingsMemory {
 }
 
 /**
- * A car, a tank, a cargo wagon or a rocket silo, kept as the config gives it: the web form shows and saves it, and does
- * not edit it yet
+ * A car, a tank, a cargo wagon or a rocket silo, in the config's own shape: the form edits its fields and saves them as
+ * they are, leaving out only rows without an item
  */
 type ChestConfig = NonNullable<Config['chests']>[number];
-export type ContainerChestFormData = Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>
-    & ChestSettingsMemory & { _uuid: string };
+type ContainerChestConfig = Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>;
+export type ContainerChestFormData = ContainerChestConfig & ChestSettingsMemory & { _uuid: string };
+export type SlotContainerFormData = Exclude<ContainerChestFormData, { type: typeof ChestType.ROCKET_SILO }>;
+export type RocketSiloFormData = Extract<ContainerChestFormData, { type: typeof ChestType.ROCKET_SILO }>;
+export type SlotFilterFormData = NonNullable<SlotContainerFormData['slot_filters']>[number];
+export type SlotContentFormData = NonNullable<SlotContainerFormData['contents']>[number];
+export type ItemCountFormData = NonNullable<RocketSiloFormData['contents']>[number];
+export type QualityName = NonNullable<RocketSiloFormData['recipe_quality']>;
+
+/** The qualities of the game, lowest first, with the names the player sees */
+export const QUALITIES: readonly { value: QualityName; label: string }[] = [
+    { value: 'normal', label: 'Normal' },
+    { value: 'uncommon', label: 'Uncommon' },
+    { value: 'rare', label: 'Rare' },
+    { value: 'epic', label: 'Epic' },
+    { value: 'legendary', label: 'Legendary' },
+];
+
+/** Every chest type, in the order the form offers them, with the name the player sees */
+export const CHEST_TYPE_LABELS: Record<ChestType, string> = {
+    [ChestType.BUFFER_CHEST]: 'Buffer chest',
+    [ChestType.INFINITY_CHEST]: 'Infinity chest',
+    [ChestType.CAR]: 'Car',
+    [ChestType.TANK]: 'Tank',
+    [ChestType.CARGO_WAGON]: 'Cargo wagon',
+    [ChestType.ROCKET_SILO]: 'Rocket silo',
+};
+export const CHEST_TYPES = Object.keys(CHEST_TYPE_LABELS) as ChestType[];
+/** The types that are not plain chests: a car, a tank, a cargo wagon and a rocket silo */
+export const CONTAINER_CHEST_TYPES = CHEST_TYPES.filter(type => type !== ChestType.BUFFER_CHEST && type !== ChestType.INFINITY_CHEST);
+
+/** The icon of a chest type: a buffer chest is drawn as a steel chest, the others as themselves */
+export function chestTypeIcon(type: ChestType | undefined): string {
+    return type === undefined || type === ChestType.BUFFER_CHEST ? 'steel-chest' : type;
+}
 
 // Discriminated union for chest types
 export type ChestFormData = BufferChestFormData | InfinityChestFormData | ContainerChestFormData;
@@ -167,6 +212,10 @@ export function isInfinityChest(chest: ChestFormData): chest is InfinityChestFor
 
 export function isContainerChest(chest: ChestFormData): chest is ContainerChestFormData {
     return !isBufferChest(chest) && !isInfinityChest(chest);
+}
+
+export function isRocketSilo(chest: ChestFormData): chest is RocketSiloFormData {
+    return chest.type === ChestType.ROCKET_SILO;
 }
 
 /** The items a car, a tank, a cargo wagon or a rocket silo names: what it starts with and what its slots are filtered to */

@@ -1,10 +1,12 @@
 import type { Config, RuleSet } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { withDefaultPickupType } from '../pickupGeometry';
+import { isContainerChest } from './formData';
 import type {
     BeltLaneFormData,
     ChestFormData,
     ConfigFormData,
+    ContainerChestFormData,
     EnableControlOverride,
     LatchConfig,
 } from './formData';
@@ -130,6 +132,16 @@ export function configToFormData(imported: Config): ConfigFormData {
 /** Converts a single form-data entity to its config equivalent, stripping UI-only fields. */
 function toConfig<T extends { _uuid: string }>({ _uuid: _, ...rest }: T) { void _; return rest; }
 
+/**
+ * A car, a tank, a cargo wagon or a rocket silo as the config takes it: its rows of slot filters and contents without an
+ * item yet are left out, and so are the fields left unset
+ */
+function containerConfig(chest: ContainerChestFormData): ContainerChestFormData {
+    const named = <T extends { item: string }>(rows: T[] | undefined) => rows?.filter(row => row.item.trim() !== '');
+    const rows = { ...('slot_filters' in chest && { slot_filters: named(chest.slot_filters) }), contents: named<{ item: string }>(chest.contents) };
+    return Object.fromEntries(Object.entries({ ...chest, ...rows }).filter(([, value]) => value !== undefined)) as unknown as ContainerChestFormData;
+}
+
 /** The config of the form state, for export, validation and generation */
 export function formDataToConfig(config: ConfigFormData): Config {
     // Strip the UI-only fields (every entity's _uuid, an inserter's _forced_always) before handing the config to any
@@ -144,8 +156,11 @@ export function formDataToConfig(config: ConfigFormData): Config {
         belts: config.belts.map(toConfig),
         chests: config.chests.map(({ _chest_settings: memory, ...chest }) => {
             void memory;
-            return toConfig(chest.type === ChestType.INFINITY_CHEST
-                ? { ...chest, item_filter: chest.item_filter.filter(filter => filter.item_name.trim() !== '') } : chest);
+            if (chest.type === ChestType.INFINITY_CHEST) {
+                return toConfig({ ...chest, item_filter: chest.item_filter.filter(filter => filter.item_name.trim() !== '') });
+            }
+            if (isContainerChest(chest)) return toConfig(containerConfig(chest));
+            return toConfig(chest);
         }),
         ...(config.drills && {
             drills: { ...config.drills, configs: config.drills.configs.map(toConfig) },

@@ -5,12 +5,14 @@ import {
     Box,
     Button,
     IconButton,
+    Menu,
+    MenuItem,
     Typography,
 } from '@mui/material';
-import { memo } from 'react';
+import { memo, useId, useState } from 'react';
 import { ChestType } from 'clock-generator/light';
 import type { ChestFormData } from '../hooks/useConfigForm';
-import { isBufferChest } from '../hooks/useConfigForm';
+import { CHEST_TYPE_LABELS, CONTAINER_CHEST_TYPES, chestTypeIcon } from '../utils/configForm/formData';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
@@ -64,10 +66,8 @@ function ChestsFormComponent({
                 <AddRow
                     label="Add chest"
                     data-row-add=""
-                    menu={[
-                        { label: 'Buffer chest', onSelect: () => { add(ChestType.BUFFER_CHEST); } },
-                        { label: 'Infinity chest', onSelect: () => { add(ChestType.INFINITY_CHEST); } },
-                    ]}
+                    menu={[ChestType.BUFFER_CHEST, ChestType.INFINITY_CHEST, ...CONTAINER_CHEST_TYPES].map(type =>
+                        ({ label: CHEST_TYPE_LABELS[type], onSelect: () => { add(type); } }))}
                 />
             ) : (
                 <PanelSection
@@ -84,11 +84,21 @@ function ChestsFormComponent({
                                 and deliveries above that stock are removed, even with unfiltered removal off.
                                 A stock of 0 removes that item and supplies none.
                             </Typography>
-                            <Typography variant="body2">
+                            <Typography variant="body2" sx={{ mb: 1 }}>
                                 <strong>Also remove unfiltered items</strong> removes incoming items without a filter.
                                 With no filters, it removes all incoming items and supplies none. This matches the
                                 “Remove unfiltered items” checkbox in Factorio. With this setting off, the simulator
                                 only accepts filtered items.
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                <strong>Cars, tanks and cargo wagons</strong> hold mixed items, a stack a slot, and can fill
+                                up or run dry. A filtered slot takes only its item. A wagon's slots depend on its quality.
+                                A wagon is taken as standing still: moving trains are not simulated.
+                            </Typography>
+                            <Typography variant="body2">
+                                <strong>A rocket silo</strong> takes the rocket part's ingredients into its input slots and
+                                any other item into its rocket, up to the weight the rocket lifts. No rocket is built or
+                                launched.
                             </Typography>
                         </>,
                     }}
@@ -100,12 +110,13 @@ function ChestsFormComponent({
                             <Button startIcon={<Add />} color="inherit" onClick={() => add(ChestType.INFINITY_CHEST)} variant="text" size="small">
                                 Infinity chest
                             </Button>
+                            <AddContainerMenu onAdd={add} />
                         </>
                     )}
                 >
                     <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
                     {chests.map((chest, index) => (
-                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)} displayLabel={<EntityBadge id={chest.id}><FactorioIcon name={isBufferChest(chest) ? 'steel-chest' : 'infinity-chest'} size={28} alt="" /></EntityBadge>}>
+                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)} displayLabel={<EntityBadge id={chest.id}><FactorioIcon name={chestTypeIcon(chest.type)} size={28} alt="" /></EntityBadge>}>
                             {(dragHandle) => (
                         <Box
                             id={`entity-chest-${chest.id}`}
@@ -144,6 +155,24 @@ function ChestsFormComponent({
             )}
         </Box>
     );
+}
+
+/** The button that adds a car, a tank, a cargo wagon or a rocket silo, from a menu */
+function AddContainerMenu({ onAdd }: { onAdd: (type: ChestType) => void }) {
+    const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+    const menuId = useId();
+    const label = 'Vehicle or silo';
+    return <>
+        <Button startIcon={<Add />} color="inherit" variant="text" size="small" aria-haspopup="menu" aria-expanded={anchor !== null}
+            aria-controls={anchor ? menuId : undefined} onClick={event => setAnchor(event.currentTarget)}>
+            {label}
+        </Button>
+        <Menu id={menuId} anchorEl={anchor} open={anchor !== null} onClose={() => setAnchor(null)} slotProps={{ list: { 'aria-label': label } }}>
+            {CONTAINER_CHEST_TYPES.map(type => <MenuItem key={type} onClick={() => { setAnchor(null); onAdd(type); }}>
+                <FactorioIcon name={chestTypeIcon(type)} size={20} alt="" /><Box component="span" sx={{ ml: 1 }}>{CHEST_TYPE_LABELS[type]}</Box>
+            </MenuItem>)}
+        </Menu>
+    </>;
 }
 
 /** What Storage Size is, and where to find it in the game */

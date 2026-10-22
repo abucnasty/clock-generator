@@ -11,8 +11,11 @@ import {
     type DrillFormData,
     type EntityKind,
     type InserterFormData,
+    type ContainerChestFormData,
+    type ContainerSettingsMemory,
     type MachineFormData,
     isContainerChest,
+    isRocketSilo,
 } from './formData';
 
 // Plain edits of the form state: each takes the state and returns the edited state, for `setConfig`
@@ -270,12 +273,15 @@ export function addChest(prev: ConfigFormData, chestType: ChestType = ChestType.
             storage_size: 1,
             item_filter: '',
         }
-        : {
-            type: ChestType.INFINITY_CHEST,
-            id,
-            _uuid: crypto.randomUUID(),
-            item_filter: [{ item_name: '', request_count: 1 }],
-        };
+        : chestType === ChestType.INFINITY_CHEST
+            ? {
+                type: ChestType.INFINITY_CHEST,
+                id,
+                _uuid: crypto.randomUUID(),
+                item_filter: [{ item_name: '', request_count: 1 }],
+            }
+            // a car, a tank, a cargo wagon or a rocket silo starts empty, without filtered slots, at the game's defaults
+            : { type: chestType, id, _uuid: crypto.randomUUID() } as ContainerChestFormData;
     return {
         ...prev,
         chests: [...prev.chests, newChest],
@@ -291,11 +297,48 @@ export function updateChest(prev: ConfigFormData, index: number, updates: Partia
     };
 }
 
+/** What a car, a tank, a cargo wagon or a rocket silo has set, to be kept while it is switched to another type */
+function containerMemory(chest: ContainerChestFormData): ContainerSettingsMemory {
+    const memory = { ...chest._chest_settings?.container };
+    if (isRocketSilo(chest)) {
+        return { ...memory, recipe_quality: chest.recipe_quality, crafting_speed: chest.crafting_speed, productivity: chest.productivity, silo_contents: chest.contents };
+    }
+    return { ...memory, slot_filters: chest.slot_filters, slot_contents: chest.contents,
+        ...(chest.type === ChestType.CARGO_WAGON ? { quality: chest.quality } : {}) };
+}
+
+/** The fields of a car, a tank, a cargo wagon or a rocket silo from what was set on it before, none left undefined */
+function containerFromMemory(type: ChestType, id: number, uuid: string, memory: ContainerSettingsMemory): Record<string, unknown> {
+    const fields: Record<string, unknown> = type === ChestType.ROCKET_SILO
+        ? { recipe_quality: memory.recipe_quality, crafting_speed: memory.crafting_speed, productivity: memory.productivity, contents: memory.silo_contents }
+        : { slot_filters: memory.slot_filters, contents: memory.slot_contents, ...(type === ChestType.CARGO_WAGON ? { quality: memory.quality } : {}) };
+    return { type, id, _uuid: uuid, ...Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)) };
+}
+
 /** The same chest conversion for a dialog draft and the committed form. */
 export function switchedChest(chest: ChestFormData, newType: ChestType, disposal = false): ChestFormData {
     if (chest.type === newType) return chest;
-    // a car, a tank, a wagon or a silo is not switched to another type in the form yet
-    if (isContainerChest(chest) || (newType !== ChestType.BUFFER_CHEST && newType !== ChestType.INFINITY_CHEST)) return chest;
+    if (isContainerChest(chest)) {
+        const settings = { ...chest._chest_settings, container: containerMemory(chest) };
+        if (newType !== ChestType.BUFFER_CHEST && newType !== ChestType.INFINITY_CHEST) {
+            return { ...containerFromMemory(newType, chest.id, chest._uuid, settings.container), _chest_settings: settings } as ContainerChestFormData;
+        }
+        if (newType === ChestType.BUFFER_CHEST) {
+            return { type: ChestType.BUFFER_CHEST, id: chest.id, _uuid: chest._uuid, storage_size: settings.storage_size ?? 1,
+                item_filter: settings.buffer_filter ?? '', _chest_settings: settings };
+        }
+        return { type: ChestType.INFINITY_CHEST, id: chest.id, _uuid: chest._uuid,
+            item_filter: disposal ? [] : (settings.infinity_filters ?? [{ item_name: settings.buffer_filter ?? '', request_count: 1 }]).map(filter => ({ ...filter })),
+            ...(disposal ? { remove_unfiltered_items: true } : settings.remove_unfiltered_items !== undefined ? { remove_unfiltered_items: settings.remove_unfiltered_items } : {}),
+            _chest_settings: settings };
+    }
+    if (newType !== ChestType.BUFFER_CHEST && newType !== ChestType.INFINITY_CHEST) {
+        // a buffer or an infinity chest becomes a container: its own settings are kept for a switch back
+        const settings = chest.type === ChestType.INFINITY_CHEST
+            ? { ...chest._chest_settings, infinity_filters: chest.item_filter.map(filter => ({ ...filter })), remove_unfiltered_items: chest.remove_unfiltered_items }
+            : { ...chest._chest_settings, buffer_filter: chest.item_filter, storage_size: chest.storage_size };
+        return { ...containerFromMemory(newType, chest.id, chest._uuid, settings.container ?? {}), _chest_settings: settings } as ContainerChestFormData;
+    }
     if (chest.type === ChestType.INFINITY_CHEST) {
         return {
             type: ChestType.BUFFER_CHEST, id: chest.id, _uuid: chest._uuid,
