@@ -16,6 +16,7 @@ up as seldom as possible, and gives you a blueprint of the clock to place.
 - biochambers with their energy consumption bonus, and mining drills with their speed bonus
 - inserters: what each takes from and drops into, its kind, quality, stack size and filters (none when they are switched off; a blacklist, which the website refuses, is marked)
 - belts and the items on each lane, and chests with what they hold
+- cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, slot filters, what they hold, and a silo's recipe quality, crafting speed and productivity
 - belt pickup reach and preferred lane, including inline pickups downstream of underground entrances and exits, and upstream across an exit's hood, where flipping the inserter changes its preferred lane
 - a warning for each belt pickup it cannot describe, which the website then refuses: bends, splitters, belt tiles that another belt side-loads onto, and inline or other pickup geometry it does not support
 - a suggested target: the product that leaves your selection and how much of it the machines make at most per second
