@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChestType, migrateBeltSupplyOverrides } from 'clock-generator/light';
+import { ChestType, migrateBeltSupplyOverrides, migrateMiningProductivityLevel } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
 import {
     backupKey,
@@ -108,6 +108,8 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
                 parsed.belts = parsed.belts.map((b: BeltFormData & { _uuid?: string }) =>
                     b._uuid ? b : { ...b, _uuid: crypto.randomUUID() });
             }
+            // drills saved with one mining productivity level get it as each drill's productivity
+            if (parsed.drills !== undefined) parsed.drills = migrateMiningProductivityLevel(parsed.drills);
             if (parsed.drills && Array.isArray(parsed.drills.configs)) {
                 parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
                     d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });

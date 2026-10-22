@@ -32,8 +32,7 @@ const bigBuild = (): Config => ({
         { id: 2, recipe: 'copper-cable', productivity: 0, crafting_speed: 2.5 },
     ],
     drills: {
-        mining_productivity_level: 12,
-        configs: [{ id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0.5, target: { type: 'machine', id: 2 } }],
+        configs: [{ id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0.5, productivity: 120, target: { type: 'machine', id: 2 } }],
     },
     inserters: [
         {

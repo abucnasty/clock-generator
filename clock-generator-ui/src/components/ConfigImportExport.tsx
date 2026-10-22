@@ -67,7 +67,6 @@ interface PendingImport extends PastedEntities {
     reduction?: ImportReduction;
     repeatedSourceKey?: string;
     originalSelections?: ImportSelections;
-    miningProductivityLevel?: number;
     /** The Target Output the paste can fill in, and where it came from; null when it could not tell */
     fill: { values: TargetValues; source: SuggestedTarget['source'] } | null;
 }
@@ -204,10 +203,7 @@ export function ConfigImportExport({
             inserters: pendingImport.inserters,
             belts: pendingImport.belts,
             chests: pendingImport.chests,
-            ...(pendingImport.drills.length > 0 && { drills: {
-                mining_productivity_level: pendingImport.miningProductivityLevel ?? base.drills?.mining_productivity_level ?? 0,
-                configs: pendingImport.drills,
-            } }),
+            ...(pendingImport.drills.length > 0 && { drills: { configs: pendingImport.drills } }),
         };
     }
 
@@ -349,7 +345,7 @@ export function ConfigImportExport({
         const suggestion = Option.toNullable(validated.suggested_target);
         const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source } : null;
         confirmOpenerRef.current = document.activeElement;
-        setPendingImport({ ...validated, miningProductivityLevel: read.miningProductivityLevel, fill, pickupWarnings: read.pickupWarnings });
+        setPendingImport({ ...validated, fill, pickupWarnings: read.pickupWarnings });
         // everything there is, except a target the player has already set; the first exports had machines only
         setImportSelections({
             target: fill !== null && currentTarget.recipe === '',
@@ -460,7 +456,7 @@ export function ConfigImportExport({
         const parts = currentPreview.counts.filter(row => row.replacing)
             .map(row => countOf(row.incoming, row.category.slice(0, -1), row.category));
         if (fill !== null) parts.unshift('Target Output');
-        const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values, pendingImport.miningProductivityLevel);
+        const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values);
 
         resetPasteFlow();
 
@@ -771,7 +767,7 @@ export function ConfigImportExport({
                                             control={<Checkbox checked={importSelections[row.category]}
                                                 onChange={() => handleSelectionChange(row.category)} disabled={row.incoming === 0}
                                                 slotProps={{ input: { 'aria-describedby': `paste-${row.category}-counts` } }} />}
-                                            label={`${title} (${row.incoming})${row.category === 'drills' && pendingImport.miningProductivityLevel !== undefined ? ` - Mining Productivity ${pendingImport.miningProductivityLevel}` : ''}`}
+                                            label={`${title} (${row.incoming})`}
                                         />
                                         <Typography id={`paste-${row.category}-counts`} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
                                             {consequence}

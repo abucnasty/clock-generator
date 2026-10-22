@@ -118,11 +118,7 @@ export function describeConfigEdit(before: ConfigFormData, after: ConfigFormData
         }
         return { message: `Updated ${KINDS[kind].many.toLowerCase()}.`, key: kind };
     }
-    return {
-        message: before.drills?.mining_productivity_level !== after.drills?.mining_productivity_level
-            ? 'Updated mining productivity.' : 'Updated build settings.',
-        key: 'build-settings',
-    };
+    return { message: 'Updated build settings.', key: 'build-settings' };
 }
 
 /** The Undo message after an example replaced the build: "Example loaded: Logistic science pack." */

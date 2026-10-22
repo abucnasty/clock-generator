@@ -19,7 +19,7 @@ describe('isBlankBuild', () => {
         expect(isBlankBuild({ ...config, inserters: something })).toBe(false);
         expect(isBlankBuild({ ...config, belts: something })).toBe(false);
         expect(isBlankBuild({ ...config, chests: something })).toBe(false);
-        expect(isBlankBuild({ ...config, drills: { mining_productivity_level: 0, configs: [] } })).toBe(false);
+        expect(isBlankBuild({ ...config, drills: { configs: [] } })).toBe(false);
     });
 });
 

@@ -2,18 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { drillsListed, focusLeaves } from './drillsSection';
 
 describe('drillsListed', () => {
-    it('folds to the Add row with no drills and level 0', () => {
-        expect(drillsListed({ drillCount: 0, miningProductivityLevel: 0, focusInSection: false })).toBe(false);
+    it('folds to the Add row with no drills', () => {
+        expect(drillsListed({ drillCount: 0, focusInSection: false })).toBe(false);
     });
 
-    it('lists with a drill, or with a productivity level to keep', () => {
-        expect(drillsListed({ drillCount: 1, miningProductivityLevel: 0, focusInSection: false })).toBe(true);
-        expect(drillsListed({ drillCount: 0, miningProductivityLevel: 3, focusInSection: false })).toBe(true);
+    it('lists with a drill', () => {
+        expect(drillsListed({ drillCount: 1, focusInSection: false })).toBe(true);
     });
 
-    it('stays listed while the focus is in the section (the level typed down to 0, Shift+Tab to its Add button), and folds once it leaves', () => {
-        expect(drillsListed({ drillCount: 0, miningProductivityLevel: 0, focusInSection: true })).toBe(true);
-        expect(drillsListed({ drillCount: 0, miningProductivityLevel: 0, focusInSection: false })).toBe(false);
+    it('stays listed while the focus is in the section (Shift+Tab to its Add button), and folds once it leaves', () => {
+        expect(drillsListed({ drillCount: 0, focusInSection: true })).toBe(true);
+        expect(drillsListed({ drillCount: 0, focusInSection: false })).toBe(false);
     });
 });
 

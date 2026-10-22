@@ -31,9 +31,8 @@ const imported = {
         { type: ChestType.INFINITY_CHEST, id: 2, item_filter: [{ item_name: 'copper-plate', request_count: 50 }] },
     ],
     drills: {
-        mining_productivity_level: 2,
         configs: [{
-            id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, target: { type: 'machine', id: 1 },
+            id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 20, target: { type: 'machine', id: 1 },
             overrides: { enable_control: { mode: 'NEVER' } },
         }],
     },

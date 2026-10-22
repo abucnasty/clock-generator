@@ -110,6 +110,8 @@ export interface DrillFormData {
     type: 'electric-mining-drill' | 'burner-mining-drill' | 'big-mining-drill';
     mined_item_name: string;
     speed_bonus: number;
+    /** The drill's mining productivity in percent: the research and its productivity modules together */
+    productivity: number;
     /** A machine, picked in the form; or a chest, kept as the config gives it (shown, not edited) */
     target: { type: 'machine'; id: number } | { type: 'chest'; id: number };
     overrides?: DrillOverrides;
@@ -251,7 +253,6 @@ export interface ConfigFormData {
     belts: BeltFormData[];
     chests: ChestFormData[];
     drills?: {
-        mining_productivity_level: number;
         configs: DrillFormData[];
     };
     overrides?: Config['overrides'];
