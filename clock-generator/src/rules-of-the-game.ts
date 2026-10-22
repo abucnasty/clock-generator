@@ -133,10 +133,11 @@ export { DrillChestWorkingMode } from "./control-logic/drill/modes/chest-working
  * 17. A mining drill's progress (docs/drills.md): each tick an enabled drill first drops what it
  * holds (into a machine up to its limit, 3; into a chest by 16); while it still holds anything it waits, its bars
  * still; else it mines: its mining bar moves by its crafting rate a tick, its bonus bar by that times its mining
- * productivity (10% a level researched), a wrap of either is an item, and what it mines is dropped in the next tick.
+ * productivity (its own: the research, 10% a level, and its productivity modules together, as the game's
+ * `productivity_bonus`), a wrap of either is an item, and what it mines is dropped in the next tick.
  * The sink is not checked before mining. A drill disabled by its circuit keeps what it holds and both bars. The bars
  * are doubles summed tick by tick, as in the game. Cases: `control-logic/drill/modes/drill-working-modes.test.ts`;
- * against the game, `tests/game/mechanics/drills` (0.34 to 1.35 items a tick into a car and into a machine, built
- * last, moved and circuit-disabled) and the containers family's drill fills (200 a tick).
+ * against the game, `tests/game/mechanics/drills` (0.0167 to 1.35 items a tick into a car and into a machine, built
+ * last, moved and circuit-disabled, one with productivity modules) and the containers family's drill fills (200 a tick).
  */
 export { MiningProgress } from "./control-logic/drill/modes/mining-progress";
