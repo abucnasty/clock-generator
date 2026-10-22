@@ -17,11 +17,21 @@ silo's rocket inventory and input slots. The probe ([probe.lua](probe.lua)) puts
 | `drill-into-chest` | the drill fills a steel chest (the config's buffer chest) to its 48 stacks; recorded from 60 ticks in, as an empty chest is not exported |
 | `drill-into-silo` | the drill fills a rocket silo's rocket inventory by weight (500 ore), nothing into its input slots |
 
-The harness puts the drill's ore under it (`drill_resource`, from the config's drill), as the save has none. The
-drill builds also compare the container's total in each of their first 30 ticks: the game's drill drops first 2 ticks
-after the recording starts, and from there the totals may part by a few items a tick (at most 11 recorded, 16
-allowed), as the game mines by a progress bar and the simulator by the rate a tick. Each has one inserter emptying the
-container, as the recorder records only a build with an inserter or a machine.
+The harness puts the drill's ore under it (`drill_resource`, from the config's drill), as the save has none. Each drill
+build has one inserter emptying the container, as the recorder records only a build with an inserter or a machine. The
+drill builds also compare the container's total at the end of each of their first 30 ticks, from the tick the game's
+drill first drops, and allow 16 items a tick between the game and the simulator (`DRILL_FILL_TOLERANCE`). What they
+differ by, recorded in Factorio 2.1.21:
+
+- **The start, 2 ticks.** The game's drill has no mining target in the recording's first tick, mines from the next, and
+  its first ore is in the container a tick after that; the simulator's drill drops in its first tick. Not modelled; the
+  totals are aligned on the first drop.
+- **Up to 4 items (car), 1 (silo): per-tick rounding, follow-up F-d.** The game's mining bar moves a quarter a tick and
+  a tick makes 200.2 ore at the harness's research; the game puts in the bar's whole items (199, 200, 200, 201, ...), the
+  simulator the rate floored (200), which falls 4 behind in 20 ticks.
+- **11 items (filtered car), not a known rule.** With the car full the drill stops. When the inserter takes 16, the
+  game's drill puts in 5 that tick and 11 the next; the simulator's puts in 16 in that tick, as it drops what it held and
+  then mines and drops again. Seen once; it changes neither the container's end state nor any hand.
 
 No silo crafts: its sinks lack rocket fuel or have a recipe of another quality, and its source holds no fuel. The
 blueprint builds the inserters in descending config id, so the game serves inserter 1 first in a tick, as the
