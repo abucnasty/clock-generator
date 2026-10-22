@@ -1,0 +1,307 @@
+{
+  "sidecar_version": "0.12.0",
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "steel-plate",
+      "crafting_speed": 105.875,
+      "productivity": 300,
+      "type": "furnace"
+    },
+    {
+      "id": 2,
+      "recipe": "iron-plate",
+      "crafting_speed": 80.0375,
+      "productivity": 50,
+      "type": "furnace"
+    }
+  ],
+  "drills": {
+    "mining_productivity_level": 7999,
+    "configs": [
+      {
+        "id": 1,
+        "type": "big-mining-drill",
+        "mined_item_name": "iron-ore",
+        "speed_bonus": 15.8244,
+        "target": {
+          "type": "chest",
+          "id": 2
+        }
+      }
+    ]
+  },
+  "inserters": [
+    {
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "steel-plate"
+      ]
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "steel-plate"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ]
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ]
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "steel-plate",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "cargo-wagon",
+      "id": 2,
+      "quality": "normal",
+      "slot_filters": [
+        {
+          "slot": 1,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 2,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 3,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 4,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 5,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 6,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 7,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 8,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 9,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 10,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 11,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 12,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 13,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 14,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 15,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 16,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 17,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 18,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 19,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 20,
+          "item": "iron-ore"
+        },
+        {
+          "slot": 21,
+          "item": "iron-plate"
+        },
+        {
+          "slot": 22,
+          "item": "iron-plate"
+        },
+        {
+          "slot": 23,
+          "item": "iron-plate"
+        },
+        {
+          "slot": 24,
+          "item": "iron-plate"
+        },
+        {
+          "slot": 25,
+          "item": "iron-plate"
+        },
+        {
+          "slot": 26,
+          "item": "steel-plate"
+        },
+        {
+          "slot": 27,
+          "item": "steel-plate"
+        },
+        {
+          "slot": 28,
+          "item": "steel-plate"
+        },
+        {
+          "slot": 29,
+          "item": "steel-plate"
+        },
+        {
+          "slot": 30,
+          "item": "steel-plate"
+        },
+        {
+          "slot": 31,
+          "blocked": true
+        },
+        {
+          "slot": 32,
+          "blocked": true
+        },
+        {
+          "slot": 33,
+          "blocked": true
+        },
+        {
+          "slot": 34,
+          "blocked": true
+        },
+        {
+          "slot": 35,
+          "blocked": true
+        },
+        {
+          "slot": 36,
+          "blocked": true
+        },
+        {
+          "slot": 37,
+          "blocked": true
+        },
+        {
+          "slot": 38,
+          "blocked": true
+        },
+        {
+          "slot": 39,
+          "blocked": true
+        },
+        {
+          "slot": 40,
+          "blocked": true
+        }
+      ]
+    }
+  ],
+  "suggested_target": {
+    "recipe": "steel-plate",
+    "items_per_second": 26.46875,
+    "copies": 1
+  }
+}
