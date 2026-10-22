@@ -71,6 +71,8 @@ export const ConfigPaths = {
     REAL_OWNER_LITHIUM_SILO: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'lithium-silo', 'lithium-silo.json'),
     /** The owner's iron plate build, 80 a second: a big mining drill drops ore into a car, which two furnaces empty */
     REAL_OWNER_CAR: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'car', 'car.json'),
+    /** The owner's steel build, 26 a second: one cargo wagon as a hub between a mining drill and two furnaces */
+    STEEL_CARGO_WAGON: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'steel-wagon', 'steel-wagon.json'),
 } as const;
 
 /** A sample kept to be refused: why it is kept, and the error generating a clock from it must fail with */

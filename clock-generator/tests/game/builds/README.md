@@ -13,6 +13,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `container-clock.game.test.ts`: a car, a tank or a cargo wagon between its supplies and a machine, with cuts that last until the container is empty.
 - `lithium-silo-clock.game.test.ts`: the owner's lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
 - `car-clock.game.test.ts`: the owner's iron plate build, a car taken as a chest between a big mining drill and two furnaces.
+- `steel-wagon-clock.game.test.ts`: the owner's steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
 
 From `clock-generator/`, select a file or case:
 
@@ -463,4 +464,33 @@ exact in all 33 judged periods after each; the two build orders are equal in eve
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/car-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/car-clock.game.test.ts -t '^car clock: car-swings-3$'
+```
+
+## A cargo wagon as the hub of a steel build
+
+`steel-wagon-clock.game.test.ts` enumerates 3 controls ([steel-wagon-clock-fixtures.ts](steel-wagon-clock-fixtures.ts)) on
+the owner's steel build (`STEEL_CARGO_WAGON`, its README in the sample's folder): one cargo wagon is a hub that a big
+mining drill fills with iron ore, a furnace takes the ore from and puts plates back into, a second takes the plates from
+and puts steel back into, and one inserter empties of steel onto the output belt, 26 steel a second. The harness puts the
+ore under the drill and builds the wagon after its rails. The selected clock (planned with belt slack, a subtick clock of
+11,520 ticks for 13 periods) is recorded as built and with the two inserters that put into the wagon built after every
+other entity; the clock planned without iron ore in its period is a second check, recorded as its subtick clock (3,840
+ticks for 13 periods): the capture exports an alternative's subtick clock where it has one, so the clock rounded to 295
+ticks is not recorded. The probe ([steel-wagon-clock-probe.lua](steel-wagon-clock-probe.lua)) counts the drops of the
+inserter from the wagon to the belt per period, and also keeps the wagon's contents at each period's start and each
+furnace's ticks with a full output. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are those of the
+container family: the drill is stopped (disabled by script) until the wagon has run dry of steel (9 and 10 periods), the
+output blocked for 4, the drill stopped again, each followed for 40 periods, the first 6 after a release not judged. A
+drill is no supply that stops in the generator's checks; here it is stopped as the supply cut. Do not compare these
+recordings period for period with the 2-period families.
+
+[steel-wagon-clock-controls.json](steel-wagon-clock-controls.json) holds the 3 native summaries, recorded on Factorio
+2.1.21 at commit `c30309ec`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the
+drill stopped) and are exact in all 33 judged periods after each; the two build orders are equal in every period.** A
+full plate or steel filter stops a furnace a few ticks a period in some states, with no steel lost (the sample's README).
+`steel-wagon-clock.generation.test.ts` pins each clock and checks it against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/steel-wagon-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/steel-wagon-clock.game.test.ts -t '^steel wagon clock: steel-wagon-belt-slack$'
 ```

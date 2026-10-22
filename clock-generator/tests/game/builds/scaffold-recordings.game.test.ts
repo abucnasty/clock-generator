@@ -360,6 +360,16 @@ const BUILDS: Record<string, ScaffoldBuild> = {
             + "furnaces 100 times a minute each, and 0.0 from other starts; the game's states give 3.8 on 2026-10-22 (1.3 for each "
             + "output inserter, 0.6 for each inserter from the car), for a reason not yet found: ",
     },
+    // The owner's steel build: one cargo wagon is a hub that a big mining drill fills with ore, two furnaces take from and
+    // put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt; 26 a second
+    // from one copy. The harness puts the ore under the drill and builds the wagon after its rails.
+    "steel plates around a cargo wagon": {
+        scaffold: path.join(SAMPLES, "smelting", "steel-wagon", "steel-wagon-scaffold.txt"),
+        config: ConfigPaths.STEEL_CARGO_WAGON,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 11520,
+    },
     "iron bacteria cultivation": {
         scaffold: path.join(SAMPLES, "gleba", "iron-bacteria-cultivation", "iron-bacteria-cultivation-scaffold.txt"),
         config: ConfigPaths.IRON_BACTERIA_CULTIVATION,

@@ -1,0 +1,50 @@
+import {createHash} from "crypto";
+import {beforeAll, expect, test} from "vitest";
+import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
+import {encodeBlueprintFile} from "../blueprints/serde";
+import {ConfigPaths} from "../config/config-paths";
+import {loadConfigFromFile} from "../config/loader";
+import {steelWagonCases} from "../../tests/game/builds/steel-wagon-clock-fixtures";
+import {readControls} from "../../tests/game/builds/clock-controls";
+
+// each clock pinned beside the in-game recording of it
+const controls = readControls("steel-wagon-clock-controls.json");
+const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
+let generated: ClockAlternativesResult;
+
+beforeAll(async () => {
+    generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON), {logger: quiet});
+}, 180_000);
+
+test("steel wagon: the clock with belt slack is selected, and the drill into the wagon gets no window", () => {
+    expect(generated.alternatives[generated.selected_index].id).toBe("planned-belt-slack-subtick");
+    for (const alternative of generated.alternatives) {
+        expect(Object.keys(alternative.result.clock_windows).filter(id => id.startsWith("drill:"))).toEqual([]);
+    }
+});
+
+for (const variant of steelWagonCases()) {
+    test(`steel wagon clock: ${variant.name}`, () => {
+        const {generation, native} = controls.cases[variant.name];
+        const expected = generation!;
+        const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
+        const result = chosen.result;
+        const exported = result.subtick ?? result;
+        const clock = {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule};
+        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control")
+            .toBe(expected.clock_sha256);
+        expect(result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks).toBe(expected.period);
+        expect(chosen.verdict).toBe(expected.verdict);
+        expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
+            supply: chosen.belt?.kind ?? null}).toEqual(expected.selection);
+        expect(native.expected).toBe(expected.expected);
+        // the game holds the target in every baseline period, and is back at it in every judged period after the drill
+        // stopped until the wagon ran dry of steel, the output blocked and the drill stopped again
+        expect(native.baseline.every(items => items === native.expected)).toBe(true);
+        for (const loss of native.recovery) {
+            expect(Math.min(...loss.during)).toBeLessThan(native.expected);
+            expect(loss.recovered.length).toBeGreaterThanOrEqual(30);
+            expect(loss.recovered.every(items => items === native.expected)).toBe(true);
+        }
+    });
+}
