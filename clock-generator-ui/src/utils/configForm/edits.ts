@@ -85,7 +85,7 @@ function followRenumber(prev: ConfigFormData, kind: EntityKind, idMap: Map<numbe
     return {
         ...prev,
         inserters: prev.inserters.map((ins) => ({ ...ins, source: follow(ins.source), sink: follow(ins.sink) })),
-        ...(prev.drills && type === 'machine' && {
+        ...(prev.drills && (type === 'machine' || type === 'chest') && {
             drills: { ...prev.drills, configs: prev.drills.configs.map((d) => ({ ...d, target: follow(d.target) })) },
         }),
     };

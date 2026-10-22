@@ -354,7 +354,8 @@ export function buildFlowGraph(
     // --- Drill nodes + edges ---
     (drills ?? []).forEach(drill => {
         const drillNodeId = flowNodeId('drill', drill.id);
-        const targetNodeId = flowNodeId('machine', drill.target.id);
+        // into a machine, or into a chest (the half it is given to, when the chest is on a loop)
+        const targetNodeId = endNodeId(drill.target, 'out');
         g.setNode(drillNodeId, { width: DRILL_NODE_WIDTH, height: Math.max(nodeHeight, DRILL_NODE_HEIGHT) });
         drawn.set(drillNodeId, { w: DRILL_NODE_WIDTH, h: Math.max(nodeHeight, DRILL_NODE_HEIGHT) });
         nodes.push({

@@ -110,7 +110,8 @@ export interface DrillFormData {
     type: 'electric-mining-drill' | 'burner-mining-drill' | 'big-mining-drill';
     mined_item_name: string;
     speed_bonus: number;
-    target: { type: 'machine'; id: number };
+    /** A machine, picked in the form; or a chest, kept as the config gives it (shown, not edited) */
+    target: { type: 'machine'; id: number } | { type: 'chest'; id: number };
     overrides?: DrillOverrides;
 }
 
