@@ -123,7 +123,8 @@ describe('the fields of each type', () => {
         for (const container of [CONTAINERS.car, CONTAINERS.tank, CONTAINERS.wagon]) {
             const html = render(container);
             expect(html).toContain('Filtered slots');
-            expect(html).toContain('Add filtered slot');
+            expect(html).toContain('Fill unfiltered slots');
+            expect(html).toContain('Shift + right-click copies');
             expect(html).toContain('Contents');
             expect(html.includes('aria-label="Quality, Chest 1"')).toBe(container === CONTAINERS.wagon);
         }
@@ -135,5 +136,16 @@ describe('the fields of each type', () => {
         for (const label of ['Recipe quality', 'Crafting Speed', 'Productivity (%)', 'Add contents']) expect(html).toContain(label);
         expect(html).not.toContain('Filtered slots');
         expect(html).toContain('Rare');
+    });
+
+    it('shows the whole inventory and keeps filters beyond a downgraded wagon visible for correction', () => {
+        const car = render(CONTAINERS.car);
+        expect(car).toContain('Slot 80: Unfiltered');
+        expect(car).not.toContain('Slot 81:');
+        const wagon = render({ ...CONTAINERS.wagon, quality: 'normal' });
+        expect(wagon).toContain('Slot 40: Unfiltered');
+        expect(wagon).not.toContain('Slot 41:');
+        expect(wagon).toContain('Some filters are outside this inventory');
+        expect(wagon).toContain('Remove filter for slot 100');
     });
 });

@@ -5,11 +5,12 @@ import type { ReactNode } from 'react';
 import {
     QUALITIES, isRocketSilo,
     type ChestFormData, type ContainerChestFormData, type ItemCountFormData, type QualityName, type RocketSiloFormData,
-    type SlotContainerFormData, type SlotContentFormData, type SlotFilterFormData,
+    type SlotContainerFormData, type SlotContentFormData,
 } from '../utils/configForm/formData';
 import { entityLabel } from '../utils/entityLabel';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
+import { ContainerFilterGrid } from './ContainerFilterGrid';
 
 interface Props {
     chest: ContainerChestFormData;
@@ -63,27 +64,15 @@ function QualityField({ label, value, onChange, ariaLabel, sx }: {
 function SlotFields({ chest, itemNames, onChange, name, fieldSx }: {
     chest: SlotContainerFormData; itemNames: string[]; onChange: Props['onChange']; name: string; fieldSx: object;
 }) {
-    const filters = chest.slot_filters ?? [];
     const contents = chest.contents ?? [];
     const nextSlot = (taken: { slot: number }[]) => Math.max(0, ...taken.map(row => row.slot)) + 1;
-    const setFilters = (rows: SlotFilterFormData[]) => onChange({ slot_filters: rows } as Partial<ChestFormData>);
     const setContents = (rows: SlotContentFormData[]) => onChange({ contents: rows } as Partial<ChestFormData>);
     return <>
         {chest.type === ChestType.CARGO_WAGON && <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
             <QualityField label="Quality" value={chest.quality} ariaLabel={`Quality, ${name}`} sx={fieldSx}
                 onChange={quality => onChange({ quality } as Partial<ChestFormData>)} />
         </Box>}
-        <RowList title="Filtered slots" note="A filtered slot takes only its item; the other slots take any item. Slots count from 1."
-            addLabel="Add filtered slot" onAdd={() => setFilters([...filters, { slot: nextSlot(filters), item: '' }])}>
-            {filters.map((row, index) => <Row key={index} removeLabel={`Remove filtered slot ${index + 1}, ${name}`}
-                onRemove={() => setFilters(filters.filter((_, i) => i !== index))}>
-                <NumberField label="Slot" value={row.slot} min={1} step={1} size="small" sx={{ width: 96, flexShrink: 0 }}
-                    onValueChange={value => setFilters(filters.map((it, i) => i === index ? { ...it, slot: value ?? 1 } : it))} />
-                <ItemSelector value={row.item || null} options={itemNames} label="Item" inputAriaLabel={`Item of filtered slot ${index + 1}, ${name}`}
-                    onChange={value => setFilters(filters.map((it, i) => i === index ? { ...it, item: value ?? '' } : it))}
-                    sx={{ flex: '1 1 180px', minWidth: 0 }} minWidth={0} />
-            </Row>)}
-        </RowList>
+        <ContainerFilterGrid chest={chest} itemNames={itemNames} onChange={slot_filters => onChange({ slot_filters } as Partial<ChestFormData>)} />
         <RowList title="Contents" note="What each slot holds when the build starts, at most a stack."
             addLabel="Add contents" onAdd={() => setContents([...contents, { slot: nextSlot(contents), item: '', count: 1 }])}>
             {contents.map((row, index) => <Row key={index} removeLabel={`Remove contents ${index + 1}, ${name}`}

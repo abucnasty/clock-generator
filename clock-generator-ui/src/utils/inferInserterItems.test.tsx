@@ -54,13 +54,17 @@ describe('automatic filters through containers', () => {
         form.inserters[0].filters = ['lithium', 'processing-unit'];
         const supply = () => sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo, form.inserters);
         expect(supply()).toEqual(['lithium']);
-        form.chests[0] = { ...form.chests[0], type: 'rocket-silo', recipe_quality: 'rare' };
+        const chest = form.chests[0];
+        if (chest.type !== 'rocket-silo') throw new Error('not a silo');
+        chest.recipe_quality = 'rare';
         expect(supply()).toEqual(['lithium', 'processing-unit']);
     });
 
     it('includes slot filters and starting contents, restricted to the destination recipe', () => {
         const form = build('car');
-        form.chests[0] = { ...form.chests[0], type: 'car', slot_filters: [{ slot: 1, item: 'lithium' }], contents: [{ slot: 2, item: 'copper-plate', count: 10 }] };
+        const chest = form.chests[0];
+        if (chest.type !== 'car') throw new Error('not a car');
+        form.chests[0] = { ...chest, slot_filters: [{ slot: 1, item: 'lithium' }], contents: [{ slot: 2, item: 'copper-plate', count: 10 }] };
         expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo)).toEqual(['copper-plate', 'lithium']);
         expect(inferInserterItems(form.inserters[1], form.machines, form.belts, form.chests, recipeInfo)).toEqual(['lithium']);
     });
