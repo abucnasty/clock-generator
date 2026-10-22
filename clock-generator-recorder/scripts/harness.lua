@@ -443,6 +443,8 @@ local function wire_clock(state, clock)
             local output = combinator.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
             output.connect_to(drill.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.player)
             local behavior = drill.get_or_create_control_behavior()
+            -- a drill that reads its resources puts the ore under it on the wire, which "anything > 0" would read as on
+            behavior.circuit_read_resources = false
             behavior.circuit_enable_disable = true
             behavior.circuit_condition = ANYTHING_POSITIVE
             for _, id in ipairs(drill_ids) do
