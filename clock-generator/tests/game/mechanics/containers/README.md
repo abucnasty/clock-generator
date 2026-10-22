@@ -19,7 +19,7 @@ silo's rocket inventory and input slots. The probe ([probe.lua](probe.lua)) puts
 
 The harness puts the drill's ore under it (`drill_resource`, from the config's drill), as the save has none. Each drill
 build has one inserter emptying the container, as the recorder records only a build with an inserter or a machine. The
-configs give the harness save's research as Sidecar exports it, 7,999 levels of mining productivity. The drill builds
+configs give the drill the harness save's research, 7,999 levels of mining productivity, +79,990%. The drill builds
 also compare the container's total at the end of each of their first 30 ticks, from the tick the drill first drops: equal
 in every tick. The game's drill has no mining target in the recording's first tick, so its first drop is a tick after
 the simulator's; not modelled. When the full filtered car gets room (the inserter takes 16), the drill puts in the 5 it
