@@ -21,6 +21,7 @@ export interface InserterEditorProps {
     label: string;
     layout: 'row' | 'stacked';
     machines: MachineFormData[];
+    inserters: InserterFormData[];
     belts: BeltFormData[];
     chests: ChestFormData[];
     itemNames: string[];
@@ -36,7 +37,7 @@ export interface InserterEditorProps {
 }
 
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
-export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
+export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
     const row = layout === 'row';
     const capacity = effectiveInserterStackSize(value);
     const timing = inserterTimingLabels(value);
@@ -46,8 +47,8 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
     const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }), [options, machines, belts, chests, itemLabel, recipeLabel]);
-    const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo), [value, machines, belts, chests, getRecipeInfo]);
-    const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo]);
+    const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo, inserters), [value, machines, belts, chests, getRecipeInfo, inserters]);
+    const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo, inserters) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo, inserters]);
     const filterChange = (result: ReturnType<typeof setFilterSlot>) => {
         onChange({ filters: result.filters });
         if (result.becameExplicit) announce(`${label}'s filters are now set by hand.`);
@@ -71,7 +72,7 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
                 <FilterSlotSelector compact={row} label={row ? `Filters · ${filtersLabel(value, 'Automatic', 'Explicit')}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
-                {!row && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? 'Automatic filters' : usesBlacklist(value) ? BLACKLIST_NOTE : 'Explicit · Set by hand'}</Typography>}
+                {!row && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? inferred.length ? 'Automatic filters · From source and destination' : 'Automatic · No items inferred' : usesBlacklist(value) ? BLACKLIST_NOTE : 'Explicit · Set by hand'}</Typography>}
                 {row && usesBlacklist(value) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{BLACKLIST_NOTE}</Typography>}
                 {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: row ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                     <Button size="small" color="inherit" onClick={() => {

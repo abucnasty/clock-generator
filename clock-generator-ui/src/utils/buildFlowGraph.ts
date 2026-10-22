@@ -310,7 +310,7 @@ export function buildFlowGraph(
         // Derive displayed items: explicit filters first, then auto-infer from source/sink
         const inferred = inserter.filters && inserter.filters.length > 0
             ? inserter.filters
-            : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
+            : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo, inserters);
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         const rule = describeEnableRule(inserter.overrides?.enable_control, { forcedAlways: inserter._forced_always });
         const height = Math.max(nodeHeight, INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT));

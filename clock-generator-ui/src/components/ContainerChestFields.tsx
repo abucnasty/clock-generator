@@ -18,6 +18,22 @@ interface Props {
     dialog?: boolean;
 }
 
+/** The settings worth keeping visible while the editor is closed. */
+export function ContainerChestSummary({ chest }: { chest: ContainerChestFormData }) {
+    const qualityLabel = (value: QualityName | undefined) => QUALITIES.find(quality => quality.value === (value ?? 'normal'))!.label;
+    const contents = (chest.contents ?? []).filter(row => row.item.trim() !== '');
+    const items = contents.reduce((total, row) => total + row.count, 0);
+    const stock = items === 0 ? 'Starts empty' : `Starts with ${items} ${items === 1 ? 'item' : 'items'}`;
+    const details = isRocketSilo(chest)
+        ? [`Speed ${chest.crafting_speed ?? 1}×`, `Productivity ${chest.productivity ?? 0}%`, `${qualityLabel(chest.recipe_quality)} recipe`, stock]
+        : [
+            ...(chest.type === ChestType.CARGO_WAGON ? [`${qualityLabel(chest.quality)} quality`] : []),
+            `${(chest.slot_filters ?? []).filter(row => row.item.trim() !== '').length} filtered slots`,
+            stock,
+        ];
+    return <Typography variant="caption">{details.join(' · ')}</Typography>;
+}
+
 /**
  * The settings of a car, a tank, a cargo wagon or a rocket silo: a wagon's quality, the slot filters and starting
  * contents of a car, a tank or a wagon, and a silo's recipe quality, crafting speed, productivity and starting contents.

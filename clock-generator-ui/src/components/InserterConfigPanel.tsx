@@ -99,13 +99,13 @@ export function InserterConfigPanel({
     const currentOverride = inserter.overrides?.enable_control;
     const savedRule = describeEnableRule(currentOverride, { forcedAlways: inserter._forced_always });
 
-    const availableItems = useMemo(() => itemsAround(draft, machines, belts, chests, getRecipeInfo), [draft, machines, belts, chests, getRecipeInfo]);
+    const availableItems = useMemo(() => itemsAround(draft, machines, belts, chests, getRecipeInfo, inserters), [draft, machines, belts, chests, getRecipeInfo, inserters]);
 
     // the items the inserter moves: its filters, else what the game would pick; a template's item picker starts on them
     const movedItems = useMemo<string[]>(() => {
         const filters = draft.filters?.filter(Boolean) ?? [];
-        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo);
-    }, [draft, machines, belts, chests, getRecipeInfo]);
+        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo, inserters);
+    }, [draft, machines, belts, chests, getRecipeInfo, inserters]);
 
     const copyFromOptions = useMemo<CopyFromOption[]>(() => {
         return inserters
@@ -190,6 +190,7 @@ export function InserterConfigPanel({
                     label={entityLabel('inserter', inserter.id)}
                     layout="stacked"
                     machines={machines}
+                    inserters={inserters}
                     belts={belts}
                     chests={chests}
                     itemNames={itemNames}

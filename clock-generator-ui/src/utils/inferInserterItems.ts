@@ -1,5 +1,5 @@
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
-import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
+import { containerItems, isBufferChest, isInfinityChest, isRocketSilo } from './configForm/formData';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 
 type EntityRef = { type: 'machine' | 'belt' | 'chest'; id: number };
@@ -10,6 +10,7 @@ export function sourceItemsOf(
     belts: BeltFormData[],
     chests: ChestFormData[],
     getRecipeInfo?: (name: string) => RecipeInfo | null,
+    inserters: InserterFormData[] = [],
 ): string[] {
     if (source.type === 'machine') {
         const m = machines.find(m => m.id === source.id);
@@ -22,6 +23,27 @@ export function sourceItemsOf(
         if (c) {
             if (isBufferChest(c) && c.item_filter) return [c.item_filter];
             if (isInfinityChest(c)) return c.item_filter.filter(filter => filter.request_count > 0).map(f => f.item_name).filter(Boolean);
+            if (!isBufferChest(c)) {
+                // Match the engine's container supply: configured items plus what incoming inserters can bring.
+                const items = new Set(containerItems(c).filter(Boolean));
+                for (const incoming of inserters) {
+                    if (incoming.sink.type !== 'chest' || incoming.sink.id !== c.id) continue;
+                    if (incoming.filters?.length) {
+                        if (incoming.filter_mode !== 'blacklist') incoming.filters.filter(Boolean).forEach(item => items.add(item));
+                    } else {
+                        // Container-to-container supply uses the source's starting contents, as the engine does.
+                        const sourceChest = incoming.source.type === 'chest' ? chests.find(chest => chest.id === incoming.source.id) : undefined;
+                        const supplied = sourceChest && !isBufferChest(sourceChest) && !isInfinityChest(sourceChest)
+                            ? (sourceChest.contents ?? []).map(content => content.item)
+                            : sourceItemsOf(incoming.source, machines, belts, chests, getRecipeInfo);
+                        supplied.filter(Boolean).forEach(item => items.add(item));
+                    }
+                }
+                // At normal recipe quality, rocket-part ingredients stay in the silo's input inventory.
+                const inputs = isRocketSilo(c) && (c.recipe_quality ?? 'normal') === 'normal'
+                    ? getRecipeInfo?.('rocket-part')?.ingredients ?? [] : [];
+                return [...items].filter(item => !inputs.includes(item));
+            }
         }
     }
     return [];
@@ -67,8 +89,9 @@ export function inferInserterItems(
     belts: BeltFormData[],
     chests: ChestFormData[],
     getRecipeInfo?: (name: string) => RecipeInfo | null,
+    inserters: InserterFormData[] = [],
 ): string[] {
-    const sourceItems = sourceItemsOf(inserter.source, machines, belts, chests, getRecipeInfo);
+    const sourceItems = sourceItemsOf(inserter.source, machines, belts, chests, getRecipeInfo, inserters);
     const chest = inserter.sink.type === 'chest' ? chests.find(chest => chest.id === inserter.sink.id) : undefined;
     if (chest && isInfinityChest(chest) && !chest.remove_unfiltered_items && !chest.item_filter.some(filter => filter.item_name)) return [];
     const sinkNeeds = getSinkNeeds(inserter.sink, sourceItems, machines, chests, getRecipeInfo);
@@ -78,10 +101,10 @@ export function inferInserterItems(
 }
 
 /** Items available to rule expressions at either end, including a machine's inputs and outputs. */
-export function itemsAround(inserter: InserterFormData, machines: MachineFormData[], belts: BeltFormData[], chests: ChestFormData[], getRecipeInfo?: (name: string) => RecipeInfo | null): string[] {
+export function itemsAround(inserter: InserterFormData, machines: MachineFormData[], belts: BeltFormData[], chests: ChestFormData[], getRecipeInfo?: (name: string) => RecipeInfo | null, inserters: InserterFormData[] = []): string[] {
     const items = new Set<string>();
     for (const ref of [inserter.source, inserter.sink]) {
-        sourceItemsOf(ref, machines, belts, chests, getRecipeInfo).forEach(item => items.add(item));
+        sourceItemsOf(ref, machines, belts, chests, getRecipeInfo, inserters).forEach(item => items.add(item));
         if (ref.type === 'machine') {
             const machine = machines.find(m => m.id === ref.id);
             if (machine?.recipe) getRecipeInfo?.(machine.recipe)?.ingredients.forEach(item => items.add(item));

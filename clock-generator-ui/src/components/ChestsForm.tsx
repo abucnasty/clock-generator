@@ -12,12 +12,14 @@ import {
 import { memo, useId, useState } from 'react';
 import { ChestType } from 'clock-generator/light';
 import type { ChestFormData } from '../hooks/useConfigForm';
-import { CHEST_TYPE_LABELS, CONTAINER_CHEST_TYPES, chestTypeIcon } from '../utils/configForm/formData';
+import { CHEST_TYPE_LABELS, CONTAINER_CHEST_TYPES, chestTypeIcon, isContainerChest } from '../utils/configForm/formData';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
 import { AddRow } from './AddRow';
 import { ChestFields } from './EntityFields';
+import { ContainerChestFields, ContainerChestSummary } from './ContainerChestFields';
+import { EntitySettings } from './EntitySettings';
 import { PanelSection } from './Panel';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
@@ -134,10 +136,11 @@ function ChestsFormComponent({
                             <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container chest-row (max-width: 600px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
                                 <Box sx={{ gridColumn: 1, gridRow: 1 }}>{dragHandle}</Box>
                             <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', minWidth: 0, gridColumn: 2, gridRow: 1, '@container chest-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 2 } }}>
-                                <ChestFields chest={chest} itemNames={itemNames} storageHelp={STORAGE_SIZE_HELP}
+                                <ChestFields chest={chest} itemNames={itemNames} storageHelp={STORAGE_SIZE_HELP} containerDetails={false}
                                     onChange={updates => onUpdate(index, updates)} onSwitchType={type => onSwitchType(index, type)} />
                             </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gridColumn: 3, gridRow: 1, '@container chest-row (max-width: 600px)': { gridColumn: 2 } }}>
+                                    {isContainerChest(chest) && <Box id={`settings-actions-chest-${chest.id}`} sx={{ display: 'flex' }} />}
                                     <RowActionsMenu label={entityLabel('chest', chest.id)} onDuplicate={() => duplicate(index)}
                                         onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
                                         onMoveDown={index < chests.length - 1 ? () => onReorder(index, index + 1) : undefined} />
@@ -146,6 +149,12 @@ function ChestsFormComponent({
                                     </IconButton>
                                 </Box>
                             </Box>
+                            {isContainerChest(chest) && <Box sx={{ mt: 1 }}>
+                                <EntitySettings actionContainerId={`settings-actions-chest-${chest.id}`} label={entityLabel('chest', chest.id)}
+                                    summary={<ContainerChestSummary chest={chest} />}>
+                                    <ContainerChestFields chest={chest} itemNames={itemNames} dialog onChange={updates => onUpdate(index, updates)} />
+                                </EntitySettings>
+                            </Box>}
                         </Box>
                             )}
                         </SortableItem>

@@ -120,9 +120,9 @@ export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = f
     </Box>;
 }
 
-export function ChestFields({ chest, itemNames, onChange, onSwitchType, dialog = false, storageHelp }: {
+export function ChestFields({ chest, itemNames, onChange, onSwitchType, dialog = false, storageHelp, containerDetails = true }: {
     chest: ChestFormData; itemNames: string[]; onChange: (update: Partial<ChestFormData>) => void;
-    onSwitchType: (type: ChestType) => void; dialog?: boolean; storageHelp?: ReactNode;
+    onSwitchType: (type: ChestType) => void; dialog?: boolean; storageHelp?: ReactNode; containerDetails?: boolean;
 }) {
     return <>
         <EntityTypeField label={dialog ? 'Chest Type' : 'Type'} value={chest.type}
@@ -150,7 +150,7 @@ export function ChestFields({ chest, itemNames, onChange, onSwitchType, dialog =
                 }}
                 onRemoveFilter={index => onChange({ item_filter: chest.item_filter.filter((_, i) => i !== index) })} />
         </InfinityChestSettings></Box>}
-        {isContainerChest(chest) && <ContainerChestFields chest={chest} itemNames={itemNames} onChange={onChange} dialog={dialog} />}
+        {containerDetails && isContainerChest(chest) && <ContainerChestFields chest={chest} itemNames={itemNames} onChange={onChange} dialog={dialog} />}
     </>;
 }
 
