@@ -12,8 +12,9 @@ local export = {}
 ---@param target InserterTargetRef|nil The target reference with type and unit_number
 ---@param result ExtractionResult The extraction result containing ID mappings
 ---@param is_sink boolean Whether the inserter drops into the target
+---@param options ExportOptions|nil
 ---@return table|nil config The resolved target config with type and id, or nil when the inserter is left out
-local function resolve_target_id(target, result, is_sink)
+local function resolve_target_id(target, result, is_sink, options)
     if not target then
         return nil
     end
@@ -33,11 +34,12 @@ local function resolve_target_id(target, result, is_sink)
     end
     
     if not target_id then
-        -- An output belt or chest is often empty when selected, so it is not exported and has no id. The inserter that
-        -- drops into it is kept, pointing at the first belt or chest: it is the build's output, and a recording is
-        -- matched to its config by the type of what an inserter drops into, not by its id. Any other end without an id
-        -- (an empty belt or chest to take from, a machine that is not exported such as a lab) leaves the inserter out.
-        if not (is_sink and (target.type == "belt" or target.type == "chest")) then
+        -- An end without an id (an empty belt or chest, a machine that is not exported such as a lab, anything outside
+        -- the selection) leaves the inserter out: pointing it at belt, chest or machine 1 would name some other entity.
+        -- Only the recorder keeps an inserter that drops onto an empty belt or into an empty chest: an output belt is
+        -- often empty when a build is recorded, and a recording is matched to its config by the type of what an
+        -- inserter drops into, never by its id (ExportOptions).
+        if not (options and options.keep_unexported_sinks and is_sink and (target.type == "belt" or target.type == "chest")) then
             return nil
         end
         target_id = 1
@@ -68,14 +70,18 @@ end
 
 -- Main Export Function
 
+---@class ExportOptions
+---@field keep_unexported_sinks boolean|nil For the recorder only: keep an inserter that drops onto a belt or into a chest that is not exported, pointing it at belt or chest 1. The sidecar never sets it.
+
 ---Inserters that end up in the exported config, paired with their config id (index + 1 in export order)
 ---@param result ExtractionResult
+---@param options ExportOptions|nil
 ---@return {id: number, inserter: InserterData, source: table, sink: table}[]
-function export.exported_inserters(result)
+function export.exported_inserters(result, options)
     local exported = {}
     for _, inserter in ipairs(result.inserters) do
-        local source_config = resolve_target_id(inserter.source, result, false)
-        local sink_config = resolve_target_id(inserter.sink, result, true)
+        local source_config = resolve_target_id(inserter.source, result, false, options)
+        local sink_config = resolve_target_id(inserter.sink, result, true, options)
         -- Only include inserter if both source and sink are known
         if source_config and sink_config then
             table.insert(exported, {
@@ -92,13 +98,14 @@ end
 ---Inserters that are left out of the exported config, each with the end it is left out for: the pickup when that has
 ---no id, else the drop. The target is nil when the sidecar has no type for what is at that end (the ground, a wagon).
 ---@param result ExtractionResult
+---@param options ExportOptions|nil
 ---@return {inserter: InserterData, pickup: boolean, target: InserterTargetRef|nil}[]
-function export.left_out_inserters(result)
+function export.left_out_inserters(result, options)
     local left_out = {}
     for _, inserter in ipairs(result.inserters) do
-        if not resolve_target_id(inserter.source, result, false) then
+        if not resolve_target_id(inserter.source, result, false, options) then
             table.insert(left_out, { inserter = inserter, pickup = true, target = inserter.source })
-        elseif not resolve_target_id(inserter.sink, result, true) then
+        elseif not resolve_target_id(inserter.sink, result, true, options) then
             table.insert(left_out, { inserter = inserter, pickup = false, target = inserter.sink })
         end
     end
@@ -148,8 +155,9 @@ end
 
 ---Convert extraction result to a clock-generator compatible config table
 ---@param result ExtractionResult
+---@param options ExportOptions|nil
 ---@return table
-function export.to_table(result)
+function export.to_table(result, options)
     local output = {
         -- lets the clock generator tell when the mod is too old to export everything it can use
         sidecar_version = script.active_mods["clock-generator-sidecar"],
@@ -212,7 +220,7 @@ function export.to_table(result)
     -- Capture diagnostics stay outside the simulator config and refer to exported inserter IDs.
     local pickup_warnings = {}
     -- Format inserters for clock-generator
-    for _, exported in ipairs(export.exported_inserters(result)) do
+    for _, exported in ipairs(export.exported_inserters(result, options)) do
         local inserter = exported.inserter
         local inserter_export = {
             source = exported.source,

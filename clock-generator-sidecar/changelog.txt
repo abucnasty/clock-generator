@@ -5,6 +5,8 @@ Version: 0.12.0
     - exports a mining drill that drops into a chest, a car, a tank, a cargo wagon or a rocket silo
   Bugfixes:
     - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine
+    - the selection tool selects linked belts; earlier versions skipped them, though the sidecar reads them as pieces of a belt
+    - an inserter that drops onto a belt or into a chest not in the JSON (empty, or outside the selection) is listed as left out; earlier versions exported it as dropping onto the first belt or into the first chest
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.0
 Date: 2026-10-21
