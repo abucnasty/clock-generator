@@ -11,6 +11,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
   underground entrance and exit, throughput and recovery.
 - `blocked-output-clock.game.test.ts`: a chest-fed machine whose output belt is blocked, at belt stack sizes 1–4.
 - `container-clock.game.test.ts`: a car, a tank or a cargo wagon between its supplies and a machine, with cuts that last until the container is empty.
+- `lithium-silo-clock.game.test.ts`: the owner's lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
 
 From `clock-generator/`, select a file or case:
 
@@ -412,4 +413,30 @@ selection and its exported clock and checks it against its native summary.
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/container-clock.game.test.ts -t '^container clock: container-car-mixed$'
+```
+
+## A rocket silo between two machines and six
+
+`lithium-silo-clock.game.test.ts` enumerates 4 controls ([lithium-silo-clock-fixtures.ts](lithium-silo-clock-fixtures.ts))
+on the owner's lithium plate build (`REAL_OWNER_LITHIUM_SILO`, its README in the sample's folder): two cryogenic plants put
+lithium into a rocket silo, six furnaces take it out, 80 plates a second. The selected clock (3 output swings, 1080
+ticks) is recorded as built and with the two inserters that fill the silo built after the six that empty it; the clock
+with 1 output swing is a second check, and the clock with 7 output swings (7560 ticks) is the known limit below. The
+probe ([lithium-silo-clock-probe.lua](lithium-silo-clock-probe.lua)) counts the drops of the six output inserters per
+period. The protocol is the standard one: the holmium plates cut for 2 periods, the output blocked for 4, the holmium plates
+cut again. The silo holds at most 250 lithium, so each cut empties it. The warm-up of 3600 ticks without a clock fills the
+silo before the clock starts, though the config exports it empty.
+
+[lithium-silo-clock-controls.json](lithium-silo-clock-controls.json) holds the 4 native summaries, recorded on Factorio
+2.1.21 at commit `759e9a50`. **The selected clock, in both build orders, and the clock with 1 output swing meet exact
+baseline output (63 periods), drop to 0 in every disturbance and are exact in every judged period after each; the two
+build orders are equal in every period.** The clock with 7 output swings is stable in the simulator and short in the game,
+9,440 to 9,600 of 10,080 in every period: the output inserters of two furnaces drop onto underground entrances whose exits
+side-load onto the shared output belt, which the config describes as one belt with room for every drop
+([scope](../../../docs/game-data-and-scope.md)). `lithium-silo-clock.generation.test.ts` pins each clock and checks it
+against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/lithium-silo-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/lithium-silo-clock.game.test.ts -t '^lithium silo clock: lithium-silo-swings-3$'
 ```
