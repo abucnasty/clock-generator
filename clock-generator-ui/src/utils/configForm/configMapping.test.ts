@@ -147,6 +147,22 @@ describe('the labels a config gives its machines and chests', () => {
         expect(config.chests).toEqual(labelled.chests);
     });
 
+    it('keeps where the inserters, drills, machines and chests stand, and the way inserters and drills face', () => {
+        const at = { position: { x: 2.5, y: -1.5 } };
+        const placed = {
+            ...imported,
+            machines: imported.machines.map(m => ({ ...m, ...at })),
+            inserters: imported.inserters.map((ins, index) => ({ id: index + 1, ...ins, ...at, direction: 8 })),
+            chests: [...imported.chests!.map(c => ({ ...c, ...at })), { type: ChestType.CAR, id: 3, ...at }],
+            drills: { configs: imported.drills!.configs.map(d => ({ ...d, ...at, direction: 4 })) },
+        } as unknown as Config;
+        const config = formDataToConfig(configToFormData(placed));
+        expect(config.machines.map(m => m.position)).toEqual(placed.machines.map(() => at.position));
+        expect(config.inserters.map(ins => [ins.position, ins.direction])).toEqual(placed.inserters.map(() => [at.position, 8]));
+        expect(config.chests!.map(c => (c as { position?: unknown }).position)).toEqual(placed.chests!.map(() => at.position));
+        expect(config.drills!.configs.map(d => [d.position, d.direction])).toEqual([[at.position, 4]]);
+    });
+
     it('draws a machine by its prototype, else by its type', () => {
         expect(machineIconName({ prototype: 'foundry', type: 'machine' })).toBe('foundry');
         expect(machineIconName({ type: 'furnace' })).toBe('electric-furnace');

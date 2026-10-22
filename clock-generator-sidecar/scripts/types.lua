@@ -47,12 +47,14 @@
 ---@field chest_type "buffer-chest" The chest type discriminator
 ---@field unit_number number The unit number of the chest entity
 ---@field name string The chest's prototype name (steel-chest, ...)
+---@field position {x: number, y: number} Where the chest stands
 ---@field storage_size number Number of inventory slots
 ---@field item_filter string The single item type this chest holds
 
 ---@class InfinityChestData
 ---@field chest_type "infinity-chest" The chest type discriminator
 ---@field unit_number number The unit number of the chest entity
+---@field position {x: number, y: number} Where the chest stands
 ---@field item_filters InfinityFilterData[] The configured infinity filters, not current inventory
 ---@field remove_unfiltered_items boolean Whether unfiltered incoming items are removed
 

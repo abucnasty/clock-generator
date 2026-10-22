@@ -61,6 +61,19 @@ describe('validateCopies', () => {
         }
     });
 
+    it('finds copies that stand in different places: positions are not a setting', () => {
+        const at = (x: number) => ({ position: { x, y: 0.5 } });
+        const c = config({
+            machines: [{ ...machine(1, 'copper-cable'), ...at(1.5) }, { ...machine(2, 'electronic-circuit'), ...at(4.5) },
+                { ...machine(3, 'copper-cable'), ...at(10.5) }, { ...machine(4, 'electronic-circuit'), ...at(13.5) }],
+            inserters: [...pair(1, 2), inserter({ type: 'chest', id: 1 }, { type: 'machine', id: 1 }),
+                ...pair(3, 4), inserter({ type: 'chest', id: 2 }, { type: 'machine', id: 3 })].map((it, index) => ({ ...it, ...at(index), direction: 4 })),
+            belts: [belt(1, 'copper-plate'), belt(2, 'electronic-circuit')],
+            chests: [{ type: 'car', id: 1, position: { x: 0, y: 9 } }, { type: 'car', id: 2, position: { x: 9, y: 9 } }],
+        } as Partial<Config>);
+        expect(findRepeatedUnits(c).copies).toEqual([{ machine_ids: [1, 2] }, { machine_ids: [3, 4] }]);
+    });
+
     it('tells a writer with copies = 1 to set copies to 2', () => {
         const c = config({
             machines: [machine(1, 'copper-cable'), machine(2, 'electronic-circuit'), machine(3, 'copper-cable'), machine(4, 'electronic-circuit')],

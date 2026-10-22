@@ -73,7 +73,8 @@ function chestSpec(chest: ChestConfig): string {
     if (chest.type === 'infinity-chest') {
         return `chest|${chest.type}|${JSON.stringify(chest.item_filter)}|${chest.remove_unfiltered_items ?? false}`;
     }
-    const { id: _id, ...settings } = chest;
+    // where it stands is not a setting: copies of a build differ in it
+    const { id: _id, position: _position, ...settings } = chest;
     return `chest|${chest.type}|${JSON.stringify(settings)}`;
 }
 
