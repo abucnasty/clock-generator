@@ -18,6 +18,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Fixed
 - Mining drills mine by their progress bars, as in the game, so a drill making less than one item a tick works, and the mining productivity level gives 10% a level instead of one level less.
+- A mining drill fills a machine up to the larger of a stack and the insertion limit, plus 64, as in the game, instead of one craft's ingredients more.
 
 ## [0.19.0] - 2026-10-21
 
