@@ -8,7 +8,8 @@ import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { backpressureLossInsight, beltPickupNotTestedInsights, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
+import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
+import { chestDrillFallbackConfig, hasPlannedChestDrill } from "./chest-drill-windows";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
@@ -146,6 +147,12 @@ interface AlternativeDefinition {
      * when no clock made before it, theirs included, can be selected as stable. It is not one of the searches.
      */
     fallback?: boolean;
+    /**
+     * The same alternative with the windows of the drills into chests a tick longer, then with those drills always
+     * enabled: made in turn when the clock does not hold, or does not survive backpressure loss, with the fewest (see
+     * chestDrillFallbackConfig). Absent where the generator makes no such windows.
+     */
+    chest_drill_fallbacks?: (() => AlternativeDefinition | undefined)[];
 }
 
 /** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
@@ -286,6 +293,18 @@ function alternativeDefinitions(
     context: ClockAlternativeContext,
     quiet: GenerateClockOptions,
     known_stable: (id: string) => boolean | undefined = () => undefined,
+    with_chest_drill_fallbacks: boolean = true,
+): AlternativeDefinition[] {
+    const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
+        with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
+    return definitions;
+}
+
+function alternativeDefinitionsWithFuelHandRoom(
+    config: Config,
+    context: ClockAlternativeContext,
+    quiet: GenerateClockOptions,
+    known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
     const definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
     if (config.overrides?.backed_up_belts !== true || !takesFuelOffABelt(config)) {
@@ -297,6 +316,32 @@ function alternativeDefinitions(
         return with_room === undefined ? definition
             : { ...definition, run: () => withFuelHandRoomWhereNeeded(definition.run, with_room.run) };
     });
+}
+
+/**
+ * Each definition with its chest drill fallbacks (see AlternativeDefinition), made lazily: the same definition on the
+ * config with the drills' windows a tick longer, then with the drills always enabled. A fallback's clock is checked
+ * on the config it was made on.
+ */
+function withChestDrillFallbacks(
+    definitions: AlternativeDefinition[],
+    config: Config,
+    wanted: boolean,
+    definitionsOn: (config: Config) => AlternativeDefinition[],
+): AlternativeDefinition[] {
+    if (!wanted || !hasPlannedChestDrill(config)) {
+        return definitions;
+    }
+    const fallbacks = (["one tick longer", "always enabled"] as const).map(fallback => {
+        let made: AlternativeDefinition[] | undefined;
+        const fallback_config = chestDrillFallbackConfig(config, fallback);
+        return (id: string) => () => {
+            made ??= definitionsOn(fallback_config);
+            const definition = made.find(it => it.id === id);
+            return definition === undefined ? undefined : { ...definition, planned_on: definition.planned_on ?? fallback_config };
+        };
+    });
+    return definitions.map(definition => ({ ...definition, chest_drill_fallbacks: fallbacks.map(of => of(definition.id)) }));
 }
 
 /** An item's name as a person says it: "low-density-structure" as "low density structure" */
@@ -544,6 +589,11 @@ function itemsPerSecondOverCopies(items_per_period: number, period_ticks: number
 
 type VerificationAssessment = Pick<ClockAssessment, "backpressure_loss" | "start_dependence">;
 
+/** Whether a clock has windows the generator made for a drill into a chest */
+function plannedChestDrillWindows(result: BlueprintGenerationResult): boolean {
+    return result.chest_drills?.some(drill => drill.planned && drill.enabled_ticks !== null) ?? false;
+}
+
 function runAlternative(
     definition: AlternativeDefinition,
     config: Config,
@@ -570,22 +620,53 @@ function runAlternative(
         // listed behind the run that assessed it, which combineClockAlternativeRuns keeps in its place
         return { signature, alternatives: [] };
     }
-    const label = withOutputSwings(definition, result.used_terminal_swing_count);
     const entity_registry = createEntityRegistryFromConfig(config);
+    // the planning simulation drives inserters from inventory levels and can over- or undershoot
+    // where the exported clock does not; in game, recordings matched the clock-only check
+    let held = holds(result);
+    const cached = verification_cache?.get(signature);
+    let backpressure_loss = cached ? cached.backpressure_loss
+        : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
+    // the drills into chests on their fewest windows: a clock that does not meet goal 1 with them is made again with
+    // them a tick longer, then always enabled, as it was before they had windows, and the first that does is kept
+    let used = definition;
+    const fallbacks = cached === undefined && !(held && backpressure_loss?.survives !== false) && plannedChestDrillWindows(result)
+        ? definition.chest_drill_fallbacks ?? [] : [];
+    for (const [index, fallbackOf] of fallbacks.entries()) {
+        const fallback = fallbackOf();
+        let made: BlueprintGenerationResult;
+        try {
+            if (fallback === undefined) continue;
+            made = fallback.run();
+        } catch (error) {
+            logger.log(`Clock alternative "${definition.label}" with its drill windows ${index === 0 ? "a tick longer" : "always enabled"} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+            continue;
+        }
+        result = made;
+        used = fallback;
+        held = holds(result);
+        backpressure_loss = held ? backpressureLossVerdictOf(fallback.planned_on ?? config, result, logger, report) : null;
+        logger.log(`Clock alternative "${definition.label}": the fewest drill windows did not meet goal 1; ${index === 0 ? "a tick longer" : "always enabled"}: holds=${held} survives=${backpressure_loss?.survives ?? "not tried"}`);
+        if (held && backpressure_loss?.survives !== false) break;
+    }
+    if (used !== definition && !plannedChestDrillWindows(result) && result.chest_drills !== undefined) {
+        // left always enabled by the fallback: say so, not that the config asks for it
+        result = { ...result, chest_drills: result.chest_drills.map(drill => drill.enabled_ticks !== null ? drill
+            : { ...drill, planned: true, always_enabled_because: "the clock does not meet goal 1 with its fewest windows, nor with them a tick longer" }) };
+    }
+    const label = withOutputSwings(definition, result.used_terminal_swing_count);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
     const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.output_feeders);
-    // the planning simulation drives inserters from inventory levels and can over- or undershoot
-    // where the exported clock does not; in game, recordings matched the clock-only check
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
-    const held = holds(result);
-    const cached = verification_cache?.get(signature);
-    const backpressure_loss = cached ? cached.backpressure_loss
-        : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
     const start_dependence = cached ? cached.start_dependence : config.overrides?.check_start_dependence === true
-        ? startDependenceVerdictOf(definition.planned_on ?? config, result, held, logger, report)
+        ? startDependenceVerdictOf(used.planned_on ?? config, result, held, logger, report)
         : null;
-    verification_cache?.set(signature, {backpressure_loss, start_dependence});
+    // a fallback's verdicts are of its clock, not of the one the signature names: a run that makes that clock again
+    // makes its own fallback
+    if (used === definition) {
+        verification_cache?.set(signature, {backpressure_loss, start_dependence});
+    }
     const start_dependence_note = start_dependence === null ? null
         : startDependenceNote(start_dependence, items => itemsPerSecondOverCopies(items, result.simulation_duration.ticks, copies));
     const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
@@ -610,6 +691,7 @@ function runAlternative(
         ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
         ...beltPickupNotTestedInsights(config),
         ...(start_dependence_note !== null && start_dependence !== null ? [startDependenceInsight(start_dependence_note, start_dependence)] : []),
+        ...chestDrillInsights(result),
     ];
     const period = result.simulation_duration.ticks;
     // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
@@ -670,6 +752,8 @@ export function planClockAlternatives(
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
     warnLanesSharedByCopies(config, logger);
+    const primary = withChestDrillFallbacks([definition], config, true,
+        fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0];
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
         planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
@@ -684,8 +768,8 @@ export function planClockAlternatives(
             ...(definition.fallback === true ? { fallback: true } : {}),
         }));
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
-    const primary = runAlternative(definition, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
-    return { primary, context, tasks };
+    const primary_run = runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
+    return { primary: primary_run, context, tasks };
 }
 
 /**
