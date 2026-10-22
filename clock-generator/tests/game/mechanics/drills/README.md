@@ -46,3 +46,29 @@ The game's drill has no mining target in the recording's first tick: game row k 
 DRILLS_CAPTURE_DIR=.scratch/drills-run \
   npm run test:game -- tests/game/mechanics/drills/drills.game.test.ts -t 'car-l8$'
 ```
+
+## The bars near a whole item
+
+`remainder.game.test.ts` checks the game's tolerance on the bonus bar near a whole item (`bonusBarTick`,
+`src/rules-of-the-game.ts` rule 17). Its probe ([remainder-probe.lua](remainder-probe.lua)) runs a big mining drill
+into a legendary steel chest that it empties every tick, so the drill mines in every tick. For each trial it sets the
+force's mining productivity bonus and writes the drill's bars so that the next mining tick lands r from a whole number
+of mining times, r from 1e-9 to 0.01 on both sides. It then reads the bars and the items the game made of it. The
+bonus bar moves 0.075 to 1,000 a tick, with the mining bar making an item in the same tick or not. Bars under 0.001
+that do not wrap are written too.
+
+| Build | What it checks |
+| --- | --- |
+| `remainder-iron` | iron ore (mining time 1), the mining bar 0.25 a tick |
+| `remainder-iron-drill-last`, `remainder-iron-moved` | the drill built last; the build at (203, -141) |
+| `remainder-iron-step` | one speed module: 0.094 a tick |
+| `remainder-scrap`, `remainder-tungsten` | mining times of 0.5 and 5: the tolerances are in the game's units, and from 2 mining times the bar keeps the fraction of a mining time |
+
+In every trial the simulator's bonus bar gives the game's bar and items, and the mining bar keeps its remainder however
+small. No trial lands on a tolerance itself (0.001 above, 0.0001 below), where the game's sum and the simulator's can
+differ in the last bit.
+
+```bash
+DRILLS_CAPTURE_DIR=.scratch/remainder-run \
+  npm run test:game -- tests/game/mechanics/drills/remainder.game.test.ts
+```

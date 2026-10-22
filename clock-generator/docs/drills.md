@@ -4,7 +4,19 @@ This page holds the game's mining drill mechanics as recorded, and how the simul
 
 ## How a drill mines
 
-A drill mines by two progress bars, as the game's does (since 0.20.0). Its mining bar moves by its crafting rate a tick (its mining speed over the resource's mining time) and its bonus bar by that times its mining productivity; each wrap of either is an item. The bars are doubles summed tick by tick, as in the game's: a bar of 0.198 a tick wraps in its 97th tick, not in the 96th an exact sum gives. So a drill making less than one item a tick mines.
+A drill mines by two progress bars, as the game's does (since 0.20.0). The bars run from 0 to the resource's mining time (1 for iron and copper ore, coal, stone and calcite; 0.5 for scrap, 2 for uranium ore, 5 for tungsten ore), as the game's `mining_progress` and `bonus_mining_progress` read. In each tick the drill mines, its mining bar moves by its mining speed a tick and its bonus bar by that times its mining productivity. Each wrap of either bar is an item. The bars are doubles summed tick by tick, as in the game's: a bar of 0.198 a tick wraps in its 97th tick, not in the 96th an exact sum gives. So a drill making less than one item a tick mines.
+
+### The bonus bar near a whole item
+
+The game's bonus bar has a tolerance near a whole item; its mining bar has none (since 0.20.0, `bonusBarTick`). In each tick the bonus bar:
+
+1. A bar of 2 mining times or more makes its whole mining times as items and keeps what is left of a mining time. The game keeps that fraction as it is, in its own units: on scrap (0.5) a bar of 1.45 makes 2 items and keeps 0.9, which is another item. On tungsten ore (5), 10.01 keeps 0.002, where 0.01 would be left in units. A bar of 1 to 2 mining times makes one item and loses one mining time.
+2. A bar 0.0001 or less below a mining time makes one more item and loses one mining time.
+3. A bar that made an item and keeps less than 0.001 keeps nothing. A bar under 0.001 that made no item is kept, so a slow bonus bar still fills.
+
+With a mining time of 1, a bar that reaches 0.9999 makes its item, and after an item a remainder under 0.001 is dropped. So a drill at +82% and 0.0875 a tick loses the 0.00025 its 223rd tick leaves (223 x 0.07175 = 16.00025), and its bar repeats every 223 ticks. A drill at +399,990% makes its 1,000th item from a sum 2.5e-8 short of 1,000. The double sum alone would carry the 0.00025 in the first case, and make one item fewer in the second.
+
+The two tolerances were measured by setting the bars by script: they hold at bonus steps of 0.0005 to 1,000 a tick, at mining steps of 0.094 and 0.25, with the mining bar making an item in the same tick or not, with the drill built last or moved, and on all three mining times. They are in the game's units, not shares of a mining time.
 
 ## What a drill holds and when it drops
 
@@ -43,7 +55,7 @@ The game's drill has no mining target in its first tick, so it mines a tick afte
 
 Recorded in Factorio 2.1.21 by two families of game tests:
 
-- **The drills family** (`tests/game/mechanics/drills/`, [README](../tests/game/mechanics/drills/README.md); #308, the stop asserted in #310). 18 builds of a big mining drill, with the research set by script: 0.0167, 0.25, 0.34, 0.43, 0.93 and 1.35 items a tick, one with four productivity modules and no research, into a car emptied by an inserter and into an assembling machine that crafts or never crafts, built last, moved to another chunk, and disabled by its circuit while it holds items. Driven by the game's takes, the simulator's drill has the game's bars, waits and drops in every tick; the simulator's run of the whole build equals the game's in every tick where the build's other entities are modelled as the game has them. The stop into a machine is the 114 on rail and 214 on landfill above.
+- **The drills family** (`tests/game/mechanics/drills/`, [README](../tests/game/mechanics/drills/README.md); #308, the stop asserted in #310). 18 builds of a big mining drill, with the research set by script: 0.0167, 0.25, 0.34, 0.43, 0.93 and 1.35 items a tick, one with four productivity modules and no research, into a car emptied by an inserter and into an assembling machine that crafts or never crafts, built last, moved to another chunk, and disabled by its circuit while it holds items. Driven by the game's takes, the simulator's drill has the game's bars, waits and drops in every tick; the simulator's run of the whole build equals the game's in every tick where the build's other entities are modelled as the game has them. The stop into a machine is the 114 on rail and 214 on landfill above. Six more builds set the drill's bars by script near a whole item, on iron ore at two mining steps, built last and moved, and on scrap and tungsten ore; the simulator's bonus bar gives the game's bar and items in every trial (`remainder.game.test.ts`).
 - **The containers family** (`tests/game/mechanics/containers/`, [README](../tests/game/mechanics/containers/README.md); #299). A big mining drill on iron ore into a car (4,000 ore in its 80 slots), into a car with five slots filtered to copper plates (3,750 ore, the five slots empty), into a steel chest (2,400) and into a rocket silo (500 ore in its rocket inventory, nothing in its input slots), each emptied by one stack inserter, at two places. The containers end as the simulator has them, slot for slot, with every hand equal, and fill by the simulator's amounts in every tick from the drill's first drop.
 
 The stop into a machine was changed in #310 to the larger of the stack and the insertion limit, + 64, after the drills family's stops (the previous rule added one craft's ingredients to the limit and gave 115 and 264).
@@ -51,6 +63,7 @@ The stop into a machine was changed in #310 to the larger of the stack and the i
 ## Known limits
 
 - The first-tick offset above is not modelled.
+- A mining bar that moves a mining time or more in a tick (several items a tick from the mining bar, on scrap a mining speed of 30 a second) is not recorded; the simulator makes one item a tick from it at most.
 - Some builds of the drills family are compared through the drill alone: a yellow inserter taking from a car leaves with what is there where the simulator's waits to fill its hand, and an assembler starts its next craft a tick later in the simulator than in the game.
 - The drills family's research levels are set by script, and the containers family uses the harness save's 7,999 levels; no other level is recorded. One build of the drills family has productivity modules.
 - A drill that drops into something the Sidecar does not export is listed as left out ([game-data-and-scope.md](game-data-and-scope.md)).
