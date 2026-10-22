@@ -1,7 +1,7 @@
 import {createHash} from "crypto";
 import {beforeAll, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
-import {encodeBlueprintFile} from "../blueprints/serde";
+import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import {lithiumSiloCases} from "../../tests/game/builds/lithium-silo-clock-fixtures";
@@ -27,8 +27,8 @@ for (const variant of lithiumSiloCases()) {
         const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
         const result = chosen.result;
         const exported = result.subtick ?? result;
-        const clock = {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule};
-        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control")
+        const clock = clockIdentity(exported);
+        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control (its identity: no text or metadata)")
             .toBe(expected.clock_sha256);
         expect(result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks).toBe(expected.period);
         expect(chosen.verdict).toBe(expected.verdict);

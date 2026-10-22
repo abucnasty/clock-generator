@@ -8,6 +8,7 @@ import {generateClockAlternatives} from "../../../src/crafting/generate-blueprin
 import {clockFromWindows} from "../../../src/crafting/trial";
 import {SerializableClockWindows} from "../../../src/crafting/clock";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
+import {clockIdentity} from "../../../src/crafting/clock-identity";
 import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {composeProbeSource} from "../helpers/probe-source";
 import {speedCapture} from "../helpers/belt-speed-fixtures";
@@ -99,7 +100,7 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
         }
         if (run.decider_order === "reversed") exported = reversedDeciders(exported.blueprint, exported.schedule);
         const clock = {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule};
-        expect(sha(clock), "the clock recorded").toBe(clockControl.clock_sha256);
+        expect(sha(clockIdentity(exported)), "the clock recorded (its identity: no text or metadata)").toBe(clockControl.clock_sha256);
         const ticks = controls.periods * P;
         const recording = (await recordInFactorio({factorio: factorio!, save: save!, config, blueprint: scaffold, clock,
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),

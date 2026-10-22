@@ -1,6 +1,7 @@
 // The blast radius: generate every sample config (as it is and with backed-up belts) and every pickup, over-hood, front
 // and blocked-output fixture and every container config, and hash every alternative's exported clock as over-hood-clock.generation.test.ts does
-// (sha256 of {blueprint, schedule}, subtick ?? result); the samples that exist to be refused (ExpectedRefusals in
+// (clock_sha256: sha256 of its identity, clockIdentity of subtick ?? result: the blueprint without its text or metadata,
+// and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description); the samples that exist to be refused (ExpectedRefusals in
 // src/config/config-paths.ts) are checked instead: each must fail with its error, as it is and backed up. Run by
 // scripts/blast/blast.sh, which installs it into the worktree's tests/game/builds/.scratch/ (gitignored), where its
 // imports resolve, with vitest.scratch-dist.config.ts (the engine from dist/); it is not run from scripts/.
@@ -13,14 +14,15 @@ import fs from 'fs'; import path from 'path'; import { createHash } from 'crypto
 import { test } from 'vitest';
 import { generateClockAlternatives } from '../../../../src/crafting/generate-blueprint';
 import { encodeBlueprintFile } from '../../../../src/blueprints/serde';
+import { clockIdentity } from '../../../../src/crafting/clock-identity';
 import { loadConfigFromFile } from '../../../../src/config/loader';
 import * as configPaths from '../../../../src/config/config-paths';
 import { pickupClockConfig, pickupClockSpeedCases } from '../pickup-clock-speed-coverage';
 import { overHoodClockCases, overHoodClockConfig } from '../over-hood-clock-fixtures';
 
-/** The job file format; blast.sh puts it in the cache key, so a change here never hits an older cache entry (its name
- * is the one of the first cached entry: renaming it would change every key) */
-const FORMAT = 't1-blast-1';
+/** The job file format; blast.sh puts it in the cache key, so a change here never hits an older cache entry. 2: clock_sha256
+ * is the hash of the clock's identity, without its text (1 hashed the text too) */
+const FORMAT = 't1-blast-2';
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const OUT = process.env.BLAST_OUT;
 const CLAIMS = process.env.BLAST_CLAIMS || (OUT && path.join(OUT, '.claims'));
@@ -121,12 +123,12 @@ function clocksOf(config: any) {
     const generated = generateClockAlternatives(config, { logger: quiet });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
-        const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
+        const with_text = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
         return {
             id: a.id, verdict: a.verdict, holds: a.assessment.holds, rate: a.assessment.items_per_second,
             supply: a.belt?.kind ?? null, period: a.result.subtick?.clock.period_ticks ?? a.result.simulation_duration.ticks,
             wake_ups: a.assessment.wake_ups?.wake_ups_per_minute ?? a.result.stability_check?.as_built?.wake_ups?.wake_ups_per_minute ?? null,
-            clock_sha256: sha(clock), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
+            clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
         };
     };
     return {
