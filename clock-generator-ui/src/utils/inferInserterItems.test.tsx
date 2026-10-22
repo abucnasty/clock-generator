@@ -5,6 +5,8 @@ import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FilterSlotSelector } from '../components/FilterSlotSelector';
 import { configToFormData } from './configForm/configMapping';
 import { inferInserterItems, sourceItemsOf } from './inferInserterItems';
+import { entityOptionsOf, findOption } from './inserterOptions';
+import { InserterEditor } from '../components/InserterEditor';
 
 const recipes: Record<string, RecipeInfo> = {
     'lithium': { ingredients: ['holmium-plate'], results: ['lithium'] },
@@ -30,6 +32,40 @@ function build(type: 'car' | 'tank' | 'cargo-wagon' | 'rocket-silo' = 'rocket-si
 }
 
 describe('automatic filters through containers', () => {
+    it.each(['car', 'tank', 'cargo-wagon', 'rocket-silo'] as const)('shows incoming supply on the %s selector even without configured contents or filters', type => {
+        const form = build(type);
+        const options = entityOptionsOf(form.machines, form.belts, form.chests, { item: id => id.toUpperCase(), recipe: id => id },
+            { inserters: form.inserters, getRecipeInfo: recipeInfo });
+        expect(findOption(options, 'chest', 1)).toMatchObject({ icon: type, sublabel: 'LITHIUM', ingredientIcons: ['lithium'] });
+        expect(form.chests[0]).not.toHaveProperty('slot_filters');
+        expect(form.chests[0]).not.toHaveProperty('contents');
+    });
+
+    it('updates selector indicators when incoming routes change, and says when no items are known', () => {
+        const form = build('car');
+        const option = () => findOption(entityOptionsOf(form.machines, form.belts, form.chests, { item: id => id, recipe: id => id },
+            { inserters: form.inserters, getRecipeInfo: recipeInfo }), 'chest', 1);
+        expect(option()?.ingredientIcons).toEqual(['lithium']);
+        form.inserters[0].source = { type: 'belt', id: 1 };
+        expect(option()?.ingredientIcons).toEqual(['copper-plate']);
+        form.inserters.splice(0, 1);
+        expect(option()).toMatchObject({ sublabel: 'No items inferred', ingredientIcons: undefined });
+    });
+
+    it('shows the current route in the selected silo field, separating incoming ingredients from outgoing cargo', () => {
+        const form = build();
+        const silo = form.chests[0];
+        if (silo.type !== 'rocket-silo') throw new Error('not a silo');
+        silo.contents = [{ item: 'lithium', count: 10 }, { item: 'copper-plate', count: 10 }];
+        form.inserters[0].source = { type: 'belt', id: 1 };
+        form.belts[0].lanes[0].ingredient = 'processing-unit';
+        const render = (index: number) => renderToStaticMarkup(<InserterEditor value={form.inserters[index]} label={`Inserter ${index + 1}`}
+            layout="stacked" machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
+            itemNames={['lithium', 'copper-plate', 'processing-unit']} getRecipeInfo={recipeInfo} onChange={() => {}} />);
+        expect(render(0)).toContain('value="Chest 1 - processing-unit"');
+        expect(render(1)).toContain('value="Chest 1 - lithium"');
+    });
+
     it('never advertises blocking markers as available items or automatic filters', () => {
         const form = build('car');
         const chest = form.chests[0];

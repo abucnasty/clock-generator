@@ -196,7 +196,7 @@ function InsertersFormComponent({
     const automaticRules = inserters.filter(row => row.overrides?.enable_control === undefined).length;
     const { itemLabel, recipeLabel } = useGameNames();
 
-    const options = useMemo(() => entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }), [machines, belts, chests, itemLabel, recipeLabel]);
+    const options = useMemo(() => entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo }), [machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo]);
 
 
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(inserters.length, onRemove);

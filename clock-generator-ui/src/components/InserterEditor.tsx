@@ -13,6 +13,7 @@ import { NearLaneSelect } from './NearLaneSelect';
 import { PickupTypeSelect } from './PickupTypeSelect';
 import { NumberField } from './NumberField';
 import { EntitySelector } from './EntitySelector';
+import { isContainerChest } from '../utils/configForm/formData';
 
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start' };
 
@@ -46,17 +47,26 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     const { itemLabel, recipeLabel } = useGameNames();
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
-    const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }), [options, machines, belts, chests, itemLabel, recipeLabel]);
+    const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo }), [options, machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo]);
     const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo, inserters), [value, machines, belts, chests, getRecipeInfo, inserters]);
     const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo, inserters) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo, inserters]);
     const filterChange = (result: ReturnType<typeof setFilterSlot>) => {
         onChange({ filters: result.filters });
         if (result.becameExplicit) announce(`${label}'s filters are now set by hand.`);
     };
+    const routeOption = (side: 'source' | 'sink') => {
+        const option = findOption(ownOptions, value[side].type, value[side].id);
+        const chest = option?.type === 'chest' ? chests.find(chest => chest.id === option.id) : undefined;
+        if (!option || !chest || !isContainerChest(chest) || usesBlacklist(value)) return option;
+        // Show this route's items in the field: a silo's incoming ingredients can differ from its outgoing cargo.
+        const items = usesAutomaticFilters(value.filters) ? inferred : value.filters?.filter(Boolean) ?? [];
+        return { ...option, ingredientIcons: items.length ? items : undefined,
+            sublabel: items.length ? items.map(itemLabel).join(', ') : 'No items inferred' };
+    };
     const picker = (side: 'source' | 'sink', name: string) => (
         <EntitySelector label={name} ariaLabel={`${name}, ${label}`} options={ownOptions}
             sx={row ? { flex: '1 1 160px', minWidth: 0 } : { width: '100%' }}
-            readOnly={value.sink.drop !== undefined} value={findOption(ownOptions, value[side].type, value[side].id)}
+            readOnly={value.sink.drop !== undefined} value={routeOption(side)}
             error={!findOption(ownOptions, value[side].type, value[side].id)}
             helperText={value.sink.drop && side === 'sink' ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}` : undefined}
             onChange={option => onChange(endpointUpdate(value, side, { type: option.type, id: option.id }))}
