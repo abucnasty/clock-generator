@@ -153,13 +153,14 @@ describe('a clock for a drill into a car between two furnaces', () => {
                     .toBe('the clock does not meet goal 1 with its fewest windows, nor with them a tick longer');
             }
         }
-        // the decider of the drill, in the pattern of the inserters outside the plan
-        const decider = selected.result.blueprint.entities.find(entity => (entity.player_description ?? '').startsWith('Drill 1 for'));
+        // the decider of the drill, named by its ends, its windows a period, and tagged with the drill it switches on
+        const decider = selected.result.blueprint.entities.find(entity => entity.tags?.clock_generator?.drills !== undefined);
         const window = selected.result.clock_windows['drill:1'][0];
+        expect(decider?.tags?.clock_generator?.drills).toEqual([1]);
         expect(decider?.player_description?.split('\n')).toEqual([
-            'Drill 1 for [item=iron-ore] into [entity=car]',
-            `- enabled for tick ${window.start} of the clock`,
-            '- not part of the swing counts, so it does not change the length of the clock',
+            '[entity=big-mining-drill] [item=iron-ore] → [entity=car]  (drill 1)',
+            `Tops the chest up just in time, 1 window per 72-tick period: open ${window.start + 1}–${window.end + 1}`,
+            'Outside the swing counts: timed by the takes out of the chest',
         ]);
         expect(selected.result.schedule.inserter_combinators.flatMap(it => it.inserter_ids).sort()).toEqual([1, 2, 3, 4]);
     }, 60_000);
