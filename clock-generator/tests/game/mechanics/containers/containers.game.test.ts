@@ -7,7 +7,7 @@ import {FactorioBlueprintFile} from "../../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../../src/blueprints/serde";
 import {CompositeControlLogic, TickControlLogic} from "../../../../src/control-logic";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {recordInFactorio} from "../../../../src/harness/factorio-harness";
+import {drillResourceOf, recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {EntityState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
 
@@ -23,6 +23,8 @@ interface ContainerMechanicCase {
     entities: Record<string, unknown>[];
     config: Record<string, unknown>;
     probe: Record<string, unknown>;
+    /** Ticks before the recording: 1 unless an empty chest would be left out of the export (the sidecar exports a chest with items) */
+    warmup_ticks?: number;
 }
 
 const supply = (id: number, item: string) => ({type: "infinity-chest", id, item_filter: [{item_name: item, request_count: 100}]});
@@ -45,6 +47,25 @@ function siloSink(name: string, items: string[], recipe_quality?: string): Conta
         config: {...idle, chests: [{type: "rocket-silo", id: 1, ...(recipe_quality ? {recipe_quality} : {})}, ...items.map((item, index) => supply(10 + index, item))],
             inserters: items.map((item, index) => ({id: index + 1, source: {type: "chest", id: 10 + index}, sink: {type: "chest", id: 1}, stack_size: 16}))},
         probe: {},
+    };
+}
+
+/**
+ * A big mining drill with 4 legendary speed modules 3 on iron ore, facing east (direction 4) and dropping into
+ * `container`, which an unfiltered stack inserter at `taker_x` east of it empties into a disposal chest (the recorder
+ * records a build only with an inserter or a machine)
+ */
+function drillInto(name: string, container: Record<string, unknown>, chest: Record<string, unknown>, taker_x: number): ContainerMechanicCase {
+    const modules = [{id: {name: "speed-module-3", quality: "legendary"}, items: {in_inventory: [0, 1, 2, 3].map(stack => ({inventory: 2, stack}))}}];
+    return {
+        name, ticks: 400,
+        entities: [{name: "big-mining-drill", position: {x: 0.5, y: 0.5}, direction: 4, items: modules}, container,
+            inserterEntity(taker_x, 0.5, 12), chestEntity(taker_x + 1, 0.5)],
+        config: {...idle, drills: {mining_productivity_level: 8000, configs: [{id: 1, type: "big-mining-drill", mined_item_name: "iron-ore",
+            speed_bonus: 5, target: {type: "chest", id: 1}}]},
+            chests: [chest, disposal(10)],
+            inserters: [{id: 1, source: {type: "chest", id: 1}, sink: {type: "chest", id: 10}, stack_size: 16}]},
+        probe: {fill_ticks: 30},
     };
 }
 
@@ -80,6 +101,21 @@ export function containerMechanicCases(): ContainerMechanicCase[] {
                     {id: 2, source: {type: "chest", id: 11}, sink: {type: "chest", id: 1}, stack_size: 16}]},
             probe: {},
         },
+        // a big mining drill drops iron ore into a chest of each kind, as the owner's car build has it (the drill faces
+        // east; the car stands 4.168 east and 0.508 south of the drill's centre, at orientation 0.25). The harness puts
+        // the ore under the drill (the config's `mined_item_name`). At the harness's research the drill mines about 617
+        // ore a tick, so each container fills within ticks and the drill then waits for room.
+        drillInto("drill-into-car", {name: "car", position: {x: 4.668, y: 1.008}, orientation: 0.25}, {type: "car", id: 1}, 6.5),
+        // free slots only: the five slots filtered to copper plates stay empty
+        drillInto("drill-into-filtered-car", {name: "car", position: {x: 4.668, y: 1.008}, orientation: 0.25,
+            trunk_inventory: {filters: [1, 2, 3, 4, 5].map(index => ({index, name: "copper-plate"}))}},
+        {type: "car", id: 1, slot_filters: [1, 2, 3, 4, 5].map(slot => ({slot, item: "copper-plate"}))}, 6.5),
+        // a steel chest of 48 slots, the config's buffer chest of iron ore; an empty chest is not exported, so its
+        // recording starts once the drill has filled it, and its first ticks are not followed
+        {...drillInto("drill-into-chest", {name: "steel-chest", position: {x: 3.5, y: 0.5}},
+            {type: "buffer-chest", id: 1, storage_size: 48, item_filter: "iron-ore"}, 4.5), warmup_ticks: 60, probe: {}},
+        // a rocket silo east of the drill: what the drill gives it, by weight into the rocket inventory if anything
+        drillInto("drill-into-silo", {name: "rocket-silo", position: {x: 7.5, y: 0.5}}, {type: "rocket-silo", id: 1}, 12.5),
         {
             // a car of mixed items emptied by an unfiltered inserter: the last slot's item first, a hand across stacks
             name: "car-source", ticks: 400,
@@ -104,6 +140,9 @@ export function containerMechanicBlueprint(variant: ContainerMechanicCase, order
         entities: entities.map((entity, index) => ({entity_number: index + 1, ...entity}))}} as unknown as FactorioBlueprintFile);
 }
 
+/** Items a drill's container may part by between the game and the simulator in a tick of its fill (measured: 4 at most) */
+const DRILL_FILL_TOLERANCE = 16;
+
 /** The hand each time it was at its fullest, before items left it */
 function handsOf(changes: string[]): string[] {
     const count = (hand: string) => hand === "" ? 0 : Number(hand.split(":")[1]);
@@ -116,12 +155,17 @@ function handsOf(changes: string[]): string[] {
     return hands;
 }
 
-interface Observed {hands: string[][]; held: string[]; slots?: string[]; rocket?: Record<string, number>; input?: Record<string, number>}
+interface Observed {hands: string[][]; held: string[]; slots?: string[]; rocket?: Record<string, number>; input?: Record<string, number>;
+    /** What a drill-fed container holds of its items in all at the end of each of the first ticks */
+    fill?: number[]; chest?: Record<string, number>}
 
 /** The simulator's run of the same build, every inserter enabled, for as many ticks */
-export function simulateContainerMechanic(config: Config, ticks: number): Observed {
+export function simulateContainerMechanic(config: Config, ticks: number, fill_ticks = 0): Observed {
     const context = SimulationContext.fromConfig(config);
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates(), ...context.drills]);
+    const drill_target = context.drills[0]?.drill_state.drill.sink_id;
+    const drill_fed = drill_target === undefined ? undefined : context.state_registry.getStateByEntityIdOrThrow(drill_target);
+    const fill: number[] = [];
     const inserters = context.inserters.map(it => it.inserter_state).sort((a, b) => a.inserter.entity_id.number - b.inserter.entity_id.number);
     const hand = (index: number) => {
         const held = inserters[index].held_item;
@@ -131,6 +175,7 @@ export function simulateContainerMechanic(config: Config, ticks: number): Observ
     const last = inserters.map((_, index) => hand(index));
     for (let i = 0; i < ticks; i++) {
         tick.executeForTick();
+        if (drill_fed && EntityState.isChest(drill_fed) && i < fill_ticks) fill.push(drill_fed.getCurrentQuantity());
         inserters.forEach((_, index) => {
             const now = hand(index);
             if (now !== last[index]) changes[index].push(now);
@@ -140,9 +185,12 @@ export function simulateContainerMechanic(config: Config, ticks: number): Observ
     const states = context.state_registry.getAllStates();
     const container = states.find(EntityState.isSlotContainer);
     const silo = states.find(EntityState.isRocketSilo);
+    const buffer = states.find(EntityState.isBufferChest);
     const nonzero = (record: Record<string, number>) => Object.fromEntries(Object.entries(record).filter(([, count]) => count > 0));
     return {
         hands: changes.map(handsOf), held: inserters.map((_, index) => hand(index)),
+        ...(fill_ticks > 0 && {fill}),
+        ...(buffer && {chest: nonzero({[buffer.chest.item_filter]: buffer.getCurrentQuantity()})}),
         ...(container && {slots: container.inventoryState.slots.map(slot => slot.item === null ? "" : `${slot.item}:${slot.count}`)}),
         ...(silo && {rocket: nonzero(silo.inventoryState.rocket.export()), input: nonzero(silo.inventoryState.input.export())}),
     };
@@ -168,7 +216,9 @@ for (const variant of containerMechanicCases()) test(`containers as chests: ${va
         fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");
         await recordInFactorio({factorio: factorio!, save: save!, blueprint, lua,
             out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"), ...(position && {position}),
-            ticks: variant.ticks + 60, warmup_ticks: 1, settle_ticks: 0, seed: [], unclocked: true,
+            // the ore the config's drill mines, put under it by the harness
+            drill_resource: drillResourceOf({config}),
+            ticks: variant.ticks + 60, warmup_ticks: variant.warmup_ticks ?? 1, settle_ticks: 0, seed: [], unclocked: true,
             game_speed: 1000, watch: false, timeout_seconds: 300, log() {},
         });
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/containers-probe.json"), "utf8"));
@@ -177,11 +227,25 @@ for (const variant of containerMechanicCases()) test(`containers as chests: ${va
             held: Object.values(report.held) as string[],
             ...(report.slots && {slots: Object.values(report.slots) as string[]}),
             ...(report.rocket && {rocket: report.rocket, input: report.input}),
+            ...(report.fill && {fill: Object.values(report.fill) as number[]}),
+            ...(report.chest && {chest: report.chest}),
         };
-        const simulated = simulateContainerMechanic(config, variant.ticks);
+        const simulated = simulateContainerMechanic(config, variant.ticks, Number(variant.probe.fill_ticks ?? 0));
         fs.writeFileSync(path.join(scratch, "comparison.json"), JSON.stringify({order, position: position ?? null, game, simulated,
-            rocket_parts: report.rocket_parts}, null, 2) + "\n");
+            rocket_parts: report.rocket_parts, drill: report.drill}, null, 2) + "\n");
         if (report.rocket_parts !== undefined) expect(report.rocket_parts, "the silo crafted nothing").toBe(0);
-        if (order === "descending") expect(simulated).toEqual(game);
+        if (order === "descending") {
+            // a drill's container fills by the same amounts a tick, from the tick the drill first drops: the game mines by
+            // a progress bar, the simulator by the rate a tick floored, so the totals may part by a few items
+            const {fill: game_fill, ...game_rest} = game, {fill: simulated_fill, ...simulated_rest} = simulated;
+            if (variant.warmup_ticks === undefined) expect(simulated_rest).toEqual(game_rest);
+            // started warm, the game's taker is in another phase of its swings than the simulator's, which starts empty:
+            // what the container holds is compared
+            else expect(simulated_rest.chest).toEqual(game_rest.chest);
+            if (game_fill && simulated_fill) {
+                const from = game_fill.findIndex(total => total > 0);
+                game_fill.slice(from).forEach((total, tick) => expect(Math.abs(total - simulated_fill[tick]), `tick ${tick} of the fill`).toBeLessThanOrEqual(DRILL_FILL_TOLERANCE));
+            }
+        }
     } finally {if (!retained) fs.rmSync(scratch, {recursive: true, force: true});}
 }, 360_000);
