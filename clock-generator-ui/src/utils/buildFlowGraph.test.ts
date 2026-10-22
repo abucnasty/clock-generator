@@ -117,6 +117,14 @@ describe('buildFlowGraph', () => {
         }
     });
 
+    it('draws a drill into a chest as an edge to the chest', () => {
+        const base = form({ machines: 1, belts: 1, chests: 1, drills: 1 }, [inserter(1, chest(1), machine(1)), inserter(2, machine(1), belt(1))]);
+        const config = { ...base, drills: { ...base.drills!, configs: base.drills!.configs.map(drill => ({ ...drill, target: { type: 'chest' as const, id: 1 } })) } };
+        const { edges } = graph(config);
+        expect(edges.some(edge => edge.source === 'drill-1' && edge.target === 'chest-1')).toBe(true);
+        expect(edges.some(edge => edge.source === 'drill-1' && edge.target.startsWith('machine'))).toBe(false);
+    });
+
     it('places the sources, then the machine, then the outputs', () => {
         const { nodes } = graph(FIXTURES['belt in and out']());
         expect(x(nodes, 'belt-1-in')).toBeLessThan(x(nodes, 'inserter-1'));

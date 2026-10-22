@@ -58,7 +58,7 @@ function entityOptions(config: Config | null | undefined, clock: ClockAlternativ
     }
     for (const drill of config?.drills?.configs ?? []) {
         const id = `drill:${drill.id}`;
-        if (!entities.has(id)) entities.set(id, { id, type: 'drill', sink: `machine:${drill.target.id}`, items: [drill.mined_item_name], signals: [] });
+        if (!entities.has(id)) entities.set(id, { id, type: 'drill', sink: `${drill.target.type}:${drill.target.id}`, items: [drill.mined_item_name], signals: [] });
     }
     return [...entities.values()].sort((a, b) => a.type.localeCompare(b.type) || Number(a.id.split(':')[1]) - Number(b.id.split(':')[1]));
 }

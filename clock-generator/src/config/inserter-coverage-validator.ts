@@ -115,7 +115,7 @@ function drillCoversInputItem(
     machineId: number,
     itemName: string,
 ): boolean {
-    return drill.target.id === machineId && drill.mined_item_name === itemName;
+    return drill.target.type === 'machine' && drill.target.id === machineId && drill.mined_item_name === itemName;
 }
 
 /** Returns true if this inserter carries `itemName` out of machine `machineId`. */
@@ -337,6 +337,7 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
         });
         const drills = new Map<number, string[]>();
         for (const drill of config.drills?.configs ?? []) {
+            if (drill.target.type !== 'machine') continue;
             const own = drills.get(drill.target.id) ?? [];
             own.push(drill.mined_item_name);
             drills.set(drill.target.id, own);

@@ -90,7 +90,7 @@ function createFromConfig(mining_prod: MiningProductivity, config: MiningDrillCo
         resource: resource,
         crafting_rate: crafting_rate,
         production_rate: production_rate,
-        sink_id: EntityId.forMachine(config.target.id)
+        sink_id: config.target.type === "chest" ? EntityId.forChest(config.target.id) : EntityId.forMachine(config.target.id)
     })
 }
 

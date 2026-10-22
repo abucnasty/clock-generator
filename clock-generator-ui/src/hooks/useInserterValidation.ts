@@ -20,7 +20,7 @@ function coverageKey(config: Config): string {
         inserters: config.inserters.map(({ id, source, sink, filters, filter_mode, prototype, quality, stack_size }) =>
             [id, source.type, source.id, sink.type, sink.id, sink.type === 'belt' ? sink.drop?.lane : null, filters, filter_mode, prototype, quality, stack_size,
                 source.type === 'belt' && source.pickup_capture?.status === 'unsupported' ? source.pickup_capture.reason : null]),
-        drills: config.drills?.configs.map(({ target, mined_item_name }) => [target.id, mined_item_name]),
+        drills: config.drills?.configs.map(({ target, mined_item_name }) => [target.type, target.id, mined_item_name]),
     });
 }
 

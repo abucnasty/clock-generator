@@ -264,6 +264,14 @@ const DrillTargetMachineConfigSchema = z.object({
     id: z.number().int().positive()
 });
 
+/** A chest of any type the drill drops into, by its rules: slots and room, weight and routing for a silo */
+const DrillTargetChestConfigSchema = z.object({
+    type: z.literal(TargetType.CHEST),
+    id: z.number().int().positive()
+});
+
+const DrillTargetConfigSchema = z.discriminatedUnion("type", [DrillTargetMachineConfigSchema, DrillTargetChestConfigSchema]);
+
 /**
  * Overrides configuration for mining drills.
  */
@@ -280,7 +288,7 @@ export const MiningDrillConfigSchema = z.object({
      * `/c game.print(game.player.selected.speed_bonus)`
      */
     speed_bonus: z.number(),
-    target: DrillTargetMachineConfigSchema,
+    target: DrillTargetConfigSchema,
     overrides: MiningDrillOverridesConfigSchema.optional()
 });
 
@@ -752,6 +760,20 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
             && config.inserters.some(inserter => inserter.sink.type === TargetType.CHEST && inserter.sink.id === chest.id)) {
             context.addIssue({ code: "custom", path: ["chests", index, "item_filter"], params: { editable_chest_settings: true },
                 message: `Chest ${chest.id}: enable Remove unfiltered items to use an empty infinity chest as an output, or configure a filter.` });
+        }
+    });
+    config.drills?.configs.forEach((drill, index) => {
+        if (drill.target.type !== TargetType.CHEST) return;
+        const chest_id = drill.target.id;
+        if (!config.chests?.some(chest => chest.id === chest_id)) {
+            context.addIssue({ code: "custom", path: ["drills", "configs", index, "target", "id"],
+                message: `Drill ${drill.id} drops into chest ${chest_id}, which is not in the config` });
+        }
+        // nothing gates a drill into a chest: it runs always, as a supply that never stops
+        const mode = drill.overrides?.enable_control?.mode;
+        if (mode !== undefined && mode !== EnableControlMode.ALWAYS) {
+            context.addIssue({ code: "custom", path: ["drills", "configs", index, "overrides", "enable_control"],
+                message: `Drill ${drill.id} drops into a chest and is always enabled; its enable control can only be ALWAYS` });
         }
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it

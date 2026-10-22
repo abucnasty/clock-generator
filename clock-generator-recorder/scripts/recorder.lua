@@ -275,22 +275,25 @@ local function build_tracks(result)
             },
         })
     end
-    -- A mining drill that drops into a machine: its status and how far along the ore it is mining is
+    -- A mining drill that drops into a machine or a chest: its status and how far along the ore it is mining is. Its id
+    -- is the export's, which numbers only the drills it keeps (a drill that drops into nothing exported is left out)
     local drills = {}
-    for id, drill in ipairs(result.drills) do
+    for _, drill in ipairs(result.drills) do
         local entity = drill.entity
-        local target_id = drill.drop_target_unit_number and result.unit_number_to_id[drill.drop_target_unit_number] or nil
-        table.insert(drills, {
-            entity = entity,
-            info = {
-                id = id,
-                unit_number = entity.unit_number,
-                name = entity.name,
-                mined_item_name = drill.mined_item_name,
-                target = target_id and { type = "machine", id = target_id } or nil,
-            },
-            samples = { status = {}, mining_progress = {}, bonus_mining_progress = {} },
-        })
+        local target = export.drill_target(drill, result)
+        if target then
+            table.insert(drills, {
+                entity = entity,
+                info = {
+                    id = #drills + 1,
+                    unit_number = entity.unit_number,
+                    name = entity.name,
+                    mined_item_name = drill.mined_item_name,
+                    target = target,
+                },
+                samples = { status = {}, mining_progress = {}, bonus_mining_progress = {} },
+            })
+        end
     end
     return inserters, machines, drills
 end
@@ -501,6 +504,25 @@ local function left_out_inserters(result)
     return out
 end
 
+---The drills the export leaves out, with what each drops into (nil for the ground)
+---@param result ExtractionResult
+---@return table[]
+local function left_out_drills(result)
+    local out = {}
+    for _, left in ipairs(export.left_out_drills(result)) do
+        local entity = left.drill.entity
+        table.insert(out, {
+            unit_number = entity.valid and entity.unit_number or nil,
+            name = left.drill.drill_type,
+            position = left.drill.position,
+            target_name = left.target_name,
+            reason = left.target_name and ("it drops into " .. left.target_name .. ", which is not in the config")
+                or "it drops onto the ground",
+        })
+    end
+    return out
+end
+
 ---What a recording of these entities would track, without samples: the config and the id of each inserter and machine,
 ---and the inserters the config leaves out, with why
 ---@param force LuaForce
@@ -522,6 +544,7 @@ function recorder.describe(force, entities)
         machines = infos(machines),
         drills = infos(drills),
         left_out = left_out_inserters(result),
+        left_out_drills = left_out_drills(result),
     }
 end
 

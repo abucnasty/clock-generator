@@ -3,12 +3,14 @@
 -- and then logs, every tick for options.ticks ticks, each inserter's hand when it changes. At the end it writes the
 -- hands, what each inserter holds, a container's slots and a silo's rocket inventory and input slots.
 local entities = ...
-local inserters, car, wagon, silo = {}, nil, nil, nil
+local inserters, car, wagon, silo, chest, drill = {}, nil, nil, nil, nil, nil
 for _, entity in pairs(entities) do
     if entity.type == "inserter" then table.insert(inserters, entity)
     elseif entity.type == "car" then car = entity
     elseif entity.type == "cargo-wagon" then wagon = entity
-    elseif entity.type == "rocket-silo" then silo = entity end
+    elseif entity.type == "rocket-silo" then silo = entity
+    elseif entity.type == "container" then chest = entity
+    elseif entity.type == "mining-drill" then drill = entity end
 end
 -- the config lists its inserters west to east, then north to south
 table.sort(inserters, function(a, b)
@@ -43,10 +45,22 @@ local function contents(inventory)
     return out
 end
 local report = {hands = {}, ticks = options.ticks}
+-- a drill's container: its contents in all at the end of each of the first options.fill_ticks ticks
+local fed = drill and drill.drop_target or nil
+if options.fill_ticks then report.fill = {} end
+local function total(entity)
+    local inventory = entity.type == "car" and entity.get_inventory(defines.inventory.car_trunk)
+        or entity.type == "rocket-silo" and entity.get_inventory(defines.inventory.rocket_silo_rocket)
+        or entity.get_inventory(defines.inventory.chest)
+    return inventory and inventory.get_item_count() or 0
+end
 local last = {}
 for index, inserter in ipairs(inserters) do report.hands[index] = {}; last[index] = hand(inserter) end
 local started = game.tick
 script.on_nth_tick(1, function()
+    -- a drill knows what it drops into once it has something to drop
+    fed = fed or (drill and drill.drop_target) or nil
+    if report.fill and #report.fill < options.fill_ticks then table.insert(report.fill, fed and total(fed) or 0) end
     for index, inserter in ipairs(inserters) do
         local now = hand(inserter)
         if now ~= last[index] then
@@ -62,6 +76,11 @@ script.on_nth_tick(1, function()
         local container = car or wagon
         if container then
             report.slots = slots(container.get_inventory(car and defines.inventory.car_trunk or defines.inventory.cargo_wagon))
+        end
+        if chest then report.chest = contents(chest.get_inventory(defines.inventory.chest)) end
+        if drill then
+            report.drill = {status = drill.status, drop_target = fed and fed.name or nil, mining_target = drill.mining_target and drill.mining_target.name or nil,
+                fed_input = silo and contents(silo.get_inventory(defines.inventory.crafter_input)) or nil}
         end
         if silo then
             report.rocket = contents(silo.get_inventory(defines.inventory.rocket_silo_rocket))

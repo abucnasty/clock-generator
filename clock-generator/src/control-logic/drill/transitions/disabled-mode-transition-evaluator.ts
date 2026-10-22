@@ -1,12 +1,11 @@
 import { EnableControl } from "../../enable-control";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { DrillMode } from "../modes/drill-mode";
-import { DrillWorkingMode } from "../modes/working-mode";
 
 export class DrillDisabledModeTransitionEvaluator implements ModeTransitionEvaluator<DrillMode> {
     constructor(
         private enable_control: EnableControl,
-        private readonly working_mode: DrillWorkingMode,
+        private readonly working_mode: DrillMode,
     ) { }
 
     public onEnter(fromMode: DrillMode): void {}

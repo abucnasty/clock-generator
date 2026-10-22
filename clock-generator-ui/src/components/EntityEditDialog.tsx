@@ -10,6 +10,7 @@ import {
     InputLabel,
     MenuItem,
     Select,
+    TextField,
     Typography,
 } from '@mui/material';
 import { useId, useMemo, useState } from 'react';
@@ -113,6 +114,11 @@ function DrillEditSection({
                 size="small"
             />
 
+            {drill.target.type === 'chest' ? (
+                // a drill into a chest keeps its target as the config gives it: shown, not edited here
+                <TextField size="small" fullWidth label="Target" value={entityLabel('chest', drill.target.id)}
+                    slotProps={{ input: { readOnly: true } }} inputProps={{ 'aria-label': 'Target chest' }} />
+            ) : (
             <FormControl size="small" fullWidth>
                 <InputLabel>Target Machine</InputLabel>
                 <Select
@@ -131,6 +137,7 @@ function DrillEditSection({
                     ))}
                 </Select>
             </FormControl>
+            )}
         </Box>
     );
 }

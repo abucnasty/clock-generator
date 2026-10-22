@@ -118,3 +118,16 @@ export { SlotInventoryState } from "./state/slot-inventory";
  * run. Cases: `state/rocket-silo-state.test.ts`; against the game, `tests/game/mechanics/containers`.
  */
 export { RocketSiloInventoryState } from "./state/rocket-silo-inventory";
+
+/**
+ * 16. A mining drill into a chest (docs/simulator.md "Cars, wagons and rocket silos as chests"): it drops what it
+ * mines as far as the chest has room, by the chest's own rules (13, 15: free slots for a car, weight for a silo's
+ * rocket inventory); what does not fit stays in the drill, which mines no more until it has dropped it, so a full chest
+ * stops it. Nothing gates it: it is always enabled. Cases: `crafting/drill-into-chest.test.ts`; against the game,
+ * `tests/game/mechanics/containers` (a car, a car with filtered slots, a steel chest and a rocket silo, at two places).
+ *
+ * Known limit (follow-up F-d): a drill mines the rate a tick, floored, into a chest as into a machine, so one that makes
+ * under one item a tick mines nothing in the simulator. The game mines by a progress bar; at the harness's research
+ * (+79,990% mining productivity) the totals part by at most 11 items a tick.
+ */
+export { DrillChestWorkingMode } from "./control-logic/drill/modes/chest-working-mode";

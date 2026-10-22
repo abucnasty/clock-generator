@@ -36,8 +36,10 @@ local function extract_mining_drill_data(entity)
     -- Get the drop target (the entity the drill is putting items into)
     local drop_target = entity.drop_target
     local drop_target_unit_number = nil
-    if drop_target and drop_target.valid and drop_target.unit_number then
+    local drop_target_name = nil
+    if drop_target and drop_target.valid then
         drop_target_unit_number = drop_target.unit_number
+        drop_target_name = drop_target.name
     end
 
     ---@type DrillData
@@ -48,6 +50,8 @@ local function extract_mining_drill_data(entity)
         speed_bonus = speed_bonus,
         productivity = total_productivity * 100,
         drop_target_unit_number = drop_target_unit_number,
+        drop_target_name = drop_target_name,
+        position = entity.position,
     }
 
     return data

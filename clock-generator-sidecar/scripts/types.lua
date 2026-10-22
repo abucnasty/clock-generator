@@ -14,6 +14,8 @@
 ---@field speed_bonus number The speed bonus from modules/beacons
 ---@field productivity number Productivity bonus as percentage (for display only)
 ---@field drop_target_unit_number number|nil The unit_number of the entity the drill drops to
+---@field drop_target_name string|nil The prototype name of the entity the drill drops to
+---@field position MapPosition|nil Where the drill stands
 
 ---@class BeltLaneData
 ---@field ingredient string|nil The item on this lane (nil if empty or mixed)

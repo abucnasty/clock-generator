@@ -1,0 +1,39 @@
+import { expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { ConfigSchema, type Config } from 'clock-generator/browser';
+import { configToFormData, formDataToConfig } from './configForm/configMapping';
+import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
+import { removeChest, removeMachine } from './configForm/edits';
+import { DrillsForm } from '../components/DrillsForm';
+
+// a big mining drill dropping into a car, which two inserters empty into a furnace
+const config: Config = {
+    target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+    machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
+    drills: { mining_productivity_level: 8000, configs: [
+        { id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 17.5, target: { type: 'chest', id: 1 } }] },
+    belts: [],
+    inserters: [{ id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 16 }],
+    chests: [{ id: 1, type: 'car' }],
+};
+
+it("keeps a drill's chest target through the form and a saved build", () => {
+    const form = configToFormData(config), saved = readSavedConfig(serializeConfig(form))!;
+    expect(formDataToConfig(saved)).toEqual(config);
+    expect(ConfigSchema.parse(formDataToConfig(saved))).toEqual(config);
+});
+
+it("shows a drill's chest target read-only", () => {
+    const form = configToFormData(config);
+    const html = renderToStaticMarkup(<DrillsForm miningProductivityLevel={8000} drills={form.drills!.configs} resourceNames={['iron-ore']}
+        machineIds={[1]} onUpdateProductivityLevel={() => { }} onAdd={() => { }} onUpdate={() => { }} onRemove={() => { }}
+        onReorder={() => { }} onDuplicate={() => { }} />);
+    expect(html).toMatch(/aria-label="Target chest"[^>]*readonly|readonly[^>]*aria-label="Target chest"/i);
+    expect(html).not.toContain('aria-label="Target machine"');
+});
+
+it('unsets the target of a drill whose chest is removed, and keeps it on a machine removed', () => {
+    const form = configToFormData(config);
+    expect(removeMachine(form, 0).drills!.configs[0].target).toEqual({ type: 'chest', id: 1 });
+    expect(removeChest(form, 0).drills!.configs[0].target).toEqual({ type: 'chest', id: 0 });
+});

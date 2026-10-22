@@ -105,6 +105,40 @@ function export.left_out_inserters(result)
     return left_out
 end
 
+---What a drill drops into, as the config's target: an exported machine, else an exported chest; nil when neither
+---@param drill DrillData
+---@param result ExtractionResult
+---@return {type: "machine"|"chest", id: number}|nil
+function export.drill_target(drill, result)
+    local unit_number = drill.drop_target_unit_number
+    if not unit_number then
+        return nil
+    end
+    local machine_id = result.unit_number_to_id[unit_number]
+    if machine_id then
+        return { type = "machine", id = machine_id }
+    end
+    local chest_id = result.chest_unit_number_to_id[unit_number]
+    if chest_id then
+        return { type = "chest", id = chest_id }
+    end
+    return nil
+end
+
+---Drills that are left out of the exported config: the ones that drop into nothing the export has (the ground, or an
+---entity that is not exported), each with the name of what it drops into, nil for the ground
+---@param result ExtractionResult
+---@return {drill: DrillData, target_name: string|nil}[]
+function export.left_out_drills(result)
+    local left_out = {}
+    for _, drill in ipairs(result.drills) do
+        if not export.drill_target(drill, result) then
+            table.insert(left_out, { drill = drill, target_name = drill.drop_target_name })
+        end
+    end
+    return left_out
+end
+
 ---The product that leaves the selection and what its machines make of it per second at most, nil when there is none
 ---@param result ExtractionResult
 ---@return SuggestedTarget|nil
@@ -160,27 +194,19 @@ function export.to_table(result)
         })
     end
     
-    -- Format drills for clock-generator (different schema)
-    for i, drill in ipairs(result.drills) do
-        -- Look up the target machine ID from the unit_number mapping
-        local target_machine_id = 1 -- Default fallback (must be >0)
-        if drill.drop_target_unit_number then
-            local mapped_id = result.unit_number_to_id[drill.drop_target_unit_number]
-            if mapped_id then
-                target_machine_id = mapped_id
-            end
+    -- Format drills for clock-generator (different schema): a drill whose drop target is neither an exported machine
+    -- nor an exported chest is left out (export.left_out_drills), as the clock generator needs what it drops into
+    for _, drill in ipairs(result.drills) do
+        local target = export.drill_target(drill, result)
+        if target then
+            table.insert(output.drills.configs, {
+                id = #output.drills.configs + 1,
+                type = drill.drill_type,
+                mined_item_name = drill.mined_item_name,
+                speed_bonus = drill.speed_bonus,
+                target = target
+            })
         end
-        
-        table.insert(output.drills.configs, {
-            id = i,
-            type = drill.drill_type,
-            mined_item_name = drill.mined_item_name,
-            speed_bonus = drill.speed_bonus,
-            target = {
-                type = "machine",
-                id = target_machine_id
-            }
-        })
     end
     
     -- Capture diagnostics stay outside the simulator config and refer to exported inserter IDs.

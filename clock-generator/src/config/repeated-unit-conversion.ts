@@ -111,6 +111,8 @@ function analyze(config: Config): Analysis {
         if (parent.has(a) && parent.has(b)) join(a, b);
     });
     config.drills?.configs.forEach(drill => {
+        // the copies of a drill into a chest are not converted (yet): the conversion follows a drill to its machine
+        if (drill.target.type !== 'machine') refuse('unsupported-boundary', 'A drill into a chest is not supported in a repeated unit.');
         if (!ids.machines.has(drill.target.id)) refuse('invalid-references', `Missing drill target ${drill.target.id}.`);
         join(keyOf('drill', drill.id), keyOf('machine', drill.target.id));
     });

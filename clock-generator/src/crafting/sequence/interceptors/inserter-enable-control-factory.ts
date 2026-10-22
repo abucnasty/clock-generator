@@ -50,6 +50,10 @@ export class EnableControlFactory {
 
         const entity_state = this.entity_state_registry.getStateByEntityIdOrThrow(entity_id);
         if (EntityState.isDrill(entity_state)) {
+            // a drill into a chest runs always: nothing gates it (plan-run sets it ALWAYS, as the config's override would)
+            if (!EntityId.isMachine(entity_state.drill.sink_id)) {
+                return AlwaysEnabledControl;
+            }
             return this.forDrill(
                 entity_state.drill,
                 entity_state.drill.sink_id,

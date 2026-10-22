@@ -84,6 +84,11 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
 
                 </Box>
                 <Box sx={{ minWidth: 0, gridColumn: 3, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 3 } }}>
+                            {drill.target.type === 'chest' ? (
+                                // a drill into a chest keeps its target as the config gives it: shown, not edited here
+                                <TextField size="small" sx={{ minWidth: 0, width: '100%' }} label="Target" value={entityLabel('chest', drill.target.id)}
+                                    slotProps={{ input: { readOnly: true } }} inputProps={{ 'aria-label': 'Target chest' }} />
+                            ) : (
                             <FormControl size="small" sx={{ minWidth: 0, width: '100%' }} error={!machineIds.includes(drill.target.id)}>
                                 <InputLabel>Target Machine</InputLabel>
                                 <Select
@@ -103,6 +108,7 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
                                     ))}
                                 </Select>
                             </FormControl>
+                            )}
 
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gridColumn: 4, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: 2 } }}>

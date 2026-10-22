@@ -174,12 +174,15 @@ export function describeRemoval(before: ConfigFormData, after: ConfigFormData, k
         sentences.push(`${ends.join(' and ')} now.`);
     }
     const drillsBefore = new Map((before.drills?.configs ?? []).map((drill) => [drill._uuid, drill]));
-    const drills = ascending((after.drills?.configs ?? []).filter((drill) => {
+    const unset = (type: 'machine' | 'chest') => ascending((after.drills?.configs ?? []).filter((drill) => {
         const was = drillsBefore.get(drill._uuid);
-        return was !== undefined && was.target.id !== 0 && drill.target.id === 0;
+        return was !== undefined && drill.target.type === type && was.target.id !== 0 && drill.target.id === 0;
     }).map((drill) => drill.id));
-    if (drills.length > 0) {
-        sentences.push(`${named('drills', drills)} ${hasOrHave(drills)} no Target Machine now.`);
+    for (const [type, field] of [['machine', 'Target Machine'], ['chest', 'Target chest']] as const) {
+        const drills = unset(type);
+        if (drills.length > 0) {
+            sentences.push(`${named('drills', drills)} ${hasOrHave(drills)} no ${field} now.`);
+        }
     }
     return sentences.join(' ');
 }

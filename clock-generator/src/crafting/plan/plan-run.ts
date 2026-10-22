@@ -1,6 +1,7 @@
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
 import { Config } from "../../config";
+import { EnableControlMode } from "../../common/enable-control-types";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
@@ -10,7 +11,7 @@ import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence
 import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { cloneSimulationContextWithInterceptors, createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
 import { Duration, OpenRange } from "../../data-types";
-import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
+import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { TargetProductionRate } from "../target-production-rate";
 import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "../../data-types/fraction";
@@ -2138,11 +2139,14 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
         }
     });
 
-    // Process drill overrides (explicit id field)
+    // Process drill overrides (explicit id field). A drill into a chest is always enabled: nothing gates it (the
+    // schema refuses an override on it), so it gets no clock windows and no combinator, as a drill set to ALWAYS
     if (config.drills !== undefined) {
         config.drills.configs.forEach((drill_config) => {
             const entity_id = EntityId.forDrill(drill_config.id).id;
-            const enable_control_override = drill_config.overrides?.enable_control;
+            const enable_control_override = drill_config.target.type === "chest"
+                ? { mode: EnableControlMode.ALWAYS }
+                : drill_config.overrides?.enable_control;
             if (enable_control_override !== undefined) {
                 map.set(entity_id, enable_control_override);
             }
@@ -2195,7 +2199,10 @@ function configureInventoryTransferPlugins(
         const sink_machine = simulation_context.entity_registry.getEntityByIdOrThrow(
             it.drill_state.drill.sink_id
         );
-        assertIsMachine(sink_machine);
+        // a drill into a chest is always enabled, so it never ends a run of transfers to record
+        if (!Entity.isMachine(sink_machine)) {
+            return;
+        }
         it.addPlugin(new DrillInventoryTransferPlugin(
             it.drill_state.drill,
             sink_machine,
