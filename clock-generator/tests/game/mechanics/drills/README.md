@@ -23,8 +23,9 @@ Each build checks three things:
 - **The drill against the game's, every tick.** The simulator's drill is driven by the game's sink: in each tick the sink
   first loses what the game's taker took (its hand's growth) or what a craft took (the machine's count falls), and the
   drill is disabled where the game's was. Its sink's count and both bars equal the game's in every tick. Into a machine
-  this holds until the game's machine reaches the drill's stop, the larger of the stack and the automated insertion
-  limit + 64 (`src/rules-of-the-game.ts` rule 3, its own check, not this family's): 114 for rail and 214 for landfill.
+  that includes the drill's stop, the larger of the stack and the automated insertion limit + 64
+  (`src/rules-of-the-game.ts` rule 3): it is 114 for rail and 214 for landfill, the game's machine never goes above it,
+  and it reaches it in the rail builds and in `landfill-l45` and its drill-last and moved variants.
 - **The whole build in the simulator**, every entity simulated, for the builds whose other entities the simulator has as
   the game does (`simulated`: the car emptied by a stack inserter, `landfill-l8`): the sink's count in every tick. A yellow
   inserter taking from a car leaves with what is there where the simulator's waits to fill its hand, and an assembler
