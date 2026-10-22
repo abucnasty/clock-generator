@@ -58,7 +58,7 @@ function createDeciderCombinatorForTransfers(
     const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));
     const outputs = Array.from(items).map(item_name => SignalId.item(item_name));
 
-    const deciderCombinator = (modulo
+    const decider = (modulo
         ? DeciderCombinatorEntity.fromSignalRanges([
             { signal: modulo.signal, ranges: clockValueRanges(modulo.split.repeating) },
             { signal: SignalId.clock, ranges: clockValueRanges(modulo.split.remaining) },
@@ -67,12 +67,16 @@ function createDeciderCombinatorForTransfers(
         .setPosition(position)
         .setMultiLinePlayerDescription(modulo
             ? description_lines.concat(`Repeats every ${modulo.split.modulus} ticks: ${SignalId.toDescriptionString(modulo.signal)} is the clock modulo ${modulo.split.modulus}`)
-            : description_lines)
-        .build();
+            : description_lines);
 
-    // the inserters its description names, which are wired to it
-    const inserter_ids = description_lines.length > 0 && Entity.isInserter(entity) ? entity_ids.map(it => it.number) : [];
-    return { combinator: deciderCombinator, inserter_ids }
+    // the inserters or drills its description names, which are wired to it
+    const named = description_lines.length > 0 ? entity_ids.map(it => it.number) : [];
+    const inserter_ids = Entity.isInserter(entity) ? named : [];
+    if (named.length > 0) {
+        const ascending = named.slice().sort((a, b) => a - b);
+        decider.setTags(Entity.isInserter(entity) ? { inserters: ascending } : { drills: ascending });
+    }
+    return { combinator: decider.build(), inserter_ids }
 }
 
 /** The machines an inserter or drill works with, as their recipes: "from" the one it empties, "into" the one it fills */
@@ -665,6 +669,7 @@ export function createSignalPerInserterBlueprint(
                 )
                 .setPosition(Position.fromXY(x += 1, 0))
                 .setMultiLinePlayerDescription(unplannedInserterClockDescriptionLines(inserters.map(it => it.entity_id), entityRegistry, items, inserter_clock, fuel_clock_signal))
+                .setTags({ inserters: inserters.map(it => it.entity_id.number).sort((a, b) => a - b) })
                 .build();
             window_deciders.push(window_decider);
             inserters_of.set(window_decider, inserters.map(it => it.entity_id.number));

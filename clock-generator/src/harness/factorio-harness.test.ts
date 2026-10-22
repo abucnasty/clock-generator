@@ -22,7 +22,24 @@ describe("factorioDataDir", () => {
 describe("clockOfBlueprintString", () => {
     const counting = { decider_conditions: { conditions: [{ comparator: "<", constant: 1728 }], else_outputs: [{ constant: 1 }] } };
 
-    it("reads the schedule of a clock blueprint from the descriptions of its combinators", () => {
+    it("reads the inserters each combinator enables from its tags, not its description", () => {
+        const blueprint = encodeBlueprintFile({
+            blueprint: {
+                entities: [
+                    { entity_number: 1, name: "decider-combinator", player_description: "Clock for [item=iron-plate] 80/s. Period 1728 ticks", control_behavior: counting },
+                    { entity_number: 2, player_description: "2 inserters, each [entity=car] → …", tags: { clock_generator: { inserters: [3, 4] } } },
+                    { entity_number: 3, player_description: "Inserter 9 for [item=iron-plate]", tags: { clock_generator: { drills: [1] } } },
+                    { entity_number: 4, player_description: "Part of the clock: do not wire or change." },
+                ],
+            },
+        } as any);
+        expect(clockOfBlueprintString(blueprint).schedule).toEqual({
+            counted_ticks: 1728,
+            inserter_combinators: [{ entity_number: 2, inserter_ids: [3, 4] }],
+        });
+    });
+
+    it("reads the schedule of a clock blueprint from before the tags from the descriptions of its combinators", () => {
         const blueprint = encodeBlueprintFile({
             blueprint: {
                 entities: [

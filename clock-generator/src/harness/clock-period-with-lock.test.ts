@@ -74,7 +74,7 @@ describe("the schedule of a generated clock", () => {
         ...(result.subtick ? [result.subtick] : []),
     ];
 
-    it("is what the descriptions of its combinators say", async () => {
+    it("is what the tags of its combinators say", async () => {
         const rocket_fuel = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
         const configs = [
             await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE),
