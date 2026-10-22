@@ -14,13 +14,17 @@ data:extend({
         select = {
             border_color = { r = 0, g = 1, b = 0.5 },
             cursor_box_type = "copy",
-            mode = { "buildable-type", "same-force" },
+            -- any-entity, kept to the types below: "buildable-type" takes buildings only, which leaves out cars, tanks
+            -- and cargo wagons (rolling stock and vehicles are not buildings)
+            mode = { "any-entity", "same-force" },
             entity_type_filters = { "assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo" }
         },
         alt_select = {
             border_color = { r = 1, g = 0.5, b = 0 },
             cursor_box_type = "copy",
-            mode = { "buildable-type", "same-force" },
+            -- any-entity, kept to the types below: "buildable-type" takes buildings only, which leaves out cars, tanks
+            -- and cargo wagons (rolling stock and vehicles are not buildings)
+            mode = { "any-entity", "same-force" },
             entity_type_filters = { "assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo" }
         },
         flags = { "only-in-cursor", "spawnable" }
