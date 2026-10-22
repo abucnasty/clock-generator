@@ -141,6 +141,9 @@ local function cell_inserter_flags(ghosts)
     return flags
 end
 
+---The types of rolling stock, which the game builds only on rails
+local ROLLING_STOCK_TYPES = { ["cargo-wagon"] = true, ["fluid-wagon"] = true, ["artillery-wagon"] = true, ["locomotive"] = true }
+
 ---Ore a tile is given under a drill: enough that no recording runs it out (a big drill at 50% drain takes 0.39 a tick)
 local DRILL_ORE_PER_TILE = 1000000000
 
@@ -289,7 +292,20 @@ local function build_blueprint(surface, force, blueprint, position_for, stage_ce
 
     local staged_flags = stage_cell_inserters and cell_inserter_flags(ghosts) or {}
     local entities, failed, tags, staged = {}, {}, {}, {}
+    -- a wagon is only built on rails, which a blueprint may list after it: rolling stock is revived after everything else
+    local order = {}
     for index, ghost in ipairs(ghosts) do
+        if not (ghost.valid and ghost.type == "entity-ghost" and ROLLING_STOCK_TYPES[ghost.ghost_type]) then
+            table.insert(order, index)
+        end
+    end
+    for index, ghost in ipairs(ghosts) do
+        if ghost.valid and ghost.type == "entity-ghost" and ROLLING_STOCK_TYPES[ghost.ghost_type] then
+            table.insert(order, index)
+        end
+    end
+    for _, index in ipairs(order) do
+        local ghost = ghosts[index]
         if staged_flags[index] then
             table.insert(staged, ghost)
         elseif ghost.valid and ghost.type == "entity-ghost" then

@@ -3,6 +3,7 @@ import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, Machine, MiningDr
 import assert from "../../../common/assert";
 import { MapExtended } from "../../../data-types";
 import { Logger, defaultLogger } from "../../../common/logger";
+import { CONTAINER_OUTPUT_PATH_REFUSAL } from "../../../config/errors";
 
 /**
  * Items a mining drill's "swing" stands for. A drill drops what it mines straight into the machine it faces, with no
@@ -154,6 +155,46 @@ export function outputInsertersOf(machine: Machine, entity_registry: Pick<Readab
     return out_of_the_build.length > 0 ? out_of_the_build : taking_from_it;
 }
 
+/**
+ * How a machine's product leaves the build: through the inserters that take it out of the machine (`feeders`), and,
+ * where those all put it into one finite container from which other inserters take it on to a belt or a chest
+ * (`takers`), through that container. The takers are then the build's output inserters, as the feeders are otherwise.
+ * The item is the machine's output, compared by equality; the kinds are the entities' types.
+ */
+export interface OutputPath {
+    feeders: Inserter[];
+    container: Chest | null;
+    takers: Inserter[];
+}
+
+export function outputPathOf(machine: Machine, entity_registry: Pick<ReadableEntityRegistry, "getAll">): OutputPath {
+    const feeders = outputInsertersOf(machine, entity_registry);
+    const item = machine.output.item_name;
+    const all = entity_registry.getAll();
+    const machine_ids = new Set(all.filter(Entity.isMachine).map(it => it.entity_id.id));
+    const finite_chests = new Map(all.filter(Entity.isChest).filter(Chest.isFinite).map(it => [it.entity_id.id, it] as const));
+    const takersOf = (chest_id: string) => all.filter(Entity.isInserter)
+        .filter(inserter => inserter.source.entity_id.id === chest_id && !machine_ids.has(inserter.sink.entity_id.id))
+        .filter(inserter => inserter.filtered_items.size === 0 || inserter.filtered_items.has(item));
+    const containers = Array.from(new Set(feeders.map(it => it.sink.entity_id.id)))
+        .filter(id => finite_chests.has(id) && takersOf(id).length > 0);
+    if (containers.length === 0) {
+        return { feeders, container: null, takers: [] };
+    }
+    const takers = takersOf(containers[0]);
+    const onward = takers.some(taker => finite_chests.has(taker.sink.entity_id.id) && takersOf(taker.sink.entity_id.id).length > 0);
+    if (containers.length > 1 || feeders.some(it => it.sink.entity_id.id !== containers[0]) || onward) {
+        throw new Error(`Machine ${machine.entity_id.number}: ${CONTAINER_OUTPUT_PATH_REFUSAL}`);
+    }
+    return { feeders, container: finite_chests.get(containers[0])!, takers };
+}
+
+/** The inserters whose drops are a machine's output of the build: the takers out of its container, or its feeders */
+export function buildOutputInsertersOf(machine: Machine, entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
+    const path = outputPathOf(machine, entity_registry);
+    return path.container === null ? path.feeders : path.takers;
+}
+
 /** The inserters that take the target output: each machine's swings are split among the inserters taking it out of the build */
 function planOutputInserters(
     output_machines: Machine[],
@@ -166,7 +207,8 @@ function planOutputInserters(
     assert(output_machines.length > 0, "At least one output machine is required");
 
     for (const machine of output_machines) {
-        const inserters = outputInsertersOf(machine, entity_registry);
+        const path = outputPathOf(machine, entity_registry);
+        const inserters = path.container === null ? path.feeders : path.takers;
         assert(
             inserters.length >= 1,
             `Output machine ${machine.entity_id.id} must have at least one dedicated output inserter, ` +
@@ -193,6 +235,20 @@ function planOutputInserters(
                 total_transfer_count: swing_count_per_inserter,
                 stack_size: handSizeFor(output_inserter, machine.output.item_name)
             });
+        }
+        // through a container: the feeders put into it what the takers take out, at their own hands
+        if (path.container !== null) {
+            const items_per_feeder = output_swing_count_per_machine.multiply(output_stack_size).divide(path.feeders.length);
+            for (const feeder of path.feeders) {
+                const hand = handSizeFor(feeder, machine.output.item_name);
+                const swings = items_per_feeder.divide(hand);
+                addTransfers(result, {
+                    entity: feeder,
+                    item_transfers: [{ item_name: machine.output.item_name, transfer_count: swings }],
+                    total_transfer_count: swings,
+                    stack_size: hand
+                });
+            }
         }
         addDemand(demand, machine, output_swing_count_per_machine.multiply(output_stack_size));
     }

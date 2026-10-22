@@ -20,7 +20,7 @@ import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
 import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
-import { EntityTransferCountMap, outputInsertersOf, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
+import { buildOutputInsertersOf, EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
@@ -1519,15 +1519,17 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
        `but target production rate is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
     )
 
-    // Every inserter that takes the target item out of the build; a machine can have several
+    // Every inserter that takes the target item out of the build, or out of the container its machine puts it into; a
+    // machine can have several
     const inserter_states = simulation_context.state_registry.getAllStates().filter(EntityState.isInserter);
-    const all_output_inserters = output_machine_state_machines.flatMap(machine_state_machine => {
-        const ids = new Set(outputInsertersOf(machine_state_machine.machine_state.machine, simulation_context.entity_registry).map(it => it.entity_id.id));
-        return inserter_states.filter(it => ids.has(it.entity_id.id));
-    });
+    const output_ids_by_machine = new Map(output_machine_state_machines.map(machine_state_machine => [machine_state_machine.machine_state.entity_id.id,
+        new Set(buildOutputInsertersOf(machine_state_machine.machine_state.machine, simulation_context.entity_registry).map(it => it.entity_id.id))] as const));
+    // machines that put the product into one container share its takers: each is counted once
+    const all_output_inserters = Array.from(new Set(Array.from(output_ids_by_machine.values()).flatMap(ids => inserter_states.filter(it => ids.has(it.entity_id.id)))));
     // One of them per output machine, which the swings of a cycle are counted by
     const output_inserters = output_machine_state_machines.map(machine_state_machine => {
-        const inserter = all_output_inserters.find(it => it.inserter.source.entity_id.id === machine_state_machine.machine_state.entity_id.id);
+        const ids = output_ids_by_machine.get(machine_state_machine.machine_state.entity_id.id)!;
+        const inserter = all_output_inserters.find(it => ids.has(it.entity_id.id));
         assert(
             inserter !== undefined,
             `No inserter with source machine ${machine_state_machine.machine_state.entity_id} found`
