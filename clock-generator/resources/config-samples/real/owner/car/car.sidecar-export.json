@@ -17,13 +17,13 @@
     }
   ],
   "drills": {
-    "mining_productivity_level": 7999,
     "configs": [
       {
         "id": 1,
         "type": "big-mining-drill",
         "mined_item_name": "iron-ore",
         "speed_bonus": 17.5,
+        "productivity": 79990,
         "target": {
           "type": "chest",
           "id": 1

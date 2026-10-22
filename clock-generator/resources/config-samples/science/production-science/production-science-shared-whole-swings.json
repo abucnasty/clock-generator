@@ -21,14 +21,14 @@
         "id": 1,
         "mined_item_name": "stone",
         "speed_bonus": 8.84,
+        "productivity": 80000,
         "target": {
           "id": 2,
           "type": "machine"
         },
         "type": "electric-mining-drill"
       }
-    ],
-    "mining_productivity_level": 8000
+    ]
   },
   "inserters": [
     {

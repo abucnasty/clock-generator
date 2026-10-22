@@ -143,13 +143,13 @@
     }
   ],
   "drills": {
-    "mining_productivity_level": 8000,
     "configs": [
       {
         "id": 1,
         "type": "electric-mining-drill",
         "mined_item_name": "stone",
         "speed_bonus": 8.84,
+        "productivity": 80000,
         "target": {
           "type": "machine",
           "id": 2
