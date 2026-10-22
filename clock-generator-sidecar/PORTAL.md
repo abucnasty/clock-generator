@@ -13,7 +13,7 @@ up as seldom as possible, and gives you a blueprint of the clock to place.
 ## What it copies
 
 - machines and furnaces: recipe, crafting speed (with modules and beacons) and productivity (with research)
-- biochambers with their energy consumption bonus, and mining drills with their speed bonus
+- biochambers with their energy consumption bonus, and mining drills with their speed bonus and productivity
 - inserters: what each takes from and drops into, its kind, quality, stack size and filters (none when they are switched off; a blacklist, which the website refuses, is marked)
 - belts and the items on each lane, and chests with what they hold
 - cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, slot filters, what they hold, and a silo's recipe quality, crafting speed and productivity

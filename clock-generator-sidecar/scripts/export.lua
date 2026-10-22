@@ -163,7 +163,6 @@ function export.to_table(result, options)
         sidecar_version = script.active_mods["clock-generator-sidecar"],
         machines = {},
         drills = {
-            mining_productivity_level = result.mining_productivity_level,
             configs = {}
         },
         inserters = {},
@@ -212,6 +211,7 @@ function export.to_table(result, options)
                 type = drill.drill_type,
                 mined_item_name = drill.mined_item_name,
                 speed_bonus = drill.speed_bonus,
+                productivity = drill.productivity,
                 target = target
             })
         end

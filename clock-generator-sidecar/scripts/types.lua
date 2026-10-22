@@ -12,7 +12,7 @@
 ---@field drill_type string The specific drill type (e.g., "electric-mining-drill")
 ---@field mined_item_name string The resource being mined
 ---@field speed_bonus number The speed bonus from modules/beacons
----@field productivity number Productivity bonus as percentage (for display only)
+---@field productivity number Mining productivity as a percentage: the force's research and the drill's modules together
 ---@field drop_target_unit_number number|nil The unit_number of the entity the drill drops to
 ---@field drop_target_name string|nil The prototype name of the entity the drill drops to
 ---@field position MapPosition|nil Where the drill stands
@@ -85,6 +85,5 @@
 ---@field unit_number_to_id table<number, number> Maps entity unit_number to machine ID
 ---@field belt_unit_number_to_id table<number, number> Maps belt unit_number to belt ID
 ---@field chest_unit_number_to_id table<number, number> Maps chest unit_number to chest ID
----@field mining_productivity_level number The levels of mining productivity researched: the force's mining productivity bonus in 10% steps
 
 return {}
