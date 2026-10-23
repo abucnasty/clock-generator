@@ -185,7 +185,9 @@ function mapRawDataToFilteredFactorioData(rawData) {
     // the crafting machines a build can name as a machine: their prototype type (a furnace picks its recipe from its
     // input; an assembling machine is set to one), the crafting categories they make recipes of, and the fuel
     // categories they burn when their energy source is a burner (none for an electric one); what the simulation rule
-    // of a machine follows from (src/entities/machine/machine-rule.ts). The rocket silo is in `rocket_silo`.
+    // of a machine follows from (src/entities/machine/machine-rule.ts). Their base crafting speed (the game's default
+    // 1 when the prototype sets none) picks the machine for an older config's type (src/config/migrate-machine-type.ts).
+    // The rocket silo is in `rocket_silo`.
     filtered["crafting_machine"] = {};
     for (const category of ["assembling-machine", "furnace"]) {
         for (const [name, machine] of Object.entries(rawData[category] ?? {})) {
@@ -198,6 +200,7 @@ function mapRawDataToFilteredFactorioData(rawData) {
                 type: category,
                 crafting_categories: machine.crafting_categories ?? [],
                 burner_fuel_categories: fuel_categories,
+                crafting_speed: machine.crafting_speed ?? 1,
             };
         }
     }

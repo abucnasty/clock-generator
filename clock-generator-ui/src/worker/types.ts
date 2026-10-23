@@ -353,6 +353,8 @@ export interface CraftingMachineInfo {
     type: string;
     crafting_categories: string[];
     burner_fuel_categories: string[];
+    /** Base crafting speed, which picks the machine for a recipe */
+    crafting_speed: number;
 }
 
 export interface CraftingMachineData {

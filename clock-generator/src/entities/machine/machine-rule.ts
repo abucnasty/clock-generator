@@ -30,22 +30,24 @@ export function machineCanMake(prototype: Pick<CraftingMachineRuleFacts, "crafti
     return recipe_categories.some(category => prototype.crafting_categories.includes(category));
 }
 
-/** A crafting machine prototype of the game data with its name, as the data lists them */
+/** A crafting machine prototype of the game data with its name and base crafting speed, as the data lists them */
 export interface NamedCraftingMachine extends CraftingMachineRuleFacts {
     readonly name: string;
+    /** The prototype's crafting speed, before modules, beacons and quality */
+    readonly crafting_speed: number;
 }
 
 /**
- * The machine to set for a recipe of these categories, among `machines` (in the data's order): one that can make the
- * recipe, first one whose crafting categories hold the recipe's own category (its first, the others being additional),
- * then one that burns no fuel, then the first in the data. Undefined when none can make it. No name decides it.
+ * The machine to set for a recipe of these categories, among `machines` (in the data's order): of those that can make
+ * the recipe, the one with the highest base crafting speed (the one a player most likely built), then one that burns no
+ * fuel, then the first in the data. Undefined when none can make it. No name decides it.
  */
 export function machineForRecipe<T extends NamedCraftingMachine>(recipe_categories: readonly string[], machines: readonly T[]): T | undefined {
-    const able = machines.filter(machine => machineCanMake(machine, recipe_categories));
-    const own = recipe_categories[0];
-    const rank = (machine: T) => (own !== undefined && machine.crafting_categories.includes(own) ? 0 : 2)
-        + (machine.burner_fuel_categories.length === 0 ? 0 : 1);
-    return able.reduce<T | undefined>((best, machine) => best === undefined || rank(machine) < rank(best) ? machine : best, undefined);
+    const better = (machine: T, best: T) => machine.crafting_speed !== best.crafting_speed
+        ? machine.crafting_speed > best.crafting_speed
+        : machine.burner_fuel_categories.length === 0 && best.burner_fuel_categories.length > 0;
+    return machines.filter(machine => machineCanMake(machine, recipe_categories))
+        .reduce<T | undefined>((best, machine) => best === undefined || better(machine, best) ? machine : best, undefined);
 }
 
 /**

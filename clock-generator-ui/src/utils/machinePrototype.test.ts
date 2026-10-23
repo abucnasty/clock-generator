@@ -25,7 +25,8 @@ describe('a machine row and its machine', () => {
     it('gets a machine that can make its recipe when it has none, picked for it', () => {
         expect(machineForRecipeOf('iron-plate', data)).toBe('electric-furnace');
         expect(machineForRecipeOf('nutrients-from-bioflux', data)).toBe('biochamber');
-        expect(machineForRecipeOf('lithium', data)).toBe('chemical-plant');
+        expect(machineForRecipeOf('lithium', data)).toBe('cryogenic-plant');
+        expect(machineForRecipeOf('iron-gear-wheel', data)).toBe('assembling-machine-3');
         expect(machineForRecipeOf('', data)).toBeUndefined();
         expect(recipePatch(row({}), 'casting-iron', data)).toEqual({ recipe: 'casting-iron', prototype: 'foundry', _prototype_source: 'recipe' });
         expect(recipePatch(row({ prototype: 'cryogenic-plant' }), 'lithium', data)).toEqual({ recipe: 'lithium' });

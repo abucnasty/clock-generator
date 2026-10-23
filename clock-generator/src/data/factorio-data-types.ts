@@ -119,6 +119,8 @@ export interface CraftingMachinePrototype {
   crafting_categories: string[]
   /** The fuel categories it burns when its energy source is a burner; none for any other energy source */
   burner_fuel_categories: string[]
+  /** Its base crafting speed, before modules, beacons and quality */
+  crafting_speed: number
 }
 
 export interface FactorioData {

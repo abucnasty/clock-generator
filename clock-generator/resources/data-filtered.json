@@ -60922,7 +60922,8 @@
         "crafting",
         "advanced-crafting"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 0.5
     },
     "assembling-machine-2": {
       "name": "assembling-machine-2",
@@ -60932,7 +60933,8 @@
         "advanced-crafting",
         "crafting-with-fluid"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 0.75
     },
     "assembling-machine-3": {
       "name": "assembling-machine-3",
@@ -60942,7 +60944,8 @@
         "advanced-crafting",
         "crafting-with-fluid"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 1.25
     },
     "oil-refinery": {
       "name": "oil-refinery",
@@ -60950,7 +60953,8 @@
       "crafting_categories": [
         "oil-processing"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 1
     },
     "chemical-plant": {
       "name": "chemical-plant",
@@ -60958,7 +60962,8 @@
       "crafting_categories": [
         "chemistry"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 1
     },
     "centrifuge": {
       "name": "centrifuge",
@@ -60966,7 +60971,8 @@
       "crafting_categories": [
         "centrifuging"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 1
     },
     "biochamber": {
       "name": "biochamber",
@@ -60976,7 +60982,8 @@
       ],
       "burner_fuel_categories": [
         "nutrients"
-      ]
+      ],
+      "crafting_speed": 2
     },
     "crusher": {
       "name": "crusher",
@@ -60984,7 +60991,8 @@
       "crafting_categories": [
         "crushing"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 1
     },
     "foundry": {
       "name": "foundry",
@@ -60992,7 +61000,8 @@
       "crafting_categories": [
         "metallurgy"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 4
     },
     "captive-biter-spawner": {
       "name": "captive-biter-spawner",
@@ -61002,7 +61011,8 @@
       ],
       "burner_fuel_categories": [
         "food"
-      ]
+      ],
+      "crafting_speed": 1
     },
     "electromagnetic-plant": {
       "name": "electromagnetic-plant",
@@ -61010,7 +61020,8 @@
       "crafting_categories": [
         "electromagnetics"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 2
     },
     "cryogenic-plant": {
       "name": "cryogenic-plant",
@@ -61018,7 +61029,8 @@
       "crafting_categories": [
         "cryogenics"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 2
     },
     "stone-furnace": {
       "name": "stone-furnace",
@@ -61028,7 +61040,8 @@
       ],
       "burner_fuel_categories": [
         "chemical"
-      ]
+      ],
+      "crafting_speed": 1
     },
     "electric-furnace": {
       "name": "electric-furnace",
@@ -61036,7 +61049,8 @@
       "crafting_categories": [
         "smelting"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 2
     },
     "steel-furnace": {
       "name": "steel-furnace",
@@ -61046,7 +61060,8 @@
       ],
       "burner_fuel_categories": [
         "chemical"
-      ]
+      ],
+      "crafting_speed": 2
     },
     "recycler": {
       "name": "recycler",
@@ -61054,7 +61069,8 @@
       "crafting_categories": [
         "recycling"
       ],
-      "burner_fuel_categories": []
+      "burner_fuel_categories": [],
+      "crafting_speed": 0.5
     }
   },
   "item": {

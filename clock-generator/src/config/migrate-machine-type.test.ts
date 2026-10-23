@@ -8,20 +8,23 @@ import { MachineConfigurationSchema } from "./schema";
 const machine = (fields: Record<string, unknown>) => ({ id: 1, recipe: "iron-plate", productivity: 0, crafting_speed: 1, ...fields });
 
 describe("a machine's former type", () => {
-    it("becomes the machine of that rule that makes the recipe, by the recipe's own category first, then one burning no fuel", () => {
+    it("becomes the machine of that rule that makes the recipe with the highest base crafting speed, then one burning no fuel", () => {
         const prototypeOf = (type: string, recipe: string) =>
             (migrateMachineType(machine({ type, recipe })) as { prototype?: string }).prototype;
         // the 2.1.21 data's choices; names are only the test's
         expect(prototypeOf("furnace", "iron-plate")).toBe("electric-furnace");
         expect(prototypeOf("furnace", "iron-plate-recycling")).toBe("recycler");
         expect(prototypeOf("biochamber", "nutrients-from-bioflux")).toBe("biochamber");
-        expect(prototypeOf("machine", "iron-gear-wheel")).toBe("assembling-machine-1");
-        expect(prototypeOf("machine", "processing-unit")).toBe("assembling-machine-2");
-        expect(prototypeOf("machine", "plastic-bar")).toBe("chemical-plant");
-        expect(prototypeOf("machine", "lithium")).toBe("chemical-plant");
+        expect(prototypeOf("machine", "iron-gear-wheel")).toBe("assembling-machine-3");
+        expect(prototypeOf("machine", "processing-unit")).toBe("electromagnetic-plant");
+        expect(prototypeOf("machine", "electronic-circuit")).toBe("electromagnetic-plant");
+        expect(prototypeOf("machine", "plastic-bar")).toBe("cryogenic-plant");
+        expect(prototypeOf("machine", "lithium")).toBe("cryogenic-plant");
+        expect(prototypeOf("machine", "sulfuric-acid")).toBe("cryogenic-plant");
+        expect(prototypeOf("machine", "advanced-oil-processing")).toBe("oil-refinery");
         expect(prototypeOf("machine", "casting-iron")).toBe("foundry");
         expect(prototypeOf("machine", "electromagnetic-science-pack")).toBe("electromagnetic-plant");
-        expect(prototypeOf("machine", "jellynut-processing")).toBe("assembling-machine-1");
+        expect(prototypeOf("machine", "jellynut-processing")).toBe("assembling-machine-3");
     });
 
     it("keeps its rule where no machine of it makes the recipe: a furnace or biochamber still gets one, a crafting machine none", () => {
@@ -52,14 +55,17 @@ describe("a machine's former type", () => {
 });
 
 describe("the machine for a recipe", () => {
-    const furnace = { name: "furnace-b", type: "furnace", crafting_categories: ["smelting"], burner_fuel_categories: [] };
-    const burner = { name: "furnace-a", type: "furnace", crafting_categories: ["smelting"], burner_fuel_categories: ["chemical"] };
-    const plant = { name: "plant", type: "assembling-machine", crafting_categories: ["chemistry"], burner_fuel_categories: [] };
-    const cold = { name: "cold", type: "assembling-machine", crafting_categories: ["cryogenics"], burner_fuel_categories: [] };
+    const furnace = { name: "furnace-b", type: "furnace", crafting_categories: ["smelting"], burner_fuel_categories: [], crafting_speed: 2 };
+    const burner = { name: "furnace-a", type: "furnace", crafting_categories: ["smelting"], burner_fuel_categories: ["chemical"], crafting_speed: 2 };
+    const plant = { name: "plant", type: "assembling-machine", crafting_categories: ["chemistry"], burner_fuel_categories: [], crafting_speed: 1 };
+    const cold = { name: "cold", type: "assembling-machine", crafting_categories: ["cryogenics"], burner_fuel_categories: [], crafting_speed: 2 };
+    const slow = { ...plant, name: "slow", crafting_speed: 0.5 };
 
-    it("follows the data, not the names: own category, then no fuel, then the data's order", () => {
+    it("follows the data, not the names: the highest base crafting speed, then no fuel, then the data's order", () => {
         expect(machineForRecipe(["smelting"], [burner, furnace])?.name).toBe("furnace-b");
-        expect(machineForRecipe(["chemistry", "cryogenics"], [cold, plant])?.name).toBe("plant");
+        expect(machineForRecipe(["chemistry", "cryogenics"], [plant, cold])?.name).toBe("cold");
+        expect(machineForRecipe(["chemistry"], [slow, plant])?.name).toBe("plant");
+        expect(machineForRecipe(["chemistry"], [plant, { ...plant, name: "twin" }])?.name).toBe("plant");
         expect(machineForRecipe(["cryogenics"], [plant])).toBeUndefined();
         expect(machineForRule("furnace", ["chemistry"], [burner, furnace, plant])?.name).toBe("furnace-b");
         expect(machineForRule("machine", ["smelting"], [burner, furnace, plant])).toBeUndefined();

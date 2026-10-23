@@ -60,7 +60,7 @@ describe("parseConfig", () => {
                 productivity: 0.5,
                 crafting_speed: 1.25,
                 // the former type, read as a machine of that rule that makes the recipe
-                prototype: "assembling-machine-1"
+                prototype: "assembling-machine-3"
             });
         });
 
