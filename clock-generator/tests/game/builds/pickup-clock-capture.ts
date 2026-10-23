@@ -29,6 +29,8 @@ export interface PickupClockScenario {
      */
     built_clock?: BuiltClock;
     keep_built_clock?: boolean;
+    /** The identity of the clock the build came with, as its control names it (a build's own clock is no selection to hash) */
+    builtClockSha256?: () => string;
     /** The copies of the config the build holds, for a generated clock wired to each (HarnessOptions.copies) */
     copies?: number;
     outagePeriods?: number;
@@ -76,7 +78,7 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     if (scenario.keep_built_clock) {
         const built = scenario.built_clock!;
         const kept = {config, period: built.period, expected: config.target_output.items_per_second * built.period / 60,
-            generationSeconds: 0, generationVerdict: "the build's own clock"};
+            generationSeconds: 0, generationVerdict: "the build's own clock", clockSha256: scenario.builtClockSha256?.()};
         generated.set(key, kept);
         return kept;
     }

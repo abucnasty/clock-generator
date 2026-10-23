@@ -78,3 +78,45 @@ export function recordingOfBuiltClock(written: { clock?: { values: unknown } }, 
     }
     return { ...written, clock: { ...written.clock, first_value: built_clock.first_value, period: built_clock.period } };
 }
+
+/** The combinators the harness mod follows from a clock: the clock is the chain of these wired to its counter */
+const CLOCK_COMBINATORS = new Set(["decider-combinator", "arithmetic-combinator", "selector-combinator"]);
+
+/**
+ * What a clock built by hand is, for a control to name it by (the counterpart of `clockIdentity` for a generated clock):
+ * the combinators wired to its counter, with what they are set to and the wires between them, and the period and first
+ * value it was named with. Where the combinators stand, their numbers in the blueprint and their descriptions are not in
+ * it, so the identity stays the same when the build is moved or its text is edited.
+ */
+export function builtClockIdentity(blueprint: string, built_clock: BuiltClock): object {
+    const file = JSON.parse(zlib.inflateSync(Buffer.from(blueprint.slice(1), "base64")).toString("utf-8"));
+    const entities: (Entity & { direction?: number })[] = file.blueprint?.entities ?? [];
+    const wires: [number, number, number, number][] = file.blueprint?.wires ?? [];
+    const clockwork = new Set(entities.filter(entity => CLOCK_COMBINATORS.has(entity.name)).map(entity => entity.entity_number));
+    if (!clockwork.has(built_clock.counter)) {
+        throw new Error(`The blueprint has no combinator ${built_clock.counter}, the counter of the clock the build came with`);
+    }
+    const found = new Set([built_clock.counter]);
+    const queue = [built_clock.counter];
+    while (queue.length > 0) {
+        const entity = queue.pop()!;
+        for (const [a, , b] of wires) {
+            for (const [from, to] of [[a, b], [b, a]]) {
+                if (from === entity && clockwork.has(to) && !found.has(to)) {
+                    found.add(to);
+                    queue.push(to);
+                }
+            }
+        }
+    }
+    const members = entities.filter(entity => found.has(entity.entity_number)).sort((a, b) => a.entity_number - b.entity_number);
+    const number = new Map(members.map((entity, index) => [entity.entity_number, index + 1]));
+    return {
+        period: built_clock.period,
+        first_value: built_clock.first_value,
+        counter: number.get(built_clock.counter),
+        combinators: members.map(entity => ({ name: entity.name, direction: entity.direction ?? 0, control_behavior: entity.control_behavior })),
+        wires: wires.filter(([a, , b]) => number.has(a) && number.has(b))
+            .map(([a, ca, b, cb]) => [number.get(a)!, ca, number.get(b)!, cb]).sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y))),
+    };
+}

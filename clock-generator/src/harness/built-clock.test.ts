@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import zlib from "zlib";
-import { blueprintWithNamedClock, recordingOfBuiltClock } from "./built-clock";
+import { BuiltClock, blueprintWithNamedClock, builtClockIdentity, recordingOfBuiltClock } from "./built-clock";
 import { encodeBlueprintFile } from "../blueprints/serde";
 
 const decider = (entity_number: number, extra: object = {}) => ({
@@ -60,5 +60,34 @@ describe("the recording of a clock the build came with", () => {
 
     test("is refused without a clock", () => {
         expect(() => recordingOfBuiltClock({}, { counter: 1, period: 2, first_value: 0 })).toThrow(/found no clock/);
+    });
+});
+
+describe("the identity of a clock built by hand", () => {
+    const clockwork = (extra: object[] = [], wires: number[][] = [[1, 3, 2, 1], [2, 2, 3, 1]], moved = 0) => encodeBlueprintFile({ blueprint: {
+        entities: [decider(1, { position: { x: 1 + moved, y: 0 }, player_description: "ore" }), decider(2), decider(3), ...extra], wires, item: "blueprint", version: 1,
+    } } as never);
+    const built: BuiltClock = { counter: 1, period: 216, first_value: 0 };
+    const hash = (blueprint: string, clock = built) => JSON.stringify(builtClockIdentity(blueprint, clock));
+
+    test("is the combinators wired to the counter and what they are set to, not where they stand or what they say", () => {
+        expect(hash(clockwork())).toBe(hash(clockwork([], [[1, 3, 2, 1], [2, 2, 3, 1]], 10)));
+        const reworded = clockwork();
+        expect(hash(reworded)).toBe(hash(blueprintWithNamedClock(reworded, built)));
+        expect(JSON.parse(hash(clockwork())).combinators).toHaveLength(3);
+    });
+
+    test("leaves out what is not wired to the counter, and changes with a window, the wires, or the period", () => {
+        const stray = { entity_number: 9, name: "decider-combinator", control_behavior: { decider_conditions: { conditions: [], outputs: [] } } };
+        expect(hash(clockwork([stray]))).toBe(hash(clockwork()));
+        expect(JSON.parse(hash(clockwork([], [[1, 3, 2, 1]]))).combinators).toHaveLength(2);
+        const window = clockwork([], [[1, 3, 2, 1], [2, 2, 3, 1]]);
+        expect(hash(window, { ...built, period: 215, first_value: 1 })).not.toBe(hash(window));
+        expect(hash(blueprintOf([decider(1, { control_behavior: { decider_conditions: { conditions: [{ first_signal: { name: "signal-clock" }, constant: 99 }], outputs: [] } } }), decider(2), decider(3)])))
+            .not.toBe(hash(clockwork([], [])));
+    });
+
+    test("refuses a counter that is no combinator of the blueprint", () => {
+        expect(() => builtClockIdentity(clockwork(), { ...built, counter: 9 })).toThrow(/no combinator 9/);
     });
 });

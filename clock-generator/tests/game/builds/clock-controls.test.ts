@@ -2,6 +2,7 @@ import fs from "fs";
 import {describe, expect, test} from "vitest";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {ClockControl, pinMismatches, readControls} from "./clock-controls";
+import {ownerClockHash} from "./own-clock-fixtures";
 
 /**
  * Every game test that runs a generated clock compares what the game did with a recording, and the recording belongs to
@@ -9,11 +10,13 @@ import {ClockControl, pinMismatches, readControls} from "./clock-controls";
  * fail where a pin was moved to follow a selection and its recording was not made again: the generation tests (pull
  * requests to master) find the selection that moved, this finds the pin that was edited to follow it.
  */
-const FAMILIES = ["blocked-output", "car", "container", "front", "lithium-silo", "over-hood", "pickup", "steel-wagon"]
+const FAMILIES = ["blocked-output", "car", "container", "front", "lithium-silo", "over-hood", "own", "pickup", "steel-wagon"]
     .map(family => `${family}-clock-controls.json`);
 const hash = /^[0-9a-f]{64}$/;
 /** Entries whose native summary has no known clock yet: the list may only shrink */
 const NOT_YET_TIED: Record<string, string[]> = {};
+/** Entries that are the clock of an owner's build, not a selection: the identity of that clock in the blueprint the test builds */
+const OWNER_CLOCKS: Record<string, Record<string, string>> = {"own-clock-controls.json": {"own-clock-three-copies": ownerClockHash()}};
 
 test("every family of game tests with a controls file is checked here", () => {
     const files = fs.readdirSync(__dirname).filter(file => file.endsWith("-clock-controls.json") && !file.includes("history")).sort();
@@ -24,7 +27,7 @@ describe.each(FAMILIES)("%s", file => {
     const controls = readControls(file);
     test("every native summary names the clock it was recorded on, and the pin names it too", () => {
         expect(Object.keys(controls.cases).length).toBeGreaterThan(0);
-        expect(pinMismatches(controls.cases, NOT_YET_TIED[file])).toEqual([]);
+        expect(pinMismatches(controls.cases, NOT_YET_TIED[file], OWNER_CLOCKS[file])).toEqual([]);
     });
     test("the entries not tied yet are entries", () => {
         for (const name of NOT_YET_TIED[file] ?? []) expect(controls.cases[name], name).toBeDefined();
@@ -66,6 +69,34 @@ describe("pinMismatches", () => {
     test("lets an entry listed as not tied go without a clock, and not keep one", () => {
         expect(pinMismatches({one: entry({})}, ["one"])).toEqual([]);
         expect(pinMismatches({one: entry({clock_sha256: b})}, ["one"])).toHaveLength(1);
+    });
+});
+
+describe("pinMismatches for a clock the owner built", () => {
+    const hash = "c".repeat(64);
+    const owner = (recorded: object = {}, extra: object = {}): ClockControl => ({
+        recorded: {pr: 1, commit: "c0ffee", frozen_head: null, clock_basis: "built", clock_sha256: hash, ...recorded},
+        native: {generationVerdict: "the build's own clock", target: 1, period: 10, expected: 5, baseline: [5], recovery: []},
+        ...extra,
+    });
+    const built = {one: hash};
+
+    test("accepts a recording on the owner's clock, with no pin", () => {
+        expect(pinMismatches({one: owner()}, [], built)).toEqual([]);
+    });
+    test("fails a recording of another clock than the blueprint's, a missing hash, or another basis", () => {
+        expect(pinMismatches({one: owner({clock_sha256: "d".repeat(64)})}, [], built)[0]).toContain("record it again in the game");
+        expect(pinMismatches({one: owner({clock_sha256: undefined})}, [], built)).toHaveLength(1);
+        expect(pinMismatches({one: owner({clock_basis: "capture"})}, [], built)).toHaveLength(1);
+    });
+    test("fails a pin or a carried note on it", () => {
+        const pin = {period: 10, expected: 5, verdict: "stable", selection: {id: "x", holds: true, rate: 1, supply: null}, clock_sha256: hash};
+        expect(pinMismatches({one: owner({}, {generation: pin})}, [], built)).toHaveLength(1);
+        expect(pinMismatches({one: owner({carried: "x"})}, [], built)).toHaveLength(1);
+    });
+    test("does not let a generated entry take the basis: it is not named as a clock the owner built", () => {
+        expect(pinMismatches({one: owner()})).toHaveLength(1);
+        expect(pinMismatches({one: owner()}, ["one"])).toHaveLength(1);
     });
 });
 

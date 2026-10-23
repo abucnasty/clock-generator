@@ -6,7 +6,9 @@
         "pr": 0,
         "commit": "e1c0aadb",
         "frozen_head": "e1c0aadb",
-        "note": "recorded before the PR was opened; pr is set when it is"
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "844e39cf2daea124b1911c7050a7b453f82ae18cac2aa352384c95f852885b32",
+        "clock_basis": "built"
       },
       "native": {
         "generationVerdict": "the build's own clock",
@@ -173,7 +175,9 @@
         "pr": 0,
         "commit": "e1c0aadb",
         "frozen_head": "e1c0aadb",
-        "note": "recorded before the PR was opened; pr is set when it is"
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "632211409dc2b4bd0a8337f16d48372c40cf277fb808c2ff19677b69c4125251",
+        "clock_basis": "capture"
       },
       "native": {
         "generationVerdict": "stable",

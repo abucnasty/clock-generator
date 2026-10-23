@@ -19,8 +19,13 @@ export interface Recorded {
      * refuses to run on another clock, and `pinMismatches` finds a pin that moved without a new recording
      */
     clock_sha256?: string;
-    /** How the hash is known: a retained capture whose summary equals `native`, the history of the pin, or the clock regenerated on the engine of the recording's commit */
-    clock_basis?: "capture" | "history" | "regenerated";
+    /**
+     * How the hash is known: a retained capture whose summary equals `native`, the history of the pin, or the clock
+     * regenerated on the engine of the recording's commit; or `built`: the clock is one the owner built (a build's own clock,
+     * named to the harness), so there is no pin, and the hash is that of `builtClockIdentity`, which the tests recompute
+     * from the blueprint
+     */
+    clock_basis?: "capture" | "history" | "regenerated" | "built";
     /**
      * Set where the pin (`generation.clock_sha256`) moved and the recording was not made again: the commit or PR and why
      * the recording still holds. The game test then runs on the pinned clock, which shows whether it does
@@ -98,11 +103,27 @@ export function clockHash(clock: Parameters<typeof clockIdentity>[0]): string {
  * `native` summary has the hash of the clock it was recorded on, and it is the hash of its pin unless `carried` says
  * why not. `untied` names the entries still without a hash (they may only be removed from the list).
  */
-export function pinMismatches(cases: Record<string, ClockControl>, untied: readonly string[] = []): string[] {
+export function pinMismatches(cases: Record<string, ClockControl>, untied: readonly string[] = [], built: Record<string, string> = {}): string[] {
     const found: string[] = [];
     const hash = /^[0-9a-f]{64}$/;
     for (const [name, control] of Object.entries(cases)) {
         const {recorded, generation} = control;
+        if (name in built) {
+            // an owner's built clock is no selection and has no pin: the recording names the clock it ran, and it has to be
+            // the clock of the blueprint the test builds
+            if (recorded.clock_basis !== "built") found.push(`${name}: is named as a clock the owner built and its recorded.clock_basis is not "built"`);
+            if (generation) found.push(`${name}: a clock the owner built is no selection and has no generation pin`);
+            if (recorded.carried !== undefined) found.push(`${name}: a clock the owner built has no pin to carry`);
+            if (!recorded.clock_sha256 || !hash.test(recorded.clock_sha256)) found.push(`${name}: recorded.clock_sha256 is missing: it is the identity of the clock the owner built`);
+            else if (recorded.clock_sha256 !== built[name]) {
+                found.push(`${name}: the owner's clock in the blueprint is ${built[name].slice(0, 12)} and the native summary was recorded on ${recorded.clock_sha256.slice(0, 12)}: record it again in the game`);
+            }
+            continue;
+        }
+        if (recorded.clock_basis === "built") {
+            found.push(`${name}: recorded.clock_basis is "built" and the entry is not named as a clock the owner built`);
+            continue;
+        }
         if (untied.includes(name)) {
             if (recorded.clock_sha256 !== undefined) found.push(`${name}: has a recorded clock and is still listed as not tied`);
             continue;

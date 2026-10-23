@@ -1,10 +1,11 @@
+import {createHash} from "crypto";
 import fs from "fs";
 import path from "path";
 import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
-import {BuiltClock} from "../../../src/harness/built-clock";
+import {BuiltClock, builtClockIdentity} from "../../../src/harness/built-clock";
 import {recordedClockPeriod, Recording} from "../../../src/verification/recording";
 import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capture";
@@ -38,6 +39,11 @@ const SCAFFOLD = path.join(__dirname, "own-clock-three-copies-scaffold.txt");
 
 /** The counter of the owner's clock (entity 36 of the blueprint): 0 to 215 */
 export const OWNER_CLOCK: BuiltClock = {counter: 36, period: 216, first_value: 0};
+
+/** The sha256 of the identity of the owner's clock in the blueprint (`builtClockIdentity`): what its control names it by */
+export function ownerClockHash(): string {
+    return createHash("sha256").update(JSON.stringify(builtClockIdentity(fs.readFileSync(SCAFFOLD, "utf8").trim(), OWNER_CLOCK))).digest("hex");
+}
 
 /** The copies of the unit the blueprint holds */
 export const COPIES = 3;
@@ -83,6 +89,7 @@ export async function ownClockScenario(variant: OwnClockCase): Promise<PickupClo
         scaffold: () => fs.readFileSync(SCAFFOLD, "utf8").trim(),
         built_clock: OWNER_CLOCK,
         keep_built_clock: !generated,
+        builtClockSha256: ownerClockHash,
         ...(generated && {alternative: variant.alternative, copies: COPIES}),
         // the family's protocol: 64 untouched periods, the ore cut at 66-68, the output blocked at 84-88, the circuits cut at 104-106
         interventions: pickupClockInterventions(),

@@ -230,7 +230,8 @@ a `native` summary in a `*-clock-controls.json` file. That summary was recorded 
 `recorded.clock_sha256` is the sha256 of the clock's identity (`clockIdentity`: the exported blueprint without its text
 and metadata, and the schedule), `recorded.clock_basis` says how it is known (`capture`: a retained capture whose summary
 equals `native`; `history`: the pin has not changed since the commit that recorded `native`; `regenerated`: the clock
-generated on the engine of that commit), and `generation.clock_sha256` is the clock the selection makes today, checked by
+generated on the engine of that commit; `built`: a clock the owner built, which no selection makes, so it has no pin and the
+hash is `builtClockIdentity` of the owner's blueprint, recomputed by `clock-controls.test.ts`), and `generation.clock_sha256` is the clock the selection makes today, checked by
 the family's `*.generation.test.ts` (pull requests to master).
 
 - `clock-controls.test.ts` runs with the unit tests and reads the files only: it fails where the pin and the recording
@@ -554,7 +555,9 @@ period (284).** The cuts are in periods of each clock, so they last 432 ticks fo
 generated one: do not compare the two recoveries tick for tick. Both builds are the owner's three copies on drained lines,
 not the one-copy scaffold of `scaffold-recordings.game.test.ts`. A drop in the first tick of a recording is not seen by it, so
 the compact count of its first period is checked less that drop (the probe counts it).
-`src/crafting/own-clock.generation.test.ts` pins the generated clock and checks it against its native summary.
+`src/crafting/own-clock.generation.test.ts` pins the generated clock and checks it against its native summary. The owner's
+clock is tied to its recording by the hash of the clock in the blueprint (`recorded.clock_basis` `built`), and the generated
+one by its pin, as in the other families.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/own-clock-new BELT_CLOCK_CALIBRATE=1 \
