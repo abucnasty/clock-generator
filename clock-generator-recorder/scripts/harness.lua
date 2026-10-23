@@ -399,7 +399,7 @@ end
 
 ---Wire the schedule combinators of a generated clock to the inserters their tags name
 ---@param state table storage.harness
----@param clock {blueprint: string, inserters: table<string, uint>} blueprint: each schedule combinator tagged with the config ids of its inserters; inserters: config inserter id -> unit number
+---@param clock {blueprint: string, inserters: table<string, uint|uint[]>} blueprint: each schedule combinator tagged with the config ids of its inserters; inserters: config inserter id -> unit number, or a list of them where the build holds the config more than once
 ---@return table report
 local function wire_clock(state, clock)
     local surface = game.surfaces[state.surface_index]
@@ -453,20 +453,30 @@ local function wire_clock(state, clock)
         elseif ids then
             local output = combinator.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
             for _, id in ipairs(ids) do
-                local inserter = by_unit_number[clock.inserters[tostring(id)] or -1]
-                if not inserter then
+                -- a build that holds the config more than once has the unit numbers of its copies' inserters in a list
+                local units = clock.inserters[tostring(id)]
+                if type(units) ~= "table" then
+                    units = { units or -1 }
+                end
+                if #units == 0 then
                     error("the clock names inserter " .. id .. ", which was not matched to an inserter of the build")
                 end
-                local input = inserter.get_wire_connector(defines.wire_connector_id.circuit_green, true)
-                output.connect_to(input, false, defines.wire_origin.player)
-                local behavior = inserter.get_or_create_control_behavior()
-                -- a condition left from the base's own clock (on a signal this clock never sends) would hold the inserter off for good
-                if not behavior.circuit_set_filters then
-                    behavior.circuit_enable_disable = true
-                    behavior.circuit_condition = ANYTHING_POSITIVE
+                for _, unit_number in ipairs(units) do
+                    local inserter = by_unit_number[unit_number]
+                    if not inserter then
+                        error("the clock names inserter " .. id .. ", which was not matched to an inserter of the build")
+                    end
+                    local input = inserter.get_wire_connector(defines.wire_connector_id.circuit_green, true)
+                    output.connect_to(input, false, defines.wire_origin.player)
+                    local behavior = inserter.get_or_create_control_behavior()
+                    -- a condition left from the base's own clock (on a signal this clock never sends) would hold the inserter off for good
+                    if not behavior.circuit_set_filters then
+                        behavior.circuit_enable_disable = true
+                        behavior.circuit_condition = ANYTHING_POSITIVE
+                    end
+                    wired_units[inserter.unit_number] = true
+                    table.insert(report.wired, { inserter = id, unit_number = inserter.unit_number })
                 end
-                wired_units[inserter.unit_number] = true
-                table.insert(report.wired, { inserter = id, unit_number = inserter.unit_number })
             end
         else
             local description = description_of(combinator)

@@ -9,7 +9,8 @@ import { ClockGeneratorTags } from "../blueprints/components";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import { Config } from "../config";
 import { ClockSchedule } from "../crafting/blueprint";
-import { matchRecordingToConfig } from "../verification/entity-matching";
+import { matchCopies } from "../verification/entity-copies";
+import { BuiltClock, blueprintWithNamedClock, recordingOfBuiltClock } from "./built-clock";
 import { parseRecording, Recording } from "../verification/recording";
 import { RconClient } from "./rcon";
 
@@ -105,6 +106,13 @@ export interface HarnessOptions {
     clock?: GeneratedClock;
     /** The config the clock was generated from: its inserter ids are the ones the clock's combinators name */
     config?: Config;
+    /**
+     * The clock the build came with, named by the test, for a build whose clock is not one the generator made (it has no
+     * "Clock for ..." description). Without `clock` and `unclocked` that clock is kept and the recording is cut by it,
+     * and its period replaces the one read off a generated clock; with a generated `clock` it is the clock removed to
+     * make room for it. Not with `unclocked`, nor in a staged start.
+     */
+    built_clock?: BuiltClock;
     /** Remove the clock of the build and let its inserters run freely */
     unclocked: boolean;
     surface?: string;
@@ -403,7 +411,8 @@ function matchBuild(described: any, config: Config) {
             samples: { status: [], crafting_progress: [], bonus_progress: [], products_finished: [], inputs: {}, outputs: {} },
         })),
     });
-    return { as_recording, match: matchRecordingToConfig(as_recording, config) };
+    const { copies, merged } = matchCopies(as_recording, config);
+    return { as_recording, match: merged, copies };
 }
 
 /**
@@ -437,15 +446,38 @@ export function clockPeriodTicks(blueprint: string): number | null {
  * so the build is matched to the config by structure, as a recording is.
  */
 export function matchBuiltInserters(described: any, config: Config): Map<number, number> {
-    const { as_recording, match } = matchBuild(described, config);
-    const unit_numbers = new Map<number, number>();
-    for (const inserter of as_recording.inserters) {
-        const config_id = match.inserters.get(inserter.id);
-        if (config_id !== undefined && inserter.unit_number !== undefined) {
-            unit_numbers.set(config_id, inserter.unit_number);
-        }
+    const copies = matchBuiltCopies(described, config);
+    if (copies.length > 1) {
+        throw new Error(`The build holds the config ${copies.length} times, and this places one cell of it`);
     }
-    return unit_numbers;
+    return copies[0];
+}
+
+/**
+ * The same for a build that holds the config more than once (see matchCopies): per copy, the unit number of the
+ * built inserter behind each config inserter id, the copies in the order of their lowest machine ids
+ */
+export function matchBuiltCopies(described: any, config: Config): Map<number, number>[] {
+    const { as_recording, copies } = matchBuild(described, config);
+    return copies.map(match => {
+        const unit_numbers = new Map<number, number>();
+        for (const inserter of as_recording.inserters) {
+            const config_id = match.inserters.get(inserter.id);
+            if (config_id !== undefined && inserter.unit_number !== undefined) {
+                unit_numbers.set(config_id, inserter.unit_number);
+            }
+        }
+        return unit_numbers;
+    });
+}
+
+/** What the mod is told of the inserters a clock enables: per config id the unit number of its inserter, a list of them where the build has copies */
+function clockInserters(copies: Map<number, number>[]): Record<string, number | number[]> {
+    if (copies.length === 1) {
+        return Object.fromEntries(copies[0]);
+    }
+    const ids = new Set(copies.flatMap(copy => Array.from(copy.keys())));
+    return Object.fromEntries(Array.from(ids).map(id => [id, copies.flatMap(copy => copy.has(id) ? [copy.get(id)!] : [])]));
 }
 
 /** Something of the build that moves items of a machine of the config and that the config does not have */
@@ -474,7 +506,7 @@ export function buildPartsMissingFromConfig(described: any, config: Config): Bui
     if (described.movers === undefined) {
         throw new Error("The recorder mod did not list the build's inserters and loaders (movers): it is older than this harness");
     }
-    const { as_recording, match } = matchBuild(described, config);
+    const { as_recording, match, copies } = matchBuild(described, config);
     const recipeOf = (config_id: number | undefined) => config.machines.find(machine => machine.id === config_id)?.recipe;
     /** unit number of a built machine -> the config machine it is */
     const config_machines = new Map<number, number>();
@@ -513,7 +545,7 @@ export function buildPartsMissingFromConfig(described: any, config: Config): Bui
             const configured = config.machines.filter(it => it.recipe === machine.recipe).length;
             missing.push({
                 kind: "machine",
-                description: `${machine.name} making ${machine.recipe}${unit(machine.unit_number)}, beyond the ${configured} the config has of that recipe`,
+                description: `${machine.name} making ${machine.recipe}${unit(machine.unit_number)}, beyond the ${configured}${copies.length > 1 ? ` in each of its ${copies.length} copies` : ""} the config has of that recipe`,
                 takes_from_belt: false,
             });
         }
@@ -667,6 +699,13 @@ function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
     }
+    if (options.built_clock && (options.unclocked || options.staged_start)) {
+        throw new Error("A named clock of the build is kept or replaced: it cannot be asked for with an unclocked run or a staged start");
+    }
+    if (options.built_clock) {
+        // the blueprint is checked against the clock named before anything is built
+        blueprintWithNamedClock(options.blueprint, options.built_clock);
+    }
     if (options.staged_start) {
         const order = options.staged_start.build_order;
         if (options.settle_ticks) {
@@ -680,7 +719,7 @@ function assertBuildOptions(options: BuildOptions): void {
         return;
     }
     // the clock the recording is cut by: the one swapped in, or the one the build came with when it is kept
-    const period = options.unclocked ? null : options.clock ? clockPeriodOf(options.clock.schedule) : clockPeriodTicks(options.blueprint);
+    const period = options.unclocked ? null : options.clock ? clockPeriodOf(options.clock.schedule) : options.built_clock?.period ?? clockPeriodTicks(options.blueprint);
     assertRecordableTicks(options.ticks, period);
 }
 
@@ -829,7 +868,7 @@ export class HarnessSession {
 
         const replaces_clock = options.clock !== undefined || options.unclocked;
         const build = await this.call("harness_build", {
-            blueprint: options.blueprint,
+            blueprint: options.built_clock ? blueprintWithNamedClock(options.blueprint, options.built_clock) : options.blueprint,
             surface: options.surface,
             position: options.position,
             clock: replaces_clock ? "remove" : "keep",
@@ -855,21 +894,26 @@ export class HarnessSession {
         }
         await this.waitFor("the warm-up", deadline, status => status.ready);
 
-        let clock: { blueprint: string; inserters: Record<string, number> } | undefined;
+        let clock: { blueprint: string; inserters: Record<string, number | number[]> } | undefined;
         if (options.clock && options.config) {
             const described = await this.call("harness_describe");
-            const unit_numbers = matchBuiltInserters(described, options.config);
-            const missing = scheduledInserterIds(options.clock.schedule).filter(id => !unit_numbers.has(id));
+            const copies = matchBuiltCopies(described, options.config);
+            const scheduled = scheduledInserterIds(options.clock.schedule);
+            const missing = copies.flatMap((unit_numbers, copy) => scheduled.filter(id => !unit_numbers.has(id)).map(id => ({ id, copy })));
             if (missing.length > 0) {
-                throw new Error(`The clock names inserters ${missing.join(", ")} of the config, which match no inserter of the build. `
+                throw new Error(`The clock names inserters ${Array.from(new Set(missing.map(it => it.id))).join(", ")} of the config, which match no inserter of the build`
+                    + `${copies.length > 1 ? ` in copy ${Array.from(new Set(missing.map(it => it.copy + 1))).join(", ")} of ${copies.length}` : ""}. `
                     + "Belt inserters are matched by what lies on their belt, so a longer warm-up may help.");
+            }
+            if (copies.length > 1) {
+                options.log(`The build holds the config ${copies.length} times: the clock is wired to each copy`);
             }
             const not_in_config = buildPartsMissingFromConfig(described, options.config);
             if (not_in_config.length > 0) {
                 throw new Error(missingFromConfigMessage(not_in_config));
             }
             assertDrillsWireable(options.clock, options.config);
-            clock = { blueprint: withInserterTags(options.clock), inserters: Object.fromEntries(unit_numbers) };
+            clock = { blueprint: withInserterTags(options.clock), inserters: clockInserters(copies) };
         }
 
         const start = await this.call("harness_start", {
@@ -894,10 +938,18 @@ export class HarnessSession {
             throw new Error(`The recorder stopped without writing a recording. End of the game's log:\n${this.server.logTail()}`);
         }
         const written = path.join(this.work_dir, "script-output", finished.last_recording.filename);
-        const recording = parseRecording(JSON.parse(await fs.readFile(written, "utf-8")));
+        const text = JSON.parse(await fs.readFile(written, "utf-8"));
+        // the clock the build came with is kept: the recording says what it is, as it is read and kept with it
+        const kept_clock = options.built_clock !== undefined && !replaces_clock;
+        const file = kept_clock ? recordingOfBuiltClock(text, options.built_clock!) : text;
+        const recording = parseRecording(file);
         const recording_path = path.resolve(options.out);
         await fs.mkdir(path.dirname(recording_path), { recursive: true });
-        await fs.copyFile(written, recording_path);
+        if (kept_clock) {
+            await fs.writeFile(recording_path, JSON.stringify(file));
+        } else {
+            await fs.copyFile(written, recording_path);
+        }
         options.log(`Recorded ${recording.sample_count} ticks (${recording.stop_reason})`);
         return { recording_path, recording, build, start };
     }

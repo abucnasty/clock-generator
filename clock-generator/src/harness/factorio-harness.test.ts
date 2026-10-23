@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltInserters, MAX_RECORDED_TICKS,
+    assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltCopies, matchBuiltInserters, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
@@ -349,5 +349,81 @@ describe("the resource the harness puts under a blueprint's drills", () => {
 
     it("is refused when the config's drills mine more than one", () => {
         expect(() => drillResourceOf({ config: config("iron-ore", "stone") })).toThrow("The config's drills mine iron-ore, stone");
+    });
+});
+
+describe("a build that holds the config more than once", () => {
+    // the config: a gear machine hands to a product machine, fed from belt 1 and emptied onto belt 2; the build has it twice
+    const config = {
+        machines: [{ id: 1, recipe: "iron-gear-wheel" }, { id: 2, recipe: "inserter" }],
+        inserters: [
+            { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } },
+            { id: 2, source: { type: "machine", id: 1 }, sink: { type: "machine", id: 2 } },
+            { id: 3, source: { type: "machine", id: 2 }, sink: { type: "belt", id: 2 } },
+        ],
+        belts: [{ id: 1, lanes: [{ ingredient: "iron-plate" }, { ingredient: "iron-plate" }] }, { id: 2, lanes: [{ ingredient: "inserter" }] }],
+    } as any;
+    const ends = (id: number) => [
+        { source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 + 2 * id } },
+        { source: { type: "machine", id: 1 + 2 * id }, sink: { type: "machine", id: 2 + 2 * id } },
+        { source: { type: "machine", id: 2 + 2 * id }, sink: { type: "belt", id: 2 } },
+    ];
+    const inserters = [0, 1].flatMap(copy => ends(copy).map((end, index) => ({ id: 3 * copy + index + 1, unit_number: 100 + 3 * copy + index, name: "inserter", stack_size: 1, ...end })));
+    const machines = [0, 1].flatMap(copy => [
+        { id: 1 + 2 * copy, unit_number: 50 + 2 * copy, name: "assembling-machine-3", recipe: "iron-gear-wheel" },
+        { id: 2 + 2 * copy, unit_number: 51 + 2 * copy, name: "assembling-machine-3", recipe: "inserter" },
+    ]);
+    const mover = (inserter: typeof inserters[number]) => {
+        const end = (it: { type: string; id: number }) => it.type === "machine"
+            ? { unit_number: 50 + it.id - 1, type: "assembling-machine", name: "assembling-machine-3" }
+            : { unit_number: 200 + it.id, type: "transport-belt", name: "transport-belt" };
+        return { unit_number: inserter.unit_number, name: "inserter", pickup: end(inserter.source), drop: end(inserter.sink) };
+    };
+    const described = (inserter_list = inserters) => ({
+        config: { inserters: inserter_list.map(({ source, sink }) => ({ source, sink })), belts: [config.belts[0], config.belts[1]] },
+        machines,
+        inserters: inserter_list,
+        movers: { loaders: [], inserters: inserter_list.map(mover) },
+    });
+
+    it("matches each copy by itself, with its own unit numbers", () => {
+        expect(matchBuiltCopies(described(), config)).toEqual([
+            new Map([[1, 100], [2, 101], [3, 102]]),
+            new Map([[1, 103], [2, 104], [3, 105]]),
+        ]);
+    });
+
+    it("finds nothing missing from the config in two copies, and a third output inserter on the second, named by the config machine it takes from", () => {
+        expect(buildPartsMissingFromConfig(described(), config)).toEqual([]);
+        const extra = { id: 7, unit_number: 106, name: "inserter", stack_size: 1, source: { type: "machine", id: 4 }, sink: { type: "belt", id: 2 } };
+        expect(buildPartsMissingFromConfig(described([...inserters, extra]), config).map(it => it.description))
+            .toEqual(["inserter machine 2 (inserter) -> transport-belt (unit 106)"]);
+    });
+
+    it("refuses to place one cell of a build that holds the config twice", () => {
+        expect(() => matchBuiltInserters(described(), config)).toThrow("holds the config 2 times");
+    });
+});
+
+describe("a clock the build came with", () => {
+    const run = (more: object, blueprint = "0") => recordInFactorio({
+        factorio: "/nowhere/factorio", save: "/nowhere/save.zip", blueprint, out: "/nowhere/recording.json",
+        ticks: 600, warmup_ticks: 300, seed: [], unclocked: false, game_speed: 1000, timeout_seconds: 1, log: () => { }, ...more,
+    });
+    const counter = (constant: number) => encodeBlueprintFile({ blueprint: { entities: [{
+        entity_number: 5, name: "decider-combinator",
+        control_behavior: { decider_conditions: { conditions: [{ first_signal: { name: "signal-clock" }, constant }], outputs: [{ signal: { name: "signal-clock" } }] } },
+    }] } } as any);
+
+    it("is cut by the period it is named with, which the limit on a recording is checked against", async () => {
+        await expect(run({ built_clock: { counter: 5, period: 100_000, first_value: 0 } }, counter(99_999))).rejects.toThrow("records 100000");
+        await expect(run({ built_clock: { counter: 5, period: 216, first_value: 0 } }, counter(215))).rejects.toThrow("Factorio not found");
+    });
+
+    it("is refused with an unclocked run, a staged start, or a blueprint it does not fit", async () => {
+        const built_clock = { counter: 5, period: 216, first_value: 0 as const };
+        await expect(run({ built_clock, unclocked: true }, counter(215))).rejects.toThrow("kept or replaced");
+        await expect(run({ built_clock, staged_start: { build_order: "ascending" } }, counter(215))).rejects.toThrow("kept or replaced");
+        await expect(run({ built_clock }, counter(100))).rejects.toThrow("not the 216 asked for");
     });
 });
