@@ -38,6 +38,10 @@ describe("the warnings of a machine's prototype", () => {
     it("name a recipe the machine cannot make, and a prototype that is no crafting machine of the data", () => {
         expect(machinePrototypeIssues({ machines: [machine({ prototype: "cryogenic-plant", recipe: "iron-plate" })] })
             .map(issue => issue.kind)).toEqual(["recipe-not-made"]);
+        // in the game's names, with the machines that can
+        expect(machinePrototypeIssues({ machines: [machine({ prototype: "assembling-machine-1", recipe: "lithium" })] })[0].message).toBe(
+            "Machine 1: Assembling machine 1 can't craft Lithium. Machines that can: Chemical plant, Cryogenic plant. The clock is made "
+            + "as configured, but the game does not let this machine be set to the recipe.");
         expect(machinePrototypeIssues({ machines: [machine({ prototype: "modded-smelter" })] }).map(issue => issue.kind))
             .toEqual(["unknown-prototype"]);
     });
