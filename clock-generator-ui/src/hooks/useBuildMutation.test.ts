@@ -247,8 +247,8 @@ describe('authoritative build mutation with whole-build Undo', () => {
     it('does not accept delayed initial saved data after a build switch away and back', async () => {
         const saved = createDefaultConfig(); saved.target_output.recipe = 'iron-gear-wheel';
         local.setItem('clock-generator-config', JSON.stringify(saved));
-        let resolve!: (value: null) => void;
-        runner.ask.mockReturnValueOnce(new Promise<null>(done => { resolve = done; }));
+        let resolve!: (value: { problem: string | null; form: unknown }) => void;
+        runner.ask.mockReturnValueOnce(new Promise<{ problem: string | null; form: unknown }>(done => { resolve = done; }));
         const hook = Render(), initial = hook.captureBuildMutation();
         const meta = hook.library.currentMeta;
         hook.library.newBuild();
@@ -257,7 +257,7 @@ describe('authoritative build mutation with whole-build Undo', () => {
         expect(returned.buildId).toBe(initial.buildId);
         expect(returned.form).toBe(initial.form);
         expect(returned.revision).toBeGreaterThan(initial.revision);
-        resolve(null); await Promise.resolve();
+        resolve({ problem: null, form: saved }); await Promise.resolve();
         expect(Render().captureBuildMutation().form).toBe(initial.form);
         expect(Render().isLoaded).toBe(true);
         expect(hook.commitBuildReplacement(initial, saved, vi.fn())).toBe(false);
