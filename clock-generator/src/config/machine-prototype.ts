@@ -48,13 +48,13 @@ export function machinePrototypeIssues(config: Pick<Config, "machines">): Machin
         const derived = machineRuleOfPrototype(prototype);
         if (machine.type !== undefined && machine.type !== derived) {
             issues.push({ machine_id: machine.id, kind: "rule-disagrees",
-                message: `Machine ${machine.id} is a ${machine.prototype}, which crafts under ${RULE_NAMES[derived]}, but its type `
-                    + `is ${machine.type}: it is simulated under ${RULE_NAMES[machine.type]}. Remove the type to follow the machine.` });
+                message: `Machine ${machine.id} (${machine.prototype}) crafts under ${RULE_NAMES[derived]}, but its type is `
+                    + `${machine.type}: it is simulated under ${RULE_NAMES[machine.type]}. Remove the type to follow the machine.` });
         }
         const recipe = FactorioDataService.findRecipe(machine.recipe);
         if (recipe !== null && !machineCanMake(prototype, recipe.categories)) {
             issues.push({ machine_id: machine.id, kind: "recipe-not-made",
-                message: `Machine ${machine.id} is a ${machine.prototype}, which cannot make ${machine.recipe}: it makes recipes of `
+                message: `Machine ${machine.id} (${machine.prototype}) cannot make ${machine.recipe}: it makes recipes of `
                     + `${prototype.crafting_categories.join(", ")}, and the recipe is ${recipe.categories.join(", ")}. The clock is `
                     + "made as configured, but the game does not let this machine be set to the recipe." });
         }
