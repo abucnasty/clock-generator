@@ -1,0 +1,313 @@
+{
+  "target_output": {
+    "recipe": "grenade",
+    "items_per_second": 240,
+    "copies": 7
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "grenade",
+      "productivity": 0,
+      "crafting_speed": 70.4159375,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -680.5,
+        "y": -669.5
+      }
+    },
+    {
+      "id": 2,
+      "recipe": "grenade",
+      "productivity": 0,
+      "crafting_speed": 70.4159375,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -677.5,
+        "y": -669.5
+      }
+    },
+    {
+      "id": 3,
+      "recipe": "casting-iron",
+      "productivity": 150,
+      "crafting_speed": 143.75,
+      "prototype": "foundry",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -677.5,
+        "y": -664.5
+      }
+    },
+    {
+      "id": 4,
+      "recipe": "grenade",
+      "productivity": 0,
+      "crafting_speed": 70.4159375,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -680.5,
+        "y": -659.5
+      }
+    },
+    {
+      "id": 5,
+      "recipe": "grenade",
+      "productivity": 0,
+      "crafting_speed": 70.4159375,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -677.5,
+        "y": -659.5
+      }
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -680.5,
+        "y": -671.5
+      },
+      "direction": 8,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -677.5,
+        "y": -671.5
+      },
+      "direction": 8,
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -678.5,
+        "y": -667.5
+      },
+      "direction": 8,
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -679.5,
+        "y": -667.5
+      },
+      "direction": 8,
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -678.5,
+        "y": -661.5
+      },
+      "direction": 0,
+      "id": 5
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -679.5,
+        "y": -661.5
+      },
+      "direction": 0,
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -680.5,
+        "y": -657.5
+      },
+      "direction": 0,
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -677.5,
+        "y": -657.5
+      },
+      "direction": 0,
+      "id": 8
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "grenade",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "grenade",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [],
+  "drills": {
+    "configs": [
+      {
+        "id": 1,
+        "type": "electric-mining-drill",
+        "mined_item_name": "coal",
+        "speed_bonus": 17.725,
+        "productivity": 80010.00000001132,
+        "target": {
+          "type": "machine",
+          "id": 1
+        },
+        "position": {
+          "x": -683.5,
+          "y": -670.5
+        },
+        "direction": 4
+      },
+      {
+        "id": 2,
+        "type": "electric-mining-drill",
+        "mined_item_name": "coal",
+        "speed_bonus": 19.0575,
+        "productivity": 80010.00000001132,
+        "target": {
+          "type": "machine",
+          "id": 2
+        },
+        "position": {
+          "x": -674.5,
+          "y": -670.5
+        },
+        "direction": 12
+      },
+      {
+        "id": 3,
+        "type": "electric-mining-drill",
+        "mined_item_name": "coal",
+        "speed_bonus": 17.725,
+        "productivity": 80010.00000001132,
+        "target": {
+          "type": "machine",
+          "id": 4
+        },
+        "position": {
+          "x": -683.5,
+          "y": -658.5
+        },
+        "direction": 4
+      },
+      {
+        "id": 4,
+        "type": "electric-mining-drill",
+        "mined_item_name": "coal",
+        "speed_bonus": 19.0575,
+        "productivity": 80010.00000001132,
+        "target": {
+          "type": "machine",
+          "id": 5
+        },
+        "position": {
+          "x": -674.5,
+          "y": -658.5
+        },
+        "direction": 12
+      }
+    ]
+  }
+}
