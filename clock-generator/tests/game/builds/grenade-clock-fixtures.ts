@@ -42,10 +42,6 @@ const BUILDS = {
     "full build": {file: "grenade-full-build.txt", clock: {counter: 1, period: 112, first_value: 0} as BuiltClock, copies: 7, share: 1},
 } as const;
 
-/** The period of the owner's clock, and the output of one copy and of seven in one period (34.2857 and 240 a second) */
-export const OWNER_PERIOD = 112;
-export const EXPECTED_PER_COPY = 64;
-
 /** The id of the alternative the generated clock is: the 112-tick one, which the rule for hands in groups makes stable */
 export const GENERATED_ALTERNATIVE = "planned-belt-slack";
 
