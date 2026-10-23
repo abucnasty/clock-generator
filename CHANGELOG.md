@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.21.1] - 2026-10-23
+
+### Fixed
+- Generating a large build no longer fails with "Maximum call stack size exceeded" when its clock is turned into a blueprint.
+
 ## [0.21.0] - 2026-10-23
 
 ### Added
