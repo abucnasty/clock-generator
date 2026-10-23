@@ -18,10 +18,10 @@ import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock } from "./generate-clock";
-import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
-import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, roundedClockTrial, startDependenceVerdictOf } from "./trial";
+import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, roundedClockTrial, startDependenceVerdictOf, withSettledOutput } from "./trial";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
 import { NotMadeClock, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
@@ -611,6 +611,12 @@ function runAlternative(
     assessed?: ReadonlySet<string>,
     verification_cache?: Map<string, VerificationAssessment>,
     on_not_made?: (clock: NotMadeClock) => void,
+    /**
+     * List a clock that fails its first check by the mean of its long run (see `withSettledOutput`). That costs a
+     * long run for each, and the rates only rank the selection where no clock holds, so it is done where the primary
+     * clock does not hold (the primary's own run: where it does not hold itself).
+     */
+    settle_unstable?: boolean,
 ): ClockAlternativeRun | null {
     const copies = config.target_output.copies ?? 1;
     let result: BlueprintGenerationResult;
@@ -700,8 +706,23 @@ function runAlternative(
         /** The ticks of a period it is run at */
         clock_period: number;
     }
+    /** The stability check of a trial with its output as the clock is listed by (see `withSettledOutput`), made once per trial */
+    const settled_checks = new Map<SimulationStabilityCheck, Map<number, SimulationStabilityCheck>>();
+    const settledStability = (trial: Trial): SimulationStabilityCheck => {
+        const check = trial.result.stability_check;
+        const by_period = settled_checks.get(check) ?? new Map<number, SimulationStabilityCheck>();
+        settled_checks.set(check, by_period);
+        if (!by_period.has(trial.clock_period)) {
+            by_period.set(trial.clock_period, withSettledOutput(used.planned_on ?? config, trial.result, trial.clock_period, logger).stability_check);
+        }
+        return by_period.get(trial.clock_period)!;
+    };
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
     const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock }): ClockAlternative => {
+        // a clock that fails its first check is listed by the mean of its long run, not the one period measured
+        const settled = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
+        trial = { ...trial, result: { ...trial.result, stability_check: settled } };
+        row = { ...row, result: { ...row.result, stability_check: settled } };
         const { as_built } = trial.result.stability_check;
         const { backpressure_loss, backpressure_loss_not_tried } = trial.loss;
         const start_dependence_note = trial.start_dependence === null ? null
@@ -873,7 +894,7 @@ export function runClockAlternativeTask(
     const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
         .find(it => it.id === task_id);
     assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
-    return runAlternative(definition, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, options.on_not_made);
+    return runAlternative(definition, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, options.on_not_made, !context.primary_stable);
 }
 
 /** The start dependence of a build's clocks in a line: that it was not checked, or which clocks depend on the start */
@@ -944,7 +965,7 @@ export function generateClockAlternatives(
         for (const definition of made) {
             current_step = definition.label;
             report();
-            const run = runAlternative(definition, config, logger, report, undefined, verification_cache, on_not_made);
+            const run = runAlternative(definition, config, logger, report, undefined, verification_cache, on_not_made, !plan.context.primary_stable);
             completed++;
             runs[1 + definitions.indexOf(definition)] = run;
             if (run) {
