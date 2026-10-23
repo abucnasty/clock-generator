@@ -4,6 +4,7 @@ import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
+import {BuiltClock} from "../../../src/harness/built-clock";
 import {GeneratedClock, recordInFactorio} from "../../../src/harness/factorio-harness";
 import {outputPerPeriod, recipesMaking} from "../../../src/harness/recording-output";
 import {Recording} from "../../../src/verification/recording";
@@ -22,6 +23,16 @@ export interface PickupClockScenario {
     controls: string;
     /** The id of the alternative to record, in place of the selected one */
     alternative?: string;
+    /**
+     * The clock the scaffold came with, named to the harness (HarnessOptions.built_clock). Without `keep_built_clock` the
+     * generated clock replaces it; with it nothing is generated and the build's own clock is the one recorded.
+     */
+    built_clock?: BuiltClock;
+    keep_built_clock?: boolean;
+    /** The identity of the clock the build came with, as its control names it (a build's own clock is no selection to hash) */
+    builtClockSha256?: () => string;
+    /** The copies of the config the build holds, for a generated clock wired to each (HarnessOptions.copies) */
+    copies?: number;
     outagePeriods?: number;
     /** Interventions of a probe of its own, in place of pickupClockInterventions(outagePeriods) */
     interventions?: [number, number, number][];
@@ -36,7 +47,8 @@ export interface PickupClockScenario {
 
 interface Prepared {
     config: Config;
-    clock: GeneratedClock;
+    /** Absent where the build's own clock is recorded */
+    clock?: GeneratedClock;
     period: number;
     expected: number;
     generationSeconds: number;
@@ -63,6 +75,13 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     if (cached) return cached;
     const config = await scenario.config();
     const started = performance.now();
+    if (scenario.keep_built_clock) {
+        const built = scenario.built_clock!;
+        const kept = {config, period: built.period, expected: config.target_output.items_per_second * built.period / 60,
+            generationSeconds: 0, generationVerdict: "the build's own clock", clockSha256: scenario.builtClockSha256?.()};
+        generated.set(key, kept);
+        return kept;
+    }
     const alternatives = generateClockAlternatives(config, {logger: quiet});
     const selected = scenario.alternative === undefined ? alternatives.alternatives[alternatives.selected_index]
         : alternatives.alternatives.find(alternative => alternative.id === scenario.alternative);
@@ -118,7 +137,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         const lastPeriod = plannedInterventions[plannedInterventions.length - 1][2];
         const settle = (lastPeriod + 10) * period;
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
-            : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint,
+            : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
                 out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
                 ticks: 2 * period, warmup_ticks: 3600, settle_ticks: settle, seed: [], unclocked: false,
                 lua: composeProbeSource(scenario.probeFile ?? path.join(__dirname, "pickup-clock-speed-probe.lua"), {
@@ -137,14 +156,16 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         }
         const detailed = outputPerPeriod(recording, recipesMaking(config, config.target_output.recipe));
         expect(detailed).toHaveLength(2);
-        const periods = report.periods as {start: number; end: number; items: number}[];
+        const periods = report.periods as {start: number; end: number; items: number; start_drop?: number}[];
         expect(periods.length).toBeGreaterThanOrEqual(130);
         expect(periods.every(value => value.end - value.start === period)).toBe(true);
         for (const observed of detailed) {
             const aggregate = periods.find(value => value.start === recording.start_game_tick + observed.start
                 && value.end === recording.start_game_tick + observed.end);
             expect(aggregate, "compact count overlaps both detailed recorder periods").toBeDefined();
-            expect(aggregate!.items).toBe(observed.items);
+            // a recording that starts with the period cannot see what was dropped in its first tick (the held count before it
+            // is not sampled): a probe whose output inserters can drop then says how much
+            expect(aggregate!.items - (observed.start === 0 ? aggregate!.start_drop ?? 0 : 0)).toBe(observed.items);
         }
         const start = report.starts;
         const baseline = periods.filter(value => value.end <= start + 64 * period);
