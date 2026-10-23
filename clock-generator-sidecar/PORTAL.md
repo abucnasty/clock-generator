@@ -1,4 +1,4 @@
-Copy a Factorio build as text for the **Clock Generator** website: <https://clock-generator-self.vercel.app>
+Export a Factorio build as text for the **Clock Generator** website: <https://clock-generator-self.vercel.app>
 
 The website works out a circuit clock for your inserters, so the build makes the rate you want while its inserters wake
 up as seldom as possible, and gives you a blueprint of the clock to place.
@@ -6,8 +6,8 @@ up as seldom as possible, and gives you a blueprint of the clock to place.
 ## How to use it
 
 1. Press Alt+E (or click the shortcut button) to pick up the selection tool.
-2. Drag over the machines, inserters, belts and chests of one build.
-3. Click **Copy JSON**. The text is already selected: press Ctrl+C.
+2. Drag over the machines, inserters, belts, chests, mining drills, cars, tanks, cargo wagons and rocket silos of one build.
+3. Click **Export**. The text is already selected: press Ctrl+C.
 4. Open <https://clock-generator-self.vercel.app> and click **Paste from Factorio**.
 
 ## What it copies
@@ -34,7 +34,7 @@ why, and left out of it.
 Belt-fed inserters include a persistent supported/unsupported classification, native source identity and a
 versioned model declaration where supported. The generator retains this information when saving a build.
 Old or unsupported captures require a fresh supported capture before generation; updating the mod alone
-does not update copied JSON or a saved build.
+does not update an earlier export or a saved build.
 
 Splitters and side-loading are out of scope: an inserter that picks up from a splitter, or from a belt tile that
 another belt side-loads onto, is marked unsupported. The website refuses it.

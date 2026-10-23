@@ -8,6 +8,7 @@ Version: 0.12.0
     - exports each mining drill's productivity, its research and productivity modules together, in place of one mining productivity level for every drill
   Changes:
     - no longer exports a machine's type (machine, furnace or biochamber): the Clock Generator works out how to simulate each machine from its prototype
+    - the button is Export (was Copy JSON), and the tool's description says what it selects: machines, inserters, belts, chests, mining drills, cars, tanks, cargo wagons and rocket silos
   Bugfixes:
     - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine. One that has not dropped into its car or tank yet is listed too: let it run and select it again
     - the selection tool selects linked belts; earlier versions skipped them, though the sidecar reads them as pieces of a belt
