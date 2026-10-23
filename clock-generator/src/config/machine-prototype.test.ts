@@ -6,7 +6,6 @@ import { Machine } from "../entities/machine/machine";
 import { parseConfig } from "./loader";
 import { machinePrototypeIssues, machinePrototypesNote, machineRuleOf } from "./machine-prototype";
 import { ConfigSchema, MachineConfiguration } from "./schema";
-import { MachineType } from "../entities/machine/machine-type";
 
 const machine = (fields: Partial<MachineConfiguration>): MachineConfiguration =>
     ({ id: 1, recipe: "iron-plate", productivity: 0, crafting_speed: 1, ...fields });
@@ -57,8 +56,9 @@ describe("the config samples' machines", () => {
             ? filesUnder(path.join(dir, entry.name))
             : entry.name.endsWith(".json") ? [path.join(dir, entry.name)] : []);
 
-    it("keep the rule their former type gave, agree with their recipes, and keep no type", async () => {
-        let typed = 0;
+    // each kept the rule its former type gave when it was rewritten (0.20.0, U7); the legacy fixture tests the mapping
+    it("agree with their recipes and name no type", async () => {
+        let machines = 0;
         for (const file of filesUnder(root)) {
             const text = fs.readFileSync(file, "utf-8");
             let sample;
@@ -69,16 +69,10 @@ describe("the config samples' machines", () => {
             }
             const name = path.relative(root, file);
             expect(machinePrototypeIssues(sample), name).toEqual([]);
-            const raw = JSON.parse(text) as { machines: { type?: MachineType }[] };
-            sample.machines.forEach((parsed, index) => {
-                expect(parsed, name).not.toHaveProperty("type");
-                const type = raw.machines[index].type;
-                if (type !== undefined) {
-                    typed++;
-                    expect(machineRuleOf(parsed), `${name} machine ${parsed.id}`).toBe(type);
-                }
-            });
+            const raw = JSON.parse(text) as { machines: object[] };
+            raw.machines.forEach(machine => expect(machine, name).not.toHaveProperty("type"));
+            machines += raw.machines.length;
         }
-        expect(typed).toBeGreaterThan(100);
+        expect(machines).toBeGreaterThan(100);
     });
 });
