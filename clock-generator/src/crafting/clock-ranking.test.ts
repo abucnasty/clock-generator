@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { combineClockAlternativeRuns, searchesAreNeeded, type ClockAlternativeRun, type ClockRanking } from "./generate-blueprint";
+import { combineClockAlternativeRuns, rankingOf, searchesAreNeeded, type ClockAlternative, type ClockAlternativeRun, type ClockRanking } from "./generate-blueprint";
+import { clockVerdictOf, windowsRoundedTo, type ClockAssessment } from "./trial";
+import type { RoundedClock } from "./rank";
+import type { Config } from "../config";
 
 type Ranked = ClockRanking & { id: string };
 
@@ -114,6 +117,105 @@ describe("combineClockAlternativeRuns", () => {
         const { alternatives, selected_index } = combineClockAlternativeRuns([...runs, null], it => it);
         expect(alternatives.map(it => it.id)).toEqual(["first"]);
         expect(selected_index).toBe(0);
+    });
+});
+
+// the car paste at 80.78/s: a clock whose losses could not be tried (its period has no whole-tick repeat) was taken as
+// stable and beat every clock that was tried (U11)
+describe("a clock whose recovery could not be tried", () => {
+    const untried = (id: string, ranking: Partial<ClockRanking> = {}) => clock(id, { recovery_untried: true, ...ranking });
+    const no_recovery = (id: string, ranking: Partial<ClockRanking> = {}) => clock(id, { meets_target_rate: false, ...ranking });
+
+    it("ranks below a clock tried and getting back, whatever their wake-ups", () => {
+        expect(selectedOf([untried("untried", { wake_ups_per_minute: 1 }), clock("recovers", { wake_ups_per_minute: 900 })])).toBe("recovers");
+        expect(selectedOf([clock("recovers", { wake_ups_per_minute: 900 }), untried("untried", { wake_ups_per_minute: 1 })])).toBe("recovers");
+    });
+
+    it("ranks above a clock tried and not getting back at the target rate, whatever their wake-ups", () => {
+        expect(selectedOf([no_recovery("no-recovery", { wake_ups_per_minute: 1 }), untried("untried", { wake_ups_per_minute: 900 })])).toBe("untried");
+        expect(selectedOf([untried("untried", { wake_ups_per_minute: 900 }), no_recovery("no-recovery", { wake_ups_per_minute: 1 })])).toBe("untried");
+    });
+
+    it("is ranked among clocks like it by their wake-ups", () => {
+        expect(selectedOf([untried("more", { wake_ups_per_minute: 500 }), untried("fewer", { wake_ups_per_minute: 50 }),
+            no_recovery("no-recovery", { wake_ups_per_minute: 0 })])).toBe("fewer");
+    });
+
+    it("leaves the searches to run: it is not a clock the selection can end on as stable", () => {
+        expect(searchesAreNeeded([{ signature: "one", alternatives: [untried("untried")] }], it => it)).toBe(true);
+        expect(searchesAreNeeded([{ signature: "one", alternatives: [untried("untried"), clock("recovers")] }], it => it)).toBe(false);
+    });
+
+    const config = { target_output: { recipe: "iron-plate", items_per_second: 80 } } as Config;
+    const assessment = (overrides: Partial<ClockAssessment>): ClockAssessment =>
+        ({ holds: true, backpressure_loss: null, items_per_second: 80, wake_ups_per_minute: 200, start_dependence: null, ...overrides });
+    const ranked = (overrides: Partial<ClockAssessment>, deadlock = false): ClockRanking => {
+        const clock_assessment = assessment(overrides);
+        return rankingOf({ assessment: clock_assessment, verdict: clockVerdictOf(clock_assessment), ranking_window_count: 4,
+            deadlock_risks: deadlock ? [{}] : [], result: { belt_pickup_slack_left_out: false } } as unknown as Omit<ClockAlternative, "ranking">, config);
+    };
+    const NOT_TRIED = "A clock of 47.537 ticks does not repeat in whole ticks, so its output cannot be counted by the period";
+
+    it("is a clock that holds the target rate with no loss verdict and the reason the trials did not run", () => {
+        expect(clockVerdictOf(assessment({ backpressure_loss_not_tried: NOT_TRIED }))).toBe("stable");
+        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED })).toMatchObject({ meets_target_rate: true, recovery_untried: true });
+        expect(ranked({ backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 3 } }))
+            .toMatchObject({ meets_target_rate: true, recovery_untried: false });
+        expect(ranked({ holds: false })).toMatchObject({ meets_target_rate: false, recovery_untried: false });
+    });
+
+    it("is not one off the target rate, which ranks by its rate, nor one on a build with a deadlock risk, where the trials do not decide", () => {
+        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 })).toMatchObject({ meets_target_rate: false, recovery_untried: false });
+        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED }, true)).toMatchObject({ meets_target_rate: true, recovery_untried: false });
+    });
+});
+
+// Atlan cell 29: the 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game (#332)
+describe("a clock rounded down to whole ticks", () => {
+    const rounded = (id: string, ranking: Partial<ClockRanking> = {}) => clock(id, { runs_fast: 0.0002, ...ranking });
+
+    it("ranks below a clock that meets the target rate exactly, whatever their wake-ups", () => {
+        expect(selectedOf([rounded("rounded", { wake_ups_per_minute: 1 }), clock("exact", { wake_ups_per_minute: 900 })])).toBe("exact");
+    });
+
+    it("ranks above a clock whose recovery could not be tried and one that does not meet the target rate", () => {
+        expect(selectedOf([clock("untried", { recovery_untried: true, wake_ups_per_minute: 1 }), rounded("rounded", { wake_ups_per_minute: 900 })])).toBe("rounded");
+        expect(selectedOf([clock("no-recovery", { meets_target_rate: false, wake_ups_per_minute: 0 }), rounded("rounded", { wake_ups_per_minute: 900 })])).toBe("rounded");
+    });
+
+    it("leaves the searches to run for a clock of exactly the target rate", () => {
+        expect(searchesAreNeeded([{ signature: "one", alternatives: [rounded("rounded")] }], it => it)).toBe(true);
+    });
+
+    const config = { target_output: { recipe: "iron-gear-wheel", items_per_second: 9.97 } } as Config;
+    const ranked = (items_per_second: number, rounded_clock: Partial<RoundedClock> | undefined) => {
+        const assessment: ClockAssessment = { holds: true, items_per_second, wake_ups_per_minute: 13.4, start_dependence: null,
+            backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 2 } };
+        return rankingOf({ assessment, verdict: clockVerdictOf(assessment), ranking_window_count: 4, deadlock_risks: [],
+            result: { belt_pickup_slack_left_out: false },
+            ...(rounded_clock && { rounded: { period_ticks: 2888, runs_fast: items_per_second / 9.97 - 1, within_machines: true, tried_on_its_period: true, ...rounded_clock } }),
+        } as unknown as Omit<ClockAlternative, "ranking">, config);
+    };
+    const fast = 480 * 60 / 2888;
+
+    it("meets the target rate at most 0.1% fast, within the machines, tried on its own period, and says how fast", () => {
+        expect(ranked(fast, {})).toMatchObject({ meets_target_rate: true, runs_fast: expect.closeTo(0.00023, 5) });
+        expect(ranked(9.97 * 1.000999, {})).toMatchObject({ meets_target_rate: true });
+    });
+
+    it("does not meet it more than 0.1% fast, beyond the machines, untried on its own period, or as an exact clock off the rate", () => {
+        expect(ranked(9.97 * 1.0011, {})).toMatchObject({ meets_target_rate: false });
+        expect(ranked(fast, { within_machines: false })).toMatchObject({ meets_target_rate: false });
+        expect(ranked(fast, { tried_on_its_period: false })).toMatchObject({ meets_target_rate: false });
+        expect(ranked(fast, undefined)).toMatchObject({ meets_target_rate: false });
+        expect(ranked(fast, undefined).runs_fast).toBeUndefined();
+        expect(ranked(9.97, undefined)).toMatchObject({ meets_target_rate: true });
+        expect(ranked(9.97, undefined).runs_fast).toBeUndefined();
+    });
+
+    it("runs on its windows rounded as its blueprint counts them", () => {
+        expect(windowsRoundedTo({ "inserter:1": [{ start: 0, end: 30 }, { start: 2870, end: 2888 }, { start: 2888, end: 2888 }] }, 2888))
+            .toEqual({ "inserter:1": [{ start: 0, end: 30 }, { start: 2870, end: 2887 }] });
     });
 });
 

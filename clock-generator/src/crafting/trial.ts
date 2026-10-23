@@ -3,7 +3,7 @@ import { Config } from "../config";
 import { EnableControlOverrideConfig, EnableControlRange } from "../config/schema";
 import { InserterClock, unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig, MovingPickupPhases } from "./sequence/simulation-context";
-import { OpenRange } from "../data-types";
+import { Duration, OpenRange } from "../data-types";
 import { Entity, EntityId } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
 import { StockRecording } from "./machine-stock";
@@ -46,9 +46,14 @@ export interface ClockAssessment {
     /**
      * Whether the clock gets back to its expected output after each loss of its build, and the losses it does not get
      * back from (see backpressure-loss.ts). Null when no loss was tried: the clock does not hold its expected output
-     * to begin with, or the trials could not be run on it.
+     * to begin with, or the trials could not be run on it (then `backpressure_loss_not_tried` says why).
      */
     backpressure_loss: BackpressureLossVerdict | null;
+    /**
+     * Why the losses could not be tried on a clock that holds its expected output: the trials' error, such as a period
+     * that does not repeat in whole ticks. Absent when they were tried, or the clock does not hold.
+     */
+    backpressure_loss_not_tried?: string;
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
     /**
@@ -70,7 +75,9 @@ export interface ClockAssessment {
  * The one word for a clock (GOALS.md, "Backpressure Loss"): stable when it holds its expected output and gets back to
  * it by itself after every backpressure loss of its build (and, when the start dependence was checked, reaches it from every
  * start); no recovery when it holds and does not get back from some
- * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on is taken by what it holds.
+ * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on keeps
+ * the word of what it holds, stable, and `backpressure_loss_not_tried` says why they were not: it ranks below every
+ * clock tried and getting back, and above every clock tried and not (`recoveryUntried`, rank.ts).
  */
 export type ClockVerdict = "stable" | "no recovery" | "unstable";
 
@@ -145,7 +152,9 @@ export function runClockOnBuild(
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): TrialRun {
     const named_start = options.keep_output_buffers === true || options.start_stock !== undefined;
-    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, options.decider_order), { logger: quietLogger(logger), cold_start: !named_start, ...options }));
+    // a clock of whole ticks is counted by its own period, also where the plan's is not whole (a clock rounded down)
+    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, options.decider_order),
+        { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(period) && { period_ticks: period }), ...options }));
 }
 
 /** Ticks a clock is run on its own to see that the build keeps up: ten minutes of game time */
@@ -918,26 +927,86 @@ export function startDependenceVerdictOf(
     }
 }
 
+/** What the backpressure loss trials of a clock found, or why they could not be run on it */
+export type BackpressureLossAssessment = Pick<ClockAssessment, "backpressure_loss" | "backpressure_loss_not_tried">;
+
 /**
- * Tries a clock that holds its expected output for backpressure loss. Null when the trials cannot be run on it, which
- * is logged: such a clock is taken by what it holds.
+ * Tries a clock that holds its expected output for backpressure loss. When the trials cannot be run on it, which is
+ * logged, the verdict is null and `backpressure_loss_not_tried` is the reason (see `clockVerdictOf`).
  */
 export function backpressureLossVerdictOf(
     planned_on: Config,
     result: BlueprintGenerationResult,
     logger: Logger,
     report?: (detail: string) => void,
-): BackpressureLossVerdict | null {
+): BackpressureLossAssessment {
     // the config the clock was planned on has its output swings per cycle
     const config = { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: result.used_terminal_swing_count } };
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     try {
-        return verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items,
-            quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`)));
+        return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
+            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`))) };
     } catch (error) {
-        logger.log(`Backpressure loss could not be tried: ${error instanceof Error ? error.message : error}`);
-        return null;
+        const reason = error instanceof Error ? error.message : String(error);
+        logger.log(`Backpressure loss could not be tried: ${reason}`);
+        return { backpressure_loss: null, backpressure_loss_not_tried: reason };
     }
+}
+
+/**
+ * The windows of a clock whose period is not a whole number of ticks, as its blueprint runs them when it counts the
+ * period rounded down to `period_ticks`: a window that opens after the last tick is gone, one that ends after it ends
+ * there.
+ */
+export function windowsRoundedTo(clock_windows: SerializableClockWindows, period_ticks: number): SerializableClockWindows {
+    const last = period_ticks - 1;
+    return Object.fromEntries(Object.entries(clock_windows).map(([entity_id, ranges]) => [entity_id, ranges
+        .filter(range => range.start <= last)
+        .map(range => ({ start: Math.floor(range.start), end: Math.min(Math.floor(range.end), last) }))]));
+}
+
+/** What a clock rounded down to whole ticks was found to do on its own period (see `roundedClockTrial`) */
+export interface RoundedClockTrial {
+    /** The clock as it runs: its windows rounded, its clock-only check (`stability_check.as_built`) of its own period */
+    result: BlueprintGenerationResult;
+    holds: boolean;
+    loss: BackpressureLossAssessment;
+    start_dependence: StartDependence | null;
+}
+
+/**
+ * Tries the clock of a period that is not whole as its blueprint runs it, rounded down to `period_ticks`: on its own
+ * period the clock-only check (its start phases, moving lane phases and long run), and, when it holds, the
+ * backpressure loss trials and, when the config asks, the other starts, as for a clock of whole ticks. The output it is
+ * to move a period is the plan's, in fewer ticks. The config is the one the clock was planned on.
+ */
+export function roundedClockTrial(
+    planned_on: Config,
+    result: BlueprintGenerationResult,
+    period_ticks: number,
+    logger: Logger,
+    report?: (detail: string) => void,
+): RoundedClockTrial {
+    assert(Number.isInteger(period_ticks), `A rounded clock has a whole number of ticks, not ${period_ticks}`);
+    const clock_windows = windowsRoundedTo(result.clock_windows, period_ticks);
+    const config = { ...planned_on, overrides: { ...planned_on.overrides, derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } };
+    const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const as_built = runAsBuiltCheck(config, windows, period_ticks, quietLogger(logger), AS_BUILT_START_PHASES,
+        (n, total) => report?.(`Checking the clock rounded to ${period_ticks} ticks, clock start ${n}/${total}`));
+    const rounded: BlueprintGenerationResult = {
+        ...result,
+        clock_windows,
+        simulation_duration: Duration.ofTicks(period_ticks),
+        stability_check: { ...result.stability_check, holds: as_built.check.holds, as_built: as_built.check },
+    };
+    const holds = as_built.check.holds;
+    logger.log(`Clock rounded to ${period_ticks} ticks: as-built=${as_built.check.actual_output_items}/${result.stability_check.expected_output_items} holds=${holds}`);
+    const loss = holds ? backpressureLossVerdictOf(planned_on, rounded, logger, report) : { backpressure_loss: null };
+    const start_dependence = planned_on.overrides?.check_start_dependence === true
+        ? startDependenceVerdictOf(planned_on, rounded, holds, logger, report) : null;
+    // the result keeps the period the plan has: the rounded clock is the same export, counting it rounded down
+    return { result: { ...rounded, simulation_duration: result.simulation_duration }, holds, loss, start_dependence };
 }
 
 /**

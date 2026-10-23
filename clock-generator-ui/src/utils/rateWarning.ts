@@ -4,6 +4,9 @@ import { STALE_COPY_LABEL } from './resultsStaleness';
 /** A rate as the sentences about it print it: at most two decimals, no trailing zeros ("192", "12.5", "0.33") */
 const figure = (rate: number) => Number(rate.toFixed(2)).toString();
 
+/** A share as a percentage, as the engine's labels print it: "0.02%", "under 0.01%" */
+const fastPercent = (share: number) => share * 100 < 0.005 ? 'under 0.01%' : `${Number((share * 100).toFixed(2))}%`;
+
 /**
  * The smallest shortfall a Copy button names. A clock less than this under the target prints as the target itself at
  * two decimals, and "240/s, below target" would read as nonsense.
@@ -57,7 +60,13 @@ function clockWarningOf(
                 : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');
     }
     const { items_per_second } = alternative.assessment;
-    if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
+    const runsFast = alternative.ranking.runs_fast;
+    if (runsFast !== undefined) {
+        warnings.push(`This clock’s period is rounded down to whole ticks, so it runs ${fastPercent(runsFast)} fast: `
+            // to three decimals: a rate 0.1% fast prints as the target at two
+            + `${Number(items_per_second.toFixed(3))}/s for the ${Number((items_per_second - alternative.ranking.rate_off_target).toFixed(3))}/s requested, `
+            + 'within the 0.1% a rounded clock may run and what the machines can make.');
+    } else if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
         warnings.push(`This clock’s output rate differs from the target: it runs at ${figure(items_per_second)}/s; requested `
             + `${figure(items_per_second - alternative.ranking.rate_off_target)}/s in the simulator.`);
     }

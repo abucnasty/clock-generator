@@ -1,0 +1,169 @@
+{
+  "target_output": {
+    "recipe": "iron-plate",
+    "items_per_second": 80.78,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "iron-plate",
+      "productivity": 50,
+      "crafting_speed": 86.16550000000001,
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": 396.5,
+        "y": -0.5
+      }
+    },
+    {
+      "id": 2,
+      "recipe": "iron-plate",
+      "productivity": 50,
+      "crafting_speed": 86.16550000000001,
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": 396.5,
+        "y": 2.5
+      }
+    }
+  ],
+  "drills": {
+    "configs": [
+      {
+        "id": 1,
+        "type": "big-mining-drill",
+        "mined_item_name": "iron-ore",
+        "speed_bonus": 17.5,
+        "productivity": 79990.00000001134,
+        "target": {
+          "type": "chest",
+          "id": 1
+        },
+        "position": {
+          "x": 388.5,
+          "y": 0.5
+        },
+        "direction": 4
+      }
+    ]
+  },
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 394.5,
+        "y": 0.5
+      },
+      "direction": 12
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 394.5,
+        "y": 1.5
+      },
+      "direction": 12
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": -2.5
+      },
+      "direction": 8
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": 4.5
+      },
+      "direction": 0
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "iron-plate",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "iron-plate",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "car",
+      "id": 1,
+      "position": {
+        "x": 392.66796875,
+        "y": 1.0078125
+      }
+    },
+    {
+      "type": "infinity-chest",
+      "id": 2,
+      "item_filter": [],
+      "remove_unfiltered_items": true,
+      "position": {
+        "x": 405.5,
+        "y": -7.5
+      }
+    }
+  ]
+}

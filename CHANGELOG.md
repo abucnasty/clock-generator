@@ -31,6 +31,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - A mining drill fills a machine up to the larger of a stack and the insertion limit, plus 64, as in the game, instead of one craft's ingredients more.
 - Mining productivity makes its bonus items on the same tick as the game when the bonus is within a hair of a whole item, on every ore.
 - The Build panel's Diagram opens without freezing the page (half a second on a 29-entity build, more on larger ones), and the flow replay opens with the whole build in view instead of zoomed in on one entity.
+- A clock whose period is rounded down to whole ticks is listed at the rate it really runs, labelled with how much it runs fast, and counts as holding the target when it is at most 0.1% fast and within what the machines make, checked on its own period; a clock whose recovery could not be tried is no longer picked over clocks that recover, and Recovers: Unavailable says why it was not tried.
 
 ## [0.19.0] - 2026-10-21
 
