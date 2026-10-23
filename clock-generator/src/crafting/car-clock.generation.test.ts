@@ -15,7 +15,7 @@ let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
     generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR), {logger: quiet});
-}, 120_000);
+});
 
 test("car: the clock with 3 output swings is selected, and the drill into the car is enabled the tick before the takers", () => {
     const selected = generated.alternatives[generated.selected_index];
@@ -61,7 +61,7 @@ describe("the car paste at 80.78/s", () => {
     let paste: ClockAlternativesResult;
     beforeAll(async () => {
         paste = generateClockAlternatives(await loadConfigFromFile(path.join(__dirname, "fixtures", "car-paste-80.78.json")), {logger: quiet});
-    }, 300_000);
+    });
 
     // 192000/4039 ticks: no subtick clock (a scale above 1000), so its blueprint counts 47 ticks and asks 64 plates of
     // them, above what the furnaces make

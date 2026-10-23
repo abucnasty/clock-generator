@@ -13,7 +13,7 @@ describe("Atlan cell 29: a clock rounded down to whole ticks", () => {
     let generated: ClockAlternativesResult;
     beforeAll(async () => {
         generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_ATLAN_CELL29), {logger: quiet});
-    }, 600_000);
+    });
 
     test("is selected, 0.02% fast, as the 2,888-tick clock it is, and was tried on its own period", () => {
         const selected = generated.alternatives[generated.selected_index];
