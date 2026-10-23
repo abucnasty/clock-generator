@@ -18,6 +18,7 @@ import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import type { GenerationAssumptions } from '../worker/types';
+import { REQUIRES_FACTORIO } from '../utils/installSteps';
 import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 
@@ -30,7 +31,6 @@ const CARD_COPY = {
     recovers: 'Recovers',
     belt: 'Belt pickups',
     detailsHeading: 'How this was checked',
-    requiresFactorio: 'The blueprint needs Factorio 2.1 or later.',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
 };
 
@@ -169,7 +169,7 @@ function ClockExplanation(props: SelectedProps) {
         </Typography>
         {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
         {props.runAssumptions}
-        <Typography variant="caption" color="text.secondary">{CARD_COPY.requiresFactorio}</Typography>
+        <Typography variant="caption" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
     </Box>;
 }
 

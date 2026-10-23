@@ -46,7 +46,7 @@ describe('installSteps', () => {
         const steps = installSteps(plain);
         expect(detailOf(steps, 'import')).toContain('Factorio 2.1');
         expect(steps[0].title).toContain('Factorio 2.1');
-        expect(REQUIRES_FACTORIO).toBe('Needs Factorio 2.1.');
+        expect(REQUIRES_FACTORIO).toBe('The blueprint needs Factorio 2.1 or later.');
     });
 
     it('says how to set an inserter to switch on, and how to undo an older clock', () => {
