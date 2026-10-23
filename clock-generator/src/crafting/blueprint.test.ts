@@ -109,15 +109,15 @@ describe("combinator descriptions of the rocket fuel biochambers", async () => {
         .map(entity => (entity.player_description ?? "").split("\n")[0])
         .filter(line => line.includes("(inserter") || / inserters/.test(line));
 
-    it("name the two ends of every inserter, the machines by their recipes where the config has no prototype", () => {
+    it("name the two ends of every inserter, the biochambers by the machine their former type gives them", () => {
         expect(first_lines.sort()).toEqual([
-            "2 inserters: [entity=turbo-transport-belt] → machines 1, 3 [recipe=rocket-fuel-from-jelly]  [item=bioflux]  (1, 5)",
-            "2 inserters: machines 1, 3 [recipe=rocket-fuel-from-jelly] → [entity=turbo-transport-belt]  [item=rocket-fuel]  (2, 4)",
-            "4 inserters: machine 2 [recipe=jellynut-processing] → machines 1, 3 [recipe=rocket-fuel-from-jelly]  [item=jelly]  (6, 7, 8, 9)",
-            "By-product: machine 2 [recipe=jellynut-processing] → [entity=turbo-transport-belt]  [item=jellynut-seed]  (inserter 11)",
-            "Fuel: 2 inserters: [entity=turbo-transport-belt] → machines 1, 3 [recipe=rocket-fuel-from-jelly]  [item=nutrients]  (10, 13)",
-            "Fuel: [entity=turbo-transport-belt] → machine 2 [recipe=jellynut-processing]  [item=nutrients]  (inserter 12)",
-            "[entity=turbo-transport-belt] → machine 2 [recipe=jellynut-processing]  [item=jellynut]  (inserter 3)",
+            "2 inserters, each [entity=biochamber] → [entity=turbo-transport-belt]  [item=rocket-fuel]  (2, 4)",
+            "2 inserters, each [entity=turbo-transport-belt] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]  [item=bioflux]  (1, 5)",
+            "4 inserters, each [entity=biochamber] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]  [item=jelly]  (6, 7, 8, 9)",
+            "By-product: [entity=biochamber] [recipe=jellynut-processing] → [entity=turbo-transport-belt]  [item=jellynut-seed]  (inserter 11)",
+            "Fuel: 2 inserters, each [entity=turbo-transport-belt] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]  [item=nutrients]  (10, 13)",
+            "Fuel: [entity=turbo-transport-belt] → [entity=biochamber] [recipe=jellynut-processing]  [item=nutrients]  (inserter 12)",
+            "[entity=turbo-transport-belt] → [entity=biochamber] [recipe=jellynut-processing]  [item=jellynut]  (inserter 3)",
         ]);
     });
 

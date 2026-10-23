@@ -68,7 +68,7 @@ describe("generateClockForConfig", () => {
             const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
             const plain = generateClockForConfig({
                 ...config,
-                machines: config.machines.map(machine => ({ ...machine, type: "machine" as const })),
+                machines: config.machines.map(machine => ({ ...machine, prototype: undefined })),
                 inserters: config.inserters.filter(inserter => inserter.id !== 3),
             }, { logger: quiet });
             expect(fuel_inserter.used_lcm).toBe(plain.used_lcm);

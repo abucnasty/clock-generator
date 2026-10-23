@@ -295,7 +295,8 @@ export interface ComputeMachineFactsParams {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace' | 'biochamber';
+    /** The machine's prototype, whose game data gives its rule; without it the crafting rule */
+    prototype?: string;
     energy_consumption_bonus?: number;
     fuel?: string;
 }
@@ -305,7 +306,7 @@ function computeMachineFacts(params: ComputeMachineFactsParams): SerializableMac
         recipe: RecipeMetadata.fromRecipeName(params.recipe),
         productivity: params.productivity,
         crafting_speed: params.crafting_speed,
-        type: params.type ?? 'machine',
+        type: machineRuleOf(params),
         energy_consumption_bonus: params.energy_consumption_bonus,
         fuel: params.fuel,
     });

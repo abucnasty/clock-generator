@@ -12,11 +12,11 @@ import {
     TargetType,
 } from "../common/enable-control-types";
 import { MachineStatus } from "../state/entity-status";
-import { MachineType } from "../entities";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
+import { migrateMachineTypeStep } from "./migrate-machine-type";
 
 // ============================================================================
 // Machine Configuration
@@ -34,24 +34,26 @@ const DirectionSchema = z.number().int().min(0).max(15);
 /** The qualities of the game, for the fields that name one */
 const MachineQualitySchema = z.enum(["normal", "uncommon", "rare", "epic", "legendary"]);
 
-export const MachineConfigurationSchema = z.object({
+/**
+ * A machine of the build. What it is is its `prototype`, whose game data gives the rule it is simulated under (a furnace
+ * holds a stack of its product, a biochamber burns nutrients, any other crafting machine stops at its overload
+ * multiplier; `entities/machine/machine-rule.ts`). That rule is internal: no config field names or sets it. The former
+ * `type` field ("machine", "furnace", "biochamber") is read once, before the machine is checked, as the prototype of a
+ * machine of that rule (`migrate-machine-type.ts`), and dropped when the machine names its prototype.
+ */
+export const MachineConfigurationSchema = z.preprocess(migrateMachineTypeStep, z.object({
     id: z.number().int().positive(),
     recipe: z.string(),
     productivity: z.number().min(0),
     crafting_speed: z.number().positive(),
-    /**
-     * The simulation rule (MachineType): "machine" the crafting rule, "furnace" the furnace rule, "biochamber" the crafting
-     * rule burning nutrients. Without it the rule is the prototype's (machine-prototype.ts), else "machine". With both, a
-     * type other than the prototype's rule is used as written and warned about.
-     */
-    type: z.enum(Object.values(MachineType)).optional(),
     energy_consumption_bonus: z.number().min(-80).optional(),
     fuel: z.string().optional(),
     /**
-     * The machine's prototype name in the game data ("electric-furnace", "assembling-machine-3"), which the clock's
-     * descriptions show as its icon; without it they name the machine by its id. Its game data gives the machine's rule
-     * when `type` is not set, and the recipes it can make (a recipe it cannot make is warned about); its speed and
-     * productivity come from `crafting_speed` and `productivity` alone. Sidecar 0.12.0 exports it.
+     * The machine's prototype name in the game data ("electric-furnace", "assembling-machine-3"): its game data gives the
+     * rule it is simulated under and the recipes it can make (a recipe it cannot make is warned about), and the clock's
+     * descriptions show it as its icon. Its speed and productivity come from `crafting_speed` and `productivity` alone.
+     * A machine without one (or with one the data does not hold) is simulated as an assembling machine, and the
+     * descriptions name it by its id. Sidecar 0.12.0 exports it.
      */
     prototype: z.string().optional(),
     /**
@@ -63,7 +65,7 @@ export const MachineConfigurationSchema = z.object({
     recipe_quality: MachineQualitySchema.optional(),
     /** Where the machine stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
     position: MapPositionSchema.optional(),
-});
+}));
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 

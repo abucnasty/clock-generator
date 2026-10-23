@@ -7,6 +7,7 @@ export interface MachineMetadata {
     productivity: number;
     crafting_speed: number;
     recipe: RecipeMetadata;
+    /** The simulation rule, derived from the machine's prototype (machine-rule.ts); internal, set by no config field */
     type: MachineType;
     /** Total energy consumption effect in percent, e.g. 50 for +50%. Defaults to 0. Only used by fuel-burning types. */
     energy_consumption_bonus?: number;

@@ -43,7 +43,7 @@ describe('complete repeated-unit conversion', () => {
     it('retains the complete composite GCD unit, internal buffers/drills, fuel, rules and nontrivial ID maps', () => {
         const source: Config = {
             target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
-            machines: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, recipe: 'iron-plate', crafting_speed: i < 4 ? 1 : 2, productivity: 0, type: 'furnace' as const, fuel: 'coal' })),
+            machines: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, recipe: 'iron-plate', crafting_speed: i < 4 ? 1 : 2, productivity: 0, prototype: 'stone-furnace', fuel: 'coal' })),
             chests: [
                 ...Array.from({ length: 6 }, (_, i) => ({ id: i + 1, type: 'buffer-chest' as const, storage_size: 2, item_filter: 'iron-plate' })),
                 { id: 7, type: 'infinity-chest', item_filter: [{ item_name: 'coal', request_count: 50 }] },

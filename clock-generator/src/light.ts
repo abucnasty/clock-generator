@@ -21,8 +21,8 @@ export {
 export { EntityType } from "./entities/entity-type";
 
 export { MachineType } from "./entities/machine/machine-type";
-export { machineRuleOfPrototype, machineCanMake } from "./entities/machine/machine-rule";
-export type { CraftingMachineRuleFacts } from "./entities/machine/machine-rule";
+export { machineRuleOfPrototype, machineCanMake, machineForRecipe, machineForRule } from "./entities/machine/machine-rule";
+export type { CraftingMachineRuleFacts, NamedCraftingMachine } from "./entities/machine/machine-rule";
 
 export { InserterStatus, MachineStatus, DrillStatus } from "./state/entity-status";
 

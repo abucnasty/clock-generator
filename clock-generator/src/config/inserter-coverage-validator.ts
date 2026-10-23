@@ -1,6 +1,7 @@
 import { Config, BeltConfig, ChestConfig, InserterConfig, MachineConfiguration, MiningDrillConfig } from './schema';
 import { FactorioDataService } from '../data/factorio-data-service';
-import { BurnerEnergySource, MachineType } from '../entities';
+import { BurnerEnergySource } from '../entities';
+import { machineRuleOf } from './machine-prototype';
 import { InserterCoverageError, InserterCoverageIssue, InserterFixOption } from './errors';
 import { assertInsertersInScope } from './inserter-scope';
 
@@ -174,7 +175,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
         // ── Input ingredients ────────────────────────────────────────────────
         const drills = config.drills?.configs ?? [];
         // A burner machine also needs its fuel inserted
-        const burner = BurnerEnergySource.forMachineType(machine.type ?? MachineType.MACHINE);
+        const burner = BurnerEnergySource.forMachineType(machineRuleOf(machine));
         const inputItemNames = recipe.ingredients.map((ingredient) => ingredient.name);
         const fuelItem = burner ? BurnerEnergySource.selectFuel(burner, machine.fuel).item_name : undefined;
         if (fuelItem) inputItemNames.push(fuelItem);
@@ -278,7 +279,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
                     if (other.id === machine.id || alreadyConnected('machine', other.id)) continue;
                     try {
                         const needs = FactorioDataService.findRecipeOrThrow(other.recipe).ingredients.some(item => item.name === itemName);
-                        const energy = BurnerEnergySource.forMachineType(other.type ?? MachineType.MACHINE);
+                        const energy = BurnerEnergySource.forMachineType(machineRuleOf(other));
                         if (needs || (energy && BurnerEnergySource.selectFuel(energy, other.fuel).item_name === itemName))
                             fixOptions.push({ type: 'existing_connection', endpoint_type: 'machine', endpoint_id: other.id, item_name: itemName });
                     } catch { /* Unknown recipes cannot be offered as destinations. */ }
@@ -316,7 +317,7 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
     return config => {
         if (!FactorioDataService.isAvailable()) return [];
         const nextCatalog = JSON.stringify({
-            machines: config.machines.map(({ id, recipe, type, fuel }) => [id, recipe, type, fuel]),
+            machines: config.machines.map(({ id, recipe, prototype, fuel }) => [id, recipe, prototype, fuel]),
             belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => lane.ingredient)]),
             chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter
                 : chest.type === 'infinity-chest' ? [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]
