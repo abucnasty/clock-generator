@@ -1,19 +1,18 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.12.0
   Features:
-    - exports cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, the slot filters of a car, tank or wagon, and a silo's recipe quality, crafting speed and productivity. They are exported empty, whatever they hold when selected
-    - exports a mining drill that drops into a chest, a car, a tank, a cargo wagon or a rocket silo
-    - exports each machine's prototype, quality and recipe quality, and each chest's prototype, which the Clock Generator shows as icons in a clock's descriptions
-    - exports where each inserter, mining drill, machine and chest stands, and which way each inserter and drill faces; the Clock Generator keeps them for tools and uses them for nothing yet
-    - exports each mining drill's productivity, its research and productivity modules together, in place of one mining productivity level for every drill
+    - exports cars, tanks, cargo wagons and rocket silos as chests, with their slot filters and quality, exported empty
+    - exports mining drills that drop into a chest, car, tank, cargo wagon or rocket silo
+    - exports each mining drill's own productivity, research and modules together
+    - exports each machine's and chest's prototype and quality, shown as icons in a clock's descriptions
+    - exports where each entity stands and which way inserters and drills face
   Changes:
-    - no longer exports a machine's type (machine, furnace or biochamber): the Clock Generator works out how to simulate each machine from its prototype
-    - the button is Export (was Copy JSON), and the tool's description says what it selects: machines, inserters, belts, chests, mining drills, cars, tanks, cargo wagons and rocket silos
+    - no longer exports a machine's type: the Clock Generator works it out from the machine
+    - the button is Export (was Copy JSON)
   Bugfixes:
-    - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine
-    - exports a mining drill that has not mined or dropped yet, such as one just built or upgraded to another quality beside a full container; earlier versions left it out of the selection, or listed it as left out until it dropped (#316)
-    - the selection tool selects linked belts; earlier versions skipped them, though the sidecar reads them as pieces of a belt
-    - an inserter that drops onto a belt or into a chest not in the JSON (empty, or outside the selection) is listed as left out; earlier versions exported it as dropping onto the first belt or into the first chest
+    - exports a mining drill that has not mined or dropped yet, such as one just upgraded beside a full container (#316)
+    - selects linked belts
+    - a mining drill or inserter that drops into something not in the export is listed as left out, instead of exported as dropping into the first machine, belt or chest
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.0
 Date: 2026-10-21
