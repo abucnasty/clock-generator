@@ -1,7 +1,7 @@
 import data from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
 import { FactorioDataService } from 'clock-generator/browser';
-import { containerSlotCount, paintSlotFilters, shownSlotFilter, slotRange } from './containerSlotFilters';
+import { containerSlotCount, paintSlotFilters, shownSlotFilter, slotCounts, slotCountsText, slotRange } from './containerSlotFilters';
 import { QUALITIES } from './configForm/formData';
 
 FactorioDataService.initialize(JSON.parse(data));
@@ -40,5 +40,19 @@ describe('inventory filter editing', () => {
         expect(painted.map(shownSlotFilter)).toEqual(['iron-plate', 'deconstruction-planner', 'deconstruction-planner']);
         expect(shownSlotFilter({ slot: 4, blocked: true })).toBe('no-item');
         expect(paintSlotFilters(painted, [2], 'coal')[1]).toEqual({ slot: 2, item: 'coal' });
+    });
+});
+
+describe('the count of an inventory', () => {
+    it('counts each slot once, filtered, blocked or free, and none past the last', () => {
+        const filters = [
+            { slot: 1, item: 'iron-plate' }, { slot: 2, item: 'iron-plate' }, { slot: 3, blocked: true as const },
+            { slot: 4, item: '' }, { slot: 41, item: 'coal' }, { slot: 42, blocked: true as const },
+        ];
+        expect(slotCounts(filters, 40)).toEqual({ filtered: 2, blocked: 1, free: 37 });
+        expect(slotCountsText(slotCounts(filters, 40))).toBe('2 filtered · 1 blocked · 37 free');
+        // a wagon of 30 filtered and 10 blocked slots has none free (the UX review's wagon)
+        const wagon = [...slotRange(1, 30).map(slot => ({ slot, item: 'iron-ore' })), ...slotRange(31, 40).map(slot => ({ slot, blocked: true as const }))];
+        expect(slotCountsText(slotCounts(wagon, 40))).toBe('30 filtered · 10 blocked · 0 free');
     });
 });

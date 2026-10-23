@@ -128,9 +128,9 @@ describe('the fields of each type', () => {
             expect(html).toContain('Fill unfiltered slots');
             expect(html).toContain('Shift + right-click copies');
             expect(html).toContain('Contents');
-            expect(html.includes('aria-label="Quality, Chest 1"')).toBe(container === CONTAINERS.wagon);
+            expect(html.includes('aria-label="Quality, Cargo wagon 1"')).toBe(container === CONTAINERS.wagon);
         }
-        expect(render(CONTAINERS.car)).toContain('aria-label="Item of contents 1, Chest 1"');
+        expect(render(CONTAINERS.car)).toContain('aria-label="Item of contents 1, Car 1"');
     });
 
     it('offers a silo its recipe quality, crafting speed, productivity and contents, without slot filters', () => {
@@ -151,12 +151,24 @@ describe('the fields of each type', () => {
         expect(wagon).toContain('Remove filter for slot 100');
     });
 
+    it('says nothing of unfiltered slots when every slot is filtered or blocked', () => {
+        const full = { type: ChestType.CAR, slot_filters: [...Array.from({ length: 5 }, (_, i) => ({ slot: i + 1, item: 'iron-plate' })),
+            ...Array.from({ length: 75 }, (_, i) => ({ slot: i + 6, blocked: true }))] };
+        const html = render(full);
+        expect(html).toContain('5 filtered · 75 blocked · 0 free');
+        expect(html).not.toContain('Unfiltered slots accept any item');
+    });
+
     it('shows a slot blocked in the config as No item, and offers a way to block the remaining slots', () => {
         const html = render(CONTAINERS.blockedCar);
         expect(html).toContain('Slot 2: Blocked (no-item)');
         expect(html).toContain('Slot 3: Blocked (no-item)');
         expect(html).toContain('Block unfiltered slots');
-        expect(html).toContain('2 blocked');
+        expect(html).toContain('1 filtered · 2 blocked · 77 free · Unfiltered slots accept any item');
+        // the game draws no number in an empty slot's corner, and a filter faded
+        expect(html).not.toMatch(/<span aria-hidden="true"[^>]*>\d+<\/span>/);
+        expect(html).toContain('opacity:0.45');
+        expect(html).toContain('Middle-click a slot to set its filter, as in the game.');
         expect(() => validateConfig(ConfigSchema.parse(build(CONTAINERS.blockedCar)))).not.toThrow();
     });
 

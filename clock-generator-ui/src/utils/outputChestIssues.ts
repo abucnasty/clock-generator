@@ -1,4 +1,5 @@
 import type { InserterCoverageIssue } from 'clock-generator/browser';
+import { chestLabel } from './entityLabel';
 import { isBufferChest, isContainerChest, isInfinityChest, type ChestFormData, type InserterFormData } from './configForm/formData';
 
 export interface OutputChestIssue {
@@ -30,7 +31,7 @@ export function coverageHandledByChestIssue(issue: InserterCoverageIssue, warnin
 }
 
 export function outputChestIssueTitle({ kind, chest }: OutputChestIssue): string {
-    return kind === 'finite' ? `Chest ${chest.id} can fill up and block output` : `Chest ${chest.id} needs output removal enabled`;
+    return kind === 'finite' ? `${chestLabel(chest)} can fill up and block output` : `${chestLabel(chest)} needs output removal enabled`;
 }
 
 export const outputChestIssueElementId = (id: number) => `output-chest-issue-${id}`;

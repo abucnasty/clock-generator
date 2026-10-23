@@ -63,8 +63,8 @@ describe('automatic filters through containers', () => {
         const render = (index: number) => renderToStaticMarkup(<InserterEditor value={form.inserters[index]} label={`Inserter ${index + 1}`}
             layout="stacked" machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
             itemNames={['lithium', 'copper-plate', 'processing-unit']} getRecipeInfo={recipeInfo} onChange={() => {}} />);
-        expect(render(0)).toContain('value="Chest 1 - processing-unit"');
-        expect(render(1)).toContain('value="Chest 1 - lithium"');
+        expect(render(0)).toContain('value="Rocket silo 1 - processing-unit"');
+        expect(render(1)).toContain('value="Rocket silo 1 - lithium"');
     });
 
     it('never advertises blocked slots as available items or automatic filters', () => {
