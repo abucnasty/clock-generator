@@ -6,14 +6,26 @@
       "recipe": "iron-plate",
       "crafting_speed": 86.16550000000001,
       "productivity": 50,
-      "type": "furnace"
+      "position": {
+        "x": 396.5,
+        "y": -0.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     },
     {
       "id": 2,
       "recipe": "iron-plate",
       "crafting_speed": 86.16550000000001,
       "productivity": 50,
-      "type": "furnace"
+      "position": {
+        "x": 396.5,
+        "y": 2.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     }
   ],
   "drills": {
@@ -23,11 +35,16 @@
         "type": "big-mining-drill",
         "mined_item_name": "iron-ore",
         "speed_bonus": 17.5,
-        "productivity": 79990,
+        "productivity": 79990.00000001134,
         "target": {
           "type": "chest",
           "id": 1
-        }
+        },
+        "position": {
+          "x": 388.5,
+          "y": 0.5
+        },
+        "direction": 4
       }
     ]
   },
@@ -43,7 +60,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 394.5,
+        "y": 0.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -56,7 +78,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 394.5,
+        "y": 1.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -69,7 +96,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": -2.5
+      },
+      "direction": 8
     },
     {
       "source": {
@@ -82,7 +114,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": 4.5
+      },
+      "direction": 0
     }
   ],
   "belts": [
@@ -104,12 +141,20 @@
   "chests": [
     {
       "type": "car",
-      "id": 1
+      "id": 1,
+      "position": {
+        "x": 392.66796875,
+        "y": 1.0078125
+      }
     },
     {
       "type": "infinity-chest",
       "id": 2,
-      "remove_unfiltered_items": true
+      "remove_unfiltered_items": true,
+      "position": {
+        "x": 405.5,
+        "y": -7.5
+      }
     }
   ],
   "suggested_target": {

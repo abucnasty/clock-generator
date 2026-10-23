@@ -8,11 +8,13 @@ is 80 plates a second from one copy.
 
 - `lithium-silo-scaffold.txt`: the owner's blueprint as given. The infinity chests, infinity pipes, loader and disposal
   chest are part of it.
-- `lithium-silo.sidecar-export.json`: what Sidecar 0.12.0 exported from the blueprint built in the harness game.
-- `lithium-silo.json`: that export as the paste reads it (each list through its schema), with the target added and each
-  machine's `prototype` (`cryogenic-plant` for machines 1 and 2 and `electric-furnace` for 3 to 8) taken from the
-  scaffold, as the sidecar exports it since this export was taken; it only names the machines in the clock's
-  descriptions. No other field was edited.
+- `lithium-silo.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
+  2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
+  (and an inserter's or drill's direction).
+- `lithium-silo.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
+  target added. It is the export above without the qualities, positions and directions; each machine's `prototype`
+  (`cryogenic-plant` for machines 1 and 2 and `electric-furnace` for 3 to 8) was taken from the scaffold and is the one
+  the export names. No other field was edited.
 
 The export was taken after a warm-up of 3600 ticks without a clock. A furnace has no recipe until it gets its first
 input, so an export taken earlier is incomplete: after 1 tick it had 2 machines and no belt. The sidecar exports a

@@ -39,14 +39,15 @@ const SCHEMA_STEPS = ["normalizePickupCaptureConfig", "migrateMachineTypeStep", 
 const migrated = (config: Raw) => Object.values(MIGRATIONS).reduce((value, step) => step(value), config);
 const read = (file: string) => JSON.parse(fs.readFileSync(file, "utf8")) as Raw;
 
-/** Every config the repository keeps as a sample: the config samples and the game tests' fixture configs */
+/** Every config the repository keeps as a sample: the config samples, the game tests' fixture configs and the Sidecar exports beside samples */
 function sampleConfigs(dir: string): string[] {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
         const file = path.join(dir, entry.name);
         if (entry.isDirectory()) return entry.name === ".scratch" || entry.name === "node_modules" ? [] : sampleConfigs(file);
         if (!entry.name.endsWith(".json")) return [];
         const value: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-        return object(value) && Array.isArray(value.machines) && object(value.target_output) ? [file] : [];
+        const config = object(value) && Array.isArray(value.machines);
+        return config && (object(value.target_output) || entry.name.endsWith(".sidecar-export.json")) ? [file] : [];
     });
 }
 
@@ -80,8 +81,9 @@ describe("the load-time migrations", () => {
 });
 
 describe("the samples", () => {
-    it("are every config of ConfigPaths and the game fixtures", () => {
+    it("are every config of ConfigPaths, the game fixtures and the Sidecar exports", () => {
         expect(SAMPLES).toEqual(expect.arrayContaining(Object.values(ConfigPaths)));
+        expect(SAMPLES.filter(file => file.endsWith(".sidecar-export.json")).length).toBeGreaterThan(0);
         expect(SAMPLES.length).toBeGreaterThan(Object.values(ConfigPaths).length);
     });
 

@@ -9,10 +9,13 @@ Every inserter is filtered to its item. The wagon's slots are filtered too: 20 t
 and 10 blocked (a deconstruction planner in the game). The target is 26 steel plates a second from one copy.
 
 - `steel-wagon-scaffold.txt`: the owner's blueprint as given. The loader and disposal chest are part of it.
-- `steel-wagon.sidecar-export.json`: what Sidecar 0.12.0 exported from the blueprint built in the harness game.
-- `steel-wagon.json`: that export as the paste reads it (each list through its schema), with the target added and each
-  machine's `prototype` (`electric-furnace` for both machines) taken from the scaffold, as the sidecar exports it since
-  this export was taken; it only names the machines in the clock's descriptions. No other field was edited.
+- `steel-wagon.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
+  2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
+  (and an inserter's or drill's direction).
+- `steel-wagon.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
+  target added. It is the export above without the qualities, positions and directions, and with the drill's
+  productivity 79990 where the game writes 79990.00000001134; each machine's `prototype` (`electric-furnace` for both
+  machines) was taken from the scaffold and is the one the export names. No other field was edited.
 
 The harness game has no ore, so the harness puts iron ore under the drill before it builds it, and it builds the wagon
 after its rails. The export was taken after a warm-up of 3600 ticks without a clock. The sidecar exports a wagon empty,
