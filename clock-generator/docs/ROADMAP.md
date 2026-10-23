@@ -2,7 +2,7 @@
 
 The clock generator is working towards clocking the cells that real Space Age bases are made of: foundries, electromagnetic plants, recyclers, quality drills, and cars and cargo wagons used as chests. Each milestone below adds one family of such cells. The live board is the GitHub project "Real Boy": https://github.com/users/abucnasty/projects/2.
 
-The plans of the coming releases, one theme each, with their packages and what is left, are in [roadmap/](roadmap/): [0.20.0](roadmap/0.20.0.md), containers and drills; [0.21.0](roadmap/0.21.0.md), trust the export; [0.22.0](roadmap/0.22.0.md), faster generation and truer ranking; [0.23.0](roadmap/0.23.0.md), lanes and recovery; and [0.24.0](roadmap/0.24.0.md), Gleba. Work with no release of its own ships when it is ready and is listed in [roadmap/later.md](roadmap/later.md). Each plan is dropped when its release ships.
+The plans of the coming releases, one theme each, with their packages and what is left, are in [roadmap/](roadmap/): [0.21.0](roadmap/0.21.0.md), trust the export; [0.22.0](roadmap/0.22.0.md), faster generation and truer ranking; [0.23.0](roadmap/0.23.0.md), lanes and recovery; and [0.24.0](roadmap/0.24.0.md), Gleba. Work with no release of its own ships when it is ready and is listed in [roadmap/later.md](roadmap/later.md). Each plan is dropped when its release ships.
 
 When the generator refuses a config because it does not model something yet, the message names the milestone or follow-up where that gap is planned, such as "roadmap milestone M2 (containers)" or "follow-up F1". You can look each name up here.
 
