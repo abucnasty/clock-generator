@@ -13,7 +13,7 @@ import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_R
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
 import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
-import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
+import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
@@ -45,6 +45,7 @@ import type { PickupCaptureWarning } from '../utils/sidecarExport';
 
 const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
+const TARGET_MAXIMUM_ID = 'paste-target-maximum';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
 const freshImportSelections = (): ImportSelections => ({ target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
 const THEME_CHOICES = [
@@ -738,7 +739,7 @@ export function ConfigImportExport({
                                             <Checkbox
                                                 checked={importSelections.target}
                                                 onChange={() => handleSelectionChange('target')}
-                                                slotProps={{ input: { 'aria-describedby': TARGET_CAPTION_ID } }}
+                                                slotProps={{ input: { 'aria-describedby': maximumTargetNote(pendingImport.fill.source) ? `${TARGET_CAPTION_ID} ${TARGET_MAXIMUM_ID}` : TARGET_CAPTION_ID } }}
                                             />
                                         }
                                         label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
@@ -747,6 +748,9 @@ export function ConfigImportExport({
                                         {targetRowCaption(pendingImport.fill.source)}
                                         {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
                                     </Typography>
+                                    {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                        {maximumTargetNote(pendingImport.fill.source)}
+                                    </Typography>}
                                 </Box>
                             ) : (
                                 currentTarget.recipe === '' && (

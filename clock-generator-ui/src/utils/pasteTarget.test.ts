@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill } from './pasteTarget';
+import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill } from './pasteTarget';
 
 const suggestion = (items_per_second: number, source: 'mod' | 'inferred' = 'inferred') => ({
     target: { recipe: 'logistic-science-pack', items_per_second, copies: 1 },
@@ -54,5 +54,12 @@ describe('the words of the Target Output row', () => {
 
     it('says what to do when it could not tell', () => {
         expect(NO_TARGET_NOTE).toBe('Could not tell what the build makes. Set Target Output after importing.');
+    });
+});
+
+describe('the note on a target at the maximum', () => {
+    it('shows when the target the paste fills is the export\'s suggested maximum, and not for an estimate', () => {
+        expect(maximumTargetNote('mod')).toBe('At the maximum the clock has no slack to recover from a disturbance; lower the rate for headroom.');
+        expect(maximumTargetNote('inferred')).toBeNull();
     });
 });
