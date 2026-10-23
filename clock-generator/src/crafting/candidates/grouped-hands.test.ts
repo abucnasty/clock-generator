@@ -73,13 +73,16 @@ describe("hands in a chain of machines", () => {
         const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         expect(duration.ticks).toBe(168);
-        const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, plan.unslacked_windows);
-        // three hands of 12 ticks onto the belt, then the units and frames (two hands of 11 and the belt pickup slack of 4), the low
-        // density structure (two hands of 8, a third start the limit refuses), the plastic (four hands of 8: no more than four)
+        // the way the sample's clock is made: a hand's worth for the plastic, whose foundries would keep a surplus hand, and the compact order
+        const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, plan.unslacked_windows, true,
+            { surplus_guard: true, feeder_offset: 1 });
+        // three hands of 12 ticks onto the belt; then, as the last of them starts, the units and frames (two hands of 11, a third start the
+        // limit refuses, and the belt pickup slack of 4); the low density structure behind them (two hands of 8 and a third start); the plastic
+        // a tick after it (four hands of 8: no more than four) and the coal after that (two hands of 11 and a third start, and the slack)
         for (const id of [3, 4, 9, 13, 18, 21, 24, 27]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 36]]);
-        for (const id of [1, 2, 14, 15, 16, 17, 28, 29]) expect(ranges(windows, `inserter:${id}`)).toEqual([[37, 64]]);
-        for (const id of [5, 6, 7, 8, 22, 23, 25, 26]) expect(ranges(windows, `inserter:${id}`)).toEqual([[65, 82]]);
-        for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[66, 91]]);
-        expect(ranges(windows, "inserter:11")).toEqual([[67, 83]]);
+        for (const id of [1, 2, 14, 15, 16, 17, 28, 29]) expect(ranges(windows, `inserter:${id}`)).toEqual([[26, 53]]);
+        for (const id of [5, 6, 7, 8, 22, 23, 25, 26]) expect(ranges(windows, `inserter:${id}`)).toEqual([[54, 71]]);
+        for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[55, 80]]);
+        expect(ranges(windows, "inserter:11")).toEqual([[56, 83]]);
     });
 });
