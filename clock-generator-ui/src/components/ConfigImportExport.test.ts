@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isValidElement, type ReactNode } from 'react';
 import { Button, FormControlLabel } from '@mui/material';
 import { Option } from 'clock-generator/light';
-import { InserterAssumptions } from './InserterAssumptions';
+import { InserterDetails } from './InserterDetails';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
 import { ConfigImportExport, type BuildEntryHandle } from './ConfigImportExport';
 import { createDefaultConfig } from '../utils/configForm/formData';
@@ -179,7 +179,7 @@ describe('prospective import assumptions', () => {
         incoming.inserters = [{ id: 1, prototype: 'fast-inserter', quality: 'normal', stack_size: 4,
             source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 0 } }];
         await paste();
-        const assumptions = () => Render().find(element => element.type === InserterAssumptions)!.props.inserters;
+        const assumptions = () => Render().find(element => element.type === InserterDetails)!.props.inserters;
         expect(assumptions()).toBe(incoming.inserters);
         const label = Render().find(element => element.type === FormControlLabel && element.props.label === 'Inserters (1)')!;
         (elements(label.props.control)[0].props.onChange as () => void)();
@@ -189,5 +189,21 @@ describe('prospective import assumptions', () => {
         expect(assumptions()).toBe(changed);
         expect(props.onApplyPaste).not.toHaveBeenCalled();
         expect(props.onUndoable).not.toHaveBeenCalled();
+    });
+});
+
+describe('the chest row', () => {
+    it('names the chests by type, in the order the export lists them, beside the counts', async () => {
+        incoming.chests = [{ id: 1, type: 'car' }, { id: 2, type: 'infinity-chest' }, { id: 3, type: 'infinity-chest' }] as PastedEntities['chests'];
+        await paste();
+        const row = Render().find(e => e.props['data-paste-category'] === 'chests')!;
+        expect(JSON.stringify(row.props.children)).toContain('1 car and 2 infinity chests. 0 in your build → 3 after import.');
+        const label = Render().find(e => e.type === FormControlLabel && e.props.label === 'Chests (3)')!;
+        (elements(label.props.control)[0].props.onChange as () => void)();
+        expect(JSON.stringify(Render().find(e => e.props['data-paste-category'] === 'chests')!.props.children)).toContain('1 car and 2 infinity chests. Not selected.');
+    });
+    it('has no line of types when the export has no chests', async () => {
+        await paste();
+        expect(JSON.stringify(Render().find(e => e.props['data-paste-category'] === 'chests')!.props.children)).toContain('None in this export.');
     });
 });

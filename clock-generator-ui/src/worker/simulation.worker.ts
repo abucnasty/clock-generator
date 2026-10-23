@@ -241,7 +241,9 @@ function requireValidConfig(config: Config): void {
 
 function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConversion {
     const plan = clockGenerator.planRepeatedUnitConversion(config);
-    if (plan.kind === 'unavailable') return { kind: 'unavailable', stage: 'proof', reason: plan.reason };
+    // the test Check refuses a build with copies inside it by
+    const repeatedGroups = () => Math.max(1, clockGenerator.findRepeatedUnits(config).gcd);
+    if (plan.kind === 'unavailable') return { kind: 'unavailable', stage: 'proof', reason: plan.reason, repeatedGroups: repeatedGroups() };
     try {
         requireValidConfig(plan.candidate);
         return { kind: 'available', plan, validation: clockGenerator.validateConfig(plan.candidate) };
@@ -253,7 +255,7 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
             && !(error instanceof clockGenerator.CopiesError)
             && !(error instanceof clockGenerator.AssertionError)) throw error;
         return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
-            message: error instanceof Error ? error.message : 'The candidate Check failed.' } };
+            message: error instanceof Error ? error.message : 'The candidate Check failed.' }, repeatedGroups: repeatedGroups() };
     }
 }
 

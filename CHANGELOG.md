@@ -15,6 +15,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - When no clock holds because an output chest fills up, the result names the chest.
 
 ### Changed
+- The paste preview names each chest's type, says "Imported as one unit" only for an export of several copies, and describes the inserters in the game's words.
 - The wiring reference shows each combinator's first line as the game does, with the same icons, drills included.
 - The machine is picked as a recipe is (groups, search, icons), from the row's machine icon. A row says when its machine cannot make its recipe, and Crafting Speed shows the machine's own speed at its quality.
 

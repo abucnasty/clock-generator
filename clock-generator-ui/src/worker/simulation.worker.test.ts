@@ -76,11 +76,11 @@ it('uses the real engine for typed Check/generation recovery and recomputed conv
     expect(answer).toMatchObject({ type: 'answer', answer: { kind: 'available', plan: { copies: 4, candidate: { machines: [source.machines[0]], target_output: { ...source.target_output, copies: 4 } } } } });
     const excessive = { ...source, target_output: { ...source.target_output, items_per_second: 100 } };
     const refused = await send({ type: 'query', requestId: 3, query: { kind: 'repeated-unit-conversion', config: excessive } });
-    expect(refused).toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed', message: expect.stringContaining('cannot meet the target') } } });
+    expect(refused).toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining('cannot meet the target') } } });
     const unsupported = structuredClone(source);
     unsupported.inserters.filter((_, i) => i % 2 === 1).forEach(ins => { ins.sink = { type: 'belt', id: 2, drop: { lane: 1, position: 0 } }; });
     expect(await send({ type: 'query', requestId: 4, query: { kind: 'repeated-unit-conversion', config: unsupported } }))
-        .toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'proof', reason: { code: 'unsupported-boundary' } } });
+        .toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'proof', repeatedGroups: 8, reason: { code: 'unsupported-boundary' } } });
     // The engine uses untyped errors for an unknown recipe; the worker must not misdiagnose one as a proved candidate refusal.
     const unknown = structuredClone(source);
     unknown.machines.forEach(machine => { machine.recipe = 'not-a-real-recipe'; });
