@@ -86,10 +86,9 @@ export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swin
         const transfer = transfers.get(inserter.entity_id.id);
         if (transfer === undefined) continue;
         found = true;
-        for (const item of transfer.item_transfers) {
-            const denominator = item.transfer_count.getDenominator;
-            lcm = lcm / gcd(lcm, denominator) * denominator;
-        }
+        // the hands of the inserter in all, not each lane's or item's part: an export onto two lanes at 1/2 + 1/2 is one hand
+        const denominator = transfer.total_transfer_count.getDenominator;
+        lcm = lcm / gcd(lcm, denominator) * denominator;
     }
     return found ? lcm : null;
 }
