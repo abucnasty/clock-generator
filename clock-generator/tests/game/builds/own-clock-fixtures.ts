@@ -23,12 +23,14 @@ import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capt
 export interface OwnClockCase {
     name: string;
     kind: "owner's clock" | "generated clock";
+    /** The alternative recorded, for the generated clock */
+    alternative?: string;
 }
 
 export function ownClockCases(): OwnClockCase[] {
     return [
         {name: "own-clock-three-copies", kind: "owner's clock"},
-        {name: "generated-three-copies", kind: "generated clock"},
+        {name: "generated-three-copies", kind: "generated clock", alternative: GENERATED_ALTERNATIVE},
     ];
 }
 
@@ -81,7 +83,7 @@ export async function ownClockScenario(variant: OwnClockCase): Promise<PickupClo
         scaffold: () => fs.readFileSync(SCAFFOLD, "utf8").trim(),
         built_clock: OWNER_CLOCK,
         keep_built_clock: !generated,
-        ...(generated && {alternative: GENERATED_ALTERNATIVE}),
+        ...(generated && {alternative: variant.alternative}),
         // the family's protocol: 64 untouched periods, the ore cut at 66-68, the output blocked at 84-88, the circuits cut at 104-106
         interventions: pickupClockInterventions(),
         probeFile: path.join(__dirname, "own-clock-probe.lua"),

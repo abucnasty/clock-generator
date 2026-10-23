@@ -14,6 +14,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `lithium-silo-clock.game.test.ts`: the owner's lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
 - `car-clock.game.test.ts`: the owner's iron plate build, a car taken as a chest between a big mining drill and two furnaces.
 - `steel-wagon-clock.game.test.ts`: the owner's steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
+- `own-clock.game.test.ts`: the owner's inserter build on three copies, once with the owner's own clock and once with the generated clock.
 
 From `clock-generator/`, select a file or case:
 
@@ -519,4 +520,42 @@ full plate or steel filter stops a furnace a few ticks a period in some states, 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/steel-wagon-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/steel-wagon-clock.game.test.ts -t '^steel wagon clock: steel-wagon-belt-slack$'
+```
+
+## A clock the build came with: the owner's inserter build on three copies
+
+`own-clock.game.test.ts` records the owner's inserter build (`LOGISTIC_SCIENCE_INSERTER_CRAFTING`, 240 a second over three
+copies of 80, [own-clock-three-copies-scaffold.txt](own-clock-three-copies-scaffold.txt)) twice, with the protocol of the
+families above: 63 untouched periods, the ore cut at periods 66-68, the output blocked at 84-88, the circuits cut at
+104-106, the first 6 periods after a release not judged. The three copies stand in a row; the ore lines run on past the last
+copy into loaders and void chests (drained and moving); the copies are not alike (the first two have a gear assembler at
+44.92, the first a fourth furnace at 91.875), and the config is the third.
+
+- `own-clock-three-copies`: the owner's clock, kept. It is one clock for the three copies: a counter of the clock signal
+  that counts 0 to 215 (a period of 216 ticks), an iron plate window on ticks 1-33 and 109-138 for the 12 ore and 12 plate
+  inserters, an iron gear wheel window on ticks 1-65 and 109-173 for the 3 gear inserters; the circuit and output inserters
+  are not wired. The test names the clock to the harness (`built_clock`: the counter's entity number in the blueprint, its
+  period and the value it starts at), and the harness records it as it records a generated one, cut at its wraps. The
+  recorder schema reads a clock that counts from 0 only when the recording names its period (the harness writes it), and then
+  checks every sample against the clock's count, so a missing signal is still refused.
+- `generated-three-copies`: the same blueprint with the owner's three combinators taken out and the generator's selected clock
+  for the config (`swings-2`, 72 ticks, 2 output swings) wired to the inserters of each copy. The harness finds the copies
+  from the build's machines and inserters (machines that inserters move items between are one copy; belts, which the copies
+  share, do not join them) and matches each to the config by itself. The inserters the owner's clock held run free while
+  the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched.
+
+[own-clock-controls.json](own-clock-controls.json) holds the 2 native summaries, recorded on Factorio 2.1.21 at commit
+`e1c0aadb`. **The owner's clock gives 864 (288 a copy) in each of 63 periods, as the owner measured it with a probe of their
+own, and the same recoveries: the ore cut 528, 0, 96 then 864 from the first judged period; the output block 80, 0, 0, 232,
+808 then 864; the circuit cut 184, 0, 356 then 864. The generated clock gives 288 in each of 63 periods of 72 ticks and is
+back at 288 in every judged period after the ore cut and the block, and after the circuit cut in all but the first judged
+period (284).** The cuts are in periods of each clock, so they last 432 ticks for the owner's clock and 144 for the
+generated one: do not compare the two recoveries tick for tick. Both builds are the owner's three copies on drained lines,
+not the one-copy scaffold of `scaffold-recordings.game.test.ts`. A drop in the first tick of a recording is not seen by it, so
+the compact count of its first period is checked less that drop (the probe counts it).
+`src/crafting/own-clock.generation.test.ts` pins the generated clock and checks it against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/own-clock-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/own-clock.game.test.ts
 ```
