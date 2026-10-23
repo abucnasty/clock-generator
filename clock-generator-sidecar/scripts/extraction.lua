@@ -636,7 +636,7 @@ function extraction.extract_all_entities(entities, force)
                 id = belt_id
                 ---@type BeltData
                 local data = {
-                    belt_type = helpers.normalize_belt_type(belt_pieces[1].name),
+                    belt_type = helpers.belt_type_of_pieces(belt_pieces),
                     unit_number = belt_pieces[1].unit_number,
                     lanes = lanes
                 }
