@@ -1,6 +1,7 @@
 import { BeltConfig, ChestConfig, Config, InserterConfig, MiningDrillConfig } from './schema';
 import { CopiesError, CopiesUnit } from './errors';
 import { assertInsertersInScope } from './inserter-scope';
+import { machineRuleOf } from './machine-prototype';
 
 // ============================================================================
 // Units of a build
@@ -62,8 +63,9 @@ export interface RepeatedUnits {
 
 const nodeKey = (kind: NodeKind, id: number): string => `${kind}:${id}`;
 
+// a machine without a type or a prototype keeps its own key, as before the prototype gave a rule
 function machineSpec(machine: Config['machines'][number]): string {
-    return `machine|${machine.recipe}|${machine.crafting_speed}|${machine.productivity}|${machine.type ?? ''}|${machine.fuel ?? ''}|${machine.energy_consumption_bonus ?? ''}`;
+    return `machine|${machine.recipe}|${machine.crafting_speed}|${machine.productivity}|${machine.type ?? (machine.prototype !== undefined ? machineRuleOf(machine) : '')}|${machine.fuel ?? ''}|${machine.energy_consumption_bonus ?? ''}`;
 }
 
 function chestSpec(chest: ChestConfig): string {

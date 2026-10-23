@@ -94,6 +94,8 @@ export { insertersScopeProblem } from './config/inserter-scope';
 export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/pickup-calibration';
 export { laneCapacityIssues, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
 export type { UncalibratedBeltPickup } from './config/pickup-calibration';
+export { machinePrototypeIssues, machineRuleOf } from './config/machine-prototype';
+export type { MachinePrototypeIssue } from './config/machine-prototype';
 
 // ============================================================================
 // Blueprint Generation
