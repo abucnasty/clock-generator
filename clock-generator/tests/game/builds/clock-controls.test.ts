@@ -2,6 +2,7 @@ import fs from "fs";
 import {describe, expect, test} from "vitest";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {ClockControl, pinMismatches, readControls} from "./clock-controls";
+import {ownerClockHash as grenadeClockHash} from "./grenade-clock-fixtures";
 import {ownerClockHash} from "./own-clock-fixtures";
 
 /**
@@ -10,13 +11,16 @@ import {ownerClockHash} from "./own-clock-fixtures";
  * fail where a pin was moved to follow a selection and its recording was not made again: the generation tests (pull
  * requests to master) find the selection that moved, this finds the pin that was edited to follow it.
  */
-const FAMILIES = ["blocked-output", "car", "container", "front", "lithium-silo", "over-hood", "own", "pickup", "steel-wagon"]
+const FAMILIES = ["blocked-output", "car", "container", "front", "grenade", "lithium-silo", "over-hood", "own", "pickup", "steel-wagon"]
     .map(family => `${family}-clock-controls.json`);
 const hash = /^[0-9a-f]{64}$/;
 /** Entries whose native summary has no known clock yet: the list may only shrink */
 const NOT_YET_TIED: Record<string, string[]> = {};
 /** Entries that are the clock of an owner's build, not a selection: the identity of that clock in the blueprint the test builds */
-const OWNER_CLOCKS: Record<string, Record<string, string>> = {"own-clock-controls.json": {"own-clock-three-copies": ownerClockHash()}};
+const OWNER_CLOCKS: Record<string, Record<string, string>> = {
+    "own-clock-controls.json": {"own-clock-three-copies": ownerClockHash()},
+    "grenade-clock-controls.json": {"owner-one-copy": grenadeClockHash("one copy"), "owner-full-build": grenadeClockHash("full build")},
+};
 
 test("every family of game tests with a controls file is checked here", () => {
     const files = fs.readdirSync(__dirname).filter(file => file.endsWith("-clock-controls.json") && !file.includes("history")).sort();

@@ -15,6 +15,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `car-clock.game.test.ts`: the owner's iron plate build, a car taken as a chest between a big mining drill and two furnaces.
 - `steel-wagon-clock.game.test.ts`: the owner's steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
 - `own-clock.game.test.ts`: the owner's inserter build on three copies, once with the owner's own clock and once with the generated clock.
+- `grenade-clock.game.test.ts`: the owner's grenade build on one copy and on its full build of seven, each with the owner's clock and with the generated clock.
 
 From `clock-generator/`, select a file or case:
 
@@ -562,4 +563,24 @@ one by its pin, as in the other families.
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/own-clock-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/own-clock.game.test.ts
+```
+
+## The owner's grenade build
+
+`grenade-clock.game.test.ts` records the owner's grenade build (`REAL_OWNER_GRENADE`, 240 a second over 7 copies, the sample's
+README) four times: on one copy (`grenade-hand-clock-scaffold.txt`: the scaffold with the owner's clock) and on the full build
+of seven (`grenade-full-build.txt`), each with the owner's clock, kept (`built_clock`), and with the generator's selected clock
+(`planned-belt-slack`, 112 ticks), wired to the inserters and drills of every copy (`copies`) with the owner's deciders taken
+out. The protocol is the family's with three losses the build has: the foundries stopped for 2 periods, the output loader taken
+away for 30 periods and rebuilt (a copy's belt takes 6 periods of grenades before it is full, so the family's 4 would change
+nothing), and the drills stopped for 2. The probe counts the drops of the output inserters per period and per inserter and the
+ticks each waits for room on the belt.
+
+[grenade-clock-controls.json](grenade-clock-controls.json) holds the 4 native summaries; `src/crafting/grenade-clock.generation.test.ts`
+pins the generated clock and checks the owner's clock in the simulator. All four hold their target in every baseline period
+(64 on a copy, 448 on seven) with no wait for the belt, and get back after every loss.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/grenade-clock.game.test.ts
 ```
