@@ -679,7 +679,7 @@ local function staged_tick(state)
 end
 
 ---Build the blueprint and pause the game, after the warm-up when one is asked for
----@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, warmup_ticks: number?, speed: number?, drill_resource: string?} speed: the game's speed from here on; it stays what it is when absent. drill_resource: the ore put under every mining drill of the blueprint
+---@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, free_warmup: boolean?, warmup_ticks: number?, speed: number?, drill_resource: string?} speed: the game's speed from here on; it stays what it is when absent. drill_resource: the ore put under every mining drill of the blueprint. free_warmup: with clock "remove", the inserters the removed clock held run free until the new clock is wired
 ---@return table report
 function harness.build(job)
     local surface = game.surfaces[job.surface or "nauvis"]
@@ -733,6 +733,13 @@ function harness.build(job)
         end
         state.entities = kept
         state.clocked_inserters = inserters
+        if job.free_warmup then
+            -- the build warms up as an unclocked one does: left without the clock they held, they would wait for a signal that
+            -- never comes, and the machines they feed would have no recipe or ingredients when the build is matched
+            for _, inserter in pairs(inserters) do
+                run_without_circuit(inserter)
+            end
+        end
     end
     state.area = bounding_box(state.entities)
 

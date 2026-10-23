@@ -872,6 +872,8 @@ export class HarnessSession {
             surface: options.surface,
             position: options.position,
             clock: replaces_clock ? "remove" : "keep",
+            // a clock built by hand gates its inserters with a condition that holds only while its signal is on the wire
+            free_warmup: options.built_clock !== undefined && options.clock !== undefined,
             warmup_ticks: options.warmup_ticks,
             speed: options.game_speed,
             drill_resource: drillResourceOf(options),
