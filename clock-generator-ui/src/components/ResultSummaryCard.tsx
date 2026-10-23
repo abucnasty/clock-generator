@@ -6,6 +6,7 @@ import type { ClockAlternativeView } from '../worker/types';
 import {
     beltLine,
     beltValue,
+    beltValueSub,
     clockTechnicalName,
     differenceFromRecommended,
     makesText,
@@ -13,12 +14,11 @@ import {
     recoversOf,
     wakeUpsText,
 } from '../utils/clockSummary';
-import { REQUIRES_FACTORIO } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import type { GenerationAssumptions } from '../worker/types';
-import { startCheckSummary } from '../utils/modelAssumptions';
+import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 
 /** Every string of the card that is not the clock's own, in one place */
@@ -28,7 +28,9 @@ const CARD_COPY = {
     makes: 'Makes',
     wakeUps: 'Wake-ups',
     recovers: 'Recovers',
-    belt: 'Belt',
+    belt: 'Belt pickups',
+    detailsHeading: 'How this was checked',
+    requiresFactorio: 'The blueprint needs Factorio 2.1 or later.',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
 };
 
@@ -136,11 +138,18 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 <Fact label={CARD_COPY.makes} value={makes.value} sub={makes.sub} />
                 <Fact label={CARD_COPY.wakeUps} value={wakeUps.value.replace(' a minute', '/min')} sub={wakeUps.sub} />
                 <Fact label={CARD_COPY.recovers} value={recovers.value} icon={RECOVERS_ICON[recovers.kind]} />
-                <Fact label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={selected.ranking.matches_belt_choice ? undefined : 'Different setting'} />
+                <Fact label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={beltValueSub(props.pickRule, selected.beltLabel) ?? (selected.ranking.matches_belt_choice ? undefined : 'Different setting')} />
             </Box>
             {recovers.kind !== 'yes' && !props.rateWarning && <Typography variant="body2" sx={{ mt: 1 }}>{recovers.detail}</Typography>}
         </>
     );
+}
+
+/** Whether the clock keeps its rate once the machines have warmed up, as a sentence */
+function holdStatusText(rate: string, holds: boolean | null | undefined): string {
+    if (holds === true) return `It keeps making ${rate} once warmed up: yes.`;
+    if (holds === false) return 'It does not keep its rate once warmed up.';
+    return 'Whether it keeps its rate once warmed up is unavailable.';
 }
 
 function ClockExplanation(props: SelectedProps) {
@@ -153,14 +162,14 @@ function ClockExplanation(props: SelectedProps) {
     return <Box sx={{ display: 'grid', gap: 1 }}>
         {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
         <Typography variant="body2" data-start-assumption>
-            Full input supplies; empty modeled machines, buffers and hands; phase 0. Rates follow model warm-up. {startCheckSummary([selected], props.generationAssumptions ?? null)}
+            {COLD_START} {startCheckSummary([selected], props.generationAssumptions ?? null)}
         </Typography>
         <Typography variant="body2" data-hold-status>
-            Modeled output holds: {selected.assessment.holds === true ? 'Yes' : selected.assessment.holds === false ? 'No' : 'unavailable'}.
+            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds)}
         </Typography>
         {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
         {props.runAssumptions}
-        <Typography variant="caption" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
+        <Typography variant="caption" color="text.secondary">{CARD_COPY.requiresFactorio}</Typography>
     </Box>;
 }
 
@@ -204,7 +213,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
             <Box component="details" sx={{ mt: 1.5, '& > summary': { cursor: 'pointer', width: 'fit-content', typography: 'body2', color: 'text.secondary' } }}>
-                <Box component="summary">Details &amp; assumptions</Box>
+                <Box component="summary">{CARD_COPY.detailsHeading}</Box>
                 <Box sx={{ display: 'grid', gap: 1, mt: 1 }}>
                     {selected && <ClockExplanation {...props} selected={selected} />}
                     {/* Keep this action mounted when its run temporarily empties the clock list. */}

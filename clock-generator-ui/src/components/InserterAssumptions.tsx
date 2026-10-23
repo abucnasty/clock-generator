@@ -2,6 +2,7 @@ import type { InserterFormData } from '../utils/configForm/formData';
 import { Box, Typography } from '@mui/material';
 import { effectiveInserterStackSize, inserterMetadataText } from '../utils/inserterMetadata';
 import { filtersLabel, usesAutomaticFilters } from '../utils/inserterFilters';
+import { assumptionsText } from '../utils/modelAssumptions';
 import { useGameNames } from '../hooks/useGameNames';
 
 interface AssumedInserter {
@@ -24,16 +25,14 @@ export function InserterAssumptions({ inserters, detailed = false }: { inserters
     const unavailable = inserters.filter(row => !Number.isFinite(effectiveInserterStackSize(row))).length;
     return <Box sx={{ overflowWrap: 'anywhere' }}>
         <Typography variant="body2" data-metadata-assumptions>
-            {inserters.length} inserters: {missingType ? `${missingType} missing type use Stack inserter timing` : 'all types explicit'};{' '}
-            {missingQuality ? `${missingQuality} missing quality use Legendary timing` : 'all qualities explicit'}.{' '}
-            Capacity: {automatic} Automatic ({unavailable ? `${unavailable} unavailable; supported types assume full research` : 'all capacity research'}), {inserters.length - automatic} Explicit.
+            {assumptionsText({ count: inserters.length, missingType, missingQuality, automatic, unavailable })}
         </Typography>
         {detailed && <Box component="ul" sx={{ pl: 2.5, my: 1 }}>
             {inserters.map((row, index) => {
                 const capacity = effectiveInserterStackSize(row);
                 return <Typography component="li" variant="body2" key={row.id ?? index} sx={{ mb: 0.5 }}>
-                    Inserter {row.id ?? index + 1}: {inserterMetadataText(row)} ({row.prototype === undefined ? 'type assumed' : 'type explicit'}; {row.quality === undefined ? 'quality assumed' : 'quality explicit'}).{' '}
-                    Capacity {row.stack_size === undefined ? 'Automatic' : 'Explicit'}: {Number.isFinite(capacity) ? `${capacity} items${row.stack_size === undefined ? ', all capacity research' : ''}` : 'unavailable'}.{' '}
+                    Inserter {row.id ?? index + 1}: {inserterMetadataText(row)} ({row.prototype === undefined ? 'type assumed' : 'type set in your build'}; {row.quality === undefined ? 'quality assumed' : 'quality set in your build'}).{' '}
+                    Hand size: {Number.isFinite(capacity) ? `${capacity} items (${row.stack_size === undefined ? 'follows your research' : 'set in your build'})` : 'unavailable'}.{' '}
                     Filters: {filtersLabel(row, 'Automatic, follow the route', 'Explicit')}{usesAutomaticFilters(row.filters) ? '' : `: ${row.filters!.map(itemLabel).join(', ')}`}.{' '}
                     Enable rule: {row.overrides?.enable_control === undefined ? 'Automatic (omitted)' : row.overrides.enable_control.mode === 'AUTO' ? 'Automatic (explicit Auto)' : `Explicit ${row.overrides.enable_control.mode}`}.
                 </Typography>;

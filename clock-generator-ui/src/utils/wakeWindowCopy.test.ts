@@ -193,6 +193,17 @@ describe('watchNotes', () => {
         expect(ids(row({ id: 'inserter:4' }), { periodTicks: 600, mostWakeUpsId: 'inserter:3' })).toEqual([]);
     });
 
+    it('says an inserter that is on for part of the period and woken 0 times a minute is not an error', () => {
+        const on19 = row({ onShare: 0.19, wakeUpsPerMinute: 0 });
+        expect(watchNotes(on19, ctx)).toEqual([{
+            id: 'never-woken',
+            text: 'On for 19% of the period but woken 0 times a minute: the simulator counts no wake-up for it while it is on.',
+        }]);
+        expect(ids(row({ onShare: 0.19, wakeUpsPerMinute: 12 }))).toEqual([]);
+        expect(ids(row({ onShare: 0.19, wakeUpsPerMinute: null }))).toEqual([]);
+        expect(ids(row({ kind: 'drill', onShare: 0.01, wakeUpsPerMinute: 0 }))).toEqual([]);
+    });
+
     it('gives no window notes to a row without bars', () => {
         expect(ids(row({ mode: 'always-on', windows: [], onShare: 1 }))).toEqual([]);
     });

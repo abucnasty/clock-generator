@@ -7,6 +7,7 @@ import {
     beltCellText,
     beltLine,
     beltValue,
+    beltValueSub,
     clockTechnicalName,
     differenceFromRecommended,
     foldedMakes,
@@ -73,11 +74,11 @@ describe('sampled starts remain separate from rate and recovery', () => {
         expect(recoversOf(dependent)).toMatchObject({ kind: 'yes', value: 'Yes' });
         expect(rateWarningOf(dependent)).toContain('some sampled starts');
         expect(rateWarningOf(dependent)).not.toContain('240 of 240');
-        expect(startCheckSummary([dependent], { startDependenceRequested: true, complete: true })).toBe('2 sampled starts evaluated across 1 of 1 clocks.');
+        expect(startCheckSummary([dependent], { startDependenceRequested: true, complete: true })).toBe('Tried from 2 other starting states, across 1 of 1 clocks.');
         const unavailable = clock('unavailable');
-        expect(startCheckSummary([unavailable], { startDependenceRequested: false, complete: true })).toBe('Other startup conditions were not checked.');
-        expect(startCheckSummary([unavailable], { startDependenceRequested: true, complete: true })).toBe('Other-start check results are unavailable.');
-        expect(startCheckSummary([dependent, unavailable], { startDependenceRequested: true, complete: false })).toBe('This generation is incomplete. 2 sampled starts evaluated across 1 of 2 clocks. Other-start results are unavailable for 1.');
+        expect(startCheckSummary([unavailable], { startDependenceRequested: false, complete: true })).toBe('Other starting states were not tried.');
+        expect(startCheckSummary([unavailable], { startDependenceRequested: true, complete: true })).toBe('Results for other starting states are unavailable.');
+        expect(startCheckSummary([dependent, unavailable], { startDependenceRequested: true, complete: false })).toBe('This generation is incomplete. Tried from 2 other starting states, across 1 of 2 clocks. Results for other starting states are unavailable for 1.');
         expect(startCheckSummary([], { startDependenceRequested: true, complete: true })).toBe('No clocks were available to check.');
         unavailable.assessment.backpressure_loss = null;
         expect(recoversOf(unavailable)).toMatchObject({ kind: 'not-tested', value: 'Unavailable' });
@@ -237,7 +238,9 @@ describe('beltLine and beltValue', () => {
 
     it('says there is no belt when no clocked inserter picks up from one', () => {
         expect(beltLine(moving, '')).toBe('No inserter on the clock picks up from a belt.');
-        expect(beltValue(null, '')).toBe('No belt');
+        expect(beltValue(null, '')).toBe('None');
+        expect(beltValueSub(moving, '')).toBe('no inserter picks up from a belt');
+        expect(beltValueSub(moving, 'moving (+4 ticks)')).toBeUndefined();
     });
 
     it('goes by the label alone without a rule', () => {

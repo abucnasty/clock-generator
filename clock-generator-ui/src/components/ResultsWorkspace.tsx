@@ -18,7 +18,8 @@ import type {
 } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import type { FuelViewData, GenerationAssumptions, ShiftOptionsView } from '../worker/types';
-import { startCheckSummary } from '../utils/modelAssumptions';
+import { freeLaneDropText, startCheckSummary } from '../utils/modelAssumptions';
+import { entityLabel } from '../utils/entityLabel';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
@@ -135,6 +136,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     }, [props.generatedFor]);
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
     const selected = props.alternatives[props.selectedIndex];
+    const freeLaneBelts = selected?.assumptions?.outputDrops.filter(drop => drop.mode === 'free-lane').map(drop => drop.beltId) ?? [];
     const workspaceRef = useRef<HTMLDivElement>(null);
     const selectionAnchor = useRef<{ clock: ClockAlternativeView; top: number } | null>(null);
     const captureWorkspacePosition = (next: ClockAlternativeView | undefined) => {
@@ -224,10 +226,10 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Button></Box>}
                 runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">
-                        These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.backed_up_belts ? 'backed-up' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
+                        {saved ? `Made for ${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'} of your build${selected.beltLabel === '' ? '' : `, with the input belts ${saved.overrides?.backed_up_belts ? 'backed up' : 'moving'}`}.` : 'These results are for a saved build whose metadata is unavailable.'}
                         {selected.assumptions?.loopSeeds.length ? ` ${selected.assumptions.loopSeeds.length} modeled loop seed(s).` : ''}
-                        {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' Supplied output-drop positions model shared-lane spacing.' : ''}
-                        {selected.assumptions?.outputDrops.some(drop => drop.mode === 'free-lane') ? ' Output belts without supplied shared-lane positions use free-lane drop timing.' : ''}
+                        {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' The drop positions you gave are used to space the output drops on the belt.' : ''}
+                        {freeLaneBelts.length > 0 ? ` ${freeLaneDropText(freeLaneBelts.map(id => entityLabel('belt', id)).join(' and '))}` : ''}
                         {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
                     </Typography>
                     {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
