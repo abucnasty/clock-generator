@@ -8,13 +8,15 @@ is 80 plates a second from one copy.
 
 - `lithium-silo-scaffold.txt`: the owner's blueprint as given. The infinity chests, infinity pipes, loader and disposal
   chest are part of it.
-- `lithium-silo.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
-  2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
-  (and an inserter's or drill's direction).
+- `lithium-silo.sidecar-export.json`: what Sidecar 0.13.0 exports from the blueprint built in the harness game, taken again on
+  2026-10-23, which also exports each machine's `prototype` and quality and each entity's position (and an inserter's or
+  drill's direction), and marks inserters 15 and 16 (`drop_capture` on their sinks) as dropping onto a belt that
+  side-loads onto another. The game test `tests/game/mechanics/belt-drop/sideload-drop-capture.game.test.ts` takes it
+  from the scaffold again and holds it equal to this file.
 - `lithium-silo.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
   target added. It is the export above without the qualities, positions and directions; each machine's `prototype`
   (`cryogenic-plant` for machines 1 and 2 and `electric-furnace` for 3 to 8) was taken from the scaffold and is the one
-  the export names. No other field was edited.
+  the export names, and the two marks of the export above were added to it. No other field was edited.
 
 The export was taken after a warm-up of 3600 ticks without a clock. A furnace has no recipe until it gets its first
 input, so an export taken earlier is incomplete: after 1 tick it had 2 machines and no belt. The sidecar exports a
@@ -41,3 +43,6 @@ exits side-load onto the belt that already carries the other four furnaces' plat
 belt, and the simulator gives those two inserters the room of that belt. In the game they wait for the merge, their
 furnaces stop with a full output, and the inserters that feed those furnaces from the silo miss hands. The clock opens
 the six output inserters together, which the other two clocks do not.
+
+The export marks the two inserters (15 and 16) as dropping onto a belt that side-loads onto another, 3 tiles on, and
+the result names that as a known limit.

@@ -1,5 +1,5 @@
 {
-  "sidecar_version": "0.12.0",
+  "sidecar_version": "0.13.0",
   "machines": [
     {
       "id": 1,
@@ -369,7 +369,12 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "drop_capture": {
+          "status": "side-loaded",
+          "tiles": 3,
+          "sidecar_version": "0.13.0"
+        }
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -387,7 +392,12 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "drop_capture": {
+          "status": "side-loaded",
+          "tiles": 3,
+          "sidecar_version": "0.13.0"
+        }
       },
       "prototype": "stack-inserter",
       "quality": "legendary",

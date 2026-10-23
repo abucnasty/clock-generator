@@ -74,6 +74,8 @@ for _, data in ipairs(captured.inserters) do
         assert(vertical == (data.sink.side_load_tiles ~= nil), "a drop is marked exactly when it lands on a vertical piece")
     end
 end
+-- the export of the scaffold, as the Sidecar's Export button gives it: the sample's export is taken the same way
+helpers.write_file("lithium-silo.sidecar-export.json", export.to_json(captured), false)
 assert(#marked == 2 and marked[1] == 3 and marked[2] == 3, "two drops marked with 3 tiles")
 assert(#unmarked == 4, "four drops not marked")
 note("lithium-scaffold-marked", "2 drops, tiles " .. marked[1] .. " and " .. marked[2])
@@ -236,6 +238,11 @@ helpers.write_file("sideload-drop-cases.txt", table.concat(report, "\\n") .. "\\
             expect(read[name], name).toBeDefined();
             expect(read[name]).toBe(expected);
         }
+        // the owner's lithium build's export in the repository is this one, as the game writes it
+        const sample = path.join(path.dirname(ConfigPaths.REAL_OWNER_LITHIUM_SILO), "lithium-silo.sidecar-export.json");
+        const exported = JSON.parse(fs.readFileSync(path.join(scratch, "script-output", "lithium-silo.sidecar-export.json"), "utf8"));
+        if (process.env.SIDELOAD_DROP_WRITE_SAMPLE) fs.writeFileSync(sample, JSON.stringify(exported, null, 2) + "\n");
+        expect(exported).toEqual(JSON.parse(fs.readFileSync(sample, "utf8")));
         expect(Object.keys(read).sort()).toEqual(Object.keys(EXPECTED_CASES).sort());
     } finally {
         fs.rmSync(scratch, { recursive: true, force: true });
