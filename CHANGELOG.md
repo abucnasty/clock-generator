@@ -10,6 +10,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ## [0.22.0] - Unreleased
 
+### Changed
+- A clock that does not hold is listed by what it makes over a long run, not by one period, so the closest clock is the one that keeps making the most.
+
 ## [0.21.0] - 2026-10-23
 
 ### Added
