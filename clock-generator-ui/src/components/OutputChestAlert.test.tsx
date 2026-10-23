@@ -30,3 +30,22 @@ it('offers an enable-removal fix on the existing infinity chest with its own ico
     expect(render()).toContain('infinity-chest');
     expect(render({ ...chest, remove_unfiltered_items: true })).toBe('');
 });
+
+it('warns of a car, a tank, a cargo wagon or a rocket silo at the end of a line, each with its own icon', () => {
+    const into: InserterFormData = { id: 1, _uuid: 'inserter-1', stack_size: 16, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 7 } };
+    const out: InserterFormData = { id: 2, _uuid: 'inserter-2', stack_size: 16, source: { type: 'chest', id: 7 }, sink: { type: 'machine', id: 2 } };
+    const render = (chest: ChestFormData, inserters = [into]) => renderToStaticMarkup(
+        <OutputChestAlert chests={[chest]} inserters={inserters} onSwitchType={() => {}} onEnableRemoval={() => {}} />);
+    for (const [type, text, name] of [[ChestType.CAR, 'out of this car.', 'Car 7'], [ChestType.TANK, 'out of this tank.', 'Tank 7'],
+        [ChestType.CARGO_WAGON, 'or swap it at a station', 'Cargo wagon 7'], [ChestType.ROCKET_SILO, 'launches rockets, which the simulator does not model yet', 'Rocket silo 7']] as const) {
+        const chest = { id: 7, _uuid: 'chest-7', type } as ChestFormData;
+        const html = render(chest);
+        // named by what it is
+        expect(html).toContain(`${name} can fill up and block output`);
+        expect(html).toContain(text);
+        expect(html).toContain(`/icons/${type}.png`);
+        expect(html).toContain(`Use infinity chest for ${name}`);
+        // a container between two inserters holds the line: no warning
+        expect(render(chest, [into, out])).toBe('');
+    }
+});

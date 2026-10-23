@@ -10,21 +10,21 @@
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 91.89999580383301,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     },
     {
       "id": 2,
       "recipe": "lithium",
       "productivity": 200,
       "crafting_speed": 75.54999828338623,
-      "type": "machine"
+      "prototype": "cryogenic-plant"
     },
     {
       "id": 3,
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 91.89999580383301,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     }
   ],
   "inserters": [

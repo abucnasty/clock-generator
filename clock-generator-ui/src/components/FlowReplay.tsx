@@ -22,6 +22,7 @@ import { ChartSwatch } from './BeltChart';
 import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { FlowNodeHandles } from './FlowNodeHandles';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
+import { useFlowPortUpdates } from '../hooks/useFlowPortUpdates';
 import { FlowTileBackground } from './FlowTileBackground';
 
 const NODE_HEIGHT = 168;
@@ -155,6 +156,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
     }), [graph, index, tick, effects, focus]);
     const measured = useMeasuredFlowNodes(nodes);
     const routes = useFlowRoutes(graph.nodes, graph.edges, measured.measurements);
+    useFlowPortUpdates(graph.nodes);
     const edges = useMemo(() => graph.edges.map(edge => {
         const from = nodeKeys.get(edge.source)!;
         const to = nodeKeys.get(edge.target)!;

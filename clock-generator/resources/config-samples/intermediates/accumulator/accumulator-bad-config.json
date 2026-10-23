@@ -10,7 +10,7 @@
       "recipe": "accumulator",
       "productivity": 50,
       "crafting_speed": 50,
-      "type": "machine"
+      "prototype": "electromagnetic-plant"
     }
   ],
   "inserters": [

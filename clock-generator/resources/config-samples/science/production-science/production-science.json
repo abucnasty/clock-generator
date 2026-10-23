@@ -10,28 +10,28 @@
       "recipe": "production-science-pack",
       "productivity": 100,
       "crafting_speed": 63.00781250000001,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 2,
       "recipe": "rail",
       "productivity": 0,
       "crafting_speed": 46.37125,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 3,
       "recipe": "casting-steel",
       "productivity": 300,
       "crafting_speed": 122.5,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 4,
       "recipe": "casting-iron-stick",
       "productivity": 150,
       "crafting_speed": 66.5,
-      "type": "machine"
+      "prototype": "foundry"
     }
   ],
   "inserters": [
@@ -158,13 +158,13 @@
   ],
   "chests": [],
   "drills": {
-    "mining_productivity_level": 26999,
     "configs": [
       {
         "id": 1,
         "type": "electric-mining-drill",
         "mined_item_name": "stone",
         "speed_bonus": 8.8388,
+        "productivity": 269990,
         "target": {
           "type": "machine",
           "id": 2

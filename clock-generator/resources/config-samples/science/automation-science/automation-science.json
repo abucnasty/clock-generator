@@ -10,7 +10,7 @@
       "recipe": "automation-science-pack",
       "productivity": 100,
       "crafting_speed": 68.90624761581421,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     }
   ],
   "inserters": [

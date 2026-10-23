@@ -1,5 +1,6 @@
 import type { InserterCoverageIssue } from 'clock-generator/browser';
-import { isBufferChest, isInfinityChest, type ChestFormData, type InserterFormData } from './configForm/formData';
+import { chestLabel } from './entityLabel';
+import { isBufferChest, isContainerChest, isInfinityChest, type ChestFormData, type InserterFormData } from './configForm/formData';
 
 export interface OutputChestIssue {
     kind: 'finite' | 'removal-disabled';
@@ -13,7 +14,8 @@ export function outputChestIssues(chests: ChestFormData[], inserters: InserterFo
     const supplies = new Set(inserters.filter(inserter => inserter.source.type === 'chest').map(inserter => inserter.source.id));
     return chests.flatMap((chest, index): OutputChestIssue[] => {
         if (!receives.has(chest.id)) return [];
-        if (isBufferChest(chest) && !supplies.has(chest.id)) return [{ kind: 'finite', chest, index }];
+        // a buffer chest, a car, a tank, a cargo wagon or a rocket silo that nothing takes from fills up
+        if ((isBufferChest(chest) || isContainerChest(chest)) && !supplies.has(chest.id)) return [{ kind: 'finite', chest, index }];
         if (isInfinityChest(chest) && !chest.remove_unfiltered_items && !chest.item_filter.some(filter => filter.item_name))
             return [{ kind: 'removal-disabled', chest, index }];
         return [];
@@ -29,7 +31,7 @@ export function coverageHandledByChestIssue(issue: InserterCoverageIssue, warnin
 }
 
 export function outputChestIssueTitle({ kind, chest }: OutputChestIssue): string {
-    return kind === 'finite' ? `Chest ${chest.id} can fill up and block output` : `Chest ${chest.id} needs output removal enabled`;
+    return kind === 'finite' ? `${chestLabel(chest)} can fill up and block output` : `${chestLabel(chest)} needs output removal enabled`;
 }
 
 export const outputChestIssueElementId = (id: number) => `output-chest-issue-${id}`;

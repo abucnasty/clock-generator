@@ -10,7 +10,7 @@
       "recipe": "electric-engine-unit",
       "productivity": 100,
       "crafting_speed": 56.49999976158142,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     }
   ],
   "inserters": [

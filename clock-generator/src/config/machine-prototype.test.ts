@@ -1,0 +1,82 @@
+import * as fs from "fs";
+import * as path from "path";
+import { describe, expect, it } from "vitest";
+import "../data/factorio-data-file";
+import { Machine } from "../entities/machine/machine";
+import { parseConfig } from "./loader";
+import { machinePrototypeIssues, machinePrototypesNote, machineRuleOf } from "./machine-prototype";
+import { ConfigSchema, MachineConfiguration } from "./schema";
+
+const machine = (fields: Partial<MachineConfiguration>): MachineConfiguration =>
+    ({ id: 1, recipe: "iron-plate", productivity: 0, crafting_speed: 1, ...fields });
+
+describe("a machine's rule from its prototype", () => {
+    it("is the prototype's, and the crafting rule with none or an unknown prototype", () => {
+        expect(machineRuleOf(machine({ prototype: "electric-furnace" }))).toBe("furnace");
+        expect(machineRuleOf(machine({ prototype: "recycler" }))).toBe("furnace");
+        expect(machineRuleOf(machine({ prototype: "biochamber" }))).toBe("biochamber");
+        expect(machineRuleOf(machine({ prototype: "cryogenic-plant" }))).toBe("machine");
+        expect(machineRuleOf(machine({}))).toBe("machine");
+        expect(machineRuleOf(machine({ prototype: "modded-smelter" }))).toBe("machine");
+    });
+
+    it("decides the simulation: a furnace by prototype holds a stack, a machine without one does not", () => {
+        const furnace = Machine.fromConfig(machine({ prototype: "electric-furnace" }));
+        const crafting = Machine.fromConfig(machine({}));
+        expect(furnace.metadata.type).toBe("furnace");
+        expect(furnace.output.outputBlock.ingredients_blocked_at).toBe(100);
+        expect(crafting.output.outputBlock.ingredients_blocked_at).not.toBe(100);
+    });
+});
+
+describe("the warnings of a machine's prototype", () => {
+    it("say nothing when the prototype and recipe agree", () => {
+        expect(machinePrototypeIssues({ machines: [machine({ prototype: "electric-furnace" }), machine({ id: 2, prototype: "stone-furnace" })] })).toEqual([]);
+        expect(machinePrototypesNote({ machines: [machine({})] })).toBeNull();
+    });
+
+    it("name a recipe the machine cannot make, and a prototype that is no crafting machine of the data", () => {
+        expect(machinePrototypeIssues({ machines: [machine({ prototype: "cryogenic-plant", recipe: "iron-plate" })] })
+            .map(issue => issue.kind)).toEqual(["recipe-not-made"]);
+        // in the game's names, with the machines that can
+        expect(machinePrototypeIssues({ machines: [machine({ prototype: "assembling-machine-1", recipe: "lithium" })] })[0].message).toBe(
+            "Machine 1: Assembling machine 1 can't craft Lithium. Machines that can: Chemical plant, Cryogenic plant. The clock is made "
+            + "as configured, but the game does not let this machine be set to the recipe.");
+        expect(machinePrototypeIssues({ machines: [machine({ prototype: "modded-smelter" })] }).map(issue => issue.kind))
+            .toEqual(["unknown-prototype"]);
+    });
+
+    it("do not stop a config loading: an unmakeable recipe parses", () => {
+        const parsed = ConfigSchema.safeParse({ target_output: { recipe: "iron-plate", items_per_second: 1, copies: 1 }, belts: [], inserters: [],
+            machines: [machine({ prototype: "cryogenic-plant" })] });
+        expect(parsed.success).toBe(true);
+    });
+});
+
+describe("the config samples' machines", () => {
+    const root = path.resolve(__dirname, "../../resources/config-samples");
+    const filesUnder = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true })
+        .flatMap(entry => entry.isDirectory()
+            ? filesUnder(path.join(dir, entry.name))
+            : entry.name.endsWith(".json") ? [path.join(dir, entry.name)] : []);
+
+    // each kept the rule its former type gave when it was rewritten (0.20.0, U7); the legacy fixture tests the mapping
+    it("agree with their recipes and name no type", async () => {
+        let machines = 0;
+        for (const file of filesUnder(root)) {
+            const text = fs.readFileSync(file, "utf-8");
+            let sample;
+            try {
+                sample = await parseConfig(text);
+            } catch {
+                continue; // not a config
+            }
+            const name = path.relative(root, file);
+            expect(machinePrototypeIssues(sample), name).toEqual([]);
+            const raw = JSON.parse(text) as { machines: object[] };
+            raw.machines.forEach(machine => expect(machine, name).not.toHaveProperty("type"));
+            machines += raw.machines.length;
+        }
+        expect(machines).toBeGreaterThan(100);
+    });
+});

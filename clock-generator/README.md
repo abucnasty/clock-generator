@@ -303,17 +303,19 @@ prototype, the quality and a blacklist from 0.11.0 on.
 
 ### Mining Drill Support
 
-For direct-insertion mining setups. A drill's `speed_bonus` comes from `/c game.print(game.player.selected.speed_bonus)`:
+For direct-insertion mining setups. A drill's `speed_bonus` comes from `/c game.print(game.player.selected.speed_bonus)`
+and its `productivity`, in percent (its mining productivity research and its productivity modules together), from
+`/c game.print(game.player.selected.productivity_bonus * 100)`:
 
 ```json
 "drills": {
-  "mining_productivity_level": 50,
   "configs": [
     {
       "id": 1,
       "type": "electric-mining-drill",
       "mined_item_name": "stone",
       "speed_bonus": 2.5,
+      "productivity": 500,
       "target": { "type": "machine", "id": 1 }
     }
   ]
@@ -427,13 +429,13 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
 
 ```json
 "drills": {
-  "mining_productivity_level": 50,
   "configs": [
     {
       "id": 1,
       "type": "electric-mining-drill",
       "mined_item_name": "iron-ore",
       "speed_bonus": 0.5,
+      "productivity": 500,
       "target": { "type": "machine", "id": 1 },
       "overrides": { "enable_control": { "mode": "ALWAYS" } }
     }
@@ -585,7 +587,7 @@ npm run record -- --blueprint=build.txt --out=recording.json --ticks=3600 --warm
 ```
 
 - `--seed` adds items right before the recording starts. `target` picks the built entities by `name`, `type`, `recipe` or `unit_number`; `inventory` is `input`, `output`, `fuel`, `modules` or `chest`, and by default wherever the entity takes the item. `count` is per entity, and per lane for belts.
-- `--clock` replaces the clock the build came with: its combinators are built below the build and wired to the inserters their descriptions name. The inserters are found by matching the build to `--config`, the config the clock was generated from. Belt inserters are matched by what lies on their belt, so give belts a `--warmup` to fill.
+- `--clock` replaces the clock the build came with: its combinators are built below the build and wired to the inserters their tags name (in a string from before the tags, their descriptions). The inserters are found by matching the build to `--config`, the config the clock was generated from. Belt inserters are matched by what lies on their belt, so give belts a `--warmup` to fill.
 - `--unclocked` removes the build's clock and lets its inserters run freely. Without either, the build is recorded as it is.
 - `--settle` runs the build for a number of ticks on its new clock and seeds before the recording starts, so its start-up is not counted.
 - `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.

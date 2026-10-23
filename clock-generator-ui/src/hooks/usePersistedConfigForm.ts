@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChestType, migrateBeltSupplyOverrides } from 'clock-generator/light';
+import { ChestType, migrateBeltSupplyOverrides, migrateMiningProductivityLevel } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
 import {
     backupKey,
@@ -28,16 +28,19 @@ import {
 } from '../utils/buildLibrary';
 import { useNotify } from './useMessages';
 import {
+    CONTAINER_CHEST_TYPES,
     createDefaultConfig,
     type BeltFormData,
     type ChestFormData,
     type ConfigFormData,
+    type ContainerChestFormData,
     type DrillFormData,
     type InfinityChestFormData,
     type InfinityFilterFormData,
     type InserterFormData,
     type MachineFormData,
 } from '../utils/configForm/formData';
+import { formSlotFilters } from '../utils/containerSlotFilters';
 
 /** Migrate legacy inserter data to include id field */
 function migrateInserters(inserters: unknown[]): InserterFormData[] {
@@ -56,6 +59,12 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
         // If already has a valid type, return as-is (with uuid)
         if (c.type === ChestType.INFINITY_CHEST) {
             return { ...(c as InfinityChestFormData), _uuid: uuid };
+        }
+        // a car, a tank, a cargo wagon or a rocket silo is kept as it is, a slot filtered to a marker read as blocked
+        if (c.type !== undefined && (CONTAINER_CHEST_TYPES as string[]).includes(c.type)) {
+            const container = c as ContainerChestFormData;
+            return { ...container, ...('slot_filters' in container && Array.isArray(container.slot_filters)
+                && { slot_filters: formSlotFilters(container.slot_filters) }), _uuid: uuid } as ContainerChestFormData;
         }
         // Default to buffer chest (handles legacy data without type)
         return {
@@ -99,6 +108,8 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
                 parsed.belts = parsed.belts.map((b: BeltFormData & { _uuid?: string }) =>
                     b._uuid ? b : { ...b, _uuid: crypto.randomUUID() });
             }
+            // drills saved with one mining productivity level get it as each drill's productivity
+            if (parsed.drills !== undefined) parsed.drills = migrateMiningProductivityLevel(parsed.drills);
             if (parsed.drills && Array.isArray(parsed.drills.configs)) {
                 parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
                     d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });
@@ -399,10 +410,10 @@ export function usePersistedConfigForm() {
             else finish();
         };
         askEngine({ kind: 'saved-config', config: savedConfig }).then(
-            (problem) => complete(() => {
+            ({ problem, form }) => complete(() => {
                 if (problem === null) {
-                    // unless the config was replaced (imported or reset) in the meantime
-                    if (load.owner.form === defaultConfig) commitBuildReplacement(load.owner, savedConfig, () => {});
+                    // unless the config was replaced (imported or reset) in the meantime; with its machines' former types read
+                    if (load.owner.form === defaultConfig) commitBuildReplacement(load.owner, form as ConfigFormData, () => {});
                 } else {
                     console.warn('Saved config in localStorage is invalid, using defaults:', problem);
                     setLoadNotice(backUpSavedConfig(pageLocal, stored.text, backupKey(opened.activeId)));
@@ -517,11 +528,13 @@ export function usePersistedConfigForm() {
             // listed but never saved: a new build is saved on its first change
             return { form: createDefaultConfig(), text: null };
         }
-        const form = readSavedConfig(text);
+        let form = readSavedConfig(text);
         let problem: string | null = form === null ? 'not the form state' : null;
         if (form !== null) {
             try {
-                problem = await askEngine({ kind: 'saved-config', config: form });
+                const checked = await askEngine({ kind: 'saved-config', config: form });
+                problem = checked.problem;
+                form = checked.form as ConfigFormData;
             } catch (e) {
                 problem = e instanceof Error ? e.message : 'the check failed';
             }
@@ -636,11 +649,13 @@ export function usePersistedConfigForm() {
         if (episode.status === 'none') return false;
         const load = beginLoad();
         const id = idRef.current;
-        const form = readSavedConfig(episode.text);
+        let form = readSavedConfig(episode.text);
         let problem: string | null = form === null ? 'It is not a build.' : null;
         if (form !== null) {
             try {
-                problem = await askEngine({ kind: 'saved-config', config: form });
+                const checked = await askEngine({ kind: 'saved-config', config: form });
+                problem = checked.problem;
+                form = checked.form as ConfigFormData;
             } catch (e) {
                 problem = e instanceof Error ? e.message : 'The check failed.';
             }

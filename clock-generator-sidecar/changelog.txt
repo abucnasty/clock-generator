@@ -1,4 +1,20 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.12.0
+Date: 2026-10-23
+  Features:
+    - exports cars, tanks, cargo wagons and rocket silos as chests, with their slot filters and quality, exported empty
+    - exports mining drills that drop into a chest, car, tank, cargo wagon or rocket silo
+    - exports each mining drill's own productivity, research and modules together
+    - exports each machine's and chest's prototype and quality, shown as icons in a clock's descriptions
+    - exports where each entity stands and which way inserters and drills face
+  Changes:
+    - no longer exports a machine's type: the Clock Generator works it out from the machine
+    - the button is Export (was Copy JSON)
+  Bugfixes:
+    - exports a mining drill that has not mined or dropped yet, such as one just upgraded beside a full container (#316)
+    - selects linked belts
+    - a mining drill or inserter that drops into something not in the export is listed as left out, instead of exported as dropping into the first machine, belt or chest
+---------------------------------------------------------------------------------------------------
 Version: 0.11.0
 Date: 2026-10-21
   Features:

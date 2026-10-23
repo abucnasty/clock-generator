@@ -1,12 +1,17 @@
 import type { Config, RuleSet } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { withDefaultPickupType } from '../pickupGeometry';
+import { isContainerChest } from './formData';
+import { formSlotFilters } from '../containerSlotFilters';
 import type {
     BeltLaneFormData,
     ChestFormData,
     ConfigFormData,
+    ContainerChestFormData,
     EnableControlOverride,
+    SlotFilterFormData,
     LatchConfig,
+    MachineFormData,
 } from './formData';
 
 // Helper to convert imported enable rule to form data
@@ -41,8 +46,8 @@ function mapEnableControlOverride(ec: {
     }
 }
 
-/** The form state of an imported config */
-export function configToFormData(imported: Config): ConfigFormData {
+/** The form state of an imported config; `prototypeSource` says where its machines' prototypes came from (an example's are the sample's) */
+export function configToFormData(imported: Config, prototypeSource?: MachineFormData['_prototype_source']): ConfigFormData {
     return {
         target_output: imported.target_output,
         machines: imported.machines.map((m) => ({
@@ -51,9 +56,13 @@ export function configToFormData(imported: Config): ConfigFormData {
             recipe: m.recipe,
             productivity: m.productivity,
             crafting_speed: m.crafting_speed,
-            type: m.type,
             energy_consumption_bonus: m.energy_consumption_bonus,
             ...(m.fuel !== undefined && { fuel: m.fuel }),
+            ...(m.prototype !== undefined && { prototype: m.prototype }),
+            ...(m.prototype !== undefined && prototypeSource !== undefined && { _prototype_source: prototypeSource }),
+            ...(m.quality !== undefined && { quality: m.quality }),
+            ...(m.recipe_quality !== undefined && { recipe_quality: m.recipe_quality }),
+            ...(m.position !== undefined && { position: m.position }),
         })),
         inserters: imported.inserters.map((ins, index) => ({
             id: ins.id ?? (index + 1),
@@ -65,6 +74,8 @@ export function configToFormData(imported: Config): ConfigFormData {
             stack_size: ins.stack_size,
             filters: ins.filters,
             ...(ins.filter_mode !== undefined && { filter_mode: ins.filter_mode }),
+            ...(ins.position !== undefined && { position: ins.position }),
+            ...(ins.direction !== undefined && { direction: ins.direction }),
             overrides: ins.overrides ? {
                 animation: ins.overrides.animation,
                 enable_control: ins.overrides.enable_control
@@ -79,7 +90,14 @@ export function configToFormData(imported: Config): ConfigFormData {
             ...(b.strategy !== undefined && { strategy: b.strategy }),
             lanes: b.lanes as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData],
         })),
-        chests: (imported.chests ?? []).map((c: { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; item_filter: string | { item_name: string; request_count: number }[] }): ChestFormData => {
+        chests: (imported.chests ?? []).map((raw): ChestFormData => {
+            // a car, a tank, a cargo wagon or a rocket silo is kept as it is: the form does not edit it yet
+            if (raw.type !== undefined && raw.type !== ChestType.BUFFER_CHEST && raw.type !== ChestType.INFINITY_CHEST) {
+                return { ...raw, ...('slot_filters' in raw && raw.slot_filters && { slot_filters: formSlotFilters(raw.slot_filters) }),
+                    _uuid: crypto.randomUUID() } as ChestFormData;
+            }
+            const c = raw as { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; prototype?: string;
+                position?: { x: number; y: number }; item_filter: string | { item_name: string; request_count: number }[] };
             // Handle infinity chest
             if (c.type === ChestType.INFINITY_CHEST) {
                 return {
@@ -87,6 +105,7 @@ export function configToFormData(imported: Config): ConfigFormData {
                     id: c.id,
                     _uuid: crypto.randomUUID(),
                     ...(c.remove_unfiltered_items !== undefined && { remove_unfiltered_items: c.remove_unfiltered_items }),
+                    ...(c.position !== undefined && { position: c.position }),
                     item_filter: (c.item_filter as { item_name: string; request_count: number }[]).map(f => ({
                         item_name: f.item_name,
                         request_count: f.request_count,
@@ -100,21 +119,25 @@ export function configToFormData(imported: Config): ConfigFormData {
                 _uuid: crypto.randomUUID(),
                 storage_size: c.storage_size ?? 1,
                 item_filter: c.item_filter as string,
+                ...(c.prototype !== undefined && { prototype: c.prototype }),
+                ...(c.position !== undefined && { position: c.position }),
             };
         }),
         drills: imported.drills
             ? {
-                mining_productivity_level: imported.drills.mining_productivity_level,
                 configs: imported.drills.configs.map((d) => ({
                     id: d.id,
                     _uuid: crypto.randomUUID(),
                     type: d.type,
                     mined_item_name: d.mined_item_name,
                     speed_bonus: d.speed_bonus,
+                    productivity: d.productivity,
                     target: d.target,
                     overrides: d.overrides?.enable_control ? {
                         enable_control: mapEnableControlOverride(d.overrides.enable_control),
                     } : undefined,
+                    ...(d.position !== undefined && { position: d.position }),
+                    ...(d.direction !== undefined && { direction: d.direction }),
                 })),
             }
             : undefined,
@@ -125,13 +148,26 @@ export function configToFormData(imported: Config): ConfigFormData {
 /** Converts a single form-data entity to its config equivalent, stripping UI-only fields. */
 function toConfig<T extends { _uuid: string }>({ _uuid: _, ...rest }: T) { void _; return rest; }
 
+/**
+ * A car, a tank, a cargo wagon or a rocket silo as the config takes it: its rows of slot filters and contents without an
+ * item yet are left out, a blocked slot is `blocked: true` without the marker painted on it, and the fields left unset
+ * are left out
+ */
+function containerConfig(chest: ContainerChestFormData): ContainerChestFormData {
+    const named = <T extends { item: string }>(rows: T[] | undefined) => rows?.filter(row => row.item.trim() !== '');
+    const slot_filters = 'slot_filters' in chest ? chest.slot_filters?.flatMap((row): SlotFilterFormData[] => row.blocked
+        ? [{ slot: row.slot, blocked: true }] : row.item.trim() !== '' ? [row] : []) : undefined;
+    const rows = { ...('slot_filters' in chest && { slot_filters }), contents: named<{ item: string }>(chest.contents) };
+    return Object.fromEntries(Object.entries({ ...chest, ...rows }).filter(([, value]) => value !== undefined)) as unknown as ContainerChestFormData;
+}
+
 /** The config of the form state, for export, validation and generation */
 export function formDataToConfig(config: ConfigFormData): Config {
     // Strip the UI-only fields (every entity's _uuid, an inserter's _forced_always) before handing the config to any
     // external consumer.
     return {
         ...config,
-        machines: config.machines.map(toConfig),
+        machines: config.machines.map(({ _prototype_source: _s, ...machine }) => { void _s; return toConfig(machine); }),
         inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => {
             void _f;
             return toConfig({ ...ins, source: withDefaultPickupType(ins.source) });
@@ -139,8 +175,11 @@ export function formDataToConfig(config: ConfigFormData): Config {
         belts: config.belts.map(toConfig),
         chests: config.chests.map(({ _chest_settings: memory, ...chest }) => {
             void memory;
-            return toConfig(chest.type === ChestType.INFINITY_CHEST
-                ? { ...chest, item_filter: chest.item_filter.filter(filter => filter.item_name.trim() !== '') } : chest);
+            if (chest.type === ChestType.INFINITY_CHEST) {
+                return toConfig({ ...chest, item_filter: chest.item_filter.filter(filter => filter.item_name.trim() !== '') });
+            }
+            if (isContainerChest(chest)) return toConfig(containerConfig(chest));
+            return toConfig(chest);
         }),
         ...(config.drills && {
             drills: { ...config.drills, configs: config.drills.configs.map(toConfig) },

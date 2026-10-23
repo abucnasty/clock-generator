@@ -1,0 +1,69 @@
+import { machineCanMake, machineForRecipe, machineRuleOfPrototype, MachineType } from 'clock-generator/light';
+import type { CraftingMachineData, CraftingMachineInfo } from '../worker/types';
+import type { MachineFormData } from './configForm/formData';
+
+/** Before the lookups arrive: no machine to pick yet */
+export const NO_CRAFTING_MACHINES: CraftingMachineData = { machines: [], recipeCategories: {} };
+
+/** The crafting machine of that prototype in the data; undefined for none or one the data does not hold (a mod's) */
+export function craftingMachineOf(data: CraftingMachineData, prototype: string | undefined): CraftingMachineInfo | undefined {
+    return prototype === undefined ? undefined : data.machines.find(machine => machine.name === prototype);
+}
+
+/** Whether the row's machine burns nutrients, as a biochamber does, so that its energy consumption counts (the engine's rule) */
+export function burnsNutrients(row: Pick<MachineFormData, 'prototype'>, data: CraftingMachineData): boolean {
+    const machine = craftingMachineOf(data, row.prototype);
+    return machine !== undefined && machineRuleOfPrototype(machine) === MachineType.BIOCHAMBER;
+}
+
+/** The machine a row without one gets for its recipe: one that can make it, as the engine picks it; undefined when none can */
+export function machineForRecipeOf(recipe: string, data: CraftingMachineData): string | undefined {
+    return recipe === '' ? undefined : machineForRecipe(data.recipeCategories[recipe] ?? [], data.machines)?.name;
+}
+
+/** A recipe chosen for a row: a row without a machine gets one that can make the recipe, picked for it */
+export function recipePatch(row: Pick<MachineFormData, 'prototype'>, recipe: string, data: CraftingMachineData): Partial<MachineFormData> {
+    const picked = row.prototype === undefined ? machineForRecipeOf(recipe, data) : undefined;
+    return { recipe, ...(picked !== undefined && { prototype: picked, _prototype_source: 'recipe' as const }) };
+}
+
+/** The ids among `recipes` that the machine can make, in their order */
+export function recipesOfMachine(machine: CraftingMachineInfo, recipes: readonly string[], data: CraftingMachineData): string[] {
+    return recipes.filter(recipe => machineCanMake(machine, data.recipeCategories[recipe] ?? []));
+}
+
+/** Where a row's machine came from */
+type PrototypeSource = NonNullable<MachineFormData['_prototype_source']>;
+
+/** The words for where the machine came from; a machine of a build file, a share link or an older saved build is the config's */
+export function prototypeSourceText(source: PrototypeSource | undefined): string {
+    switch (source) {
+        case 'sidecar': return 'from Sidecar';
+        case 'sample': return 'from the sample';
+        case 'hand': return 'chosen by hand';
+        case 'recipe': return 'picked for its recipe';
+        default: return 'from the config';
+    }
+}
+
+/** The qualities a machine can have, in the game's order */
+export const MACHINE_QUALITIES = ['normal', 'uncommon', 'rare', 'epic', 'legendary'] as const;
+type MachineQuality = typeof MACHINE_QUALITIES[number];
+
+/** "Legendary" */
+export function qualityLabel(quality: MachineQuality): string {
+    return quality.charAt(0).toUpperCase() + quality.slice(1);
+}
+
+/** What the Quality field's help says: a label, never a speed */
+export const MACHINE_QUALITY_HELP = 'Quality is a label only: it draws the quality on the machine\'s icon, as the game does. '
+    + 'The Crafting Speed and Productivity fields are what the clock is made from, and changing the quality changes neither '
+    + 'of them, nor the clock. Set both to the machine\'s values in the game (Sidecar copies them).';
+
+/** What a machine's icon stands for: "Cryogenic plant (Legendary), from Sidecar" */
+export function machineIconText(machine: Pick<MachineFormData, 'prototype' | 'quality' | '_prototype_source'>,
+    machineName: (id: string) => string): string {
+    if (machine.prototype === undefined) return 'No machine set: simulated as an assembling machine';
+    const quality = machine.quality ? ` (${qualityLabel(machine.quality)})` : '';
+    return `${machineName(machine.prototype)}${quality}, ${prototypeSourceText(machine._prototype_source)}`;
+}

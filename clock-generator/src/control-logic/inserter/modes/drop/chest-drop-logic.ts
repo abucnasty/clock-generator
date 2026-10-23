@@ -38,7 +38,7 @@ export class ChestDropLogic implements InserterTransferLogic {
             return;
         }
 
-        const available_space = sink.getAvailableSpace();
+        const available_space = sink.getAvailableSpace(held_item.item_name);
 
         // If chest is full, nothing can be dropped this tick
         if (available_space <= 0) {

@@ -1,6 +1,6 @@
 import assert from "../../../common/assert";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
-import { EntityTransferCountMap, outputInsertersOf } from "../cycle/swing-counts";
+import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
 import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { ItemName } from "../../../data";
@@ -34,6 +34,8 @@ export class EnableControlFactory {
                 this.entities.push(state.inserter);
             } else if (EntityState.isMachine(state)) {
                 this.entities.push(state.machine);
+            } else if (EntityState.isChest(state)) {
+                this.chests.push(state.chest);
             }
         }
         this.terminal_machine_states = this.findFinalMachines();
@@ -44,12 +46,22 @@ export class EnableControlFactory {
     /** The inserters and machines of the build */
     private readonly entities: Entity[] = [];
 
+    /** The chests of the build, which an output path may pass through */
+    private readonly chests: Entity[] = [];
+
+    /** Each output inserter's terminal machine, and the container it takes the product from when there is one */
+    private readonly output_sources = new Map<string, { machine: MachineState; container: ChestState | null }>();
+
     private readonly always_enabled_ids: ReadonlySet<string>;
 
     public createForEntityId(entity_id: EntityId): EnableControl {
 
         const entity_state = this.entity_state_registry.getStateByEntityIdOrThrow(entity_id);
         if (EntityState.isDrill(entity_state)) {
+            // a drill into a chest runs always: nothing gates it (plan-run sets it ALWAYS, as the config's override would)
+            if (!EntityId.isMachine(entity_state.drill.sink_id)) {
+                return AlwaysEnabledControl;
+            }
             return this.forDrill(
                 entity_state.drill,
                 entity_state.drill.sink_id,
@@ -67,6 +79,7 @@ export class EnableControlFactory {
             const by_clock = this.transferCountFromMachine(
                 entity_state,
                 terminal_machine,
+                this.output_sources.get(entity_state.entity_id.id)?.container ?? null,
             );
             if (this.crafting_cycle_plan.fractional_swings_enabled) {
                 return by_clock;
@@ -255,13 +268,13 @@ export class EnableControlFactory {
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
                 // Enable when chest has space for at least one stack and source has items
-                const available_space = sink_state.getAvailableSpace();
+                const available_space = sink_state.getAvailableSpace(source_item_name);
                 const source_quantity = source_state.inventoryState.getQuantity(source_item_name);
                 return available_space >= stack_size && source_quantity >= stack_size;
             }),
             release: EnableControl.lambda(() => {
                 // Release when chest is full
-                return sink_state.isFull();
+                return sink_state.isFull(source_item_name);
             })
         });
     }
@@ -583,9 +596,15 @@ export class EnableControlFactory {
         });
     }
 
+    /**
+     * The control of an output inserter: windows from the target's cycle, and in the normal mode a hand ready at its
+     * source. `container` is the container it takes the product from, when the machine's inserters put it into one; its
+     * stock of the product is then the hand's source, and the machine's output is not.
+     */
     private transferCountFromMachine(
         inserter_state: InserterState,
         source_state: MachineState,
+        container: ChestState | null = null,
     ): EnableControl {
 
         const mode = computeSimulationMode(
@@ -614,13 +633,14 @@ export class EnableControlFactory {
 
         // For NORMAL mode, always add the inventory check
         if (mode === SimulationMode.NORMAL) {
+            const hand = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
+            const item_name = source_state.machine.output.item_name;
             return EnableControl.all(
                 [
                     clocked_control,
-                    this.sourceIsGreaterThanStackSize(
-                        source_state,
-                        handSizeFor(inserter_state.inserter, source_state.machine.output.item_name),
-                    )
+                    container === null
+                        ? this.sourceIsGreaterThanStackSize(source_state, hand)
+                        : EnableControl.lambda(() => container.getCurrentQuantity(item_name) >= hand),
                 ]
             )
         }
@@ -1209,7 +1229,10 @@ export class EnableControlFactory {
     private findFinalInserters(): Set<InserterState> {
         const final_inserters = new Set<InserterState>();
         for (const terminal_machine of this.terminal_machine_states) {
-            const output_ids = new Set(outputInsertersOf(terminal_machine.machine, { getAll: () => this.entities }).map(it => it.entity_id.id));
+            const path = outputPathOf(terminal_machine.machine, { getAll: () => [...this.entities, ...this.chests] });
+            const output = path.container === null ? path.feeders : path.takers;
+            const output_ids = new Set(output.map(it => it.entity_id.id));
+            const container = path.container === null ? null : this.entity_state_registry.getStateByEntityIdOrThrow(path.container.entity_id);
             const inserters = this.entity_state_registry
                 .getAllStates()
                 .filter(EntityState.isInserter)
@@ -1220,6 +1243,10 @@ export class EnableControlFactory {
             );
             for (const inserter of inserters) {
                 final_inserters.add(inserter);
+                if (!this.output_sources.has(inserter.entity_id.id)) {
+                    this.output_sources.set(inserter.entity_id.id, { machine: terminal_machine,
+                        container: container !== null && EntityState.isChest(container) ? container : null });
+                }
             }
         }
         return final_inserters;
@@ -1229,10 +1256,9 @@ export class EnableControlFactory {
      * Find the terminal machine that a given terminal inserter takes output from.
      */
     private findTerminalMachineForInserter(inserter_state: InserterState): MachineState {
-        for (const terminal_machine of this.terminal_machine_states) {
-            if (inserter_state.inserter.source.entity_id.id === terminal_machine.entity_id.id) {
-                return terminal_machine;
-            }
+        const source = this.output_sources.get(inserter_state.entity_id.id);
+        if (source !== undefined) {
+            return source.machine;
         }
         throw new Error(
             `Inserter ${inserter_state.entity_id.id} is not connected to any terminal machine`

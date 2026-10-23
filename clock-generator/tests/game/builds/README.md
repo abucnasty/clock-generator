@@ -10,6 +10,10 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `over-hood-pickup-clock.game.test.ts`, `front-pickup-clock.game.test.ts`: the over-the-hood exit and the front
   underground entrance and exit, throughput and recovery.
 - `blocked-output-clock.game.test.ts`: a chest-fed machine whose output belt is blocked, at belt stack sizes 1–4.
+- `container-clock.game.test.ts`: a car, a tank or a cargo wagon between its supplies and a machine, with cuts that last until the container is empty.
+- `lithium-silo-clock.game.test.ts`: the owner's lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
+- `car-clock.game.test.ts`: the owner's iron plate build, a car taken as a chest between a big mining drill and two furnaces.
+- `steel-wagon-clock.game.test.ts`: the owner's steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
 
 From `clock-generator/`, select a file or case:
 
@@ -385,4 +389,110 @@ checks it against its native summary beside it.
 BELT_SPEED_CAPTURE_DIR=.scratch/blocked-output-new \
   npm run test:game -- tests/game/builds/blocked-output-clock.game.test.ts \
   -t '^blocked output clock: blocked-output-express-stack-3$'
+```
+
+## Containers between two inserters
+
+`container-clock.game.test.ts` enumerates 6 controls ([container-clock-fixtures.ts](container-clock-fixtures.ts)): a
+cargo wagon of normal and of legendary quality (40 and 100 slots) and one with 10 slots filtered to iron plates and 30
+to copper plates, making iron gears; a legendary wagon, a car and a tank whose slots are split by filters between iron
+plates and copper cable, making electronic circuits. Infinity chests feed the container, one legendary stack inserter
+takes from it into a legendary assembler 3 (crafting speed 3.125) and the output inserter drops into a disposal chest,
+at 5 a second. The slot filters and the wagon's quality come with the blueprint; the wagon stands on rails. The probe
+([container-clock-probe.lua](container-clock-probe.lua)) counts the output inserter's drops per period.
+
+**Cuts that empty the container.** A container between two inserters is a buffer: a 2-period cut, as the belt-fed
+families have, does not disturb it. So each supply cut lasts until the container's stock of the cut input is gone (its
+slots and stack sizes from the game data, plus 8 periods; up to 321 periods for the legendary wagon), the output block
+lasts 4 periods (the disposal chest is filled), and recovery is judged over 40 periods after each disturbance, the first
+6 after the release left out. Do not compare these recordings period for period with the 2-period families.
+
+[container-clock-controls.json](container-clock-controls.json) holds the 6 native summaries, recorded on Factorio 2.1.21
+at commit `000ad913`. **All 6 selected clocks are stable, meet exact baseline output (63 periods), drop to 0 in every
+disturbance and are exact in all 33 judged periods after each.** `container-clock.generation.test.ts` pins each
+selection and its exported clock and checks it against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/container-clock.game.test.ts -t '^container clock: container-car-mixed$'
+```
+
+## A rocket silo between two machines and six
+
+`lithium-silo-clock.game.test.ts` enumerates 4 controls ([lithium-silo-clock-fixtures.ts](lithium-silo-clock-fixtures.ts))
+on the owner's lithium plate build (`REAL_OWNER_LITHIUM_SILO`, its README in the sample's folder): two cryogenic plants put
+lithium into a rocket silo, six furnaces take it out, 80 plates a second. The selected clock (3 output swings, 1080
+ticks) is recorded as built and with the two inserters that fill the silo built after the six that empty it; the clock
+with 1 output swing is a second check, and the clock with 7 output swings (7560 ticks) is the known limit below. The
+probe ([lithium-silo-clock-probe.lua](lithium-silo-clock-probe.lua)) counts the drops of the six output inserters per
+period. The protocol is the standard one: the holmium plates cut for 2 periods, the output blocked for 4, the holmium plates
+cut again. The silo holds at most 250 lithium, so each cut empties it. The warm-up of 3600 ticks without a clock fills the
+silo before the clock starts, though the config exports it empty.
+
+[lithium-silo-clock-controls.json](lithium-silo-clock-controls.json) holds the 4 native summaries, recorded on Factorio
+2.1.21 at commit `759e9a50`. **The selected clock, in both build orders, and the clock with 1 output swing meet exact
+baseline output (63 periods), drop to 0 in every disturbance and are exact in every judged period after each; the two
+build orders are equal in every period.** The clock with 7 output swings is stable in the simulator and short in the game,
+9,440 to 9,600 of 10,080 in every period: the output inserters of two furnaces drop onto underground entrances whose exits
+side-load onto the shared output belt, which the config describes as one belt with room for every drop
+([scope](../../../docs/game-data-and-scope.md)). `lithium-silo-clock.generation.test.ts` pins each clock and checks it
+against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/lithium-silo-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/lithium-silo-clock.game.test.ts -t '^lithium silo clock: lithium-silo-swings-3$'
+```
+
+## A car between a mining drill and two furnaces
+
+`car-clock.game.test.ts` enumerates 3 controls ([car-clock-fixtures.ts](car-clock-fixtures.ts)) on the owner's iron plate
+build (`REAL_OWNER_CAR`, its README in the sample's folder): a big mining drill drops iron ore into a car, two furnaces take
+it out, 80 plates a second. The harness puts the ore under the drill. The selected clock (3 output swings, 72 ticks) is
+recorded as built and with the two inserters that take from the car built after the output inserters; the clock with 1
+output swing is a second check. Each clock enables the drill one tick a period, the tick before the two inserters that take
+from the car; the harness wires it with its resource reading off. The probe ([car-clock-probe.lua](car-clock-probe.lua)) counts the drops of the two output
+inserters per period. The car holds 4,000 ore, so the cuts are those of the container family: the drill is stopped
+(disabled by script) until the car has run dry (71 periods), the output blocked for 4, the drill stopped again, each
+followed for 40 periods, the first 6 after a release not judged. A drill is no supply that stops in the generator's
+checks; here it is stopped as the supply cut. Do not compare these recordings period for period with the 2-period
+families.
+
+[car-clock-controls.json](car-clock-controls.json) holds the 3 native summaries, recorded on Factorio 2.1.21 at commit
+`1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the drill stopped) and are
+exact in all 33 judged periods after each; the two build orders are equal in every period.**
+`car-clock.generation.test.ts` pins each clock and checks it against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/car-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/car-clock.game.test.ts -t '^car clock: car-swings-3$'
+```
+
+## A cargo wagon as the hub of a steel build
+
+`steel-wagon-clock.game.test.ts` enumerates 3 controls ([steel-wagon-clock-fixtures.ts](steel-wagon-clock-fixtures.ts)) on
+the owner's steel build (`STEEL_CARGO_WAGON`, its README in the sample's folder): one cargo wagon is a hub that a big
+mining drill fills with iron ore, a furnace takes the ore from and puts plates back into, a second takes the plates from
+and puts steel back into, and one inserter empties of steel onto the output belt, 26 steel a second. The harness puts the
+ore under the drill and builds the wagon after its rails. The selected clock (planned with belt slack, a subtick clock of
+11,520 ticks for 13 periods) is recorded as built and with the two inserters that put into the wagon built after every
+other entity; the clock planned without iron ore in its period is a second check, recorded as its subtick clock (3,840
+ticks for 13 periods): the capture exports an alternative's subtick clock where it has one, so the clock rounded to 295
+ticks is not recorded. Each clock enables the drill a window of two positions a period, 1.08 ticks on average, before
+the inserter that takes the ore; the harness wires it with its resource reading off. The probe ([steel-wagon-clock-probe.lua](steel-wagon-clock-probe.lua)) counts the drops of the
+inserter from the wagon to the belt per period, and also keeps the wagon's contents at each period's start and each
+furnace's ticks with a full output. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are those of the
+container family: the drill is stopped (disabled by script) until the wagon has run dry of steel (9 and 10 periods), the
+output blocked for 4, the drill stopped again, each followed for 40 periods, the first 6 after a release not judged. A
+drill is no supply that stops in the generator's checks; here it is stopped as the supply cut. Do not compare these
+recordings period for period with the 2-period families.
+
+[steel-wagon-clock-controls.json](steel-wagon-clock-controls.json) holds the 3 native summaries, recorded on Factorio
+2.1.21 at commit `1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the
+drill stopped) and are exact in all 33 judged periods after each; the two build orders are equal in every period.** A
+full plate or steel filter stops a furnace a few ticks a period in some states, with no steel lost (the sample's README).
+`steel-wagon-clock.generation.test.ts` pins each clock and checks it against its native summary.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/steel-wagon-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/steel-wagon-clock.game.test.ts -t '^steel wagon clock: steel-wagon-belt-slack$'
 ```

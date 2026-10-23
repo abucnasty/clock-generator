@@ -10,7 +10,7 @@
       "recipe": "nutrients-from-bioflux",
       "productivity": 150,
       "crafting_speed": 18.4776,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 814.9699999999999
     },
     {
@@ -18,7 +18,7 @@
       "recipe": "nutrients-from-bioflux",
       "productivity": 150,
       "crafting_speed": 18.4776,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 814.9699999999999
     },
     {
@@ -26,7 +26,7 @@
       "recipe": "pentapod-egg",
       "productivity": 150,
       "crafting_speed": 64.5,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 1019.9999999999999
     },
     {
@@ -34,7 +34,7 @@
       "recipe": "pentapod-egg",
       "productivity": 150,
       "crafting_speed": 64.5,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 1019.9999999999999
     },
     {
@@ -42,7 +42,7 @@
       "recipe": "agricultural-science-pack",
       "productivity": 150,
       "crafting_speed": 90.375,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 1309.8000000000002
     }
   ],

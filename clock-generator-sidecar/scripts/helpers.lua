@@ -46,9 +46,10 @@ function helpers.get_target_type(entity)
         return "belt"
     end
     
-    -- Containers/Chests
+    -- Containers/Chests; a car, a tank, a cargo wagon and a rocket silo are chests to the Clock Generator
     if entity_type == "container" or entity_type == "logistic-container" or 
-       entity_type == "linked-container" or entity_type == "infinity-container" then
+       entity_type == "linked-container" or entity_type == "infinity-container" or
+       entity_type == "car" or entity_type == "cargo-wagon" or entity_type == "rocket-silo" then
         return "chest"
     end
     
@@ -192,6 +193,21 @@ function helpers.get_recipe_or_previous(entity)
     end
 
     return recipe
+end
+
+---The quality name of the recipe a machine is set to, or of a furnace's previous recipe; nil when it has none
+---@param entity LuaEntity
+---@return string|nil
+function helpers.get_recipe_quality(entity)
+    local recipe, quality = entity.get_recipe()
+    if recipe and quality then
+        return type(quality) == "string" and quality or quality.name
+    end
+    if not recipe and entity.type == "furnace" and entity.previous_recipe and entity.previous_recipe.quality then
+        local previous = entity.previous_recipe.quality
+        return type(previous) == "string" and previous or previous.name
+    end
+    return nil
 end
 
 ---Resolve a RecipeID union type to a LuaRecipePrototype

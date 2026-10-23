@@ -1,4 +1,5 @@
 import { EntityBadge } from './EntityBadge';
+import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { InserterIcon } from './InserterIcon';
 import { EntitySettings } from './EntitySettings';
 import { effectiveInserterStackSize, inserterTimingLabels } from '../utils/inserterMetadata';
@@ -13,7 +14,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef, memo, type MouseEvent } from 'react';
-import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
@@ -58,6 +59,8 @@ interface InsertersFormProps {
     machines: MachineFormData[];
     belts: BeltFormData[];
     chests: ChestFormData[];
+    /** The drills: a container holds what the ones that drop into it mine */
+    drills?: readonly DrillFormData[];
     itemNames: string[];
     getRecipeInfo: (recipeName: string) => RecipeInfo | null;
     onAdd: () => void;
@@ -90,12 +93,13 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
     const ruleCopyOptions = useMemo(() => ruleCopySources.filter(source => source.uuid !== value._uuid), [ruleCopySources, value._uuid]);
     const label = entityLabel('inserter', value.id);
     const { itemLabel } = useGameNames();
+    const craftingMachines = useCraftingMachines();
     const selectedRow = selecting && checked;
     const selectionStyle = {
         bgcolor: (theme: Theme) => selectedRow ? themeTokens(theme).hover.row : themeTokens(theme).surface.row,
         boxShadow: (theme: Theme) => selectedRow ? `inset 0 0 0 1px ${themeTokens(theme).control.border}, inset 4px 0 0 ${themeTokens(theme).text.secondary}` : undefined,
     };
-    const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo) : value.filters?.filter(Boolean) ?? [];
+    const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills) : value.filters?.filter(Boolean) ?? [];
     if (filterView) return <SortableItem stableKey={value._uuid} label={label} displayLabel={<EntityBadge id={value.id}><InserterIcon value={value} size={28} /></EntityBadge>}>
         {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label}
             data-selected={selectedRow ? 'true' : undefined}
@@ -109,13 +113,13 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
                     <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
                         {findOption(editor.options ?? [], value.source.type, value.source.id)?.label ?? entityLabel(value.source.type, value.source.id)} → {findOption(editor.options ?? [], value.sink.type, value.sink.id)?.label ?? entityLabel(value.sink.type, value.sink.id)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">{filtersLabel(value, 'Automatic', 'Explicit filters')}</Typography>
+                    <Typography variant="caption" color="text.secondary">{filtersLabel(value, filterItems.length ? 'Automatic · From source and destination' : 'Automatic · No items inferred', 'Explicit filters')}</Typography>
                     {!usesAutomaticFilters(value.filters) && <Button size="small" color="inherit" sx={{ ml: 0.5, py: 0, minWidth: 0 }} onClick={() => onChange({ filters: undefined })}>Use auto</Button>}
                     {usesBlacklist(value) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{BLACKLIST_NOTE}</Typography>}
                 </Box>
                 <Box data-row-first="" sx={{ minWidth: 0, '@container filter-row (max-width: 500px)': { gridColumn: 2 } }}>
                     <FilterSlotSelector filters={value.filters} inferredFilters={filterItems} itemNames={editor.itemNames}
-                        priority={{ label: 'From source', ids: sourceItemsOf(value.source, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo) }}
+                        priority={{ label: 'From source', ids: sourceItemsOf(value.source, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, editor.drills) }}
                         onFilterChange={(slot, item) => onChange({ filters: setFilterSlot(value.filters, filterItems.slice(0, 5), slot, item).filters })}
                         onRemoveFilter={slot => onChange({ filters: removeFilterSlot(value.filters, filterItems.slice(0, 5), slot).filters })} />
                 </Box>
@@ -145,7 +149,7 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
                     rowSettings={fields => <EntitySettings actionContainerId={`settings-actions-inserter-${value.id}`} label={label} tabs={[{ label: 'Enable control', content:
                         <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
                             currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
-                            availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo)}
+                            availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills)}
                             movedItems={filterItems} stackSize={effectiveInserterStackSize(value)} copyFromOptions={ruleCopyOptions}
                             onCancel={() => setRuleRevision(previous => previous + 1)}
                             onSave={override => {
@@ -153,7 +157,7 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
                                 setRuleRevision(previous => previous + 1);
                             }} />
                     }]} summary={<Typography variant="body2">
-                        Stack {effectiveInserterStackSize(value)}{value.stack_size === undefined ? ' (automatic)' : ' (explicit)'} · Filters: {filtersLabel(value, 'Auto', 'Explicit')}{filterItems.length ? ` (${filterItems.map(itemLabel).join(', ')})` : ' (none)'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
+                        Stack {effectiveInserterStackSize(value)}{value.stack_size === undefined ? ' (automatic)' : ' (explicit)'} · Filters: {filtersLabel(value, 'Auto', 'Explicit')}{filterItems.length ? ` (${filterItems.map(itemLabel).join(', ')})` : usesAutomaticFilters(value.filters) ? ' (no items inferred)' : ' (none)'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
                         {value.source.type === 'belt' && value.source.near_lane !== undefined && ` · Nearest lane ${value.source.near_lane}`}
                         {value.prototype !== undefined && ` · ${inserterTimingLabels(value).type}`}
                         {value.quality !== undefined && ` · ${inserterTimingLabels(value).quality}`}
@@ -175,6 +179,7 @@ function InsertersFormComponent({
     machines,
     belts,
     chests,
+    drills,
     itemNames,
     getRecipeInfo,
     onAdd,
@@ -196,7 +201,7 @@ function InsertersFormComponent({
     const automaticRules = inserters.filter(row => row.overrides?.enable_control === undefined).length;
     const { itemLabel, recipeLabel } = useGameNames();
 
-    const options = useMemo(() => entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }), [machines, belts, chests, itemLabel, recipeLabel]);
+    const options = useMemo(() => entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo, drills }), [machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo, drills]);
 
 
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(inserters.length, onRemove);
@@ -226,8 +231,9 @@ function InsertersFormComponent({
         return () => cancelAnimationFrame(frame);
     }, [focusRequest, onFocusHandled]);
     const selectedRows = useMemo(() => inserters.filter(row => selected.has(row._uuid)), [inserters, selected]);
-    const priorityIds = useMemo(() => itemsUnion(selectedRows.map(row => sourceItemsOf(row.source, machines, belts, chests, getRecipeInfo))), [selectedRows, machines, belts, chests, getRecipeInfo]);
-    const bulkItems = useMemo(() => itemsUnion(selectedRows.map(row => itemsAround(row, machines, belts, chests, getRecipeInfo))), [selectedRows, machines, belts, chests, getRecipeInfo]);
+    const craftingMachines = useCraftingMachines();
+    const priorityIds = useMemo(() => itemsUnion(selectedRows.map(row => sourceItemsOf(row.source, machines, belts, chests, getRecipeInfo, inserters, drills))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters, drills]);
+    const bulkItems = useMemo(() => itemsUnion(selectedRows.map(row => itemsAround(row, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills]);
     const itemKeys = useMemo(() => inserters.map(row => row._uuid), [inserters]);
     const rowOrder = useRef(itemKeys);
     useEffect(() => { rowOrder.current = itemKeys; }, [itemKeys]);
@@ -309,7 +315,7 @@ function InsertersFormComponent({
             <Box sx={{ ...LIST_GRID_SX, rowGap: 1 }}>
             <SortableList itemKeys={itemKeys} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} machines={machines} belts={belts} chests={chests} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
+                <InserterRow key={inserter._uuid} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
                     onDuplicate={duplicate} onReorder={onReorder} canMoveDown={index < inserters.length - 1}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}

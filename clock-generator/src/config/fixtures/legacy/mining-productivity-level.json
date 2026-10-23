@@ -1,0 +1,14 @@
+{
+  "target_output": { "recipe": "iron-plate", "items_per_second": 1, "copies": 1 },
+  "machines": [{ "id": 1, "recipe": "iron-plate", "productivity": 0, "crafting_speed": 2, "prototype": "electric-furnace" }],
+  "drills": {
+    "mining_productivity_level": 8,
+    "configs": [
+      { "id": 1, "type": "big-mining-drill", "mined_item_name": "iron-ore", "speed_bonus": 5, "target": { "type": "chest", "id": 1 } },
+      { "id": 2, "type": "big-mining-drill", "mined_item_name": "iron-ore", "speed_bonus": 5, "target": { "type": "chest", "id": 1 } }
+    ]
+  },
+  "inserters": [],
+  "belts": [],
+  "chests": [{ "type": "car", "id": 1 }]
+}

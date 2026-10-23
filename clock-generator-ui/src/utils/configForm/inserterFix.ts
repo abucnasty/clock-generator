@@ -54,7 +54,10 @@ function hasItemConnection(config: ConfigFormData, issue: InserterCoverageIssue,
         if (machine.type !== 'machine' || machine.id !== issue.machine_id) return false;
         if (endpoint.type === 'belt') return config.belts.some(belt => belt.id === endpoint.id && belt.lanes.some(lane => lane.ingredient === item));
         if (endpoint.type === 'chest') return config.chests.some(chest => chest.id === endpoint.id && (chest.type === ChestType.BUFFER_CHEST
-            ? chest.item_filter === item : (!input && chest.remove_unfiltered_items) || chest.item_filter.some(filter => filter.item_name === item && (!input || filter.request_count > 0))));
+            ? chest.item_filter === item : chest.type === ChestType.INFINITY_CHEST
+                ? (!input && chest.remove_unfiltered_items) || chest.item_filter.some(filter => filter.item_name === item && (!input || filter.request_count > 0))
+                // a container holds mixed items: any item, as the engine's coverage check takes it
+                : true));
         return false;
     });
 }

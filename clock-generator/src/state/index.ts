@@ -15,3 +15,7 @@ export * from "./drill-state";
 export * from "./status-category";
 export * from "./supply-gate";
 export * from "./factorio-entity-state";
+export * from "./slot-inventory";
+export * from "./slot-container-state";
+export * from "./rocket-silo-inventory";
+export * from "./rocket-silo-state";

@@ -1,0 +1,475 @@
+{
+  "sidecar_version": "0.12.0",
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "lithium",
+      "crafting_speed": 53.122,
+      "productivity": 200,
+      "position": {
+        "x": 393.5,
+        "y": -2.5
+      },
+      "prototype": "cryogenic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 2,
+      "recipe": "lithium",
+      "crafting_speed": 53.122,
+      "productivity": 200,
+      "position": {
+        "x": 393.5,
+        "y": 3.5
+      },
+      "prototype": "cryogenic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 3,
+      "recipe": "lithium-plate",
+      "crafting_speed": 66,
+      "productivity": 50,
+      "position": {
+        "x": 398.5,
+        "y": -6.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 4,
+      "recipe": "lithium-plate",
+      "crafting_speed": 66,
+      "productivity": 50,
+      "position": {
+        "x": 398.5,
+        "y": 7.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 5,
+      "recipe": "lithium-plate",
+      "crafting_speed": 66,
+      "productivity": 50,
+      "position": {
+        "x": 402.5,
+        "y": -6.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 6,
+      "recipe": "lithium-plate",
+      "crafting_speed": 66,
+      "productivity": 50,
+      "position": {
+        "x": 402.5,
+        "y": 7.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 7,
+      "recipe": "lithium-plate",
+      "crafting_speed": 66,
+      "productivity": 50,
+      "position": {
+        "x": 408.5,
+        "y": -1.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 8,
+      "recipe": "lithium-plate",
+      "crafting_speed": 66,
+      "productivity": 50,
+      "position": {
+        "x": 408.5,
+        "y": 2.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    }
+  ],
+  "drills": {
+    "configs": {}
+  },
+  "inserters": [
+    {
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 390.5,
+        "y": -0.5
+      },
+      "direction": 12
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 390.5,
+        "y": 1.5
+      },
+      "direction": 12
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": -7.5
+      },
+      "direction": 4
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": -0.5
+      },
+      "direction": 12
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": 1.5
+      },
+      "direction": 12
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": 8.5
+      },
+      "direction": 4
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 399.5,
+        "y": -4.5
+      },
+      "direction": 8
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 399.5,
+        "y": 5.5
+      },
+      "direction": 0
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": -4.5
+      },
+      "direction": 8
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 6
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": 5.5
+      },
+      "direction": 0
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 404.5,
+        "y": -7.5
+      },
+      "direction": 12
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 6
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 404.5,
+        "y": 8.5
+      },
+      "direction": 12
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 7
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 406.5,
+        "y": -0.5
+      },
+      "direction": 12
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 8
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 406.5,
+        "y": 1.5
+      },
+      "direction": 12
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 7
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 409.5,
+        "y": -3.5
+      },
+      "direction": 8
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 8
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 409.5,
+        "y": 4.5
+      },
+      "direction": 0
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "lithium-plate",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "lithium-plate",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "item_filter": [
+        {
+          "item_name": "holmium-plate",
+          "request_count": 100
+        }
+      ],
+      "remove_unfiltered_items": false,
+      "position": {
+        "x": 389.5,
+        "y": -0.5
+      }
+    },
+    {
+      "type": "infinity-chest",
+      "id": 2,
+      "item_filter": [
+        {
+          "item_name": "holmium-plate",
+          "request_count": 100
+        }
+      ],
+      "remove_unfiltered_items": false,
+      "position": {
+        "x": 389.5,
+        "y": 1.5
+      }
+    },
+    {
+      "type": "rocket-silo",
+      "id": 3,
+      "recipe_quality": "normal",
+      "crafting_speed": 13.5,
+      "productivity": 10,
+      "position": {
+        "x": 401.5,
+        "y": 0.5
+      }
+    },
+    {
+      "type": "infinity-chest",
+      "id": 4,
+      "remove_unfiltered_items": true,
+      "position": {
+        "x": 419.5,
+        "y": 0.5
+      }
+    }
+  ],
+  "suggested_target": {
+    "recipe": "lithium-plate",
+    "items_per_second": 92.8125,
+    "copies": 1
+  }
+}

@@ -28,7 +28,9 @@ export function EntitySettings({ label, summary, children, actionContainerId, fi
             </Tooltip>
         </Portal>
         <Box id={`${id}-settings`} hidden={!open} sx={{ mt: 1.5, minWidth: 0, border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
-            {opened && <>
+            {/* a single panel needs no tab bar */}
+            {opened && panels.length === 1 && <Box role="region" aria-label={`${label} settings`} sx={{ p: 2, minWidth: 0 }}>{children}</Box>}
+            {opened && panels.length > 1 && <>
                 <Tabs value={active} onChange={(_, next: number) => { setActive(next); setVisited(previous => new Set([...previous, next])); }}
                     aria-label={`${label} settings`} variant="scrollable" scrollButtons="auto" sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 40 }}>
                     {panels.map((panel, index) => <Tab key={panel.label} label={panel.label} id={`${id}-tab-${index}`} aria-controls={`${id}-panel-${index}`} sx={{ minHeight: 40, '&.Mui-selected': { color: 'text.primary' } }} />)}

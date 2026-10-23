@@ -6,10 +6,10 @@ import { InserterStateMachine } from "../../control-logic/inserter/inserter-stat
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
 import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { ControlLogic } from "../../control-logic";
-import { Belt, Chest, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
+import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
+import { FactorioDataService } from "../../data";
 import { MiningDrill } from "../../entities/drill/mining-drill";
-import { MiningProductivity } from "../../entities/drill/mining-productivity";
-import { assertIsMachineState, DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, MachineState, WritableEntityStateRegistry } from "../../state";
+import { DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
 import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
@@ -121,7 +121,7 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
 
     if (chests) {
         chests.forEach(chestConfig => {
-            entity_registry.add(Chest.fromConfig(chestConfig))
+            entity_registry.add(Chest.fromConfig(chestConfig, itemsPutInto(config, chestConfig.id, entity_registry)))
         })
     }
 
@@ -132,13 +132,47 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
     const drills = config.drills
 
     if (drills) {
-        const mining_productivity = MiningProductivity.fromLevel(drills.mining_productivity_level)
-        drills.configs.forEach((drill_config, index) => {
-            entity_registry.add(MiningDrill.fromConfig(mining_productivity, drill_config))
+        drills.configs.forEach(drill_config => {
+            entity_registry.add(MiningDrill.fromConfig(drill_config))
         })
     }
 
     return entity_registry;
+}
+
+/**
+ * The items the build's inserters put into a chest: an inserter's filters, else what its source gives (a machine's
+ * products, a belt's lanes, a chest's configured items). A chest of mixed items can give these on.
+ */
+function itemsPutInto(config: Config, chest_id: number, entity_registry: EntityRegistry): string[] {
+    const items = new Set<string>();
+    for (const inserter of config.inserters) {
+        if (inserter.sink.type !== "chest" || inserter.sink.id !== chest_id) continue;
+        if (inserter.filters && inserter.filters.length > 0) {
+            inserter.filters.forEach(item => items.add(item));
+            continue;
+        }
+        const source = inserter.source;
+        if (source.type === "machine") {
+            const machine = entity_registry.getEntityById(EntityId.forMachine(source.id));
+            if (machine !== null && Entity.isMachine(machine)) machine.outputs.forEach(output => items.add(output.item_name));
+        } else if (source.type === "belt") {
+            const belt = entity_registry.getEntityById(EntityId.forBelt(source.id));
+            if (belt !== null && Entity.isBelt(belt)) belt.lanes.forEach(lane => items.add(lane.ingredient_name));
+        } else if (source.type === "chest") {
+            const chest = config.chests?.find(it => it.id === source.id);
+            if (chest?.type === "buffer-chest") items.add(chest.item_filter);
+            else if (chest?.type === "infinity-chest") chest.item_filter.forEach(filter => items.add(filter.item_name));
+            else if (chest !== undefined) (chest.contents ?? []).forEach(content => items.add(content.item));
+        }
+    }
+    // a drill that drops into the chest puts in what it mines
+    for (const drill of config.drills?.configs ?? []) {
+        if (drill.target.type === "chest" && drill.target.id === chest_id) {
+            items.add(FactorioDataService.getResourceOrThrow(drill.mined_item_name).minable.result);
+        }
+    }
+    return Array.from(items);
 }
 
 function createSimulationContextFromConfig(
@@ -228,7 +262,7 @@ export function cloneSimulationContextWithInterceptors(
     context: SimulationContext,
     interceptors: {
         inserter?: InserterInterceptor,
-        drill?: (drill_state: DrillState, sink_state: MachineState) => EnableControl,
+        drill?: (drill_state: DrillState, sink_state: EntityState) => EnableControl,
     } = {}
 ): SimulationContext {
 
@@ -258,7 +292,6 @@ export function cloneSimulationContextWithInterceptors(
     if (interceptors.drill) {
         new_drills = context.drills.map(drill_state_machine => {
             const sink_state = entity_state_registry.getStateByEntityIdOrThrow(drill_state_machine.drill_state.drill.sink_id);
-            assertIsMachineState(sink_state);
             const enable_control = interceptors.drill!(drill_state_machine.drill_state, sink_state);
             return DrillStateMachine.create({
                 drill_state: drill_state_machine.drill_state,

@@ -1,5 +1,5 @@
 import assert from "../../common/assert";
-import { fullResearchHandSize, handSizeFor, Inserter, Machine } from "../../entities";
+import { EntityId, fullResearchHandSize, handSizeFor, Inserter, Machine } from "../../entities";
 import { EntityTransferCount } from "./cycle/swing-counts";
 
 export const SimulationMode = {
@@ -90,6 +90,12 @@ export function computeSimulationMode(
 
     if (is_output_inserter) {
         return simulationModeForOutput(inserter, entity_transfer_count, machine);
+    }
+
+    // an output inserter that takes the machine's product out of the container the machine's inserters put it into
+    // (outputPathOf): the container holds the stock, so neither its insertion limits nor its output block apply
+    if (EntityId.isChest(inserter.source.entity_id)) {
+        return SimulationMode.NORMAL;
     }
 
     throw new Error(`Inserter ${inserter.entity_id} is not connected to machine ${machine.entity_id}`);

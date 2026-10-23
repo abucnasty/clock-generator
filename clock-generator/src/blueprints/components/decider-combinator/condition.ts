@@ -89,7 +89,18 @@ export class DeciderCombinatorConditionBuilder {
     }
 }
 
+/**
+ * The conditions that hold while `signalId` is in the range: at least its start and at most its end, or, for a range
+ * of one value, equal to it (one condition where two would say the same).
+ */
 function fromOpenRange(openRange: OpenRange, signalId: SignalId): DeciderCombinatorCondition[] {
+    if (openRange.start_inclusive === openRange.end_inclusive) {
+        return [new DeciderCombinatorConditionBuilder(signalId)
+            .setComparator(ComparatorString.EQUAL_TO)
+            .setConstant(openRange.start_inclusive)
+            .build()];
+    }
+
     const start = new DeciderCombinatorConditionBuilder(signalId)
         .setComparator(ComparatorString.GREATER_THAN_OR_EQUAL_TO)
         .setConstant(openRange.start_inclusive)
@@ -111,7 +122,7 @@ function fromInserterTransfer(
 
     const item_signal_id = SignalId.item(inventory_transfer.item_name);
 
-    const [start, end] = fromOpenRange(inventory_transfer.tick_range, clock_signal_id);
+    const range_conditions = fromOpenRange(inventory_transfer.tick_range, clock_signal_id);
 
     const item_condition = new DeciderCombinatorConditionBuilder(SignalId.each)
         .setComparator(ComparatorString.EQUAL_TO)
@@ -121,7 +132,7 @@ function fromInserterTransfer(
         .setCompareType(CompareType.AND)
         .build();
 
-    return [start, end, item_condition];
+    return [...range_conditions, item_condition];
 }
 
 export const DeciderCombinatorCondition = {

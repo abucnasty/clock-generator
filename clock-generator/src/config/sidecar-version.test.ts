@@ -20,13 +20,14 @@ describe("compareVersions", () => {
 
 describe("checkSidecarImport", () => {
     const biochamber = { recipe: "nutrients-from-yumako-mash", type: "machine" };
-    const assembler = { recipe: "iron-gear-wheel", type: "machine" };
 
     it("says what is missing when the sidecar did not say its version and there is a biochamber recipe", () => {
         const guidance = Option.toNullable(checkSidecarImport(undefined, [biochamber]));
         expect(guidance).toBe(
             `This was exported by an older Clock Generator Sidecar. `
             + `The energy consumption of biochambers is not exported, so it has to be set on each biochamber by hand. `
+            + `Each machine's kind (a furnace, a biochamber or another) was exported, not the machine, so each got a machine `
+            + `of its kind that can make its recipe: check each machine. `
             + `Update the mod to ${LATEST_SIDECAR_VERSION} to import everything automatically.`,
         );
     });
@@ -36,7 +37,7 @@ describe("checkSidecarImport", () => {
     });
 
     it("says that nothing is missing, and only offers the update, when nothing in the data needs what the sidecar lacks", () => {
-        const guidance = Option.toNullable(checkSidecarImport("0.6.0", [assembler]));
+        const guidance = Option.toNullable(checkSidecarImport("0.6.0", []));
         expect(guidance).toBe(
             "This was exported by Clock Generator Sidecar 0.6.0. Nothing is missing from this import. "
             + `You can update the mod to ${LATEST_SIDECAR_VERSION} when you like.`,
@@ -159,4 +160,11 @@ describe('an older capture without inserter identity', () => {
     it('has nothing to recapture when the export holds no inserter', () => {
         expect(Option.toNullable(checkSidecarImport('0.10.0', [{ recipe: 'iron-gear-wheel' }]))).not.toContain(recapture);
     });
+});
+
+it("tells a paste with drills from a sidecar before 0.12.0 that the drills' productivity modules are not in it", () => {
+    const drills = [{ id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 70, target: { type: 'chest', id: 1 } }];
+    expect(Option.toNullable(checkSidecarImport('0.11.0', [], undefined, [], [], drills))).toContain("productivity modules were not exported");
+    expect(Option.toNullable(checkSidecarImport('0.11.0', [], undefined, [], [], []))).not.toContain('productivity modules');
+    expect(checkSidecarImport('0.12.0', [], undefined, [], [], drills)).toEqual(Option.none());
 });

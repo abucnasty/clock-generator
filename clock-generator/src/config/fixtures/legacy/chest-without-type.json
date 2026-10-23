@@ -1,0 +1,7 @@
+{
+  "target_output": { "recipe": "plastic-bar", "items_per_second": 1, "copies": 1 },
+  "machines": [{ "id": 1, "recipe": "plastic-bar", "productivity": 0, "crafting_speed": 1, "prototype": "chemical-plant" }],
+  "inserters": [{ "id": 1, "source": { "type": "machine", "id": 1 }, "sink": { "type": "chest", "id": 1 }, "stack_size": 16 }],
+  "belts": [],
+  "chests": [{ "id": 1, "storage_size": 1, "item_filter": "plastic-bar" }]
+}

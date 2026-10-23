@@ -10,7 +10,6 @@ import {
     Machine, 
     InfinityChest,
     EntityId,
-    EntityType,
 } from "../../../entities";
 
 describe("InserterInterceptor", () => {
@@ -34,7 +33,6 @@ describe("InserterInterceptor", () => {
                     recipe: "lithium",
                     productivity: 0,
                     crafting_speed: 10,
-                    type: "machine",
                 });
                 
                 // Create machine state
@@ -64,7 +62,6 @@ describe("InserterInterceptor", () => {
                     recipe: "lithium",
                     productivity: 0,
                     crafting_speed: 10,
-                    type: "machine",
                 });
                 const machineState = MachineState.forMachine(machine);
                 
@@ -97,7 +94,6 @@ describe("InserterInterceptor", () => {
                     recipe: "lithium",
                     productivity: 0,
                     crafting_speed: 10,
-                    type: "machine",
                 });
                 const machineState = MachineState.forMachine(machine);
                 
@@ -120,7 +116,6 @@ describe("InserterInterceptor", () => {
                     recipe: "lithium",
                     productivity: 0,
                     crafting_speed: 10,
-                    type: "machine",
                 });
                 const sourceMachineState = MachineState.forMachine(sourceMachine);
                 
@@ -129,7 +124,7 @@ describe("InserterInterceptor", () => {
                     recipe: "lithium-plate",
                     productivity: 0,
                     crafting_speed: 10,
-                    type: EntityType.FURNACE,
+                    prototype: "electric-furnace",
                 });
                 const sinkMachineState = MachineState.forMachine(sinkMachine);
                 

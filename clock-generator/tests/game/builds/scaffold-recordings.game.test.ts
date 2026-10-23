@@ -337,6 +337,39 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 7200,
     },
+    // The owner's lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
+    // 80 a second from one copy. The warm-up fills the silo, which the config exports empty.
+    "lithium plates through a rocket silo": {
+        scaffold: path.join(SAMPLES, "real", "owner", "lithium-silo", "lithium-silo-scaffold.txt"),
+        config: ConfigPaths.REAL_OWNER_LITHIUM_SILO,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 2400,
+        wake_ups_open: "a chest end wakes no one in the simulator, so the inserters that fill the silo count 0 where the game's states give "
+            + "10 a minute each, as their cryogenic plants wake them (to be measured for every container): ",
+    },
+    // The owner's iron plate build: a big mining drill drops ore into a car taken as a chest, and two furnaces empty it; 80 a
+    // second from one copy. The harness puts the ore under the drill; at its research the drill keeps the car full.
+    "iron plates through a car": {
+        scaffold: path.join(SAMPLES, "real", "owner", "car", "car-scaffold.txt"),
+        config: ConfigPaths.REAL_OWNER_CAR,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 2400,
+        wake_ups_open: "the simulator counts 200.0 a minute from the scaffold's cold start, its two output inserters woken by their "
+            + "furnaces 100 times a minute each, and 0.0 from other starts; the game's states give 3.8 on 2026-10-22 (1.3 for each "
+            + "output inserter, 0.6 for each inserter from the car), for a reason not yet found: ",
+    },
+    // The owner's steel build: one cargo wagon is a hub that a big mining drill fills with ore, two furnaces take from and
+    // put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt; 26 a second
+    // from one copy. The harness puts the ore under the drill and builds the wagon after its rails.
+    "steel plates around a cargo wagon": {
+        scaffold: path.join(SAMPLES, "smelting", "steel-wagon", "steel-wagon-scaffold.txt"),
+        config: ConfigPaths.STEEL_CARGO_WAGON,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 11520,
+    },
     "iron bacteria cultivation": {
         scaffold: path.join(SAMPLES, "gleba", "iron-bacteria-cultivation", "iron-bacteria-cultivation-scaffold.txt"),
         config: ConfigPaths.IRON_BACTERIA_CULTIVATION,

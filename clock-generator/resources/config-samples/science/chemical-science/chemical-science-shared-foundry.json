@@ -10,63 +10,63 @@
       "recipe": "chemical-science-pack",
       "productivity": 100,
       "crafting_speed": 66.0253125,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 2,
       "recipe": "chemical-science-pack",
       "productivity": 100,
       "crafting_speed": 66.0253125,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 3,
       "recipe": "chemical-science-pack",
       "productivity": 100,
       "crafting_speed": 66.0253125,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 4,
       "recipe": "chemical-science-pack",
       "productivity": 100,
       "crafting_speed": 66.0253125,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 5,
       "recipe": "engine-unit",
       "productivity": 100,
       "crafting_speed": 49.0859375,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 6,
       "recipe": "engine-unit",
       "productivity": 100,
       "crafting_speed": 49.0859375,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 7,
       "recipe": "engine-unit",
       "productivity": 100,
       "crafting_speed": 49.0859375,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 8,
       "recipe": "engine-unit",
       "productivity": 100,
       "crafting_speed": 49.0859375,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 9,
       "recipe": "casting-pipe",
       "productivity": 50,
       "crafting_speed": 236.75,
-      "type": "machine"
+      "prototype": "foundry"
     }
   ],
   "inserters": [

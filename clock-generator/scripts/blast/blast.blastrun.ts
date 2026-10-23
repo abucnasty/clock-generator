@@ -1,26 +1,29 @@
 // The blast radius: generate every sample config (as it is and with backed-up belts) and every pickup, over-hood, front
-// and blocked-output fixture, and hash every alternative's exported clock as over-hood-clock.generation.test.ts does
-// (sha256 of {blueprint, schedule}, subtick ?? result); the samples that exist to be refused (ExpectedRefusals in
+// and blocked-output fixture and every container config, and hash every alternative's exported clock as over-hood-clock.generation.test.ts does
+// (clock_sha256: sha256 of its identity, clockIdentity of subtick ?? result: the blueprint without its text or metadata,
+// and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description); the samples that exist to be refused (ExpectedRefusals in
 // src/config/config-paths.ts) are checked instead: each must fail with its error, as it is and backed up. Run by
 // scripts/blast/blast.sh, which installs it into the worktree's tests/game/builds/.scratch/ (gitignored), where its
 // imports resolve, with vitest.scratch-dist.config.ts (the engine from dist/); it is not run from scripts/.
 // Env: BLAST_OUT (folder; one JSON per job, and _jobs.json, the job list with each config's sha256), BLAST_CLAIMS
 // (folder shared by parallel processes, default <BLAST_OUT>/.claims: a job is claimed by creating <claims>/<job>),
 // BLAST_MODE (generate, the default, or jobs: write _jobs.json only), BLAST_ONLY (comma list of job names),
-// BLAST_GROUPS (default config,config-backed,pickup,overhood,front,blocked,refusal), BLAST_SKIP (default
+// BLAST_GROUPS (default config,config-backed,pickup,overhood,front,blocked,containers,refusal), BLAST_SKIP (default
 // REAL_THAELN_CELL09; "" runs it).
 import fs from 'fs'; import path from 'path'; import { createHash } from 'crypto';
 import { test } from 'vitest';
 import { generateClockAlternatives } from '../../../../src/crafting/generate-blueprint';
 import { encodeBlueprintFile } from '../../../../src/blueprints/serde';
+import { clockIdentity } from '../../../../src/crafting/clock-identity';
+import * as playerDescription from '../../../../src/blueprints/components/player-description';
 import { loadConfigFromFile } from '../../../../src/config/loader';
 import * as configPaths from '../../../../src/config/config-paths';
 import { pickupClockConfig, pickupClockSpeedCases } from '../pickup-clock-speed-coverage';
 import { overHoodClockCases, overHoodClockConfig } from '../over-hood-clock-fixtures';
 
-/** The job file format; blast.sh puts it in the cache key, so a change here never hits an older cache entry (its name
- * is the one of the first cached entry: renaming it would change every key) */
-const FORMAT = 't1-blast-1';
+/** The job file format; blast.sh puts it in the cache key, so a change here never hits an older cache entry. 2: clock_sha256
+ * is the hash of the clock's identity, without its text (1 hashed the text too) */
+const FORMAT = 't1-blast-2';
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const OUT = process.env.BLAST_OUT;
 const CLAIMS = process.env.BLAST_CLAIMS || (OUT && path.join(OUT, '.claims'));
@@ -29,7 +32,7 @@ const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefi
 // Thaeln's cell 09 is out of scope for 0.19.0 (owner, 2026-10-20) and takes ~1,000 s alone: skipped unless BLAST_SKIP
 // is set ("" runs it)
 const SKIP = (process.env.BLAST_SKIP ?? 'REAL_THAELN_CELL09').split(',').filter(Boolean);
-const GROUPS = (process.env.BLAST_GROUPS || 'config,config-backed,pickup,overhood,front,blocked,refusal').split(',');
+const GROUPS = (process.env.BLAST_GROUPS || 'config,config-backed,pickup,overhood,front,blocked,containers,refusal').split(',');
 const { ConfigPaths } = configPaths;
 // the samples that exist to be refused, by ConfigPaths key, with the error each must fail with; a worktree from before
 // the list has none, and its config groups keep every sample
@@ -57,6 +60,14 @@ async function blockedJobs(): Promise<Job[]> {
     return blocked.blockedOutputClockCases()
         .map((variant: any) => ({ group: 'blocked', name: variant.name, config: async () => blocked.blockedOutputClockConfig(variant) }));
 }
+/** The container configs (a car, a tank, a cargo wagon between two inserters); none in a worktree from before them */
+async function containerJobs(): Promise<Job[]> {
+    const file = path.join(__dirname, '..', 'container-clock-fixtures.ts');
+    if (!fs.existsSync(file)) return [];
+    const containers = await import(file);
+    return containers.containerClockCases()
+        .map((variant: any) => ({ group: 'containers', name: variant.name, config: async () => containers.containerClockConfig(variant) }));
+}
 // as the scaffold recordings generate a backed-up variant: overrides.backed_up_belts
 const backedUp = (config: any) => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
 const samples = Object.entries(ConfigPaths).filter(([name]) => !(name in REFUSALS));
@@ -71,7 +82,7 @@ const baseJobs: Job[] = [
         ({ group: 'overhood', name: variant.name, config: async () => overHoodClockConfig(variant) }))),
 ];
 async function loadJobs(): Promise<Job[]> {
-    return [...baseJobs, ...await frontJobs(), ...await blockedJobs()]
+    return [...baseJobs, ...await frontJobs(), ...await blockedJobs(), ...await containerJobs()]
         .sort((a, b) => (SLOW.includes(b.name) ? 1 : 0) - (SLOW.includes(a.name) ? 1 : 0))
         .filter(job => GROUPS.includes(job.group) && !SKIP.includes(job.name) && (!ONLY || ONLY.includes(job.name)));
 }
@@ -108,17 +119,28 @@ async function writeJobList(jobs: Job[]) {
     fs.renameSync(tmp, file);
 }
 
+/** Descriptions Factorio's 500 bytes cut, the blueprints' own and their combinators', in an alternative's plain, modulo
+ * and subtick blueprints (null in a worktree from before the count); compare.py lists any */
+function descriptionsCut(result: any): number | null {
+    const wasCut = (playerDescription as any).wasCut as ((description: string) => boolean) | undefined;
+    if (!wasCut) return null;
+    const blueprints = [result.blueprint, result.modulo_blueprint, result.subtick?.blueprint].filter(Boolean);
+    return blueprints.filter((blueprint: any) => wasCut(blueprint.description ?? '')).length
+        + blueprints.flatMap((blueprint: any) => blueprint.entities ?? [])
+            .filter((entity: any) => wasCut(entity.player_description ?? '')).length;
+}
+
 /** Every alternative of a config, each exported clock hashed, and the selected one */
 function clocksOf(config: any) {
     const generated = generateClockAlternatives(config, { logger: quiet });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
-        const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
+        const with_text = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
         return {
             id: a.id, verdict: a.verdict, holds: a.assessment.holds, rate: a.assessment.items_per_second,
             supply: a.belt?.kind ?? null, period: a.result.subtick?.clock.period_ticks ?? a.result.simulation_duration.ticks,
             wake_ups: a.assessment.wake_ups?.wake_ups_per_minute ?? a.result.stability_check?.as_built?.wake_ups?.wake_ups_per_minute ?? null,
-            clock_sha256: sha(clock), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
+            clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), descriptions_cut: descriptionsCut(a.result), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
         };
     };
     return {

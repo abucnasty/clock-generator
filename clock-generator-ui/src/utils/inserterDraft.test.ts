@@ -48,8 +48,11 @@ describe('changedConfigFields', () => {
 
 describe('every Diagram draft', () => {
     it('finds changed machine, chest and drill fields without saving identity or rules', () => {
-        const machine = { recipe: 'gear', productivity: 0, crafting_speed: 1, type: 'machine' };
+        const machine = { recipe: 'gear', productivity: 0, crafting_speed: 1, prototype: undefined as string | undefined,
+            _prototype_source: undefined as string | undefined, quality: undefined as string | undefined };
         expect(changedFields({ ...machine, crafting_speed: 2 }, machine, MACHINE_FIELDS)).toEqual({ crafting_speed: 2 });
+        expect(changedFields({ ...machine, prototype: 'electric-furnace', _prototype_source: 'hand' }, machine, MACHINE_FIELDS))
+            .toEqual({ prototype: 'electric-furnace', _prototype_source: 'hand' });
         expect(changedFields(machine, machine, MACHINE_FIELDS)).toEqual({});
         const chest = { type: 'buffer-chest', storage_size: 2, item_filter: 'coal', remove_unfiltered_items: undefined as boolean | undefined };
         expect(changedFields({ ...chest, type: 'infinity-chest' }, chest, CHEST_FIELDS)).toEqual({ type: 'infinity-chest' });

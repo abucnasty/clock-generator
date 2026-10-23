@@ -2,16 +2,16 @@ import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
-    FormControl,
     IconButton,
-    InputLabel,
-    MenuItem,
-    Select,
     TextField,
     Typography,
 } from '@mui/material';
-import { useState, memo } from 'react';
-import type { DrillFormData } from '../hooks/useConfigForm';
+import { TargetType } from 'clock-generator/light';
+import { useState, memo, useMemo } from 'react';
+import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import type { DrillTargetBuild } from '../utils/drillTarget';
+import { DrillTargetField } from './DrillTargetField';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
@@ -33,16 +33,20 @@ import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
 import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
 import { EntityTypeField } from './EntityFields';
-import { drillsListed, focusLeaves } from '../utils/drillsSection';
+import { drillsListed, focusLeaves, speedBonusOfPercent, speedBonusPercent } from '../utils/drillsSection';
 
-const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
+const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus * 100)';
+const PRODUCTIVITY_COMMAND = '/c game.print(game.player.selected.productivity_bonus * 100)';
 
 interface DrillsFormProps {
-    miningProductivityLevel: number;
     drills: DrillFormData[];
     resourceNames: string[];
-    machineIds: number[];
-    onUpdateProductivityLevel: (value: number) => void;
+    /** The build's other entities: a drill drops into one of its machines or containers */
+    machines: MachineFormData[];
+    belts: BeltFormData[];
+    chests: ChestFormData[];
+    inserters: InserterFormData[];
+    getRecipeInfo?: (name: string) => RecipeInfo | null;
     /** Adds a drill, and turns drills on in the build if they were not */
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
@@ -52,8 +56,9 @@ interface DrillsFormProps {
 }
 
 
-function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: Pick<DrillsFormProps, 'resourceNames' | 'machineIds' | 'onUpdate'> & {
+function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: Pick<DrillsFormProps, 'resourceNames' | 'getRecipeInfo' | 'onUpdate'> & {
     drill: DrillFormData;
+    build: DrillTargetBuild;
     index: number;
     onRemove: (index: number) => void;
     onDuplicate: () => void;
@@ -84,25 +89,8 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
 
                 </Box>
                 <Box sx={{ minWidth: 0, gridColumn: 3, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 3 } }}>
-                            <FormControl size="small" sx={{ minWidth: 0, width: '100%' }} error={!machineIds.includes(drill.target.id)}>
-                                <InputLabel>Target Machine</InputLabel>
-                                <Select
-                                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
-                                    value={drill.target.id}
-                                    label="Target Machine"
-                                    onChange={(e) =>
-                                        onUpdate(index, {
-                                            target: { type: 'machine', id: e.target.value as number },
-                                        })
-                                    }
-                                >
-                                    {machineIds.map((id) => (
-                                        <MenuItem key={id} value={id}>
-                                            {entityLabel('machine', id)}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                            <DrillTargetField drill={drill} build={build} getRecipeInfo={getRecipeInfo} sx={{ minWidth: 0, width: '100%' }}
+                                onChange={target => onUpdate(index, { target })} />
 
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gridColumn: 4, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: 2 } }}>
@@ -111,10 +99,10 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
                     <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete=""><Delete /></IconButton>
                 </Box>
                 <EntitySettings label={label} actionContainerId={`settings-actions-drill-${drill.id}`} summary={<Typography variant="body2">
-                    Speed bonus {Number((drill.speed_bonus * 100).toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
+                    Mining speed bonus {Number(speedBonusPercent(drill.speed_bonus).toFixed(2))}% · Productivity {Number(drill.productivity.toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
                 </Typography>} tabs={[{ label: 'Enable control', content: <EnableControlFormContent
                     key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
-                    currentOverride={drill.overrides?.enable_control} sinkType="machine" availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
+                    currentOverride={drill.overrides?.enable_control} sinkType={drill.target.type === 'chest' ? TargetType.CHEST : TargetType.MACHINE} availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
                     onCancel={() => setRuleRevision(previous => previous + 1)}
                     onSave={override => {
                         if (enableControlOverrideChanged(override, drill.overrides?.enable_control)) onUpdate(index, { overrides: { ...drill.overrides, enable_control: override } });
@@ -125,15 +113,28 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
                                 inputAriaLabel={SELECT_NAMES.drillType} nameOf={value => entityTypeLabel(value, itemLabel)}
                                 onChange={type => onUpdate(index, { type: type as DrillFormData['type'] })} sx={{ minWidth: 0, flex: '1 1 200px' }} />
                             <TextField
-                                label="Speed Bonus"
+                                label="Mining speed bonus (%)"
                                 type="number"
-                                value={drill.speed_bonus}
+                                value={speedBonusPercent(drill.speed_bonus)}
                                 onChange={(e) =>
                                     onUpdate(index, {
-                                        speed_bonus: parseFloat(e.target.value) || 0,
+                                        speed_bonus: speedBonusOfPercent(parseFloat(e.target.value) || 0),
                                     })
                                 }
-                                inputProps={{ step: 0.1 }}
+                                inputProps={{ step: 10 }}
+                                sx={{ minWidth: 0, flex: '1 1 140px' }}
+                                size="small"
+                            />
+                            <TextField
+                                label="Productivity (%)"
+                                type="number"
+                                value={drill.productivity}
+                                onChange={(e) =>
+                                    onUpdate(index, {
+                                        productivity: Math.max(0, parseFloat(e.target.value) || 0),
+                                    })
+                                }
+                                inputProps={{ min: 0, step: 10 }}
                                 sx={{ minWidth: 0, flex: '1 1 140px' }}
                                 size="small"
                             />
@@ -145,15 +146,17 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
 }
 
 /**
- * The build's mining drills. With none (and no productivity level to keep), the section is one "Add mining drill" row:
- * a build without drills and one with drills turned off are the same to the generator.
+ * The build's mining drills. With none, the section is one "Add mining drill" row: a build without drills and one with
+ * drills turned off are the same to the generator.
  */
 function DrillsFormComponent({
-    miningProductivityLevel,
     drills,
     resourceNames,
-    machineIds,
-    onUpdateProductivityLevel,
+    machines,
+    belts,
+    chests,
+    inserters,
+    getRecipeInfo,
     onAdd,
     onUpdate,
     onRemove,
@@ -161,6 +164,7 @@ function DrillsFormComponent({
     onDuplicate,
 }: DrillsFormProps) {
 
+    const build = useMemo(() => ({ machines, belts, chests, inserters, drills }), [machines, belts, chests, inserters, drills]);
     // the row's delete button goes with it: the keyboard moves on to a neighbour's, or to the Add row
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(drills.length, onRemove);
     const announce = useAnnounce();
@@ -169,8 +173,8 @@ function DrillsFormComponent({
         afterAdd(() => onDuplicate(index));
         announce(`Added ${addedLabel()}, a copy of ${entityLabel('drill', drills[index].id)}.`);
     };
-    // the section does not fold while the focus is in it: not under the level field typed down to 0, nor under a click
-    // on its Add button (which a fold before the click would swallow)
+    // the section does not fold while the focus is in it: not under a click on its Add button (which a fold before the
+    // click would swallow)
     const [focusInSection, setFocusInSection] = useState(false);
     // but deleting the last drill folds it, as before: the focus then goes to the Add row
     const [drillCountBefore, setDrillCountBefore] = useState(drills.length);
@@ -178,7 +182,7 @@ function DrillsFormComponent({
         setDrillCountBefore(drills.length);
         if (drills.length < drillCountBefore) setFocusInSection(false);
     }
-    const listed = drillsListed({ drillCount: drills.length, miningProductivityLevel, focusInSection });
+    const listed = drillsListed({ drillCount: drills.length, focusInSection });
 
     const add = () => {
         afterAdd(onAdd);
@@ -199,30 +203,21 @@ function DrillsFormComponent({
                 content: (
                     <>
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                            To get the speed bonus of a mining drill in Factorio, hover over the drill and run this command:
+                            To get the mining speed bonus of a drill in Factorio, in percent, hover over the drill and run this command:
                         </Typography>
                         <HelpCommand command={SPEED_BONUS_COMMAND} />
+                        <Typography variant="body2" sx={{ my: 1 }}>
+                            Its productivity, in percent, is its mining productivity research and its productivity modules together:
+                        </Typography>
+                        <HelpCommand command={PRODUCTIVITY_COMMAND} />
                     </>
                 ),
             }}
             // with none, the Add row below is the one add
             actions={listed && (
-                <>
-                        <TextField
-                            label="Mining productivity level"
-                            type="number"
-                            value={miningProductivityLevel}
-                            onChange={(e) =>
-                                onUpdateProductivityLevel(parseInt(e.target.value) || 0)
-                            }
-                            inputProps={{ min: 0 }}
-                            sx={{ width: 180, my: 0.75 }}
-                            size="small"
-                        />
                 <Button startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">
                     Add mining drill
                 </Button>
-                </>
             )}
         >
             {!listed ? (
@@ -230,7 +225,7 @@ function DrillsFormComponent({
             ) : (
                 <>
                     <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
-                    {drills.map((drill, index) => <DrillRow key={drill._uuid} drill={drill} index={index} resourceNames={resourceNames} machineIds={machineIds}
+                    {drills.map((drill, index) => <DrillRow key={drill._uuid} drill={drill} index={index} resourceNames={resourceNames} build={build} getRecipeInfo={getRecipeInfo}
                         onUpdate={onUpdate} onRemove={remove} onDuplicate={() => duplicate(index)}
                         onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
                         onMoveDown={index < drills.length - 1 ? () => onReorder(index, index + 1) : undefined} />)}

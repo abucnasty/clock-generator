@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { ConfigSchema } from "./config";
 import { ConfigPaths } from "./config/config-paths";
 import { loadConfigFromFile } from "./config/loader";
 import { Entity, ReadableEntityRegistry } from "./entities";
@@ -31,16 +32,31 @@ describe("the rules of the game", () => {
 
     describe("the mining drill limit", () => {
         // GOALS.md: the limit is the automated insertion limit + 64, and in practice the drill stops at a minimum of
-        // 114 items, the stack of stone (50) + 64. The function takes the stack where the limit is below it, and leaves
-        // room for the stone a craft takes on top. This pins the function, not a recorded figure: the stone furnaces of
-        // the sample have a limit of 70 for stone, above the stack, so the 114 is not reached here.
-        it("fills a stone furnace to its insertion limit for stone plus 64 and one craft's stone", async () => {
+        // 114 items, the stack of stone (50) + 64. The function takes the larger of the stack and the limit, + 64.
+        const machineInto = (recipe: string) => createEntityRegistryFromConfig(ConfigSchema.parse({
+            target_output: { recipe, items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
+            machines: [{ id: 1, recipe, crafting_speed: 0.5, productivity: 0 }],
+            drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, productivity: 440, target: { type: "machine", id: 1 } }] } }));
+
+        // recorded in the game (the drills mechanics family, #308): a big mining drill on stone into an assembling
+        // machine 1 stopped at 114 on rail (1 stone a craft, limit 3) and at 214 on landfill (50 a craft, limit 150),
+        // at 0.43 to 1.35 stone a tick
+        it.each([["rail", 3, 114], ["landfill", 150, 214]])("fills an assembler on %s (limit %i) to %i", (recipe, limit, stop) => {
+            const registry = machineInto(recipe as string);
+            const drill = registry.getAll().filter(Entity.isDrill)[0];
+            const machine = registry.getAll().filter(Entity.isMachine)[0];
+            expect(machine.inputs.getOrThrow("stone").automated_insertion_limit.quantity).toBe(limit);
+            expect(miningDrillMaxInsertion(drill, machine)).toBe(stop);
+        });
+
+        // the function on the stone brick sample, whose furnaces have a limit of 70 for stone, above the stack
+        it("fills a stone furnace to its insertion limit for stone plus 64", async () => {
             const registry = await registryOf(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
             const drill = registry.getAll().filter(Entity.isDrill)[0];
             const furnace = registry.getAll().filter(Entity.isMachine).find(it => it.inputs.has("stone"))!;
             expect(furnace.inputs.getOrThrow("stone").automated_insertion_limit.quantity).toBe(70);
             expect(drill.item.stack_size).toBe(50);
-            expect(miningDrillMaxInsertion(drill, furnace)).toBe(70 + 64 + 2);
+            expect(miningDrillMaxInsertion(drill, furnace)).toBe(70 + 64);
         });
     });
 

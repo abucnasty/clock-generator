@@ -21,13 +21,16 @@ export interface ConfigValidationIssue {
  * types it takes.
  */
 export const NOT_SUPPORTED_YET: Readonly<Record<string, string>> = {
-    "car": "a car as a chest comes with roadmap milestone M2 (containers)",
-    "tank": "a tank as a chest comes with roadmap milestone M2 (containers)",
-    "cargo-wagon": "a cargo wagon as a chest comes with roadmap milestone M2 (containers); a wagon on a moving train is follow-up F5",
-    "rocket-silo": "a rocket silo as a chest comes with roadmap milestone M2 (containers)",
+    "rocket-silo": "a rocket silo as a machine, crafting rocket parts and launching, comes with phase 2 of roadmap milestone M2 "
+        + "(containers); a rocket silo is taken as a chest: list it under `chests` with type \"rocket-silo\"",
     "recycler": "recyclers come with roadmap milestone M3 (recyclers and quality tiers)",
     "lab": "labs are not modelled: they consume no recipe",
 };
+
+/** The refusal of a build whose target product passes through more than one container on its way out */
+export const CONTAINER_OUTPUT_PATH_REFUSAL = "the target product passes through more than one container on its way out of the build, "
+    + "which is not modelled yet (roadmap milestone M2, containers): the generator models a product taken out of the machine "
+    + "that makes it, or out of the one container that machine's inserters put it into";
 
 /**
  * What the generator leaves out on purpose, not on the roadmap. A config or capture naming one of these is refused

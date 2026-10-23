@@ -51,7 +51,7 @@ describe('validateInserterCoverage', () => {
         const biochamberConfig = (extraInserters: object[]) => ({
             target_output: { recipe: 'nutrients-from-yumako-mash', items_per_second: 1, copies: 1 },
             machines: [
-                { id: 1, recipe: 'nutrients-from-yumako-mash', productivity: 0, crafting_speed: 2, type: 'biochamber' },
+                { id: 1, recipe: 'nutrients-from-yumako-mash', productivity: 0, crafting_speed: 2, prototype: 'biochamber' },
             ],
             inserters: [
                 { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 2 },
@@ -86,10 +86,13 @@ describe('a coverage check that comes before anything read the game data', () =>
         vi.resetModules();
         await import('../data/factorio-data-file');
         const { FactorioDataService: data } = await import('../data/factorio-data-service');
-        const { loadConfigFromFile: load } = await import('./loader');
         const { ConfigPaths: paths } = await import('./config-paths');
         const { generateClockAlternatives } = await import('../crafting/generate-blueprint');
-        const config = await load(paths.BAD_ACCUMULATOR_CONFIG);
+        const { parseConfig: parse } = await import('./loader');
+        const fs = await import('fs');
+        // without the machines' former type, which is read with the data
+        const raw = JSON.parse(fs.readFileSync(paths.BAD_ACCUMULATOR_CONFIG, 'utf-8'));
+        const config = await parse(JSON.stringify({ ...raw, machines: raw.machines.map(({ type: _type, ...machine }: { type?: string }) => machine) }));
         expect(data.isInitialized()).toBe(false);
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(
             "Missing inserter coverage (2 issues):\n  - Machine 1 (accumulator): missing input inserter for 'iron-plate'\n"

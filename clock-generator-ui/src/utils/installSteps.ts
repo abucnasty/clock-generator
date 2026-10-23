@@ -48,27 +48,29 @@ export const INSTALL_COPY = {
     },
     wire: {
         title: 'Wire the output of each combinator to its inserters.',
-        detail: 'A combinator described as "Inserter 3 for [item] from [recipe] into [recipe]" switches that inserter '
-            + 'on. With a green wire, connect its output to each inserter in the wiring reference. Find an inserter by its '
-            + 'item and by the machines at its two ends; the numbers are the ones on Configure. The combinator\'s '
-            + 'description names the same inserters; this list has all of it. The other combinators (Clock, Clock lock, Fuel '
-            + 'clock, Clock lock filter, and the ones about a modulo or a subtick clock) are the clock itself: leave them.',
-        drills: ' A combinator described as "Drill 1 for …" switches that mining drill on: wire it the same way.',
+        detail: 'A combinator whose description ends its first line with "(inserter 3)", or with the numbers of several '
+            + 'inserters, switches them on; the line names the item and the two ends, such as "[car] → [electric furnace]". '
+            + 'With a green wire, connect its output to each inserter in the wiring reference; the numbers are the ones on '
+            + 'Configure. The combinator\'s description names the same inserters; this list has all of it. The Clock, the '
+            + 'Clock lock and every combinator described "Part of the clock" are the clock itself: leave them.',
+        drills: ' A combinator whose first line ends with "(drill 1)" switches that mining drill on: wire it the same way.',
     },
     enable: {
         title: 'Set each wired inserter to switch on with that wire.',
         detail: 'Open the inserter, find Circuit network connection, choose Enable/disable, and set the condition to '
             + 'Anything > 0. The combinator puts out one of the inserter\'s item only while the clock is in a wake '
             + 'window, so the inserter works only then.',
-        drills: ' A mining drill is wired and set the same way.',
+        drills: ' A mining drill is wired and set the same way, with Read resources off: a drill that reads its resources '
+            + 'puts its ore on the wire, and Anything > 0 then keeps it on.',
     },
     drills: {
         title: 'Wire each combinator\'s output to its mining drills, and set them to switch on with it.',
-        detail: 'A combinator described as "Drill 1 for [item] into [recipe]" switches that mining drill on. With a '
-            + 'green wire, connect its output to each drill in the wiring reference; the numbers are the ones on Configure. '
+        detail: 'A combinator whose description ends its first line with "(drill 1)" switches that mining drill on. With '
+            + 'a green wire, connect its output to each drill in the wiring reference; the numbers are the ones on Configure. '
             + 'Then open the drill, find Circuit network connection, choose Enable/disable, and set the condition to '
-            + 'Anything > 0. The other combinators (Clock, Clock lock, Clock lock filter, and the ones about a modulo or '
-            + 'a subtick clock) are the clock itself: leave them.',
+            + 'Anything > 0, with Read resources off: a drill that reads its resources puts its ore on the wire, and '
+            + 'Anything > 0 then keeps it on. The Clock, the Clock lock and every combinator described "Part of the clock" '
+            + 'are the clock itself: leave them.',
     },
     others: {
         title: 'Leave the other inserters alone.',

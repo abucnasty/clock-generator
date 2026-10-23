@@ -14,6 +14,7 @@ import type {
     FuelPlan,
     InserterCoverageIssue,
     MachineConfigurationSchema,
+    MachinePrototypeIssue,
     MiningDrillConfigSchema,
     Option,
     ClockAlternativeContext,
@@ -345,6 +346,23 @@ export interface RepeatedUnitsRecovery {
             code: RepeatedUnitConversionReasonCode | 'candidate-check-failed'; message: string };
 }
 
+/** A crafting machine of the game data (an assembling machine or a furnace prototype), as the Machine picker offers it */
+export interface CraftingMachineInfo {
+    name: string;
+    /** "furnace" or "assembling-machine" */
+    type: string;
+    crafting_categories: string[];
+    burner_fuel_categories: string[];
+    /** Base crafting speed, which picks the machine for a recipe */
+    crafting_speed: number;
+}
+
+export interface CraftingMachineData {
+    machines: CraftingMachineInfo[];
+    /** By recipe id, hidden ones included */
+    recipeCategories: Record<string, string[]>;
+}
+
 export interface RecipeInfo {
     ingredients: string[];
     results: string[];
@@ -361,6 +379,8 @@ export interface FactorioLookups {
     names: GameNames;
     /** The recipes the data marks hidden (recycling, parameters, mod and unused recipes) */
     hiddenRecipes: string[];
+    /** The crafting machines a machine can be, in the data's order, and the crafting categories of every recipe */
+    craftingMachines: CraftingMachineData;
 }
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -380,6 +400,8 @@ export interface PastedEntities {
     guidance: Option<string>;
     /** The target output the paste suggests: the mod's own, else worked out from the machines */
     suggested_target: Option<SuggestedTarget>;
+    /** The ids of the machines an older Sidecar named only by kind, which got a machine picked for their recipe */
+    picked_machines?: number[];
 }
 
 /**
@@ -419,6 +441,8 @@ export interface LiveCoverage {
     pickupNotTested: string | null;
     /** The engine's warning for belt lanes that the copies, summed, would ask for more than they carry; it does not block */
     laneSharedByCopies: string | null;
+    /** The engine's warnings for machines whose prototype disagrees with their type or cannot make their recipe; they do not block */
+    machinePrototypes: MachinePrototypeIssue[];
 }
 
 export interface EngineAnswers {
@@ -435,7 +459,11 @@ export interface EngineAnswers {
     'inserter-coverage': LiveCoverage;
     'repeated-unit-conversion': CheckedRepeatedUnitConversion;
     /** Why the saved config cannot be used; null when it can */
-    'saved-config': string | null;
+    /**
+     * The saved form state with each machine's former type read as its machine, to load in its place, and why it cannot
+     * be loaded, or null when it can
+     */
+    'saved-config': { problem: string | null; form: unknown };
     'config-file': Config;
     'pasted-entities': PastedEntities;
 }

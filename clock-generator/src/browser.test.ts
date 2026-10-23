@@ -33,7 +33,8 @@ function importsReachedFrom(entry: string): { file: string, specifier: string }[
         seen.add(file);
         for (const specifier of importsOf(fs.readFileSync(file, "utf-8"))) {
             found.push({ file: path.relative(__dirname, file), specifier });
-            if (specifier.startsWith(".")) {
+            // a JSON file (the engine's package.json, for its version) imports nothing
+            if (specifier.startsWith(".") && !specifier.endsWith(".json")) {
                 visit(resolveSource(file, specifier));
             }
         }
@@ -75,12 +76,16 @@ describe("the light entry", () => {
             "common/entity-types.ts",
             "config/copies-value.ts",
             "config/migrate-belt-supply.ts",
+            "config/migrate-blocked-slots.ts",
+            "config/migrate-mining-productivity.ts",
             "crafting/rank.ts",
             "crafting/why-not-stable.ts",
             "data-types/fraction.ts",
             "data-types/map-extended.ts",
             "data-types/option.ts",
             "entities/entity-type.ts",
+            "entities/machine/machine-rule.ts",
+            "entities/machine/machine-type.ts",
             "state/entity-status.ts",
             "state/status-category.ts",
         ]);

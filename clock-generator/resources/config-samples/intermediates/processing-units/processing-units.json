@@ -10,7 +10,7 @@
       "recipe": "processing-unit",
       "productivity": 300,
       "crafting_speed": 90.3499984741211,
-      "type": "machine"
+      "prototype": "electromagnetic-plant"
     }
   ],
   "inserters": [

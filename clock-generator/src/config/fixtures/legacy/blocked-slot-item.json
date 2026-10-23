@@ -1,0 +1,11 @@
+{
+  "target_output": { "recipe": "iron-plate", "items_per_second": 1, "copies": 1 },
+  "machines": [{ "id": 1, "recipe": "iron-plate", "productivity": 0, "crafting_speed": 2, "prototype": "electric-furnace" }],
+  "inserters": [],
+  "belts": [],
+  "chests": [{ "type": "cargo-wagon", "id": 1, "slot_filters": [
+    { "slot": 1, "item": "iron-ore" },
+    { "slot": 2, "item": "no-item" },
+    { "slot": 3, "item": "deconstruction-planner" }
+  ] }]
+}

@@ -20,6 +20,8 @@ export interface PickupClockScenario {
     scaffold: () => string;
     /** The family's controls file (clock-controls.ts), whose entry for the scenario the capture is compared with */
     controls: string;
+    /** The id of the alternative to record, in place of the selected one */
+    alternative?: string;
     outagePeriods?: number;
     /** Interventions of a probe of its own, in place of pickupClockInterventions(outagePeriods) */
     interventions?: [number, number, number][];
@@ -60,11 +62,14 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     const config = await scenario.config();
     const started = performance.now();
     const alternatives = generateClockAlternatives(config, {logger: quiet});
-    const selected = alternatives.alternatives[alternatives.selected_index];
+    const selected = scenario.alternative === undefined ? alternatives.alternatives[alternatives.selected_index]
+        : alternatives.alternatives.find(alternative => alternative.id === scenario.alternative);
+    if (!selected) throw new Error(`No alternative ${scenario.alternative} for ${scenario.name}`);
     // A generation-only preflight checks the target. Native captures also retain below-target candidates:
     // their output is evidence of a shortfall, rather than a reason to skip the game measurement entirely.
     if (process.env.BELT_CLOCK_GENERATION_ONLY === "1" && process.env.BELT_CLOCK_CALIBRATE !== "1") {
-        expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
+        // the rate is a sum of floating-point rates: 26 steel plates a second came out as 26.000000000000004
+        expect(selected.assessment.items_per_second).toBeCloseTo(config.target_output.items_per_second, 9);
     }
     const exported = selected.result.subtick ?? selected.result;
     const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;

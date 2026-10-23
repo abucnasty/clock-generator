@@ -8,6 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.20.0] - 2026-10-23
+
+### Added
+- Cars, tanks, cargo wagons and rocket silos can be chests, with mixed items, filtered slots and slots by quality. Sidecar 0.12.0 exports them.
+- Slots filtered to No item or a Deconstruction planner stay blocked. The inventory editor can block every unfiltered slot at once.
+- A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo.
+- A drill that drops into a chest is switched on just in time to keep the chest topped up, instead of always. Wire it with Read resources off.
+- A product can leave through the container its machine fills, and a container shared by several machines gets a clock.
+- Each clock names the generator version and site that made it.
+- A machine is picked by what it is and its quality, and its recipe picker lists only the recipes it can make.
+
+### Changed
+- The Type setting (assembling machine, furnace, biochamber) is gone: the machine decides how it is simulated. Older configs and exports still load.
+- The clock's combinators describe what each one switches on in plain terms, with icons.
+- A one-tick window is one condition, clock = 28, instead of two.
+- Each mining drill has its own productivity, in place of one mining productivity level. Older configs and exports still load.
+- The mining speed bonus is entered in percent.
+- Cars, tanks, wagons and silos are named by what they are ("Car 1"), and the inventory grid draws filtered and blocked slots as the game does.
+- A paste whose target is the export's maximum warns you to lower it for headroom.
+
+### Fixed
+- Mining drills mine as in the game, including slow drills and the tick each productivity bonus item appears.
+- A mining drill fills a machine up to the larger of a stack and the insertion limit, plus 64, as in the game.
+- The Diagram opens without freezing the page.
+- A clock rounded down to whole ticks shows the rate it really runs, and holds the target when it runs at most 0.1% fast.
+- A clock whose recovery could not be tried is no longer picked over clocks that recover.
+
 ## [0.19.0] - 2026-10-21
 
 ### Fixed

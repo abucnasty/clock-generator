@@ -43,6 +43,14 @@ export function targetRowCaption(source: SuggestedTarget['source']): string {
         : 'Estimated maximum output of the imported machines. You can lower the rate in Target Output after importing.';
 }
 
+/**
+ * Said under the row when the target it fills is the export's suggested maximum: a clock at the machines' maximum has no
+ * slack to recover from a disturbance. Null for an estimate of the imported machines, which says it is one.
+ */
+export function maximumTargetNote(source: SuggestedTarget['source']): string | null {
+    return source === 'mod' ? 'At the maximum the clock has no slack to recover from a disturbance; lower the rate for headroom.' : null;
+}
+
 /** Said under the row when Target Output is already set, so the row starts unticked */
 export function replacesTargetNote(current: TargetValues, name: (id: string) => string): string {
     return `Tick to replace your current target (${name(current.recipe)} at ${formatNumberText(current.items_per_second)}/s).`;

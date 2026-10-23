@@ -3,7 +3,8 @@ import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
     assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltInserters, MAX_RECORDED_TICKS,
-    factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledInserterIds,
+    factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
+    drillResourceOf,
 } from "./factorio-harness";
 
 describe("factorioDataDir", () => {
@@ -21,7 +22,24 @@ describe("factorioDataDir", () => {
 describe("clockOfBlueprintString", () => {
     const counting = { decider_conditions: { conditions: [{ comparator: "<", constant: 1728 }], else_outputs: [{ constant: 1 }] } };
 
-    it("reads the schedule of a clock blueprint from the descriptions of its combinators", () => {
+    it("reads the inserters each combinator enables from its tags, not its description", () => {
+        const blueprint = encodeBlueprintFile({
+            blueprint: {
+                entities: [
+                    { entity_number: 1, name: "decider-combinator", player_description: "Clock for [item=iron-plate] 80/s. Period 1728 ticks", control_behavior: counting },
+                    { entity_number: 2, player_description: "2 inserters, each [entity=car] → …", tags: { clock_generator: { inserters: [3, 4] } } },
+                    { entity_number: 3, player_description: "Inserter 9 for [item=iron-plate]", tags: { clock_generator: { drills: [1] } } },
+                    { entity_number: 4, player_description: "Part of the clock: do not wire or change." },
+                ],
+            },
+        } as any);
+        expect(clockOfBlueprintString(blueprint).schedule).toEqual({
+            counted_ticks: 1728,
+            inserter_combinators: [{ entity_number: 2, inserter_ids: [3, 4] }],
+        });
+    });
+
+    it("reads the schedule of a clock blueprint from before the tags from the descriptions of its combinators", () => {
         const blueprint = encodeBlueprintFile({
             blueprint: {
                 entities: [
@@ -39,6 +57,29 @@ describe("clockOfBlueprintString", () => {
             inserter_combinators: [{ entity_number: 2, inserter_ids: [3, 4, 6, 7] }, { entity_number: 3, inserter_ids: [12] }],
         });
         expect(scheduledInserterIds(schedule)).toEqual([3, 4, 6, 7, 12]);
+    });
+
+    it("reads the drills a clock enables off the tags of their combinators, or the descriptions of a string from before the tags", () => {
+        const blueprint = encodeBlueprintFile({
+            blueprint: {
+                entities: [
+                    { entity_number: 1, player_description: "Drill 1 for [item=iron-ore] into [entity=car]\n- enabled for tick 27 of the clock" },
+                    { entity_number: 2, player_description: "Drills 2, 3 for [item=stone] into [recipe=stone-brick]\nSwing Counts:" },
+                    { entity_number: 3, player_description: "Inserter 1 for [item=iron-ore] into [recipe=iron-plate]" },
+                ],
+            },
+        } as any);
+        expect(scheduledDrillIds(blueprint)).toEqual([1, 2, 3]);
+        // a clock with tags names them there, whatever its descriptions say
+        const tagged = encodeBlueprintFile({
+            blueprint: {
+                entities: [
+                    { entity_number: 1, player_description: "[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)", tags: { clock_generator: { drills: [1] } } },
+                    { entity_number: 2, player_description: "Drill 4 for [item=stone]", tags: { clock_generator: { inserters: [2] } } },
+                ],
+            },
+        } as any);
+        expect(scheduledDrillIds(tagged)).toEqual([1]);
     });
 
     it("refuses a blueprint without a clock the generator made", () => {
@@ -291,5 +332,22 @@ describe("the most ticks one run in Factorio records", () => {
         await expect(run(600, { blueprint: clock(100_000, ONE_BASED) })).rejects.toThrow("records 100000");
         // within the limit the run goes on, to where it finds no Factorio
         await expect(run(70_848, { clock: swapped, config: {} })).rejects.toThrow("Factorio not found");
+    });
+});
+
+describe("the resource the harness puts under a blueprint's drills", () => {
+    const drills = (...mined: string[]) => ({ drills: { configs: mined.map((mined_item_name, index) => ({
+        id: index + 1, type: "big-mining-drill" as const, mined_item_name, speed_bonus: 0, productivity: 10, target: { type: "chest" as const, id: 1 } })) } });
+    const config = (...mined: string[]) => ({ target_output: { recipe: "iron-plate", items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [], ...drills(...mined) });
+
+    it("is what the config's drills mine, or what is asked", () => {
+        expect(drillResourceOf({ config: config("iron-ore", "iron-ore") })).toBe("iron-ore");
+        expect(drillResourceOf({ config: config("iron-ore"), drill_resource: "copper-ore" })).toBe("copper-ore");
+        expect(drillResourceOf({ config: config() })).toBeUndefined();
+        expect(drillResourceOf({})).toBeUndefined();
+    });
+
+    it("is refused when the config's drills mine more than one", () => {
+        expect(() => drillResourceOf({ config: config("iron-ore", "stone") })).toThrow("The config's drills mine iron-ore, stone");
     });
 });

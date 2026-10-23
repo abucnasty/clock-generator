@@ -68,13 +68,15 @@ function sourceNames(known) {
 /**
  * `requested`: every icon file the page can ask for, which are the icons worth keeping.
  * `required`: the icons the page cannot do without, as it draws them for any config: the names in its own source, the
- * drills, and the resources and what they yield. The other names come from the whole game data, mods and hidden
- * recipes included, and many of them have no icon; FactorioIcon draws nothing for those.
+ * drills, the crafting machines (the Machine picker), and the resources and what they yield. The other names come from
+ * the whole game data, mods and hidden recipes included, and many of them have no icon; FactorioIcon draws nothing for those.
  */
 export function iconNames() {
     const data = JSON.parse(readFileSync(FACTORIO_DATA_FILE, 'utf8'));
     const names = dataNames(data);
-    const required = [...sourceNames(names), ...Object.keys(data['mining-drill']), ...minedNames(data)];
+    // FactorioIcon renders the No item marker as an inline SVG, so it needs no PNG asset.
+    // the Machine picker draws every crafting machine of the data
+    const required = [...sourceNames(names), ...Object.keys(data['mining-drill']), ...Object.keys(data.crafting_machine ?? {}), ...minedNames(data)].filter(name => name !== 'no-item');
     return {
         requested: new Set([...names].map(iconFileName)),
         required: new Set(required.map(iconFileName)),

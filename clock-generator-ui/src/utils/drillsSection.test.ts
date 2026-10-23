@@ -1,19 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { drillsListed, focusLeaves } from './drillsSection';
+import { drillsListed, focusLeaves, speedBonusOfPercent, speedBonusPercent } from './drillsSection';
 
 describe('drillsListed', () => {
-    it('folds to the Add row with no drills and level 0', () => {
-        expect(drillsListed({ drillCount: 0, miningProductivityLevel: 0, focusInSection: false })).toBe(false);
+    it('folds to the Add row with no drills', () => {
+        expect(drillsListed({ drillCount: 0, focusInSection: false })).toBe(false);
     });
 
-    it('lists with a drill, or with a productivity level to keep', () => {
-        expect(drillsListed({ drillCount: 1, miningProductivityLevel: 0, focusInSection: false })).toBe(true);
-        expect(drillsListed({ drillCount: 0, miningProductivityLevel: 3, focusInSection: false })).toBe(true);
+    it('lists with a drill', () => {
+        expect(drillsListed({ drillCount: 1, focusInSection: false })).toBe(true);
     });
 
-    it('stays listed while the focus is in the section (the level typed down to 0, Shift+Tab to its Add button), and folds once it leaves', () => {
-        expect(drillsListed({ drillCount: 0, miningProductivityLevel: 0, focusInSection: true })).toBe(true);
-        expect(drillsListed({ drillCount: 0, miningProductivityLevel: 0, focusInSection: false })).toBe(false);
+    it('stays listed while the focus is in the section (Shift+Tab to its Add button), and folds once it leaves', () => {
+        expect(drillsListed({ drillCount: 0, focusInSection: true })).toBe(true);
+        expect(drillsListed({ drillCount: 0, focusInSection: false })).toBe(false);
     });
 });
 
@@ -32,5 +31,15 @@ describe('focusLeaves', () => {
     it('is true when the focus goes outside, or to nothing', () => {
         expect(focusLeaves(section, outside)).toBe(true);
         expect(focusLeaves(section, null)).toBe(true);
+    });
+});
+
+describe('the mining speed bonus in percent', () => {
+    it('shows the multiplier the config keeps as the game\'s percent, and keeps a percent as the multiplier', () => {
+        expect(speedBonusPercent(17.5)).toBe(1750);
+        expect(speedBonusPercent(0.3)).toBe(30);
+        expect(speedBonusOfPercent(1750)).toBe(17.5);
+        expect(speedBonusOfPercent(30)).toBe(0.3);
+        expect(speedBonusOfPercent(speedBonusPercent(2.35))).toBe(2.35);
     });
 });

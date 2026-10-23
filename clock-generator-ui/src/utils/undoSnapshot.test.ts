@@ -39,7 +39,7 @@ function form(): ConfigFormData {
     config = edits.addChest(edits.addChest(config), ChestType.INFINITY_CHEST);
     config = edits.updateChest(config, 0, { storage_size: 4, item_filter: 'copper-plate' });
     config = edits.addDrill(edits.addDrill(config));
-    config = edits.updateDrillsConfig(config, 'mining_productivity_level', 3);
+    config = edits.updateDrill(config, 0, { productivity: 30 });
     config = edits.updateDrill(config, 1, { target: { type: 'machine', id: 3 } });
     return {
         ...config,
@@ -189,7 +189,7 @@ describe('the snapshot', () => {
             (c) => edits.addChest(c), (c) => edits.updateChest(c, 0, { storage_size: 2 }), (c) => edits.removeChest(c, 0),
             (c) => edits.reorderChests(c, 0, 1),
             (c) => edits.switchChestType(c, 0, ChestType.INFINITY_CHEST), (c) => edits.switchChestType(c, 1, ChestType.BUFFER_CHEST),
-            (c) => edits.updateDrillsConfig(c, 'mining_productivity_level', 1),
+            (c) => edits.updateDrill(c, 1, { productivity: 10 }),
             (c) => edits.addDrill(c), (c) => edits.updateDrill(c, 0, { speed_bonus: 1 }), (c) => edits.removeDrill(c, 0),
             (c) => edits.reorderDrills(c, 0, 1),
             (c) => edits.updateOverrides(c, 'lcm', 60), (c) => edits.updateIgnoredIngredients(c, ['iron-plate'], plan),
@@ -290,17 +290,17 @@ describe('the messages', () => {
         expect(removalMessage(form(), 'inserters', 0)).toBe('Deleted Inserter 1. Inserters 2–3 are now 1–2.');
         expect(removalMessage(form(), 'belts', 0)).toBe('Deleted Belt 1. Inserter 1 has no Source now.');
         expect(removalMessage(form(), 'machines', 0))
-            .toBe('Deleted Machine 1. Machines 2–3 are now 1–2. Inserter 3 has no Source now. Drill 1 has no Target Machine now.');
+            .toBe('Deleted Machine 1. Machines 2–3 are now 1–2. Inserter 3 has no Source now. Drill 1 has no Target now.');
         expect(removalMessage(form(), 'drills', 0)).toBe('Deleted Drill 1. Drill 2 is now 1.');
     });
 
     it('say which links were cleared, in the form\'s words, one sentence per kind', () => {
         expect(removalMessage(form(), 'machines', 2))
-            .toBe('Deleted Machine 3. Inserter 2 has no Source and Inserter 1 has no Destination now. Drill 2 has no Target Machine now.');
+            .toBe('Deleted Machine 3. Inserter 2 has no Source and Inserter 1 has no Destination now. Drill 2 has no Target now.');
         expect(removalMessage(form(), 'chests', 1)).toBe('Deleted Chest 2. Inserter 2 has no Destination now.');
         const twoFromMachine3 = edits.updateInserter(form(), 0, { source: { type: 'machine', id: 3 }, sink: { type: 'belt', id: 1 } });
         expect(removalMessage(twoFromMachine3, 'machines', 2))
-            .toBe('Deleted Machine 3. Inserters 1–2 have no Source now. Drill 2 has no Target Machine now.');
+            .toBe('Deleted Machine 3. Inserters 1–2 have no Source now. Drill 2 has no Target now.');
     });
 
     it('name the delete button that an Undo brings back', () => {

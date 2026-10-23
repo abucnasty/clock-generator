@@ -13,7 +13,7 @@ import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_R
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
 import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
-import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
+import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
@@ -45,6 +45,7 @@ import type { PickupCaptureWarning } from '../utils/sidecarExport';
 
 const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
+const TARGET_MAXIMUM_ID = 'paste-target-maximum';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
 const freshImportSelections = (): ImportSelections => ({ target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
 const THEME_CHOICES = [
@@ -67,7 +68,6 @@ interface PendingImport extends PastedEntities {
     reduction?: ImportReduction;
     repeatedSourceKey?: string;
     originalSelections?: ImportSelections;
-    miningProductivityLevel?: number;
     /** The Target Output the paste can fill in, and where it came from; null when it could not tell */
     fill: { values: TargetValues; source: SuggestedTarget['source'] } | null;
 }
@@ -87,7 +87,7 @@ interface ConfigImportExportProps {
     currentForm: ConfigFormData;
     /** The form's Target Output, which a paste fills in only when its recipe is empty */
     target: TargetValues;
-    onImport: (config: Config) => void;
+    onImport: (config: Config, prototypeSource?: 'sample') => void;
     /** Commits a selected paste as one form edit, preserving retained raw fields and row identity. */
     onApplyPaste: (form: ConfigFormData) => void;
     onReset: () => void;
@@ -204,10 +204,7 @@ export function ConfigImportExport({
             inserters: pendingImport.inserters,
             belts: pendingImport.belts,
             chests: pendingImport.chests,
-            ...(pendingImport.drills.length > 0 && { drills: {
-                mining_productivity_level: pendingImport.miningProductivityLevel ?? base.drills?.mining_productivity_level ?? 0,
-                configs: pendingImport.drills,
-            } }),
+            ...(pendingImport.drills.length > 0 && { drills: { configs: pendingImport.drills } }),
         };
     }
 
@@ -307,12 +304,12 @@ export function ConfigImportExport({
     }, []);
 
     /** Replaces the build with the one a build file holds; throws when the text is not one */
-    const importConfigText = useCallback(async (text: string, undoMessage: string) => {
+    const importConfigText = useCallback(async (text: string, undoMessage: string, prototypeSource?: 'sample') => {
         // values out of bounds are kept, for the form to show; only a broken file is rejected
         const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
         // its Undo message says what replaced the build
         onUndoable(undoMessage);
-        onImport(parsedConfig);
+        onImport(parsedConfig, prototypeSource);
         onBuildReplaced();
     }, [onImport, onBuildReplaced, onUndoable]);
 
@@ -349,7 +346,7 @@ export function ConfigImportExport({
         const suggestion = Option.toNullable(validated.suggested_target);
         const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source } : null;
         confirmOpenerRef.current = document.activeElement;
-        setPendingImport({ ...validated, miningProductivityLevel: read.miningProductivityLevel, fill, pickupWarnings: read.pickupWarnings });
+        setPendingImport({ ...validated, fill, pickupWarnings: read.pickupWarnings });
         // everything there is, except a target the player has already set; the first exports had machines only
         setImportSelections({
             target: fill !== null && currentTarget.recipe === '',
@@ -438,7 +435,7 @@ export function ConfigImportExport({
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
-            await importConfigText(await response.text(), exampleUndoMessage(example, recipeLabel));
+            await importConfigText(await response.text(), exampleUndoMessage(example, recipeLabel), 'sample');
         } catch (error) {
             console.error('Example error:', error);
             errorIdRef.current = notify({ severity: 'error', text: EXAMPLE_FAILED_MESSAGE });
@@ -460,7 +457,7 @@ export function ConfigImportExport({
         const parts = currentPreview.counts.filter(row => row.replacing)
             .map(row => countOf(row.incoming, row.category.slice(0, -1), row.category));
         if (fill !== null) parts.unshift('Target Output');
-        const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values, pendingImport.miningProductivityLevel);
+        const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values);
 
         resetPasteFlow();
 
@@ -742,7 +739,7 @@ export function ConfigImportExport({
                                             <Checkbox
                                                 checked={importSelections.target}
                                                 onChange={() => handleSelectionChange('target')}
-                                                slotProps={{ input: { 'aria-describedby': TARGET_CAPTION_ID } }}
+                                                slotProps={{ input: { 'aria-describedby': maximumTargetNote(pendingImport.fill.source) ? `${TARGET_CAPTION_ID} ${TARGET_MAXIMUM_ID}` : TARGET_CAPTION_ID } }}
                                             />
                                         }
                                         label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
@@ -751,6 +748,9 @@ export function ConfigImportExport({
                                         {targetRowCaption(pendingImport.fill.source)}
                                         {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
                                     </Typography>
+                                    {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                        {maximumTargetNote(pendingImport.fill.source)}
+                                    </Typography>}
                                 </Box>
                             ) : (
                                 currentTarget.recipe === '' && (
@@ -771,7 +771,7 @@ export function ConfigImportExport({
                                             control={<Checkbox checked={importSelections[row.category]}
                                                 onChange={() => handleSelectionChange(row.category)} disabled={row.incoming === 0}
                                                 slotProps={{ input: { 'aria-describedby': `paste-${row.category}-counts` } }} />}
-                                            label={`${title} (${row.incoming})${row.category === 'drills' && pendingImport.miningProductivityLevel !== undefined ? ` - Mining Productivity ${pendingImport.miningProductivityLevel}` : ''}`}
+                                            label={`${title} (${row.incoming})`}
                                         />
                                         <Typography id={`paste-${row.category}-counts`} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
                                             {consequence}
@@ -802,8 +802,8 @@ export function ConfigImportExport({
                             <Box component="details" data-import-assumptions sx={{ mt: 1 }}>
                                 <Typography component="summary" variant="body2" sx={{ cursor: 'pointer', fontWeight: 600 }}>Import details and defaults</Typography>
                                 <Typography variant="body2">{preview?.counts.find(row => row.category === 'inserters')?.replacing ? 'Incoming' : 'Retained'} inserters; {preview?.counts.find(row => row.category === 'machines')?.replacing ? 'incoming' : 'retained'} machines. Target and Copies {importSelections.target && pendingImport.fill ? 'come from this export' : 'stay as entered'} ({prospectiveTarget.copies} {prospectiveTarget.copies === 1 ? 'copy' : 'copies'}). The current belt-movement setting is retained.</Typography>
-                                <InserterAssumptions inserters={prospectiveInserters} />
                                 <Box sx={{ mt: 1 }}>
+                                    {/* its first line is the summary, said once */}
                                     <InserterAssumptions inserters={prospectiveInserters} detailed />
                                     {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
                                         ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}

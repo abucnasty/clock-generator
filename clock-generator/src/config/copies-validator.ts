@@ -1,6 +1,7 @@
 import { BeltConfig, ChestConfig, Config, InserterConfig, MiningDrillConfig } from './schema';
 import { CopiesError, CopiesUnit } from './errors';
 import { assertInsertersInScope } from './inserter-scope';
+import { machineRuleOf } from './machine-prototype';
 
 // ============================================================================
 // Units of a build
@@ -11,7 +12,7 @@ import { assertInsertersInScope } from './inserter-scope';
 // of redundant copies.
 //
 // A unit is a connected component of the graph whose nodes are the machines, the buffer chests and the mining drills,
-// and whose edges are the inserters between two nodes and the drill-to-machine links. Infinity chests (mocks of an
+// and whose edges are the inserters between two nodes and the drill-to-machine and drill-to-chest links. Infinity chests (mocks of an
 // always-available source) and belts do not join units: belts are shared between the units on purpose.
 //
 // Two units are identical when they have the same signature: a canonical string of their nodes and of every inserter
@@ -62,14 +63,21 @@ export interface RepeatedUnits {
 
 const nodeKey = (kind: NodeKind, id: number): string => `${kind}:${id}`;
 
+// two machines of the same rule simulate alike, whichever prototype they are
 function machineSpec(machine: Config['machines'][number]): string {
-    return `machine|${machine.recipe}|${machine.crafting_speed}|${machine.productivity}|${machine.type ?? ''}|${machine.fuel ?? ''}|${machine.energy_consumption_bonus ?? ''}`;
+    return `machine|${machine.recipe}|${machine.crafting_speed}|${machine.productivity}|${machineRuleOf(machine)}|${machine.fuel ?? ''}|${machine.energy_consumption_bonus ?? ''}`;
 }
 
 function chestSpec(chest: ChestConfig): string {
-    return chest.type === 'buffer-chest'
-        ? `chest|${chest.type}|${chest.storage_size}|${chest.item_filter}`
-        : `chest|${chest.type}|${JSON.stringify(chest.item_filter)}|${chest.remove_unfiltered_items ?? false}`;
+    if (chest.type === 'buffer-chest') {
+        return `chest|${chest.type}|${chest.storage_size}|${chest.item_filter}`;
+    }
+    if (chest.type === 'infinity-chest') {
+        return `chest|${chest.type}|${JSON.stringify(chest.item_filter)}|${chest.remove_unfiltered_items ?? false}`;
+    }
+    // where it stands is not a setting: copies of a build differ in it
+    const { id: _id, position: _position, ...settings } = chest;
+    return `chest|${chest.type}|${JSON.stringify(settings)}`;
 }
 
 function drillSpec(drill: MiningDrillConfig): string {
@@ -112,7 +120,8 @@ function unitsOf(config: Config): { nodes: UnitNode[]; edges: UnitEdge[]; compon
         nodes.set(key, { key, kind: 'machine', id: machine.id, spec: machineSpec(machine) });
     }
     for (const chest of config.chests ?? []) {
-        if (chest.type === 'buffer-chest') {
+        // a chest that holds what it holds is part of a unit; an infinity chest is a supply or a sink outside it
+        if (chest.type !== 'infinity-chest') {
             const key = nodeKey('chest', chest.id);
             nodes.set(key, { key, kind: 'chest', id: chest.id, spec: chestSpec(chest) });
         }
@@ -131,7 +140,9 @@ function unitsOf(config: Config): { nodes: UnitNode[]; edges: UnitEdge[]; compon
         });
     }
     for (const drill of config.drills?.configs ?? []) {
-        edges.push({ from: { node: nodeKey('drill', drill.id) }, to: { node: nodeKey('machine', drill.target.id) }, label: 'mines-into' });
+        // into a machine, or into a chest: a chest that holds what it holds is a node, an infinity chest is outside
+        const to = drill.target.type === 'chest' ? endOfInserter(config, drill.target, nodes) : { node: nodeKey('machine', drill.target.id) };
+        edges.push({ from: { node: nodeKey('drill', drill.id) }, to, label: 'mines-into' });
     }
 
     // Union-find over the edges whose both ends are nodes.

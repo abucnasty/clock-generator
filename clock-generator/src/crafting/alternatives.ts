@@ -3,12 +3,14 @@ import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
 import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
+import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { backpressureLossInsight, beltPickupNotTestedInsights, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
+import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
+import { chestDrillFallbackConfig, hasPlannedChestDrill } from "./chest-drill-windows";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
@@ -16,9 +18,10 @@ import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
-import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
-import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
-import { START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
+import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
+import { TargetProductionRate } from "./target-production-rate";
+import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, roundedClockTrial, startDependenceVerdictOf } from "./trial";
+import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
 import { NotMadeClock, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
@@ -47,6 +50,8 @@ export interface ClockAlternative {
     belt: ClockBelt | null;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
+    /** For a clock of a period that is not whole, exported rounded down to whole ticks: how it runs against the target */
+    rounded?: RoundedClock;
     result: BlueprintGenerationResult;
 }
 
@@ -146,6 +151,12 @@ interface AlternativeDefinition {
      * when no clock made before it, theirs included, can be selected as stable. It is not one of the searches.
      */
     fallback?: boolean;
+    /**
+     * The same alternative with the windows of the drills into chests a tick longer, then with those drills always
+     * enabled: made in turn when the clock does not hold, or does not survive backpressure loss, with the fewest (see
+     * chestDrillFallbackConfig). Absent where the generator makes no such windows.
+     */
+    chest_drill_fallbacks?: (() => AlternativeDefinition | undefined)[];
 }
 
 /** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
@@ -286,6 +297,18 @@ function alternativeDefinitions(
     context: ClockAlternativeContext,
     quiet: GenerateClockOptions,
     known_stable: (id: string) => boolean | undefined = () => undefined,
+    with_chest_drill_fallbacks: boolean = true,
+): AlternativeDefinition[] {
+    const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
+        with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
+    return definitions;
+}
+
+function alternativeDefinitionsWithFuelHandRoom(
+    config: Config,
+    context: ClockAlternativeContext,
+    quiet: GenerateClockOptions,
+    known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
     const definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
     if (config.overrides?.backed_up_belts !== true || !takesFuelOffABelt(config)) {
@@ -297,6 +320,32 @@ function alternativeDefinitions(
         return with_room === undefined ? definition
             : { ...definition, run: () => withFuelHandRoomWhereNeeded(definition.run, with_room.run) };
     });
+}
+
+/**
+ * Each definition with its chest drill fallbacks (see AlternativeDefinition), made lazily: the same definition on the
+ * config with the drills' windows a tick longer, then with the drills always enabled. A fallback's clock is checked
+ * on the config it was made on.
+ */
+function withChestDrillFallbacks(
+    definitions: AlternativeDefinition[],
+    config: Config,
+    wanted: boolean,
+    definitionsOn: (config: Config) => AlternativeDefinition[],
+): AlternativeDefinition[] {
+    if (!wanted || !hasPlannedChestDrill(config)) {
+        return definitions;
+    }
+    const fallbacks = (["one tick longer", "always enabled"] as const).map(fallback => {
+        let made: AlternativeDefinition[] | undefined;
+        const fallback_config = chestDrillFallbackConfig(config, fallback);
+        return (id: string) => () => {
+            made ??= definitionsOn(fallback_config);
+            const definition = made.find(it => it.id === id);
+            return definition === undefined ? undefined : { ...definition, planned_on: definition.planned_on ?? fallback_config };
+        };
+    });
+    return definitions.map(definition => ({ ...definition, chest_drill_fallbacks: fallbacks.map(of => of(definition.id)) }));
 }
 
 /** An item's name as a person says it: "low-density-structure" as "low density structure" */
@@ -521,9 +570,12 @@ function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_outp
     return notes;
 }
 
-/** A sentence for an alternative's description about the losses its clock does not get back from */
-function backpressureLossNote(verdict: BackpressureLossVerdict | null): string {
-    if (verdict === null || verdict.survives) {
+/** A sentence for an alternative's description about the losses its clock does not get back from, or why none was tried */
+function backpressureLossNote(verdict: BackpressureLossVerdict | null, not_tried: string | undefined): string {
+    if (verdict === null) {
+        return not_tried === undefined ? "" : ` Its backpressure losses could not be tried, so whether it gets back after one is not known: ${not_tried.replace(/\.$/, "")}.`;
+    }
+    if (verdict.survives) {
         return "";
     }
     return verdict.broken_by.length === 0 ? " It was off its expected output in the run the backpressure losses are tried on, so it is not counted as stable."
@@ -542,7 +594,12 @@ function itemsPerSecondOverCopies(items_per_period: number, period_ticks: number
     return fraction(copies).multiply(items_per_period * 60).divide(period_ticks).toDecimal();
 }
 
-type VerificationAssessment = Pick<ClockAssessment, "backpressure_loss" | "start_dependence">;
+type VerificationAssessment = BackpressureLossAssessment & Pick<ClockAssessment, "start_dependence">;
+
+/** Whether a clock has windows the generator made for a drill into a chest */
+function plannedChestDrillWindows(result: BlueprintGenerationResult): boolean {
+    return result.chest_drills?.some(drill => drill.planned && drill.enabled_ticks !== null) ?? false;
+}
 
 function runAlternative(
     definition: AlternativeDefinition,
@@ -570,24 +627,55 @@ function runAlternative(
         // listed behind the run that assessed it, which combineClockAlternativeRuns keeps in its place
         return { signature, alternatives: [] };
     }
-    const label = withOutputSwings(definition, result.used_terminal_swing_count);
     const entity_registry = createEntityRegistryFromConfig(config);
+    // the planning simulation drives inserters from inventory levels and can over- or undershoot
+    // where the exported clock does not; in game, recordings matched the clock-only check
+    let held = holds(result);
+    const cached = verification_cache?.get(signature);
+    let loss: BackpressureLossAssessment = cached
+        ? { backpressure_loss: cached.backpressure_loss, backpressure_loss_not_tried: cached.backpressure_loss_not_tried }
+        : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
+    // the drills into chests on their fewest windows: a clock that does not meet goal 1 with them is made again with
+    // them a tick longer, then always enabled, as it was before they had windows, and the first that does is kept
+    let used = definition;
+    const fallbacks = cached === undefined && !(held && loss.backpressure_loss?.survives !== false) && plannedChestDrillWindows(result)
+        ? definition.chest_drill_fallbacks ?? [] : [];
+    for (const [index, fallbackOf] of fallbacks.entries()) {
+        const fallback = fallbackOf();
+        let made: BlueprintGenerationResult;
+        try {
+            if (fallback === undefined) continue;
+            made = fallback.run();
+        } catch (error) {
+            logger.log(`Clock alternative "${definition.label}" with its drill windows ${index === 0 ? "a tick longer" : "always enabled"} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+            continue;
+        }
+        result = made;
+        used = fallback;
+        held = holds(result);
+        loss = held ? backpressureLossVerdictOf(fallback.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
+        logger.log(`Clock alternative "${definition.label}": the fewest drill windows did not meet goal 1; ${index === 0 ? "a tick longer" : "always enabled"}: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
+        if (held && loss.backpressure_loss?.survives !== false) break;
+    }
+    if (used !== definition && !plannedChestDrillWindows(result) && result.chest_drills !== undefined) {
+        // left always enabled by the fallback: say so, not that the config asks for it
+        result = { ...result, chest_drills: result.chest_drills.map(drill => drill.enabled_ticks !== null ? drill
+            : { ...drill, planned: true, always_enabled_because: "the clock does not meet goal 1 with its fewest windows, nor with them a tick longer" }) };
+    }
+    const { backpressure_loss } = loss;
+    const label = withOutputSwings(definition, result.used_terminal_swing_count);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
     const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.output_feeders);
-    // the planning simulation drives inserters from inventory levels and can over- or undershoot
-    // where the exported clock does not; in game, recordings matched the clock-only check
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
-    const held = holds(result);
-    const cached = verification_cache?.get(signature);
-    const backpressure_loss = cached ? cached.backpressure_loss
-        : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
     const start_dependence = cached ? cached.start_dependence : config.overrides?.check_start_dependence === true
-        ? startDependenceVerdictOf(definition.planned_on ?? config, result, held, logger, report)
+        ? startDependenceVerdictOf(used.planned_on ?? config, result, held, logger, report)
         : null;
-    verification_cache?.set(signature, {backpressure_loss, start_dependence});
-    const start_dependence_note = start_dependence === null ? null
-        : startDependenceNote(start_dependence, items => itemsPerSecondOverCopies(items, result.simulation_duration.ticks, copies));
+    // a fallback's verdicts are of its clock, not of the one the signature names: a run that makes that clock again
+    // makes its own fallback
+    if (used === definition) {
+        verification_cache?.set(signature, {...loss, start_dependence});
+    }
     const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
@@ -601,56 +689,122 @@ function runAlternative(
         + `) start ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const { belt } = result;
     const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
-    const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
-        + backpressureLossNote(backpressure_loss) + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`);
-    // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
-    const insights = [
-        ...clockInsights(result, held, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS),
-        ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
-        ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
-        ...beltPickupNotTestedInsights(config),
-        ...(start_dependence_note !== null && start_dependence !== null ? [startDependenceInsight(start_dependence_note, start_dependence)] : []),
-    ];
     const period = result.simulation_duration.ticks;
-    // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
-    const achieved_output_items = as_built?.actual_output_items ?? actual_output_items;
-    const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
-    /** The alternative for the clock run at `clock_period` ticks a period: the exact period, or the rounded one */
-    const alternativeAt = (clock_period: number, row: { id: string; label: string; description: string; result: BlueprintGenerationResult }): ClockAlternative => {
-        const assessment: ClockAssessment = { holds: held, backpressure_loss, items_per_second: itemsPerSecondOverCopies(achieved_output_items, clock_period, copies), wake_ups_per_minute, start_dependence };
-        const clock = { ...row, inserter_window_count, ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
+    /** What a trial of the clock found, on the exact period or, for a clock rounded down, on its own */
+    interface Trial {
+        result: BlueprintGenerationResult;
+        held: boolean;
+        loss: BackpressureLossAssessment;
+        start_dependence: StartDependence | null;
+        /** The ticks of a period it is run at */
+        clock_period: number;
+    }
+    /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
+    const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock }): ClockAlternative => {
+        const { as_built } = trial.result.stability_check;
+        const { backpressure_loss, backpressure_loss_not_tried } = trial.loss;
+        const start_dependence_note = trial.start_dependence === null ? null
+            : startDependenceNote(trial.start_dependence, items => itemsPerSecondOverCopies(items, trial.clock_period, copies));
+        const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
+            + backpressureLossNote(backpressure_loss, backpressure_loss_not_tried)
+            + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
+        // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
+        const insights = [
+            ...clockInsights(trial.result, trial.held, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS),
+            ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
+            ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
+            ...beltPickupNotTestedInsights(config),
+            ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
+            ...chestDrillInsights(trial.result),
+        ];
+        // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
+        const achieved_output_items = as_built?.actual_output_items ?? trial.result.stability_check.actual_output_items;
+        const assessment: ClockAssessment = { holds: trial.held, backpressure_loss, ...(backpressure_loss_not_tried !== undefined && { backpressure_loss_not_tried }),
+            items_per_second: itemsPerSecondOverCopies(achieved_output_items, trial.clock_period, copies),
+            wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null, start_dependence: trial.start_dependence };
+        const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
+            inserter_window_count, ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         return { ...clock, ranking: rankingOf(clock, config) };
     };
-    const exact = alternativeAt(period, { id, label, description, result });
+    const exact_trial: Trial = { result, held, loss, start_dependence, clock_period: period };
+    const exact = alternativeOf(exact_trial, { id, label, description_suffix: "", result });
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} verdict=${exact.verdict} survives=${backpressure_loss?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
-    if (!result.subtick) {
+    if (Number.isInteger(period)) {
         return { signature, alternatives: [exact] };
     }
+    // the blueprint of a period that is not a whole number of ticks counts it rounded down (blueprint.ts), unless it
+    // has a subtick clock: listed as that clock, at the rate it runs the build at, it is judged by its own rate. One
+    // whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its own period
+    const rounded_ticks = Math.floor(period);
+    const rounded_rate = itemsPerSecondOverCopies(expected_output_items, rounded_ticks, copies);
+    const target = config.target_output.items_per_second;
+    const runs_fast = rounded_rate / target - 1;
+    const within_machines = rounded_rate <= outputCapacityPerSecond(config) * (1 + 1e-9);
+    const may_meet = roundedRateAllowed({ runs_fast, within_machines });
+    let not_tried_on_its_period: string | null = null;
+    const rounded_trial: Trial | null = may_meet ? (() => {
+        try {
+            const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
+            return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_period: rounded_ticks };
+        } catch (error) {
+            not_tried_on_its_period = error instanceof Error ? error.message : String(error);
+            logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks could not be tried on its own period: ${not_tried_on_its_period}`);
+            return null;
+        }
+    })() : null;
+    const rounded: RoundedClock = { period_ticks: rounded_ticks, runs_fast, within_machines, tried_on_its_period: rounded_trial !== null };
+    const fast = `${fastPercent(runs_fast)} fast`;
+    const roundedAlternative = (why: string) => alternativeOf(rounded_trial ?? { ...exact_trial, clock_period: rounded_ticks }, {
+        id,
+        label: `${label} (clock rounded to ${rounded_ticks} ticks, runs ${fast})`,
+        description_suffix: ` The period is not a whole number of ticks (${period.toFixed(3)})${why}, so this clock runs it `
+            + `rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
+            + (rounded_trial !== null
+                ? `: within the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run and what the machines make, so it is checked on its own ${rounded_ticks}-tick period.`
+                : not_tried_on_its_period !== null
+                    ? `; it could not be tried on its own period (${(not_tried_on_its_period as string).replace(/\.$/, "")}), so the clock-only check models the exact period.`
+                    : `, ${within_machines ? `more than the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run` : "more than the machines make"}; `
+                    + "the clock-only check models the exact period."),
+        result: rounded_trial?.result ?? result,
+        rounded,
+    });
+    if (rounded_trial !== null) {
+        logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} survives=${rounded_trial.loss.backpressure_loss?.survives ?? "not tried"}`);
+    }
+    if (!result.subtick) {
+        return { signature, alternatives: [roundedAlternative(" and has no subtick clock of a small enough scale")] };
+    }
     const { period_ticks, scale } = result.subtick.clock;
-    const rounded = Math.floor(period);
     return {
         signature,
         alternatives: [
             // listed first so it wins ties with the rounded clock for the default selection
-            alternativeAt(period, {
+            alternativeOf(exact_trial, {
                 id: `${id}-subtick`,
                 label: `${label}, subtick clock`,
-                description: `${description} Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
+                description_suffix: ` Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
                     + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
                     + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
                     + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
                 result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
             }),
-            alternativeAt(rounded, {
-                id,
-                label: `${label} (clock rounded to ${rounded} ticks)`,
-                description: `${description} The period is not a whole number of ticks (${period.toFixed(3)}), so this clock `
-                    + `runs it rounded down to ${rounded} ticks, slightly faster than the target; the clock-only check models `
-                    + "the exact period, so the machines need a little headroom.",
-                result,
-            }),
+            roundedAlternative(""),
         ],
     };
+}
+
+/** A share as a percentage the labels print: "0.02%", "1.14%", "under 0.01%" */
+function fastPercent(share: number): string {
+    const percent = share * 100;
+    return percent < 0.005 ? "under 0.01%" : `${Number(percent.toFixed(2))}%`;
+}
+
+/** Items a second the machines that make the target item can make together, over all copies */
+function outputCapacityPerSecond(config: Config): number {
+    const item = TargetProductionRate.fromConfig(config.target_output).machine_production_rate.item;
+    return createEntityRegistryFromConfig(config).getAll().filter(Entity.isMachine)
+        .filter(machine => machine.output.item_name === item)
+        .reduce((sum, machine) => sum + machine.output.production_rate.amount_per_second.toDecimal(), 0) * (config.target_output.copies ?? 1);
 }
 
 /** Runs the primary (batched swings) alternative and lists the rest as independent tasks */
@@ -670,6 +824,9 @@ export function planClockAlternatives(
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
     warnLanesSharedByCopies(config, logger);
+    warnMachinePrototypes(config, logger);
+    const primary = withChestDrillFallbacks([definition], config, true,
+        fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0];
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
         planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
@@ -684,8 +841,8 @@ export function planClockAlternatives(
             ...(definition.fallback === true ? { fallback: true } : {}),
         }));
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
-    const primary = runAlternative(definition, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
-    return { primary, context, tasks };
+    const primary_run = runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
+    return { primary: primary_run, context, tasks };
 }
 
 /**
@@ -773,8 +930,8 @@ export function generateClockAlternatives(
     // Request-local: a new generation (or changed config/data) never inherits another run's verdict.
     const verification_cache = new Map<string, VerificationAssessment>();
     if (plan.primary?.alternatives[0]) {
-        const {backpressure_loss, start_dependence} = plan.primary.alternatives[0].assessment;
-        verification_cache.set(plan.primary.signature, {backpressure_loss, start_dependence});
+        const {backpressure_loss, backpressure_loss_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
+        verification_cache.set(plan.primary.signature, {backpressure_loss, backpressure_loss_not_tried, start_dependence});
     }
     const known_stable = (id: string) => stable_by_id.get(id);
     const definitions = alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable);

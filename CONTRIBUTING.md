@@ -66,19 +66,18 @@ npm run test:generation -- src/crafting/automation-science.generation.test.ts \
 Compare elapsed time and CPU time as well as test names and outcomes. Use a single worker to isolate work
 reduction from scheduling changes; do not report a faster test from a less busy machine as a code speedup.
 
-## Belt pickup experiment release hold
+## Release hold for unreleased merges
 
-The belt pickup experiment was developed on `integration/belt-pickup` and its stacked mechanics PRs.
-It may be consolidated into `master` as an **unreleased merge** while the repository Actions variable
-`RELEASE_HOLD` is `true`. Both publishing workflows enforce that hold, including manual dispatches; tests and
-master preview deployments remain enabled. Keep the hold active while capture/config compatibility work is pending.
+Work can be merged into `master` as an **unreleased merge** while the repository Actions variable `RELEASE_HOLD` is
+`true`. Both publishing workflows enforce that hold, including manual dispatches; tests and master preview deployments
+remain enabled. Keep the hold active until the held work is ready to release.
 
-Reserve engine/UI **0.19.0** and Sidecar **0.11.0** for the complete experiment. Keep the engine/UI package and
+Reserve the next engine/UI version and the next Sidecar version for the work held back. Keep the engine/UI package and
 lock versions synchronized. Update the existing unreleased changelog sections rather than adding a version for
-each mechanics case. Keep Sidecar's `info.json`, newest changelog entry, `LATEST_SIDECAR_VERSION`, feature-version
-checks and documentation aligned at 0.11.0. Published versions and their release notes stay unchanged.
+each change. Keep Sidecar's `info.json`, newest changelog entry, `LATEST_SIDECAR_VERSION`, feature-version
+checks and documentation aligned at the reserved Sidecar version. Published versions and their release notes stay unchanged.
 
-Publishing is on hold until the user authorizes the release. Do not clear `RELEASE_HOLD` or dispatch publishing
+While the hold is on, publishing waits until the user authorizes the release. Do not clear `RELEASE_HOLD` or dispatch publishing
 workflows to bypass that hold. At release time, finalize both changelog dates/summaries and run the release
 checks. Only then set the repository variable to `false` and explicitly dispatch the release and Sidecar
 publishing workflows on `master` (a change outside the Sidecar directory does not trigger its push workflow).

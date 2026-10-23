@@ -54,6 +54,29 @@ describe("outputInserters", () => {
     });
 });
 
+describe("outputInserters through a container", () => {
+    const samples = { held_count: [], held_item: [], status: [] };
+    const hub = (sink_chest: { type: string; id: number }) => parseRecording({
+        format: "clock-generator-recording", version: 1, start_game_tick: 0, sample_count: 0,
+        config: { inserters: [], belts: [], chests: [sink_chest, { type: "infinity-chest", id: 2 }] },
+        machines: [{ id: 1, name: "electric-furnace", recipe: "steel-plate", samples: EMPTY_MACHINE_SAMPLES }],
+        inserters: [
+            // the furnace puts its steel into chest 1; inserter 2 takes it onto a belt, inserter 3 into the furnace
+            { id: 1, name: "stack-inserter", source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16, samples },
+            { id: 2, name: "stack-inserter", source: { type: "chest", id: 1 }, sink: { type: "belt", id: 1 }, stack_size: 16, samples },
+            { id: 3, name: "stack-inserter", source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16, samples },
+        ],
+    });
+
+    it("picks the inserters that take the product out of the container its machine puts it into", () => {
+        expect(outputInserters(hub({ type: "cargo-wagon", id: 1 }), ["steel-plate"]).map(inserter => inserter.id)).toEqual([2]);
+    });
+
+    it("keeps the machine's inserters where they put the product into an infinity chest", () => {
+        expect(outputInserters(hub({ type: "infinity-chest", id: 1 }), ["steel-plate"]).map(inserter => inserter.id)).toEqual([1]);
+    });
+});
+
 describe("outputPerPeriod", () => {
     it("sums the drops of the output inserters in each period, counting a drop on the boundary in the period that starts there", () => {
         expect(outputPerPeriod(recording([1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]), ["electronic-circuit"])).toEqual([

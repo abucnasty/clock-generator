@@ -6,6 +6,8 @@ import { EntityState } from "./entity-state";
 import { InfinityChestState } from "./infinity-chest-state";
 import { InserterState } from "./inserter-state";
 import { MachineState } from "./machine-state";
+import { RocketSiloState } from "./rocket-silo-state";
+import { SlotContainerState } from "./slot-container-state";
 
 export class EntityStateFactory {
 
@@ -39,6 +41,12 @@ export class EntityStateFactory {
             }
             if (Chest.isBufferChest(entity)) {
                 return BufferChestState.forChest(entity);
+            }
+            if (Chest.isSlotContainer(entity)) {
+                return SlotContainerState.forChest(entity);
+            }
+            if (Chest.isRocketSilo(entity)) {
+                return RocketSiloState.forChest(entity);
             }
             throw new Error(`Unsupported chest type: ${entity.chest_type}`);
         }

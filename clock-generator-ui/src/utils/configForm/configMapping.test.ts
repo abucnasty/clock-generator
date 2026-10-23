@@ -4,6 +4,7 @@ import { ChestType } from 'clock-generator/light';
 import { configToFormData, formDataToConfig } from './configMapping';
 import { planRepeatedUnitConversion } from 'clock-generator/browser';
 import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
+import { machineIconName } from './formData';
 
 const imported = {
     target_output: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
@@ -31,9 +32,8 @@ const imported = {
         { type: ChestType.INFINITY_CHEST, id: 2, item_filter: [{ item_name: 'copper-plate', request_count: 50 }] },
     ],
     drills: {
-        mining_productivity_level: 2,
         configs: [{
-            id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, target: { type: 'machine', id: 1 },
+            id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 20, target: { type: 'machine', id: 1 },
             overrides: { enable_control: { mode: 'NEVER' } },
         }],
     },
@@ -135,6 +135,41 @@ describe('formDataToConfig', () => {
     });
 });
 
+describe('the labels a config gives its machines and chests', () => {
+    it('keeps a machine\'s prototype and qualities and a buffer chest\'s prototype through the form', () => {
+        const labelled = {
+            ...imported,
+            machines: [{ id: 1, recipe: 'iron-plate', productivity: 0, crafting_speed: 2, prototype: 'electric-furnace', quality: 'legendary', recipe_quality: 'normal' }],
+            chests: [{ type: ChestType.BUFFER_CHEST, id: 1, storage_size: 2, item_filter: 'copper-plate', prototype: 'steel-chest' }],
+        } as unknown as Config;
+        const config = formDataToConfig(configToFormData(labelled));
+        expect(config.machines).toEqual(labelled.machines);
+        expect(config.chests).toEqual(labelled.chests);
+    });
+
+    it('keeps where the inserters, drills, machines and chests stand, and the way inserters and drills face', () => {
+        const at = { position: { x: 2.5, y: -1.5 } };
+        const placed = {
+            ...imported,
+            machines: imported.machines.map(m => ({ ...m, ...at })),
+            inserters: imported.inserters.map((ins, index) => ({ id: index + 1, ...ins, ...at, direction: 8 })),
+            chests: [...imported.chests!.map(c => ({ ...c, ...at })), { type: ChestType.CAR, id: 3, ...at }],
+            drills: { configs: imported.drills!.configs.map(d => ({ ...d, ...at, direction: 4 })) },
+        } as unknown as Config;
+        const config = formDataToConfig(configToFormData(placed));
+        expect(config.machines.map(m => m.position)).toEqual(placed.machines.map(() => at.position));
+        expect(config.inserters.map(ins => [ins.position, ins.direction])).toEqual(placed.inserters.map(() => [at.position, 8]));
+        expect(config.chests!.map(c => (c as { position?: unknown }).position)).toEqual(placed.chests!.map(() => at.position));
+        expect(config.drills!.configs.map(d => [d.position, d.direction])).toEqual([[at.position, 4]]);
+    });
+
+    it('draws a machine by its prototype, else by its type', () => {
+        expect(machineIconName({ prototype: 'foundry' })).toBe('foundry');
+        expect(machineIconName({})).toBe('assembling-machine-3');
+        expect(machineIconName(undefined)).toBe('assembling-machine-3');
+    });
+});
+
 describe('configToFormData and the forced flag', () => {
     it('never flags an inserter, even one with an ALWAYS rule', () => {
         const always = {
@@ -155,5 +190,18 @@ describe('imported inserter metadata', () => {
         expect(file.inserters[0].stack_size).toBe(stack_size);
         expect(Object.hasOwn(file.inserters[0], 'stack_size')).toBe(stack_size !== undefined);
         expect(configToFormData(file).inserters[0].stack_size).toBe(stack_size);
+    });
+});
+
+describe('cars, tanks, cargo wagons and rocket silos', () => {
+    it('keeps them through the form as the config gives them', () => {
+        const chests = [
+            { id: 1, type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }], contents: [{ slot: 2, item: 'coal', count: 50 }] },
+            { id: 2, type: ChestType.TANK },
+            { id: 3, type: ChestType.CARGO_WAGON, quality: 'legendary' as const },
+            { id: 4, type: ChestType.ROCKET_SILO, recipe_quality: 'rare' as const, crafting_speed: 2, contents: [{ item: 'iron-plate', count: 100 }] },
+        ];
+        const config = { ...imported, chests } as unknown as Config;
+        expect(formDataToConfig(configToFormData(config)).chests).toEqual(chests);
     });
 });

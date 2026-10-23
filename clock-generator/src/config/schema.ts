@@ -12,23 +12,60 @@ import {
     TargetType,
 } from "../common/enable-control-types";
 import { MachineStatus } from "../state/entity-status";
-import { MachineType } from "../entities";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
+import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
+import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
+import { migrateMachineTypeStep } from "./migrate-machine-type";
 
 // ============================================================================
 // Machine Configuration
 // ============================================================================
 
-export const MachineConfigurationSchema = z.object({
+/**
+ * Where an entity stands in the game, as the sidecar reads it (tile centres are at .5). Kept for tools: no engine
+ * decision reads it, and copies of a build differ in it.
+ */
+const MapPositionSchema = z.object({ x: z.number(), y: z.number() });
+
+/** The direction an entity faces, one of the game's 16 (0 north, 4 east, 8 south, 12 west). Kept for tools, as its position */
+const DirectionSchema = z.number().int().min(0).max(15);
+
+/** The qualities of the game, for the fields that name one */
+const MachineQualitySchema = z.enum(["normal", "uncommon", "rare", "epic", "legendary"]);
+
+/**
+ * A machine of the build. What it is is its `prototype`, whose game data gives the rule it is simulated under (a furnace
+ * holds a stack of its product, a biochamber burns nutrients, any other crafting machine stops at its overload
+ * multiplier; `entities/machine/machine-rule.ts`). That rule is internal: no config field names or sets it. The former
+ * `type` field ("machine", "furnace", "biochamber") is read once, before the machine is checked, as the prototype of a
+ * machine of that rule (`migrate-machine-type.ts`), and dropped when the machine names its prototype.
+ */
+export const MachineConfigurationSchema = z.preprocess(migrateMachineTypeStep, z.object({
     id: z.number().int().positive(),
     recipe: z.string(),
     productivity: z.number().min(0),
     crafting_speed: z.number().positive(),
-    type: z.enum(Object.values(MachineType)).optional(),
     energy_consumption_bonus: z.number().min(-80).optional(),
     fuel: z.string().optional(),
-});
+    /**
+     * The machine's prototype name in the game data ("electric-furnace", "assembling-machine-3"): its game data gives the
+     * rule it is simulated under and the recipes it can make (a recipe it cannot make is warned about), and the clock's
+     * descriptions show it as its icon. Its speed and productivity come from `crafting_speed` and `productivity` alone.
+     * A machine without one (or with one the data does not hold) is simulated as an assembling machine, and the
+     * descriptions name it by its id. Sidecar 0.12.0 exports it.
+     */
+    prototype: z.string().optional(),
+    /**
+     * The machine's quality, which its crafting speed already counts; kept for labels, it changes nothing the engine
+     * simulates. Sidecar 0.12.0 exports it.
+     */
+    quality: MachineQualitySchema.optional(),
+    /** The quality of the recipe the machine is set to; kept for labels. Sidecar 0.12.0 exports it. */
+    recipe_quality: MachineQualitySchema.optional(),
+    /** Where the machine stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
+}));
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 
@@ -263,11 +300,25 @@ const DrillTargetMachineConfigSchema = z.object({
     id: z.number().int().positive()
 });
 
+/** A chest of any type the drill drops into, by its rules: slots and room, weight and routing for a silo */
+const DrillTargetChestConfigSchema = z.object({
+    type: z.literal(TargetType.CHEST),
+    id: z.number().int().positive()
+});
+
+const DrillTargetConfigSchema = z.discriminatedUnion("type", [DrillTargetMachineConfigSchema, DrillTargetChestConfigSchema]);
+
 /**
  * Overrides configuration for mining drills.
  */
 const MiningDrillOverridesConfigSchema = z.object({
-    enable_control: EnableControlOverrideConfigSchema.optional()
+    enable_control: EnableControlOverrideConfigSchema.optional(),
+    /**
+     * For a drill into a chest on the windows the generator makes for it (no enable control, or AUTO): ticks each window
+     * starts earlier than the fewest that keep the chest's takers supplied. The generator tries 1 when a clock does not
+     * hold with the fewest.
+     */
+    extra_window_ticks: z.number().int().min(0).optional()
 });
 
 export const MiningDrillConfigSchema = z.object({
@@ -279,21 +330,25 @@ export const MiningDrillConfigSchema = z.object({
      * `/c game.print(game.player.selected.speed_bonus)`
      */
     speed_bonus: z.number(),
-    target: DrillTargetMachineConfigSchema,
-    overrides: MiningDrillOverridesConfigSchema.optional()
+    /**
+     * The drill's mining productivity in percent, as a machine's: the force's mining productivity research and the
+     * drill's productivity modules together, as the game gives it and its bonus bar uses it (not capped). The sidecar
+     * exports it; the game shows it with: `/c game.print(game.player.selected.productivity_bonus * 100)`
+     */
+    productivity: z.number().min(0),
+    target: DrillTargetConfigSchema,
+    overrides: MiningDrillOverridesConfigSchema.optional(),
+    /** Where the drill stands and the way it faces (MapPositionSchema, DirectionSchema). Sidecar 0.12.0 exports them. */
+    position: MapPositionSchema.optional(),
+    direction: DirectionSchema.optional(),
 });
 
 export type MiningDrillConfig = z.infer<typeof MiningDrillConfigSchema>;
 
-export const DrillsConfigSchema = z.object({
-    /**
-     * The mining productivity level to apply to all mining drills.
-     * The value here is the current researched level and can be set in-game by running the command:
-     * `/c game.player.force.technologies['mining-productivity-3'].level = X+1`
-     */
-    mining_productivity_level: z.number().int().min(0),
+/** The mining drills. A config with the former `mining_productivity_level` is read as each drill's productivity once. */
+export const DrillsConfigSchema = z.preprocess(migrateMiningProductivityLevelStep, z.object({
     configs: z.array(MiningDrillConfigSchema)
-});
+}));
 
 // ============================================================================
 // Inserter Configuration
@@ -420,7 +475,10 @@ export const InserterConfigSchema = z.object({
      * blacklist is refused rather than stripped and read as the items to move.
      */
     filter_mode: z.enum(["whitelist", "blacklist"]).optional(),
-    overrides: InserterOverridesConfigSchema.optional()
+    overrides: InserterOverridesConfigSchema.optional(),
+    /** Where the inserter stands and the way it faces (MapPositionSchema, DirectionSchema). Sidecar 0.12.0 exports them. */
+    position: MapPositionSchema.optional(),
+    direction: DirectionSchema.optional(),
 });
 
 /** Input may omit pickup length; schema parsing and entity construction both resolve it to 1. */
@@ -486,7 +544,11 @@ export const BufferChestConfigSchema = z.object({
      * The single item type this chest is filtered to hold.
      * Chests only support one item type for simplicity.
      */
-    item_filter: z.string()
+    item_filter: z.string(),
+    /** The chest's prototype name in the game data ("steel-chest"), which the clock's descriptions show as its icon; without it they name it by its id. Sidecar 0.12.0 exports it. */
+    prototype: z.string().optional(),
+    /** Where the chest stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
 });
 
 export type BufferChestConfig = z.infer<typeof BufferChestConfigSchema>;
@@ -516,14 +578,116 @@ export const InfinityChestConfigSchema = z.object({
     id: z.number().int().positive(),
     item_filter: z.array(InfinityFilterConfigSchema).default([]),
     /** Remove incoming items that are not configured supplies. Omitted in legacy builds. */
-    remove_unfiltered_items: z.boolean().optional()
+    remove_unfiltered_items: z.boolean().optional(),
+    /** Where the chest stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
 });
 
 export type InfinityChestConfig = z.infer<typeof InfinityChestConfigSchema>;
 
+const QualityNameSchema = z.enum(["normal", "uncommon", "rare", "epic", "legendary"]);
+
+/** `storage_size` on a chest whose slots come from the game data: refused, not read as an override */
+const storageSizeRefused = z.custom<never>(() => false, {
+    error: "`storage_size` is refused on a car, a tank, a cargo wagon or a rocket silo: their slots come from the game "
+        + "data (a cargo wagon's by its `quality`)",
+}).optional();
+
+const BOTH_IN_SLOT_FILTER = "a slot filter names an item or is `blocked: true`, not both";
+
+/** A slot that takes one item only, or none at all; a filter named as no-item or deconstruction-planner is read as blocked */
+const SlotFilterConfigSchema = z.preprocess(migrateBlockedSlotFilter, z.union([
+    z.object({
+        /** The slot, from 1 */
+        slot: z.number().int().positive(),
+        /** The only item the slot takes */
+        item: z.string().min(1),
+        blocked: z.never({ error: BOTH_IN_SLOT_FILTER }).optional(),
+    }),
+    z.object({
+        /** The slot, from 1 */
+        slot: z.number().int().positive(),
+        /** The slot takes no item, as with the game's no-item or deconstruction planner filter */
+        blocked: z.literal(true),
+        item: z.never({ error: BOTH_IN_SLOT_FILTER }).optional(),
+    }),
+]));
+
+export const SlotContentConfigSchema = z.object({
+    /** The slot, from 1 */
+    slot: z.number().int().positive(),
+    item: z.string().min(1),
+    /** At most the item's stack size */
+    count: z.number().int().positive(),
+});
+
+export type SlotContentConfig = z.infer<typeof SlotContentConfigSchema>;
+
+const slotContainerFields = {
+    id: z.number().int().positive(),
+    /** Slots that take one item only, or none when blocked; the other slots take any item */
+    slot_filters: z.array(SlotFilterConfigSchema).optional(),
+    /** What the container holds when the build starts, slot by slot; empty without it */
+    contents: z.array(SlotContentConfigSchema).optional(),
+    storage_size: storageSizeRefused,
+    /** Where it stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
+};
+
+/** A car as a chest: the slots of its trunk, from the game data */
+export const CarConfigSchema = z.object({ type: z.literal(ChestType.CAR), ...slotContainerFields });
+/** A tank as a chest: the slots of its trunk, from the game data */
+export const TankConfigSchema = z.object({ type: z.literal(ChestType.TANK), ...slotContainerFields });
+/** A cargo wagon standing still, as a chest: its slots from the game data and its quality */
+export const CargoWagonConfigSchema = z.object({
+    type: z.literal(ChestType.CARGO_WAGON),
+    ...slotContainerFields,
+    /** The wagon's quality (default "normal"), which sets its slots */
+    quality: QualityNameSchema.optional(),
+});
+
+export type CarConfig = z.infer<typeof CarConfigSchema>;
+export type TankConfig = z.infer<typeof TankConfigSchema>;
+export type CargoWagonConfig = z.infer<typeof CargoWagonConfigSchema>;
+export type SlotContainerConfig = CarConfig | TankConfig | CargoWagonConfig;
+
+export const ItemCountConfigSchema = z.object({
+    item: z.string().min(1),
+    count: z.number().int().positive(),
+});
+
+/**
+ * A rocket silo as a chest. It takes any item into its rocket inventory, as far as the rocket lifts its weight, and its
+ * recipe's ingredients into its input slots, up to the automated insertion limit. No craft is run.
+ */
+export const RocketSiloConfigSchema = z.object({
+    type: z.literal(ChestType.ROCKET_SILO),
+    id: z.number().int().positive(),
+    /**
+     * The quality of its rocket part recipe (default "normal"). Of any other quality, the ingredients the build brings
+     * (all of normal quality) go into the rocket inventory instead of the input slots.
+     */
+    recipe_quality: QualityNameSchema.optional(),
+    /** Its crafting speed with modules and beacons (default the game data's, 1), which sets the insertion limit */
+    crafting_speed: z.number().positive().optional(),
+    /** Its productivity; no craft is run, so it changes nothing yet */
+    productivity: z.number().min(0).optional(),
+    /** What it holds when the build starts, placed as an inserter would place it */
+    contents: z.array(ItemCountConfigSchema).optional(),
+    storage_size: storageSizeRefused,
+    /** Where it stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
+    position: MapPositionSchema.optional(),
+});
+
+export type RocketSiloConfig = z.infer<typeof RocketSiloConfigSchema>;
+
 export const ChestConfigSchema = z.discriminatedUnion("type", [
     BufferChestConfigSchema,
-    InfinityChestConfigSchema
+    InfinityChestConfigSchema,
+    CarConfigSchema,
+    TankConfigSchema,
+    CargoWagonConfigSchema,
+    RocketSiloConfigSchema,
 ]);
 
 export type ChestConfig = z.infer<typeof ChestConfigSchema>;
@@ -655,6 +819,21 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
             && config.inserters.some(inserter => inserter.sink.type === TargetType.CHEST && inserter.sink.id === chest.id)) {
             context.addIssue({ code: "custom", path: ["chests", index, "item_filter"], params: { editable_chest_settings: true },
                 message: `Chest ${chest.id}: enable Remove unfiltered items to use an empty infinity chest as an output, or configure a filter.` });
+        }
+    });
+    config.drills?.configs.forEach((drill, index) => {
+        if (drill.target.type !== TargetType.CHEST) return;
+        const chest_id = drill.target.id;
+        if (!config.chests?.some(chest => chest.id === chest_id)) {
+            context.addIssue({ code: "custom", path: ["drills", "configs", index, "target", "id"],
+                message: `Drill ${drill.id} drops into chest ${chest_id}, which is not in the config` });
+        }
+        // a drill into a chest is on the windows the generator makes for it (AUTO), on its own (CLOCKED) or always on;
+        // a condition needs an inserter's hand to read, and a drill that never runs fills nothing
+        const mode = drill.overrides?.enable_control?.mode;
+        if (mode === EnableControlMode.CONDITIONAL || mode === EnableControlMode.NEVER) {
+            context.addIssue({ code: "custom", path: ["drills", "configs", index, "overrides", "enable_control"],
+                message: `Drill ${drill.id} drops into a chest; its enable control can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
         }
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it

@@ -1,7 +1,6 @@
 import { describe, test, expect } from "vitest"
 import { MiningDrill } from "./mining-drill";
 import { MiningDrillConfig } from "../../config/schema";
-import { MiningProductivity } from "./mining-productivity";
 import { TICKS_PER_SECOND } from "../../data-types";
 import { FactorioDataService } from "../../data/factorio-data-service";
 
@@ -12,13 +11,13 @@ describe("MiningDrill", () => {
         type: "electric-mining-drill",
         mined_item_name: "stone",
         speed_bonus: 12.5,
+        productivity: 0,
         target: { type: "machine", id: 3 }
     };
+    const withProductivity = (productivity: number): MiningDrillConfig => ({ ...test_config, productivity });
 
-    test("sets productivity from level", () => {
-        const level = 8000
-        const mining_prod = MiningProductivity.fromLevel(level)
-        const drill = MiningDrill.fromConfig(mining_prod, test_config);
+    test("takes its own productivity, in percent", () => {
+        const drill = MiningDrill.fromConfig(withProductivity(79990));
 
         expect(drill.entity_id.id).toBe("drill:1");
         expect(drill.productivity.value).toBe(79990);
@@ -26,9 +25,7 @@ describe("MiningDrill", () => {
     });
 
     test("sets crafting rate based on speed bonus", () => {
-        const level = 0
-        const mining_prod = MiningProductivity.fromLevel(level)
-        const drill = MiningDrill.fromConfig(mining_prod, test_config);
+        const drill = MiningDrill.fromConfig(test_config);
 
         const mining_time = FactorioDataService.getResourceOrThrow("stone").minable.mining_time;
         expect(mining_time).toBe(1.0);
@@ -45,11 +42,10 @@ describe("MiningDrill", () => {
     });
 
     test("productivity does not affect crafting rate", () => {
-        const mining_prod_levels = [0, 100, 1000, 8000];
+        const productivities = [0, 1000, 10000, 80000];
 
-        const crafting_rates = mining_prod_levels.map(level => {
-            const mining_prod = MiningProductivity.fromLevel(level)
-            const drill = MiningDrill.fromConfig(mining_prod, test_config);
+        const crafting_rates = productivities.map(productivity => {
+            const drill = MiningDrill.fromConfig(withProductivity(productivity));
             return drill.crafting_rate;
         });
 
@@ -63,19 +59,16 @@ describe("MiningDrill", () => {
     })
 
     test("sets production rate based on productivity", () => {
-        const mining_prod_levels = [0, 100, 1000, 8000];
-        mining_prod_levels.forEach(level => {
-            const mining_prod = MiningProductivity.fromLevel(level)
-            const drill = MiningDrill.fromConfig(mining_prod, test_config);
+        const productivities = [0, 82, 490, 1000, 80000];
+        productivities.forEach(productivity => {
+            const drill = MiningDrill.fromConfig(withProductivity(productivity));
 
             const base_crafting_rate = drill.crafting_rate;
-            const expected_production_rate_per_second = base_crafting_rate.amount_per_second * (1 + mining_prod.productivity.normalized);
+            const expected_production_rate_per_second = base_crafting_rate.amount_per_second * (1 + productivity / 100);
             const expected_production_rate_per_tick = expected_production_rate_per_second / TICKS_PER_SECOND.toDecimal();
-            console.log(`expected_production_rate_per_second: ${expected_production_rate_per_second}`);
-            console.log(`expected_production_rate_per_tick: ${expected_production_rate_per_tick}`);
 
-            expect(drill.production_rate.amount_per_second.toDecimal()).toBe(expected_production_rate_per_second);
-            expect(drill.production_rate.amount_per_tick.toDecimal()).toBe(expected_production_rate_per_tick);
+            expect(drill.production_rate.amount_per_second.toDecimal()).toBeCloseTo(expected_production_rate_per_second, 9);
+            expect(drill.production_rate.amount_per_tick.toDecimal()).toBeCloseTo(expected_production_rate_per_tick, 11);
         })
     });
 });

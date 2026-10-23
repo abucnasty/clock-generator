@@ -13,6 +13,10 @@ local RECORDING_FORMAT_VERSION = 1
 local CLOCK_SIGNAL = { type = "virtual", name = "signal-clock" }
 local CLOCK_DESCRIPTION_PREFIX = "Clock for"
 local MAX_WAIT_TICKS = 100000
+-- The recorder keeps an inserter that drops onto an empty belt or into an empty chest, which the sidecar leaves out:
+-- an output belt is often empty when a build is recorded, and a recording is matched to its config by the type of what
+-- an inserter drops into, never by its id
+local RECORDING_EXPORT = { keep_unexported_sinks = true }
 
 local status_names = {}
 for name, value in pairs(defines.entity_status) do
@@ -201,7 +205,7 @@ end
 ---@return table[] inserters, table[] machines, table[] drills
 local function build_tracks(result)
     local inserters = {}
-    for _, exported in ipairs(export.exported_inserters(result)) do
+    for _, exported in ipairs(export.exported_inserters(result, RECORDING_EXPORT)) do
         local entity = exported.inserter.entity
         table.insert(inserters, {
             entity = entity,
@@ -275,22 +279,25 @@ local function build_tracks(result)
             },
         })
     end
-    -- A mining drill that drops into a machine: its status and how far along the ore it is mining is
+    -- A mining drill that drops into a machine or a chest: its status and how far along the ore it is mining is. Its id
+    -- is the export's, which numbers only the drills it keeps (a drill that drops into nothing exported is left out)
     local drills = {}
-    for id, drill in ipairs(result.drills) do
+    for _, drill in ipairs(result.drills) do
         local entity = drill.entity
-        local target_id = drill.drop_target_unit_number and result.unit_number_to_id[drill.drop_target_unit_number] or nil
-        table.insert(drills, {
-            entity = entity,
-            info = {
-                id = id,
-                unit_number = entity.unit_number,
-                name = entity.name,
-                mined_item_name = drill.mined_item_name,
-                target = target_id and { type = "machine", id = target_id } or nil,
-            },
-            samples = { status = {}, mining_progress = {}, bonus_mining_progress = {} },
-        })
+        local target = export.drill_target(drill, result)
+        if target then
+            table.insert(drills, {
+                entity = entity,
+                info = {
+                    id = #drills + 1,
+                    unit_number = entity.unit_number,
+                    name = entity.name,
+                    mined_item_name = drill.mined_item_name,
+                    target = target,
+                },
+                samples = { status = {}, mining_progress = {}, bonus_mining_progress = {} },
+            })
+        end
     end
     return inserters, machines, drills
 end
@@ -483,10 +490,11 @@ local LEFT_OUT_REASONS = {
 
 ---The inserters the export leaves out, each with the end it is left out for and why
 ---@param result ExtractionResult
+---@param options ExportOptions|nil The recorder's (RECORDING_EXPORT), or nil for the sidecar's
 ---@return table[]
-local function left_out_inserters(result)
+local function left_out_inserters(result, options)
     local out = {}
-    for _, left in ipairs(export.left_out_inserters(result)) do
+    for _, left in ipairs(export.left_out_inserters(result, options)) do
         local inserter = left.inserter
         local target = left.target
         table.insert(out, {
@@ -496,6 +504,26 @@ local function left_out_inserters(result)
             at = left.pickup and "pickup" or "drop",
             target = target and { type = target.type, unit_number = target.unit_number, name = target.name } or nil,
             reason = target and LEFT_OUT_REASONS[target.type] or "the sidecar has no type for what is there (the ground, a wagon)",
+        })
+    end
+    return out
+end
+
+---The drills the export leaves out, with what each drops into (nil for the ground)
+---@param result ExtractionResult
+---@return table[]
+local function left_out_drills(result)
+    local out = {}
+    for _, left in ipairs(export.left_out_drills(result)) do
+        local entity = left.drill.entity
+        table.insert(out, {
+            unit_number = entity.valid and entity.unit_number or nil,
+            name = left.drill.drill_type,
+            position = left.drill.position,
+            target_name = left.target_name,
+            reason = left.no_resource and "it has not mined yet, and its area does not tell one resource"
+                or left.target_name and ("it drops into " .. left.target_name .. ", which is not in the config")
+                or "it drops onto the ground",
         })
     end
     return out
@@ -517,11 +545,15 @@ function recorder.describe(force, entities)
         return out
     end
     return {
-        config = export.to_table(result),
+        config = export.to_table(result, RECORDING_EXPORT),
         inserters = infos(inserters),
         machines = infos(machines),
         drills = infos(drills),
-        left_out = left_out_inserters(result),
+        left_out = left_out_inserters(result, RECORDING_EXPORT),
+        left_out_drills = left_out_drills(result),
+        -- what the sidecar gives a player for the same selection: its JSON and the inserters it lists as left out, which
+        -- include the ones that drop onto an empty belt or into an empty chest
+        sidecar = { config = export.to_table(result), left_out = left_out_inserters(result) },
     }
 end
 
@@ -562,7 +594,7 @@ function recorder.start(force, entities, player_index, options)
         last_clock = nil,
         start_game_tick = game.tick,
         sample_count = 0,
-        config = export.to_table(result),
+        config = export.to_table(result, RECORDING_EXPORT),
         inserters = inserters,
         machines = machines,
         drills = drills,

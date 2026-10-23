@@ -22,6 +22,21 @@ const WaitUntilSourceIsOutputBlockedInterceptor: InserterInterceptor = (inserter
         if (EntityState.isInfinityChest(source_state)) {
             return AlwaysEnabledControl;
         }
+        // A chest of mixed items that nothing fills gives what it starts with
+        if ((EntityState.isSlotContainer(source_state) || EntityState.isRocketSilo(source_state)) && source_state.chest.items_put_in.length === 0) {
+            return AlwaysEnabledControl;
+        }
+        // A chest of mixed items: wait until it is full of each item this inserter takes, not of every item it holds. A
+        // container used as a hub is filled with some of its items only by machines that need the others first.
+        if (EntityState.isSlotContainer(source_state) || EntityState.isRocketSilo(source_state)) {
+            const filters = Array.from(inserter_state.inserter.filtered_items);
+            const taken = filters.length > 0 ? filters
+                : source_state.getItemFilters().filter(item => sink_state.machine.inputs.has(item));
+            return EnableControl.latched({
+                base: EnableControl.lambda(() => taken.length === 0 ? source_state.isFull() : taken.every(item => source_state.isFull(item))),
+                release: EnableControl.never
+            })
+        }
         // Buffer chests: wait until chest is full (buffered and ready)
         return EnableControl.latched({
             base: EnableControl.lambda(() => {

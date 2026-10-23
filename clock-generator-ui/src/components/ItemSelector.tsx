@@ -32,6 +32,8 @@ interface ItemSelectorProps {
     sx?: object;
     /** If true, only show the icon in the selected value (text shown in dropdown and tooltip) */
     iconOnly?: boolean;
+    /** Recipes a typed search finds beyond the options, in place of the page's (the recycling recipes) */
+    searchOnlyIds?: readonly string[];
 }
 
 export function ItemSelector({
@@ -52,6 +54,7 @@ export function ItemSelector({
     errorText,
     sx,
     iconOnly = false,
+    searchOnlyIds,
 }: ItemSelectorProps) {
     const { itemLabel, recipeLabel } = useGameNames();
     const nameOf = kind === 'recipe' ? recipeLabel : itemLabel;
@@ -66,7 +69,8 @@ export function ItemSelector({
         [value, options, nameOf],
     );
     // Recipes the open list leaves out (recycling) but a typed query finds, after the visible matches
-    const searchOnlyAll = useContext(SearchOnlyRecipesContext);
+    const searchOnlyContext = useContext(SearchOnlyRecipesContext);
+    const searchOnlyAll = searchOnlyIds ?? searchOnlyContext;
     const searchOnly = useMemo(() => {
         if (kind !== 'recipe') return [];
         const listed = new Set(offered);
@@ -95,7 +99,7 @@ export function ItemSelector({
 
     if (kind === 'recipe') return <ItemPickerField kind="recipe" label={label} inputAriaLabel={inputAriaLabel ?? label}
         value={value} options={options} onChange={onChange} inputId={inputId} required={required} errorText={errorText}
-        size={size} iconOnly={iconOnly} allowCustom={freeSolo} sx={{ minWidth: effectiveMinWidth, ...sx }} />;
+        size={size} iconOnly={iconOnly} allowCustom={freeSolo} searchOnlyIds={searchOnlyIds} sx={{ minWidth: effectiveMinWidth, ...sx }} />;
 
     const autocomplete = (
         <Autocomplete

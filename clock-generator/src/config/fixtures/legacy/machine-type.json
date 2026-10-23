@@ -1,0 +1,12 @@
+{
+  "target_output": { "recipe": "stone-brick", "items_per_second": 1, "copies": 1 },
+  "machines": [
+    { "id": 1, "recipe": "stone-brick", "productivity": 0, "crafting_speed": 2, "type": "furnace" },
+    { "id": 2, "recipe": "iron-gear-wheel", "productivity": 0, "crafting_speed": 1.25, "type": "machine" },
+    { "id": 3, "recipe": "nutrients-from-bioflux", "productivity": 50, "crafting_speed": 2, "type": "biochamber" },
+    { "id": 4, "recipe": "iron-plate", "productivity": 0, "crafting_speed": 2, "type": "machine" },
+    { "id": 5, "recipe": "lithium", "productivity": 0, "crafting_speed": 2, "type": "machine", "prototype": "cryogenic-plant" }
+  ],
+  "inserters": [],
+  "belts": []
+}

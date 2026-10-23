@@ -100,13 +100,14 @@ end
 
 ---What is at the end an inserter is left out for, as a locale table
 ---@param target InserterTargetRef|nil
+---@param pickup boolean Whether the end is the one the inserter takes from
 ---@return table
-local function left_out_target(target)
+local function left_out_target(target, pickup)
     if not target then
         return { "clock-generator-sidecar.left-out-nothing" }
     end
     if target.type == "belt" or target.type == "chest" then
-        return { "clock-generator-sidecar.left-out-" .. target.type }
+        return { "clock-generator-sidecar.left-out-" .. target.type .. (pickup and "" or "-drop") }
     end
     local prototype = target.name and prototypes.entity[target.name]
     if not prototype then
@@ -146,8 +147,38 @@ local function add_left_out_inserters(frame, left_out)
                 "clock-generator-sidecar.left-out-inserter",
                 inserter.inserter_type,
                 where,
-                { left.pickup and "clock-generator-sidecar.left-out-takes-from" or "clock-generator-sidecar.left-out-drops-into", left_out_target(left.target) }
+                { left.pickup and "clock-generator-sidecar.left-out-takes-from" or "clock-generator-sidecar.left-out-drops-into", left_out_target(left.target, left.pickup) }
             }
+        })
+        label.style.single_line = false
+        label.style.maximal_width = 600
+    end
+end
+
+---Add the drills left out of the export to the copy popup, each with what it drops into
+---@param frame LuaGuiElement
+---@param left_out {drill: DrillData, target_name: string|nil}[]
+local function add_left_out_drills(frame, left_out)
+    local heading = frame.add({
+        type = "label",
+        caption = { "clock-generator-sidecar.left-out-drills", #left_out },
+        style = "bold_label"
+    })
+    heading.style.top_margin = 8
+    heading.style.single_line = false
+    heading.style.maximal_width = 600
+
+    for _, left in ipairs(left_out) do
+        local drill = left.drill
+        local position = drill.position
+        local where = position and string.format("%g, %g", position.x, position.y) or "?"
+        local prototype = left.target_name and prototypes.entity[left.target_name]
+        local target = left.no_resource and { "clock-generator-sidecar.left-out-drill-no-resource" }
+            or prototype and { "clock-generator-sidecar.left-out-drill-into", { "", "[entity=" .. left.target_name .. "] ", prototype.localised_name } }
+            or { "clock-generator-sidecar.left-out-drill-ground" }
+        local label = frame.add({
+            type = "label",
+            caption = { "clock-generator-sidecar.left-out-drill", drill.drill_type, where, target }
         })
         label.style.single_line = false
         label.style.maximal_width = 600
@@ -159,7 +190,8 @@ end
 ---@param json string
 ---@param left_out {inserter: InserterData, pickup: boolean, target: InserterTargetRef|nil}[] Inserters left out of the JSON
 ---@param pickup_warnings {inserter_id: number, reason: string}[]|nil
-function gui.create_copy_popup(player, json, left_out, pickup_warnings)
+---@param left_out_drills {drill: DrillData, target_name: string|nil}[]|nil Drills left out of the JSON
+function gui.create_copy_popup(player, json, left_out, pickup_warnings, left_out_drills)
     -- Remove any existing copy popup
     local existing = player.gui.screen[gui.COPY_GUI_NAME]
     if existing and existing.valid then
@@ -196,6 +228,9 @@ function gui.create_copy_popup(player, json, left_out, pickup_warnings)
 
     if #left_out > 0 then
         add_left_out_inserters(frame, left_out)
+    end
+    if left_out_drills and #left_out_drills > 0 then
+        add_left_out_drills(frame, left_out_drills)
     end
 
     if pickup_warnings then
@@ -372,7 +407,7 @@ function gui.create(player, player_data, result)
             for i, drill in ipairs(result.drills) do
                 drill_table.add({ type = "label", caption = tostring(i) })
                 drill_table.add({ type = "label", caption = drill.drill_type })
-                drill_table.add({ type = "label", caption = drill.mined_item_name })
+                drill_table.add({ type = "label", caption = drill.mined_item_name or "?" })
                 drill_table.add({ type = "label", caption = string.format("+%.0f%%", drill.speed_bonus * 100) })
                 drill_table.add({ type = "label", caption = string.format("%.1f%%", drill.productivity) })
             end

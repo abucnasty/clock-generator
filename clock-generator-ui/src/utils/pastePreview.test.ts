@@ -9,7 +9,7 @@ const empty = (): PastedEntities => ({ machines: [], drills: [], inserters: [], 
 const current = (): ConfigFormData => ({ ...createDefaultConfig(), machines: [], inserters: [], chests: [], belts: [] });
 const machine = (id: number) => ({ id, recipe: '', productivity: 0, crafting_speed: 1 });
 const inserter = (id: number, type: 'machine' | 'belt' | 'chest', source = 1, sink = 1) => ({ id, source: { type, id: source }, sink: { type, id: sink } });
-const drill = (id: number, target = 1) => ({ id, type: 'electric-mining-drill' as const, mined_item_name: 'iron-ore', speed_bonus: 0, target: { type: 'machine' as const, id: target } });
+const drill = (id: number, target = 1) => ({ id, type: 'electric-mining-drill' as const, mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 0, target: { type: 'machine' as const, id: target } });
 const formInserter = (id: number, type: 'machine' | 'belt' | 'chest', source = 1, sink = 1): InserterFormData => ({ ...inserter(id, type, source, sink), _uuid: `inserter-${id}` });
 
 describe('selective Paste preview', () => {
@@ -65,7 +65,7 @@ describe('selective Paste preview', () => {
         expect(pastePreview(form, incoming, { ...none, drills: true }).crossings).toEqual([
             { ownerType: 'drill', ownerId: 2, slot: 'target', endpointType: 'machine', endpointId: 1, direction: 'incoming-to-retained', destinationExists: false },
         ]);
-        form.drills = { mining_productivity_level: 12, configs: [{ ...drill(1), _uuid: 'd' }] }; incoming.machines = [machine(1)];
+        form.drills = { configs: [{ ...drill(1), _uuid: 'd' }] }; incoming.machines = [machine(1)];
         expect(pastePreview(form, incoming, { ...none, machines: true }).crossings[0]).toMatchObject({ ownerType: 'drill', direction: 'retained-to-replaced', destinationExists: true });
     });
     it('uses the existing import adapter’s index fallback for an incoming inserter without an id', () => {
@@ -107,7 +107,7 @@ describe('atomic selective Paste', () => {
         form.belts = [{ id: 4, _uuid: 'retained-belt', type: 'transport-belt', lanes: [{ ingredient: '', stack_size: 1 }] }];
         form.chests = [{ id: 5, _uuid: 'retained-chest', type: 'infinity-chest', item_filter: [],
             _chest_settings: { buffer_filter: 'coal', storage_size: 2 } }];
-        form.drills = { mining_productivity_level: 12, configs: [{ ...drill(3), _uuid: 'retained-drill' }] };
+        form.drills = { configs: [{ ...drill(3), _uuid: 'retained-drill' }] };
         form.target_output = { recipe: '', copies: 0, items_per_second: 0 };
         form.overrides = { backed_up_belts: true };
         const before = structuredClone({ form, incoming });
@@ -143,10 +143,10 @@ describe('atomic selective Paste', () => {
         expect(again.inserters[0]._uuid).not.toBe(next.inserters[0]._uuid);
     });
 
-    it('retains selected empty categories and does not create absent drills or apply their productivity', () => {
+    it('retains selected empty categories and does not create absent drills', () => {
         const form = current();
         form.inserters = [formInserter(1, 'machine')];
-        const next = applyPaste(form, empty(), { target: true, machines: true, drills: true, inserters: true, belts: true, chests: true }, undefined, 99);
+        const next = applyPaste(form, empty(), { target: true, machines: true, drills: true, inserters: true, belts: true, chests: true });
         for (const category of categories) {
             if (category !== 'drills') expect(next[category]).toBe(form[category]);
         }
@@ -161,13 +161,12 @@ describe('atomic selective Paste', () => {
         expect(applyPaste(form, empty(), { ...none, target: true }, target).target_output).toBe(target);
     });
 
-    it('updates mining productivity with imported drills, retaining the current level when unspecified', () => {
+    it("takes each imported drill's own productivity, and keeps the drills when they are not replaced", () => {
         const form = current(), incoming = populated();
-        form.drills = { mining_productivity_level: 12, configs: [{ ...drill(1), _uuid: 'retained' }] };
-        expect(applyPaste(form, incoming, { ...none, drills: true }, undefined, 0).drills?.mining_productivity_level).toBe(0);
-        expect(applyPaste(form, incoming, { ...none, drills: true }).drills?.mining_productivity_level).toBe(12);
-        expect(applyPaste(current(), incoming, { ...none, drills: true }).drills?.mining_productivity_level).toBe(0);
-        expect(applyPaste(form, incoming, none, undefined, 99).drills).toBe(form.drills);
-        expect(applyPaste(form, empty(), { ...none, drills: true }, undefined, 99).drills).toBe(form.drills);
+        incoming.drills = [{ ...drill(8, 7), productivity: 490 }];
+        form.drills = { configs: [{ ...drill(1), productivity: 120, _uuid: 'retained' }] };
+        expect(applyPaste(form, incoming, { ...none, drills: true }).drills?.configs.map(row => row.productivity)).toEqual([490]);
+        expect(applyPaste(form, incoming, none).drills).toBe(form.drills);
+        expect(applyPaste(form, empty(), { ...none, drills: true }).drills).toBe(form.drills);
     });
 });

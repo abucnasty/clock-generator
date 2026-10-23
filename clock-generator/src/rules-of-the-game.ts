@@ -25,8 +25,9 @@ export { AutomatedInsertionLimit } from "./entities/machine/input/automated-inse
 /**
  * 3. Mining drill limit (GOALS.md "Constraint Exceptions"): a drill fills a machine past the automated insertion limit,
  * to the limit + 64, and was observed to stop at 114 items at the least, the stack of stone + 64. The function takes
- * the stack where the limit is below it, and a craft's amount on top. Cases: `rules-of-the-game.test.ts` pins the
- * function on the stone brick sample, whose furnaces have a limit above the stack; the 114 has no table yet.
+ * the stack where the limit is below it. Cases: `rules-of-the-game.test.ts`, the game's stops of the drills mechanics
+ * family (114 on rail, 214 on landfill) and the stone brick sample, whose furnaces have a limit above the stack.
+ * The drill's mechanics as a whole: docs/drills.md.
  */
 export { miningDrillMaxInsertion } from "./entities/drill/mining-drill-ext";
 
@@ -95,3 +96,52 @@ export { fuelHandRoomTicks } from "./crafting/clock";
  * `crafting/belt-near-lane.test.ts` (10.7, 26.8 and 32.1).
  */
 export { wakeUps, wakeUpsOfStock } from "./crafting/wake-ups";
+
+/**
+ * 13. Where an item goes in a container of mixed items (docs/simulator.md "Cars, wagons and rocket silos as chests"):
+ * first into the slots filtered to it, in slot order, then topping up the free slots that hold it, then into empty free
+ * slots in slot order; a slot filtered to another item never takes it (`SlotInventoryState.addQuantity`).
+ * 14. What an inserter takes from one (the same section): the item of the last slot that holds one it may take, from
+ * that slot backwards, a hand that holds some only more of its item (`SlotInventoryState.lastItemAmong`,
+ * `ChestPickupLogic`). Cases of both: `state/slot-inventory.test.ts`, `crafting/container-chest.test.ts`; against the
+ * game, `tests/game/mechanics/containers` (339 of 339 hands, 120 of 120 slots, at two places and in both build orders).
+ *
+ * Known limit, a stand-in: which of two inserters acting on one container in the same tick goes first. The game serves
+ * the last built first; the simulator serves the lowest config id first, as for clock deciders (rule 5). Built the
+ * other way, two of the five recorded builds split the container differently in the game.
+ */
+export { SlotInventoryState } from "./state/slot-inventory";
+
+/**
+ * 15. A rocket silo as a chest (the same section): its fixed recipe's ingredients, of that recipe's quality, go into its
+ * input slots, a whole hand while under the automated insertion limit (rule 2); everything else goes into its rocket
+ * inventory while the rocket lifts its weight (in the game's 1/65536 parts), and only that inventory gives. No craft is
+ * run. Cases: `state/rocket-silo-state.test.ts`; against the game, `tests/game/mechanics/containers`.
+ */
+export { RocketSiloInventoryState } from "./state/rocket-silo-inventory";
+
+/**
+ * 16. A mining drill into a chest (docs/simulator.md "Cars, wagons and rocket silos as chests"): it drops what it
+ * holds as far as the chest has room, by the chest's own rules (13, 15: free slots for a car, weight for a silo's
+ * rocket inventory); what does not fit stays in the drill, which mines no more until it has dropped it, so a full chest
+ * stops it. A clock gives it windows made from the takes out of the chest (`crafting/chest-drill-windows.ts`). Cases: `crafting/drill-into-chest.test.ts`; against the game,
+ * `tests/game/mechanics/containers` (a car, a car with filtered slots, a steel chest and a rocket silo, at two places).
+ */
+export { DrillChestWorkingMode } from "./control-logic/drill/modes/chest-working-mode";
+
+/**
+ * 17. A mining drill's progress (docs/drills.md): each tick an enabled drill first drops what it
+ * holds (into a machine up to its limit, 3; into a chest by 16); while it still holds anything it waits, its bars
+ * still; else it mines: its mining bar moves by its crafting rate a tick, its bonus bar by that times its mining
+ * productivity (its own: the research, 10% a level, and its productivity modules together, as the game's
+ * `productivity_bonus`), a wrap of either is an item, and what it mines is dropped in the next tick.
+ * The sink is not checked before mining. A drill disabled by its circuit keeps what it holds and both bars. The bars
+ * are doubles summed tick by tick, as in the game, in the game's units (0 to the resource's mining time). Near a whole
+ * item the bonus bar has the game's tolerance (`bonusBarTick`): within 0.0001 below it makes the item, and after an
+ * item a remainder under 0.001 is dropped; from 2 mining times it keeps the fraction of a mining time in its own units.
+ * Cases: `control-logic/drill/modes/drill-working-modes.test.ts`, `mining-progress.test.ts`; against the game,
+ * `tests/game/mechanics/drills` (0.0167 to 1.35 items a tick into a car and into a machine, built last, moved and
+ * circuit-disabled, one with productivity modules; the bonus bar set near a whole item on iron ore, scrap and tungsten
+ * ore) and the containers family's drill fills (200 a tick).
+ */
+export { MiningProgress } from "./control-logic/drill/modes/mining-progress";

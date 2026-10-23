@@ -182,6 +182,14 @@ describe('recoversOf', () => {
         expect(recoversOf(clock('c', { verdict: 'no recovery', brokenBy: ['coal stops arriving'] })).detail).toMatch(/^In the simulator, /);
     });
 
+    it('says why the recovery of a clock that holds could not be tried', () => {
+        const untried = clock('a');
+        untried.assessment.backpressure_loss = null;
+        untried.assessment.backpressure_loss_not_tried = 'A clock of 47.537 ticks does not repeat in whole ticks, so its output cannot be counted by the period';
+        expect(recoversOf(untried)).toEqual({ kind: 'not-tested', value: 'Unavailable',
+            detail: 'Recovery could not be tried in the simulator: A clock of 47.537 ticks does not repeat in whole ticks, so its output cannot be counted by the period.' });
+    });
+
     it('says not tested for a clock that does not hold its rate', () => {
         expect(recoversOf(clock('a', { verdict: 'unstable' }))).toMatchObject({ kind: 'not-tested', value: 'Not tested' });
     });

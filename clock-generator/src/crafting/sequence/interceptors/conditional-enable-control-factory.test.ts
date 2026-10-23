@@ -85,7 +85,6 @@ describe("ConditionalEnableControlFactory", () => {
             recipe: "iron-gear-wheel",
             productivity: 0,
             crafting_speed: 1,
-            type: "machine",
         });
         entityRegistry.add(sourceMachine);
         sourceMachineState = MachineState.forMachine(sourceMachine);
@@ -96,7 +95,6 @@ describe("ConditionalEnableControlFactory", () => {
             recipe: "transport-belt",
             productivity: 0,
             crafting_speed: 1,
-            type: "machine",
         });
         entityRegistry.add(sinkMachine);
         sinkMachineState = MachineState.forMachine(sinkMachine);

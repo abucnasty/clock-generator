@@ -6,7 +6,7 @@ import type {
     RuleSet,
     ValueReference,
 } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/light';
+import { ChestType, type BLOCKED_SLOT_MARKERS } from 'clock-generator/light';
 
 export interface MachineFormData {
     id: number;
@@ -16,10 +16,25 @@ export interface MachineFormData {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace' | 'biochamber';
-    /** Energy consumption effect in percent; only used by biochambers. */
+    /** Energy consumption effect in percent; only used by machines burning nutrients (biochambers). */
     energy_consumption_bonus?: number;
     fuel?: Config['machines'][number]['fuel'];
+    /**
+     * What the machine is ("electric-furnace"), shown as its icon; the engine works out how to simulate it from it. Sidecar
+     * exports it, it is chosen by hand, or picked for the recipe of a row without one
+     */
+    prototype?: string;
+    /** UI-only: where `prototype` came from, for its tooltip; none for a build file, a share link or an older saved build */
+    _prototype_source?: 'sidecar' | 'sample' | 'hand' | 'recipe';
+    quality?: Config['machines'][number]['quality'];
+    recipe_quality?: Config['machines'][number]['recipe_quality'];
+    /** Where it stands in the game; Sidecar exports it, nothing reads it */
+    position?: Config['machines'][number]['position'];
+}
+
+/** The icon of a machine: its prototype when the config has it, else an assembling machine's, as it is simulated */
+export function machineIconName(machine: Pick<MachineFormData, 'prototype'> | undefined): string {
+    return machine?.prototype ?? 'assembling-machine-3';
 }
 
 // Enable rule types come from the engine's config schema
@@ -55,6 +70,9 @@ export interface InserterFormData {
     /** How the game reads `filters`; a blacklist with filters is refused by the engine, so it is kept as captured */
     filter_mode?: Config['inserters'][number]['filter_mode'];
     overrides?: InserterOverrides;
+    /** Where it stands and the way it faces in the game; Sidecar exports them, nothing reads them */
+    position?: Config['inserters'][number]['position'];
+    direction?: Config['inserters'][number]['direction'];
     /** UI-only, never part of the exported config: set when Exclude from LCM forced this inserter's rule to ALWAYS
      *  (its items are all excluded), so that including one of them again may take that ALWAYS away. Replacing the
      *  rule clears it. */
@@ -110,8 +128,14 @@ export interface DrillFormData {
     type: 'electric-mining-drill' | 'burner-mining-drill' | 'big-mining-drill';
     mined_item_name: string;
     speed_bonus: number;
-    target: { type: 'machine'; id: number };
+    /** The drill's mining productivity in percent: the research and its productivity modules together */
+    productivity: number;
+    /** What it drops into: a machine, or a chest of any type (a car, a tank, a cargo wagon, a rocket silo), picked in one Target field */
+    target: { type: 'machine'; id: number } | { type: 'chest'; id: number };
     overrides?: DrillOverrides;
+    /** Where it stands and the way it faces in the game; Sidecar exports them, nothing reads them */
+    position?: { x: number; y: number };
+    direction?: number;
 }
 
 // Infinity chest filter for item_name + request_count pairs
@@ -120,9 +144,21 @@ export interface InfinityFilterFormData {
     request_count: number;
 }
 
+/** A car's, a tank's, a cargo wagon's or a rocket silo's settings, kept while the chest is switched to another type */
+export interface ContainerSettingsMemory {
+    slot_filters?: SlotFilterFormData[];
+    slot_contents?: SlotContentFormData[];
+    quality?: QualityName;
+    recipe_quality?: QualityName;
+    crafting_speed?: number;
+    productivity?: number;
+    silo_contents?: ItemCountFormData[];
+}
+
 /** Form-only settings retained while switching chest types; never sent to the backend. */
 interface ChestSettingsMemory {
-    _chest_settings?: { infinity_filters?: InfinityFilterFormData[]; remove_unfiltered_items?: boolean; buffer_filter?: string; storage_size?: number };
+    _chest_settings?: { infinity_filters?: InfinityFilterFormData[]; remove_unfiltered_items?: boolean; buffer_filter?: string; storage_size?: number;
+        container?: ContainerSettingsMemory };
 }
 
 // Buffer chest form data
@@ -133,6 +169,10 @@ export interface BufferChestFormData extends ChestSettingsMemory {
     _uuid: string;
     storage_size: number;
     item_filter: string;
+    /** The chest's prototype name ("steel-chest"); Sidecar exports it */
+    prototype?: string;
+    /** Where it stands in the game; Sidecar exports it, nothing reads it */
+    position?: { x: number; y: number };
 }
 
 // Infinity chest form data
@@ -143,10 +183,57 @@ export interface InfinityChestFormData extends ChestSettingsMemory {
     _uuid: string;
     item_filter: InfinityFilterFormData[];
     remove_unfiltered_items?: boolean;
+    /** Where it stands in the game; Sidecar exports it, nothing reads it */
+    position?: { x: number; y: number };
+}
+
+/**
+ * A car, a tank, a cargo wagon or a rocket silo, in the config's own shape: the form edits its fields and saves them as
+ * they are, leaving out only rows without an item
+ */
+type ChestConfig = NonNullable<Config['chests']>[number];
+type ContainerChestConfig = Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>;
+type ConfigSlotFilter = NonNullable<Extract<ContainerChestConfig, { slot_filters?: unknown }>['slot_filters']>[number];
+export type BlockedSlotMarker = typeof BLOCKED_SLOT_MARKERS[number];
+/** A slot filter as the form keeps it: a blocked slot remembers the marker painted on it, which the config leaves out */
+export type SlotFilterFormData = Exclude<ConfigSlotFilter, { blocked: true }> | (Extract<ConfigSlotFilter, { blocked: true }> & { _marker?: BlockedSlotMarker });
+type WithFormSlotFilters<T> = T extends { slot_filters?: unknown } ? Omit<T, 'slot_filters'> & { slot_filters?: SlotFilterFormData[] } : T;
+export type ContainerChestFormData = WithFormSlotFilters<ContainerChestConfig> & ChestSettingsMemory & { _uuid: string };
+export type SlotContainerFormData = Exclude<ContainerChestFormData, { type: typeof ChestType.ROCKET_SILO }>;
+export type RocketSiloFormData = Extract<ContainerChestFormData, { type: typeof ChestType.ROCKET_SILO }>;
+export type SlotContentFormData = NonNullable<SlotContainerFormData['contents']>[number];
+export type ItemCountFormData = NonNullable<RocketSiloFormData['contents']>[number];
+export type QualityName = NonNullable<RocketSiloFormData['recipe_quality']>;
+
+/** The qualities of the game, lowest first, with the names the player sees */
+export const QUALITIES: readonly { value: QualityName; label: string }[] = [
+    { value: 'normal', label: 'Normal' },
+    { value: 'uncommon', label: 'Uncommon' },
+    { value: 'rare', label: 'Rare' },
+    { value: 'epic', label: 'Epic' },
+    { value: 'legendary', label: 'Legendary' },
+];
+
+/** Every chest type, in the order the form offers them, with the name the player sees */
+export const CHEST_TYPE_LABELS: Record<ChestType, string> = {
+    [ChestType.BUFFER_CHEST]: 'Buffer chest',
+    [ChestType.INFINITY_CHEST]: 'Infinity chest',
+    [ChestType.CAR]: 'Car',
+    [ChestType.TANK]: 'Tank',
+    [ChestType.CARGO_WAGON]: 'Cargo wagon',
+    [ChestType.ROCKET_SILO]: 'Rocket silo',
+};
+export const CHEST_TYPES = Object.keys(CHEST_TYPE_LABELS) as ChestType[];
+/** The types that are not plain chests: a car, a tank, a cargo wagon and a rocket silo */
+export const CONTAINER_CHEST_TYPES = CHEST_TYPES.filter(type => type !== ChestType.BUFFER_CHEST && type !== ChestType.INFINITY_CHEST);
+
+/** The icon of a chest type: a buffer chest is drawn as a steel chest, the others as themselves */
+export function chestTypeIcon(type: ChestType | undefined): string {
+    return type === undefined || type === ChestType.BUFFER_CHEST ? 'steel-chest' : type;
 }
 
 // Discriminated union for chest types
-export type ChestFormData = BufferChestFormData | InfinityChestFormData;
+export type ChestFormData = BufferChestFormData | InfinityChestFormData | ContainerChestFormData;
 
 // Type guards - handle legacy data without type field (default to buffer chest)
 export function isBufferChest(chest: ChestFormData): chest is BufferChestFormData {
@@ -155,6 +242,27 @@ export function isBufferChest(chest: ChestFormData): chest is BufferChestFormDat
 
 export function isInfinityChest(chest: ChestFormData): chest is InfinityChestFormData {
     return chest.type === ChestType.INFINITY_CHEST;
+}
+
+export function isContainerChest(chest: ChestFormData): chest is ContainerChestFormData {
+    return !isBufferChest(chest) && !isInfinityChest(chest);
+}
+
+export function isRocketSilo(chest: ChestFormData): chest is RocketSiloFormData {
+    return chest.type === ChestType.ROCKET_SILO;
+}
+
+/** The items a car, a tank, a cargo wagon or a rocket silo names: what it starts with and what its slots are filtered to */
+export function containerItems(chest: ContainerChestFormData | Exclude<ChestConfig, { type: typeof ChestType.BUFFER_CHEST } | { type: typeof ChestType.INFINITY_CHEST }>): string[] {
+    const filtered = 'slot_filters' in chest ? (chest.slot_filters ?? []).flatMap(filter => filter.blocked ? [] : [filter.item]) : [];
+    return Array.from(new Set([...(chest.contents ?? []).map(content => content.item), ...filtered]));
+}
+
+/** The items a chest of a config names: a buffer chest's filter, an infinity chest's supplies, a container's items */
+export function chestConfigItems(chest: ChestConfig): string[] {
+    if (chest.type === ChestType.BUFFER_CHEST) return [chest.item_filter];
+    if (chest.type === ChestType.INFINITY_CHEST) return chest.item_filter.map(filter => filter.item_name);
+    return containerItems(chest);
 }
 
 /** The kinds of entity of the form, which number their entities each on their own */
@@ -172,7 +280,6 @@ export interface ConfigFormData {
     belts: BeltFormData[];
     chests: ChestFormData[];
     drills?: {
-        mining_productivity_level: number;
         configs: DrillFormData[];
     };
     overrides?: Config['overrides'];
@@ -191,6 +298,7 @@ export const createDefaultConfig = (): ConfigFormData => ({
             recipe: '',
             productivity: 0,
             crafting_speed: 1,
+            quality: 'normal',
         },
     ],
     inserters: [],

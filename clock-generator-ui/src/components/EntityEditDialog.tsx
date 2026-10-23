@@ -5,11 +5,7 @@ import {
     Dialog,
     DialogContent,
     DialogTitle,
-    FormControl,
     IconButton,
-    InputLabel,
-    MenuItem,
-    Select,
     Typography,
 } from '@mui/material';
 import { useId, useMemo, useState } from 'react';
@@ -24,9 +20,11 @@ import type {
     InserterFormData,
     MachineFormData,
 } from '../hooks/useConfigForm';
-import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
+import { isBufferChest, isContainerChest, isInfinityChest } from '../hooks/useConfigForm';
+import { chestTypeIcon } from '../utils/configForm/formData';
+import type { BufferChestFormData } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
-import { entityLabel } from '../utils/entityLabel';
+import { chestLabel, entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES } from '../utils/a11yLabels';
 import type { EntityClickType } from './ConfigFlowDiagram';
 import { BeltLaneFields, BeltStrategyField, ChestFields, EntityTypeField, MachineSettingsFields } from './EntityFields';
@@ -35,13 +33,18 @@ import { DraftFooter } from './DraftFooter';
 import { switchedChest } from '../utils/configForm/edits';
 import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS } from '../utils/inserterDraft';
 import { FactorioIcon } from './FactorioIcon';
+import { DrillTargetField } from './DrillTargetField';
+import type { DrillTargetBuild } from '../utils/drillTarget';
 import { OutputChestAlert } from './OutputChestAlert';
 import { ItemSelector } from './ItemSelector';
+import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
+import { recipePatch } from '../utils/machinePrototype';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { BELT_TYPES, DRILL_TYPES, entityTypeLabel } from './entityTypes';
 import { DROP_BELT_READ_ONLY, beltGeometryEditProblem, hasImportedBeltDrops } from '../utils/inserterMetadata';
+import { speedBonusOfPercent, speedBonusPercent } from '../utils/drillsSection';
 
 // ---- Props ----
 
@@ -58,7 +61,8 @@ export interface EntityEditDialogProps {
     recipeNames: string[];
     itemNames: string[];
     getRecipeInfo: (name: string) => RecipeInfo | null;
-    onUpdateMachine: (index: number, field: keyof MachineFormData, value: string | number) => void;
+    /** Saves a machine's edited fields as one edit; a field set to undefined is removed */
+    onPatchMachine: (index: number, patch: Partial<MachineFormData>) => void;
     onUpdateInserter: (index: number, updates: Partial<InserterFormData>) => void;
     onUpdateBelt: (index: number, updates: Partial<BeltFormData>) => void;
     onUpdateChest: (index: number, updates: Partial<ChestFormData>) => void;
@@ -76,17 +80,19 @@ export interface EntityEditDialogProps {
 function DrillEditSection({
     drill,
     entityIndex,
-    machines,
+    build,
+    getRecipeInfo,
     itemNames,
     onUpdate,
 }: {
     drill: DrillFormData;
     entityIndex: number;
-    machines: MachineFormData[];
+    build: DrillTargetBuild;
+    getRecipeInfo: (name: string) => RecipeInfo | null;
     itemNames: string[];
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
 }) {
-    const { itemLabel, recipeLabel } = useGameNames();
+    const { itemLabel } = useGameNames();
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <EntityTypeField label="Drill Type" value={drill.type} options={DRILL_TYPES}
@@ -102,33 +108,17 @@ function DrillEditSection({
             />
 
             <NumberField
-                label="Speed Bonus"
-                value={drill.speed_bonus}
-                onValueChange={(val) => onUpdate(entityIndex, { speed_bonus: val ?? 0 })}
+                label="Mining speed bonus (%)"
+                value={speedBonusPercent(drill.speed_bonus)}
+                onValueChange={(val) => onUpdate(entityIndex, { speed_bonus: speedBonusOfPercent(val ?? 0) })}
                 min={0}
-                step={0.1}
+                step={10}
                 defaultValue={0}
                 size="small"
             />
 
-            <FormControl size="small" fullWidth>
-                <InputLabel>Target Machine</InputLabel>
-                <Select
-                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
-                    value={drill.target.id}
-                    label="Target Machine"
-                    onChange={(e) => onUpdate(entityIndex, { target: { type: 'machine', id: Number(e.target.value) } })}
-                >
-                    {machines.map((m) => (
-                        <MenuItem key={m.id} value={m.id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={m.recipe || 'assembling-machine-3'} size={20} alt="" />
-                                {entityLabel('machine', m.id)}{m.recipe ? ` (${recipeLabel(m.recipe)})` : ''}
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
+            <DrillTargetField drill={drill} build={build} getRecipeInfo={getRecipeInfo} sx={{ width: '100%' }}
+                onChange={target => onUpdate(entityIndex, { target })} />
         </Box>
     );
 }
@@ -148,7 +138,7 @@ export function EntityEditDialog({
     recipeNames,
     itemNames,
     getRecipeInfo,
-    onUpdateMachine,
+    onPatchMachine,
     onUpdateInserter,
     onUpdateBelt,
     onUpdateChest,
@@ -183,7 +173,7 @@ export function EntityEditDialog({
                 const idx = chests.findIndex(c => c.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const c = chests[idx];
-                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: isInfinityChest(c) ? 'infinity-chest' : 'steel-chest' };
+                return { entity: c, entityIndex: idx, title: chestLabel(c), iconName: chestTypeIcon(c.type) };
             }
             case 'inserter': {
                 const idx = inserters.findIndex(i => i.id === entityId);
@@ -199,6 +189,7 @@ export function EntityEditDialog({
             }
         }
     }, [entityType, entityId, machines, inserters, belts, chests, drills]);
+    const drillTargetBuild = useMemo(() => ({ machines, belts, chests, inserters, drills: drills ?? [] }), [machines, belts, chests, inserters, drills]);
 
     const handleDelete = () => {
         if (entityIndex === -1) return;
@@ -223,6 +214,8 @@ export function EntityEditDialog({
     // Each opening starts from the current saved entity.
     const [inserterDirty, setInserterDirty] = useState(false);
     const [draft, setDraft] = useState(entity);
+    const craftingMachines = useCraftingMachines();
+    const machineRecipes = useMachineRecipeOptions(entityType === 'machine' ? (draft as MachineFormData | null)?.prototype : undefined, recipeNames);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [saveProblem, setSaveProblem] = useState<string | null>(null);
     // each opening gets a fresh panel: one reopened while the last closing fades out must not keep that draft
@@ -256,7 +249,14 @@ export function EntityEditDialog({
             case 'drill': return changedFields(draft as DrillFormData, entity as DrillFormData, DRILL_FIELDS);
             case 'chest': {
                 const chest = (value: ChestFormData) => ({ ...value, remove_unfiltered_items: isInfinityChest(value) ? value.remove_unfiltered_items : undefined, storage_size: isBufferChest(value) ? value.storage_size : undefined });
-                return changedFields(chest(draft as ChestFormData), chest(entity as ChestFormData), CHEST_FIELDS);
+                // a car, a tank, a wagon or a silo: every field it has, or the chest it was switched from had
+                if (isContainerChest(draft as ChestFormData) || isContainerChest(entity as ChestFormData)) {
+                    const keys = [...new Set([...Object.keys(draft), ...Object.keys(entity)])]
+                        .filter(key => key !== '_uuid' && key !== '_chest_settings') as (keyof ChestFormData)[];
+                    return changedFields(draft as ChestFormData, entity as ChestFormData, keys);
+                }
+                type Fields = Record<(typeof CHEST_FIELDS)[number], unknown>;
+                return changedFields(chest(draft as ChestFormData) as unknown as Fields, chest(entity as ChestFormData) as unknown as Fields, CHEST_FIELDS) as Partial<BufferChestFormData>;
             }
             default: return {};
         }
@@ -277,17 +277,19 @@ export function EntityEditDialog({
         }
         switch (entityType) {
             case 'machine':
-                for (const field of MACHINE_FIELDS) {
-                    if (field in edits) onUpdateMachine(entityIndex, field, (draft as MachineFormData)[field] ?? 'machine');
-                }
+                onPatchMachine(entityIndex, Object.fromEntries(MACHINE_FIELDS.filter(field => field in edits)
+                    .map(field => [field, (draft as MachineFormData)[field]])) as Partial<MachineFormData>);
                 break;
             case 'belt': onUpdateBelt(entityIndex, edits as Partial<BeltFormData>); break;
             case 'drill': onUpdateDrill?.(entityIndex, edits as Partial<DrillFormData>); break;
             case 'chest': {
                 const chest = draft as ChestFormData;
                 if (chest.type !== (entity as ChestFormData).type) onSwitchChestType(entityIndex, chest.type);
-                const rest = { ...edits } as Partial<ChestFormData>;
+                // a car, a tank, a wagon or a silo, or a chest switched to or from one, is saved as the draft has it
+                const container = isContainerChest(chest) || isContainerChest(entity as ChestFormData);
+                const rest = (container ? { ...chest } : { ...edits }) as Partial<ChestFormData>;
                 delete rest.type;
+                delete rest._uuid;
                 onUpdateChest(entityIndex, rest);
                 break;
             }
@@ -300,7 +302,7 @@ export function EntityEditDialog({
         recipe: machineEntity?.recipe ?? '',
         productivity: machineEntity?.productivity ?? 0,
         crafting_speed: machineEntity?.crafting_speed ?? 1,
-        type: machineEntity?.type,
+        prototype: machineEntity?.prototype,
     });
 
     return (
@@ -336,11 +338,12 @@ export function EntityEditDialog({
                     {draft && entityType === 'machine' && (
                         <Box sx={{ p: 2 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                <ItemSelector kind="recipe" options={recipeNames} value={(draft as MachineFormData).recipe || null}
-                                    onChange={value => updateDraft(entityIndex, { recipe: value || '' })}
+                                <ItemSelector kind="recipe" options={machineRecipes.options} searchOnlyIds={machineRecipes.searchOnly} value={(draft as MachineFormData).recipe || null}
+                                    onChange={value => updateDraft(entityIndex, recipePatch(draft as MachineFormData, value || '', craftingMachines))}
                                     label="Recipe" placeholder="Search recipes..." freeSolo />
                                 <MachineSettingsFields machine={draft as MachineFormData} dialog
-                                    onChange={(field, value) => updateDraft(entityIndex, { [field]: value })} />
+                                    onChange={(field, value) => updateDraft(entityIndex, { [field]: value })}
+                                    onPatch={patch => updateDraft(entityIndex, patch)} />
                             </Box>
                             {machineEntity?.recipe && (
                                 <MachineFactsAccordion machineId={entityId ?? 0} facts={machineFacts} error={machineFactsError} headingLevel={3} />
@@ -380,6 +383,7 @@ export function EntityEditDialog({
                             inserters={inserters}
                             belts={belts}
                             chests={chests}
+                            drills={drills}
                             itemNames={itemNames}
                             getRecipeInfo={getRecipeInfo}
                             onUpdate={onUpdateInserter}
@@ -392,7 +396,8 @@ export function EntityEditDialog({
                         <Box sx={{ p: 2 }}><DrillEditSection
                             drill={draft as DrillFormData}
                             entityIndex={entityIndex}
-                            machines={machines}
+                            build={drillTargetBuild}
+                            getRecipeInfo={getRecipeInfo}
                             itemNames={itemNames}
                             onUpdate={updateDraft}
                         /></Box>

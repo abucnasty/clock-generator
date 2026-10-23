@@ -1,4 +1,6 @@
+import path from "path";
 import {describe, expect, it} from "vitest";
+import {loadConfigFromFile} from "./loader";
 import {ConfigSchema} from "./schema";
 import {sidecarPickupInserters} from "./pickup-capture";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
@@ -49,6 +51,14 @@ describe("persistent pickup capture boundary", () => {
         const config = ConfigSchema.parse({...raw, sidecar_version: "0.11.0"});
         expect(config.inserters[0].source).toMatchObject({pickup_length: 0.5, pickup_capture: {status: "unclassified", reason: "legacy"}});
         expect(() => SimulationContext.fromConfig(config)).toThrow(/Update Sidecar and recapture/);
+    });
+
+    it("marks the legacy fixture's captures: none from an older Sidecar, and an underground one without its layout", async () => {
+        const config = await loadConfigFromFile(path.join(__dirname, "fixtures/legacy/pickup-without-capture.json"));
+        expect(config.inserters.map(inserter => inserter.source)).toMatchObject([
+            {pickup_length: 1, pickup_capture: {status: "unclassified", reason: "legacy", sidecar_version: "0.10.0"}},
+            {pickup_length: 0.5, pickup_layout: "side-entrance", pickup_capture: {status: "unclassified", reason: "layout-not-captured"}},
+        ]);
     });
 
     it("migrates pasted entries before defaults and gives an explicit warning precedence", () => {

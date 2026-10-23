@@ -1,7 +1,7 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { Config } from 'clock-generator/browser';
-import type { LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
+import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
@@ -10,7 +10,43 @@ import { buildValidationIssues } from '../utils/buildValidation';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
+it.each(['blocked', 'markers'] as const)('keeps blocked container slots through Sidecar paste (%s), save/reload and engine validation', async spelling => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    // Sidecar exports both game markers as blocked slots; an export of the 0.20.0 drafts named the marker as the item
+    const slot_filters = [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => spelling === 'blocked'
+        ? { slot: i + 2, blocked: true } : { slot: i + 2, item: i % 2 ? 'no-item' : 'deconstruction-planner' })];
+    const result = await send({ type: 'query', requestId: 200, query: {
+        kind: 'pasted-entities', sidecar_version: '0.12.0', suggested_target: undefined, drills: [], belts: [],
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
+        chests: [
+            { id: 1, type: 'car', slot_filters },
+            { id: 2, type: 'infinity-chest', item_filter: [{ item_name: 'iron-plate', request_count: 200 }] },
+            { id: 3, type: 'infinity-chest', remove_unfiltered_items: true },
+        ],
+        inserters: [
+            { id: 1, source: { type: 'chest', id: 2 }, sink: { type: 'chest', id: 1 }, prototype: 'stack-inserter', quality: 'legendary' },
+            { id: 2, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary' },
+            { id: 3, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 3 }, prototype: 'stack-inserter', quality: 'legendary' },
+        ],
+    } });
+    expect(result.type).toBe('answer');
+    const pasted = (result as { answer: PastedEntities }).answer;
+    const form = applyPaste(createDefaultConfig(), pasted, { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
+    const config = formDataToConfig(readSavedConfig(serializeConfig(form))!);
+    config.target_output = { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
+    expect(config.chests![0]).toEqual({ id: 1, type: 'car',
+        slot_filters: [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, blocked: true }))] });
+    expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
+});
+
 it('uses the real engine for typed Check/generation recovery and recomputed conversion, separating planning refusal from query failure', async () => {
+    vi.resetModules();
     const posted: WorkerResponse[] = [];
     const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
     vi.stubGlobal('self', port);
@@ -94,11 +130,11 @@ it('keeps a captured inserter kind, quality and filter mode through paste, save 
     await import('./simulation.worker');
     const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
     await send({ type: 'initialize', factorioData });
-    // A Sidecar 0.11.0 export: a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
+    // A Sidecar 0.12.0 export (its pickups captured as 0.11.0 captures them): a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
     const pickup = { type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
         entity_type: 'transport-belt', entity_name: 'turbo-transport-belt', sidecar_version: '0.11.0', model: 'belt', model_version: 2 } };
     const exported = (output: object, input: object = {}) => ({
-        kind: 'pasted-entities' as const, sidecar_version: '0.11.0', suggested_target: undefined, drills: [],
+        kind: 'pasted-entities' as const, sidecar_version: '0.12.0', suggested_target: undefined, drills: [],
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0, type: 'machine' }],
         inserters: [
             { source: pickup, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16, ...input },
@@ -114,7 +150,7 @@ it('keeps a captured inserter kind, quality and filter mode through paste, save 
         const pasted = (answer as { answer: PastedEntities }).answer;
         const form = applyPaste(createDefaultConfig(), pasted, { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
         const saved = readSavedConfig(serializeConfig(form))!;
-        expect(await send({ type: 'query', requestId: 51, query: { kind: 'saved-config', config: formDataToConfig(saved) } })).toMatchObject({ answer: null });
+        expect(await send({ type: 'query', requestId: 51, query: { kind: 'saved-config', config: formDataToConfig(saved) } })).toMatchObject({ answer: { problem: null } });
         const reloaded = configToFormData(formDataToConfig(saved));
         return { ...formDataToConfig(reloaded), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
     };
@@ -184,12 +220,12 @@ it('warns live of a belt pickup whose timing is not tested, as generation logs i
         return (answer as { answer: LiveCoverage }).answer;
     };
 
-    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null });
+    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, machinePrototypes: [] });
     const warning = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
     const untested = await live(gears(2));
-    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null });
+    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: untested.issues, scopeRefusal: untested.refusal, pickupNotTested: untested.pickupNotTested,
         chests: [], inserters: [], machines: gears(2).machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
@@ -228,10 +264,48 @@ it('warns live of a lane the copies would ask too much of if they shared it, as 
     const warning = 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
         + 'The config cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
         + 'belts of their own is not affected.';
-    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning });
+    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: live.issues, laneSharedByCopies: live.laneSharedByCopies,
         chests: [], inserters: [], machines: config.machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
         .toEqual([{ source: 'lanes', severity: 'warning', blocksGeneration: false, text: warning }]);
     expect(await send({ type: 'validate', requestId: 71, config })).toMatchObject({ type: 'validated' });
+});
+
+it("gives the crafting machines, fills a prototype's rule on import and paste, and warns live of a machine that cannot make its recipe", async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    const ask = async <K extends EngineQuery['kind']>(query: Extract<EngineQuery, { kind: K }>) =>
+        ((await send({ type: 'query', requestId: 70, query })) as unknown as { answer: EngineAnswers[K] }).answer;
+
+    const lookups = await ask({ kind: 'lookups' });
+    expect(lookups.craftingMachines.machines.map(machine => machine.name)).toContain('cryogenic-plant');
+    expect(lookups.craftingMachines.recipeCategories['lithium-plate']).toEqual(['smelting']);
+
+    const furnace = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' };
+    const config = {
+        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        machines: [furnace], inserters: [], belts: [],
+    };
+    // a former type is read as the machine, in a build file, a saved build and a paste from an older Sidecar
+    const typed = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, type: 'furnace' };
+    expect((await ask({ kind: 'config-file', config: { ...config, machines: [typed] } })).machines[0]).toEqual(furnace);
+    const saved = await ask({ kind: 'saved-config', config: { ...config, machines: [{ ...typed, _uuid: 'm' }, { ...furnace, id: 2, type: 'machine' }] } });
+    expect(saved.problem).toBeNull();
+    expect((saved.form as { machines: unknown[] }).machines).toEqual([{ ...furnace, _uuid: 'm', _prototype_source: 'recipe' }, { ...furnace, id: 2 }]);
+    const pasted = await ask({ kind: 'pasted-entities', machines: [typed, { ...furnace, id: 2 }], drills: [], inserters: [], belts: [], chests: [] } as Extract<EngineQuery, { kind: 'pasted-entities' }>);
+    expect(pasted.machines).toEqual([furnace, { ...furnace, id: 2 }]);
+    expect(pasted.picked_machines).toEqual([1]);
+
+    const live = await ask({ kind: 'inserter-coverage', config: { ...config, machines: [{ ...furnace, prototype: 'cryogenic-plant' }] } as Config });
+    expect(live.machinePrototypes.map(issue => issue.kind)).toEqual(['recipe-not-made']);
+    expect(buildValidationIssues({ fieldProblems: [], coverage: [], machinePrototypes: live.machinePrototypes, chests: [], inserters: [],
+        machines: [{ id: 1 }], chestIssues: [], coverageText: () => '' })
+        .map(({ source, severity, blocksGeneration, fieldTarget }) => ({ source, severity, blocksGeneration, fieldTarget })))
+        .toEqual([{ source: 'machine', severity: 'warning', blocksGeneration: false, fieldTarget: { kind: 'machine-recipe', machineId: 1 } }]);
 });

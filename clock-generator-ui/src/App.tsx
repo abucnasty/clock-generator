@@ -73,13 +73,15 @@ import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
-import { entityLabel } from './utils/entityLabel';
+import { chestLabel, entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
 import { createAppTheme } from './theme/theme';
 import { useResolvedColorScheme } from './hooks/useResolvedColorScheme';
 import { nextStepOf } from './utils/nextStep';
-import { itemName, recipeName, type GameNames } from './utils/gameNames';
+import { itemName, nameIdsInText, recipeName, type GameNames } from './utils/gameNames';
 import { GameNamesContext, SearchOnlyRecipesContext } from './hooks/useGameNames';
+import { CraftingMachinesContext } from './hooks/useCraftingMachines';
+import type { CraftingMachineData } from './worker/types';
 import { RuleTimingContext } from './components/RuleTimingContext';
 import { ruleTimingOf, type RuleTiming } from './utils/ruleTiming';
 import type { EntityKind } from './utils/configForm/formData';
@@ -120,13 +122,15 @@ function DisplayThemeProvider({ children }: { children: ReactNode }) {
 }
 
 /** The theme, the in-game names every picker and label reads, and the timing the rule editor checks a rule against */
-function PageProviders({ gameNames, searchOnlyRecipes, ruleTiming, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; ruleTiming: RuleTiming; children: ReactNode }) {
+function PageProviders({ gameNames, searchOnlyRecipes, craftingMachines, ruleTiming, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; craftingMachines: CraftingMachineData; ruleTiming: RuleTiming; children: ReactNode }) {
     return (
         <DisplayPreferencesProvider>
             <DisplayThemeProvider>
                 <GameNamesContext value={gameNames}>
                     <SearchOnlyRecipesContext value={searchOnlyRecipes}>
-                        <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+                        <CraftingMachinesContext value={craftingMachines}>
+                            <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+                        </CraftingMachinesContext>
                     </SearchOnlyRecipesContext>
                 </GameNamesContext>
             </DisplayThemeProvider>
@@ -145,6 +149,7 @@ function App() {
         resourceNames,
         itemNames,
         gameNames,
+        craftingMachines,
         logs,
         blueprintString,
         transferHistory,
@@ -201,6 +206,7 @@ function App() {
         updateInserters,
         addMachine,
         updateMachine,
+        patchMachine,
         removeMachine,
         addInserter,
         updateInserter,
@@ -212,7 +218,6 @@ function App() {
         updateChest,
         switchChestType,
         removeChest,
-        updateDrillsConfig,
         addDrill,
         updateDrill,
         removeDrill,
@@ -337,7 +342,6 @@ function App() {
     }, [initialize]);
 
     // Extract IDs for dropdown population
-    const machineIds = useMemo(() => config.machines.map((m) => m.id), [config.machines]);
 
     // All item ids (from recipes and resources), in the order of their in-game names
     const itemNamesComposite = useMemo(() => {
@@ -518,7 +522,8 @@ function App() {
             machines: config.machines,
             machinesMax,
         }),
-        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies, chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
+        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
+        machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
@@ -746,7 +751,7 @@ function App() {
             removeDrill: removal('drills', removeDrill),
             switchChestType: (index: number, type: ChestType, disposal = false) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type, disposal); },
             enableChestRemoval: (index: number) => {
-                offerUndo(form => `Enabled output removal for ${entityLabel('chest', form.chests[index].id)}.`);
+                offerUndo(form => `Enabled output removal for ${chestLabel(form.chests[index])}.`);
                 updateChest(index, { remove_unfiltered_items: true });
             },
         };
@@ -788,7 +793,7 @@ function App() {
         recipeNames,
         itemNames: itemNamesComposite,
         getRecipeInfo,
-        onUpdateMachine: updateMachine,
+        onPatchMachine: patchMachine,
         onUpdateInserter: updateInserter,
         onUpdateBelt: updateBelt,
         onUpdateChest: updateChest,
@@ -805,10 +810,6 @@ function App() {
         onAddChest: addChest,
         onAddDrill: addDrill,
     };
-    const updateMiningProductivityLevel = useCallback(
-        (value: number) => updateDrillsConfig('mining_productivity_level', value),
-        [updateDrillsConfig]
-    );
     const handleExcludeChange = useCallback((items: string[]) => {
         // an out-of-date plan numbers the inserters as they were, which a delete or reorder has since moved
         if (validation.status === 'valid' && checkStatus === 'valid') {
@@ -818,8 +819,8 @@ function App() {
         }
     }, [validation, checkStatus, updateIgnoredIngredients]);
 
-    const handleImportConfig = useCallback((imported: Config) => {
-        importConfig(imported);
+    const handleImportConfig = useCallback((imported: Config, prototypeSource?: 'sample') => {
+        importConfig(imported, prototypeSource);
     }, [importConfig]);
 
     // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown. The
@@ -1055,7 +1056,7 @@ function App() {
 
     return (
         <BuildSectionsContext value={sectionContext}>
-        <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} ruleTiming={ruleTiming}>
+        <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} craftingMachines={craftingMachines} ruleTiming={ruleTiming}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', pb: { xs: 'calc(72px + env(safe-area-inset-bottom))', sm: 'calc(48px + env(safe-area-inset-bottom))' } }}>
                 <AppBar position="sticky" ref={headerRef}>
@@ -1204,6 +1205,7 @@ function App() {
                                             recipeNames={recipeNames}
                                             onAdd={addMachine}
                                             onUpdate={updateMachine}
+                                            onPatch={patchMachine}
                                             onRemove={undoable.removeMachine}
                                             onReorder={undoable.reorderMachines}
                                             onDuplicate={duplicate.machines}
@@ -1242,6 +1244,7 @@ function App() {
                                             machines={config.machines}
                                             belts={config.belts}
                                             chests={config.chests}
+                                            drills={drillConfigs}
                                             itemNames={itemNamesComposite}
                                             getRecipeInfo={getRecipeInfo}
                                             onAdd={addInserter}
@@ -1270,11 +1273,13 @@ function App() {
 
                                 {/* outside the toggle: the diagram does not show the drills' settings */}
                                 <DrillsForm
-                                    miningProductivityLevel={config.drills?.mining_productivity_level ?? 0}
                                     drills={drillConfigs}
                                     resourceNames={resourceNames}
-                                    machineIds={machineIds}
-                                    onUpdateProductivityLevel={updateMiningProductivityLevel}
+                                    machines={config.machines}
+                                    belts={config.belts}
+                                    chests={config.chests}
+                                    inserters={config.inserters}
+                                    getRecipeInfo={getRecipeInfo}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={undoable.removeDrill}

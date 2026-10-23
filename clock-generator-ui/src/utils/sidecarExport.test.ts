@@ -32,7 +32,7 @@ describe('readSidecarExport', () => {
         expect(problemOf(JSON.stringify({ target_output: { recipe: 'iron-gear-wheel' }, machines: [machine] }))).toBe('build-file');
     });
 
-    it('reads the full export, with drills as { mining_productivity_level, configs }', () => {
+    it('reads the full export of an older sidecar, its mining productivity level as each drill\'s productivity', () => {
         const read = readSidecarExport(JSON.stringify({
             sidecar_version: '0.7.0',
             suggested_target: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1 },
@@ -46,8 +46,7 @@ describe('readSidecarExport', () => {
             kind: 'export',
             legacy: false,
             machines: [machine],
-            drills: [{ id: 1 }],
-            miningProductivityLevel: 3,
+            drills: [{ id: 1, productivity: 30 }],
             inserters: [inserter],
             belts: [],
             chests: [{ id: 1 }],
@@ -56,10 +55,15 @@ describe('readSidecarExport', () => {
         });
     });
 
-    it('reads drills given as a bare list, without a mining level', () => {
-        const read = readSidecarExport(JSON.stringify({ machines: [machine], drills: [{ id: 1 }, { id: 2 }] }));
-        expect(read.kind === 'export' && read.drills).toHaveLength(2);
-        expect(read.kind === 'export' && read.miningProductivityLevel).toBeUndefined();
+    it('reads each drill\'s own productivity', () => {
+        const read = readSidecarExport(JSON.stringify({ sidecar_version: '0.12.0', machines: [machine],
+            drills: { configs: [{ id: 1, productivity: 82 }, { id: 2, productivity: 490 }] } }));
+        expect(read.kind === 'export' && read.drills).toEqual([{ id: 1, productivity: 82 }, { id: 2, productivity: 490 }]);
+    });
+
+    it('reads drills given as a bare list, without a mining level, at productivity 0', () => {
+        const read = readSidecarExport(JSON.stringify({ machines: [machine], drills: [{ id: 1 }, { id: 2, productivity: 10 }] }));
+        expect(read.kind === 'export' && read.drills).toEqual([{ id: 1, productivity: 0 }, { id: 2, productivity: 10 }]);
     });
 
     it('counts a list that is not an array as empty', () => {

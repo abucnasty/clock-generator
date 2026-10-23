@@ -194,7 +194,6 @@ const LABEL_KINDS: Record<string, LabelKind> = {
     furnace: 'machine',
     inserter: 'inserter',
     belt: 'belt',
-    chest: 'chest',
     drill: 'drill',
 };
 

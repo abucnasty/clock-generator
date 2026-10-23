@@ -16,8 +16,9 @@ import { TimelinePauses } from './TimelinePauses';
 import { EntitySelector } from './EntitySelector';
 import { entitySelectorKey, type EntitySelectorOption } from '../utils/entitySelector';
 import { configToFormData } from '../utils/configForm/configMapping';
+import { chestConfigItems } from '../utils/configForm/formData';
 import { entityOptionsOf } from '../utils/inserterOptions';
-import { entityLabel } from '../utils/entityLabel';
+import { entityLabelIn } from '../utils/entityLabel';
 import { craftingCycles, craftingCycleAt, craftingCycleIndex, craftingCycleRange } from '../utils/craftingCycles';
 import { CraftingCycleNavigator } from './CraftingCycleNavigator';
 
@@ -50,14 +51,14 @@ function entityOptions(config: Config | null | undefined, clock: ClockAlternativ
     });
     for (const machine of config?.machines ?? []) entities.set(`machine:${machine.id}`, { ...entities.get(`machine:${machine.id}`), id: `machine:${machine.id}`, type: 'machine', recipe: machine.recipe, items: entities.get(`machine:${machine.id}`)?.items ?? [], signals: [] });
     for (const belt of config?.belts ?? []) entities.set(`belt:${belt.id}`, { id: `belt:${belt.id}`, type: 'belt', items: belt.lanes.map(lane => lane.ingredient), signals: [] });
-    for (const chest of config?.chests ?? []) entities.set(`chest:${chest.id}`, { id: `chest:${chest.id}`, type: 'chest', items: typeof chest.item_filter === 'string' ? [chest.item_filter] : chest.item_filter.map(filter => filter.item_name), signals: [] });
+    for (const chest of config?.chests ?? []) entities.set(`chest:${chest.id}`, { id: `chest:${chest.id}`, type: 'chest', items: chestConfigItems(chest), signals: [] });
     for (const [index, inserter] of (config?.inserters ?? []).entries()) {
         const id = `inserter:${inserter.id ?? index + 1}`;
         if (!entities.has(id)) entities.set(id, { id, type: 'inserter', source: `${inserter.source.type}:${inserter.source.id}`, sink: `${inserter.sink.type}:${inserter.sink.id}`, items: inserter.filters ?? [], signals: [] });
     }
     for (const drill of config?.drills?.configs ?? []) {
         const id = `drill:${drill.id}`;
-        if (!entities.has(id)) entities.set(id, { id, type: 'drill', sink: `machine:${drill.target.id}`, items: [drill.mined_item_name], signals: [] });
+        if (!entities.has(id)) entities.set(id, { id, type: 'drill', sink: `${drill.target.type}:${drill.target.id}`, items: [drill.mined_item_name], signals: [] });
     }
     return [...entities.values()].sort((a, b) => a.type.localeCompare(b.type) || Number(a.id.split(':')[1]) - Number(b.id.split(':')[1]));
 }
@@ -101,10 +102,10 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const options = useMemo(() => entityOptions(props.config, props.selected), [props.config, props.selected]);
     const identities = useMemo(() => {
         const form = props.config ? configToFormData(props.config) : null;
-        return new Map((form ? entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel }) : []).map(option => [entitySelectorKey(option), option]));
+        return new Map((form ? entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel }, { drills: form.drills?.configs }) : []).map(option => [entitySelectorKey(option), option]));
     }, [props.config, itemLabel, recipeLabel]);
     const selectorOptions = useMemo(() => options.map((entity): EntitySelectorOption => identities.get(entity.id) ?? {
-        type: entity.type, id: Number(entity.id.split(':')[1]), label: entityLabel(entity.type, Number(entity.id.split(':')[1])),
+        type: entity.type, id: Number(entity.id.split(':')[1]), label: entityLabelIn(props.config?.chests, entity.type, Number(entity.id.split(':')[1])),
         icon: entity.type === 'inserter' ? props.config?.inserters?.find((ins, index) => (ins.id ?? index + 1) === Number(entity.id.split(':')[1]))?.prototype ?? 'stack-inserter'
             : entity.type === 'drill' ? 'electric-mining-drill' : entity.type === 'chest' ? 'steel-chest' : 'assembling-machine-3',
         sublabel: entity.recipe ? recipeLabel(entity.recipe) : undefined,

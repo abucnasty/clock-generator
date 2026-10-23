@@ -12,8 +12,9 @@ local export = {}
 ---@param target InserterTargetRef|nil The target reference with type and unit_number
 ---@param result ExtractionResult The extraction result containing ID mappings
 ---@param is_sink boolean Whether the inserter drops into the target
+---@param options ExportOptions|nil
 ---@return table|nil config The resolved target config with type and id, or nil when the inserter is left out
-local function resolve_target_id(target, result, is_sink)
+local function resolve_target_id(target, result, is_sink, options)
     if not target then
         return nil
     end
@@ -33,11 +34,12 @@ local function resolve_target_id(target, result, is_sink)
     end
     
     if not target_id then
-        -- An output belt or chest is often empty when selected, so it is not exported and has no id. The inserter that
-        -- drops into it is kept, pointing at the first belt or chest: it is the build's output, and a recording is
-        -- matched to its config by the type of what an inserter drops into, not by its id. Any other end without an id
-        -- (an empty belt or chest to take from, a machine that is not exported such as a lab) leaves the inserter out.
-        if not (is_sink and (target.type == "belt" or target.type == "chest")) then
+        -- An end without an id (an empty belt or chest, a machine that is not exported such as a lab, anything outside
+        -- the selection) leaves the inserter out: pointing it at belt, chest or machine 1 would name some other entity.
+        -- Only the recorder keeps an inserter that drops onto an empty belt or into an empty chest: an output belt is
+        -- often empty when a build is recorded, and a recording is matched to its config by the type of what an
+        -- inserter drops into, never by its id (ExportOptions).
+        if not (options and options.keep_unexported_sinks and is_sink and (target.type == "belt" or target.type == "chest")) then
             return nil
         end
         target_id = 1
@@ -68,14 +70,18 @@ end
 
 -- Main Export Function
 
+---@class ExportOptions
+---@field keep_unexported_sinks boolean|nil For the recorder only: keep an inserter that drops onto a belt or into a chest that is not exported, pointing it at belt or chest 1. The sidecar never sets it.
+
 ---Inserters that end up in the exported config, paired with their config id (index + 1 in export order)
 ---@param result ExtractionResult
+---@param options ExportOptions|nil
 ---@return {id: number, inserter: InserterData, source: table, sink: table}[]
-function export.exported_inserters(result)
+function export.exported_inserters(result, options)
     local exported = {}
     for _, inserter in ipairs(result.inserters) do
-        local source_config = resolve_target_id(inserter.source, result, false)
-        local sink_config = resolve_target_id(inserter.sink, result, true)
+        local source_config = resolve_target_id(inserter.source, result, false, options)
+        local sink_config = resolve_target_id(inserter.sink, result, true, options)
         -- Only include inserter if both source and sink are known
         if source_config and sink_config then
             table.insert(exported, {
@@ -92,14 +98,62 @@ end
 ---Inserters that are left out of the exported config, each with the end it is left out for: the pickup when that has
 ---no id, else the drop. The target is nil when the sidecar has no type for what is at that end (the ground, a wagon).
 ---@param result ExtractionResult
+---@param options ExportOptions|nil
 ---@return {inserter: InserterData, pickup: boolean, target: InserterTargetRef|nil}[]
-function export.left_out_inserters(result)
+function export.left_out_inserters(result, options)
     local left_out = {}
     for _, inserter in ipairs(result.inserters) do
-        if not resolve_target_id(inserter.source, result, false) then
+        if not resolve_target_id(inserter.source, result, false, options) then
             table.insert(left_out, { inserter = inserter, pickup = true, target = inserter.source })
-        elseif not resolve_target_id(inserter.sink, result, true) then
+        elseif not resolve_target_id(inserter.sink, result, true, options) then
             table.insert(left_out, { inserter = inserter, pickup = false, target = inserter.sink })
+        end
+    end
+    return left_out
+end
+
+---What a drill drops into, as the config's target: an exported machine, else an exported chest; nil when neither, or
+---when what it mines is not known
+---@param drill DrillData
+---@param result ExtractionResult
+---@return {type: "machine"|"chest", id: number}|nil
+function export.drill_target(drill, result)
+    local unit_number = drill.drop_target_unit_number
+    if not unit_number or not drill.mined_item_name then
+        return nil
+    end
+    local machine_id = result.unit_number_to_id[unit_number]
+    if machine_id then
+        return { type = "machine", id = machine_id }
+    end
+    local chest_id = result.chest_unit_number_to_id[unit_number]
+    if chest_id then
+        return { type = "chest", id = chest_id }
+    end
+    return nil
+end
+
+---Where an entity stands, as a plain {x, y} for the JSON (the clock generator keeps it for tools; nothing reads it); nil
+---for an entity no longer valid
+---@param entity LuaEntity|nil
+---@return {x: number, y: number}|nil
+function export.position_of(entity)
+    if not entity or not entity.valid then
+        return nil
+    end
+    return { x = entity.position.x, y = entity.position.y }
+end
+
+---Drills that are left out of the exported config: the ones that drop into nothing the export has (the ground, or an
+---entity that is not exported), each with the name of what it drops into, nil for the ground, and the ones whose
+---resource is not known (`no_resource`)
+---@param result ExtractionResult
+---@return {drill: DrillData, target_name: string|nil, no_resource: boolean}[]
+function export.left_out_drills(result)
+    local left_out = {}
+    for _, drill in ipairs(result.drills) do
+        if not export.drill_target(drill, result) then
+            table.insert(left_out, { drill = drill, target_name = drill.drop_target_name, no_resource = drill.mined_item_name == nil })
         end
     end
     return left_out
@@ -114,14 +168,14 @@ end
 
 ---Convert extraction result to a clock-generator compatible config table
 ---@param result ExtractionResult
+---@param options ExportOptions|nil
 ---@return table
-function export.to_table(result)
+function export.to_table(result, options)
     local output = {
         -- lets the clock generator tell when the mod is too old to export everything it can use
         sidecar_version = script.active_mods["clock-generator-sidecar"],
         machines = {},
         drills = {
-            mining_productivity_level = result.mining_productivity_level,
             configs = {}
         },
         inserters = {},
@@ -138,8 +192,12 @@ function export.to_table(result)
             recipe = machine.recipe,
             crafting_speed = machine.crafting_speed,
             productivity = machine.productivity,
-            type = machine.type,
-            energy_consumption_bonus = machine.energy_consumption_bonus
+            energy_consumption_bonus = machine.energy_consumption_bonus,
+            position = export.position_of(machine.entity),
+            -- what the machine is: the generator works out how to simulate it from the prototype, and shows its icon
+            prototype = machine.name,
+            quality = machine.quality,
+            recipe_quality = machine.recipe_quality
         })
     end
     
@@ -160,33 +218,28 @@ function export.to_table(result)
         })
     end
     
-    -- Format drills for clock-generator (different schema)
-    for i, drill in ipairs(result.drills) do
-        -- Look up the target machine ID from the unit_number mapping
-        local target_machine_id = 1 -- Default fallback (must be >0)
-        if drill.drop_target_unit_number then
-            local mapped_id = result.unit_number_to_id[drill.drop_target_unit_number]
-            if mapped_id then
-                target_machine_id = mapped_id
-            end
+    -- Format drills for clock-generator (different schema): a drill whose drop target is neither an exported machine
+    -- nor an exported chest is left out (export.left_out_drills), as the clock generator needs what it drops into
+    for _, drill in ipairs(result.drills) do
+        local target = export.drill_target(drill, result)
+        if target then
+            table.insert(output.drills.configs, {
+                id = #output.drills.configs + 1,
+                type = drill.drill_type,
+                mined_item_name = drill.mined_item_name,
+                speed_bonus = drill.speed_bonus,
+                productivity = drill.productivity,
+                target = target,
+                position = export.position_of(drill.entity),
+                direction = drill.entity.valid and drill.entity.direction or nil
+            })
         end
-        
-        table.insert(output.drills.configs, {
-            id = i,
-            type = drill.drill_type,
-            mined_item_name = drill.mined_item_name,
-            speed_bonus = drill.speed_bonus,
-            target = {
-                type = "machine",
-                id = target_machine_id
-            }
-        })
     end
     
     -- Capture diagnostics stay outside the simulator config and refer to exported inserter IDs.
     local pickup_warnings = {}
     -- Format inserters for clock-generator
-    for _, exported in ipairs(export.exported_inserters(result)) do
+    for _, exported in ipairs(export.exported_inserters(result, options)) do
         local inserter = exported.inserter
         local inserter_export = {
             source = exported.source,
@@ -195,7 +248,9 @@ function export.to_table(result)
             -- inserter but the legendary stack inserter. Without them it would run every inserter as that one.
             prototype = inserter.inserter_type,
             quality = inserter.quality,
-            stack_size = inserter.stack_size
+            stack_size = inserter.stack_size,
+            position = export.position_of(inserter.entity),
+            direction = inserter.entity.valid and inserter.entity.direction or nil
         }
 
         -- Only the filters set on the inserter itself are exported. Which items it moves is worked out by the
@@ -234,7 +289,28 @@ function export.to_table(result)
                 id = i,
                 -- Missing filters default to [] in the config; avoid ambiguous JSON for an empty Lua table.
                 item_filter = #filters > 0 and filters or nil,
-                remove_unfiltered_items = chest.remove_unfiltered_items == true
+                remove_unfiltered_items = chest.remove_unfiltered_items == true,
+                position = chest.position
+            })
+        elseif chest.chest_type == "rocket-silo" then
+            table.insert(output.chests, {
+                type = "rocket-silo",
+                id = i,
+                recipe_quality = chest.recipe_quality,
+                crafting_speed = chest.crafting_speed,
+                productivity = chest.productivity,
+                contents = #chest.contents > 0 and chest.contents or nil,
+                position = chest.position,
+            })
+        elseif chest.chest_type == "car" or chest.chest_type == "tank" or chest.chest_type == "cargo-wagon" then
+            -- a car's or a tank's quality does not change its slots: only a wagon's is exported
+            table.insert(output.chests, {
+                type = chest.chest_type,
+                id = i,
+                quality = chest.chest_type == "cargo-wagon" and chest.quality or nil,
+                slot_filters = #chest.slot_filters > 0 and chest.slot_filters or nil,
+                contents = #chest.contents > 0 and chest.contents or nil,
+                position = chest.position,
             })
         else
             -- Buffer chest format
@@ -242,7 +318,9 @@ function export.to_table(result)
                 type = "buffer-chest",
                 id = i,
                 storage_size = chest.storage_size,
-                item_filter = chest.item_filter
+                item_filter = chest.item_filter,
+                prototype = chest.name,
+                position = chest.position
             })
         end
     end

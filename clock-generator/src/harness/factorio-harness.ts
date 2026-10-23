@@ -5,6 +5,7 @@ import net from "net";
 import os from "os";
 import path from "path";
 import zlib from "zlib";
+import { ClockGeneratorTags } from "../blueprints/components";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import { Config } from "../config";
 import { ClockSchedule } from "../crafting/blueprint";
@@ -19,6 +20,8 @@ const RCON_READY = "Starting RCON interface";
 const POLL_INTERVAL_MS = 100;
 /** The tag of a schedule combinator in the clock blueprint the mod builds: the config ids of the inserters it enables */
 const INSERTERS_TAG = "clock_generator_inserters";
+/** The tag of a window combinator for drills: the config ids of the drills it enables, read off its "Drill N for" description */
+const DRILLS_TAG = "clock_generator_drills";
 
 /**
  * The most ticks one run in Factorio may record: 20 minutes of game time. It keeps the game-backed tests and
@@ -106,6 +109,12 @@ export interface HarnessOptions {
     unclocked: boolean;
     surface?: string;
     position?: { x: number; y: number };
+    /**
+     * The resource the harness creates under every mining drill of the blueprint before it builds it, as a drill is only
+     * built on its ore and the save may have none there. Absent, it is what the config's drills mine when they all mine
+     * one; a blueprint with drills that mine more than one is refused.
+     */
+    drill_resource?: string;
     /** Lua run right before the recording starts, as a chunk called with (entities, surface, area) */
     lua?: string;
     /** Scratch folder for Factorio's write data; a temporary folder that is removed afterwards when absent */
@@ -292,17 +301,24 @@ function decodeBlueprintString(blueprint: string): any {
 
 /**
  * A generated clock given only as a blueprint string, as `npm run record -- --clock=` takes it, with its schedule read
- * back from the descriptions of its combinators: "Inserters 1, 2 for ..." names the inserters one enables, and the
- * clock is the decider described as "Clock for ..." (see clockPeriodTicks). A clock from the generator itself comes
- * with its schedule (BlueprintGenerationResult.schedule) and needs none of this.
+ * back from its combinators: the inserters each enables from its tags (ClockGeneratorTags), or, in a string from before
+ * the tags, from its description ("Inserters 1, 2 for ..."); the clock is the decider described as "Clock for ..." (see
+ * clockPeriodTicks). A clock from the generator itself comes with its schedule (BlueprintGenerationResult.schedule) and
+ * needs none of this.
  */
 export function clockOfBlueprintString(blueprint: string): GeneratedClock {
     const counted_ticks = clockPeriodTicks(blueprint);
     if (counted_ticks === null) {
         throw new Error("The clock blueprint has no clock the generator made: no decider described as \"Clock for ...\" that counts a period");
     }
-    const entities: { entity_number: number; player_description?: string }[] = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    const entities: { entity_number: number; player_description?: string; tags?: { clock_generator?: ClockGeneratorTags } }[] =
+        decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    const tagged = entities.some(entity => entity.tags?.clock_generator !== undefined);
     const inserter_combinators = entities.flatMap(entity => {
+        if (tagged) {
+            const inserter_ids = entity.tags?.clock_generator?.inserters ?? [];
+            return inserter_ids.length > 0 ? [{ entity_number: entity.entity_number, inserter_ids }] : [];
+        }
         const named = /^Inserters? ([\d, ]+) for/.exec(entity.player_description ?? "");
         return named ? [{ entity_number: entity.entity_number, inserter_ids: named[1].split(",").map(id => Number(id.trim())) }] : [];
     });
@@ -321,8 +337,10 @@ function clockPeriodOf(schedule: ClockSchedule): number {
 }
 
 /**
- * The clock blueprint with each schedule combinator tagged with the config ids of the inserters it enables. The mod
- * reads the tags off the ghosts it builds the clock from, to wire each combinator to its inserters.
+ * The clock blueprint with each schedule combinator tagged with the config ids of the inserters it enables, and each
+ * window combinator of drills with the config ids of those (its `clock_generator.drills` tag: the schedule lists
+ * inserters only). The mod reads the tags off the ghosts it builds the clock from, to wire each combinator to its
+ * inserters and drills.
  */
 function withInserterTags(clock: GeneratedClock): string {
     const file = decodeBlueprintString(clock.blueprint);
@@ -332,8 +350,40 @@ function withInserterTags(clock: GeneratedClock): string {
         if (ids !== undefined) {
             entity.tags = { ...entity.tags, [INSERTERS_TAG]: ids };
         }
+        const drill_ids = scheduledDrillIdsOf(entity);
+        if (drill_ids.length > 0) {
+            entity.tags = { ...entity.tags, [DRILLS_TAG]: drill_ids };
+        }
     }
     return encodeBlueprintFile(file);
+}
+
+/**
+ * The config ids of the drills a combinator of a clock enables: its `clock_generator.drills` tag, or, in a string from
+ * before the tags, its description ("Drills 1, 2 for ...")
+ */
+function scheduledDrillIdsOf(entity: { player_description?: string; tags?: { clock_generator?: ClockGeneratorTags } }): number[] {
+    if (entity.tags?.clock_generator !== undefined) {
+        return entity.tags.clock_generator.drills ?? [];
+    }
+    const named = /^Drills? ([\d, ]+) for/.exec(entity.player_description ?? "");
+    return named ? named[1].split(",").map(id => Number(id.trim())) : [];
+}
+
+/** The mod wires a clocked drill to the build's one mining drill: a clock that enables drills needs a config with one */
+function assertDrillsWireable(clock: GeneratedClock, config: Config): void {
+    const drill_ids = scheduledDrillIds(clock.blueprint);
+    const config_ids = (config.drills?.configs ?? []).map(drill => drill.id);
+    if (drill_ids.length > 0 && (config_ids.length !== 1 || drill_ids.some(id => id !== config_ids[0]))) {
+        throw new Error(`The clock enables drills ${drill_ids.join(", ")} and the config has drills ${config_ids.join(", ") || "none"}: `
+            + "the harness wires a clocked drill only in a build with one drill");
+    }
+}
+
+/** Config drill ids the window combinators of a clock blueprint enable */
+export function scheduledDrillIds(blueprint: string): number[] {
+    const entities: { player_description?: string; tags?: { clock_generator?: ClockGeneratorTags } }[] = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    return Array.from(new Set(entities.flatMap(scheduledDrillIdsOf))).sort((a, b) => a - b);
 }
 
 /** The build as a recording without samples, matched to the config by structure, as a recording is */
@@ -601,6 +651,18 @@ type SessionOptions = Pick<HarnessOptions, "factorio" | "save" | "work_dir" | "w
 type BuildOptions = Omit<HarnessOptions, "factorio" | "save" | "work_dir" | "watch" | "watch_debug">;
 
 /** Throws when the build cannot be recorded as asked. Nothing of the game is needed to tell */
+/** The resource to put under the blueprint's drills: as asked, else the one the config's drills mine */
+export function drillResourceOf(options: Pick<BuildOptions, "drill_resource" | "config">): string | undefined {
+    if (options.drill_resource !== undefined) {
+        return options.drill_resource;
+    }
+    const mined = new Set((options.config?.drills?.configs ?? []).map(drill => drill.mined_item_name));
+    if (mined.size > 1) {
+        throw new Error(`The config's drills mine ${Array.from(mined).sort().join(", ")}: the harness puts one resource under its drills, so pass drill_resource`);
+    }
+    return mined.size === 1 ? Array.from(mined)[0] : undefined;
+}
+
 function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
@@ -773,6 +835,7 @@ export class HarnessSession {
             clock: replaces_clock ? "remove" : "keep",
             warmup_ticks: options.warmup_ticks,
             speed: options.game_speed,
+            drill_resource: drillResourceOf(options),
         });
         const not_built = Object.values<string>(build.failed);
         if (not_built.length > 0) {
@@ -805,6 +868,7 @@ export class HarnessSession {
             if (not_in_config.length > 0) {
                 throw new Error(missingFromConfigMessage(not_in_config));
             }
+            assertDrillsWireable(options.clock, options.config);
             clock = { blueprint: withInserterTags(options.clock), inserters: Object.fromEntries(unit_numbers) };
         }
 
@@ -817,7 +881,8 @@ export class HarnessSession {
             record: { ticks: options.ticks },
         });
         if (start.clock) {
-            options.log(`Wired the clock to ${Object.values(start.clock.wired).length} inserters`);
+            options.log(`Wired the clock to ${Object.values(start.clock.wired).length} inserters`
+                + (Object.values(start.clock.wired_drills ?? {}).length > 0 ? ` and ${Object.values(start.clock.wired_drills).length} drill` : ""));
         }
         for (const seeded of Object.values<any>(start.seeds)) {
             options.log(`Seeded ${seeded.inserted} ${seeded.item} into ${seeded.entities} entities`);
@@ -863,6 +928,7 @@ export class HarnessSession {
                 clock: "remove",
                 warmup_ticks: staged.trial_build_ticks ?? 900,
                 speed: options.game_speed,
+                drill_resource: drillResourceOf(options),
             });
             await this.waitFor("the trial build", deadline, status => status.ready);
             const described = await this.call("harness_describe");
@@ -896,6 +962,7 @@ export class HarnessSession {
                 if (not_in_config.length > 0) {
                     throw new Error(missingFromConfigMessage(not_in_config));
                 }
+                assertDrillsWireable(options.clock, options.config);
             }
             position = trial.origin;
             const cleared = await this.call("harness_clear");
@@ -909,6 +976,7 @@ export class HarnessSession {
             position,
             clock: replaces_clock ? "remove" : "keep",
             speed: options.game_speed,
+            drill_resource: drillResourceOf(options),
             staged: { saturation_ticks: staged.saturation_ticks, cap_ticks: staged.saturation_cap_ticks },
         });
         const not_built = Object.values<string>(build.failed);
@@ -944,7 +1012,9 @@ export class HarnessSession {
             options.log(`Built inserter ${placed.config_id !== undefined ? `of config id ${placed.config_id}` : "not in the config"} at (${placed.x}, ${placed.y}) of the blueprint: unit_number ${placed.unit_number}, tick ${placed.tick}`);
         }
         if (start.clock) {
-            options.log(`Wired the clock to ${Object.values(start.clock.wired).length} inserters in tick ${start.staged.tick}`);
+            options.log(`Wired the clock to ${Object.values(start.clock.wired).length} inserters`
+                + (Object.values(start.clock.wired_drills ?? {}).length > 0 ? ` and ${Object.values(start.clock.wired_drills).length} drill` : "")
+                + ` in tick ${start.staged.tick}`);
         }
         for (const seeded of Object.values<{ unit_number: number; item: string; inserted: number }>(start.loop_seeds ?? {})) {
             options.log(`Seeded ${seeded.inserted} ${seeded.item} into the machine with unit number ${seeded.unit_number} (a loop)`);

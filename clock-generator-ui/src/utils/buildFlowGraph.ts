@@ -2,11 +2,11 @@ import { effectiveInserterStackSize } from './inserterMetadata';
 import dagre from '@dagrejs/dagre';
 import { MarkerType, type Node, type Edge } from '@xyflow/react';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
-import { isBufferChest } from '../hooks/useConfigForm';
+import { containerItems, isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { describeEnableRule } from './enableRuleLabel';
-import { entityLabel } from './entityLabel';
-import { inferInserterItems } from './inferInserterItems';
+import { chestLabel, entityLabel, entityLabelIn } from './entityLabel';
+import { drillItemsInto, inferInserterItems } from './inferInserterItems';
 import { assignFlowPorts } from './flowRouting';
 
 // The sizes the nodes are drawn at (the components use the widths) and the layout places them by: the layout's must be
@@ -34,7 +34,7 @@ export type MachineNodeParams = {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace' | 'biochamber';
+    prototype?: string;
 };
 
 export type EntityNodeData = {
@@ -257,7 +257,7 @@ export function buildFlowGraph(
                     recipe: machine.recipe || '',
                     productivity: machine.productivity,
                     crafting_speed: machine.crafting_speed,
-                    type: machine.type,
+                    prototype: machine.prototype,
                 },
                 detailed: detailMode,
                 verticalHandles: in_loop,
@@ -282,19 +282,23 @@ export function buildFlowGraph(
         if (isBufferChest(chest)) {
             iconName = 'steel-chest';
             filterIcons = chest.item_filter ? [chest.item_filter] : undefined;
-        } else {
+        } else if (isInfinityChest(chest)) {
             iconName = 'infinity-chest';
             const items = chest.item_filter.map(f => f.item_name).filter(Boolean);
+            filterIcons = items.length > 0 ? items : undefined;
+        } else {
+            iconName = chest.type;
+            const items = [...new Set([...containerItems(chest), ...drillItemsInto(chest.id, drills)])];
             filterIcons = items.length > 0 ? items : undefined;
         }
         pushEntityNode({
             entityType: 'chest',
             entityId: chest.id,
-            label: entityLabel('chest', chest.id),
+            label: chestLabel(chest),
             iconName,
             filterIcons,
-            ...(!isBufferChest(chest) && chest.remove_unfiltered_items && { sublabel: filterIcons?.length ? 'Removes unfiltered items' : 'Removes all incoming items' }),
-        }, !isBufferChest(chest) && chest.remove_unfiltered_items ? 'removes unfiltered incoming items' : filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
+            ...(isInfinityChest(chest) && chest.remove_unfiltered_items && { sublabel: filterIcons?.length ? 'Removes unfiltered items' : 'Removes all incoming items' }),
+        }, isInfinityChest(chest) && chest.remove_unfiltered_items ? 'removes unfiltered incoming items' : filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
     });
 
     // --- Inserter nodes + edges ---
@@ -306,7 +310,7 @@ export function buildFlowGraph(
         // Derive displayed items: explicit filters first, then auto-infer from source/sink
         const inferred = inserter.filters && inserter.filters.length > 0
             ? inserter.filters
-            : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
+            : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo, inserters, undefined, drills);
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         const rule = describeEnableRule(inserter.overrides?.enable_control, { forcedAlways: inserter._forced_always });
         const height = Math.max(nodeHeight, INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT));
@@ -317,7 +321,7 @@ export function buildFlowGraph(
         drawn.set(inserterNodeId, { w: width, h: height });
         const label = entityLabel('inserter', inserter.id);
         const items = listText(filterIcons, itemLabel);
-        const route = `from ${entityLabel(inserter.source.type, inserter.source.id)} to ${entityLabel(inserter.sink.type, inserter.sink.id)}`;
+        const route = `from ${entityLabelIn(chests, inserter.source.type, inserter.source.id)} to ${entityLabelIn(chests, inserter.sink.type, inserter.sink.id)}`;
         nodes.push({
             id: inserterNodeId,
             type: 'inserterNode',
@@ -350,7 +354,8 @@ export function buildFlowGraph(
     // --- Drill nodes + edges ---
     (drills ?? []).forEach(drill => {
         const drillNodeId = flowNodeId('drill', drill.id);
-        const targetNodeId = flowNodeId('machine', drill.target.id);
+        // into a machine, or into a chest (the half it is given to, when the chest is on a loop)
+        const targetNodeId = endNodeId(drill.target, 'out');
         g.setNode(drillNodeId, { width: DRILL_NODE_WIDTH, height: Math.max(nodeHeight, DRILL_NODE_HEIGHT) });
         drawn.set(drillNodeId, { w: DRILL_NODE_WIDTH, h: Math.max(nodeHeight, DRILL_NODE_HEIGHT) });
         nodes.push({

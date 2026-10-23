@@ -1,4 +1,5 @@
 import { Box } from '@mui/material';
+import { Block } from '@mui/icons-material';
 import { useState } from 'react';
 import { useGameNames } from '../hooks/useGameNames';
 import { nameWithId } from '../utils/gameNames';
@@ -26,6 +27,11 @@ export function FactorioIcon({ name, size = 24, alt, titled = false, fallback = 
     // Normalize the name to match icon file naming convention
     const iconName = name.toLowerCase().replace(/_/g, '-');
     const iconPath = `/icons/${iconName}.png`;
+    // No item is a blocking marker. Render it inline so every picker can show it without a game sprite.
+    if (iconName === 'no-item') {
+        return <Block titleAccess={alt === '' ? undefined : titled ? nameWithId(label, name) : alt ?? label}
+            aria-hidden={alt === '' ? true : undefined} sx={{ width: size, height: size, flexShrink: 0 }} />;
+    }
     if (failedPath === iconPath) return <>{fallback}</>;
 
     return (

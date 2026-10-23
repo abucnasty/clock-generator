@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fitPlayerDescription, MAX_PLAYER_DESCRIPTION_BYTES } from "./player-description";
+import { fitPlayerDescription, MAX_PLAYER_DESCRIPTION_BYTES, wasCut } from "./player-description";
 
 const bytes = (text: string) => new TextEncoder().encode(text).length;
 
@@ -38,5 +38,12 @@ describe("fitPlayerDescription", () => {
 
     it("takes the limit it is given", () => {
         expect(fitPlayerDescription(["abcdef", "ghijkl"], 10)).toBe("abcdef\n...");
+    });
+});
+
+describe("wasCut", () => {
+    it("tells a cut description from one that fit", () => {
+        expect(wasCut(fitPlayerDescription(["abcdef", "ghijkl"], 10))).toBe(true);
+        expect(wasCut(fitPlayerDescription(["abcdef", "ghijkl"]))).toBe(false);
     });
 });

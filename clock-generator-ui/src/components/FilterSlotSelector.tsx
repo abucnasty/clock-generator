@@ -63,6 +63,9 @@ export function FilterSlotSelector({ priority, filters,
                 </Tooltip>;
             })}
         </Box>
+        {automatic && inferredFilters.length === 0 && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            No items inferred. Choose an item to set an explicit filter.
+        </Typography>}
         {automatic && inferredFilters.length > maxSlots && <Typography variant="caption" color="text.secondary">+{inferredFilters.length - maxSlots} inferred items</Typography>}
         {anchor && active !== null && <FilterItemPicker anchor={anchor} label="Choose an inserter filter" initialItem={displayed[active]}
             itemNames={itemNames} priority={priority} onClose={close}

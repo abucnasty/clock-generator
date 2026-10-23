@@ -10,7 +10,7 @@
       "recipe": "stone-brick",
       "productivity": 50,
       "crafting_speed": 91.875,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     }
   ],
   "inserters": [
@@ -48,13 +48,13 @@
   ],
   "chests": [],
   "drills": {
-    "mining_productivity_level": 8000,
     "configs": [
       {
         "id": 1,
         "type": "electric-mining-drill",
         "mined_item_name": "stone",
         "speed_bonus": 19.0575,
+        "productivity": 80000,
         "target": {
           "type": "machine",
           "id": 1

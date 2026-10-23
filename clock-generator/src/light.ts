@@ -7,7 +7,7 @@
  * browser.test.ts keeps it small.
  */
 
-export { ChestType } from "./common/entity-types";
+export { ChestType, chestName } from "./common/entity-types";
 
 export {
     EnableControlMode,
@@ -19,6 +19,10 @@ export {
 } from "./common/enable-control-types";
 
 export { EntityType } from "./entities/entity-type";
+
+export { MachineType } from "./entities/machine/machine-type";
+export { machineRuleOfPrototype, machineCanMake, machineForRecipe, machineForRule } from "./entities/machine/machine-rule";
+export type { CraftingMachineRuleFacts, NamedCraftingMachine } from "./entities/machine/machine-rule";
 
 export { InserterStatus, MachineStatus, DrillStatus } from "./state/entity-status";
 
@@ -33,6 +37,8 @@ export { Option } from "./data-types/option";
 export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-value";
 export { fraction } from "./data-types/fraction";
 export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
+export { BLOCKED_SLOT_MARKERS } from "./config/migrate-blocked-slots";
+export { migrateMiningProductivityLevel, PRODUCTIVITY_PER_MINING_LEVEL } from "./config/migrate-mining-productivity";
 
 export { BELT_PICKUP_LAYOUTS, BELT_PICKUP_LAYOUT_LABELS, pickupLengthForLayout } from "./common/belt-pickup-layout";
 export type { BeltPickupLayout } from "./common/belt-pickup-layout";

@@ -1,5 +1,6 @@
 import { FactorioDataService } from "../data/factorio-data-service";
-import { BurnerEnergySource, MachineType } from "../entities";
+import { BurnerEnergySource } from "../entities";
+import { machineRuleOf } from "./machine-prototype";
 import { effectiveHandSize } from "../entities/inserter/inserter";
 import { configuredHandSize } from "../entities/inserter/metadata/inserter-spec";
 import type { Logger } from "../common/logger";
@@ -33,7 +34,7 @@ function sinkTakes(config: Config, inserter: InserterConfig, item: string): bool
     if (sink.type === "machine") {
         const machine = config.machines.find(it => it.id === sink.id);
         if (machine === undefined) return false;
-        const burner = BurnerEnergySource.forMachineType(machine.type ?? MachineType.MACHINE);
+        const burner = BurnerEnergySource.forMachineType(machineRuleOf(machine));
         return FactorioDataService.findRecipeOrThrow(machine.recipe).ingredients.some(it => it.name === item)
             || (burner !== undefined && BurnerEnergySource.selectFuel(burner, machine.fuel).item_name === item);
     }

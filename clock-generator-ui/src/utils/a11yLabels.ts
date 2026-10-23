@@ -6,12 +6,12 @@
 
 /** The names of the dropdowns, each containing the visible label so a voice user can say what they see ("type") */
 export const SELECT_NAMES = {
-    machineType: 'Machine type',
+    machinePrototype: 'Machine',
+    machineQuality: 'Machine quality',
     beltType: 'Belt type',
     beltStrategy: 'Belt strategy',
     chestType: 'Chest type',
     drillType: 'Drill type',
-    targetMachine: 'Target machine',
     quickTemplates: 'Quick templates',
     comparisonOperator: 'Comparison operator',
     valueType: 'Value type',

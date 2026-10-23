@@ -1,4 +1,4 @@
-import { FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualitySpec, Recipe, Resource, ResourceName } from "./factorio-data-types";
+import { ContainerPrototype, CraftingMachinePrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
 
@@ -121,6 +121,12 @@ export class FactorioDataService {
 
     public static readonly DEFAULT_ENERGY_REQUIRED = 0.5
 
+    /** The recipe of that name as the data holds it; null when there is none (own keys only) */
+    public static findRecipe(recipeName: string): Recipe | null {
+        const recipes = this.getData().recipe;
+        return Object.prototype.hasOwnProperty.call(recipes, recipeName) ? recipes[recipeName] : null;
+    }
+
     public static findRecipeOrThrow(recipeName: string): EnrichedRecipe {
         const recipe = this.getData().recipe[recipeName]
 
@@ -200,6 +206,73 @@ export class FactorioDataService {
         return qualities[name];
     }
 
+    /** The container prototype of that name (a car, a tank, a cargo wagon); an unknown name is refused */
+    public static findContainerOrThrow(name: string): ContainerPrototype {
+        const containers = this.getData().container;
+        if (!Object.prototype.hasOwnProperty.call(containers, name)) {
+            throw new Error(`${name} is not a container of the game data`);
+        }
+        return containers[name];
+    }
+
+    /**
+     * The slots of a container of that prototype and quality: its inventory size, times the quality's cargo wagon
+     * multiplier where the prototype lets quality change it (exact at every quality of 2.1.21: 40, 50, 60, 70, 100)
+     */
+    public static containerSlots(name: string, quality: QualityName): number {
+        const container = this.findContainerOrThrow(name);
+        this.findQualityOrThrow(quality);
+        if (!container.quality_affects_inventory_size) {
+            return container.inventory_size;
+        }
+        const multiplier = this.getData().quality_inventory[quality]?.cargo_wagon_inventory_size_multiplier ?? 1;
+        return Math.floor(container.inventory_size * multiplier);
+    }
+
+    /** The rocket silo prototype of that name; an unknown name is refused */
+    public static findRocketSiloOrThrow(name: string): RocketSiloPrototype {
+        const silos = this.getData().rocket_silo;
+        if (!Object.prototype.hasOwnProperty.call(silos, name)) {
+            throw new Error(`${name} is not a rocket silo of the game data`);
+        }
+        return silos[name];
+    }
+
+    /** The crafting machine prototype of that name (an assembling machine or a furnace); null when the data has none */
+    public static findCraftingMachine(name: string): CraftingMachinePrototype | null {
+        const machines = this.getData().crafting_machine ?? {};
+        return Object.prototype.hasOwnProperty.call(machines, name) ? machines[name] : null;
+    }
+
+    /**
+     * The game's English name of an item, fluid or entity id ("Iron plate", "Cargo wagon"); for an id the data does not
+     * name, the id with its first letter upper case and its dashes as spaces
+     */
+    public static itemDisplayName(id: string): string {
+        const names = this.getData().names?.item ?? {};
+        return Object.prototype.hasOwnProperty.call(names, id) ? names[id] : displayNameOfId(id);
+    }
+
+    /** The game's English name of a recipe id, else of the item of that id, else as `itemDisplayName` makes it */
+    public static recipeDisplayName(id: string): string {
+        const names = this.getData().names?.recipe ?? {};
+        return Object.prototype.hasOwnProperty.call(names, id) ? names[id] : this.itemDisplayName(id);
+    }
+
+    /** Every crafting machine prototype of the data, in its order */
+    public static getAllCraftingMachines(): CraftingMachinePrototype[] {
+        return Object.values(this.getData().crafting_machine ?? {});
+    }
+
+    /** An item's weight as the game holds it; an item without one is refused */
+    public static itemWeightOrThrow(item: ItemName): number {
+        const weights = this.getData().item_weight;
+        if (!Object.prototype.hasOwnProperty.call(weights, item)) {
+            throw new Error(`Item ${item} has no weight in the game data`);
+        }
+        return weights[item];
+    }
+
     /** What all the technologies together add to the hand of an inserter */
     public static inserterResearch(): InserterResearch {
         return this.getData().inserter_research;
@@ -211,4 +284,10 @@ export class FactorioDataService {
         return resource;
     }
 
+}
+
+/** "iron-plate" as "Iron plate": the name of an id the data does not name */
+function displayNameOfId(id: string): string {
+    const words = id.replace(/-/g, " ");
+    return words.charAt(0).toUpperCase() + words.slice(1);
 }

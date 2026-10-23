@@ -63,10 +63,10 @@ describe('buildChangesOf', () => {
         expect(changes((config) => edits.updateOverrides(config, 'lcm', 120))).toEqual(['Advanced Overrides']);
     });
 
-    it('names the mining productivity level', () => {
-        const generated = { ...form(), drills: { mining_productivity_level: 0, configs: [] } };
-        expect(buildChangesOf(formDataToConfig(generated), formDataToConfig(edits.updateDrillsConfig(generated, 'mining_productivity_level', 3))))
-            .toEqual(['Mining productivity level (0 → 3)']);
+    it('names the drill whose productivity changed', () => {
+        const generated = edits.addDrill(form());
+        expect(buildChangesOf(formDataToConfig(generated), formDataToConfig(edits.updateDrill(generated, 0, { productivity: 30 }))))
+            .toEqual(['Drill 1']);
     });
 
     it('lists the changes in the form\'s order, the same each time', () => {

@@ -6,6 +6,7 @@ import { EntityId } from "../entity-id";
 import { CraftingRate } from "../machine/traits";
 import { MiningProductivity } from "./mining-productivity";
 import { fraction } from "../../data-types/fraction";
+import { Percentage } from "../../data-types";
 import { ProductionRate } from "../machine";
 
 // Re-export for backwards compatibility
@@ -28,7 +29,7 @@ export interface MiningDrill extends Entity, MiningProductivity, MiningDrillOutp
 }
 
 function create(args: {
-    productivity: MiningProductivity,
+    productivity: Percentage,
     id: number,
     type: MiningDrillType,
     resource: Resource,
@@ -37,7 +38,7 @@ function create(args: {
     sink_id: EntityId
 }): MiningDrill {
     return {
-        productivity: args.productivity.productivity,
+        productivity: args.productivity,
         entity_id: EntityId.forDrill(args.id),
         meta: {
             type: args.type,
@@ -69,7 +70,8 @@ function createCraftingRate(
 }
 
 
-function createFromConfig(mining_prod: MiningProductivity, config: MiningDrillConfig): MiningDrill {
+/** A drill as its config gives it, with its own productivity (`config.productivity`, in percent) */
+function createFromConfig(config: MiningDrillConfig): MiningDrill {
 
     const resource: Resource = FactorioDataService.getResourceOrThrow(config.mined_item_name)
 
@@ -81,16 +83,17 @@ function createFromConfig(mining_prod: MiningProductivity, config: MiningDrillCo
         config.speed_bonus,
     )
 
-    const production_rate = ProductionRate.fromCraftingRate(resource.minable.result, crafting_rate, mining_prod.productivity)
+    const productivity = new Percentage(config.productivity)
+    const production_rate = ProductionRate.fromCraftingRate(resource.minable.result, crafting_rate, productivity)
 
     return create({
-        productivity: mining_prod,
+        productivity,
         id: config.id,
         type: config.type,
         resource: resource,
         crafting_rate: crafting_rate,
         production_rate: production_rate,
-        sink_id: EntityId.forMachine(config.target.id)
+        sink_id: config.target.type === "chest" ? EntityId.forChest(config.target.id) : EntityId.forMachine(config.target.id)
     })
 }
 

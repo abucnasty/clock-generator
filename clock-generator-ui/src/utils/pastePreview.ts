@@ -61,21 +61,21 @@ export function pastePreview(current: ConfigFormData, incoming: PastedEntities, 
 
 /** Apply the exact preview policy as one edit, leaving retained form rows and their UI identity untouched. */
 export function applyPaste(current: ConfigFormData, incoming: PastedEntities, selections: ImportSelections,
-    target?: TargetValues, miningProductivityLevel?: number): ConfigFormData {
+    target?: TargetValues): ConfigFormData {
     const replacing = (category: PasteCategory) => replacesCategory(incoming, selections, category);
     const withUuid = <T,>(row: T) => ({ ...row, _uuid: crypto.randomUUID() });
     return {
         ...current,
         target_output: selections.target && target ? target : current.target_output,
-        machines: replacing('machines') ? incoming.machines.map(withUuid) : current.machines,
+        machines: replacing('machines')
+            ? incoming.machines.map(row => withUuid({ ...row, ...(row.prototype !== undefined
+                && { _prototype_source: incoming.picked_machines?.includes(row.id) ? 'recipe' as const : 'sidecar' as const }) }))
+            : current.machines,
         inserters: replacing('inserters')
             ? incoming.inserters.map((row, index) => withUuid({ ...row, id: row.id ?? index + 1 }))
             : current.inserters,
         belts: replacing('belts') ? incoming.belts.map(withUuid) : current.belts,
         chests: replacing('chests') ? incoming.chests.map(withUuid) : current.chests,
-        ...(replacing('drills') && { drills: {
-            mining_productivity_level: miningProductivityLevel ?? current.drills?.mining_productivity_level ?? 0,
-            configs: incoming.drills.map(withUuid),
-        } }),
+        ...(replacing('drills') && { drills: { configs: incoming.drills.map(withUuid) } }),
     };
 }

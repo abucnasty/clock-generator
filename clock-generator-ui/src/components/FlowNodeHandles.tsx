@@ -1,13 +1,12 @@
-import { useEffect } from 'react';
-import { Handle, Position, useNodeId, useUpdateNodeInternals, type Node } from '@xyflow/react';
+import { Handle, Position, type Node } from '@xyflow/react';
 import type { FlowPort } from '../utils/flowRouting';
 
-/** Existing connections get their own port; unused sides still accept new editor connections. */
+/**
+ * Existing connections get their own port; unused sides still accept new editor connections. The diagram tells React
+ * Flow when they move (useFlowPortUpdates), for all nodes in one update.
+ */
 export function FlowNodeHandles({ data }: { data: Node['data'] }) {
     const ports = (data.routePorts as FlowPort[] | undefined) ?? [];
-    const nodeId = useNodeId();
-    const updateNodeInternals = useUpdateNodeInternals();
-    useEffect(() => { if (nodeId) updateNodeInternals(nodeId); }, [nodeId, data.routePorts, updateNodeInternals]);
     const entity = 'entityType' in data, drill = 'drillId' in data;
     const defaults: (Omit<FlowPort, 'id'> & { id?: string })[] = [];
     if ((!entity || data.half !== 'in') && !drill) defaults.push({ type: 'target', id: data.vertical ? 'in' : undefined,

@@ -49,12 +49,22 @@ export function recipesMaking(config: Config, item: string): Set<string> {
     return new Set(config.machines.filter(machine => Machine.fromConfig(machine).output.item_name === item).map(machine => machine.recipe));
 }
 
-/** The inserters that take the product out of the build: from a machine with one of the recipes into a chest or onto a belt */
+/**
+ * The inserters that take the product out of the build: from a machine with one of the recipes into a chest or onto a
+ * belt, or, where those put it into a container that other inserters take it from onto a belt or into a chest, those
+ * (as the generator's output path, `outputPathOf`, has them). An infinity chest is a sink, not such a container.
+ */
 export function outputInserters(recording: Recording, recipes: Iterable<string>): RecordedInserter[] {
     const names = new Set(recipes);
     const making = new Set(recording.machines.filter(machine => names.has(machine.recipe)).map(machine => machine.id));
-    return recording.inserters.filter(inserter =>
+    const feeders = recording.inserters.filter(inserter =>
         inserter.source.type === "machine" && making.has(inserter.source.id) && inserter.sink.type !== "machine");
+    const chests = Object.values((recording.config as { chests?: Record<string, { id: number; type: string }> | { id: number; type: string }[] }).chests ?? {});
+    const infinity = new Set(chests.filter(chest => chest.type === "infinity-chest").map(chest => chest.id));
+    const containers = new Set(feeders.filter(inserter => inserter.sink.type === "chest" && !infinity.has(inserter.sink.id)).map(inserter => inserter.sink.id));
+    const takers = recording.inserters.filter(inserter =>
+        inserter.source.type === "chest" && containers.has(inserter.source.id) && inserter.sink.type !== "machine");
+    return takers.length > 0 ? takers : feeders;
 }
 
 /**

@@ -38,11 +38,16 @@ export class ChestPickupLogic implements InserterTransferLogic {
      * Order of filtered items matters for inserter pickups from a chest, at least for the simulation.
      */
     private pickupFromChest(state: InserterState, source: ChestState): void {
-        const first_available_item = Array.from(state.inserter.filtered_items).find(it => {
-            return source.getCurrentQuantity(it) > 0
-                && canPickupItem(this.inserterState, it)
-                && canPickupItemForSink(this.sinkEntityState, it);
-        })
+        const takes = (it: string) => source.getCurrentQuantity(it) > 0
+            && canPickupItem(this.inserterState, it)
+            && canPickupItemForSink(this.sinkEntityState, it);
+        // a chest of mixed items gives the item of its last slot that the inserter takes, and to a hand that holds some
+        // only more of that item (the game: a hand of 5 iron waited for iron beside a stack of copper); the others leave
+        // the order to the inserter's items
+        const held = state.held_item;
+        const first_available_item = EntityState.isSlotContainer(source) || EntityState.isRocketSilo(source)
+            ? source.nextPickupItem(it => state.inserter.filtered_items.has(it) && takes(it) && (held === null || held.item_name === it))
+            : Array.from(state.inserter.filtered_items).find(takes);
 
         if (!first_available_item) {
             return;

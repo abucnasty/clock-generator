@@ -38,7 +38,7 @@ function outputRateOf(machine: MachineConfiguration): number | null {
             recipe: machine.recipe,
             productivity: machine.productivity,
             crafting_speed: machine.crafting_speed,
-            type: machine.type,
+            prototype: machine.prototype,
             energy_consumption_bonus: machine.energy_consumption_bonus,
             fuel: machine.fuel,
         }).output_rate_per_second;

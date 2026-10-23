@@ -1,5 +1,6 @@
 import type { Config } from 'clock-generator/browser';
-import { entityLabel, type LabelKind } from './entityLabel';
+import type { ChestType } from 'clock-generator/light';
+import { entityLabelIn, type LabelKind } from './entityLabel';
 
 /** A rate or count as the sentences print it: at most two decimals, no trailing zeros */
 const figure = (value: number) => Number(value.toFixed(2)).toString();
@@ -40,13 +41,15 @@ function entityChanges(kind: LabelKind, many: string, generated: { id?: number }
     if (ids.length === 0) {
         return null;
     }
-    return ids.length === 1 ? entityLabel(kind, ids[0]) : `${many} ${ids.join(', ')}`;
+    // a chest by what it is: "Car 1"
+    const chests = kind === 'chest' ? current.map((entity, i) => ({ ...(entity as { type?: ChestType }), id: entity.id ?? i + 1 })) : undefined;
+    return ids.length === 1 ? entityLabelIn(chests, kind, ids[0]) : `${many} ${ids.join(', ')}`;
 }
 
 /**
  * What changed in the build since the clocks were made for `generated`, in the form's words and in the form's order:
  * "Recipe (logistic-science-pack → automation-science-pack)", "Items per second (240 → 200)", "Copies (1 → 2)", then
- * per kind of entity, the drills' productivity level, the belt answer, the deeper search, the other overrides, and
+ * per kind of entity (a drill's productivity is its own), drills turned on or off, the belt answer, the deeper search, the other overrides, and
  * "other settings" for anything else. `recipeLabel` gives a recipe's game name.
  */
 export function buildChangesOf(generated: Config, current: Config, recipeLabel: (id: string) => string = (id) => id): string[] {
@@ -68,11 +71,7 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
             changes.push(change);
         }
     }
-    const levelBefore = generated.drills?.mining_productivity_level ?? 0;
-    const levelAfter = current.drills?.mining_productivity_level ?? 0;
-    if (levelBefore !== levelAfter) {
-        changes.push(`Mining productivity level (${levelBefore} → ${levelAfter})`);
-    } else if (Boolean(generated.drills) !== Boolean(current.drills) && !changes.some((it) => it.startsWith('Drills'))) {
+    if (Boolean(generated.drills) !== Boolean(current.drills) && !changes.some((it) => it.startsWith('Drills'))) {
         changes.push(`Mining drills (${onOff(Boolean(generated.drills))} → ${onOff(Boolean(current.drills))})`);
     }
     if (beltsText(generated) !== beltsText(current)) {

@@ -14,6 +14,58 @@ local extraction = {}
 
 -- Individual Entity Extractors
 
+---The entity types a drill's drop can go into that the export has a type for: crafting machines and chests
+local DRILL_SINK_TYPES = {
+    "assembling-machine", "furnace", "rocket-silo",
+    "container", "logistic-container", "linked-container", "infinity-container", "car", "cargo-wagon",
+}
+
+---The one resource a drill can mine in its area, when the game has not told which it mines (`mining_target` is nil
+---until the drill first mines, and a drill built or fast-replaced next to a full container may not mine for a long
+---time); nil when its area holds none it can mine, or more than one kind
+---@param entity LuaEntity
+---@return string|nil
+local function resource_under(entity)
+    local prototype = entity.prototype
+    local radius = prototype.get_mining_drill_radius(entity.quality)
+    local categories = prototype.resource_categories or {}
+    local at = entity.position
+    local found = nil
+    for _, resource in pairs(entity.surface.find_entities_filtered({
+        area = { { at.x - radius, at.y - radius }, { at.x + radius, at.y + radius } },
+        type = "resource",
+    })) do
+        if categories[resource.prototype.resource_category] then
+            if found and found ~= resource.name then
+                return nil
+            end
+            found = resource.name
+        end
+    end
+    return found
+end
+
+---How far into the tile under a drill's drop position an entity's collision box has to reach for the drill to drop into
+---it: 12/256 of a tile, on every side of the tile (11/256 gets nothing), for a car and a tank, the drill facing each way
+---(Factorio 2.1.21)
+local DROP_TILE_REACH = 12 / 256
+
+---The machines and chests a drill drops into by the game's rule, when the game has not told (`drop_target` is nil until
+---the drill first drops): the entities whose collision box reaches DROP_TILE_REACH into the tile under its drop position.
+---Measured for a chest, a car and a tank at three orientations, a cargo wagon, a rocket silo and a furnace
+---@param entity LuaEntity
+---@return LuaEntity[]
+local function drop_candidates(entity)
+    local drop = entity.drop_position
+    local x, y = math.floor(drop.x), math.floor(drop.y)
+    local reach = DROP_TILE_REACH
+    -- the search takes a box that touches the area's edge too: one that reaches exactly as far is found
+    return entity.surface.find_entities_filtered({
+        area = { { x + reach, y + reach }, { x + 1 - reach, y + 1 - reach } },
+        type = DRILL_SINK_TYPES,
+    })
+end
+
 ---Extract data from a mining drill
 ---@param entity LuaEntity
 ---@return DrillData|nil
@@ -22,32 +74,40 @@ local function extract_mining_drill_data(entity)
         return nil
     end
 
-    -- Get what the drill is mining
+    -- What the drill is mining; nil when the game has not told and its area does not (the export leaves it out)
     local mining_target = entity.mining_target
-    if not mining_target then
-        return nil
-    end
+    local mined_item_name = mining_target and mining_target.name or resource_under(entity)
 
+    -- the force's mining productivity research and the drill's productivity modules together: what its bonus bar uses
     local total_productivity = entity.productivity_bonus or 0
 
     -- Speed bonus from modules/beacons (this is what clock-generator expects)
     local speed_bonus = entity.speed_bonus or 0
 
-    -- Get the drop target (the entity the drill is putting items into)
+    -- What the drill drops into: the game's drop_target once it has dropped, else the one machine or chest under its
+    -- drop position (none, or more than one, leaves it unknown)
     local drop_target = entity.drop_target
+    if not (drop_target and drop_target.valid) then
+        local candidates = drop_candidates(entity)
+        drop_target = #candidates == 1 and candidates[1] or nil
+    end
     local drop_target_unit_number = nil
-    if drop_target and drop_target.valid and drop_target.unit_number then
+    local drop_target_name = nil
+    if drop_target and drop_target.valid then
         drop_target_unit_number = drop_target.unit_number
+        drop_target_name = drop_target.name
     end
 
     ---@type DrillData
     local data = {
         entity = entity,
         drill_type = entity.name,
-        mined_item_name = mining_target.name,
+        mined_item_name = mined_item_name,
         speed_bonus = speed_bonus,
         productivity = total_productivity * 100,
         drop_target_unit_number = drop_target_unit_number,
+        drop_target_name = drop_target_name,
+        position = entity.position,
     }
 
     return data
@@ -62,7 +122,76 @@ local function is_chest_entity(entity)
     end
     local t = entity.type
     return t == "container" or t == "logistic-container" or
-        t == "linked-container" or t == "infinity-container"
+        t == "linked-container" or t == "infinity-container" or
+        t == "car" or t == "cargo-wagon" or t == "rocket-silo"
+end
+
+---The game's filters that block a slot: no item may go into it
+local BLOCKING_FILTERS = { ["no-item"] = true, ["deconstruction-planner"] = true }
+
+---The slots of an inventory: the filter of each filtered slot (blocked for the game's blocking filters) and the
+---contents of each slot that holds something
+---@param inventory LuaInventory
+---@return ({slot: number, item: string}|{slot: number, blocked: true})[] filters, {slot: number, item: string, count: number}[] contents
+local function slots_of(inventory)
+    local filters, contents = {}, {}
+    for slot = 1, #inventory do
+        local filter = inventory.supports_filters() and inventory.get_filter(slot) or nil
+        if filter then
+            local name = type(filter) == "table" and filter.name or filter
+            if BLOCKING_FILTERS[name] then
+                table.insert(filters, { slot = slot, blocked = true })
+            else
+                table.insert(filters, { slot = slot, item = name })
+            end
+        end
+        local stack = inventory[slot]
+        if stack.valid_for_read then
+            table.insert(contents, { slot = slot, item = stack.name, count = stack.count })
+        end
+    end
+    return filters, contents
+end
+
+---A car, a tank, a cargo wagon or a rocket silo, taken as a chest
+---@param entity LuaEntity
+---@return table
+local function extract_vehicle_or_silo_data(entity)
+    if entity.type == "rocket-silo" then
+        -- The silo's contents are not exported (owner, 2026-10-21): they are a snapshot of a running build, and a silo that
+        -- starts full makes the inserters filling it take turns instead of inserting together; the build starts empty
+        local contents = {}
+        local recipe, recipe_quality = entity.get_recipe()
+        -- As for machines: modules and beacons, plus the force's research productivity for the recipe, capped at 300%
+        local productivity = entity.productivity_bonus or 0
+        local force_recipe = recipe and entity.force and entity.force.recipes[recipe.name]
+        if force_recipe then
+            productivity = productivity + (force_recipe.productivity_bonus or 0)
+        end
+        return {
+            chest_type = "rocket-silo",
+            unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
+            recipe_quality = recipe_quality and recipe_quality.name or "normal",
+            crafting_speed = entity.crafting_speed,
+            productivity = math.min(productivity, 3.0) * 100,
+            contents = contents,
+        }
+    end
+    local index = entity.type == "car" and defines.inventory.car_trunk or defines.inventory.cargo_wagon
+    -- Its slot filters are part of the build; its contents are not exported (owner, 2026-10-21), as a silo's: they are a
+    -- snapshot of a running build, so the build starts empty
+    local filters = slots_of(entity.get_inventory(index))
+    local contents = {}
+    return {
+        -- the car's and the tank's prototype names are their chest types
+        chest_type = entity.type == "car" and entity.name or "cargo-wagon",
+        unit_number = entity.unit_number,
+        position = { x = entity.position.x, y = entity.position.y },
+        quality = entity.quality and entity.quality.name or "normal",
+        slot_filters = filters,
+        contents = contents,
+    }
 end
 
 ---Extract data from a chest (buffer chest or infinity chest)
@@ -75,6 +204,10 @@ local function extract_chest_data(entity)
 
     if not is_chest_entity(entity) then
         return nil
+    end
+
+    if entity.type == "car" or entity.type == "cargo-wagon" or entity.type == "rocket-silo" then
+        return extract_vehicle_or_silo_data(entity)
     end
 
     -- Infinity settings exist even when the inventory is empty (a disposal chest usually is).
@@ -90,6 +223,7 @@ local function extract_chest_data(entity)
         return {
             chest_type = "infinity-chest",
             unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
             item_filters = filters,
             remove_unfiltered_items = entity.remove_unfiltered_items
         }
@@ -108,6 +242,8 @@ local function extract_chest_data(entity)
         return {
             chest_type = "buffer-chest",
             unit_number = entity.unit_number,
+            position = { x = entity.position.x, y = entity.position.y },
+            name = entity.name,
             storage_size = storage_size,
             item_filter = first_item.name
         }
@@ -201,6 +337,14 @@ local function extract_inserter_data(entity)
     return data
 end
 
+---Whether a crafting machine's burner burns nutrients, as a biochamber does: read from its prototype, never its name
+---@param entity LuaEntity
+---@return boolean
+local function burns_nutrients(entity)
+    local burner = entity.prototype.burner_prototype
+    return burner ~= nil and burner.fuel_categories["nutrients"] == true
+end
+
 ---Extract crafting data from a single crafting machine entity
 ---@param entity LuaEntity
 ---@return MachineData|nil
@@ -215,18 +359,11 @@ local function extract_crafting_machine_data(entity)
         return nil
     end
 
-    -- Determine type category
-    local entity_type = "machine"
-    if entity.type == "furnace" then
-        entity_type = "furnace"
-    elseif entity.name == "biochamber" then
-        entity_type = "biochamber"
-    end
-
-    -- Biochambers burn nutrients; the energy consumption effect (modules/beacons) scales how fast.
-    -- consumption_bonus is a fraction (0.5 = +50%), exported as a percentage like productivity.
+    -- A machine burning nutrients (a biochamber): the energy consumption effect (modules/beacons) scales how fast.
+    -- consumption_bonus is a fraction (0.5 = +50%), exported as a percentage like productivity. How the machine is
+    -- simulated the Clock Generator works out from its prototype, which is exported.
     local energy_consumption_bonus = nil
-    if entity_type == "biochamber" then
+    if burns_nutrients(entity) then
         energy_consumption_bonus = (entity.consumption_bonus or 0) * 100
     end
 
@@ -255,10 +392,11 @@ local function extract_crafting_machine_data(entity)
     local data = {
         entity = entity,
         name = entity.name,
+        quality = entity.quality and entity.quality.name or "normal",
         recipe = recipe.name,
+        recipe_quality = helpers.get_recipe_quality(entity),
         crafting_speed = entity.crafting_speed,
         productivity = total_productivity * 100,
-        type = entity_type,
         energy_consumption_bonus = energy_consumption_bonus
     }
 
@@ -295,7 +433,9 @@ local function extract_machine_data(entity)
         return nil, nil
     end
 
-    if subgroup == "agriculture" and entity.name ~= "biochamber" then
+    -- of the agriculture machines only those burning nutrients craft as the Clock Generator models; a captive biter
+    -- spawner burns food
+    if subgroup == "agriculture" and not burns_nutrients(entity) then
         return nil, nil
     end
 
@@ -311,14 +451,9 @@ end
 -- Main Extraction Orchestrator
 --- - Extract data from all selected entities, separating machines, drills, inserters, and belts
 ---@param entities LuaEntity[]
----@param force LuaForce? The player's force (for researched bonuses)
+---@param force LuaForce? The player's force; not read: each entity's bonuses, research included, are read from the entity
 ---@return ExtractionResult
 function extraction.extract_all_entities(entities, force)
-    local mining_productivity_level = 1
-    if force and force.technologies['mining-productivity-3'] then
-        mining_productivity_level = force.technologies['mining-productivity-3'].level - 1
-    end
-
     local result = {
         machines = {},
         drills = {},
@@ -327,8 +462,7 @@ function extraction.extract_all_entities(entities, force)
         chests = {},
         unit_number_to_id = {},
         belt_unit_number_to_id = {},
-        chest_unit_number_to_id = {},
-        mining_productivity_level = mining_productivity_level
+        chest_unit_number_to_id = {}
     }
 
     -- First pass: extract machines and build unit_number -> id mapping
@@ -476,8 +610,8 @@ function extraction.extract_all_entities(entities, force)
             table.insert(ingredients, ingredient)
         end
         table.sort(ingredients)
-        -- a belt with nothing on it is not described, as before: an inserter that takes from it is left out of the export,
-        -- and one that drops onto it points at the first belt (see resolve_target_id in export.lua)
+        -- a belt with nothing on it is not described, as before: an inserter that takes from it or drops onto it is left
+        -- out of the export (see resolve_target_id in export.lua)
         if #ingredients > 0 then
             local lanes = {}
             if not lane_ingredient[1] and not lane_ingredient[2] then

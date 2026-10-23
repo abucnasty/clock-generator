@@ -9,31 +9,36 @@
       "id": 1,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 257.60000228882
+      "crafting_speed": 257.60000228882,
+      "prototype": "foundry"
     },
     {
       "id": 2,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 257.60000228882
+      "crafting_speed": 257.60000228882,
+      "prototype": "foundry"
     },
     {
       "id": 3,
       "recipe": "plastic-bar",
       "productivity": 300,
-      "crafting_speed": 117.5
+      "crafting_speed": 117.5,
+      "prototype": "cryogenic-plant"
     },
     {
       "id": 4,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 257.60000228882
+      "crafting_speed": 257.60000228882,
+      "prototype": "foundry"
     },
     {
       "id": 5,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 257.60000228882
+      "crafting_speed": 257.60000228882,
+      "prototype": "foundry"
     }
   ],
   "inserters": [
@@ -242,11 +247,13 @@
   ],
   "chests": [
     {
+      "type": "buffer-chest",
       "id": 1,
       "storage_size": 1,
       "item_filter": "plastic-bar"
     },
     {
+      "type": "buffer-chest",
       "id": 2,
       "storage_size": 1,
       "item_filter": "plastic-bar"

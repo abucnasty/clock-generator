@@ -10,7 +10,7 @@ import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence
 import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { cloneSimulationContextWithInterceptors, createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
 import { Duration, OpenRange } from "../../data-types";
-import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
+import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { TargetProductionRate } from "../target-production-rate";
 import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "../../data-types/fraction";
@@ -19,7 +19,7 @@ import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
 import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
-import { EntityTransferCountMap, outputInsertersOf, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
+import { buildOutputInsertersOf, EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
@@ -52,6 +52,7 @@ import { factorioDrillState, factorioInserterState, factorioMachineState } from 
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
+import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
 /**
@@ -244,6 +245,11 @@ export interface BlueprintGenerationResult {
      * windows only reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
      */
     output_feeders?: { inserter_ids: string[]; window_count_without_feeder_windows: number };
+    /**
+     * Each drill that drops into a chest: the windows the clock gives it, from the windows of the inserters that take
+     * from the chest (see chestDrillWindows), or why it stays always enabled. Absent when the build has none.
+     */
+    chest_drills?: ChestDrillClock[];
 }
 
 /**
@@ -356,6 +362,12 @@ export interface RunOptions {
     backpressure_loss?: BackpressureLossOptions;
     /** Warmup length in simulation periods (default 10) */
     warmup_periods?: number;
+    /**
+     * The period of the run, when it is not the one the plan gives: a clock of whole ticks run on a plan of a period
+     * that is not whole, such as the clock of a fractional period rounded down (the output it is to move a period is
+     * still the plan's). Its output is counted and its state compared by this period.
+     */
+    period_ticks?: number;
     /**
      * Simulate and record this many periods instead of one (default 1). The histories then cover the longer run;
      * the output is judged over one period, so it only means something at 1.
@@ -733,7 +745,7 @@ interface RunPeriods {
 
 /** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
 function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
-    const duration: Duration = Duration.ofTicks(options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
+    const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     const requested_warmup_periods = options.warmup_periods ?? 10;
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
@@ -1069,7 +1081,7 @@ function backpressureLossOf(
     const repeat = subtickClockForPeriod(loss_period);
     const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
         : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
-    assert(bin !== null, `A clock of ${loss_period} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
+    assert(bin !== null, `A clock of ${Number(loss_period.toFixed(3))} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
     const own_clock_ticks = Array.from(controlled.inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
     // boundaries a whole proven bin apart repeat for good; in bins of the period that is every `stride`-th boundary
     const proven_bin = provenRepeatBin(config, loss_period);
@@ -1266,6 +1278,12 @@ export function exportClock(
         simulation_context, target_production_rate, crafting_cycle_plan, recipe_lcm, computed_lcm, serializable_transfer_plan,
         duration, recorded_duration, final_history, state_transition_history, stability_check, used_terminal_swing_count,
     } = plan.run;
+    // the windows of the drills into chests, from their takers' as the clock-only check made them (see runAsBuiltCheck)
+    const chest_drill_clock = chestDrillWindows(plan.config, windows, duration.ticks);
+    windows = chest_drill_clock.windows;
+    for (const drill of chest_drill_clock.drills) {
+        plan.logger.log(chestDrillClockLine(drill));
+    }
     const item_names = new Map(plan.item_names);
     for (const [key, name] of extras.item_names ?? []) {
         item_names.set(key, name);
@@ -1281,6 +1299,7 @@ export function exportClock(
             target_production_rate.machine_production_rate.item,
             crafting_cycle_plan,
             duration,
+            recipe_lcm,
             InventoryTransferHistory.removeDuplicateEntities(new InventoryTransferHistory(new Map(
                 Array.from(clocked.entries()).map(([key, ranges]) => [
                     entity_ids.get(key)!,
@@ -1347,6 +1366,7 @@ export function exportClock(
         serializable_transfer_plan,
         computed_lcm,
         derived_clock_windows: extras.derived_clock_windows,
+        ...(chest_drill_clock.drills.length > 0 ? { chest_drills: chest_drill_clock.drills } : {}),
     };
 }
 
@@ -1518,15 +1538,17 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
        `but target production rate is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
     )
 
-    // Every inserter that takes the target item out of the build; a machine can have several
+    // Every inserter that takes the target item out of the build, or out of the container its machine puts it into; a
+    // machine can have several
     const inserter_states = simulation_context.state_registry.getAllStates().filter(EntityState.isInserter);
-    const all_output_inserters = output_machine_state_machines.flatMap(machine_state_machine => {
-        const ids = new Set(outputInsertersOf(machine_state_machine.machine_state.machine, simulation_context.entity_registry).map(it => it.entity_id.id));
-        return inserter_states.filter(it => ids.has(it.entity_id.id));
-    });
+    const output_ids_by_machine = new Map(output_machine_state_machines.map(machine_state_machine => [machine_state_machine.machine_state.entity_id.id,
+        new Set(buildOutputInsertersOf(machine_state_machine.machine_state.machine, simulation_context.entity_registry).map(it => it.entity_id.id))] as const));
+    // machines that put the product into one container share its takers: each is counted once
+    const all_output_inserters = Array.from(new Set(Array.from(output_ids_by_machine.values()).flatMap(ids => inserter_states.filter(it => ids.has(it.entity_id.id)))));
     // One of them per output machine, which the swings of a cycle are counted by
     const output_inserters = output_machine_state_machines.map(machine_state_machine => {
-        const inserter = all_output_inserters.find(it => it.inserter.source.entity_id.id === machine_state_machine.machine_state.entity_id.id);
+        const ids = output_ids_by_machine.get(machine_state_machine.machine_state.entity_id.id)!;
+        const inserter = all_output_inserters.find(it => ids.has(it.entity_id.id));
         assert(
             inserter !== undefined,
             `No inserter with source machine ${machine_state_machine.machine_state.entity_id} found`
@@ -2138,7 +2160,8 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
         }
     });
 
-    // Process drill overrides (explicit id field)
+    // Process drill overrides (explicit id field). A drill into a chest without one is always enabled in the planning
+    // run; its windows are made from its takers' afterwards (see chestDrillWindows)
     if (config.drills !== undefined) {
         config.drills.configs.forEach((drill_config) => {
             const entity_id = EntityId.forDrill(drill_config.id).id;
@@ -2195,7 +2218,10 @@ function configureInventoryTransferPlugins(
         const sink_machine = simulation_context.entity_registry.getEntityByIdOrThrow(
             it.drill_state.drill.sink_id
         );
-        assertIsMachine(sink_machine);
+        // a drill into a chest has no transfers to record: its windows are made from its takers' (see chestDrillWindows)
+        if (!Entity.isMachine(sink_machine)) {
+            return;
+        }
         it.addPlugin(new DrillInventoryTransferPlugin(
             it.drill_state.drill,
             sink_machine,

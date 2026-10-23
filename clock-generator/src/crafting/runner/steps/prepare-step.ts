@@ -42,7 +42,7 @@ export class PrepareStep implements RunnerStep {
         // Only check for full buffer chests that have both an input and output inserter
         const buffer_chests = context.state_registry
             .getAllStates()
-            .filter(EntityState.isBufferChest)
+            .filter(EntityState.isFiniteChest)
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.source.entity_id.id === chest.entity_id.id))
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id))
         

@@ -8,8 +8,8 @@ The [simulator guide](../simulator.md#picking-up-from-moving-belts-and-undergrou
 The [diagram glossary](glossary.md) illustrates the layouts and test conditions named in the tables,
 including a [phase A vs phase B example](glossary.md#phase-a-vs-phase-b).
 
-The accepted changes are unreleased, reserved for **engine/UI 0.19.0** and **Sidecar 0.11.0**.
-Publishing remains on hold. **Side-loaded pickup tiles, merges and splitters are out of scope**; see the
+The accepted changes shipped in **engine/UI 0.19.0** and **Sidecar 0.11.0** (2026-10-21).
+**Side-loaded pickup tiles, merges and splitters are out of scope**; see the
 [side-loading history](#side-loaded-pickups-and-merges).
 
 ## General rules

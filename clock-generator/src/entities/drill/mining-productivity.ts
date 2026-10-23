@@ -1,17 +1,6 @@
 import { Percentage } from "../../data-types";
 
+/** A drill's mining productivity: the force's mining productivity research and its productivity modules together */
 export interface MiningProductivity {
     readonly productivity: Percentage;
-}
-
-
-function createFromResearchLevel(level: number): MiningProductivity {
-    return {
-        productivity: new Percentage((level - 1) * 10)
-    };
-}
-
-
-export const MiningProductivity = {
-    fromLevel: createFromResearchLevel
 }
