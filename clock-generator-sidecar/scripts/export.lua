@@ -190,10 +190,9 @@ function export.to_table(result, options)
             recipe = machine.recipe,
             crafting_speed = machine.crafting_speed,
             productivity = machine.productivity,
-            type = machine.type,
             energy_consumption_bonus = machine.energy_consumption_bonus,
             position = export.position_of(machine.entity),
-            -- for labels only: the generator names the machine by its icon and keeps its qualities
+            -- what the machine is: the generator works out how to simulate it from the prototype, and shows its icon
             prototype = machine.name,
             quality = machine.quality,
             recipe_quality = machine.recipe_quality

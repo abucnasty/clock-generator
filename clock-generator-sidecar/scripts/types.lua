@@ -6,8 +6,7 @@
 ---@field recipe_quality string|nil The quality name of its recipe, nil when it has none
 ---@field crafting_speed number Effective crafting speed with bonuses (for machines/furnaces)
 ---@field productivity number Productivity bonus as percentage (0-100+)
----@field type "machine"|"furnace"|"biochamber"|"mining-drill" Entity type category
----@field energy_consumption_bonus number|nil Energy consumption effect as a percentage (biochambers only)
+---@field energy_consumption_bonus number|nil Energy consumption effect as a percentage (machines burning nutrients only)
 
 ---@class DrillData
 ---@field entity LuaEntity The drill itself

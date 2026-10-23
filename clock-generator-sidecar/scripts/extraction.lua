@@ -282,6 +282,14 @@ local function extract_inserter_data(entity)
     return data
 end
 
+---Whether a crafting machine's burner burns nutrients, as a biochamber does: read from its prototype, never its name
+---@param entity LuaEntity
+---@return boolean
+local function burns_nutrients(entity)
+    local burner = entity.prototype.burner_prototype
+    return burner ~= nil and burner.fuel_categories["nutrients"] == true
+end
+
 ---Extract crafting data from a single crafting machine entity
 ---@param entity LuaEntity
 ---@return MachineData|nil
@@ -296,18 +304,11 @@ local function extract_crafting_machine_data(entity)
         return nil
     end
 
-    -- Determine type category
-    local entity_type = "machine"
-    if entity.type == "furnace" then
-        entity_type = "furnace"
-    elseif entity.name == "biochamber" then
-        entity_type = "biochamber"
-    end
-
-    -- Biochambers burn nutrients; the energy consumption effect (modules/beacons) scales how fast.
-    -- consumption_bonus is a fraction (0.5 = +50%), exported as a percentage like productivity.
+    -- A machine burning nutrients (a biochamber): the energy consumption effect (modules/beacons) scales how fast.
+    -- consumption_bonus is a fraction (0.5 = +50%), exported as a percentage like productivity. How the machine is
+    -- simulated the Clock Generator works out from its prototype, which is exported.
     local energy_consumption_bonus = nil
-    if entity_type == "biochamber" then
+    if burns_nutrients(entity) then
         energy_consumption_bonus = (entity.consumption_bonus or 0) * 100
     end
 
@@ -341,7 +342,6 @@ local function extract_crafting_machine_data(entity)
         recipe_quality = helpers.get_recipe_quality(entity),
         crafting_speed = entity.crafting_speed,
         productivity = total_productivity * 100,
-        type = entity_type,
         energy_consumption_bonus = energy_consumption_bonus
     }
 
@@ -378,7 +378,9 @@ local function extract_machine_data(entity)
         return nil, nil
     end
 
-    if subgroup == "agriculture" and entity.name ~= "biochamber" then
+    -- of the agriculture machines only those burning nutrients craft as the Clock Generator models; a captive biter
+    -- spawner burns food
+    if subgroup == "agriculture" and not burns_nutrients(entity) then
         return nil, nil
     end
 
