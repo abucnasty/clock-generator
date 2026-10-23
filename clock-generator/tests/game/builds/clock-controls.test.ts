@@ -1,0 +1,76 @@
+import fs from "fs";
+import {describe, expect, test} from "vitest";
+import {ClockControl, pinMismatches, readControls} from "./clock-controls";
+
+/**
+ * Every game test that runs a generated clock compares what the game did with a recording, and the recording belongs to
+ * one clock. These tests read the controls files only (no generation, no Factorio, so they run with the unit tests) and
+ * fail where a pin was moved to follow a selection and its recording was not made again: the generation tests (pull
+ * requests to master) find the selection that moved, this finds the pin that was edited to follow it.
+ */
+const FAMILIES = ["blocked-output", "car", "container", "front", "lithium-silo", "over-hood", "pickup", "steel-wagon"]
+    .map(family => `${family}-clock-controls.json`);
+/** Entries whose native summary has no known clock yet: the list may only shrink */
+const NOT_YET_TIED: Record<string, string[]> = {};
+
+test("every family of game tests with a controls file is checked here", () => {
+    const files = fs.readdirSync(__dirname).filter(file => file.endsWith("-clock-controls.json") && !file.includes("history")).sort();
+    expect(files).toEqual([...FAMILIES].sort());
+});
+
+describe.each(FAMILIES)("%s", file => {
+    const controls = readControls(file);
+    test("every native summary names the clock it was recorded on, and the pin names it too", () => {
+        expect(Object.keys(controls.cases).length).toBeGreaterThan(0);
+        expect(pinMismatches(controls.cases, NOT_YET_TIED[file])).toEqual([]);
+    });
+    test("the entries not tied yet are entries", () => {
+        for (const name of NOT_YET_TIED[file] ?? []) expect(controls.cases[name], name).toBeDefined();
+    });
+});
+
+describe("pinMismatches", () => {
+    const entry = (recorded: object, pin = "b".repeat(64)): ClockControl => ({
+        recorded: {pr: 1, commit: "c0ffee", frozen_head: null, clock_basis: "capture", ...recorded},
+        native: {generationVerdict: "stable", target: 1, period: 10, expected: 5, baseline: [5], recovery: []},
+        generation: {period: 10, expected: 5, verdict: "stable", selection: {id: "x", holds: true, rate: 1, supply: null}, clock_sha256: pin},
+    });
+    const a = "a".repeat(64), b = "b".repeat(64);
+
+    test("accepts a recording on the pinned clock", () => {
+        expect(pinMismatches({one: entry({clock_sha256: b})})).toEqual([]);
+    });
+    test("fails a pin that moved while the recording did not", () => {
+        const found = pinMismatches({one: entry({clock_sha256: a})});
+        expect(found).toHaveLength(1);
+        expect(found[0]).toContain("one: the pin names clock bbbbbbbbbbbb and the native summary was recorded on aaaaaaaaaaaa");
+    });
+    test("accepts a moved pin that says why the recording still holds, and nothing that says it for no reason", () => {
+        expect(pinMismatches({one: entry({clock_sha256: a, carried: "5e904a10: same windows, verdicts and game result"})})).toEqual([]);
+        expect(pinMismatches({one: entry({clock_sha256: a, carried: " "})}).length).toBeGreaterThan(0);
+        expect(pinMismatches({one: entry({clock_sha256: b, carried: "stale"})})).toHaveLength(1);
+    });
+    test("fails a native summary with no clock, no basis or no pin", () => {
+        expect(pinMismatches({one: entry({})})).toHaveLength(1);
+        expect(pinMismatches({one: entry({clock_sha256: "xyz"})})).toHaveLength(1);
+        expect(pinMismatches({one: entry({clock_sha256: b, clock_basis: undefined})})).toHaveLength(1);
+        expect(pinMismatches({one: {...entry({clock_sha256: b}), generation: undefined}})).toHaveLength(1);
+    });
+    test("fails a native summary and a pin of different periods", () => {
+        const other = entry({clock_sha256: b});
+        other.generation!.period = 12;
+        expect(pinMismatches({one: other})).toHaveLength(1);
+    });
+    test("lets an entry listed as not tied go without a clock, and not keep one", () => {
+        expect(pinMismatches({one: entry({})}, ["one"])).toEqual([]);
+        expect(pinMismatches({one: entry({clock_sha256: b})}, ["one"])).toHaveLength(1);
+    });
+});
+
+test("the history files keep the recordings of clocks no pin names", () => {
+    // a superseded recording belongs to no current pin: it has no hash to keep in step
+    for (const file of fs.readdirSync(__dirname).filter(file => file.endsWith("history-controls.json"))) {
+        const history = readControls<{cases: Record<string, {recorded: {clock_sha256?: string}}[]>}>(file);
+        for (const entries of Object.values(history.cases)) for (const it of entries) expect(it.recorded.clock_sha256).toBeUndefined();
+    }
+});
