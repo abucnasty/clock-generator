@@ -24,6 +24,9 @@ over-produces.
 Conventions:
 - `<build>.json` is the config; variants get a suffix that says what differs (`-chain-always-on`, `-belt-fed`).
 - `<build>-scaffold.txt` is the one-copy scaffold; `-scaffold-full-build.txt` is kept only for reference.
+- Every config is in the current shape: each machine names its `prototype` (the one its scaffold shows) or none, never a
+  `type`. `src/config/current-samples.test.ts` fails on a sample that a load-time migration would change; the former
+  shapes live only in `src/config/fixtures/legacy/`, one per migration.
 - Most scaffolds have belts closed at the end, so supply backs up once full. Iron bacteria's creeps (below).
   Isolated moving/underground and same-item pickup experiments live under
   [game mechanic fixtures](../../tests/game/mechanics/belt-pickup/README.md), with their own catalog and probes.
