@@ -15,9 +15,9 @@ export interface BuildValidationIssue extends Problem {
     /**
      * 'calibration': the engine's warning that a belt pickup's timing is not tested; 'lanes': its warning that the copies
      * summed would ask a lane for more than it carries; 'machine': its warning that a machine's prototype disagrees with its
-     * type or cannot make its recipe. All shown as plain text.
+     * type or cannot make its recipe; 'drop': its note that a drop side-loads onto another belt. All shown as plain text.
      */
-    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes' | 'machine';
+    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes' | 'drop' | 'machine';
     fieldTarget?: FocusTarget;
     coverage?: InserterCoverageIssue;
     chest?: OutputChestIssue;
@@ -47,6 +47,8 @@ interface Input {
     pickupNotTested?: string | null;
     /** The live warning for lanes the copies would ask too much of if they shared them: advice, never blocking */
     laneSharedByCopies?: string | null;
+    /** The live note for drops marked as side-loading onto another belt: a known limit, never blocking */
+    sideLoadedDrop?: string | null;
     /** The live warnings for machines whose prototype disagrees with their type or cannot make their recipe: advice, never blocking */
     machinePrototypes?: readonly MachinePrototypeIssue[];
     failure?: { message: string; diagnostics?: ValidationDiagnostic[] };
@@ -108,6 +110,11 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
     if (input.laneSharedByCopies) {
         const id = 'lanes-shared-by-copies';
         add({ id, text: input.laneSharedByCopies, severity: 'warning', blocksGeneration: false, source: 'lanes',
+            target: { kind: 'validation-issue', id } });
+    }
+    if (input.sideLoadedDrop) {
+        const id = 'side-loaded-drop';
+        add({ id, text: input.sideLoadedDrop, severity: 'warning', blocksGeneration: false, source: 'drop',
             target: { kind: 'validation-issue', id } });
     }
     for (const issue of input.machinePrototypes ?? []) {

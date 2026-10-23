@@ -523,6 +523,7 @@ function App() {
             machinesMax,
         }),
         coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
+        sideLoadedDrop: checkedCoverage?.sideLoadedDrop,
         machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),

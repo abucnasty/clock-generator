@@ -78,7 +78,7 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
                 </Button>
             </Part>
             <Collapse in={open} id={reasonsId}>
-                <Part label={INSIGHTS_COPY.why}><Typography variant="body2">{nameIdsIn(insight.why)}</Typography></Part>
+                {insight.why !== '' && <Part label={INSIGHTS_COPY.why}><Typography variant="body2">{nameIdsIn(insight.why)}</Typography></Part>}
                 <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>
             </Collapse>
             {insight.swing_comparison && <SwingComparison data={insight.swing_comparison} />}

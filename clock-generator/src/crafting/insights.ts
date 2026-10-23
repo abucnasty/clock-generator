@@ -10,6 +10,7 @@ import type { SpareTime } from "./why-not-stable";
 import { FactorioDataService } from "../data";
 import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPickups } from "../config/pickup-calibration";
 import type { Config } from "../config/schema";
+import { describeSideLoadedDrop, SIDE_LOADED_DROP_ADVICE, SIDE_LOADED_DROP_TITLE, sideLoadedDrops } from "../config/side-loaded-drop";
 import { chestName } from "../common/entity-types";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
@@ -418,6 +419,25 @@ export function beltPickupNotTestedInsights(config: Config): ClockInsight[] {
             + "compared with the game.",
         explanation: "The clock may not match the game: its rate, stability and wake-ups are worked out from pickup timing "
             + "never checked there.",
+    }];
+}
+
+/**
+ * That drops of the build are marked as side-loading onto a belt downstream (Sidecar 0.13.0): a known limit, as the config
+ * describes the belts as one belt. There is no separate why: the advice is the explanation. None when no drop is marked.
+ */
+export function sideLoadedDropInsights(config: Config): ClockInsight[] {
+    const drops = sideLoadedDrops(config);
+    if (drops.length === 0) {
+        return [];
+    }
+    return [{
+        id: "side-loaded-drop",
+        scope: "build",
+        title: SIDE_LOADED_DROP_TITLE,
+        what: drops.map(describeSideLoadedDrop).join(" "),
+        why: "",
+        explanation: SIDE_LOADED_DROP_ADVICE,
     }];
 }
 

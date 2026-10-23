@@ -441,6 +441,8 @@ export interface LiveCoverage {
     pickupNotTested: string | null;
     /** The engine's warning for belt lanes that the copies, summed, would ask for more than they carry; it does not block */
     laneSharedByCopies: string | null;
+    /** The engine's note for drops marked as side-loading onto another belt, a known limit; it does not block */
+    sideLoadedDrop: string | null;
     /** The engine's warnings for machines whose prototype disagrees with their type or cannot make their recipe; they do not block */
     machinePrototypes: MachinePrototypeIssue[];
 }

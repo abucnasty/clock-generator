@@ -42,6 +42,10 @@ Sidecar exports `source.pickup_capture` for each belt-fed inserter. It stays wit
 file export, saved-build reload, sharing, and recording parsing. Top-level `pickup_warnings` remain for the
 Sidecar copy window and older import previews; they are not the only copy of the classification.
 
+A drop has a mark of its own: Sidecar 0.13.0 exports `sink.drop_capture` (`status: "side-loaded"`, `tiles`, `sidecar_version`) on an
+inserter whose drop onto a belt side-loads onto a belt that is fed from behind, and no top-level list. It is a note for the
+result: the drop stays a drop onto that belt.
+
 - `supported`: a positive model declaration, currently `model: "belt"`, with `model_version: 2`, native
   `entity_type`, and the matching layout, reach and preferred lane.
   Version 1 straight-belt captures remain valid; version 1 underground captures require recapture.

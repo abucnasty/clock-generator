@@ -220,12 +220,20 @@ it('warns live of a belt pickup whose timing is not tested, as generation logs i
         return (answer as { answer: LiveCoverage }).answer;
     };
 
-    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, machinePrototypes: [] });
+    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null, machinePrototypes: [] });
     const warning = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
+    // a drop the Sidecar marked: the live answer carries the note as the log and the result say it, and blocks nothing
+    const marked = { ...gears(4), inserters: [
+        { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
+        { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 2, drop_capture: { status: 'side-loaded', tiles: 3 } } },
+    ], belts: [...gears(4).belts, { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }] }] } as Config;
+    expect((await live(marked)).sideLoadedDrop).toBe('Inserter 2 drops onto a 3 tile belt buffer that side-loads onto another belt. '
+        + 'The clock may make less in the game than shown here, most of all when these inserters are switched on at the same time as others '
+        + 'that drop onto the belt. Give each of these drops a belt of its own, or check the clock in the game.');
     const untested = await live(gears(2));
-    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null, machinePrototypes: [] });
+    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null, sideLoadedDrop: null, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: untested.issues, scopeRefusal: untested.refusal, pickupNotTested: untested.pickupNotTested,
         chests: [], inserters: [], machines: gears(2).machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
@@ -264,7 +272,7 @@ it('warns live of a lane the copies would ask too much of if they shared it, as 
     const warning = 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
         + 'The config cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
         + 'belts of their own is not affected.';
-    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning, machinePrototypes: [] });
+    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning, sideLoadedDrop: null, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: live.issues, laneSharedByCopies: live.laneSharedByCopies,
         chests: [], inserters: [], machines: config.machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))

@@ -102,6 +102,24 @@ it('says in the paste preview that a side-loaded pickup is out of scope', async 
     expect(lines.some(line => line.includes('has not been calibrated'))).toBe(false);
 });
 
+it('says in the paste preview which drop side-loads onto another belt, in the owner\'s words, only while importing those inserters', async () => {
+    incoming.inserters = [{ source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop_capture: { status: 'side-loaded', tiles: 3, sidecar_version: '0.13.0' } } }];
+    incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
+    vi.stubGlobal('navigator', { clipboard: { readText: async () => JSON.stringify({
+        machines: incoming.machines, inserters: incoming.inserters, belts: incoming.belts,
+    }) } });
+    await paste();
+    const text = (element: { props: { children?: unknown } }) => JSON.stringify(element.props.children) ?? '';
+    const sentence = 'drops onto a 3 tile belt buffer that side-loads onto another belt. Imported as an ordinary drop: '
+        + 'where the other belt is busy, the game has less room than the clock generator assumes.';
+    const line = Render().map(text).find(it => it.includes('Captured Inserter'));
+    expect(line).toContain(sentence);
+    expect(line).toContain('"Captured Inserter ",1,": "');
+    const selected = Render().find(e => e.type === FormControlLabel && e.props.label === 'Inserters (1)')!;
+    (elements(selected.props.control)[0].props.onChange as () => void)();
+    expect(Render().some(e => text(e).includes('3 tile belt buffer'))).toBe(false);
+});
+
 describe('Paste acknowledgment bound to the actual preview', () => {
     it('guards Apply until the current mixed preview is deliberately acknowledged, then applies once with one Undo', async () => {
         await paste(); expect(apply().disabled).toBe(true); clickApply();

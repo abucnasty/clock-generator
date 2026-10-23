@@ -57,6 +57,13 @@ local function resolve_target_id(target, result, is_sink, options)
             model_version = not problem and 2 or nil,
         }
     end
+    local drop_capture
+    if is_sink and target.type == "belt" and target.side_load_tiles then
+        drop_capture = {
+            status = "side-loaded", tiles = target.side_load_tiles,
+            sidecar_version = script.active_mods["clock-generator-sidecar"],
+        }
+    end
     return {
         type = target.type,
         id = target_id,
@@ -64,7 +71,8 @@ local function resolve_target_id(target, result, is_sink, options)
         near_lane = target.near_lane,
         pickup_length = not is_sink and target.pickup_length or nil,
         pickup_layout = not is_sink and target.pickup_layout or nil,
-        pickup_capture = pickup_capture
+        pickup_capture = pickup_capture,
+        drop_capture = drop_capture
     }
 end
 
@@ -326,6 +334,20 @@ function export.to_table(result, options)
     end
 
     return output
+end
+
+---The exported inserters whose drop is marked as side-loading onto a belt downstream, for the copy window
+---@param exported_table table The result of export.to_table
+---@return {inserter_id: number, tiles: number}[]
+function export.drop_marks(exported_table)
+    local marks = {}
+    for index, inserter in ipairs(exported_table.inserters) do
+        local capture = inserter.sink and inserter.sink.drop_capture
+        if capture then
+            table.insert(marks, { inserter_id = index, tiles = capture.tiles })
+        end
+    end
+    return marks
 end
 
 ---Convert extraction result to clock-generator compatible JSON
