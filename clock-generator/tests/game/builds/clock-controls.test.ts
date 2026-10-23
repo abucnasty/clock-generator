@@ -1,5 +1,6 @@
 import fs from "fs";
 import {describe, expect, test} from "vitest";
+import {ConfigPaths} from "../../../src/config/config-paths";
 import {ClockControl, pinMismatches, readControls} from "./clock-controls";
 
 /**
@@ -79,6 +80,17 @@ describe("cold starts", () => {
         const used = new Set(Object.values(start.runs).map(run => run.clock));
         expect([...used].filter(key => !start.clocks[key])).toEqual([]);
         expect(Object.keys(start.clocks).filter(key => !used.has(key))).toEqual([]);
+    });
+});
+
+describe("scaffold recordings", () => {
+    const pins = readControls<{cases: Record<string, {config: string; clock_sha256: string}>}>("scaffold-recordings-clock-pins.json").cases;
+    test("each pinned build has a hash and a config that exists", () => {
+        expect(Object.keys(pins).length).toBeGreaterThan(0);
+        for (const [name, pin] of Object.entries(pins)) {
+            expect(pin.clock_sha256, name).toMatch(hash);
+            expect(fs.existsSync((ConfigPaths as Record<string, string>)[pin.config]), `${name}: ${pin.config}`).toBe(true);
+        }
     });
 });
 
