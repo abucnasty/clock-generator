@@ -36,6 +36,19 @@ function enabledTicksMatch(ranges: OpenRange[], period: number): boolean {
     return true;
 }
 
+/**
+ * The windows a decider's conditions are open for, as the values they check, with the signal each reads: a pair (at
+ * least, then at most) or, for a window of one value, a single "="
+ */
+function conditionWindows(conditions: { first_signal: { name: string }; comparator: string; constant?: number }[]): { signal: string; start: number; end: number }[] {
+    return conditions.flatMap((condition, index) => {
+        if (condition.comparator === "=" && condition.constant !== undefined) {
+            return [{ signal: condition.first_signal.name, start: condition.constant, end: condition.constant }];
+        }
+        return condition.comparator === "≥" ? [{ signal: condition.first_signal.name, start: condition.constant!, end: conditions[index + 1].constant! }] : [];
+    });
+}
+
 function windowsEvery(spacing: number, length: number, period: number, offset = 0): OpenRange[] {
     const ranges: OpenRange[] = [];
     for (let start = offset; start < period; start += spacing) {
@@ -165,13 +178,11 @@ describe("the clock of a blueprint with fuel inserters", () => {
         for (let tick = 1 + FILTER_TICKS; tick <= ticks; tick++) {
             const counted = tick - FILTER_TICKS;
             const signals = new Map(modulos.map(modulo => [modulo.signal, ((counted - 1) % counted_to) % modulo.modulus + 1]));
-            // the conditions come in pairs, at least and at most, and any pair enables
-            let any = false;
-            for (let index = 0; index < conditions.length; index += 2) {
-                const value = signals.get(conditions[index].first_signal.name)!;
-                any = any || (value >= conditions[index].constant && value <= conditions[index + 1].constant);
-            }
-            if (any) {
+            // any window enables
+            if (conditionWindows(conditions).some(window => {
+                const value = signals.get(window.signal)!;
+                return value >= window.start && value <= window.end;
+            })) {
                 enabled.push(tick);
             }
         }
@@ -344,7 +355,7 @@ describe("the count of a clock", async () => {
         networks.find(members => members.has(`${numberOf(entity)}:${connector}`)) ?? new Set<string>();
 
     it.each(blueprints)("starts at 1 for every window (%s), so a switched-off clock, which reads as 0, enables nothing", (_, blueprint) => {
-        const lower_bounds = conditionsOf(blueprint).filter(condition => condition.comparator === "≥");
+        const lower_bounds = conditionsOf(blueprint).filter(condition => condition.comparator === "≥" || (condition.comparator === "=" && condition.first_signal.name !== "signal-lock"));
         expect(lower_bounds.length).toBeGreaterThan(0);
         expect(lower_bounds.every(condition => condition.constant! >= 1)).toBe(true);
         expect(conditionsOf(blueprint).filter(condition => condition.comparator === "≤").every(condition => condition.constant! >= 1)).toBe(true);
@@ -542,7 +553,7 @@ describe("the count of a clock", async () => {
         /** The windows a combinator is open for, as positions in the period: the values it checks for less 1 */
         const windowsOf = (decider: Entity) => {
             const { conditions } = deciderOf(decider);
-            return conditions.flatMap((condition, index) => condition.comparator === "≥" ? [[condition.constant! - 1, conditions[index + 1].constant! - 1]] : []);
+            return conditionWindows(conditions).map(window => [window.start - 1, window.end - 1]);
         };
         /** The combinators of the windows that read the clock of the period and nothing else */
         const readingTheClock = (blueprint: Blueprint) => windowDeciders(blueprint)

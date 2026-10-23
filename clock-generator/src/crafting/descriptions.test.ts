@@ -85,6 +85,14 @@ describe("the description of an enabling combinator", () => {
         expect(planned([EntityId.forInserter(4)], fraction(1))[1]).toMatch(/^1 swing in /);
     });
 
+    it("gives a window of one tick as its one value", () => {
+        const one_tick = deciderWindows([OpenRange.from(27, 27), OpenRange.from(71, 83)], values);
+        expect(planned([EntityId.forInserter(4)], fraction(2), one_tick)[1]).toBe("2 swings in 2 windows per 144-tick period: open 28, 72–84");
+        const by_product: InserterClock = { inserter_id: EntityId.forInserter(2), kind: "by-product", modulus: 32, own_clock: false, window: OpenRange.from(6, 6) };
+        expect(unplannedDescriptionLines([EntityId.forInserter(2)], registry, ["jellynut-seed"], by_product, OpenRange.from(7, 7), SignalId.clock)[1])
+            .toBe("Clears it: open [virtual-signal=signal-clock] 7 of every 32 ticks; outside the main plan");
+    });
+
     it("lists no windows past three, nor repeating ones, and says what is unusual", () => {
         const four = deciderWindows([0, 10, 20, 30].map(at => OpenRange.from(at, at + 2)), values);
         expect(planned([EntityId.forInserter(4)], fraction(4), four)[1]).toBe("4 swings in 4 windows per 144-tick period");
