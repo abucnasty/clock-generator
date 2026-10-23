@@ -100,3 +100,11 @@ it('lists the engine warning for lanes the copies would share over capacity as a
         blocksGeneration: false, source: 'lanes', target: { kind: 'validation-issue', id: 'lanes-shared-by-copies' } }]);
     expect(buildValidationIssues({ ...input, laneSharedByCopies: null })).toEqual([]);
 });
+
+it('lists the engine note for a drop that side-loads onto another belt as a known limit that never blocks generation', () => {
+    const text = 'Inserter 15 drops onto a 3 tile belt buffer that side-loads onto another belt. The clock may make less in the game than shown here.';
+    const input = { fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 3 }], chestIssues: [], coverageText: () => '' };
+    expect(buildValidationIssues({ ...input, sideLoadedDrop: text })).toEqual([{ id: 'side-loaded-drop', text, severity: 'warning',
+        blocksGeneration: false, source: 'drop', target: { kind: 'validation-issue', id: 'side-loaded-drop' } }]);
+    expect(buildValidationIssues({ ...input, sideLoadedDrop: null })).toEqual([]);
+});

@@ -4,7 +4,7 @@ import {rotateRanges, SerializableClockWindows} from "./clock";
 import {backpressureLossOf, simulateClockOnly} from "./trial";
 import {OpenRange} from "../data-types";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
-import {readControls} from "../../tests/game/builds/clock-controls";
+import {clockHash, readControls} from "../../tests/game/builds/clock-controls";
 
 const controls = readControls("pickup-clock-controls.json").cases;
 
@@ -27,11 +27,20 @@ const {moving_phase: movingPhases, recovery_phase: recoveryPhases} = readControl
 for (const family of ["electromagnetic", "same-item"] as const) describe(`native-checked ${family} defaults`, () => {
     for (const variant of pickupClockSpeedCases(family)) test(variant.name, async () => {
         const native = controls[variant.name]?.native;
+        const pin = controls[variant.name]?.generation;
         expect(native, "every ordinary speed/layout/supply combination has a native control").toBeDefined();
+        expect(pin, "and a pin of the selection its native summary was recorded on").toBeDefined();
         const config = await pickupClockConfig(variant);
         const result = generateClockAlternatives(config, {logger: quiet});
         const selected = result.alternatives[result.selected_index];
         const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
+        expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as the pin (its identity: no text or metadata)")
+            .toBe(pin!.clock_sha256);
+        expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
+            supply: selected.belt?.kind ?? null}).toEqual(pin!.selection);
+        expect(result.why_not_stable?.cause).toBe(pin!.why_not_stable);
+        expect(period).toBe(pin!.period);
+        expect(selected.verdict).toBe(pin!.verdict);
         expect(period).toBe(native.period);
         expect(selected.verdict).toBe(movingPhases.cases[variant.name] ? "unstable" : native.generationVerdict);
         expect(config.target_output.items_per_second * period / 60).toBe(native.expected);

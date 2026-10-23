@@ -1,0 +1,355 @@
+{
+  "meaning": "Native summaries of the owner's inserter build (LOGISTIC_SCIENCE_INSERTER_CRAFTING, 240 a second over three copies) as the owner built it, in Factorio 2.1.21: three copies in a row, the ore lines running on past the last copy into loaders and void chests (drained and moving), and the owner's clock, a counter of 0 to 215 (216 ticks) with an iron plate window for the ore and plate inserters and an iron gear wheel window for the gear inserters. The copies are not alike (the first two have a gear assembler at 44.92, the first a fourth furnace at 91.875). 'own-clock-three-copies' is the owner's clock, kept and recorded as the build came; 'generated-three-copies' is the generator's selected clock for the config (swings-2, 72 ticks) wired to each copy, with the owner's three combinators taken out. Both with the family's protocol: ore cut at periods 66-68, output blocked 84-88, circuits cut 104-106, in periods of each clock, so the cuts last 432 ticks for the owner's clock and 144 for the generated one. Do not compare their recoveries tick for tick.",
+  "cases": {
+    "own-clock-three-copies": {
+      "recorded": {
+        "pr": 0,
+        "commit": "e1c0aadb",
+        "frozen_head": "e1c0aadb",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "844e39cf2daea124b1911c7050a7b453f82ae18cac2aa352384c95f852885b32",
+        "clock_basis": "built"
+      },
+      "native": {
+        "generationVerdict": "the build's own clock",
+        "target": 240,
+        "period": 216,
+        "expected": 864,
+        "baseline": [
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864,
+          864
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              528,
+              0,
+              96
+            ],
+            "recovered": [
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              80,
+              0,
+              0,
+              232,
+              808
+            ],
+            "recovered": [
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864
+            ]
+          },
+          {
+            "cut": 104,
+            "during": [
+              184,
+              0,
+              356
+            ],
+            "recovered": [
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864,
+              864
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            88,
+            104
+          ],
+          [
+            104,
+            106,
+            132
+          ]
+        ]
+      }
+    },
+    "generated-three-copies": {
+      "recorded": {
+        "pr": 0,
+        "commit": "e1c0aadb",
+        "frozen_head": "e1c0aadb",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "632211409dc2b4bd0a8337f16d48372c40cf277fb808c2ff19677b69c4125251",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 240,
+        "period": 72,
+        "expected": 288,
+        "baseline": [
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288,
+          288
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              288,
+              288,
+              284
+            ],
+            "recovered": [
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              232,
+              84,
+              0,
+              8,
+              232
+            ],
+            "recovered": [
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288
+            ]
+          },
+          {
+            "cut": 104,
+            "during": [
+              288,
+              180,
+              0
+            ],
+            "recovered": [
+              284,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288,
+              288
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            88,
+            104
+          ],
+          [
+            104,
+            106,
+            132
+          ]
+        ]
+      },
+      "generation": {
+        "period": 72,
+        "expected": 288,
+        "verdict": "stable",
+        "selection": {
+          "id": "swings-2",
+          "holds": true,
+          "rate": 240,
+          "supply": "moving"
+        },
+        "clock_sha256": "632211409dc2b4bd0a8337f16d48372c40cf277fb808c2ff19677b69c4125251"
+      }
+    }
+  }
+}

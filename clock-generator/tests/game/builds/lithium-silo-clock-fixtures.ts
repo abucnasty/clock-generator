@@ -21,14 +21,15 @@ import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capt
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the owner's blueprint
  * has them, the two inserters that fill the silo are built before the six that empty it; `fill-last` builds them after.
  * The clock with 1 output swing is a second check. The clock with 7 output swings is the known limit of a drop onto a
- * belt that side-loads downstream (the sample's README): the simulator holds it and the game does not.
+ * belt that side-loads downstream (the sample's README): the simulator holds it and the game does not. The config marks
+ * the two drops (`drop_capture`), and the result names them as that limit.
  */
 export interface LithiumSiloCase {
     name: string;
     /** The alternative recorded */
     alternative: "swings-3" | "swings-7" | "swings-1";
-    /** Why the game does not hold this clock though the simulator does; absent where it holds */
-    known_limit?: string;
+    /** Set where the game does not hold this clock though the simulator does: the limit of the drops the config marks */
+    known_limit?: "side-loaded-drop";
     order: "as-built" | "fill-last";
 }
 
@@ -38,7 +39,7 @@ export function lithiumSiloCases(): LithiumSiloCase[] {
         {name: "lithium-silo-swings-3-fill-last", alternative: "swings-3", order: "fill-last"},
         {name: "lithium-silo-swings-1", alternative: "swings-1", order: "as-built"},
         {name: "lithium-silo-swings-7", alternative: "swings-7", order: "as-built",
-            known_limit: "two output inserters drop onto belts that side-load onto the shared output belt, which the config describes as one belt"},
+            known_limit: "side-loaded-drop"},
     ];
 }
 

@@ -14,6 +14,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `lithium-silo-clock.game.test.ts`: the owner's lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
 - `car-clock.game.test.ts`: the owner's iron plate build, a car taken as a chest between a big mining drill and two furnaces.
 - `steel-wagon-clock.game.test.ts`: the owner's steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
+- `own-clock.game.test.ts`: the owner's inserter build on three copies, once with the owner's own clock and once with the generated clock.
 
 From `clock-generator/`, select a file or case:
 
@@ -221,6 +222,31 @@ other 46 pass.
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
   npm run test:game -- tests/game/builds/pickup-clock-cold-start.game.test.ts -t 'express-underground-entrance-moving-l1'
 ```
+
+## A recording belongs to one clock
+
+A game test does not store its clock: it generates the clock the generator selects and compares what the game does with
+a `native` summary in a `*-clock-controls.json` file. That summary was recorded on one clock, so every entry names it:
+`recorded.clock_sha256` is the sha256 of the clock's identity (`clockIdentity`: the exported blueprint without its text
+and metadata, and the schedule), `recorded.clock_basis` says how it is known (`capture`: a retained capture whose summary
+equals `native`; `history`: the pin has not changed since the commit that recorded `native`; `regenerated`: the clock
+generated on the engine of that commit; `built`: a clock the owner built, which no selection makes, so it has no pin and the
+hash is `builtClockIdentity` of the owner's blueprint, recomputed by `clock-controls.test.ts`), and `generation.clock_sha256` is the clock the selection makes today, checked by
+the family's `*.generation.test.ts` (pull requests to master).
+
+- `clock-controls.test.ts` runs with the unit tests and reads the files only: it fails where the pin and the recording
+  name different clocks, which is what editing a pin to follow a moved selection leaves behind. Either record the entry
+  again in the game and set `recorded.clock_sha256`, or write in `recorded.carried` the commit or PR and why the
+  recording still holds (a re-pin with the same windows, verdicts and game result). The game test then runs on the
+  pinned clock, which shows whether it does.
+- A game test checks the hash of the clock it generated against the recorded one before it starts Factorio
+  (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
+- The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
+  `clock_sha256` (checked by `pickup-clock-cold-start.generation.test.ts` against the selection or the pinned windows)
+  and `recorded_clock_sha256` (checked by the game test).
+- Three scaffold-recordings builds expect values that belong to one clock (agricultural science's dips and open issues,
+  and the moved inserters of agricultural science with backed-up belts and of chemical science with a shared foundry):
+  `scaffold-recordings-clock-pins.json`.
 
 ## Over-the-hood operating clocks
 
@@ -495,4 +521,45 @@ full plate or steel filter stops a furnace a few ticks a period in some states, 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/steel-wagon-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/steel-wagon-clock.game.test.ts -t '^steel wagon clock: steel-wagon-belt-slack$'
+```
+
+## A clock the build came with: the owner's inserter build on three copies
+
+`own-clock.game.test.ts` records the owner's inserter build (`LOGISTIC_SCIENCE_INSERTER_CRAFTING`, 240 a second over three
+copies of 80, [own-clock-three-copies-scaffold.txt](own-clock-three-copies-scaffold.txt)) twice, with the protocol of the
+families above: 63 untouched periods, the ore cut at periods 66-68, the output blocked at 84-88, the circuits cut at
+104-106, the first 6 periods after a release not judged. The three copies stand in a row; the ore lines run on past the last
+copy into loaders and void chests (drained and moving); the copies are not alike (the first two have a gear assembler at
+44.92, the first a fourth furnace at 91.875), and the config is the third.
+
+- `own-clock-three-copies`: the owner's clock, kept. It is one clock for the three copies: a counter of the clock signal
+  that counts 0 to 215 (a period of 216 ticks), an iron plate window on ticks 1-33 and 109-138 for the 12 ore and 12 plate
+  inserters, an iron gear wheel window on ticks 1-65 and 109-173 for the 3 gear inserters; the circuit and output inserters
+  are not wired. The test names the clock to the harness (`built_clock`: the counter's entity number in the blueprint, its
+  period and the value it starts at), and the harness records it as it records a generated one, cut at its wraps. The
+  recorder schema reads a clock that counts from 0 only when the recording names its period (the harness writes it), and then
+  checks every sample against the clock's count, so a missing signal is still refused.
+- `generated-three-copies`: the same blueprint with the owner's three combinators taken out and the generator's selected clock
+  for the config (`swings-2`, 72 ticks, 2 output swings) wired to the inserters of each copy. The test says the build holds 3
+  copies (`copies: 3`; without it a build is one copy and a machine beyond the config is refused), and the harness finds them
+  from the build's machines and inserters (machines that inserters move items between are one copy; belts, which the copies
+  share, do not join them) and matches each to the config by itself. The inserters the owner's clock held run free while
+  the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched.
+
+[own-clock-controls.json](own-clock-controls.json) holds the 2 native summaries, recorded on Factorio 2.1.21 at commit
+`e1c0aadb`. **The owner's clock gives 864 (288 a copy) in each of 63 periods, as the owner measured it with a probe of their
+own, and the same recoveries: the ore cut 528, 0, 96 then 864 from the first judged period; the output block 80, 0, 0, 232,
+808 then 864; the circuit cut 184, 0, 356 then 864. The generated clock gives 288 in each of 63 periods of 72 ticks and is
+back at 288 in every judged period after the ore cut and the block, and after the circuit cut in all but the first judged
+period (284).** The cuts are in periods of each clock, so they last 432 ticks for the owner's clock and 144 for the
+generated one: do not compare the two recoveries tick for tick. Both builds are the owner's three copies on drained lines,
+not the one-copy scaffold of `scaffold-recordings.game.test.ts`. A drop in the first tick of a recording is not seen by it, so
+the compact count of its first period is checked less that drop (the probe counts it).
+`src/crafting/own-clock.generation.test.ts` pins the generated clock and checks it against its native summary. The owner's
+clock is tied to its recording by the hash of the clock in the blueprint (`recorded.clock_basis` `built`), and the generated
+one by its pin, as in the other families.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/own-clock-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/own-clock.game.test.ts
 ```

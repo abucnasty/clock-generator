@@ -61,7 +61,9 @@ export interface InserterFormData {
         pickup_layout?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['pickup_layout'];
         drop?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['drop'] };
     sink: { type: 'machine' | 'belt' | 'chest'; id: number;
-        drop?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop'] };
+        drop?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop'];
+        /** Sidecar 0.13.0's mark of a drop that side-loads onto another belt: a note, read by nothing that generates */
+        drop_capture?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop_capture'] };
     prototype?: string;
     quality?: Config['inserters'][number]['quality'];
     /** Omitted means the prototype's fully researched capacity (Automatic). */

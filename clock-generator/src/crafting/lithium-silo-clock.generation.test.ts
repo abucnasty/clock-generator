@@ -38,6 +38,10 @@ for (const variant of lithiumSiloCases()) {
         // the game holds the target in every baseline period and is back at it in every judged period after each
         // disturbance, but for the known limit, where it is short in every one
         const holds = variant.known_limit === undefined;
+        // the config marks the two drops that side-load onto the shared belt, and every clock of the build says so
+        expect(chosen.insights.filter(insight => insight.id === "side-loaded-drop").map(insight => insight.what)).toEqual([
+            "Inserter 15 drops onto a 3 tile belt buffer that side-loads onto another belt. "
+            + "Inserter 16 drops onto a 3 tile belt buffer that side-loads onto another belt."]);
         expect(native.baseline.every(items => items === native.expected)).toBe(holds);
         expect(native.baseline.some(items => items === native.expected)).toBe(holds);
         for (const loss of native.recovery) {

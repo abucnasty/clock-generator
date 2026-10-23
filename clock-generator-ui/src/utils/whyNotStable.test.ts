@@ -18,6 +18,15 @@ function view(overrides: Partial<ClockAlternativeView> = {}): ClockAlternativeVi
 }
 
 describe('the note on why no clock is stable', () => {
+    it('names a full output chest from the clock\'s as-built check, under its own heading', () => {
+        const chest = { chest_id: 1, chest_type: 'buffer-chest', name: 'Chest 1', item: 'electromagnetic-science-pack', item_label: 'electromagnetic science pack',
+            held: 9600, capacity: 9600, inserter_ids: [1, 2] };
+        const why = whyNotStableOf([view({ asBuilt: { holds: false, actual_output_items: 0, start_phases_checked: 1, full_output_chests: [chest] } as ClockAlternativeView['asBuilt'] })], 0, false, []);
+        expect(why?.cause).toBe('output chest full');
+        expect(why?.message).toContain('Chest 1 fills up. Nothing takes any electromagnetic science pack out of it, so it holds 9,600 of 9,600');
+        expect(WHY_NOT_STABLE_TITLE[why!.cause]).toBe('Why no clock is stable: an output chest fills up');
+    });
+
     it('says what the engine says of the recommended clock, from the clocks on screen', () => {
         const why = whyNotStableOf([view()], 0, false, []);
         expect(why?.cause).toBe('moving lane phases');

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isValidElement, type ReactNode } from 'react';
 import { Button, FormControlLabel } from '@mui/material';
 import { Option } from 'clock-generator/light';
-import { InserterAssumptions } from './InserterAssumptions';
+import { InserterDetails } from './InserterDetails';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
 import { ConfigImportExport, type BuildEntryHandle } from './ConfigImportExport';
 import { createDefaultConfig } from '../utils/configForm/formData';
@@ -102,6 +102,24 @@ it('says in the paste preview that a side-loaded pickup is out of scope', async 
     expect(lines.some(line => line.includes('has not been calibrated'))).toBe(false);
 });
 
+it('says in the paste preview which drop side-loads onto another belt, in the owner\'s words, only while importing those inserters', async () => {
+    incoming.inserters = [{ source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop_capture: { status: 'side-loaded', tiles: 3, sidecar_version: '0.13.0' } } }];
+    incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
+    vi.stubGlobal('navigator', { clipboard: { readText: async () => JSON.stringify({
+        machines: incoming.machines, inserters: incoming.inserters, belts: incoming.belts,
+    }) } });
+    await paste();
+    const text = (element: { props: { children?: unknown } }) => JSON.stringify(element.props.children) ?? '';
+    const sentence = 'drops onto a 3 tile belt buffer that side-loads onto another belt. Imported as an ordinary drop: '
+        + 'where the other belt is busy, the game has less room than the clock generator assumes.';
+    const line = Render().map(text).find(it => it.includes('Captured Inserter'));
+    expect(line).toContain(sentence);
+    expect(line).toContain('"Captured Inserter ",1,": "');
+    const selected = Render().find(e => e.type === FormControlLabel && e.props.label === 'Inserters (1)')!;
+    (elements(selected.props.control)[0].props.onChange as () => void)();
+    expect(Render().some(e => text(e).includes('3 tile belt buffer'))).toBe(false);
+});
+
 describe('Paste acknowledgment bound to the actual preview', () => {
     it('guards Apply until the current mixed preview is deliberately acknowledged, then applies once with one Undo', async () => {
         await paste(); expect(apply().disabled).toBe(true); clickApply();
@@ -161,7 +179,7 @@ describe('prospective import assumptions', () => {
         incoming.inserters = [{ id: 1, prototype: 'fast-inserter', quality: 'normal', stack_size: 4,
             source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 0 } }];
         await paste();
-        const assumptions = () => Render().find(element => element.type === InserterAssumptions)!.props.inserters;
+        const assumptions = () => Render().find(element => element.type === InserterDetails)!.props.inserters;
         expect(assumptions()).toBe(incoming.inserters);
         const label = Render().find(element => element.type === FormControlLabel && element.props.label === 'Inserters (1)')!;
         (elements(label.props.control)[0].props.onChange as () => void)();
@@ -171,5 +189,21 @@ describe('prospective import assumptions', () => {
         expect(assumptions()).toBe(changed);
         expect(props.onApplyPaste).not.toHaveBeenCalled();
         expect(props.onUndoable).not.toHaveBeenCalled();
+    });
+});
+
+describe('the chest row', () => {
+    it('names the chests by type, in the order the export lists them, beside the counts', async () => {
+        incoming.chests = [{ id: 1, type: 'car' }, { id: 2, type: 'infinity-chest' }, { id: 3, type: 'infinity-chest' }] as PastedEntities['chests'];
+        await paste();
+        const row = Render().find(e => e.props['data-paste-category'] === 'chests')!;
+        expect(JSON.stringify(row.props.children)).toContain('1 car and 2 infinity chests. 0 in your build → 3 after import.');
+        const label = Render().find(e => e.type === FormControlLabel && e.props.label === 'Chests (3)')!;
+        (elements(label.props.control)[0].props.onChange as () => void)();
+        expect(JSON.stringify(Render().find(e => e.props['data-paste-category'] === 'chests')!.props.children)).toContain('1 car and 2 infinity chests. Not selected.');
+    });
+    it('has no line of types when the export has no chests', async () => {
+        await paste();
+        expect(JSON.stringify(Render().find(e => e.props['data-paste-category'] === 'chests')!.props.children)).toContain('None in this export.');
     });
 });

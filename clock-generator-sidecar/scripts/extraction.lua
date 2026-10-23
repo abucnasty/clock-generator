@@ -7,6 +7,7 @@
 require("__clock-generator-sidecar__.scripts.types")
 local helpers = require("__clock-generator-sidecar__.scripts.helpers")
 local pickup_supply = require("__clock-generator-sidecar__.scripts.pickup-supply")
+local drop_merge = require("__clock-generator-sidecar__.scripts.drop-merge")
 
 local debug = false
 
@@ -668,6 +669,11 @@ function extraction.extract_all_entities(entities, force)
                 -- their reason.
                 if data.source and data.source.type == "belt" and not data.source.pickup_problem then
                     data.source.supply_problem = pickup_supply.problem(entity.pickup_target)
+                end
+                -- A drop whose stream side-loads onto a belt that is fed from behind, within the selected belt pieces, is
+                -- marked with the tiles to the merge.
+                if data.sink and data.sink.type == "belt" and entity.drop_target then
+                    data.sink.side_load_tiles = drop_merge.tiles(entity.drop_target, pieces)
                 end
                 table.insert(result.inserters, data)
             end

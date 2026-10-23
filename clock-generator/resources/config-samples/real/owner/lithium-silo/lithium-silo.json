@@ -252,7 +252,12 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "drop_capture": {
+          "status": "side-loaded",
+          "tiles": 3,
+          "sidecar_version": "0.13.0"
+        }
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -265,7 +270,12 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "drop_capture": {
+          "status": "side-loaded",
+          "tiles": 3,
+          "sidecar_version": "0.13.0"
+        }
       },
       "prototype": "stack-inserter",
       "quality": "legendary",

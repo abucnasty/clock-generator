@@ -1,0 +1,20 @@
+[
+  {
+    "id": "production",
+    "label": "Production",
+    "icon": "assembling-machine-3",
+    "rows": [
+      ["stone-furnace", "steel-furnace", "electric-furnace", "foundry", "recycler"],
+      ["biochamber", "captive-biter-spawner"],
+      ["assembling-machine-1", "assembling-machine-2", "assembling-machine-3", "oil-refinery", "chemical-plant", "centrifuge", "electromagnetic-plant", "cryogenic-plant"]
+    ]
+  },
+  {
+    "id": "space",
+    "label": "Space",
+    "icon": "rocket-silo",
+    "rows": [
+      ["crusher"]
+    ]
+  }
+]

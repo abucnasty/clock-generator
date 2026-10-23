@@ -241,7 +241,9 @@ function requireValidConfig(config: Config): void {
 
 function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConversion {
     const plan = clockGenerator.planRepeatedUnitConversion(config);
-    if (plan.kind === 'unavailable') return { kind: 'unavailable', stage: 'proof', reason: plan.reason };
+    // the test Check refuses a build with copies inside it by
+    const repeatedGroups = () => Math.max(1, clockGenerator.findRepeatedUnits(config).gcd);
+    if (plan.kind === 'unavailable') return { kind: 'unavailable', stage: 'proof', reason: plan.reason, repeatedGroups: repeatedGroups() };
     try {
         requireValidConfig(plan.candidate);
         return { kind: 'available', plan, validation: clockGenerator.validateConfig(plan.candidate) };
@@ -253,7 +255,7 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
             && !(error instanceof clockGenerator.CopiesError)
             && !(error instanceof clockGenerator.AssertionError)) throw error;
         return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
-            message: error instanceof Error ? error.message : 'The candidate Check failed.' } };
+            message: error instanceof Error ? error.message : 'The candidate Check failed.' }, repeatedGroups: repeatedGroups() };
     }
 }
 
@@ -377,8 +379,9 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             const refusal = clockGenerator.insertersScopeProblem(query.config);
             const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config));
             const laneSharedByCopies = clockGenerator.laneSharedByCopiesWarning(query.config);
+            const sideLoadedDrop = clockGenerator.sideLoadedDropWarning(query.config);
             const machinePrototypes = clockGenerator.machinePrototypeIssues(query.config);
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies, machinePrototypes };
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies, sideLoadedDrop, machinePrototypes };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);

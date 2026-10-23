@@ -170,6 +170,17 @@ describe('the labels a config gives its machines and chests', () => {
     });
 });
 
+describe('a drop marked as side-loading onto another belt', () => {
+    const mark = { status: 'side-loaded', tiles: 3, sidecar_version: '0.13.0' } as const;
+    const marked = { ...imported, inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop_capture: mark }, stack_size: 16 }] } as unknown as Config;
+
+    it('goes through the form and back as the export gave it', () => {
+        const form = configToFormData(marked);
+        expect(form.inserters[0].sink).toEqual({ type: 'belt', id: 1, drop_capture: mark });
+        expect(formDataToConfig(form).inserters[0].sink).toEqual({ type: 'belt', id: 1, drop_capture: mark });
+    });
+});
+
 describe('configToFormData and the forced flag', () => {
     it('never flags an inserter, even one with an ALWAYS rule', () => {
         const always = {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    changeMachineName,
     clockHelpName,
     deleteLaneName,
     recipeName,
@@ -14,6 +15,7 @@ describe('names built from a row', () => {
         expect(rowActionsName('Inserter 2')).toBe('More actions for Inserter 2');
         expect(selectRowName('Chest 12')).toBe('Select Chest 12');
         expect(recipeName('Machine 12')).toBe('Recipe, Machine 12');
+        expect(changeMachineName('Machine 12')).toBe('Change machine, Machine 12');
     });
 
     it('name the second lane of a belt and a filter slot', () => {

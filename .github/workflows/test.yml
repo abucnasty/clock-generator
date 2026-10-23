@@ -71,7 +71,8 @@ jobs:
     # the input rather than the event, since a called run has the event of its caller: a push or a run by hand
     if: inputs.generation || github.base_ref == 'master'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # the suite took 1,488 s on an AMD EPYC 7763 runner (4 vCPU) on 2026-10-23, about half that on an EPYC 9V45
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: clock-generator

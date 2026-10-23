@@ -43,7 +43,8 @@ export const SUMMARY_COPY = {
     recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
     beltMoving: 'Moving',
     beltBackedUp: 'Backed up',
-    beltNone: 'No belt',
+    beltNone: 'None',
+    beltNoneSub: 'no inserter picks up from a belt',
     beltCellMoving: (slack: string) => `Moving (${slack} belt slack)`,
     beltLineMoving: 'Made for moving belts.',
     beltLineBackedUp: 'Made for backed-up belts.',
@@ -171,9 +172,14 @@ function beltKindOf(rule: PickRule | null, beltLabel: string): BeltKind {
     return !rule?.backedUpBelts && beltLabel.startsWith('moving') ? 'moving' : 'backed_up';
 }
 
-/** The Belt tile's word: "Moving", "Backed up", or "No belt" when no clocked inserter picks up from one */
+/** The Belt pickups tile's word: "Moving", "Backed up", or "None" when no clocked inserter picks up from a belt */
 export function beltValue(rule: PickRule | null, beltLabel: string): string {
     return { moving: SUMMARY_COPY.beltMoving, backed_up: SUMMARY_COPY.beltBackedUp, none: SUMMARY_COPY.beltNone }[beltKindOf(rule, beltLabel)];
+}
+
+/** The line under the Belt pickups tile's word when there is none: what "None" means; undefined otherwise */
+export function beltValueSub(rule: PickRule | null, beltLabel: string): string | undefined {
+    return beltKindOf(rule, beltLabel) === 'none' ? SUMMARY_COPY.beltNoneSub : undefined;
 }
 
 /**

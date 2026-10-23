@@ -22,7 +22,7 @@ it.each(['blocked', 'markers'] as const)('keeps blocked container slots through 
     const slot_filters = [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => spelling === 'blocked'
         ? { slot: i + 2, blocked: true } : { slot: i + 2, item: i % 2 ? 'no-item' : 'deconstruction-planner' })];
     const result = await send({ type: 'query', requestId: 200, query: {
-        kind: 'pasted-entities', sidecar_version: '0.12.0', suggested_target: undefined, drills: [], belts: [],
+        kind: 'pasted-entities', sidecar_version: '0.13.0', suggested_target: undefined, drills: [], belts: [],
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         chests: [
             { id: 1, type: 'car', slot_filters },
@@ -76,11 +76,11 @@ it('uses the real engine for typed Check/generation recovery and recomputed conv
     expect(answer).toMatchObject({ type: 'answer', answer: { kind: 'available', plan: { copies: 4, candidate: { machines: [source.machines[0]], target_output: { ...source.target_output, copies: 4 } } } } });
     const excessive = { ...source, target_output: { ...source.target_output, items_per_second: 100 } };
     const refused = await send({ type: 'query', requestId: 3, query: { kind: 'repeated-unit-conversion', config: excessive } });
-    expect(refused).toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed', message: expect.stringContaining('cannot meet the target') } } });
+    expect(refused).toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining('cannot meet the target') } } });
     const unsupported = structuredClone(source);
     unsupported.inserters.filter((_, i) => i % 2 === 1).forEach(ins => { ins.sink = { type: 'belt', id: 2, drop: { lane: 1, position: 0 } }; });
     expect(await send({ type: 'query', requestId: 4, query: { kind: 'repeated-unit-conversion', config: unsupported } }))
-        .toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'proof', reason: { code: 'unsupported-boundary' } } });
+        .toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'proof', repeatedGroups: 8, reason: { code: 'unsupported-boundary' } } });
     // The engine uses untyped errors for an unknown recipe; the worker must not misdiagnose one as a proved candidate refusal.
     const unknown = structuredClone(source);
     unknown.machines.forEach(machine => { machine.recipe = 'not-a-real-recipe'; });
@@ -130,11 +130,11 @@ it('keeps a captured inserter kind, quality and filter mode through paste, save 
     await import('./simulation.worker');
     const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
     await send({ type: 'initialize', factorioData });
-    // A Sidecar 0.12.0 export (its pickups captured as 0.11.0 captures them): a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
+    // A Sidecar 0.13.0 export (its pickups captured as 0.11.0 captures them): a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
     const pickup = { type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
         entity_type: 'transport-belt', entity_name: 'turbo-transport-belt', sidecar_version: '0.11.0', model: 'belt', model_version: 2 } };
     const exported = (output: object, input: object = {}) => ({
-        kind: 'pasted-entities' as const, sidecar_version: '0.12.0', suggested_target: undefined, drills: [],
+        kind: 'pasted-entities' as const, sidecar_version: '0.13.0', suggested_target: undefined, drills: [],
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0, type: 'machine' }],
         inserters: [
             { source: pickup, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16, ...input },
@@ -220,12 +220,20 @@ it('warns live of a belt pickup whose timing is not tested, as generation logs i
         return (answer as { answer: LiveCoverage }).answer;
     };
 
-    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, machinePrototypes: [] });
+    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null, machinePrototypes: [] });
     const warning = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
+    // a drop the Sidecar marked: the live answer carries the note as the log and the result say it, and blocks nothing
+    const marked = { ...gears(4), inserters: [
+        { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
+        { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 2, drop_capture: { status: 'side-loaded', tiles: 3 } } },
+    ], belts: [...gears(4).belts, { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }] }] } as Config;
+    expect((await live(marked)).sideLoadedDrop).toBe('Inserter 2 drops onto a 3 tile belt buffer that side-loads onto another belt. '
+        + 'The clock may make less in the game than shown here, most of all when these inserters are switched on at the same time as others '
+        + 'that drop onto the belt. Give each of these drops a belt of its own, or check the clock in the game.');
     const untested = await live(gears(2));
-    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null, machinePrototypes: [] });
+    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null, sideLoadedDrop: null, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: untested.issues, scopeRefusal: untested.refusal, pickupNotTested: untested.pickupNotTested,
         chests: [], inserters: [], machines: gears(2).machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
@@ -264,7 +272,7 @@ it('warns live of a lane the copies would ask too much of if they shared it, as 
     const warning = 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
         + 'The config cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
         + 'belts of their own is not affected.';
-    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning, machinePrototypes: [] });
+    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning, sideLoadedDrop: null, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: live.issues, laneSharedByCopies: live.laneSharedByCopies,
         chests: [], inserters: [], machines: config.machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))

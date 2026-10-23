@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INSTALL_COPY, REQUIRES_FACTORIO, installSteps, wiringList, type InstallStep } from './installSteps';
+import { INSTALL_COPY, REQUIRES_FACTORIO, firstLineOf, installSteps, wiringList, wiringRowKey, type InstallStep } from './installSteps';
 
 const ids = (steps: InstallStep[]) => steps.map(it => it.id);
 const detailOf = (steps: InstallStep[], id: InstallStep['id']) => steps.find(it => it.id === id)?.detail ?? '';
@@ -46,7 +46,7 @@ describe('installSteps', () => {
         const steps = installSteps(plain);
         expect(detailOf(steps, 'import')).toContain('Factorio 2.1');
         expect(steps[0].title).toContain('Factorio 2.1');
-        expect(REQUIRES_FACTORIO).toBe('Needs Factorio 2.1.');
+        expect(REQUIRES_FACTORIO).toBe('The blueprint needs Factorio 2.1 or later.');
     });
 
     it('says how to set an inserter to switch on, and how to undo an older clock', () => {
@@ -134,5 +134,18 @@ describe('wiringList', () => {
     it('drops an empty row', () => {
         expect(wiringList({ wiring: [[], [5, 4]], drills: [[]] }, () => none).map(it => it.combinator)).toEqual(['Inserters 4, 5']);
     });
-});
 
+    it('gives a row the first line of its combinator\'s description, found by the ids it switches on in any order', () => {
+        const lines = { 'inserter:1,2': 'two inserters line', 'drill:1': 'a drill line' };
+        const rows = wiringList({ wiring: [[3], [2, 1]], drills: [[1]], lines }, movesOf);
+        expect(rows.map(it => it.line)).toEqual(['two inserters line', undefined, 'a drill line']);
+        expect(rows.map(it => 'line' in it)).toEqual([true, false, true]);
+    });
+
+    it('keeps a row\'s key by its kind: inserter 1 and drill 1 do not share a line', () => {
+        expect(wiringRowKey('inserter', [2, 1])).toBe('inserter:1,2');
+        expect(wiringRowKey('drill', [1])).toBe('drill:1');
+        expect(firstLineOf('first\nsecond')).toBe('first');
+        expect(firstLineOf('only')).toBe('only');
+    });
+});

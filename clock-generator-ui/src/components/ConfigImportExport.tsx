@@ -1,4 +1,4 @@
-import { pickupCaptureWarningMessage } from "../utils/sidecarExport";
+import { pickupCaptureWarningMessage, sideLoadedDropMessage } from "../utils/sidecarExport";
 import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
@@ -18,7 +18,9 @@ import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { applyPaste, pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
-import { InserterAssumptions } from './InserterAssumptions';
+import { InserterDetails } from './InserterDetails';
+import { chestTypesText } from '../utils/pasteText';
+import { pickupGeometryOf } from '../utils/pickupGeometry';
 import { entityLabel } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
@@ -731,6 +733,10 @@ export function ConfigImportExport({
                             {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
                                 Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
                             </Typography>)}
+                            {importSelections.inserters && pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop_capture
+                                ? [<Typography key={`side-loaded-${i}`} variant="body2" color="text.secondary">
+                                    Captured Inserter {inserter.id ?? i + 1}: {sideLoadedDropMessage(inserter.sink.drop_capture.tiles)}
+                                </Typography>] : [])}
                             {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                             {pendingImport.fill ? (
                                 <Box>
@@ -761,10 +767,12 @@ export function ConfigImportExport({
                             )}
                             {preview?.counts.map(row => {
                                 const title = row.category[0].toUpperCase() + row.category.slice(1);
-                                const consequence = row.replacing
+                                const counted = row.replacing
                                     ? `${row.current} in your build → ${row.incoming} after import.`
                                     : row.incoming === 0 ? row.current === 0 ? 'None in this export.' : `None in this export. Your ${row.current} stay unchanged.`
                                         : `Not selected. Keep the ${row.current} in your build.`;
+                                // the chests are named by what they are: a car and an infinity chest are both "chests" here
+                                const consequence = row.category === 'chests' && row.incoming > 0 ? `${chestTypesText(pendingImport.chests)}. ${counted}` : counted;
                                 return (
                                     <Box key={row.category} data-paste-category={row.category}>
                                         <FormControlLabel
@@ -800,11 +808,11 @@ export function ConfigImportExport({
                                 </>
                             )}
                             <Box component="details" data-import-assumptions sx={{ mt: 1 }}>
-                                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer', fontWeight: 600 }}>Import details and defaults</Typography>
-                                <Typography variant="body2">{preview?.counts.find(row => row.category === 'inserters')?.replacing ? 'Incoming' : 'Retained'} inserters; {preview?.counts.find(row => row.category === 'machines')?.replacing ? 'incoming' : 'retained'} machines. Target and Copies {importSelections.target && pendingImport.fill ? 'come from this export' : 'stay as entered'} ({prospectiveTarget.copies} {prospectiveTarget.copies === 1 ? 'copy' : 'copies'}). The current belt-movement setting is retained.</Typography>
+                                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer', fontWeight: 600 }}>Import details</Typography>
+                                {pickupGeometryOf({ inserters: prospectiveInserters, overrides: currentForm.overrides }).total > 0
+                                    && <Typography variant="body2">Your input belt setting (moving or backed up) stays as it is.</Typography>}
                                 <Box sx={{ mt: 1 }}>
-                                    {/* its first line is the summary, said once */}
-                                    <InserterAssumptions inserters={prospectiveInserters} detailed />
+                                    <InserterDetails inserters={prospectiveInserters} />
                                     {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
                                         ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
                                     {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}

@@ -10,6 +10,7 @@ import type { SpareTime } from "./why-not-stable";
 import { FactorioDataService } from "../data";
 import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPickups } from "../config/pickup-calibration";
 import type { Config } from "../config/schema";
+import { describeSideLoadedDrop, SIDE_LOADED_DROP_ADVICE, SIDE_LOADED_DROP_TITLE, sideLoadedDrops } from "../config/side-loaded-drop";
 import { chestName } from "../common/entity-types";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
@@ -252,17 +253,16 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
     return {
         id: "plan-versus-clock",
         scope: "clock",
-        title: "The exported clock does not swing exactly as planned",
-        what: `Driven only by its clock windows, ${example.label} drops at ticks ${ticksList(example.clocked)} `
-            + `where the plan had ${ticksList(example.planned)}.`
-            + (differing.length > 1 ? ` ${differing.length - 1} more inserter${differing.length === 2 ? " differs" : "s differ"} too.` : ""),
-        why: "The plan decides each swing by looking at what the machines hold. The blueprint only has the clock. In game a window "
-            + "also stays on a couple of ticks longer than the decider (circuit latency), so an inserter that is back before it "
-            + "closes can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a "
-            + "later window.",
-        explanation: "When the clock is stable the same number of items moves per period either way, but the drops can bunch together "
-            + "instead of landing one batch per window. The Timelines tab shows both runs; the exported clock is the one the "
-            + "blueprint follows.",
+        title: "Swings land a few ticks off the plan, as the blueprint runs them",
+        what: `The plan has ${example.label} drop at ticks ${ticksList(example.planned)}. Run by the clock alone, as in the game, `
+            + `it drops at ticks ${ticksList(example.clocked)}.`
+            + (differing.length > 1 ? ` ${differing.slice(1).map(it => it.label).join(" and ")} differ${differing.length === 2 ? "s" : ""} too.` : "")
+            + " The clock still holds its rate.",
+        why: "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and "
+            + "off. A window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start "
+            + "another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later window.",
+        explanation: "The same number of items moves each period either way, but the swings can bunch together instead of landing "
+            + "one to a window. The Timeline tab shows both runs; the exported clock is the one the blueprint follows.",
         table: {
             columns: ["Inserter", "Plan drops at", "Exported clock drops at"],
             rows: differing.map(it => [it.label, ticksList(it.planned), ticksList(it.clocked)]),
@@ -296,9 +296,9 @@ function wakeUpsInsight(result: BlueprintGenerationResult, entities: Serializabl
         scope: "clock",
         title: `Machines wake the inserters ${round(wake_ups.wake_ups_per_minute)} times a minute`,
         what: `In a long run of this clock the machines of one copy of the build woke its inserters ${round(wake_ups.wake_ups_per_minute)} `
-            + `times a minute. ${most.label} is woken most, ${round(most.wake_ups_per_minute)} times a minute: it is enabled `
-            + `${percent(most.enabled_share)} of the time and spends ${percent(most.waiting_share)} of the time waiting.`
-            + (mostly_enabled.length === 0 ? "" : ` Enabled ${percent(MOSTLY_ENABLED_SHARE)} of the time or more: `
+            + `times a minute. ${most.label} is woken most, ${round(most.wake_ups_per_minute)} times a minute: it is on `
+            + `${percent(most.enabled_share)} of the time and is on and waiting for ${percent(most.waiting_share)} of it.`
+            + (mostly_enabled.length === 0 ? "" : ` On ${percent(MOSTLY_ENABLED_SHARE)} of the time or more: `
                 + `${mostly_enabled.map(it => `${it.label} (${percent(it.enabled_share)})`).join(", ")}.`),
         why: "An enabled inserter with nothing to move sleeps on the wake-up list of the machine it waits on, and that machine "
             + "wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a "
@@ -309,7 +309,7 @@ function wakeUpsInsight(result: BlueprintGenerationResult, entities: Serializabl
             + "of the machine it waits on, whether its windows are long, it is left always enabled in a loop of machines, or "
             + "the config sets it to always enabled.",
         table: {
-            columns: ["Inserter", "Between", "Wake-ups a minute", "Machine wakes a minute", "Enabled", "Enabled and waiting"],
+            columns: ["Inserter", "Between", "Wake-ups a minute", "Most it could be woken a minute", "On", "On and waiting"],
             rows: rows.map(it => [it.label, it.ends, `${round(it.wake_ups_per_minute)}`, `${round(it.alarms_per_minute)}`,
                 percent(it.enabled_share), percent(it.waiting_share)]),
         },
@@ -418,6 +418,25 @@ export function beltPickupNotTestedInsights(config: Config): ClockInsight[] {
             + "compared with the game.",
         explanation: "The clock may not match the game: its rate, stability and wake-ups are worked out from pickup timing "
             + "never checked there.",
+    }];
+}
+
+/**
+ * That drops of the build are marked as side-loading onto a belt downstream (Sidecar 0.13.0): a known limit, as the config
+ * describes the belts as one belt. There is no separate why: the advice is the explanation. None when no drop is marked.
+ */
+export function sideLoadedDropInsights(config: Config): ClockInsight[] {
+    const drops = sideLoadedDrops(config);
+    if (drops.length === 0) {
+        return [];
+    }
+    return [{
+        id: "side-loaded-drop",
+        scope: "build",
+        title: SIDE_LOADED_DROP_TITLE,
+        what: drops.map(describeSideLoadedDrop).join(" "),
+        why: "",
+        explanation: SIDE_LOADED_DROP_ADVICE,
     }];
 }
 

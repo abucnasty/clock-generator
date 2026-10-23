@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { ChestType } from "../common/entity-types";
+import type { FullOutputChest } from "./full-output-chests";
 import { NotMadeClock, whyNotStable, WhyNotStableBuild, WhyNotStableClock, whyNotStableClockOf } from "./why-not-stable";
 
 /** A clock at the target that holds and recovers, changed by `overrides` */
@@ -12,6 +14,7 @@ function clock(overrides: Partial<WhyNotStableClock> = {}): WhyNotStableClock {
         expected_output_items: 176,
         as_built_output: { items: 176 },
         spare_time: null,
+        full_output_chests: [],
         ...overrides,
     };
 }
@@ -155,6 +158,48 @@ describe("why the selected clock does not meet goal 1", () => {
     });
 });
 
+const chest1: FullOutputChest = { chest_id: 1, chest_type: ChestType.BUFFER_CHEST, name: "Chest 1", item: "electromagnetic-science-pack",
+    item_label: "electromagnetic science pack", held: 9600, capacity: 9600, inserter_ids: [1, 2] };
+
+describe("an output chest that fills up", () => {
+    const full = (chests: FullOutputChest[], overrides: Partial<WhyNotStableClock> = {}) => clock({ verdict: "unstable", meets_target_rate: false,
+        assessment: { holds: false, items_per_second: 0, backpressure_loss: null }, full_output_chests: chests, ...overrides });
+    const build: WhyNotStableBuild = { target_items_per_second: 48, backed_up_belts: false, not_made: [{ id: "even-hands", label: "Even hands", reason: "not made." }] };
+
+    it("is told as the cause, with the chest as the form names it, its numbers with thousands separators and the clocks not made", () => {
+        expect(whyNotStable([full([chest1])], 0, build)).toEqual({
+            cause: "output chest full",
+            message: "No clock holds the target rate of 48 a second: Chest 1 fills up. Nothing takes any electromagnetic science pack out of it, "
+                + "so it holds 9,600 of 9,600 and inserters 1 and 2 have nowhere to drop. The closest, Batched swings: 2 output swings per "
+                + "cycle, moves 0 a second, 48 under the target. Use an infinity chest, or add an inserter that takes the items out, and "
+                + "generate again. Not made: Even hands (not made).",
+        });
+    });
+
+    it("names each chest, a car by its type, and an inserter alone in the singular", () => {
+        const car: FullOutputChest = { ...chest1, chest_id: 2, chest_type: ChestType.CAR, name: "Car 2", item: "iron-plate", item_label: "iron plate",
+            held: 79999, capacity: 80000, inserter_ids: [3] };
+        const message = whyNotStable([full([chest1, car])], 0, { ...build, not_made: [] })!.message;
+        expect(message).toContain("Chest 1 fills up. Nothing takes any electromagnetic science pack out of it, so it holds 9,600 of 9,600 and "
+            + "inserters 1 and 2 have nowhere to drop. Car 2 fills up. Nothing takes any iron plate out of it, so it holds 79,999 of 80,000 "
+            + "and inserter 3 has nowhere to drop. The closest");
+    });
+
+    it("comes before the other causes, and is not said of a clock that meets the target or was not found with a full chest", () => {
+        expect(whyNotStable([full([chest1], { moving_belt: true })], 0, build)?.cause).toBe("output chest full");
+        expect(whyNotStable([full([chest1], { meets_target_rate: true })], 0, build)).toBeNull();
+        expect(whyNotStable([full([])], 0, build)?.cause).toBe("nothing holds");
+    });
+
+    it("is read from the as-built check of the alternative", () => {
+        const view = { label: "x", verdict: "unstable" as const, ranking: { meets_target_rate: false },
+            assessment: { holds: false, items_per_second: 0, backpressure_loss: null }, expected_output_items: 4, insights: [] };
+        const as_built = { holds: false, actual_output_items: 0, start_phases_checked: 1, full_output_chests: [chest1] };
+        expect(whyNotStableClockOf({ ...view, as_built }).full_output_chests).toEqual([chest1]);
+        expect(whyNotStableClockOf({ ...view, as_built: undefined }).full_output_chests).toEqual([]);
+    });
+});
+
 describe("what the summary reads of a clock", () => {
     it("reads the alternative's fields under their names", () => {
         const assessment = { holds: false, items_per_second: 7.5, backpressure_loss: null };
@@ -170,6 +215,7 @@ describe("what the summary reads of a clock", () => {
             failed_pickup_phases: { "inserter:2": [3, 0] }, expected_output_items: 176,
             as_built_output: { items: 176, repeat_periods: 6, repeat_output_items: 880 },
             spare_time: { machine: "Machine 1 (assembling-machine)", spare_ticks: 3, working_ticks: 160, recovery_periods: 40 },
+            full_output_chests: [],
         });
     });
 
@@ -177,7 +223,8 @@ describe("what the summary reads of a clock", () => {
         const view = { label: "Observed windows", verdict: "stable" as const, ranking: { meets_target_rate: true },
             assessment: { holds: true, items_per_second: 1, backpressure_loss: null }, as_built: null, expected_output_items: 4, insights: [] };
         expect(whyNotStableClockOf(view)).toEqual({ label: "Observed windows", verdict: "stable", meets_target_rate: true,
-            assessment: view.assessment, moving_belt: false, expected_output_items: 4, spare_time: null });
+            assessment: view.assessment, moving_belt: false, expected_output_items: 4, spare_time: null,
+            full_output_chests: [] });
         expect(whyNotStableClockOf({ ...view, belt: { kind: "backed_up" } }).moving_belt).toBe(false);
     });
 });

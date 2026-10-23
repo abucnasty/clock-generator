@@ -5,6 +5,7 @@ import type { ClockInstallFacts } from '../worker/installFacts';
 import { WIRING_LIST_NAME } from '../utils/a11yLabels';
 import { INSTALL_COPY, installSteps, wiringList, type WiringMoves, type WiringRow } from '../utils/installSteps';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import { RichText } from './RichText';
 import { WakeRowMoves } from './WakeRowMoves';
 
 /** Where the steps being folded away is remembered, so a player who knows them is not shown them again */
@@ -14,8 +15,8 @@ const WIRING_ROWS_SHOWN = 8;
 /** The box's height then: about 8 one-line rows */
 const WIRING_BOX_PX = 8 * 30 + 36;
 
-/** The lines of the list: one per inserter or drill, and a heading line for a combinator of several */
-const linesOf = (rows: WiringRow[]) => rows.reduce((lines, row) => lines + row.entries.length + (row.entries.length > 1 ? 1 : 0), 0);
+/** The lines of the list: one per inserter or drill, and a line more for a combinator of several, or for the combinator's own line */
+const linesOf = (rows: WiringRow[]) => rows.reduce((lines, row) => lines + row.entries.length + (row.line !== undefined || row.entries.length > 1 ? 1 : 0), 0);
 
 function readCollapsed(): boolean {
     try {
@@ -69,9 +70,13 @@ function WiringEntryText({ entry }: { entry: WiringRow['entries'][number] }) {
     );
 }
 
-/** One combinator: what it is called, then what to wire to its output (one line when it serves one inserter) */
+/**
+ * One combinator: its first line as the game shows it (what a player reads on the combinator they placed), then the
+ * inserters or drills to wire to its output, one line each. A clock with no line for it keeps the earlier form: one
+ * line for one inserter, a heading and its inserters for several.
+ */
 function WiringItem({ row }: { row: WiringRow }) {
-    if (row.entries.length === 1) {
+    if (row.line === undefined && row.entries.length === 1) {
         return (
             <Box component="li" sx={{ py: 0.5 }} data-wiring-row={row.combinator} data-wiring-entry="">
                 <WiringEntryText entry={row.entries[0]} />
@@ -80,9 +85,15 @@ function WiringItem({ row }: { row: WiringRow }) {
     }
     return (
         <Box component="li" sx={{ py: 0.5 }} data-wiring-row={row.combinator}>
-            <Box component="span" sx={{ fontWeight: 600 }}>{row.combinator}</Box>
-            <Box component="span" sx={{ color: 'text.secondary' }}> ({INSTALL_COPY.oneCombinator})</Box>
-            <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+            {row.line === undefined ? (
+                <>
+                    <Box component="span" sx={{ fontWeight: 600 }}>{row.combinator}</Box>
+                    <Box component="span" sx={{ color: 'text.secondary' }}> ({INSTALL_COPY.oneCombinator})</Box>
+                </>
+            ) : (
+                <Box component="span" data-wiring-line=""><RichText text={row.line} /></Box>
+            )}
+            <Box component="ul" sx={{ m: 0, pl: 2.5, ...(row.line === undefined ? {} : { color: 'text.secondary' }) }}>
                 {row.entries.map(entry => (
                     <li key={entry.label} data-wiring-entry=""><WiringEntryText entry={entry} /></li>
                 ))}

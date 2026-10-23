@@ -269,7 +269,7 @@ export function selectionAnnouncement(row: WakeWindowRow, index: number, periodT
     return `${row.label}. ${windowDetails(row, index, periodTicks)}`;
 }
 
-export type WatchNoteKind = 'mostly-on' | 'slack' | 'short' | 'wraps' | 'most-woken';
+export type WatchNoteKind = 'mostly-on' | 'slack' | 'short' | 'wraps' | 'most-woken' | 'never-woken';
 
 /** What to watch for in a row, in the glossary's terms; empty for a row with nothing to say */
 export function watchNotes(
@@ -317,6 +317,12 @@ export function watchNotes(
                 text: `Wake window ${num(wrapped + 1)} runs past the end of the clock period and carries on from tick 0.`,
             });
         }
+    }
+    if (row.kind === 'inserter' && row.wakeUpsPerMinute === 0 && row.onShare > 0) {
+        notes.push({
+            id: 'never-woken',
+            text: `On for ${percentText(row.onShare)} of the period but woken 0 times a minute: the simulator counts no wake-up for it while it is on.`,
+        });
     }
     if (ctx.mostWakeUpsId !== null && row.id === ctx.mostWakeUpsId) {
         notes.push({ id: 'most-woken', text: 'Woken most of all the inserters of this clock.' });

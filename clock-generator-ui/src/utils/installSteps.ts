@@ -11,6 +11,8 @@ interface InstallInput {
     wiring: number[][];
     /** The config ids of the mining drills wired to each combinator that switches drills on */
     drills: number[][];
+    /** The first line of each combinator's description, by `wiringRowKey`; a combinator with no line is missing */
+    lines?: Record<string, string>;
 }
 
 export type InstallStepId = 'import' | 'book' | 'place' | 'wire' | 'enable' | 'drills' | 'others' | 'none' | 'lock';
@@ -22,7 +24,7 @@ export interface InstallStep {
 }
 
 /** The version the blueprints need: the else outputs of a decider combinator, which the clocks use, came with 2.1 */
-export const REQUIRES_FACTORIO = 'Needs Factorio 2.1.';
+export const REQUIRES_FACTORIO = 'The blueprint needs Factorio 2.1 or later.';
 
 /** Every player-facing string of the install steps */
 export const INSTALL_COPY = {
@@ -151,29 +153,42 @@ interface WiringEntry extends WiringMoves {
 export interface WiringRow {
     /** As its description starts: "Inserters 1, 5", "Drill 2" */
     combinator: string;
+    /** The first line of the combinator's description as the game shows it, rich text and all; absent when the clock has none */
+    line?: string;
     /** What to wire to it, one line each */
     entries: WiringEntry[];
 }
+
+/** Where the first line of the combinator that switches these inserters or drills on is kept: "inserter:1,5", "drill:2" */
+export const wiringRowKey = (kind: 'inserter' | 'drill', ids: readonly number[]) => `${kind}:${[...ids].sort((a, b) => a - b).join(',')}`;
+
+/** The first line of a description: what the game shows of a combinator on the map, and the line the clock's players match */
+export const firstLineOf = (description: string) => description.split('\n', 1)[0];
 
 /** "Inserters 1, 5" or "Drill 2", as the engine's description header names a combinator's entities */
 const namesText = (kind: 'Inserter' | 'Drill', ids: number[]) => `${kind}${ids.length > 1 ? 's' : ''} ${ids.join(', ')}`;
 
 /**
  * The wiring list: one row per combinator, inserters first and then drills, each ordered by its first number, with
- * what each inserter or drill moves and between which ends (`movesOf`, keyed "inserter:3"; empty when unknown).
+ * what each inserter or drill moves and between which ends (`movesOf`, keyed "inserter:3"; empty when unknown), and the
+ * first line of the combinator's description when the clock has it.
  */
 export function wiringList(
-    facts: Pick<InstallInput, 'wiring' | 'drills'>,
+    facts: Pick<InstallInput, 'wiring' | 'drills' | 'lines'>,
     movesOf: (id: string) => WiringMoves,
 ): WiringRow[] {
-    const rows = (kind: 'Inserter' | 'Drill', groups: number[][]) => groups
+    const rows = (kind: 'Inserter' | 'Drill', groups: number[][]): WiringRow[] => groups
         .map(ids => [...ids].sort((a, b) => a - b))
         .filter(ids => ids.length > 0)
         .sort((a, b) => a[0] - b[0])
-        .map(ids => ({
-            combinator: namesText(kind, ids),
-            entries: ids.map(id => ({ label: `${kind} ${id}`, ...movesOf(`${kind.toLowerCase()}:${id}`) })),
-        }));
+        .map(ids => {
+            const line = facts.lines?.[wiringRowKey(kind === 'Inserter' ? 'inserter' : 'drill', ids)];
+            return {
+                combinator: namesText(kind, ids),
+                ...(line !== undefined ? { line } : {}),
+                entries: ids.map(id => ({ label: `${kind} ${id}`, ...movesOf(`${kind.toLowerCase()}:${id}`) })),
+            };
+        });
     return [...rows('Inserter', facts.wiring), ...rows('Drill', facts.drills)];
 }
 

@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.13.0
+Date: 2026-10-23
+  Features:
+    - marks an inserter that drops onto a belt that side-loads onto another belt downstream, with the tiles to the merge
+---------------------------------------------------------------------------------------------------
 Version: 0.12.0
 Date: 2026-10-23
   Features:

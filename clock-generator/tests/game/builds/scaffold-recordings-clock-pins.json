@@ -1,0 +1,8 @@
+{
+  "meaning": "The clocks that the values of three scaffold-recordings builds belong to: agricultural science (the dips and open issues of its staged start), and the inserters moved_open names for agricultural science with backed-up belts and for chemical science with a shared foundry. Each build is named as in scaffold-recordings.game.test.ts, its config by the ConfigPaths key; `clock_sha256` is the sha256 of the identity (clockIdentity) of the clock the generator selects for it. The game test refuses to run on another clock and scaffold-recordings-clock.generation.test.ts checks the selection, so a clock that moves is found before those values are taken for the new clock's. The values were recorded on 2026-10-15 and 2026-10-16 on the same clock (agricultural science: 2 output swings per cycle; chemical science with a shared foundry: 1 output swing per cycle); the hashes were taken from the selection on 2026-10-23, no recording of the clock itself was kept.",
+  "cases": {
+    "agricultural science": {"config": "AGRICULTURAL_SCIENCE", "backed_up_belts": false, "clock_sha256": "ad5a0508af055cf73cbf3593e610ae0d54335829324a2a8c8a22aa6f65ec4d34"},
+    "agricultural science (belts are backed up)": {"config": "AGRICULTURAL_SCIENCE", "backed_up_belts": true, "clock_sha256": "febeda0a8b3f06a0bb361b2f5563c17e482037d795f907a268bdc739dd6e3260"},
+    "chemical science with a shared foundry": {"config": "CHEMICAL_SCIENCE_SHARED_FOUNDRY", "backed_up_belts": false, "clock_sha256": "0754ff7fba92b1df02544983c7d074446b9f0913181ce64d894820bf52d31b2a"}
+  }
+}

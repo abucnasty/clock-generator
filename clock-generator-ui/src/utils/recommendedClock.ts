@@ -55,8 +55,8 @@ export const RECOMMENDED_COPY = {
      * The clocks the pick was compared with: those that hold the rate and recover, or on a build with a deadlock risk
      * those that hold the rate (the glossary's words, not the table's old "Stable")
      */
-    contenders: (rate: string, deadlock: boolean) => deadlock ? `the clocks that hold ${rate}/s` : `the clocks that hold ${rate}/s and recover`,
-    fewestWakeUps: (contenders: string, belt: string) => `Fewest wake-ups among ${contenders}${belt}.`,
+    contenders: (rate: string, deadlock: boolean) => deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep making ${rate}/s and recover`,
+    fewestWakeUps: (contenders: string, belt: string) => `Fewest wake-ups of ${contenders}${belt}.`,
     onlyContender: (rate: string, belt: string, deadlock: boolean) =>
         deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only clock that holds ${rate}/s and recovers${belt}.`,
     wakeUpsNotCounted: (contenders: string, belt: string) =>
@@ -67,7 +67,7 @@ export const RECOMMENDED_COPY = {
         ` ${othersText(others, kind)} on wake-ups, so the one with fewer wake windows was picked, not counting the `
         + 'extra wake windows that only cut wake-ups.',
     tieOnWindows: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wake-ups and on wake windows, so the first listed was picked.`,
+        ` ${othersText(others, kind)} on wake-ups and wake windows, so the first one in the list is shown.`,
     tieKindMoving: ' for a moving belt',
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
     noneForMovingBelt: (rate: string, deadlock: boolean) => deadlock
@@ -89,7 +89,7 @@ export const RECOMMENDED_COPY = {
 
 /** "1 other clock for a moving belt ties" / "2 other clocks tie" */
 function othersText(others: number, kind: string): string {
-    return others === 1 ? `1 other clock${kind} ties` : `${others} other clocks${kind} tie`;
+    return others === 1 ? `One other clock${kind} is level with it` : `${others} other clocks${kind} are level with it`;
 }
 
 /** As the rate warning prints a rate: 240, 12.5, 0.33 */
