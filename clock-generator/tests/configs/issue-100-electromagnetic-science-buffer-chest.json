@@ -1,0 +1,262 @@
+{
+  "target_output": {
+    "recipe": "electromagnetic-science-pack",
+    "items_per_second": 48,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "electromagnetic-science-pack",
+      "productivity": 175,
+      "crafting_speed": 89.625,
+      "type": "machine"
+    },
+    {
+      "id": 2,
+      "recipe": "electromagnetic-science-pack",
+      "productivity": 175,
+      "crafting_speed": 89.625,
+      "type": "machine"
+    },
+    {
+      "id": 3,
+      "recipe": "supercapacitor",
+      "productivity": 175,
+      "crafting_speed": 63.75,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "electromagnetic-science-pack"
+      ],
+      "id": 1,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "electromagnetic-science-pack"
+      ],
+      "id": 2,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "supercapacitor"
+      ],
+      "id": 3,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "supercapacitor"
+      ],
+      "id": 4,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "accumulator",
+        "accumulator"
+      ],
+      "id": 5
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "accumulator",
+        "accumulator"
+      ],
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "battery"
+      ],
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "superconductor",
+        "holmium-plate"
+      ],
+      "id": 8,
+      "overrides": {}
+    },
+    {
+      "id": 9,
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 400,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "superconductor",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "holmium-plate",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "battery",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "buffer-chest",
+      "id": 1,
+      "storage_size": 48,
+      "item_filter": "electromagnetic-science-pack"
+    },
+    {
+      "type": "infinity-chest",
+      "id": 2,
+      "item_filter": [
+        {
+          "item_name": "electronic-circuit",
+          "request_count": 1000
+        }
+      ]
+    }
+  ],
+  "overrides": {
+    "ignored_lcm_ingredients": [
+      "electronic-circuit",
+      "supercapacitor",
+      "electromagnetic-science-pack"
+    ]
+  }
+}
