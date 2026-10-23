@@ -35,6 +35,7 @@ import { flowFocus, flowEntityKey } from '../utils/flowFocus';
 import { FlowTileBackground } from './FlowTileBackground';
 import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
+import { useFlowPortUpdates } from '../hooks/useFlowPortUpdates';
 
 const nodeTypes: NodeTypes = {
     entityNode: EntityFlowNode,
@@ -204,6 +205,7 @@ function FlowContent({
     })), [graphNodes, focus, selection, activeNodeId]);
     const measured = useMeasuredFlowNodes(nodes);
     const routes = useFlowRoutes(graphNodes, edges, measured.measurements);
+    useFlowPortUpdates(graphNodes);
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
     const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
     const edgesWithSelection = useMemo(() => edges.map(edge => {
