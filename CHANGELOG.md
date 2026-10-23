@@ -11,27 +11,29 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.20.0] - Unreleased
 
 ### Added
-- Cars, tanks, cargo wagons and rocket silos can be chests, with mixed items, filtered slots and wagon slots by quality; a silo fills its rocket by weight. The web form adds and edits them, and Sidecar 0.12.0 exports them.
-- Container slots filtered to No item or Deconstruction planner stay blocked, including when pasted from Sidecar; a config marks such a slot `blocked: true`. The inventory editor can block all remaining unfiltered slots at once.
-- A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo. Sidecar 0.12.0 exports it, and the web form picks it in the drill's Target, with the machines; the inserters that take from it know the ore it holds.
-- A mining drill that drops into a chest is switched on only for the ticks it needs to top the chest up just in time for the inserters that take from it, instead of always; the clock says to wire it with Read resources off.
-- A build's product can leave through the car, wagon or chest its machine fills, and a container used as a hub by several machines warms up and gets a clock.
-- Every clock says which generator made it, with the version and the site, in the blueprint's description, on the clock combinator and in its tags. The clock combinator also lists the inserters and drills that are not on the clock, when there is room.
-- A machine's settings start with the machine itself, set by Sidecar, picked for its recipe or chosen by hand, and its quality: its recipe picker offers only the recipes it can make, and its icon shows its quality as in the game. A config whose recipe does not fit its machine loads with a warning.
+- Cars, tanks, cargo wagons and rocket silos can be chests, with mixed items, filtered slots and slots by quality. Sidecar 0.12.0 exports them.
+- Slots filtered to No item or a Deconstruction planner stay blocked. The inventory editor can block every unfiltered slot at once.
+- A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo.
+- A drill that drops into a chest is switched on just in time to keep the chest topped up, instead of always. Wire it with Read resources off.
+- A product can leave through the container its machine fills, and a container shared by several machines gets a clock.
+- Each clock names the generator version and site that made it.
+- A machine is picked by what it is and its quality, and its recipe picker lists only the recipes it can make.
 
 ### Changed
-- How a machine is simulated follows from the machine alone, and the Type setting (assembling machine, furnace, biochamber) is gone. Configs, saved builds, share links and Sidecar exports that set a Type load with a machine of that kind that can make the recipe.
-- The clock's combinators read in plain terms: each names what it switches on by its two ends as icons (a machine by its prototype, which Sidecar 0.12.0 exports and the web form shows, else by its number and recipe), the item and the config id, then its swings and windows a period, with the windows when there are three or fewer. The clock's own combinators say to leave them. Swings no longer show as fractions such as 6000000000000001/400000000000000.
-- A window of one tick is one condition on its combinator, clock = 28, instead of two (clock ≥ 28 and clock ≤ 28), and its description says "open 28".
-- Each mining drill has its own productivity, its mining research and productivity modules together, in place of one mining productivity level for all drills. Sidecar 0.12.0 exports it, and older configs, saved builds and exports load with the level as each drill's productivity.
-- Cars, tanks, cargo wagons and rocket silos are named by what they are ("Car 1") instead of "Chest 1"; the inventory grid draws filters faded and blocked slots red as the game does, with one slot count; machines default to Normal quality; the mining speed bonus is entered in percent; and the blueprint and combinator texts read more plainly. A paste whose target is the export's maximum says to lower it for headroom. Sidecar 0.12.0's button is Export.
+- The Type setting (assembling machine, furnace, biochamber) is gone: the machine decides how it is simulated. Older configs and exports still load.
+- The clock's combinators describe what each one switches on in plain terms, with icons.
+- A one-tick window is one condition, clock = 28, instead of two.
+- Each mining drill has its own productivity, in place of one mining productivity level. Older configs and exports still load.
+- The mining speed bonus is entered in percent.
+- Cars, tanks, wagons and silos are named by what they are ("Car 1"), and the inventory grid draws filtered and blocked slots as the game does.
+- A paste whose target is the export's maximum warns you to lower it for headroom.
 
 ### Fixed
-- Mining drills mine by their progress bars, as in the game, so a drill making less than one item a tick works, and the mining productivity level gives 10% a level instead of one level less.
-- A mining drill fills a machine up to the larger of a stack and the insertion limit, plus 64, as in the game, instead of one craft's ingredients more.
-- Mining productivity makes its bonus items on the same tick as the game when the bonus is within a hair of a whole item, on every ore.
-- The Build panel's Diagram opens without freezing the page (half a second on a 29-entity build, more on larger ones), and the flow replay opens with the whole build in view instead of zoomed in on one entity.
-- A clock whose period is rounded down to whole ticks is listed at the rate it really runs, labelled with how much it runs fast, and counts as holding the target when it is at most 0.1% fast and within what the machines make, checked on its own period; a clock whose recovery could not be tried is no longer picked over clocks that recover, and Recovers: Unavailable says why it was not tried.
+- Mining drills mine as in the game, including slow drills and the tick each productivity bonus item appears.
+- A mining drill fills a machine up to the larger of a stack and the insertion limit, plus 64, as in the game.
+- The Diagram opens without freezing the page.
+- A clock rounded down to whole ticks shows the rate it really runs, and holds the target when it runs at most 0.1% fast.
+- A clock whose recovery could not be tried is no longer picked over clocks that recover.
 
 ## [0.19.0] - 2026-10-21
 
