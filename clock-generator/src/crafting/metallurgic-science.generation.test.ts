@@ -63,7 +63,8 @@ describe("generateClockForConfig", () => {
                 expect(clock).not.toBe(selected);
                 expect(clock.ranking.holds_expected_output).toBe(false);
             }
-            expect(one_swing.assessment.items_per_second).toBeCloseTo(36, 6);
+            // listed by the mean of its long run: the one period the first check measures moved 36 a second
+            expect(one_swing.assessment.items_per_second).toBeCloseTo(34.875, 6);
         });
 
         it("with the belts backed up, selects the observed windows of 2 output swings, which are stable", () => {
