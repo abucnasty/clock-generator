@@ -1,5 +1,6 @@
 import { Config } from "../config";
 import { defaultLogger } from "../common/logger";
+import { groupedHandsClock } from "./candidates/grouped-hands";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { BlueprintGenerationResult, GenerateClockOptions, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, planRun } from "./plan/plan-run";
 
@@ -21,7 +22,13 @@ export function generateClockForConfig(
     }
     const plan = planRun(config, options);
     const clock = clockOfPlan(plan, options);
-    return checkedClock(plan, clock, clock.windows, options);
+    const planned = checkedClock(plan, clock, clock.windows, options);
+    // where the planned windows do not hold, windows made from the hands and the sources take their place, if they do
+    if (options.verify_as_built !== true || (planned.stability_check.as_built?.holds ?? planned.stability_check.holds)) {
+        return planned;
+    }
+    const grouped = groupedHandsClock(plan, clock, options);
+    return grouped !== null && grouped.stability_check.holds ? grouped : planned;
 }
 
 /**

@@ -1146,7 +1146,7 @@ export function trialRunOf(run: BuildRun): TrialRun {
 type PlanRunOptions = Pick<GenerateClockOptions, "debug" | "debug_steps" | "logger" | "factorio_states">;
 
 /** The planning run of a build, with what a clock and its export read off it */
-interface PlanRun {
+export interface PlanRun {
     config: Config;
     logger: Logger;
     run: BuildRun;
