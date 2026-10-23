@@ -712,11 +712,24 @@ function runAlternative(
     };
     const exact = alternativeAt(period, { id, label, description, result });
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} verdict=${exact.verdict} survives=${backpressure_loss?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
-    if (!result.subtick) {
+    if (Number.isInteger(period)) {
         return { signature, alternatives: [exact] };
     }
-    const { period_ticks, scale } = result.subtick.clock;
+    // the blueprint of a period that is not a whole number of ticks counts it rounded down (blueprint.ts), unless it
+    // has a subtick clock: listed as that clock, at the rate it runs the build at, it is judged by its own rate
     const rounded = Math.floor(period);
+    const roundedRow = (why: string) => ({
+        id,
+        label: `${label} (clock rounded to ${rounded} ticks)`,
+        description: `${description} The period is not a whole number of ticks (${period.toFixed(3)})${why}, so this clock `
+            + `runs it rounded down to ${rounded} ticks, slightly faster than the target; the clock-only check models `
+            + "the exact period, so the machines need a little headroom.",
+        result,
+    });
+    if (!result.subtick) {
+        return { signature, alternatives: [alternativeAt(rounded, roundedRow(" and has no subtick clock of a small enough scale"))] };
+    }
+    const { period_ticks, scale } = result.subtick.clock;
     return {
         signature,
         alternatives: [
@@ -730,14 +743,7 @@ function runAlternative(
                     + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
                 result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
             }),
-            alternativeAt(rounded, {
-                id,
-                label: `${label} (clock rounded to ${rounded} ticks)`,
-                description: `${description} The period is not a whole number of ticks (${period.toFixed(3)}), so this clock `
-                    + `runs it rounded down to ${rounded} ticks, slightly faster than the target; the clock-only check models `
-                    + "the exact period, so the machines need a little headroom.",
-                result,
-            }),
+            alternativeAt(rounded, roundedRow("")),
         ],
     };
 }
