@@ -16,7 +16,8 @@
    "id": 2,
    "recipe": "iron-plate",
    "productivity": 50,
-   "crafting_speed": 80.0375
+   "crafting_speed": 80.0375,
+   "prototype": "electric-furnace"
   }
  ],
  "inserters": [
