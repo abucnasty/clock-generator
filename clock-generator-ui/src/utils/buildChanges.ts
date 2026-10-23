@@ -1,5 +1,6 @@
 import type { Config } from 'clock-generator/browser';
-import { entityLabel, type LabelKind } from './entityLabel';
+import type { ChestType } from 'clock-generator/light';
+import { entityLabelIn, type LabelKind } from './entityLabel';
 
 /** A rate or count as the sentences print it: at most two decimals, no trailing zeros */
 const figure = (value: number) => Number(value.toFixed(2)).toString();
@@ -40,7 +41,9 @@ function entityChanges(kind: LabelKind, many: string, generated: { id?: number }
     if (ids.length === 0) {
         return null;
     }
-    return ids.length === 1 ? entityLabel(kind, ids[0]) : `${many} ${ids.join(', ')}`;
+    // a chest by what it is: "Car 1"
+    const chests = kind === 'chest' ? current.map((entity, i) => ({ ...(entity as { type?: ChestType }), id: entity.id ?? i + 1 })) : undefined;
+    return ids.length === 1 ? entityLabelIn(chests, kind, ids[0]) : `${many} ${ids.join(', ')}`;
 }
 
 /**
