@@ -386,13 +386,13 @@ function scheduledDrillIdsOf(entity: { player_description?: string; tags?: { clo
     return named ? named[1].split(",").map(id => Number(id.trim())) : [];
 }
 
-/** The mod wires a clocked drill to the build's one mining drill: a clock that enables drills needs a config with one */
+/** The clock's drills are wired by the unit numbers of the built drills (see matchBuiltDrills) */
 function assertDrillsWireable(clock: GeneratedClock, config: Config): void {
     const drill_ids = scheduledDrillIds(clock.blueprint);
     const config_ids = (config.drills?.configs ?? []).map(drill => drill.id);
-    if (drill_ids.length > 0 && (config_ids.length !== 1 || drill_ids.some(id => id !== config_ids[0]))) {
-        throw new Error(`The clock enables drills ${drill_ids.join(", ")} and the config has drills ${config_ids.join(", ") || "none"}: `
-            + "the harness wires a clocked drill only in a build with one drill");
+    const unknown = drill_ids.filter(id => !config_ids.includes(id));
+    if (unknown.length > 0) {
+        throw new Error(`The clock enables drills ${drill_ids.join(", ")} and the config has drills ${config_ids.join(", ") || "none"}`);
     }
 }
 
@@ -482,6 +482,26 @@ export function matchBuiltCopies(described: any, config: Config, named_copies?: 
             const config_id = match.inserters.get(inserter.id);
             if (config_id !== undefined && inserter.unit_number !== undefined) {
                 unit_numbers.set(config_id, inserter.unit_number);
+            }
+        }
+        return unit_numbers;
+    });
+}
+
+/**
+ * Per copy, the unit number of the built drill behind each config drill id: a config drill is the one whose target machine
+ * is the machine of the copy that the built drill drops into.
+ */
+export function matchBuiltDrills(described: any, config: Config, named_copies?: number): Map<number, number>[] {
+    const { copies } = matchBuild(described, config, named_copies);
+    return copies.map(match => {
+        const unit_numbers = new Map<number, number>();
+        for (const drill of Object.values<any>(described.drills ?? {})) {
+            if (drill.target?.type !== "machine") continue;
+            const machine_id = match.machines.get(drill.target.id);
+            const configured = (config.drills?.configs ?? []).find(it => it.target.type === "machine" && it.target.id === machine_id);
+            if (configured !== undefined && drill.unit_number !== undefined) {
+                unit_numbers.set(configured.id, drill.unit_number);
             }
         }
         return unit_numbers;
@@ -916,7 +936,7 @@ export class HarnessSession {
         }
         await this.waitFor("the warm-up", deadline, status => status.ready);
 
-        let clock: { blueprint: string; inserters: Record<string, number | number[]> } | undefined;
+        let clock: { blueprint: string; inserters: Record<string, number | number[]>; drills?: Record<string, number | number[]> } | undefined;
         if (options.clock && options.config) {
             const described = await this.call("harness_describe");
             const copies = matchBuiltCopies(described, options.config, options.copies);
@@ -935,7 +955,13 @@ export class HarnessSession {
                 throw new Error(missingFromConfigMessage(not_in_config));
             }
             assertDrillsWireable(options.clock, options.config);
-            clock = { blueprint: withInserterTags(options.clock), inserters: clockInserters(copies) };
+            const scheduled_drills = scheduledDrillIds(options.clock.blueprint);
+            const drill_copies = matchBuiltDrills(described, options.config, options.copies);
+            const missing_drills = drill_copies.flatMap(unit_numbers => scheduled_drills.filter(id => !unit_numbers.has(id)));
+            if (missing_drills.length > 0) {
+                throw new Error(`The clock names drills ${Array.from(new Set(missing_drills)).join(", ")} of the config, which match no drill of the build`);
+            }
+            clock = { blueprint: withInserterTags(options.clock), inserters: clockInserters(copies), drills: clockInserters(drill_copies) };
         }
 
         const start = await this.call("harness_start", {
