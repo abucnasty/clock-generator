@@ -5,12 +5,7 @@ import {
     Dialog,
     DialogContent,
     DialogTitle,
-    FormControl,
     IconButton,
-    InputLabel,
-    MenuItem,
-    Select,
-    TextField,
     Typography,
 } from '@mui/material';
 import { useId, useMemo, useState } from 'react';
@@ -38,6 +33,8 @@ import { DraftFooter } from './DraftFooter';
 import { switchedChest } from '../utils/configForm/edits';
 import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS } from '../utils/inserterDraft';
 import { FactorioIcon } from './FactorioIcon';
+import { DrillTargetField } from './DrillTargetField';
+import type { DrillTargetBuild } from '../utils/drillTarget';
 import { OutputChestAlert } from './OutputChestAlert';
 import { ItemSelector } from './ItemSelector';
 import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
@@ -82,17 +79,19 @@ export interface EntityEditDialogProps {
 function DrillEditSection({
     drill,
     entityIndex,
-    machines,
+    build,
+    getRecipeInfo,
     itemNames,
     onUpdate,
 }: {
     drill: DrillFormData;
     entityIndex: number;
-    machines: MachineFormData[];
+    build: DrillTargetBuild;
+    getRecipeInfo: (name: string) => RecipeInfo | null;
     itemNames: string[];
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
 }) {
-    const { itemLabel, recipeLabel } = useGameNames();
+    const { itemLabel } = useGameNames();
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <EntityTypeField label="Drill Type" value={drill.type} options={DRILL_TYPES}
@@ -117,30 +116,8 @@ function DrillEditSection({
                 size="small"
             />
 
-            {drill.target.type === 'chest' ? (
-                // a drill into a chest keeps its target as the config gives it: shown, not edited here
-                <TextField size="small" fullWidth label="Target" value={entityLabel('chest', drill.target.id)}
-                    slotProps={{ input: { readOnly: true } }} inputProps={{ 'aria-label': 'Target chest' }} />
-            ) : (
-            <FormControl size="small" fullWidth>
-                <InputLabel>Target Machine</InputLabel>
-                <Select
-                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
-                    value={drill.target.id}
-                    label="Target Machine"
-                    onChange={(e) => onUpdate(entityIndex, { target: { type: 'machine', id: Number(e.target.value) } })}
-                >
-                    {machines.map((m) => (
-                        <MenuItem key={m.id} value={m.id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={m.recipe || 'assembling-machine-3'} size={20} alt="" />
-                                {entityLabel('machine', m.id)}{m.recipe ? ` (${recipeLabel(m.recipe)})` : ''}
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
-            )}
+            <DrillTargetField drill={drill} build={build} getRecipeInfo={getRecipeInfo} sx={{ width: '100%' }}
+                onChange={target => onUpdate(entityIndex, { target })} />
         </Box>
     );
 }
@@ -211,6 +188,7 @@ export function EntityEditDialog({
             }
         }
     }, [entityType, entityId, machines, inserters, belts, chests, drills]);
+    const drillTargetBuild = useMemo(() => ({ machines, belts, chests, inserters, drills: drills ?? [] }), [machines, belts, chests, inserters, drills]);
 
     const handleDelete = () => {
         if (entityIndex === -1) return;
@@ -417,7 +395,8 @@ export function EntityEditDialog({
                         <Box sx={{ p: 2 }}><DrillEditSection
                             drill={draft as DrillFormData}
                             entityIndex={entityIndex}
-                            machines={machines}
+                            build={drillTargetBuild}
+                            getRecipeInfo={getRecipeInfo}
                             itemNames={itemNames}
                             onUpdate={updateDraft}
                         /></Box>

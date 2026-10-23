@@ -12,7 +12,6 @@ export const SELECT_NAMES = {
     beltStrategy: 'Belt strategy',
     chestType: 'Chest type',
     drillType: 'Drill type',
-    targetMachine: 'Target machine',
     quickTemplates: 'Quick templates',
     comparisonOperator: 'Comparison operator',
     valueType: 'Value type',
