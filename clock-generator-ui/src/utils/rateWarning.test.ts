@@ -80,3 +80,15 @@ describe('numerical output and actual hold checks', () => {
         expect(rateWarningOf(result)).toContain('does not hold its expected output');
     });
 });
+
+// Atlan cell 29: the 2,888-tick clock of a 2,888.666-tick period meets goal 1 at 0.02% fast
+describe('a clock rounded down to whole ticks that meets the target rate', () => {
+    it('says how much it runs fast, and not that its rate differs', () => {
+        const rounded = clock(9.972299, 0.002299, true);
+        rounded.assessment.holds = true;
+        rounded.ranking.runs_fast = 0.0002306;
+        expect(rateWarningOf(rounded)).toBe('This clock’s period is rounded down to whole ticks, so it runs 0.02% fast: '
+            + '9.972/s for the 9.97/s requested, within the 0.1% a rounded clock may run and what the machines can make.');
+        expect(copyBlueprintLabelOf(rounded, false)).toBe('Copy blueprint');
+    });
+});
