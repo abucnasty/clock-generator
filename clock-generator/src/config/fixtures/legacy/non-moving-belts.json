@@ -1,0 +1,7 @@
+{
+  "target_output": { "recipe": "iron-gear-wheel", "items_per_second": 1, "copies": 1 },
+  "machines": [{ "id": 1, "recipe": "iron-gear-wheel", "productivity": 0, "crafting_speed": 1.25, "prototype": "assembling-machine-3" }],
+  "inserters": [],
+  "belts": [],
+  "overrides": { "non_moving_belts": true, "lcm": 2 }
+}

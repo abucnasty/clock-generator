@@ -1,6 +1,7 @@
+import path from "path";
 import { describe, expect, it } from "vitest";
 import { ConfigOverridesSchema, ConfigSchema } from "./schema";
-import { parseConfig } from "./loader";
+import { loadConfigFromFile, parseConfig } from "./loader";
 
 describe("backed-up belt configuration", () => {
     it.each([false, true])("migrates the former setting %s to the canonical config name", async value => {
@@ -13,6 +14,11 @@ describe("backed-up belt configuration", () => {
             expect(JSON.stringify(config)).not.toContain("non_moving_belts");
         }
         expect(input.overrides).toEqual({ non_moving_belts: value });
+    });
+
+    it("migrates the legacy fixture's former setting, keeping the other overrides", async () => {
+        const config = await loadConfigFromFile(path.join(__dirname, "fixtures/legacy/non-moving-belts.json"));
+        expect(config.overrides).toEqual({ lcm: 2, backed_up_belts: true });
     });
 
     it("lets the canonical setting win when both spellings are present", () => {

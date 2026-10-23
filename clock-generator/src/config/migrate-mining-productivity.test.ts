@@ -1,4 +1,6 @@
+import path from "path";
 import { describe, expect, it } from "vitest";
+import { loadConfigFromFile } from "./loader";
 import { ConfigSchema } from "./schema";
 import {
     MINING_PRODUCTIVITY_LEVEL_AND_PRODUCTIVITY_ERROR,
@@ -13,6 +15,12 @@ const config = (drills: unknown) => ({ target_output: { recipe: "iron-gear-wheel
     chests: [{ type: "car", id: 1 }], drills });
 
 describe("the former mining productivity level", () => {
+    it("is read from the legacy fixture: level 8 is 80% on each drill", async () => {
+        const config = await loadConfigFromFile(path.join(__dirname, "fixtures/legacy/mining-productivity-level.json"));
+        expect(config.drills?.configs.map(drill => drill.productivity)).toEqual([80, 80]);
+        expect(config.drills).not.toHaveProperty("mining_productivity_level");
+    });
+
     // the game gives 10% a level researched: the harness save's research (mining productivity 3 at level 8000, with 1
     // and 2 done) is 7,999 levels, +79,990%, which a sidecar before 0.12.0's per-drill export gave as the level
     it.each([
