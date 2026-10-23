@@ -14,6 +14,58 @@ local extraction = {}
 
 -- Individual Entity Extractors
 
+---The entity types a drill's drop can go into that the export has a type for: crafting machines and chests
+local DRILL_SINK_TYPES = {
+    "assembling-machine", "furnace", "rocket-silo",
+    "container", "logistic-container", "linked-container", "infinity-container", "car", "cargo-wagon",
+}
+
+---The one resource a drill can mine in its area, when the game has not told which it mines (`mining_target` is nil
+---until the drill first mines, and a drill built or fast-replaced next to a full container may not mine for a long
+---time); nil when its area holds none it can mine, or more than one kind
+---@param entity LuaEntity
+---@return string|nil
+local function resource_under(entity)
+    local prototype = entity.prototype
+    local radius = prototype.get_mining_drill_radius(entity.quality)
+    local categories = prototype.resource_categories or {}
+    local at = entity.position
+    local found = nil
+    for _, resource in pairs(entity.surface.find_entities_filtered({
+        area = { { at.x - radius, at.y - radius }, { at.x + radius, at.y + radius } },
+        type = "resource",
+    })) do
+        if categories[resource.prototype.resource_category] then
+            if found and found ~= resource.name then
+                return nil
+            end
+            found = resource.name
+        end
+    end
+    return found
+end
+
+---How far into the tile under a drill's drop position an entity's collision box has to reach for the drill to drop into
+---it: 12/256 of a tile, on every side of the tile (11/256 gets nothing), for a car and a tank, the drill facing each way
+---(Factorio 2.1.21)
+local DROP_TILE_REACH = 12 / 256
+
+---The machines and chests a drill drops into by the game's rule, when the game has not told (`drop_target` is nil until
+---the drill first drops): the entities whose collision box reaches DROP_TILE_REACH into the tile under its drop position.
+---Measured for a chest, a car and a tank at three orientations, a cargo wagon, a rocket silo and a furnace
+---@param entity LuaEntity
+---@return LuaEntity[]
+local function drop_candidates(entity)
+    local drop = entity.drop_position
+    local x, y = math.floor(drop.x), math.floor(drop.y)
+    local reach = DROP_TILE_REACH
+    -- the search takes a box that touches the area's edge too: one that reaches exactly as far is found
+    return entity.surface.find_entities_filtered({
+        area = { { x + reach, y + reach }, { x + 1 - reach, y + 1 - reach } },
+        type = DRILL_SINK_TYPES,
+    })
+end
+
 ---Extract data from a mining drill
 ---@param entity LuaEntity
 ---@return DrillData|nil
@@ -22,11 +74,9 @@ local function extract_mining_drill_data(entity)
         return nil
     end
 
-    -- Get what the drill is mining
+    -- What the drill is mining; nil when the game has not told and its area does not (the export leaves it out)
     local mining_target = entity.mining_target
-    if not mining_target then
-        return nil
-    end
+    local mined_item_name = mining_target and mining_target.name or resource_under(entity)
 
     -- the force's mining productivity research and the drill's productivity modules together: what its bonus bar uses
     local total_productivity = entity.productivity_bonus or 0
@@ -34,8 +84,13 @@ local function extract_mining_drill_data(entity)
     -- Speed bonus from modules/beacons (this is what clock-generator expects)
     local speed_bonus = entity.speed_bonus or 0
 
-    -- Get the drop target (the entity the drill is putting items into)
+    -- What the drill drops into: the game's drop_target once it has dropped, else the one machine or chest under its
+    -- drop position (none, or more than one, leaves it unknown)
     local drop_target = entity.drop_target
+    if not (drop_target and drop_target.valid) then
+        local candidates = drop_candidates(entity)
+        drop_target = #candidates == 1 and candidates[1] or nil
+    end
     local drop_target_unit_number = nil
     local drop_target_name = nil
     if drop_target and drop_target.valid then
@@ -47,7 +102,7 @@ local function extract_mining_drill_data(entity)
     local data = {
         entity = entity,
         drill_type = entity.name,
-        mined_item_name = mining_target.name,
+        mined_item_name = mined_item_name,
         speed_bonus = speed_bonus,
         productivity = total_productivity * 100,
         drop_target_unit_number = drop_target_unit_number,

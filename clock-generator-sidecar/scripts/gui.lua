@@ -173,8 +173,8 @@ local function add_left_out_drills(frame, left_out)
         local position = drill.position
         local where = position and string.format("%g, %g", position.x, position.y) or "?"
         local prototype = left.target_name and prototypes.entity[left.target_name]
-        local target = prototype
-            and { "clock-generator-sidecar.left-out-drill-into", { "", "[entity=" .. left.target_name .. "] ", prototype.localised_name } }
+        local target = left.no_resource and { "clock-generator-sidecar.left-out-drill-no-resource" }
+            or prototype and { "clock-generator-sidecar.left-out-drill-into", { "", "[entity=" .. left.target_name .. "] ", prototype.localised_name } }
             or { "clock-generator-sidecar.left-out-drill-ground" }
         local label = frame.add({
             type = "label",
@@ -407,7 +407,7 @@ function gui.create(player, player_data, result)
             for i, drill in ipairs(result.drills) do
                 drill_table.add({ type = "label", caption = tostring(i) })
                 drill_table.add({ type = "label", caption = drill.drill_type })
-                drill_table.add({ type = "label", caption = drill.mined_item_name })
+                drill_table.add({ type = "label", caption = drill.mined_item_name or "?" })
                 drill_table.add({ type = "label", caption = string.format("+%.0f%%", drill.speed_bonus * 100) })
                 drill_table.add({ type = "label", caption = string.format("%.1f%%", drill.productivity) })
             end

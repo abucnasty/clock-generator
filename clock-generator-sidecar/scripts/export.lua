@@ -112,13 +112,14 @@ function export.left_out_inserters(result, options)
     return left_out
 end
 
----What a drill drops into, as the config's target: an exported machine, else an exported chest; nil when neither
+---What a drill drops into, as the config's target: an exported machine, else an exported chest; nil when neither, or
+---when what it mines is not known
 ---@param drill DrillData
 ---@param result ExtractionResult
 ---@return {type: "machine"|"chest", id: number}|nil
 function export.drill_target(drill, result)
     local unit_number = drill.drop_target_unit_number
-    if not unit_number then
+    if not unit_number or not drill.mined_item_name then
         return nil
     end
     local machine_id = result.unit_number_to_id[unit_number]
@@ -132,10 +133,6 @@ function export.drill_target(drill, result)
     return nil
 end
 
----Drills that are left out of the exported config: the ones that drop into nothing the export has (the ground, or an
----entity that is not exported), each with the name of what it drops into, nil for the ground
----@param result ExtractionResult
----@return {drill: DrillData, target_name: string|nil}[]
 ---Where an entity stands, as a plain {x, y} for the JSON (the clock generator keeps it for tools; nothing reads it); nil
 ---for an entity no longer valid
 ---@param entity LuaEntity|nil
@@ -147,11 +144,16 @@ function export.position_of(entity)
     return { x = entity.position.x, y = entity.position.y }
 end
 
+---Drills that are left out of the exported config: the ones that drop into nothing the export has (the ground, or an
+---entity that is not exported), each with the name of what it drops into, nil for the ground, and the ones whose
+---resource is not known (`no_resource`)
+---@param result ExtractionResult
+---@return {drill: DrillData, target_name: string|nil, no_resource: boolean}[]
 function export.left_out_drills(result)
     local left_out = {}
     for _, drill in ipairs(result.drills) do
         if not export.drill_target(drill, result) then
-            table.insert(left_out, { drill = drill, target_name = drill.drop_target_name })
+            table.insert(left_out, { drill = drill, target_name = drill.drop_target_name, no_resource = drill.mined_item_name == nil })
         end
     end
     return left_out
