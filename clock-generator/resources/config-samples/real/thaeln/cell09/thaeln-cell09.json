@@ -10,91 +10,91 @@
    "recipe": "utility-science-pack",
    "productivity": 100,
    "crafting_speed": 63.007813,
-   "type": "machine"
+   "prototype": "assembling-machine-3"
   },
   {
    "id": 2,
    "recipe": "utility-science-pack",
    "productivity": 100,
    "crafting_speed": 63.007813,
-   "type": "machine"
+   "prototype": "assembling-machine-3"
   },
   {
    "id": 3,
    "recipe": "casting-low-density-structure",
    "productivity": 300,
    "crafting_speed": 199.75,
-   "type": "machine"
+   "prototype": "foundry"
   },
   {
    "id": 4,
    "recipe": "casting-low-density-structure",
    "productivity": 300,
    "crafting_speed": 199.75,
-   "type": "machine"
+   "prototype": "foundry"
   },
   {
    "id": 5,
    "recipe": "utility-science-pack",
    "productivity": 100,
    "crafting_speed": 63.007813,
-   "type": "machine"
+   "prototype": "assembling-machine-3"
   },
   {
    "id": 6,
    "recipe": "utility-science-pack",
    "productivity": 100,
    "crafting_speed": 63.007813,
-   "type": "machine"
+   "prototype": "assembling-machine-3"
   },
   {
    "id": 7,
    "recipe": "plastic-bar",
    "productivity": 300,
    "crafting_speed": 117.5,
-   "type": "machine"
+   "prototype": "cryogenic-plant"
   },
   {
    "id": 8,
    "recipe": "utility-science-pack",
    "productivity": 100,
    "crafting_speed": 63.007813,
-   "type": "machine"
+   "prototype": "assembling-machine-3"
   },
   {
    "id": 9,
    "recipe": "utility-science-pack",
    "productivity": 100,
    "crafting_speed": 63.007813,
-   "type": "machine"
+   "prototype": "assembling-machine-3"
   },
   {
    "id": 10,
    "recipe": "casting-low-density-structure",
    "productivity": 300,
    "crafting_speed": 199.75,
-   "type": "machine"
+   "prototype": "foundry"
   },
   {
    "id": 11,
    "recipe": "casting-low-density-structure",
    "productivity": 300,
    "crafting_speed": 199.75,
-   "type": "machine"
+   "prototype": "foundry"
   },
   {
    "id": 12,
    "recipe": "utility-science-pack",
    "productivity": 100,
    "crafting_speed": 63.007813,
-   "type": "machine"
+   "prototype": "assembling-machine-3"
   },
   {
    "id": 13,
    "recipe": "utility-science-pack",
    "productivity": 100,
    "crafting_speed": 63.007813,
-   "type": "machine"
+   "prototype": "assembling-machine-3"
   }
  ],
  "inserters": [

@@ -6,10 +6,13 @@ used as a chest. Two legendary stack inserters take the ore from the car into tw
 a loader empties into a disposal chest. The target is 80 plates a second from one copy.
 
 - `car-scaffold.txt`: the owner's blueprint as given. The loader and disposal chest are part of it.
-- `car.sidecar-export.json`: what Sidecar 0.12.0 exported from the blueprint built in the harness game.
-- `car.json`: that export as the paste reads it (each list through its schema), with the target added and each machine's
-  `prototype` (`electric-furnace` for both machines) taken from the scaffold, as the sidecar exports it since this
-  export was taken; it only names the machines in the clock's descriptions. No other field was edited.
+- `car.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
+  2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
+  (and an inserter's or drill's direction).
+- `car.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the target
+  added. It is the export above without the qualities, positions and directions, and with the drill's productivity
+  79990 where the game writes 79990.00000001134; each machine's `prototype` (`electric-furnace` for both machines) was
+  taken from the scaffold and is the one the export names. No other field was edited.
 
 The harness game has no ore, so the harness puts iron ore under the drill before it builds it (`drill_resource`, from the
 config's drill). The export was taken after a warm-up of 3600 ticks without a clock, as a furnace has no recipe until it

@@ -10,7 +10,6 @@
       "recipe": "iron-plate",
       "productivity": 50,
       "crafting_speed": 86.16550000000001,
-      "type": "furnace",
       "prototype": "electric-furnace"
     },
     {
@@ -18,7 +17,6 @@
       "recipe": "iron-plate",
       "productivity": 50,
       "crafting_speed": 86.16550000000001,
-      "type": "furnace",
       "prototype": "electric-furnace"
     }
   ],

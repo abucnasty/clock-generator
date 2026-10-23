@@ -9,41 +9,43 @@
       "id": 1,
       "recipe": "inserter",
       "productivity": 0,
-      "crafting_speed": 73.984375
+      "crafting_speed": 73.984375,
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 2,
       "recipe": "iron-plate",
       "productivity": 50,
       "crafting_speed": 86.1655,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     },
     {
       "id": 3,
       "recipe": "iron-plate",
       "productivity": 50,
       "crafting_speed": 86.1655,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     },
     {
       "id": 4,
       "recipe": "iron-gear-wheel",
       "productivity": 100,
-      "crafting_speed": 40.3125
+      "crafting_speed": 40.3125,
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 5,
       "recipe": "iron-plate",
       "productivity": 50,
       "crafting_speed": 86.1655,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     },
     {
       "id": 6,
       "recipe": "iron-plate",
       "productivity": 50,
       "crafting_speed": 91.875,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     }
   ],
   "inserters": [

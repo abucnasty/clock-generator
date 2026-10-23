@@ -10,63 +10,63 @@
    "recipe": "advanced-circuit",
    "productivity": 175,
    "crafting_speed": 45.444,
-   "type": "machine"
+   "prototype": "electromagnetic-plant"
   },
   {
    "id": 2,
    "recipe": "processing-unit",
    "productivity": 300,
    "crafting_speed": 112.7875,
-   "type": "machine"
+   "prototype": "electromagnetic-plant"
   },
   {
    "id": 3,
    "recipe": "casting-copper-cable",
    "productivity": 150,
    "crafting_speed": 129,
-   "type": "machine"
+   "prototype": "foundry"
   },
   {
    "id": 4,
    "recipe": "electronic-circuit",
    "productivity": 150,
    "crafting_speed": 52.444,
-   "type": "machine"
+   "prototype": "electromagnetic-plant"
   },
   {
    "id": 5,
    "recipe": "casting-iron",
    "productivity": 150,
    "crafting_speed": 143.75,
-   "type": "machine"
+   "prototype": "foundry"
   },
   {
    "id": 6,
    "recipe": "electronic-circuit",
    "productivity": 150,
    "crafting_speed": 52.444,
-   "type": "machine"
+   "prototype": "electromagnetic-plant"
   },
   {
    "id": 7,
    "recipe": "casting-copper-cable",
    "productivity": 150,
    "crafting_speed": 129,
-   "type": "machine"
+   "prototype": "foundry"
   },
   {
    "id": 8,
    "recipe": "processing-unit",
    "productivity": 300,
    "crafting_speed": 112.7875,
-   "type": "machine"
+   "prototype": "electromagnetic-plant"
   },
   {
    "id": 9,
    "recipe": "advanced-circuit",
    "productivity": 175,
    "crafting_speed": 55.372,
-   "type": "machine"
+   "prototype": "electromagnetic-plant"
   }
  ],
  "inserters": [

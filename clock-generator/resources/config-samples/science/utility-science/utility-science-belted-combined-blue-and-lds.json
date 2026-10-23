@@ -10,7 +10,7 @@
       "recipe": "utility-science-pack",
       "productivity": 100,
       "crafting_speed": 63.00781250000001,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     }
   ],
   "inserters": [

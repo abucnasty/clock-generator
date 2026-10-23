@@ -10,7 +10,7 @@
       "recipe": "iron-bacteria-cultivation",
       "productivity": 150,
       "crafting_speed": 90.375,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 1309.8000000000002
     },
     {
@@ -18,7 +18,7 @@
       "recipe": "iron-bacteria-cultivation",
       "productivity": 150,
       "crafting_speed": 90.375,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 1309.8000000000002
     }
   ],

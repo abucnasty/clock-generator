@@ -10,35 +10,35 @@
    "recipe": "advanced-circuit",
    "productivity": 175,
    "crafting_speed": 100.0625,
-   "type": "machine"
+   "prototype": "electromagnetic-plant"
   },
   {
    "id": 2,
    "recipe": "plastic-bar",
    "productivity": 300,
    "crafting_speed": 38.936,
-   "type": "machine"
+   "prototype": "chemical-plant"
   },
   {
    "id": 3,
    "recipe": "casting-copper-cable",
    "productivity": 150,
    "crafting_speed": 157.075,
-   "type": "machine"
+   "prototype": "foundry"
   },
   {
    "id": 4,
    "recipe": "plastic-bar",
    "productivity": 300,
    "crafting_speed": 38.936,
-   "type": "machine"
+   "prototype": "chemical-plant"
   },
   {
    "id": 5,
    "recipe": "advanced-circuit",
    "productivity": 175,
    "crafting_speed": 100.0625,
-   "type": "machine"
+   "prototype": "electromagnetic-plant"
   }
  ],
  "inserters": [

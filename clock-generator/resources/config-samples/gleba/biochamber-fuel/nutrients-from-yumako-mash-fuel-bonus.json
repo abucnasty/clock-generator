@@ -10,7 +10,7 @@
       "recipe": "nutrients-from-yumako-mash",
       "productivity": 0,
       "crafting_speed": 2,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 926.17
     }
   ],

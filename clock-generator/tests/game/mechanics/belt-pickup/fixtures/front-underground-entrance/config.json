@@ -10,7 +10,7 @@
       "recipe": "electromagnetic-science-pack",
       "productivity": 175,
       "crafting_speed": 109.475,
-      "type": "machine"
+      "prototype": "electromagnetic-plant"
     }
   ],
   "inserters": [

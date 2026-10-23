@@ -10,42 +10,42 @@
       "recipe": "accumulator",
       "productivity": 50,
       "crafting_speed": 124.625,
-      "type": "machine"
+      "prototype": "electromagnetic-plant"
     },
     {
       "id": 2,
       "recipe": "accumulator",
       "productivity": 50,
       "crafting_speed": 124.625,
-      "type": "machine"
+      "prototype": "electromagnetic-plant"
     },
     {
       "id": 3,
       "recipe": "casting-iron",
       "productivity": 150,
       "crafting_speed": 66.5,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 4,
       "recipe": "battery",
       "productivity": 200,
       "crafting_speed": 87.375,
-      "type": "machine"
+      "prototype": "cryogenic-plant"
     },
     {
       "id": 5,
       "recipe": "battery",
       "productivity": 200,
       "crafting_speed": 87.375,
-      "type": "machine"
+      "prototype": "cryogenic-plant"
     },
     {
       "id": 6,
       "recipe": "casting-copper",
       "productivity": 150,
       "crafting_speed": 112.244,
-      "type": "machine"
+      "prototype": "foundry"
     }
   ],
   "inserters": [

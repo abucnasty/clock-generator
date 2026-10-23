@@ -10,7 +10,7 @@
    "recipe": "casting-steel",
    "productivity": 300,
    "crafting_speed": 185,
-   "type": "machine"
+   "prototype": "foundry"
   }
  ],
  "inserters": [

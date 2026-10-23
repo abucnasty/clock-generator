@@ -6,56 +6,104 @@
       "recipe": "lithium",
       "crafting_speed": 53.122,
       "productivity": 200,
-      "type": "machine"
+      "position": {
+        "x": 393.5,
+        "y": -2.5
+      },
+      "prototype": "cryogenic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     },
     {
       "id": 2,
       "recipe": "lithium",
       "crafting_speed": 53.122,
       "productivity": 200,
-      "type": "machine"
+      "position": {
+        "x": 393.5,
+        "y": 3.5
+      },
+      "prototype": "cryogenic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     },
     {
       "id": 3,
       "recipe": "lithium-plate",
       "crafting_speed": 66,
       "productivity": 50,
-      "type": "furnace"
+      "position": {
+        "x": 398.5,
+        "y": -6.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     },
     {
       "id": 4,
       "recipe": "lithium-plate",
       "crafting_speed": 66,
       "productivity": 50,
-      "type": "furnace"
+      "position": {
+        "x": 398.5,
+        "y": 7.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     },
     {
       "id": 5,
       "recipe": "lithium-plate",
       "crafting_speed": 66,
       "productivity": 50,
-      "type": "furnace"
+      "position": {
+        "x": 402.5,
+        "y": -6.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     },
     {
       "id": 6,
       "recipe": "lithium-plate",
       "crafting_speed": 66,
       "productivity": 50,
-      "type": "furnace"
+      "position": {
+        "x": 402.5,
+        "y": 7.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     },
     {
       "id": 7,
       "recipe": "lithium-plate",
       "crafting_speed": 66,
       "productivity": 50,
-      "type": "furnace"
+      "position": {
+        "x": 408.5,
+        "y": -1.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     },
     {
       "id": 8,
       "recipe": "lithium-plate",
       "crafting_speed": 66,
       "productivity": 50,
-      "type": "furnace"
+      "position": {
+        "x": 408.5,
+        "y": 2.5
+      },
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal"
     }
   ],
   "drills": {
@@ -73,7 +121,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 390.5,
+        "y": -0.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -86,7 +139,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 390.5,
+        "y": 1.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -99,7 +157,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": -7.5
+      },
+      "direction": 4
     },
     {
       "source": {
@@ -112,7 +175,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": -0.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -125,7 +193,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": 1.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -138,7 +211,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 396.5,
+        "y": 8.5
+      },
+      "direction": 4
     },
     {
       "source": {
@@ -151,7 +229,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 399.5,
+        "y": -4.5
+      },
+      "direction": 8
     },
     {
       "source": {
@@ -164,7 +247,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 399.5,
+        "y": 5.5
+      },
+      "direction": 0
     },
     {
       "source": {
@@ -177,7 +265,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": -4.5
+      },
+      "direction": 8
     },
     {
       "source": {
@@ -190,7 +283,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": 5.5
+      },
+      "direction": 0
     },
     {
       "source": {
@@ -203,7 +301,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 404.5,
+        "y": -7.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -216,7 +319,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 404.5,
+        "y": 8.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -229,7 +337,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 406.5,
+        "y": -0.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -242,7 +355,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 406.5,
+        "y": 1.5
+      },
+      "direction": 12
     },
     {
       "source": {
@@ -255,7 +373,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 409.5,
+        "y": -3.5
+      },
+      "direction": 8
     },
     {
       "source": {
@@ -268,7 +391,12 @@
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
-      "stack_size": 16
+      "stack_size": 16,
+      "position": {
+        "x": 409.5,
+        "y": 4.5
+      },
+      "direction": 0
     }
   ],
   "belts": [
@@ -297,7 +425,11 @@
           "request_count": 100
         }
       ],
-      "remove_unfiltered_items": false
+      "remove_unfiltered_items": false,
+      "position": {
+        "x": 389.5,
+        "y": -0.5
+      }
     },
     {
       "type": "infinity-chest",
@@ -308,19 +440,31 @@
           "request_count": 100
         }
       ],
-      "remove_unfiltered_items": false
+      "remove_unfiltered_items": false,
+      "position": {
+        "x": 389.5,
+        "y": 1.5
+      }
     },
     {
       "type": "rocket-silo",
       "id": 3,
       "recipe_quality": "normal",
       "crafting_speed": 13.5,
-      "productivity": 10
+      "productivity": 10,
+      "position": {
+        "x": 401.5,
+        "y": 0.5
+      }
     },
     {
       "type": "infinity-chest",
       "id": 4,
-      "remove_unfiltered_items": true
+      "remove_unfiltered_items": true,
+      "position": {
+        "x": 419.5,
+        "y": 0.5
+      }
     }
   ],
   "suggested_target": {

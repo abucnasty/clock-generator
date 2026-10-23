@@ -10,21 +10,21 @@
       "recipe": "casting-iron-gear-wheel",
       "productivity": 150,
       "crafting_speed": 92.388,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 2,
       "recipe": "casting-copper",
       "productivity": 150,
       "crafting_speed": 92.388,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 3,
       "recipe": "automation-science-pack",
       "productivity": 100,
       "crafting_speed": 40.3125,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     }
   ],
   "inserters": [

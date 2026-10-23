@@ -1,6 +1,6 @@
-import { ChestType } from "../common/entity-types";
 import { ParsedConfig, ConfigSchema } from "./schema";
 import { ConfigValidationError } from "./errors";
+import { migrateChestType } from "./migrate-chest-type";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -104,11 +104,9 @@ export async function loadConfigFromFile(filePath: string): Promise<ParsedConfig
 // ============================================================================
 
 /**
- * Normalize a raw config object for backwards compatibility.
- * 
- * This function applies the following transformations:
- * - Adds `type: "buffer-chest"` to chest configs missing the type field
- * 
+ * Normalize a raw config object for backwards compatibility: a chest without `type` is a buffer chest
+ * (`migrateChestType`). The schema runs the other migrations.
+ *
  * @param rawConfig - The raw parsed config object (before Zod validation)
  * @returns The normalized config object
  */
@@ -118,35 +116,9 @@ function normalizeConfig(rawConfig: unknown): unknown {
     }
 
     const config = rawConfig as Record<string, unknown>;
-    
-    // Normalize chest configs
     if (Array.isArray(config.chests)) {
-        config.chests = config.chests.map(normalizeChestConfig);
+        config.chests = config.chests.map(migrateChestType);
     }
 
     return config;
-}
-
-/**
- * Normalize a single chest config.
- * 
- * If the chest config is missing the `type` field, defaults to "buffer-chest"
- * for backwards compatibility with existing configs.
- */
-function normalizeChestConfig(chestConfig: unknown): unknown {
-    if (typeof chestConfig !== "object" || chestConfig === null) {
-        return chestConfig;
-    }
-
-    const chest = chestConfig as Record<string, unknown>;
-    
-    // If no type specified, default to buffer-chest for backwards compatibility
-    if (!("type" in chest)) {
-        return {
-            ...chest,
-            type: ChestType.BUFFER_CHEST
-        };
-    }
-
-    return chest;
 }
