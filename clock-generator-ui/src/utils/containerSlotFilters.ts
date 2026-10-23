@@ -41,3 +41,19 @@ export function slotRange(from: number, to: number): number[] {
     const first = Math.min(from, to);
     return Array.from({ length: Math.abs(to - from) + 1 }, (_, index) => first + index);
 }
+
+/** The slots of an inventory: filtered to an item, blocked, and free (unfiltered, taking any item); slots past its last are not counted */
+export interface SlotCounts { filtered: number; blocked: number; free: number }
+
+export function slotCounts(filters: readonly SlotFilterFormData[], count: number): SlotCounts {
+    const inside = new Map(filters
+        .filter(filter => Number.isInteger(filter.slot) && filter.slot >= 1 && filter.slot <= count && (filter.blocked || filter.item.trim() !== ''))
+        .map(filter => [filter.slot, filter]));
+    const blocked = [...inside.values()].filter(filter => filter.blocked).length;
+    return { filtered: inside.size - blocked, blocked, free: count - inside.size };
+}
+
+/** The one count the row and the grid both show: "30 filtered · 10 blocked · 0 free" */
+export function slotCountsText({ filtered, blocked, free }: SlotCounts): string {
+    return `${filtered} filtered · ${blocked} blocked · ${free} free`;
+}
