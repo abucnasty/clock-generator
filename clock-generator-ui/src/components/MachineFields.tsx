@@ -110,7 +110,7 @@ export function MachineRuleField({ machine, onPatch, blockedAt, inputAriaLabel, 
         </Tooltip>
         {rule !== derived && <>
             <Typography variant="body2" color="warning.main">
-                The config's type sets it; a {itemLabel(known.name)} crafts under the {RULE_LABELS[derived].toLowerCase()}.
+                Set by the config's type: the {itemLabel(known.name)} crafts under the {RULE_LABELS[derived].toLowerCase()}.
             </Typography>
             <Button size="small" color="inherit" onClick={() => onPatch({ type: derived })}>Use the {RULE_LABELS[derived].toLowerCase()}</Button>
         </>}
