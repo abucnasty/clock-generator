@@ -191,7 +191,8 @@ end
 ---@param left_out {inserter: InserterData, pickup: boolean, target: InserterTargetRef|nil}[] Inserters left out of the JSON
 ---@param pickup_warnings {inserter_id: number, reason: string}[]|nil
 ---@param left_out_drills {drill: DrillData, target_name: string|nil}[]|nil Drills left out of the JSON
-function gui.create_copy_popup(player, json, left_out, pickup_warnings, left_out_drills)
+---@param drop_marks {inserter_id: number, tiles: number}[]|nil Inserters whose drop side-loads onto a belt downstream
+function gui.create_copy_popup(player, json, left_out, pickup_warnings, left_out_drills, drop_marks)
     -- Remove any existing copy popup
     local existing = player.gui.screen[gui.COPY_GUI_NAME]
     if existing and existing.valid then
@@ -231,6 +232,18 @@ function gui.create_copy_popup(player, json, left_out, pickup_warnings, left_out
     end
     if left_out_drills and #left_out_drills > 0 then
         add_left_out_drills(frame, left_out_drills)
+    end
+
+    if drop_marks and #drop_marks > 0 then
+        local scroll = frame.add({ type = "scroll-pane", direction = "vertical", horizontal_scroll_policy = "never" })
+        scroll.style.maximal_height = 150
+        for _, mark in ipairs(drop_marks) do
+            local label = scroll.add({ type = "label", caption = {
+                "clock-generator-sidecar.drop-warning", mark.inserter_id, mark.tiles
+            } })
+            label.style.single_line = false
+            label.style.maximal_width = 600
+        end
     end
 
     if pickup_warnings then
