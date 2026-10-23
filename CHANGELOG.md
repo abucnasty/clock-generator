@@ -21,6 +21,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Changed
 - The clock's combinators read in plain terms: each names what it switches on by its two ends as icons (a machine by its prototype, which Sidecar 0.12.0 exports and the web form shows, else by its number and recipe), the item and the config id, then its swings and windows a period, with the windows when there are three or fewer. The clock's own combinators say to leave them. Swings no longer show as fractions such as 6000000000000001/400000000000000.
+- A window of one tick is one condition on its combinator, clock = 28, instead of two (clock ≥ 28 and clock ≤ 28), and its description says "open 28".
 - Each mining drill has its own productivity, its mining research and productivity modules together, in place of one mining productivity level for all drills. Sidecar 0.12.0 exports it, and older configs, saved builds and exports load with the level as each drill's productivity.
 
 ### Fixed
