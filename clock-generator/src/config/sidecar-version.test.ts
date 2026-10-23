@@ -166,5 +166,5 @@ it("tells a paste with drills from a sidecar before 0.12.0 that the drills' prod
     const drills = [{ id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 70, target: { type: 'chest', id: 1 } }];
     expect(Option.toNullable(checkSidecarImport('0.11.0', [], undefined, [], [], drills))).toContain("productivity modules were not exported");
     expect(Option.toNullable(checkSidecarImport('0.11.0', [], undefined, [], [], []))).not.toContain('productivity modules');
-    expect(checkSidecarImport('0.12.0', [], undefined, [], [], drills)).toEqual(Option.none());
+    expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [], drills)).toEqual(Option.none());
 });
