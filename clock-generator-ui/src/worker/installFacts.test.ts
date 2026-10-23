@@ -117,6 +117,51 @@ describe('installFactsOf', () => {
         });
     });
 
+    describe('lines: the first line of each combinator\'s description', () => {
+        /** A blueprint whose entity n has the description given for it, and the tags, if any */
+        const described = (entities: Record<number, { description?: string; tags?: unknown }>): Input['blueprint'] => ({
+            entities: Object.entries(entities).map(([number, { description, tags }]) => ({
+                entity_number: Number(number),
+                name: 'decider-combinator',
+                position: { x: Number(number), y: 0 },
+                ...(description !== undefined ? { player_description: description } : {}),
+                ...(tags !== undefined ? { tags: { clock_generator: tags } } : {}),
+            })),
+        } as unknown as Input['blueprint']);
+
+        it('is found for an inserter\'s combinator by the entity number the schedule gives, and is only the first line', () => {
+            const combinators = [{ entity_number: 4, inserter_ids: [2, 1] }, { entity_number: 3, inserter_ids: [7] }];
+            const facts = factsOf({
+                schedule: { counted_ticks: 72, inserter_combinators: combinators },
+                blueprint: described({
+                    3: { description: '[entity=wooden-chest] → [entity=stone-furnace] [item=coal] (inserter 7)\n1 swing in 1 window' },
+                    4: { description: '2 inserters, each [entity=car] → machine 1 [item=iron-ore] (1, 2)\nsecond line' },
+                    5: { description: 'Part of the clock: do not wire or change.' },
+                }),
+            });
+            expect(facts.lines).toEqual({
+                'inserter:1,2': '2 inserters, each [entity=car] → machine 1 [item=iron-ore] (1, 2)',
+                'inserter:7': '[entity=wooden-chest] → [entity=stone-furnace] [item=coal] (inserter 7)',
+            });
+        });
+
+        it('is found for a drill\'s combinator by its tags, whatever number the entity has', () => {
+            const facts = factsOf({
+                schedule: schedule([]),
+                blueprint: described({ 9: { description: '[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)\nTops the car up', tags: { drills: [1] } } }),
+            });
+            expect(facts.lines).toEqual({ 'drill:1': '[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)' });
+        });
+
+        it('is found for a drill\'s combinator in a clock from before the tags, and left out for a combinator with no description', () => {
+            const facts = factsOf({
+                schedule: { counted_ticks: 72, inserter_combinators: [{ entity_number: 2, inserter_ids: [1] }] },
+                blueprint: described({ 1: { description: 'Drill 3 for [item=stone]' }, 2: {} }),
+            });
+            expect(facts.lines).toEqual({ 'drill:3': 'Drill 3 for [item=stone]' });
+        });
+    });
+
     it('is plain data that survives postMessage', () => {
         const facts = factsOf({ schedule: schedule([[2, 1], [4]]), blueprint: blueprint('Drill 1 for z'), modulo_blueprint: someBlueprint });
         expect(structuredClone(facts)).toEqual(facts);
