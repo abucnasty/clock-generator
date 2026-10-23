@@ -143,6 +143,19 @@ export function updateMachine(
     };
 }
 
+/** Sets several fields of a machine at once (the Machine picker sets the prototype, its source and its rule); undefined removes a field */
+export function patchMachine(prev: ConfigFormData, index: number, patch: Partial<MachineFormData>): ConfigFormData {
+    return {
+        ...prev,
+        machines: prev.machines.map((m, i) => {
+            if (i !== index) return m;
+            const next: Record<string, unknown> = { ...m, ...patch };
+            for (const [key, value] of Object.entries(patch)) if (value === undefined) delete next[key];
+            return next as unknown as MachineFormData;
+        }),
+    };
+}
+
 export function removeMachine(prev: ConfigFormData, index: number): ConfigFormData {
     const removed = removeAndRenumber(prev.machines, index);
     if (!removed) return prev;

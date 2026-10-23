@@ -73,6 +73,8 @@ interface UseConfigFormResult {
     // Machines
     addMachine: () => void;
     updateMachine: (index: number, field: keyof MachineFormData, value: string | number) => void;
+    /** Sets several fields of a machine as one edit; a field set to undefined is removed */
+    patchMachine: (index: number, patch: Partial<MachineFormData>) => void;
     removeMachine: (index: number) => void;
     reorderMachines: (fromIndex: number, toIndex: number) => void;
     
@@ -106,7 +108,7 @@ interface UseConfigFormResult {
     updateIgnoredIngredients: (items: string[], transferPlan: SerializableTransferPlan) => void;
     
     // Import/Export
-    importConfig: (config: Config) => void;
+    importConfig: (config: Config, prototypeSource?: MachineFormData['_prototype_source']) => void;
     /** Engine config derived once for this form revision, shared by validation and generation. */
     engineConfig: Config;
     /**
@@ -134,6 +136,7 @@ export function useConfigForm(): UseConfigFormResult {
             updateTargetOutput: edit(formEdits.updateTargetOutput),
             addMachine: edit(formEdits.addMachine),
             updateMachine: edit(formEdits.updateMachine),
+            patchMachine: edit(formEdits.patchMachine),
             removeMachine: edit(formEdits.removeMachine),
             reorderMachines: edit(formEdits.reorderMachines),
             addInserter: edit(formEdits.addInserter),
@@ -160,8 +163,8 @@ export function useConfigForm(): UseConfigFormResult {
     }, [setConfig]);
 
     // Import/Export
-    const importConfig = useCallback((imported: Config) => {
-        setConfig(configToFormData(imported));
+    const importConfig = useCallback((imported: Config, prototypeSource?: MachineFormData['_prototype_source']) => {
+        setConfig(configToFormData(imported, prototypeSource));
     }, [setConfig]);
 
     const engineConfig = useMemo(() => formDataToConfig(config), [config]);

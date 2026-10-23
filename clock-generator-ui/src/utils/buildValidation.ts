@@ -1,4 +1,4 @@
-import type { InserterCoverageIssue } from 'clock-generator/browser';
+import type { InserterCoverageIssue, MachinePrototypeIssue } from 'clock-generator/browser';
 import type { ChestFormData, InserterFormData } from './configForm/formData';
 import { coverageIssueElementId, focusIdOf, type FocusTarget, type Problem } from './firstProblem';
 import { coverageHandledByChestIssue, outputChestIssueTitle, type OutputChestIssue } from './outputChestIssues';
@@ -14,9 +14,10 @@ export interface BuildValidationIssue extends Problem {
     blocksGeneration: boolean;
     /**
      * 'calibration': the engine's warning that a belt pickup's timing is not tested; 'lanes': its warning that the copies
-     * summed would ask a lane for more than it carries. Both shown as plain text.
+     * summed would ask a lane for more than it carries; 'machine': its warning that a machine's prototype disagrees with its
+     * type or cannot make its recipe. All shown as plain text.
      */
-    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes';
+    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes' | 'machine';
     fieldTarget?: FocusTarget;
     coverage?: InserterCoverageIssue;
     chest?: OutputChestIssue;
@@ -46,6 +47,8 @@ interface Input {
     pickupNotTested?: string | null;
     /** The live warning for lanes the copies would ask too much of if they shared them: advice, never blocking */
     laneSharedByCopies?: string | null;
+    /** The live warnings for machines whose prototype disagrees with their type or cannot make their recipe: advice, never blocking */
+    machinePrototypes?: readonly MachinePrototypeIssue[];
     failure?: { message: string; diagnostics?: ValidationDiagnostic[] };
 }
 
@@ -105,6 +108,12 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
     if (input.laneSharedByCopies) {
         const id = 'lanes-shared-by-copies';
         add({ id, text: input.laneSharedByCopies, severity: 'warning', blocksGeneration: false, source: 'lanes',
+            target: { kind: 'validation-issue', id } });
+    }
+    for (const issue of input.machinePrototypes ?? []) {
+        const id = `machine-prototype:${issue.machine_id}:${issue.kind}`;
+        add({ id, text: issue.message, severity: 'warning', blocksGeneration: false, source: 'machine',
+            fieldTarget: input.machines.some(machine => machine.id === issue.machine_id) ? { kind: 'machine-recipe', machineId: issue.machine_id } : undefined,
             target: { kind: 'validation-issue', id } });
     }
     return [...found.values()];

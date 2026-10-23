@@ -297,7 +297,10 @@ function lookups(): FactorioLookups {
             // a recipe the generator cannot use has no info
         }
     }
-    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes, names: gameNames, hiddenRecipes };
+    const recipeCategories: Record<string, string[]> = {};
+    for (const recipe of data.getAllRecipes()) recipeCategories[recipe.name] = recipe.categories;
+    const craftingMachines = { machines: data.getAllCraftingMachines(), recipeCategories };
+    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes, names: gameNames, hiddenRecipes, craftingMachines };
 }
 
 /** Validate each entry of a pasted list, throwing on the first one the schema rejects */
@@ -314,7 +317,7 @@ function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: strin
 
 function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }>): PastedEntities {
     // IDs are already assigned by the mod
-    const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine');
+    const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine').map(withMachineRule);
     return {
         machines,
         drills: validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill'),
@@ -334,13 +337,21 @@ function savedConfigProblem(config: unknown): string | null {
     return result.success ? null : result.error.message;
 }
 
+/**
+ * A machine with its simulation rule written out: a prototype without a type gets the prototype's rule, which the engine
+ * would use, so that the form shows and keeps what is simulated
+ */
+function withMachineRule<T extends Config['machines'][number]>(machine: T): T {
+    return machine.type === undefined && machine.prototype !== undefined ? { ...machine, type: clockGenerator.machineRuleOf(machine) } : machine;
+}
+
 /** An imported config file, which can hold what the form exports, e.g. an inserter end left unset */
 function configFile(config: unknown): Config {
     const result = parseFormConfig(clockGenerator.ConfigSchema, config);
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return result.data;
+    return { ...result.data, machines: result.data.machines.map(withMachineRule) };
 }
 
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
@@ -361,7 +372,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             const refusal = clockGenerator.insertersScopeProblem(query.config);
             const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config));
             const laneSharedByCopies = clockGenerator.laneSharedByCopiesWarning(query.config);
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies };
+            const machinePrototypes = clockGenerator.machinePrototypeIssues(query.config);
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies, machinePrototypes };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);

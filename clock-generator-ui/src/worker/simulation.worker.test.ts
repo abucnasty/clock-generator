@@ -1,7 +1,7 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { Config } from 'clock-generator/browser';
-import type { LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
+import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
@@ -220,12 +220,12 @@ it('warns live of a belt pickup whose timing is not tested, as generation logs i
         return (answer as { answer: LiveCoverage }).answer;
     };
 
-    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null });
+    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, machinePrototypes: [] });
     const warning = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
     const untested = await live(gears(2));
-    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null });
+    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: untested.issues, scopeRefusal: untested.refusal, pickupNotTested: untested.pickupNotTested,
         chests: [], inserters: [], machines: gears(2).machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
@@ -264,10 +264,42 @@ it('warns live of a lane the copies would ask too much of if they shared it, as 
     const warning = 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
         + 'The config cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
         + 'belts of their own is not affected.';
-    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning });
+    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: live.issues, laneSharedByCopies: live.laneSharedByCopies,
         chests: [], inserters: [], machines: config.machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
         .toEqual([{ source: 'lanes', severity: 'warning', blocksGeneration: false, text: warning }]);
     expect(await send({ type: 'validate', requestId: 71, config })).toMatchObject({ type: 'validated' });
+});
+
+it("gives the crafting machines, fills a prototype's rule on import and paste, and warns live of a machine that cannot make its recipe", async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    const ask = async <K extends EngineQuery['kind']>(query: Extract<EngineQuery, { kind: K }>) =>
+        ((await send({ type: 'query', requestId: 70, query })) as unknown as { answer: EngineAnswers[K] }).answer;
+
+    const lookups = await ask({ kind: 'lookups' });
+    expect(lookups.craftingMachines.machines.map(machine => machine.name)).toContain('cryogenic-plant');
+    expect(lookups.craftingMachines.recipeCategories['lithium-plate']).toEqual(['smelting']);
+
+    const furnace = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' };
+    const config = {
+        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        machines: [furnace], inserters: [], belts: [],
+    };
+    expect((await ask({ kind: 'config-file', config })).machines[0].type).toBe('furnace');
+    expect((await ask({ kind: 'pasted-entities', machines: [furnace], drills: [], inserters: [], belts: [], chests: [] } as Extract<EngineQuery, { kind: 'pasted-entities' }>))
+        .machines[0].type).toBe('furnace');
+
+    const live = await ask({ kind: 'inserter-coverage', config: { ...config, machines: [{ ...furnace, prototype: 'cryogenic-plant', type: 'machine' }] } as Config });
+    expect(live.machinePrototypes.map(issue => issue.kind)).toEqual(['recipe-not-made']);
+    expect(buildValidationIssues({ fieldProblems: [], coverage: [], machinePrototypes: live.machinePrototypes, chests: [], inserters: [],
+        machines: [{ id: 1 }], chestIssues: [], coverageText: () => '' })
+        .map(({ source, severity, blocksGeneration, fieldTarget }) => ({ source, severity, blocksGeneration, fieldTarget })))
+        .toEqual([{ source: 'machine', severity: 'warning', blocksGeneration: false, fieldTarget: { kind: 'machine-recipe', machineId: 1 } }]);
 });

@@ -40,6 +40,7 @@ import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS 
 import { FactorioIcon } from './FactorioIcon';
 import { OutputChestAlert } from './OutputChestAlert';
 import { ItemSelector } from './ItemSelector';
+import { useMachineRecipeOptions } from '../hooks/useCraftingMachines';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
@@ -61,7 +62,8 @@ export interface EntityEditDialogProps {
     recipeNames: string[];
     itemNames: string[];
     getRecipeInfo: (name: string) => RecipeInfo | null;
-    onUpdateMachine: (index: number, field: keyof MachineFormData, value: string | number) => void;
+    /** Saves a machine's edited fields as one edit; a field set to undefined is removed */
+    onPatchMachine: (index: number, patch: Partial<MachineFormData>) => void;
     onUpdateInserter: (index: number, updates: Partial<InserterFormData>) => void;
     onUpdateBelt: (index: number, updates: Partial<BeltFormData>) => void;
     onUpdateChest: (index: number, updates: Partial<ChestFormData>) => void;
@@ -157,7 +159,7 @@ export function EntityEditDialog({
     recipeNames,
     itemNames,
     getRecipeInfo,
-    onUpdateMachine,
+    onPatchMachine,
     onUpdateInserter,
     onUpdateBelt,
     onUpdateChest,
@@ -232,6 +234,7 @@ export function EntityEditDialog({
     // Each opening starts from the current saved entity.
     const [inserterDirty, setInserterDirty] = useState(false);
     const [draft, setDraft] = useState(entity);
+    const machineRecipes = useMachineRecipeOptions(entityType === 'machine' ? (draft as MachineFormData | null)?.prototype : undefined, recipeNames);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [saveProblem, setSaveProblem] = useState<string | null>(null);
     // each opening gets a fresh panel: one reopened while the last closing fades out must not keep that draft
@@ -293,9 +296,8 @@ export function EntityEditDialog({
         }
         switch (entityType) {
             case 'machine':
-                for (const field of MACHINE_FIELDS) {
-                    if (field in edits) onUpdateMachine(entityIndex, field, (draft as MachineFormData)[field] ?? 'machine');
-                }
+                onPatchMachine(entityIndex, Object.fromEntries(MACHINE_FIELDS.filter(field => field in edits)
+                    .map(field => [field, (draft as MachineFormData)[field]])) as Partial<MachineFormData>);
                 break;
             case 'belt': onUpdateBelt(entityIndex, edits as Partial<BeltFormData>); break;
             case 'drill': onUpdateDrill?.(entityIndex, edits as Partial<DrillFormData>); break;
@@ -355,11 +357,13 @@ export function EntityEditDialog({
                     {draft && entityType === 'machine' && (
                         <Box sx={{ p: 2 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                <ItemSelector kind="recipe" options={recipeNames} value={(draft as MachineFormData).recipe || null}
+                                <ItemSelector kind="recipe" options={machineRecipes.options} searchOnlyIds={machineRecipes.searchOnly} value={(draft as MachineFormData).recipe || null}
                                     onChange={value => updateDraft(entityIndex, { recipe: value || '' })}
                                     label="Recipe" placeholder="Search recipes..." freeSolo />
                                 <MachineSettingsFields machine={draft as MachineFormData} dialog
-                                    onChange={(field, value) => updateDraft(entityIndex, { [field]: value })} />
+                                    onChange={(field, value) => updateDraft(entityIndex, { [field]: value })}
+                                    onPatch={patch => updateDraft(entityIndex, patch)}
+                                    blockedAt={machineFacts && !machineFactsError ? `${machineFacts.output_block_size} ${itemLabel(machineFacts.output_item)}` : undefined} />
                             </Box>
                             {machineEntity?.recipe && (
                                 <MachineFactsAccordion machineId={entityId ?? 0} facts={machineFacts} error={machineFactsError} headingLevel={3} />

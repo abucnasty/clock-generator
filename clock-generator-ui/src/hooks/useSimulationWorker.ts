@@ -3,13 +3,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask, NotMadeClock } from 'clock-generator/browser';
-import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
+import type { ClockAlternativeRunView, ClockAlternativeView, CraftingMachineData, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import { CHECK_TEXT, PendingChecks, type CheckOutcome } from '../utils/checkThenGenerate';
 import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
 import { planGenerationRun } from '../utils/deeperSearch';
 import { NO_NAMES, pickerIds, type GameNames } from '../utils/gameNames';
+import { NO_CRAFTING_MACHINES } from '../utils/machinePrototype';
 import { plainClockName } from '../utils/clockSummary';
 import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
 import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
@@ -44,6 +45,8 @@ interface UseSimulationWorkerResult {
     resourceNames: string[];
     /** The in-game names of the ids above */
     gameNames: GameNames;
+    /** The crafting machines a machine can be, and the categories of the recipes they make */
+    craftingMachines: CraftingMachineData;
     logs: LogMessage[];
     blueprintString: string | null;
     transferHistory: SerializableTransferHistory | null;
@@ -221,6 +224,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
     const [gameNames, setGameNames] = useState<GameNames>(NO_NAMES);
+    const [craftingMachines, setCraftingMachines] = useState<CraftingMachineData>(NO_CRAFTING_MACHINES);
     const [recipes, setRecipes] = useState<Map<string, RecipeInfo>>(() => new Map());
     const [logs, setLogs] = useState<LogMessage[]>([]);
     const [resultsView, setResultsView] = useState(emptyResults);
@@ -670,6 +674,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             setItemNames(pickerIds(lookups.itemNames));
             setResourceNames(pickerIds(lookups.resourceNames));
             setGameNames(lookups.names);
+            setCraftingMachines(lookups.craftingMachines);
             setRecipes(lookups.recipes);
             await workersReady;
 
@@ -859,6 +864,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         resourceNames,
         itemNames,
         gameNames,
+        craftingMachines,
         logs,
         blueprintString: selected?.blueprintString ?? null,
         transferHistory: selected?.transferHistory ?? null,

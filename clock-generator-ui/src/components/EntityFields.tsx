@@ -15,7 +15,7 @@ import { HelpButton } from './HelpButton';
 import { InfinityChestSettings } from './InfinityChestSettings';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
-import { MACHINE_TYPE_LABELS } from './entityTypes';
+import { MachinePrototypeField, MachineQualityField, MachineRuleField } from './MachineFields';
 import { CHEST_TYPES, CHEST_TYPE_LABELS, chestTypeIcon } from '../utils/configForm/formData';
 
 /** Controlled type fields shared by the list and diagram editors. Draft ownership stays with the caller. */
@@ -38,26 +38,34 @@ export function EntityTypeField<T extends string>({ label, value, options, nameO
     </FormControl>;
 }
 
-export function MachineSettingsFields({ machine, onChange, dialog = false }: {
-    machine: MachineFormData; onChange: (field: keyof MachineFormData, value: string | number) => void; dialog?: boolean;
+export function MachineSettingsFields({ machine, onChange, onPatch, dialog = false, blockedAt }: {
+    machine: MachineFormData; onChange: (field: keyof MachineFormData, value: string | number) => void;
+    /** Sets several fields at once (the machine, its source and its rule); undefined removes a field */
+    onPatch: (patch: Partial<MachineFormData>) => void; dialog?: boolean;
+    /** Where this machine stops taking ingredients ("146 Plastic bar"), for the rule's tooltip, when its facts are known */
+    blockedAt?: string;
 }) {
     const fieldSx = dialog ? { flex: 1 } : { minWidth: 0, width: '100%' };
+    const ownerName = (name: string) => dialog ? name : `${name}, ${entityLabel('machine', machine.id)}`;
     return <Box sx={dialog ? { display: 'flex', flexWrap: 'wrap', gap: 2 } : {
-        display: 'grid', gap: 1, gridTemplateColumns: `repeat(${machine.type === 'biochamber' ? 4 : 3}, minmax(0, 1fr))`,
-        '@container machine-row (max-width: 680px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+        display: 'grid', gap: 1, gridTemplateColumns: `repeat(${machine.type === 'biochamber' ? 3 : 2}, minmax(0, 1fr))`,
+        '@container machine-row (max-width: 520px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
         '@container machine-row (max-width: 360px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
     }}>
+        <Box sx={{ gridColumn: '1 / -1', display: 'flex', flexWrap: 'wrap', gap: dialog ? 2 : 1, minWidth: 0, width: dialog ? '100%' : undefined }}>
+            <MachinePrototypeField machine={machine} onPatch={onPatch} inputAriaLabel={ownerName(SELECT_NAMES.machinePrototype)}
+                sx={{ flex: '2 1 220px', minWidth: 0 }} />
+            <MachineQualityField machine={machine} onPatch={onPatch} inputAriaLabel={ownerName(SELECT_NAMES.machineQuality)}
+                sx={{ flex: '1 1 150px', minWidth: 0 }} />
+        </Box>
         <NumberField label="Productivity (%)" value={machine.productivity} onValueChange={value => onChange('productivity', value ?? 0)}
             min={0} step={1} defaultValue={0} sx={fieldSx} size="small" />
         <NumberField label="Crafting Speed" value={machine.crafting_speed} onValueChange={value => onChange('crafting_speed', value ?? 1)}
             min={0.01} step={0.1} defaultValue={1} sx={fieldSx} size="small" />
         {!dialog && machine.type === 'biochamber' && <NumberField label="Energy Consumption (%)" value={machine.energy_consumption_bonus ?? 0}
             onValueChange={value => onChange('energy_consumption_bonus', value ?? 0)} min={-80} step={1} defaultValue={0} sx={fieldSx} size="small" />}
-        <EntityTypeField label="Type" value={machine.type || 'machine'} options={[{ value: 'machine' }, { value: 'furnace' }, { value: 'biochamber' }]}
-            nameOf={value => MACHINE_TYPE_LABELS[value]} icons={!dialog}
-            iconOf={value => value === 'furnace' ? 'electric-furnace' : value === 'biochamber' ? 'biochamber' : 'assembling-machine-3'}
-            inputAriaLabel={dialog ? SELECT_NAMES.machineType : `${SELECT_NAMES.machineType}, ${entityLabel('machine', machine.id)}`}
-            sx={dialog ? { flex: 1, minWidth: { xs: '100%', sm: 200 } } : fieldSx} onChange={value => onChange('type', value)} />
+        <MachineRuleField machine={machine} onPatch={onPatch} blockedAt={blockedAt} inputAriaLabel={ownerName(SELECT_NAMES.machineRule)}
+            sx={dialog ? { width: '100%' } : { gridColumn: '1 / -1', minWidth: 0 }} />
     </Box>;
 }
 

@@ -20,8 +20,10 @@ export interface MachineFormData {
     /** Energy consumption effect in percent; only used by biochambers. */
     energy_consumption_bonus?: number;
     fuel?: Config['machines'][number]['fuel'];
-    /** The machine's prototype name ("electric-furnace"), shown as its icon; Sidecar exports it */
+    /** The machine's prototype name ("electric-furnace"), shown as its icon; Sidecar exports it, or it is chosen by hand */
     prototype?: string;
+    /** UI-only: where `prototype` came from, for its tooltip; none for a build file, a share link or an older saved build */
+    _prototype_source?: 'sidecar' | 'sample' | 'hand';
     quality?: Config['machines'][number]['quality'];
     recipe_quality?: Config['machines'][number]['recipe_quality'];
     /** Where it stands in the game; Sidecar exports it, nothing reads it */

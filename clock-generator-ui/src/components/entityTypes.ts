@@ -25,10 +25,3 @@ export function entityTypeLabel(value: string, itemLabel: (id: string) => string
     if (name !== value) return name;
     return [...BELT_TYPES, ...DRILL_TYPES].find((option) => option.value === value)?.label ?? value;
 }
-
-/** The saved machine types and the names the player sees for them. */
-export const MACHINE_TYPE_LABELS: Record<'machine' | 'furnace' | 'biochamber', string> = {
-    machine: 'Assembling machine',
-    furnace: 'Furnace',
-    biochamber: 'Biochamber',
-};

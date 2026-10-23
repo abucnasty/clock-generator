@@ -86,7 +86,7 @@ interface ConfigImportExportProps {
     currentForm: ConfigFormData;
     /** The form's Target Output, which a paste fills in only when its recipe is empty */
     target: TargetValues;
-    onImport: (config: Config) => void;
+    onImport: (config: Config, prototypeSource?: 'sample') => void;
     /** Commits a selected paste as one form edit, preserving retained raw fields and row identity. */
     onApplyPaste: (form: ConfigFormData) => void;
     onReset: () => void;
@@ -303,12 +303,12 @@ export function ConfigImportExport({
     }, []);
 
     /** Replaces the build with the one a build file holds; throws when the text is not one */
-    const importConfigText = useCallback(async (text: string, undoMessage: string) => {
+    const importConfigText = useCallback(async (text: string, undoMessage: string, prototypeSource?: 'sample') => {
         // values out of bounds are kept, for the form to show; only a broken file is rejected
         const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
         // its Undo message says what replaced the build
         onUndoable(undoMessage);
-        onImport(parsedConfig);
+        onImport(parsedConfig, prototypeSource);
         onBuildReplaced();
     }, [onImport, onBuildReplaced, onUndoable]);
 
@@ -434,7 +434,7 @@ export function ConfigImportExport({
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
-            await importConfigText(await response.text(), exampleUndoMessage(example, recipeLabel));
+            await importConfigText(await response.text(), exampleUndoMessage(example, recipeLabel), 'sample');
         } catch (error) {
             console.error('Example error:', error);
             errorIdRef.current = notify({ severity: 'error', text: EXAMPLE_FAILED_MESSAGE });

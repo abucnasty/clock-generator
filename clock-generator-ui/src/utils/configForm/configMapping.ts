@@ -11,6 +11,7 @@ import type {
     EnableControlOverride,
     SlotFilterFormData,
     LatchConfig,
+    MachineFormData,
 } from './formData';
 
 // Helper to convert imported enable rule to form data
@@ -45,8 +46,8 @@ function mapEnableControlOverride(ec: {
     }
 }
 
-/** The form state of an imported config */
-export function configToFormData(imported: Config): ConfigFormData {
+/** The form state of an imported config; `prototypeSource` says where its machines' prototypes came from (an example's are the sample's) */
+export function configToFormData(imported: Config, prototypeSource?: MachineFormData['_prototype_source']): ConfigFormData {
     return {
         target_output: imported.target_output,
         machines: imported.machines.map((m) => ({
@@ -59,6 +60,7 @@ export function configToFormData(imported: Config): ConfigFormData {
             energy_consumption_bonus: m.energy_consumption_bonus,
             ...(m.fuel !== undefined && { fuel: m.fuel }),
             ...(m.prototype !== undefined && { prototype: m.prototype }),
+            ...(m.prototype !== undefined && prototypeSource !== undefined && { _prototype_source: prototypeSource }),
             ...(m.quality !== undefined && { quality: m.quality }),
             ...(m.recipe_quality !== undefined && { recipe_quality: m.recipe_quality }),
             ...(m.position !== undefined && { position: m.position }),
@@ -166,7 +168,7 @@ export function formDataToConfig(config: ConfigFormData): Config {
     // external consumer.
     return {
         ...config,
-        machines: config.machines.map(toConfig),
+        machines: config.machines.map(({ _prototype_source: _s, ...machine }) => { void _s; return toConfig(machine); }),
         inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => {
             void _f;
             return toConfig({ ...ins, source: withDefaultPickupType(ins.source) });

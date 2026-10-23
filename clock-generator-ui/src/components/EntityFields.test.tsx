@@ -19,12 +19,12 @@ const belt: BeltFormData = { id: 3, _uuid: 'belt', type: 'turbo-transport-belt',
 it('keeps dialog machine edits within the draft whitelist and preserves numeric clear defaults', () => {
     const machine: MachineFormData = { id: 1, _uuid: 'machine', recipe: 'iron-plate', productivity: 25, crafting_speed: 3, type: 'biochamber' };
     const onChange = vi.fn();
-    const dialog = fields(MachineSettingsFields({ machine, dialog: true, onChange }));
+    const dialog = fields(MachineSettingsFields({ machine, dialog: true, onChange, onPatch: vi.fn() }));
     const numbers = dialog.filter(field => field.type === NumberField);
     expect(numbers.map(field => field.props.label)).toEqual(['Productivity (%)', 'Crafting Speed']);
     for (const field of numbers) (field.props.onValueChange as (value: null) => void)(null);
     expect(onChange.mock.calls).toEqual([['productivity', 0], ['crafting_speed', 1]]);
-    const energy = fields(MachineSettingsFields({ machine, onChange })).find(field => field.props.label === 'Energy Consumption (%)')!;
+    const energy = fields(MachineSettingsFields({ machine, onChange, onPatch: vi.fn() })).find(field => field.props.label === 'Energy Consumption (%)')!;
     expect(energy.props.min).toBe(-80);
     (energy.props.onValueChange as (value: number) => void)(-40);
     expect(onChange).toHaveBeenLastCalledWith('energy_consumption_bonus', -40);

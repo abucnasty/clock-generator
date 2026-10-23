@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DragIndicator } from '@mui/icons-material';
-import { Box, Chip } from '@mui/material';
+import { Box, Chip, Tooltip } from '@mui/material';
 import type { Announcements } from '@dnd-kit/core';
 
 const SILENT: Announcements = {
@@ -78,12 +78,14 @@ interface SortableItemProps {
     /** The entity's name shown in the row's chip, e.g. "Inserter 3". */
     label: string;
     displayLabel?: React.ReactNode;
+    /** What the chip's picture stands for, shown on hover in place of the label ("Cryogenic plant, from Sidecar") */
+    displayTitle?: string;
     /** Render prop: receives the composed drag-handle+ID element to place inside the row. */
     children: (dragHandle: React.ReactNode) => React.ReactNode;
 }
 
 /** Wraps a single row with sortable drag behaviour and injects a drag handle. */
-export function SortableItem({ stableKey, label, displayLabel, children }: SortableItemProps) {
+export function SortableItem({ stableKey, label, displayLabel, displayTitle, children }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -101,7 +103,17 @@ export function SortableItem({ stableKey, label, displayLabel, children }: Sorta
         zIndex: isDragging ? 1 : undefined,
     };
 
-    const dragHandle = useMemo(() => (
+    const dragHandle = useMemo(() => {
+        // the chip passes the pointer through: a picture's tooltip goes on a span around it
+        const chip = (title?: string) => <Chip
+            label={displayLabel ?? label}
+            aria-label={label}
+            title={title}
+            size="small"
+            sx={{ minWidth: displayLabel ? 52 : 72, height: displayLabel ? 40 : undefined, bgcolor: displayLabel ? 'transparent' : undefined, '& .MuiChip-label': displayLabel ? { px: 0 } : undefined, fontSize: '0.7rem', pointerEvents: 'none' }}
+        />;
+        return (
+
         <Box
             sx={{
                 display: 'flex',
@@ -133,15 +145,12 @@ export function SortableItem({ stableKey, label, displayLabel, children }: Sorta
                 <DragIndicator fontSize="small" />
             </Box>
             {/* at least as wide as "Inserter 99", so the rows of a card line up */}
-            <Chip
-                label={displayLabel ?? label}
-                aria-label={label}
-                title={label}
-                size="small"
-                sx={{ minWidth: displayLabel ? 52 : 72, height: displayLabel ? 40 : undefined, bgcolor: displayLabel ? 'transparent' : undefined, '& .MuiChip-label': displayLabel ? { px: 0 } : undefined, fontSize: '0.7rem', pointerEvents: 'none' }}
-            />
+            {displayTitle === undefined ? chip(label) : <Tooltip title={displayTitle} describeChild>
+                <Box component="span" sx={{ display: 'inline-flex' }}>{chip()}</Box>
+            </Tooltip>}
         </Box>
-    ), [attributes, listeners, label, displayLabel]);
+        );
+    }, [attributes, listeners, label, displayLabel, displayTitle]);
     // Sortable context updates positions for the whole list; unchanged row contents can stay as they are.
     const content = useMemo(() => children(dragHandle), [children, dragHandle]);
 
