@@ -32,6 +32,7 @@ import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-star
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { DeciderOrder } from "../decider-order";
 import { WarmupStep } from "../runner/steps/warmup-step";
+import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
 import { simulationStateKey } from "../runner/steady-state";
 import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
@@ -137,6 +138,8 @@ export interface SimulationStabilityCheck {
     repeat_output_items?: number;
     /** Re-simulation driven only by the exported clock windows; absent when verify_as_built is disabled */
     as_built?: AsBuiltStabilityCheck;
+    /** The chests the output goes into that nothing empties and that are full where the run ended; absent when none is */
+    full_output_chests?: FullOutputChest[];
 }
 
 
@@ -1024,6 +1027,8 @@ function checkOutput(
         logger.log(`Stability check: belt ${lane.belt_id} ${lane.item_name} exported ${lane.actual}, consumers take ${lane.expected}`);
     }
 
+    const full_output_chests = fullOutputChestsOf(controlled.new_simulation_context, output_inserter_states);
+
     // the simulated period can hit the expected output while the periods it alternates with fall short
     let repeat_output_items: number | undefined;
     if (repeat_periods !== undefined && repeat_periods > 1 && duration.ticks * repeat_periods < MAX_SIMULATION_TICKS) {
@@ -1048,6 +1053,7 @@ function checkOutput(
         used_lcm: recipe_lcm,
         repeat_periods,
         repeat_output_items,
+        ...(full_output_chests.length > 0 && { full_output_chests }),
     };
     logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.holds} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 

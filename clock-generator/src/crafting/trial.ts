@@ -20,6 +20,7 @@ import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 import { canonicalVerificationJson } from "./verification-signature";
 import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider-order";
 import { withChestDrillWindows } from "./chest-drill-windows";
+import type { FullOutputChest } from "./full-output-chests";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -129,6 +130,8 @@ export interface AsBuiltStabilityCheck {
      * made no long run: the clock already failed its one-period check, or its period is too long for one.
      */
     wake_ups?: WakeUps;
+    /** The chests the output goes into that nothing empties and that were full where the failing run ended */
+    full_output_chests?: FullOutputChest[];
 }
 
 
@@ -220,6 +223,8 @@ function longRunOfFreeRunningBuild(
     cycle_periods: number | null;
     /** Tick of the run the first judged bin starts at, for judging the same window the verdict is of */
     first_judged_tick: number;
+    /** The chests the output goes into that nothing empties and that were full where the run ended */
+    full_output_chests: FullOutputChest[] | undefined;
 } | null {
     // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
     const registry = createEntityRegistryFromConfig(config);
@@ -263,6 +268,7 @@ function longRunOfFreeRunningBuild(
         proven,
         cycle_periods: run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.periods_per_bin,
         first_judged_tick: verdict.first_judged_tick,
+        full_output_chests: run.stability_check.full_output_chests,
     };
 }
 
@@ -638,6 +644,9 @@ export function runAsBuiltCheck(
         repeat_output_items: result.stability_check.repeat_output_items,
     };
     report?.(1, total);
+    if (!check.holds && result.stability_check.full_output_chests !== undefined) {
+        check.full_output_chests = result.stability_check.full_output_chests;
+    }
     let stock: StockRecording | undefined;
     if (check.holds) for (const phases of movingPickupPhaseStarts(config)) {
         if (passed !== undefined) {
@@ -654,6 +663,9 @@ export function runAsBuiltCheck(
             check.holds = false;
             check.actual_output_items = judged.actual_output_items;
             check.failed_pickup_phases = Object.fromEntries(phases);
+            if (shifted.stability_check.full_output_chests !== undefined) {
+                check.full_output_chests = shifted.stability_check.full_output_chests;
+            }
             check.repeat_periods = judged.repeat_periods;
             check.repeat_output_items = judged.repeat_output_items;
             break;
@@ -684,6 +696,9 @@ export function runAsBuiltCheck(
             if (long_run && !long_run.keeps_up) {
                 check.holds = false;
                 check.actual_output_items = long_run.output_items_per_period;
+                if (long_run.full_output_chests !== undefined) {
+                    check.full_output_chests = long_run.full_output_chests;
+                }
             }
         }
     }
@@ -720,6 +735,9 @@ export function runAsBuiltCheck(
             check.holds = false;
             check.actual_output_items = shifted.stability_check.actual_output_items;
             check.failed_start_offset = offset;
+            if (shifted.stability_check.full_output_chests !== undefined) {
+                check.full_output_chests = shifted.stability_check.full_output_chests;
+            }
             check.repeat_periods = shifted.stability_check.repeat_periods;
             check.repeat_output_items = shifted.stability_check.repeat_output_items;
             break;

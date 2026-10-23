@@ -12,6 +12,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Added
 - Sidecar 0.13.0 marks a drop onto a belt that side-loads onto another belt, and the result names it as a known limit.
+- When no clock holds because an output chest fills up, the result names the chest.
 
 ### Changed
 - The wiring reference shows each combinator's first line as the game does, with the same icons, drills included.
