@@ -5,7 +5,7 @@ import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, Dr
 import { containerItems, isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { describeEnableRule } from './enableRuleLabel';
-import { entityLabel } from './entityLabel';
+import { chestLabel, entityLabel, entityLabelIn } from './entityLabel';
 import { drillItemsInto, inferInserterItems } from './inferInserterItems';
 import { assignFlowPorts } from './flowRouting';
 
@@ -294,7 +294,7 @@ export function buildFlowGraph(
         pushEntityNode({
             entityType: 'chest',
             entityId: chest.id,
-            label: entityLabel('chest', chest.id),
+            label: chestLabel(chest),
             iconName,
             filterIcons,
             ...(isInfinityChest(chest) && chest.remove_unfiltered_items && { sublabel: filterIcons?.length ? 'Removes unfiltered items' : 'Removes all incoming items' }),
@@ -321,7 +321,7 @@ export function buildFlowGraph(
         drawn.set(inserterNodeId, { w: width, h: height });
         const label = entityLabel('inserter', inserter.id);
         const items = listText(filterIcons, itemLabel);
-        const route = `from ${entityLabel(inserter.source.type, inserter.source.id)} to ${entityLabel(inserter.sink.type, inserter.sink.id)}`;
+        const route = `from ${entityLabelIn(chests, inserter.source.type, inserter.source.id)} to ${entityLabelIn(chests, inserter.sink.type, inserter.sink.id)}`;
         nodes.push({
             id: inserterNodeId,
             type: 'inserterNode',

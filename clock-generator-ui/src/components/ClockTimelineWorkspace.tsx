@@ -18,7 +18,7 @@ import { entitySelectorKey, type EntitySelectorOption } from '../utils/entitySel
 import { configToFormData } from '../utils/configForm/configMapping';
 import { chestConfigItems } from '../utils/configForm/formData';
 import { entityOptionsOf } from '../utils/inserterOptions';
-import { entityLabel } from '../utils/entityLabel';
+import { entityLabelIn } from '../utils/entityLabel';
 import { craftingCycles, craftingCycleAt, craftingCycleIndex, craftingCycleRange } from '../utils/craftingCycles';
 import { CraftingCycleNavigator } from './CraftingCycleNavigator';
 
@@ -105,7 +105,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         return new Map((form ? entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel }, { drills: form.drills?.configs }) : []).map(option => [entitySelectorKey(option), option]));
     }, [props.config, itemLabel, recipeLabel]);
     const selectorOptions = useMemo(() => options.map((entity): EntitySelectorOption => identities.get(entity.id) ?? {
-        type: entity.type, id: Number(entity.id.split(':')[1]), label: entityLabel(entity.type, Number(entity.id.split(':')[1])),
+        type: entity.type, id: Number(entity.id.split(':')[1]), label: entityLabelIn(props.config?.chests, entity.type, Number(entity.id.split(':')[1])),
         icon: entity.type === 'inserter' ? props.config?.inserters?.find((ins, index) => (ins.id ?? index + 1) === Number(entity.id.split(':')[1]))?.prototype ?? 'stack-inserter'
             : entity.type === 'drill' ? 'electric-mining-drill' : entity.type === 'chest' ? 'steel-chest' : 'assembling-machine-3',
         sublabel: entity.recipe ? recipeLabel(entity.recipe) : undefined,

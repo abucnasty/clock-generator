@@ -31,7 +31,7 @@ import { EntityEditDialog } from './EntityEditDialog';
 import type { EntityEditDialogProps } from './EntityEditDialog';
 import { FLOW_NODE_BOX_CLASS } from './flowNodeStyle';
 import { endpointEditProblem, endpointUpdate } from '../utils/inserterMetadata';
-import { entityLabel } from '../utils/entityLabel';
+import { entityLabel, entityLabelIn } from '../utils/entityLabel';
 import { flowFocus, flowEntityKey } from '../utils/flowFocus';
 import { FlowTileBackground } from './FlowTileBackground';
 import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
@@ -498,7 +498,7 @@ function ConfigFlowDiagramComponent({
 
     return (
         <>
-            {selection && <Typography variant="body2" sx={{ mb: 0.5 }}>Selected: {entityLabel(selection.kind, selection.id)}. Open it to edit.</Typography>}
+            {selection && <Typography variant="body2" sx={{ mb: 0.5 }}>Selected: {entityLabelIn(dialogProps.chests, selection.kind, selection.id)}. Open it to edit.</Typography>}
             <Box
                 sx={{
                     height,

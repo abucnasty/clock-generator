@@ -73,7 +73,7 @@ import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
-import { entityLabel } from './utils/entityLabel';
+import { chestLabel, entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
 import { createAppTheme } from './theme/theme';
 import { useResolvedColorScheme } from './hooks/useResolvedColorScheme';
@@ -751,7 +751,7 @@ function App() {
             removeDrill: removal('drills', removeDrill),
             switchChestType: (index: number, type: ChestType, disposal = false) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type, disposal); },
             enableChestRemoval: (index: number) => {
-                offerUndo(form => `Enabled output removal for ${entityLabel('chest', form.chests[index].id)}.`);
+                offerUndo(form => `Enabled output removal for ${chestLabel(form.chests[index])}.`);
                 updateChest(index, { remove_unfiltered_items: true });
             },
         };
