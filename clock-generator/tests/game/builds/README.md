@@ -222,6 +222,30 @@ BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
   npm run test:game -- tests/game/builds/pickup-clock-cold-start.game.test.ts -t 'express-underground-entrance-moving-l1'
 ```
 
+## A recording belongs to one clock
+
+A game test does not store its clock: it generates the clock the generator selects and compares what the game does with
+a `native` summary in a `*-clock-controls.json` file. That summary was recorded on one clock, so every entry names it:
+`recorded.clock_sha256` is the sha256 of the clock's identity (`clockIdentity`: the exported blueprint without its text
+and metadata, and the schedule), `recorded.clock_basis` says how it is known (`capture`: a retained capture whose summary
+equals `native`; `history`: the pin has not changed since the commit that recorded `native`; `regenerated`: the clock
+generated on the engine of that commit), and `generation.clock_sha256` is the clock the selection makes today, checked by
+the family's `*.generation.test.ts` (pull requests to master).
+
+- `clock-controls.test.ts` runs with the unit tests and reads the files only: it fails where the pin and the recording
+  name different clocks, which is what editing a pin to follow a moved selection leaves behind. Either record the entry
+  again in the game and set `recorded.clock_sha256`, or write in `recorded.carried` the commit or PR and why the
+  recording still holds (a re-pin with the same windows, verdicts and game result). The game test then runs on the
+  pinned clock, which shows whether it does.
+- A game test checks the hash of the clock it generated against the recorded one before it starts Factorio
+  (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
+- The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
+  `clock_sha256` (checked by `pickup-clock-cold-start.generation.test.ts` against the selection or the pinned windows)
+  and `recorded_clock_sha256` (checked by the game test).
+- Three scaffold-recordings builds expect values that belong to one clock (agricultural science's dips and open issues,
+  and the moved inserters of agricultural science with backed-up belts and of chemical science with a shared foundry):
+  `scaffold-recordings-clock-pins.json`.
+
 ## Over-the-hood operating clocks
 
 `over-hood-pickup-clock.game.test.ts` enumerates 32 controls: electronic circuits with different lane

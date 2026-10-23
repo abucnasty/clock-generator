@@ -1,12 +1,14 @@
 import {createHash} from "crypto";
 import {describe, expect, test} from "vitest";
-import {runClockOnBuild} from "./trial";
+import {clockFromWindows, runClockOnBuild} from "./trial";
+import {generateClockAlternatives} from "./generate-blueprint";
 import {SerializableClockWindows} from "./clock";
 import {OpenRange} from "../data-types";
 import {Config} from "../config";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
 import {overHoodClockCases, overHoodClockConfig} from "../../tests/game/builds/over-hood-clock-fixtures";
-import {readControls} from "../../tests/game/builds/clock-controls";
+import {clockHash, readControls} from "../../tests/game/builds/clock-controls";
+import {reversedDeciders} from "../../tests/game/builds/reversed-deciders";
 
 interface ColdStartClock {
     period: number;
@@ -14,6 +16,8 @@ interface ColdStartClock {
     clock_windows: SerializableClockWindows;
     /** sha256 of the exported clock's identity (`clockIdentity`: no text or metadata), as the blast and the other pins hash it */
     clock_sha256: string;
+    /** The same hash of the clock the runs were recorded on (the game test refuses another); a unit test requires the two equal */
+    recorded_clock_sha256: string;
 }
 interface ColdStartRun {
     /** The fixture: `<tier>-<geometry>-<supply>-l<near lane>` for a side pickup, an over-hood clock case's name */
@@ -114,5 +118,32 @@ describe("clocked cold starts from placement", () => {
         if (KNOWN_INPUT_DIFFERENCES[name] !== undefined) return;
         expect(perPeriod(input, clock.period, controls.periods).pickups, "input pickups per period").toEqual(run.pickups);
         expect(sha(input), "input inserter held, tick for tick").toBe(run.input_held_sha256);
+    });
+});
+
+// The clock each run was recorded on is the one it names: the generator's selection for a run started at the period's
+// beginning (`rotate` 0), the pinned windows built into a clock for the others, with the deciders in the mirror order where
+// the run was. The game test checks this hash against the clock it builds; nothing else did, so a selection that moved
+// left these runs pinned to the old one (#275).
+describe("cold start runs name the clock they were recorded on", () => {
+    const selected = new Map<string, Promise<{blueprint: any; schedule: any}>>();
+    test.each(Object.keys(controls.runs))("%s", async name => {
+        const run = controls.runs[name];
+        const clock = controls.clocks[run.clock];
+        const config = await configOf(run.case);
+        let exported: {blueprint: any; schedule: any};
+        if (run.rotate === 0) {
+            if (!selected.has(run.case)) selected.set(run.case, Promise.resolve().then(() => {
+                const generated = generateClockAlternatives(config, {logger: quiet});
+                const chosen = generated.alternatives[generated.selected_index].result;
+                return chosen.subtick ?? chosen;
+            }));
+            exported = await selected.get(run.case)!;
+        } else {
+            exported = clockFromWindows({...config, overrides: {...config.overrides, terminal_swing_count: clock.terminal_swings}},
+                clock.clock_windows, clock.period, quiet);
+        }
+        if (run.decider_order === "reversed") exported = reversedDeciders(exported.blueprint, exported.schedule);
+        expect(clockHash(exported), "the selection (or the pinned windows) no longer make the clock these runs were recorded on").toBe(clock.clock_sha256);
     });
 });

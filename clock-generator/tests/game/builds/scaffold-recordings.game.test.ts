@@ -9,6 +9,7 @@ import { loadConfigFromFile } from "../../../src/config/loader";
 import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
 import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
 import { outputPerPeriod, recipesMaking } from "../../../src/harness/recording-output";
+import { clockHash, readControls } from "./clock-controls";
 import { matchRecordingToConfig } from "../../../src/verification/entity-matching";
 import { wakeUpsOfRecording } from "../../../src/verification/recording-wake-ups";
 import { compareRecordings } from "../../../src/verification/compare-recordings";
@@ -417,6 +418,17 @@ afterAll(async () => {
     }
 }, 60_000);
 
+/** The clocks the values of three builds belong to (scaffold-recordings-clock-pins.json); src/crafting/scaffold-recordings-clock.generation.test.ts checks the selection */
+const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
+
+test("every build with a pinned clock is a build of this file", () => {
+    for (const [name, pin] of Object.entries(clockPins)) {
+        expect(BUILDS[name], `${name} is in scaffold-recordings-clock-pins.json and not among the builds`).toBeDefined();
+        expect(BUILDS[name].config, name).toBe((ConfigPaths as Record<string, string>)[pin.config]);
+        expect(!!BUILDS[name].backed_up_belts, name).toBe(pin.backed_up_belts);
+    }
+});
+
 // one build at a time: each test waits for its own recording before the next starts
 describe.sequential("the selected clock holds the target rate in Factorio", () => {
     for (const [name, build] of Object.entries(BUILDS)) {
@@ -451,6 +463,11 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const expected = Math.round(config.target_output.items_per_second / config.target_output.copies * period / 60 * 1e6) / 1e6;
             // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
             const exported = subtick ?? selected.result;
+            // the dips and issues this build expects were seen on one clock: on another they say nothing
+            if (clockPins[name]) {
+                expect(clockHash(exported), `the selected clock (${selected.label}) is not the one the values of ${name} were recorded on (scaffold-recordings-clock-pins.json)`)
+                    .toBe(clockPins[name].clock_sha256);
+            }
             const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
             const result = await record({
                 factorio: FACTORIO!,

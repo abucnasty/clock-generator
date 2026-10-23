@@ -10,7 +10,7 @@ import {Recording} from "../../../src/verification/recording";
 import {FixtureBeltSpeed, speedCapture} from "../helpers/belt-speed-fixtures";
 import {composeProbeSource} from "../helpers/probe-source";
 import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
-import {expectedNativeSummary} from "./clock-controls";
+import {clockHash, clockToRun, expectedNativeSummary} from "./clock-controls";
 
 export interface PickupClockScenario {
     name: string;
@@ -41,6 +41,8 @@ interface Prepared {
     expected: number;
     generationSeconds: number;
     generationVerdict: string;
+    /** The sha256 of the clock's identity (clock-controls.ts); absent from a retained generated-clock.json made before it was kept */
+    clockSha256?: string;
     selection?: {id: string; holds: boolean; rate: number; supply: "moving" | "backed_up" | null};
 }
 const generated = new Map<string, Prepared>();
@@ -75,7 +77,7 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
     const prepared = {config, period, expected: config.target_output.items_per_second * period / 60,
         clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule},
-        generationSeconds: (performance.now() - started) / 1000, generationVerdict: selected.verdict,
+        generationSeconds: (performance.now() - started) / 1000, generationVerdict: selected.verdict, clockSha256: clockHash(exported),
         selection: {id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
             supply: selected.belt?.kind ?? null}};
     generated.set(key, prepared);
@@ -97,6 +99,12 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
             fs.writeFileSync(generationPath, JSON.stringify(prepared) + "\n");
         }
         fs.writeFileSync(path.join(capture.directory, "generated-clock.json"), JSON.stringify(prepared) + "\n");
+        // the summary is compared with the recording of one clock: on another one it says nothing, so no game is started
+        const recordedClock = clockToRun(scenario.controls, scenario.name);
+        if (recordedClock && prepared.clockSha256 && process.env.BELT_CLOCK_CALIBRATE !== "1") {
+            expect(prepared.clockSha256, `the clock ${scenario.name} runs is not the one its native summary in ${path.basename(scenario.controls)} was recorded on `
+                + "(recorded.clock_sha256): record it again in the game, or say in recorded.carried why the recording still holds").toBe(recordedClock);
+        }
         if (prepared.selection) fs.writeFileSync(path.join(capture.directory, "generation-selection.json"), JSON.stringify(prepared.selection) + "\n");
         if (process.env.BELT_CLOCK_GENERATION_ONLY === "1") return;
         const {config, clock, period, expected} = prepared;

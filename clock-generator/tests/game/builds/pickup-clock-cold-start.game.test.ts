@@ -8,14 +8,14 @@ import {generateClockAlternatives} from "../../../src/crafting/generate-blueprin
 import {clockFromWindows} from "../../../src/crafting/trial";
 import {SerializableClockWindows} from "../../../src/crafting/clock";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
-import {clockIdentity} from "../../../src/crafting/clock-identity";
 import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {composeProbeSource} from "../helpers/probe-source";
 import {speedCapture} from "../helpers/belt-speed-fixtures";
 import {reflectOrdinaryPickup} from "../mechanics/belt-pickup/ordinary-reflection-fixtures";
 import {pickupClockConfig, pickupClockScaffold, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 import {overHoodClockCases, overHoodClockConfig, overHoodClockScaffold} from "./over-hood-clock-fixtures";
-import {readControls} from "./clock-controls";
+import {clockHash, readControls} from "./clock-controls";
+import {reversedDeciders} from "./reversed-deciders";
 
 interface Run {
     case: string; clock: string; rotate: number; decider_order: "built" | "reversed";
@@ -25,7 +25,7 @@ interface Run {
 }
 interface Controls {
     frame_offset: number; periods: number;
-    clocks: Record<string, {period: number; terminal_swings: number; clock_windows: SerializableClockWindows; clock_sha256: string}>;
+    clocks: Record<string, {period: number; terminal_swings: number; clock_windows: SerializableClockWindows; clock_sha256: string; recorded_clock_sha256: string}>;
     runs: Record<string, Run>;
 }
 interface Report {
@@ -62,21 +62,6 @@ async function fixtureOf(name: string): Promise<{config: Config; scaffold: strin
     return {config, scaffold, units: variant.speed.units, backed: variant.backed};
 }
 
-/** The clock's deciders built in the mirror order: each decider's conditions move to the mirror slot (the game updates the last built first) */
-function reversedDeciders<B extends {entities: any[]}, S extends {inserter_combinators: {entity_number: number; inserter_ids: number[]}[]}>(blueprint: B, schedule: S) {
-    const permuted: B = JSON.parse(JSON.stringify(blueprint));
-    const slots = schedule.inserter_combinators.map(it => it.entity_number);
-    const byNumber = new Map<number, any>(permuted.entities.map(entity => [entity.entity_number, entity]));
-    const contents = slots.map(number => { const {entity_number: _, position: __, ...rest} = byNumber.get(number); return rest; });
-    slots.forEach((number, k) => {
-        const entity = byNumber.get(number);
-        for (const key of Object.keys(entity)) if (key !== "entity_number" && key !== "position") delete entity[key];
-        Object.assign(entity, JSON.parse(JSON.stringify(contents[slots.length - 1 - k])));
-    });
-    return {blueprint: permuted, schedule: {...schedule, inserter_combinators: slots.map((entity_number, k) =>
-        ({entity_number, inserter_ids: schedule.inserter_combinators[slots.length - 1 - k].inserter_ids}))}};
-}
-
 // The clocked cold starts the generation test lays the simulator against (src/crafting/pickup-clock-cold-start.
 // generation.test.ts; tests/game/builds/README.md, "Clocked cold starts"), recorded again: the staged start, the
 // generator's selected clock (or the same windows started inside the period, with the deciders or the inserters built
@@ -100,7 +85,7 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
         }
         if (run.decider_order === "reversed") exported = reversedDeciders(exported.blueprint, exported.schedule);
         const clock = {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule};
-        expect(sha(clockIdentity(exported)), "the clock recorded (its identity: no text or metadata)").toBe(clockControl.clock_sha256);
+        expect(clockHash(exported), "the clock these runs were recorded on (recorded_clock_sha256; its identity: no text or metadata)").toBe(clockControl.recorded_clock_sha256);
         const ticks = controls.periods * P;
         const recording = (await recordInFactorio({factorio: factorio!, save: save!, config, blueprint: scaffold, clock,
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),

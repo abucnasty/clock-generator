@@ -6,7 +6,9 @@
         "pr": 0,
         "commit": "000ad913",
         "frozen_head": "000ad913",
-        "note": "recorded before the PR was opened; pr is set when it is"
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee",
+        "clock_basis": "capture"
       },
       "native": {
         "generationVerdict": "stable",
@@ -468,7 +470,9 @@
         "pr": 0,
         "commit": "000ad913",
         "frozen_head": "000ad913",
-        "note": "recorded before the PR was opened; pr is set when it is"
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee",
+        "clock_basis": "capture"
       },
       "native": {
         "generationVerdict": "stable",
@@ -930,7 +934,9 @@
         "pr": 0,
         "commit": "000ad913",
         "frozen_head": "000ad913",
-        "note": "recorded before the PR was opened; pr is set when it is"
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349",
+        "clock_basis": "capture"
       },
       "native": {
         "generationVerdict": "stable",
@@ -1247,7 +1253,9 @@
         "pr": 0,
         "commit": "000ad913",
         "frozen_head": "000ad913",
-        "note": "recorded before the PR was opened; pr is set when it is"
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349",
+        "clock_basis": "capture"
       },
       "native": {
         "generationVerdict": "stable",
@@ -2126,7 +2134,9 @@
         "pr": 0,
         "commit": "000ad913",
         "frozen_head": "000ad913",
-        "note": "recorded before the PR was opened; pr is set when it is"
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee",
+        "clock_basis": "capture"
       },
       "native": {
         "generationVerdict": "stable",
@@ -2641,7 +2651,9 @@
         "pr": 0,
         "commit": "000ad913",
         "frozen_head": "000ad913",
-        "note": "recorded before the PR was opened; pr is set when it is"
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349",
+        "clock_basis": "capture"
       },
       "native": {
         "generationVerdict": "stable",
