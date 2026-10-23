@@ -10,6 +10,7 @@ import {ClockControl, pinMismatches, readControls} from "./clock-controls";
  */
 const FAMILIES = ["blocked-output", "car", "container", "front", "lithium-silo", "over-hood", "pickup", "steel-wagon"]
     .map(family => `${family}-clock-controls.json`);
+const hash = /^[0-9a-f]{64}$/;
 /** Entries whose native summary has no known clock yet: the list may only shrink */
 const NOT_YET_TIED: Record<string, string[]> = {};
 
@@ -64,6 +65,20 @@ describe("pinMismatches", () => {
     test("lets an entry listed as not tied go without a clock, and not keep one", () => {
         expect(pinMismatches({one: entry({})}, ["one"])).toEqual([]);
         expect(pinMismatches({one: entry({clock_sha256: b})}, ["one"])).toHaveLength(1);
+    });
+});
+
+describe("cold starts", () => {
+    const start = readControls<{cold_start: {clocks: Record<string, {clock_sha256: string; recorded_clock_sha256: string}>; runs: Record<string, {clock: string}>}}>("pickup-clock-start-controls.json").cold_start;
+    test("every clock the runs were recorded on is the one the selection and the pinned windows make", () => {
+        const found = Object.entries(start.clocks).filter(([, clock]) => clock.recorded_clock_sha256 !== clock.clock_sha256 || !hash.test(clock.clock_sha256))
+            .map(([key, clock]) => `${key}: pinned ${clock.clock_sha256}, recorded on ${clock.recorded_clock_sha256}`);
+        expect(found).toEqual([]);
+    });
+    test("every run names a clock, and every clock has a run", () => {
+        const used = new Set(Object.values(start.runs).map(run => run.clock));
+        expect([...used].filter(key => !start.clocks[key])).toEqual([]);
+        expect(Object.keys(start.clocks).filter(key => !used.has(key))).toEqual([]);
     });
 });
 

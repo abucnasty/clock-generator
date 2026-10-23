@@ -239,6 +239,9 @@ the family's `*.generation.test.ts` (pull requests to master).
   pinned clock, which shows whether it does.
 - A game test checks the hash of the clock it generated against the recorded one before it starts Factorio
   (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
+- The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
+  `clock_sha256` (checked by `pickup-clock-cold-start.generation.test.ts` against the selection or the pinned windows)
+  and `recorded_clock_sha256` (checked by the game test).
 
 ## Over-the-hood operating clocks
 
