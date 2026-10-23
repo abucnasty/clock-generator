@@ -29,7 +29,6 @@ export {
     beltStrategyUpdate,
     containerItems,
     isBufferChest,
-    machineIconName,
     isContainerChest,
     isInfinityChest,
 } from '../utils/configForm/formData';
