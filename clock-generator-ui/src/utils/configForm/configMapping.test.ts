@@ -139,7 +139,7 @@ describe('the labels a config gives its machines and chests', () => {
     it('keeps a machine\'s prototype and qualities and a buffer chest\'s prototype through the form', () => {
         const labelled = {
             ...imported,
-            machines: [{ id: 1, recipe: 'iron-plate', productivity: 0, crafting_speed: 2, type: 'furnace', prototype: 'electric-furnace', quality: 'legendary', recipe_quality: 'normal' }],
+            machines: [{ id: 1, recipe: 'iron-plate', productivity: 0, crafting_speed: 2, prototype: 'electric-furnace', quality: 'legendary', recipe_quality: 'normal' }],
             chests: [{ type: ChestType.BUFFER_CHEST, id: 1, storage_size: 2, item_filter: 'copper-plate', prototype: 'steel-chest' }],
         } as unknown as Config;
         const config = formDataToConfig(configToFormData(labelled));
@@ -164,8 +164,8 @@ describe('the labels a config gives its machines and chests', () => {
     });
 
     it('draws a machine by its prototype, else by its type', () => {
-        expect(machineIconName({ prototype: 'foundry', type: 'machine' })).toBe('foundry');
-        expect(machineIconName({ type: 'furnace' })).toBe('electric-furnace');
+        expect(machineIconName({ prototype: 'foundry' })).toBe('foundry');
+        expect(machineIconName({})).toBe('assembling-machine-3');
         expect(machineIconName(undefined)).toBe('assembling-machine-3');
     });
 });

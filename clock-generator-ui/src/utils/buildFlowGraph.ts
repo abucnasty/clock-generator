@@ -34,7 +34,7 @@ export type MachineNodeParams = {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace' | 'biochamber';
+    prototype?: string;
 };
 
 export type EntityNodeData = {
@@ -257,7 +257,7 @@ export function buildFlowGraph(
                     recipe: machine.recipe || '',
                     productivity: machine.productivity,
                     crafting_speed: machine.crafting_speed,
-                    type: machine.type,
+                    prototype: machine.prototype,
                 },
                 detailed: detailMode,
                 verticalHandles: in_loop,

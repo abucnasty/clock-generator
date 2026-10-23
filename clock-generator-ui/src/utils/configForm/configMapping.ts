@@ -56,7 +56,6 @@ export function configToFormData(imported: Config, prototypeSource?: MachineForm
             recipe: m.recipe,
             productivity: m.productivity,
             crafting_speed: m.crafting_speed,
-            type: m.type,
             energy_consumption_bonus: m.energy_consumption_bonus,
             ...(m.fuel !== undefined && { fuel: m.fuel }),
             ...(m.prototype !== undefined && { prototype: m.prototype }),

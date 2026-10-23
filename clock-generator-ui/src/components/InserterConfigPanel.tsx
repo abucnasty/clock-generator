@@ -1,4 +1,5 @@
 import { effectiveInserterStackSize } from '../utils/inserterMetadata';
+import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import {
     Box,
     Chip,
@@ -99,13 +100,14 @@ export function InserterConfigPanel({
     const currentOverride = inserter.overrides?.enable_control;
     const savedRule = describeEnableRule(currentOverride, { forcedAlways: inserter._forced_always });
 
-    const availableItems = useMemo(() => itemsAround(draft, machines, belts, chests, getRecipeInfo, inserters), [draft, machines, belts, chests, getRecipeInfo, inserters]);
+    const craftingMachines = useCraftingMachines();
+    const availableItems = useMemo(() => itemsAround(draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines), [draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines]);
 
     // the items the inserter moves: its filters, else what the game would pick; a template's item picker starts on them
     const movedItems = useMemo<string[]>(() => {
         const filters = draft.filters?.filter(Boolean) ?? [];
-        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo, inserters);
-    }, [draft, machines, belts, chests, getRecipeInfo, inserters]);
+        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines);
+    }, [draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines]);
 
     const copyFromOptions = useMemo<CopyFromOption[]>(() => {
         return inserters

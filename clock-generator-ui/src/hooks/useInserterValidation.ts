@@ -7,12 +7,12 @@ import type { LiveCoverage } from '../worker/types';
  * Only routes, carried items, recipes and fuel can change connection coverage; an inserter's kind and filter mode can put
  * it out of scope; a lane's and an inserter's stack size can put a belt pickup outside its calibration; the target,
  * productivity, a belt's type and a drop's lane change what a lane is asked for against what it carries; a machine's
- * prototype, against its type and recipe, is warned about.
+ * prototype, against its recipe, is warned about.
  */
 function coverageKey(config: Config): string {
     return JSON.stringify({
         target: config.target_output,
-        machines: config.machines.map(({ id, recipe, type, fuel, productivity, prototype }) => [id, recipe, type, fuel, productivity, prototype]),
+        machines: config.machines.map(({ id, recipe, fuel, productivity, prototype }) => [id, recipe, fuel, productivity, prototype]),
         belts: config.belts.map(({ id, type, lanes }) => [id, type, lanes.map(lane => [lane.ingredient, lane.stack_size,
             'consumption_per_second' in lane ? lane.consumption_per_second : null])]),
         chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter

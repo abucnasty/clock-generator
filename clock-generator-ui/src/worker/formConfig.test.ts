@@ -41,7 +41,7 @@ describe('parseFormConfig', () => {
 
     it('preserves imported geometry, fuel and explicit overrides, refuses unsupported geometry edits, and keeps mixed-drop drafts recoverable', () => {
         let form = edits.updateTargetOutput(createDefaultConfig(), 'recipe', 'rocket-fuel');
-        form.machines[0] = { ...form.machines[0], recipe: 'rocket-fuel-from-jelly', type: 'biochamber', fuel: 'nutrients' };
+        form.machines[0] = { ...form.machines[0], recipe: 'rocket-fuel-from-jelly', prototype: 'biochamber', fuel: 'nutrients' };
         form = edits.addBelt(form);
         form = edits.addBelt(form);
         form = edits.addInserter(form);

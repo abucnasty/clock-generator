@@ -1,4 +1,5 @@
 import { EntityBadge } from './EntityBadge';
+import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { InserterIcon } from './InserterIcon';
 import { EntitySettings } from './EntitySettings';
 import { effectiveInserterStackSize, inserterTimingLabels } from '../utils/inserterMetadata';
@@ -90,12 +91,13 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
     const ruleCopyOptions = useMemo(() => ruleCopySources.filter(source => source.uuid !== value._uuid), [ruleCopySources, value._uuid]);
     const label = entityLabel('inserter', value.id);
     const { itemLabel } = useGameNames();
+    const craftingMachines = useCraftingMachines();
     const selectedRow = selecting && checked;
     const selectionStyle = {
         bgcolor: (theme: Theme) => selectedRow ? themeTokens(theme).hover.row : themeTokens(theme).surface.row,
         boxShadow: (theme: Theme) => selectedRow ? `inset 0 0 0 1px ${themeTokens(theme).control.border}, inset 4px 0 0 ${themeTokens(theme).text.secondary}` : undefined,
     };
-    const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters) : value.filters?.filter(Boolean) ?? [];
+    const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines) : value.filters?.filter(Boolean) ?? [];
     if (filterView) return <SortableItem stableKey={value._uuid} label={label} displayLabel={<EntityBadge id={value.id}><InserterIcon value={value} size={28} /></EntityBadge>}>
         {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label}
             data-selected={selectedRow ? 'true' : undefined}
@@ -145,7 +147,7 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
                     rowSettings={fields => <EntitySettings actionContainerId={`settings-actions-inserter-${value.id}`} label={label} tabs={[{ label: 'Enable control', content:
                         <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
                             currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
-                            availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters)}
+                            availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines)}
                             movedItems={filterItems} stackSize={effectiveInserterStackSize(value)} copyFromOptions={ruleCopyOptions}
                             onCancel={() => setRuleRevision(previous => previous + 1)}
                             onSave={override => {
@@ -226,8 +228,9 @@ function InsertersFormComponent({
         return () => cancelAnimationFrame(frame);
     }, [focusRequest, onFocusHandled]);
     const selectedRows = useMemo(() => inserters.filter(row => selected.has(row._uuid)), [inserters, selected]);
+    const craftingMachines = useCraftingMachines();
     const priorityIds = useMemo(() => itemsUnion(selectedRows.map(row => sourceItemsOf(row.source, machines, belts, chests, getRecipeInfo, inserters))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters]);
-    const bulkItems = useMemo(() => itemsUnion(selectedRows.map(row => itemsAround(row, machines, belts, chests, getRecipeInfo, inserters))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters]);
+    const bulkItems = useMemo(() => itemsUnion(selectedRows.map(row => itemsAround(row, machines, belts, chests, getRecipeInfo, inserters, craftingMachines))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters, craftingMachines]);
     const itemKeys = useMemo(() => inserters.map(row => row._uuid), [inserters]);
     const rowOrder = useRef(itemKeys);
     useEffect(() => { rowOrder.current = itemKeys; }, [itemKeys]);

@@ -398,6 +398,8 @@ export interface PastedEntities {
     guidance: Option<string>;
     /** The target output the paste suggests: the mod's own, else worked out from the machines */
     suggested_target: Option<SuggestedTarget>;
+    /** The ids of the machines an older Sidecar named only by kind, which got a machine picked for their recipe */
+    picked_machines?: number[];
 }
 
 /**
@@ -455,7 +457,11 @@ export interface EngineAnswers {
     'inserter-coverage': LiveCoverage;
     'repeated-unit-conversion': CheckedRepeatedUnitConversion;
     /** Why the saved config cannot be used; null when it can */
-    'saved-config': string | null;
+    /**
+     * The saved form state with each machine's former type read as its machine, to load in its place, and why it cannot
+     * be loaded, or null when it can
+     */
+    'saved-config': { problem: string | null; form: unknown };
     'config-file': Config;
     'pasted-entities': PastedEntities;
 }

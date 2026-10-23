@@ -8,7 +8,6 @@
 export const SELECT_NAMES = {
     machinePrototype: 'Machine',
     machineQuality: 'Machine quality',
-    machineRule: 'Simulation rule',
     beltType: 'Belt type',
     beltStrategy: 'Belt strategy',
     chestType: 'Chest type',

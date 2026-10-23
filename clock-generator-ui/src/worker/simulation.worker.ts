@@ -317,9 +317,11 @@ function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: strin
 
 function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }>): PastedEntities {
     // IDs are already assigned by the mod
-    const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine').map(withMachineRule);
+    const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine');
     return {
         machines,
+        picked_machines: machines.filter((machine, index) => machine.prototype !== undefined && !hasPrototype(Array.isArray(pasted.machines) ? pasted.machines[index] : undefined))
+            .map(machine => machine.id),
         drills: validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill'),
         inserters: validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter'),
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
@@ -331,27 +333,30 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
     };
 }
 
-/** Why the saved form state cannot be loaded, or null when it can */
-function savedConfigProblem(config: unknown): string | null {
-    const result = parseFormConfig(clockGenerator.ConfigSchema, config);
-    return result.success ? null : result.error.message;
-}
+const hasPrototype = (machine: unknown): boolean => typeof machine === 'object' && machine !== null && 'prototype' in machine && machine.prototype !== undefined;
 
 /**
- * A machine with its simulation rule written out: a prototype without a type gets the prototype's rule, which the engine
- * would use, so that the form shows and keeps what is simulated
+ * The saved form state with each machine's former type read as its machine (a row given one so is marked as picked for
+ * its recipe), and why it cannot be loaded, or null when it can
  */
-function withMachineRule<T extends Config['machines'][number]>(machine: T): T {
-    return machine.type === undefined && machine.prototype !== undefined ? { ...machine, type: clockGenerator.machineRuleOf(machine) } : machine;
+function savedConfig(config: unknown): EngineAnswers['saved-config'] {
+    const form = clockGenerator.migrateMachineTypes(config);
+    const before = typeof config === 'object' && config !== null && 'machines' in config && Array.isArray(config.machines) ? config.machines : [];
+    const marked = typeof form === 'object' && form !== null && 'machines' in form && Array.isArray(form.machines)
+        ? { ...form, machines: form.machines.map((machine: unknown, index: number) => hasPrototype(machine) && !hasPrototype(before[index])
+            ? { ...(machine as object), _prototype_source: 'recipe' } : machine) }
+        : form;
+    const result = parseFormConfig(clockGenerator.ConfigSchema, marked);
+    return { problem: result.success ? null : result.error.message, form: marked };
 }
 
-/** An imported config file, which can hold what the form exports, e.g. an inserter end left unset */
+/** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */
 function configFile(config: unknown): Config {
-    const result = parseFormConfig(clockGenerator.ConfigSchema, config);
+    const result = parseFormConfig(clockGenerator.ConfigSchema, clockGenerator.migrateMachineTypes(config));
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return { ...result.data, machines: result.data.machines.map(withMachineRule) };
+    return result.data;
 }
 
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
@@ -380,7 +385,7 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
         case 'repeated-unit-conversion':
             return checkRepeatedUnitConversion(query.config);
         case 'saved-config':
-            return savedConfigProblem(query.config);
+            return savedConfig(query.config);
         case 'config-file':
             return configFile(query.config);
         case 'pasted-entities':

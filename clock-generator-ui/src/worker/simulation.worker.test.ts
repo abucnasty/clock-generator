@@ -150,7 +150,7 @@ it('keeps a captured inserter kind, quality and filter mode through paste, save 
         const pasted = (answer as { answer: PastedEntities }).answer;
         const form = applyPaste(createDefaultConfig(), pasted, { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
         const saved = readSavedConfig(serializeConfig(form))!;
-        expect(await send({ type: 'query', requestId: 51, query: { kind: 'saved-config', config: formDataToConfig(saved) } })).toMatchObject({ answer: null });
+        expect(await send({ type: 'query', requestId: 51, query: { kind: 'saved-config', config: formDataToConfig(saved) } })).toMatchObject({ answer: { problem: null } });
         const reloaded = configToFormData(formDataToConfig(saved));
         return { ...formDataToConfig(reloaded), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
     };
@@ -292,11 +292,17 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
         target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [furnace], inserters: [], belts: [],
     };
-    expect((await ask({ kind: 'config-file', config })).machines[0].type).toBe('furnace');
-    expect((await ask({ kind: 'pasted-entities', machines: [furnace], drills: [], inserters: [], belts: [], chests: [] } as Extract<EngineQuery, { kind: 'pasted-entities' }>))
-        .machines[0].type).toBe('furnace');
+    // a former type is read as the machine, in a build file, a saved build and a paste from an older Sidecar
+    const typed = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, type: 'furnace' };
+    expect((await ask({ kind: 'config-file', config: { ...config, machines: [typed] } })).machines[0]).toEqual(furnace);
+    const saved = await ask({ kind: 'saved-config', config: { ...config, machines: [{ ...typed, _uuid: 'm' }, { ...furnace, id: 2, type: 'machine' }] } });
+    expect(saved.problem).toBeNull();
+    expect((saved.form as { machines: unknown[] }).machines).toEqual([{ ...furnace, _uuid: 'm', _prototype_source: 'recipe' }, { ...furnace, id: 2 }]);
+    const pasted = await ask({ kind: 'pasted-entities', machines: [typed, { ...furnace, id: 2 }], drills: [], inserters: [], belts: [], chests: [] } as Extract<EngineQuery, { kind: 'pasted-entities' }>);
+    expect(pasted.machines).toEqual([furnace, { ...furnace, id: 2 }]);
+    expect(pasted.picked_machines).toEqual([1]);
 
-    const live = await ask({ kind: 'inserter-coverage', config: { ...config, machines: [{ ...furnace, prototype: 'cryogenic-plant', type: 'machine' }] } as Config });
+    const live = await ask({ kind: 'inserter-coverage', config: { ...config, machines: [{ ...furnace, prototype: 'cryogenic-plant' }] } as Config });
     expect(live.machinePrototypes.map(issue => issue.kind)).toEqual(['recipe-not-made']);
     expect(buildValidationIssues({ fieldProblems: [], coverage: [], machinePrototypes: live.machinePrototypes, chests: [], inserters: [],
         machines: [{ id: 1 }], chestIssues: [], coverageText: () => '' })
