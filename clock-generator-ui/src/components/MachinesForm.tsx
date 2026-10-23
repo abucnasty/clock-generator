@@ -13,14 +13,15 @@ import {
 import { memo, useState } from 'react';
 import type { Config, MachineTargetRate } from 'clock-generator/browser';
 import type { MachineFormData } from '../hooks/useConfigForm';
-import { machineIconName } from '../hooks/useConfigForm';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useMachineTargetRates } from '../hooks/useMachineTargetRates';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
 import { MachineSettingsFields } from './EntityFields';
-import { FactorioIcon } from './FactorioIcon';
+import { MachineIcon } from './MachineIcon';
+import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
+import { machineIconText } from '../utils/machinePrototype';
 import { HelpCommand } from './HelpButton';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
@@ -42,6 +43,7 @@ interface MachinesFormProps {
     recipeNames: string[];
     onAdd: () => void;
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
+    onPatch: (index: number, patch: Partial<MachineFormData>) => void;
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
     onDuplicate: (index: number) => void;
@@ -55,10 +57,13 @@ function MachinesFormComponent({
     recipeNames,
     onAdd,
     onUpdate,
+    onPatch,
     onRemove,
     onReorder,
     onDuplicate,
 }: MachinesFormProps) {
+    const { itemLabel } = useGameNames();
+    const craftingMachines = useCraftingMachines();
     const [rateView, setRateView] = useState<'max' | 'target'>('max');
     const targetRates = useMachineTargetRates(engineConfig, rateView === 'target');
     const common = machines.length === 0 ? [] : [
@@ -128,8 +133,9 @@ function MachinesFormComponent({
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}
+                        displayTitle={machineIconText(machine, itemLabel, craftingMachines)}
                         displayLabel={<EntityBadge id={machine.id}>
-                            <FactorioIcon name={machineIconName(machine)} size={28} alt="" />
+                            <MachineIcon machine={machine} size={28} />
                         </EntityBadge>}>
                         {(dragHandle) => (
                             <MachineRow
@@ -142,6 +148,7 @@ function MachinesFormComponent({
                                 canDelete={machines.length > 1}
                                 dragHandle={dragHandle}
                                 onUpdate={onUpdate}
+                                onPatch={onPatch}
                                 onRemove={remove}
                                 onDuplicate={() => duplicate(index)}
                                 onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
@@ -168,11 +175,13 @@ interface MachineRowProps {
     onMoveDown?: () => void;
     dragHandle: React.ReactNode;
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
+    onPatch: (index: number, patch: Partial<MachineFormData>) => void;
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetUpdating, canDelete, dragHandle, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
+function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetUpdating, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
     const { itemLabel, recipeLabel } = useGameNames();
+    const recipes = useMachineRecipeOptions(machine.prototype, recipeNames);
     const { facts, error, updating } = useMachineFacts({
         recipe: machine.recipe,
         productivity: machine.productivity,
@@ -224,7 +233,8 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
                             }}
                             minWidth={0}
                             dropdownMinWidth={300}
-                            options={recipeNames}
+                            options={recipes.options}
+                            searchOnlyIds={recipes.searchOnly}
                             value={machine.recipe || null}
                             onChange={(newValue) => onUpdate(index, 'recipe', newValue || '')}
                             label="Recipe"
@@ -266,7 +276,8 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
                     </Typography>
                 </Box>
             }>
-            <MachineSettingsFields machine={machine} onChange={(field, value) => onUpdate(index, field, value)} />
+            <MachineSettingsFields machine={machine} onChange={(field, value) => onUpdate(index, field, value)} onPatch={patch => onPatch(index, patch)}
+                blockedAt={facts && !error ? `${facts.output_block_size} ${itemLabel(facts.output_item)}` : undefined} />
 
             {machine.fuel !== undefined && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }} title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
             </EntitySettings>

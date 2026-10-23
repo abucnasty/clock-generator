@@ -1,5 +1,6 @@
 import { fraction } from "../../data-types/fraction"
 import { MachineConfiguration } from "../../config";
+import { machineRuleOf } from "../../config/machine-prototype";
 import { AutomatedInsertionLimit, ConsumptionRate } from "./input";
 import { BurnerEnergySource, FuelSlot } from "./fuel";
 import { MachineMetadata } from "./machine-metadata";
@@ -105,7 +106,7 @@ function fromConfig(config: MachineConfiguration): Machine {
         recipe: RecipeMetadata.fromRecipeName(config.recipe),
         productivity: config.productivity,
         crafting_speed: config.crafting_speed,
-        type: config.type ?? "machine",
+        type: machineRuleOf(config),
         energy_consumption_bonus: config.energy_consumption_bonus,
         fuel: config.fuel,
         ...(config.prototype !== undefined ? { prototype: config.prototype } : {}),

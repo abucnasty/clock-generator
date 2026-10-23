@@ -6,7 +6,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { FilterItemPicker } from './FilterItemPicker';
 
 /** An inline item field that opens the shared category picker. */
-export function ItemPickerField({ label, inputAriaLabel, value, options, readOnly = false, onChange, kind = 'item', inputId, required, errorText, sx, size = 'small', iconOnly = false, allowCustom = false }: {
+export function ItemPickerField({ label, inputAriaLabel, value, options, readOnly = false, onChange, kind = 'item', inputId, required, errorText, sx, size = 'small', iconOnly = false, allowCustom = false, searchOnlyIds }: {
     label: string;
     inputAriaLabel: string;
     value: string | null;
@@ -20,13 +20,16 @@ export function ItemPickerField({ label, inputAriaLabel, value, options, readOnl
     size?: 'small' | 'medium';
     iconOnly?: boolean;
     allowCustom?: boolean;
+    /** Recipes a typed search finds beyond the options, in place of the page's */
+    searchOnlyIds?: readonly string[];
     onChange: (value: string | null) => void;
 }) {
     const generatedId = useId();
     const id = inputId ?? generatedId;
     const { itemLabel, recipeLabel } = useGameNames();
     const nameOf = kind === 'recipe' ? recipeLabel : itemLabel;
-    const searchOnly = useContext(SearchOnlyRecipesContext);
+    const searchOnlyContext = useContext(SearchOnlyRecipesContext);
+    const searchOnly = searchOnlyIds ?? searchOnlyContext;
     const offered = useMemo(() => value && !options.includes(value) ? [value, ...options] : options, [options, value]);
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
     const close = () => setAnchor(null);

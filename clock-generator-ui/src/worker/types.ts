@@ -14,6 +14,7 @@ import type {
     FuelPlan,
     InserterCoverageIssue,
     MachineConfigurationSchema,
+    MachinePrototypeIssue,
     MiningDrillConfigSchema,
     Option,
     ClockAlternativeContext,
@@ -345,6 +346,21 @@ export interface RepeatedUnitsRecovery {
             code: RepeatedUnitConversionReasonCode | 'candidate-check-failed'; message: string };
 }
 
+/** A crafting machine of the game data (an assembling machine or a furnace prototype), as the Machine picker offers it */
+export interface CraftingMachineInfo {
+    name: string;
+    /** "furnace" or "assembling-machine" */
+    type: string;
+    crafting_categories: string[];
+    burner_fuel_categories: string[];
+}
+
+export interface CraftingMachineData {
+    machines: CraftingMachineInfo[];
+    /** By recipe id, hidden ones included */
+    recipeCategories: Record<string, string[]>;
+}
+
 export interface RecipeInfo {
     ingredients: string[];
     results: string[];
@@ -361,6 +377,8 @@ export interface FactorioLookups {
     names: GameNames;
     /** The recipes the data marks hidden (recycling, parameters, mod and unused recipes) */
     hiddenRecipes: string[];
+    /** The crafting machines a machine can be, in the data's order, and the crafting categories of every recipe */
+    craftingMachines: CraftingMachineData;
 }
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -419,6 +437,8 @@ export interface LiveCoverage {
     pickupNotTested: string | null;
     /** The engine's warning for belt lanes that the copies, summed, would ask for more than they carry; it does not block */
     laneSharedByCopies: string | null;
+    /** The engine's warnings for machines whose prototype disagrees with their type or cannot make their recipe; they do not block */
+    machinePrototypes: MachinePrototypeIssue[];
 }
 
 export interface EngineAnswers {

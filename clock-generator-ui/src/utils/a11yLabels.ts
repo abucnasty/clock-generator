@@ -6,7 +6,9 @@
 
 /** The names of the dropdowns, each containing the visible label so a voice user can say what they see ("type") */
 export const SELECT_NAMES = {
-    machineType: 'Machine type',
+    machinePrototype: 'Machine',
+    machineQuality: 'Machine quality',
+    machineRule: 'Simulation rule',
     beltType: 'Belt type',
     beltStrategy: 'Belt strategy',
     chestType: 'Chest type',

@@ -67,7 +67,9 @@ export function applyPaste(current: ConfigFormData, incoming: PastedEntities, se
     return {
         ...current,
         target_output: selections.target && target ? target : current.target_output,
-        machines: replacing('machines') ? incoming.machines.map(withUuid) : current.machines,
+        machines: replacing('machines')
+            ? incoming.machines.map(row => withUuid({ ...row, ...(row.prototype !== undefined && { _prototype_source: 'sidecar' as const }) }))
+            : current.machines,
         inserters: replacing('inserters')
             ? incoming.inserters.map((row, index) => withUuid({ ...row, id: row.id ?? index + 1 }))
             : current.inserters,

@@ -1,14 +1,7 @@
-import { EntityType } from "../entity-type";
 import { RecipeMetadata } from "./recipe";
+import { MachineType } from "./machine-type";
 
-export const MachineType = {
-    MACHINE: EntityType.MACHINE,
-    FURNACE: EntityType.FURNACE,
-    /** Burns fuel (nutrients) while crafting. Otherwise behaves like a machine. */
-    BIOCHAMBER: "biochamber",
-} as const
-
-export type MachineType = typeof MachineType[keyof typeof MachineType];
+export { MachineType } from "./machine-type";
 
 export interface MachineMetadata {
     productivity: number;

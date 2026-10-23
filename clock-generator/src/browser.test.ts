@@ -84,6 +84,8 @@ describe("the light entry", () => {
             "data-types/map-extended.ts",
             "data-types/option.ts",
             "entities/entity-type.ts",
+            "entities/machine/machine-rule.ts",
+            "entities/machine/machine-type.ts",
             "state/entity-status.ts",
             "state/status-category.ts",
         ]);

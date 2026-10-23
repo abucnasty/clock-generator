@@ -78,8 +78,10 @@ import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDevelop
 import { createAppTheme } from './theme/theme';
 import { useResolvedColorScheme } from './hooks/useResolvedColorScheme';
 import { nextStepOf } from './utils/nextStep';
-import { itemName, recipeName, type GameNames } from './utils/gameNames';
+import { itemName, nameIdsInText, recipeName, type GameNames } from './utils/gameNames';
 import { GameNamesContext, SearchOnlyRecipesContext } from './hooks/useGameNames';
+import { CraftingMachinesContext } from './hooks/useCraftingMachines';
+import type { CraftingMachineData } from './worker/types';
 import { RuleTimingContext } from './components/RuleTimingContext';
 import { ruleTimingOf, type RuleTiming } from './utils/ruleTiming';
 import type { EntityKind } from './utils/configForm/formData';
@@ -120,13 +122,15 @@ function DisplayThemeProvider({ children }: { children: ReactNode }) {
 }
 
 /** The theme, the in-game names every picker and label reads, and the timing the rule editor checks a rule against */
-function PageProviders({ gameNames, searchOnlyRecipes, ruleTiming, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; ruleTiming: RuleTiming; children: ReactNode }) {
+function PageProviders({ gameNames, searchOnlyRecipes, craftingMachines, ruleTiming, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; craftingMachines: CraftingMachineData; ruleTiming: RuleTiming; children: ReactNode }) {
     return (
         <DisplayPreferencesProvider>
             <DisplayThemeProvider>
                 <GameNamesContext value={gameNames}>
                     <SearchOnlyRecipesContext value={searchOnlyRecipes}>
-                        <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+                        <CraftingMachinesContext value={craftingMachines}>
+                            <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+                        </CraftingMachinesContext>
                     </SearchOnlyRecipesContext>
                 </GameNamesContext>
             </DisplayThemeProvider>
@@ -145,6 +149,7 @@ function App() {
         resourceNames,
         itemNames,
         gameNames,
+        craftingMachines,
         logs,
         blueprintString,
         transferHistory,
@@ -201,6 +206,7 @@ function App() {
         updateInserters,
         addMachine,
         updateMachine,
+        patchMachine,
         removeMachine,
         addInserter,
         updateInserter,
@@ -517,7 +523,8 @@ function App() {
             machines: config.machines,
             machinesMax,
         }),
-        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies, chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
+        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
+        machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
@@ -787,7 +794,7 @@ function App() {
         recipeNames,
         itemNames: itemNamesComposite,
         getRecipeInfo,
-        onUpdateMachine: updateMachine,
+        onPatchMachine: patchMachine,
         onUpdateInserter: updateInserter,
         onUpdateBelt: updateBelt,
         onUpdateChest: updateChest,
@@ -813,8 +820,8 @@ function App() {
         }
     }, [validation, checkStatus, updateIgnoredIngredients]);
 
-    const handleImportConfig = useCallback((imported: Config) => {
-        importConfig(imported);
+    const handleImportConfig = useCallback((imported: Config, prototypeSource?: 'sample') => {
+        importConfig(imported, prototypeSource);
     }, [importConfig]);
 
     // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown. The
@@ -1050,7 +1057,7 @@ function App() {
 
     return (
         <BuildSectionsContext value={sectionContext}>
-        <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} ruleTiming={ruleTiming}>
+        <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} craftingMachines={craftingMachines} ruleTiming={ruleTiming}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', pb: { xs: 'calc(72px + env(safe-area-inset-bottom))', sm: 'calc(48px + env(safe-area-inset-bottom))' } }}>
                 <AppBar position="sticky" ref={headerRef}>
@@ -1199,6 +1206,7 @@ function App() {
                                             recipeNames={recipeNames}
                                             onAdd={addMachine}
                                             onUpdate={updateMachine}
+                                            onPatch={patchMachine}
                                             onRemove={undoable.removeMachine}
                                             onReorder={undoable.reorderMachines}
                                             onDuplicate={duplicate.machines}

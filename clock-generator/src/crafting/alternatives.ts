@@ -3,6 +3,7 @@ import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
 import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
+import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
@@ -752,6 +753,7 @@ export function planClockAlternatives(
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
     warnLanesSharedByCopies(config, logger);
+    warnMachinePrototypes(config, logger);
     const primary = withChestDrillFallbacks([definition], config, true,
         fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0];
     const context: ClockAlternativeContext = {

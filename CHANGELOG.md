@@ -17,6 +17,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - A mining drill that drops into a chest is switched on only for the ticks it needs to top the chest up just in time for the inserters that take from it, instead of always; the clock says to wire it with Read resources off.
 - A build's product can leave through the car, wagon or chest its machine fills, and a container used as a hub by several machines warms up and gets a clock.
 - Every clock says which generator made it, with the version and the site, in the blueprint's description, on the clock combinator and in its tags. The clock combinator also lists the inserters and drills that are not on the clock, when there is room.
+- A machine's settings start with the machine itself, set by Sidecar or chosen by hand, and its quality: the simulation rule follows from the machine, its recipe picker offers only the recipes it can make, and its icon shows its quality as in the game. A config whose type or recipe does not fit its machine loads with a warning.
 
 ### Changed
 - The clock's combinators read in plain terms: each names what it switches on by its two ends as icons (a machine by its prototype, which Sidecar 0.12.0 exports and the web form shows, else by its number and recipe), the item and the config id, then its swings and windows a period, with the windows when there are three or fewer. The clock's own combinators say to leave them. Swings no longer show as fractions such as 6000000000000001/400000000000000.

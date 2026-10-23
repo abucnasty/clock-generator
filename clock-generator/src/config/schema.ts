@@ -39,16 +39,25 @@ export const MachineConfigurationSchema = z.object({
     recipe: z.string(),
     productivity: z.number().min(0),
     crafting_speed: z.number().positive(),
+    /**
+     * The simulation rule (MachineType): "machine" the crafting rule, "furnace" the furnace rule, "biochamber" the crafting
+     * rule burning nutrients. Without it the rule is the prototype's (machine-prototype.ts), else "machine". With both, a
+     * type other than the prototype's rule is used as written and warned about.
+     */
     type: z.enum(Object.values(MachineType)).optional(),
     energy_consumption_bonus: z.number().min(-80).optional(),
     fuel: z.string().optional(),
     /**
      * The machine's prototype name in the game data ("electric-furnace", "assembling-machine-3"), which the clock's
-     * descriptions show as its icon; without it they name the machine by its id. No decision of the engine reads it:
-     * what the machine does comes from `type`, `crafting_speed` and `productivity`. Sidecar 0.12.0 exports it.
+     * descriptions show as its icon; without it they name the machine by its id. Its game data gives the machine's rule
+     * when `type` is not set, and the recipes it can make (a recipe it cannot make is warned about); its speed and
+     * productivity come from `crafting_speed` and `productivity` alone. Sidecar 0.12.0 exports it.
      */
     prototype: z.string().optional(),
-    /** The machine's quality, which its crafting speed already counts; kept for labels. Sidecar 0.12.0 exports it. */
+    /**
+     * The machine's quality, which its crafting speed already counts; kept for labels, it changes nothing the engine
+     * simulates. Sidecar 0.12.0 exports it.
+     */
     quality: MachineQualitySchema.optional(),
     /** The quality of the recipe the machine is set to; kept for labels. Sidecar 0.12.0 exports it. */
     recipe_quality: MachineQualitySchema.optional(),
