@@ -363,6 +363,12 @@ export interface RunOptions {
     /** Warmup length in simulation periods (default 10) */
     warmup_periods?: number;
     /**
+     * The period of the run, when it is not the one the plan gives: a clock of whole ticks run on a plan of a period
+     * that is not whole, such as the clock of a fractional period rounded down (the output it is to move a period is
+     * still the plan's). Its output is counted and its state compared by this period.
+     */
+    period_ticks?: number;
+    /**
      * Simulate and record this many periods instead of one (default 1). The histories then cover the longer run;
      * the output is judged over one period, so it only means something at 1.
      */
@@ -739,7 +745,7 @@ interface RunPeriods {
 
 /** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
 function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
-    const duration: Duration = Duration.ofTicks(options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
+    const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     const requested_warmup_periods = options.warmup_periods ?? 10;
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget

@@ -69,11 +69,22 @@ describe("the car paste at 80.78/s", () => {
         const lean = paste.alternatives.find(alternative => alternative.id === "planned-lean-iron-ore")!;
         expect(lean.result.simulation_duration.ticks).toBeCloseTo(47.537, 3);
         expect(lean.result.subtick).toBeUndefined();
-        expect(lean.label).toMatch(/\(clock rounded to 47 ticks\)$/);
+        // 1.14% fast: more than the 0.1% a rounded clock may run, so it is not tried on its own period
+        expect(lean.label).toMatch(/\(clock rounded to 47 ticks, runs 1\.14% fast\)$/);
         expect(lean.assessment.items_per_second).toBeCloseTo(64 * 60 / 47, 6);
+        expect(lean.rounded).toMatchObject({period_ticks: 47, tried_on_its_period: false});
         expect(lean.ranking).toMatchObject({meets_target_rate: false, recovery_untried: false});
+        expect(lean.ranking.runs_fast).toBeUndefined();
         expect(paste.alternatives.filter(alternative => alternative.id.startsWith("planned-lean-iron-ore"))).toHaveLength(1);
         expect(paste.alternatives[paste.selected_index].id).not.toMatch(/lean/);
+    });
+
+    // 285 ticks of 285.19: 0.08% fast, but above the furnaces' 80.78015625/s, so not tried on its own period either
+    test("does not let a rounded clock run above what the furnaces make", () => {
+        const rounded = paste.alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
+        expect(rounded.rounded).toMatchObject({period_ticks: 285, within_machines: false, tried_on_its_period: false});
+        expect(rounded.rounded!.runs_fast).toBeLessThan(0.001);
+        expect(rounded.ranking.meets_target_rate).toBe(false);
     });
 
     test("says why the lean clock's recovery was not tried, and the selected clock meets the target rate", () => {
