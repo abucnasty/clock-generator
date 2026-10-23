@@ -235,5 +235,16 @@
    "unit": 1094768,
    "share": 0.3594
   }
+ },
+ "owner_scaffold": {
+  "date": "2026-10-23",
+  "note": "measured in the harness (Factorio 2.1.21) on the owner's scaffold with its circuit export throttled to 80 a second, 36,000 ticks after 3,600 of warm-up and 4,800 of settling; the figures above are the cell in the save, whose output backs up 7.7% of the time",
+  "unclocked_items_per_second": 82.86,
+  "selected_clock": {
+   "alternative": "swings-1",
+   "verdict": "unstable",
+   "simulated_items_per_second": 69.09,
+   "game_items_per_second": 62.0
+  }
  }
 }
