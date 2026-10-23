@@ -10,6 +10,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ## [0.21.0] - Unreleased
 
+### Changed
+- The wiring reference shows each combinator's first line as the game does, with the same icons, drills included.
+
 ## [0.20.0] - 2026-10-23
 
 ### Added
