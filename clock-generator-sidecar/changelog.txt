@@ -10,7 +10,8 @@ Version: 0.12.0
     - no longer exports a machine's type (machine, furnace or biochamber): the Clock Generator works out how to simulate each machine from its prototype
     - the button is Export (was Copy JSON), and the tool's description says what it selects: machines, inserters, belts, chests, mining drills, cars, tanks, cargo wagons and rocket silos
   Bugfixes:
-    - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine. One that has not dropped into its car or tank yet is listed too: let it run and select it again
+    - a mining drill that drops into something not in the JSON is listed as left out; earlier versions exported it as dropping into the first machine
+    - exports a mining drill that has not mined or dropped yet, such as one just built or upgraded to another quality beside a full container; earlier versions left it out of the selection, or listed it as left out until it dropped (#316)
     - the selection tool selects linked belts; earlier versions skipped them, though the sidecar reads them as pieces of a belt
     - an inserter that drops onto a belt or into a chest not in the JSON (empty, or outside the selection) is listed as left out; earlier versions exported it as dropping onto the first belt or into the first chest
 ---------------------------------------------------------------------------------------------------

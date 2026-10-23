@@ -521,7 +521,8 @@ local function left_out_drills(result)
             name = left.drill.drill_type,
             position = left.drill.position,
             target_name = left.target_name,
-            reason = left.target_name and ("it drops into " .. left.target_name .. ", which is not in the config")
+            reason = left.no_resource and "it has not mined yet, and its area does not tell one resource"
+                or left.target_name and ("it drops into " .. left.target_name .. ", which is not in the config")
                 or "it drops onto the ground",
         })
     end
