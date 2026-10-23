@@ -137,4 +137,6 @@ export interface FactorioData {
   "crafting_machine": Record<string, CraftingMachinePrototype>
   /** Every item's weight as the running game holds it (in 1/65536 parts; resources/dump-item-weights.js) */
   "item_weight": Record<ItemName, number>
+  /** The game's English names by id, items (entities and fluids too) and recipes apart (resources/locale-names.js) */
+  "names"?: { item: Record<string, string>; recipe: Record<string, string> }
 }

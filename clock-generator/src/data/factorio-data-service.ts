@@ -244,6 +244,21 @@ export class FactorioDataService {
         return Object.prototype.hasOwnProperty.call(machines, name) ? machines[name] : null;
     }
 
+    /**
+     * The game's English name of an item, fluid or entity id ("Iron plate", "Cargo wagon"); for an id the data does not
+     * name, the id with its first letter upper case and its dashes as spaces
+     */
+    public static itemDisplayName(id: string): string {
+        const names = this.getData().names?.item ?? {};
+        return Object.prototype.hasOwnProperty.call(names, id) ? names[id] : displayNameOfId(id);
+    }
+
+    /** The game's English name of a recipe id, else of the item of that id, else as `itemDisplayName` makes it */
+    public static recipeDisplayName(id: string): string {
+        const names = this.getData().names?.recipe ?? {};
+        return Object.prototype.hasOwnProperty.call(names, id) ? names[id] : this.itemDisplayName(id);
+    }
+
     /** Every crafting machine prototype of the data, in its order */
     public static getAllCraftingMachines(): CraftingMachinePrototype[] {
         return Object.values(this.getData().crafting_machine ?? {});
@@ -269,4 +284,10 @@ export class FactorioDataService {
         return resource;
     }
 
+}
+
+/** "iron-plate" as "Iron plate": the name of an id the data does not name */
+function displayNameOfId(id: string): string {
+    const words = id.replace(/-/g, " ");
+    return words.charAt(0).toUpperCase() + words.slice(1);
 }
