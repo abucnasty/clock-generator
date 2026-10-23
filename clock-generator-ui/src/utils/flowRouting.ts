@@ -128,37 +128,48 @@ export function routeFlowEdges(nodes: Node[], edges: Edge[], measurements: FlowM
     const xIndex = new Map(xs.map((x, i) => [x, i])), yIndex = new Map(ys.map((y, i) => [y, i]));
     const pointAt = (index: number) => ({ x: xs[index % width], y: ys[Math.floor(index / width)] });
     const pointIndex = (point: FlowPoint) => yIndex.get(point.y)! * width + xIndex.get(point.x)!;
-    const clear = new Map<number, boolean>(), occupied = new Map<number, number>();
+    // per grid step (keyOf): 0 not checked yet, 1 clear of every obstacle, 2 blocked; and how many routes use it
+    const clear = new Uint8Array(count * 2), occupied = new Uint16Array(count * 2);
     const vertices = new Uint16Array(count * 2);
     const keyOf = (from: number, to: number, direction: number) => Math.min(from, to) * 2 + direction;
+    const blocked = (from: FlowPoint, to: FlowPoint) => obstacles.some(rect => segmentRect(from, to, rect));
+    // the search's arrays, shared by the edges: a state's cost and parent count only when `reached` holds this edge's
+    // number, so no edge clears them
+    const costs = new Float64Array(count * 2), parents = new Int32Array(count * 2), reached = new Uint32Array(count * 2);
+    let search = 0;
     ends.sort((a, b) => Math.abs(a.source.stub.x - a.target.stub.x) + Math.abs(a.source.stub.y - a.target.stub.y) -
         Math.abs(b.source.stub.x - b.target.stub.x) - Math.abs(b.source.stub.y - b.target.stub.y) || a.edge.id.localeCompare(b.edge.id));
     for (const { edge, source, target } of ends) {
         const start = pointIndex(source.stub), finish = pointIndex(target.stub);
-        const costs = new Float64Array(count * 2).fill(Infinity), parents = new Int32Array(count * 2).fill(-1);
+        const round = ++search;
+        const costOf = (state: number) => reached[state] === round ? costs[state] : Infinity;
         const queue = new Queue();
-        const heuristic = (i: number) => { const p = pointAt(i); return Math.abs(p.x - target.stub.x) + Math.abs(p.y - target.stub.y); };
+        const targetX = target.stub.x, targetY = target.stub.y;
+        const heuristic = (i: number) => Math.abs(xs[i % width] - targetX) + Math.abs(ys[Math.floor(i / width)] - targetY);
         const initial = start * 2 + (horizontal(source.side) ? 0 : 1);
-        costs[initial] = 0; queue.push({ state: initial, cost: 0, score: heuristic(start) });
+        costs[initial] = 0; parents[initial] = -1; reached[initial] = round;
+        queue.push({ state: initial, cost: 0, score: heuristic(start) });
         let last = -1;
         for (let entry = queue.pop(); entry; entry = queue.pop()) {
             const { state, cost } = entry, index = Math.floor(state / 2), previousDirection = state % 2;
-            if (cost !== costs[state]) continue;
+            if (cost !== costOf(state)) continue;
             if (index === finish) { last = state; break; }
-            const col = index % width, row = Math.floor(index / width), from = pointAt(index);
-            const neighbours = [col > 0 ? index - 1 : -1, col + 1 < width ? index + 1 : -1,
-                row > 0 ? index - width : -1, row + 1 < ys.length ? index + width : -1];
-            for (let n = 0; n < neighbours.length; n++) {
-                const next = neighbours[n]; if (next < 0) continue;
-                const direction = n < 2 ? 0 : 1, key = keyOf(index, next, direction), to = pointAt(next);
-                if (!clear.has(key)) clear.set(key, !obstacles.some(rect => segmentRect(from, to, rect)));
-                if (!clear.get(key)) continue;
-                const distance = Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
-                const nextCost = cost + distance * (1 + (occupied.get(key) ?? 0) * 12) + (previousDirection === direction ? 0 : 18) +
+            const col = index % width, row = Math.floor(index / width);
+            const fromX = xs[col], fromY = ys[row];
+            for (let n = 0; n < 4; n++) {
+                const next = n === 0 ? (col > 0 ? index - 1 : -1) : n === 1 ? (col + 1 < width ? index + 1 : -1)
+                    : n === 2 ? (row > 0 ? index - width : -1) : (row + 1 < ys.length ? index + width : -1);
+                if (next < 0) continue;
+                const direction = n < 2 ? 0 : 1, key = keyOf(index, next, direction);
+                const toX = xs[next % width], toY = ys[Math.floor(next / width)];
+                if (clear[key] === 0) clear[key] = blocked({ x: fromX, y: fromY }, { x: toX, y: toY }) ? 2 : 1;
+                if (clear[key] === 2) continue;
+                const distance = Math.abs(fromX - toX) + Math.abs(fromY - toY);
+                const nextCost = cost + distance * (1 + occupied[key] * 12) + (previousDirection === direction ? 0 : 18) +
                     (vertices[next * 2 + 1 - direction] > 0 ? 30 : 0);
                 const nextState = next * 2 + direction;
-                if (nextCost >= costs[nextState]) continue;
-                costs[nextState] = nextCost; parents[nextState] = state;
+                if (nextCost >= costOf(nextState)) continue;
+                costs[nextState] = nextCost; parents[nextState] = state; reached[nextState] = round;
                 queue.push({ state: nextState, cost: nextCost, score: nextCost + heuristic(next) });
             }
         }
@@ -169,7 +180,7 @@ export function routeFlowEdges(nodes: Node[], edges: Edge[], measurements: FlowM
         for (let i = 1; i < indices.length; i++) {
             const from = indices[i - 1], to = indices[i], direction = Math.abs(from - to) === 1 ? 0 : 1;
             const key = keyOf(from, to, direction);
-            occupied.set(key, (occupied.get(key) ?? 0) + 1);
+            occupied[key]++;
             vertices[from * 2 + direction]++; vertices[to * 2 + direction]++;
         }
         const points = simplify([source.point, ...indices.map(pointAt), target.point]);
