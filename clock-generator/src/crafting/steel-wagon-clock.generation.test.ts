@@ -14,7 +14,7 @@ let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
     generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON), {logger: quiet});
-}, 180_000);
+});
 
 test("steel wagon: the clock with belt slack is selected, and the drill into the wagon is enabled before the ore is taken", () => {
     const selected = generated.alternatives[generated.selected_index];

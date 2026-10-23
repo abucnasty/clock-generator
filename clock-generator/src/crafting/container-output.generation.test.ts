@@ -12,5 +12,5 @@ describe('a product that leaves through a container', () => {
         expect(selected.verdict).toBe('stable');
         expect(selected.assessment.items_per_second).toBeCloseTo(26, 6);
         expect(Object.keys(selected.result.clock_windows)).toContain('inserter:3');
-    }, 120_000);
+    });
 });

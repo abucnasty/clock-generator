@@ -14,7 +14,7 @@ let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
     generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO), {logger: quiet});
-}, 120_000);
+});
 
 test("lithium silo: the clock with 3 output swings is selected", () => {
     expect(generated.alternatives[generated.selected_index].id).toBe("swings-3");
