@@ -342,7 +342,6 @@ function App() {
     }, [initialize]);
 
     // Extract IDs for dropdown population
-    const machineIds = useMemo(() => config.machines.map((m) => m.id), [config.machines]);
 
     // All item ids (from recipes and resources), in the order of their in-game names
     const itemNamesComposite = useMemo(() => {
@@ -1245,6 +1244,7 @@ function App() {
                                             machines={config.machines}
                                             belts={config.belts}
                                             chests={config.chests}
+                                            drills={drillConfigs}
                                             itemNames={itemNamesComposite}
                                             getRecipeInfo={getRecipeInfo}
                                             onAdd={addInserter}
@@ -1275,7 +1275,11 @@ function App() {
                                 <DrillsForm
                                     drills={drillConfigs}
                                     resourceNames={resourceNames}
-                                    machineIds={machineIds}
+                                    machines={config.machines}
+                                    belts={config.belts}
+                                    chests={config.chests}
+                                    inserters={config.inserters}
+                                    getRecipeInfo={getRecipeInfo}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={undoable.removeDrill}

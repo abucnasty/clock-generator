@@ -112,7 +112,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     const options = useMemo(() => {
         if (!config) return [];
         const form = configToFormData(config);
-        return entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel });
+        return entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel }, { drills: form.drills?.configs });
     }, [config, itemLabel, recipeLabel]);
     const rows = useMemo(() => (alternative ? buildWakeWindowRows(alternative, options) : []), [alternative, options]);
     const announce = useAnnounce();

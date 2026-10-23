@@ -14,7 +14,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef, memo, type MouseEvent } from 'react';
-import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
@@ -59,6 +59,8 @@ interface InsertersFormProps {
     machines: MachineFormData[];
     belts: BeltFormData[];
     chests: ChestFormData[];
+    /** The drills: a container holds what the ones that drop into it mine */
+    drills?: readonly DrillFormData[];
     itemNames: string[];
     getRecipeInfo: (recipeName: string) => RecipeInfo | null;
     onAdd: () => void;
@@ -97,7 +99,7 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
         bgcolor: (theme: Theme) => selectedRow ? themeTokens(theme).hover.row : themeTokens(theme).surface.row,
         boxShadow: (theme: Theme) => selectedRow ? `inset 0 0 0 1px ${themeTokens(theme).control.border}, inset 4px 0 0 ${themeTokens(theme).text.secondary}` : undefined,
     };
-    const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines) : value.filters?.filter(Boolean) ?? [];
+    const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills) : value.filters?.filter(Boolean) ?? [];
     if (filterView) return <SortableItem stableKey={value._uuid} label={label} displayLabel={<EntityBadge id={value.id}><InserterIcon value={value} size={28} /></EntityBadge>}>
         {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label}
             data-selected={selectedRow ? 'true' : undefined}
@@ -117,7 +119,7 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
                 </Box>
                 <Box data-row-first="" sx={{ minWidth: 0, '@container filter-row (max-width: 500px)': { gridColumn: 2 } }}>
                     <FilterSlotSelector filters={value.filters} inferredFilters={filterItems} itemNames={editor.itemNames}
-                        priority={{ label: 'From source', ids: sourceItemsOf(value.source, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters) }}
+                        priority={{ label: 'From source', ids: sourceItemsOf(value.source, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, editor.drills) }}
                         onFilterChange={(slot, item) => onChange({ filters: setFilterSlot(value.filters, filterItems.slice(0, 5), slot, item).filters })}
                         onRemoveFilter={slot => onChange({ filters: removeFilterSlot(value.filters, filterItems.slice(0, 5), slot).filters })} />
                 </Box>
@@ -147,7 +149,7 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
                     rowSettings={fields => <EntitySettings actionContainerId={`settings-actions-inserter-${value.id}`} label={label} tabs={[{ label: 'Enable control', content:
                         <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
                             currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
-                            availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines)}
+                            availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills)}
                             movedItems={filterItems} stackSize={effectiveInserterStackSize(value)} copyFromOptions={ruleCopyOptions}
                             onCancel={() => setRuleRevision(previous => previous + 1)}
                             onSave={override => {
@@ -177,6 +179,7 @@ function InsertersFormComponent({
     machines,
     belts,
     chests,
+    drills,
     itemNames,
     getRecipeInfo,
     onAdd,
@@ -198,7 +201,7 @@ function InsertersFormComponent({
     const automaticRules = inserters.filter(row => row.overrides?.enable_control === undefined).length;
     const { itemLabel, recipeLabel } = useGameNames();
 
-    const options = useMemo(() => entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo }), [machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo]);
+    const options = useMemo(() => entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo, drills }), [machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo, drills]);
 
 
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(inserters.length, onRemove);
@@ -229,8 +232,8 @@ function InsertersFormComponent({
     }, [focusRequest, onFocusHandled]);
     const selectedRows = useMemo(() => inserters.filter(row => selected.has(row._uuid)), [inserters, selected]);
     const craftingMachines = useCraftingMachines();
-    const priorityIds = useMemo(() => itemsUnion(selectedRows.map(row => sourceItemsOf(row.source, machines, belts, chests, getRecipeInfo, inserters))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters]);
-    const bulkItems = useMemo(() => itemsUnion(selectedRows.map(row => itemsAround(row, machines, belts, chests, getRecipeInfo, inserters, craftingMachines))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters, craftingMachines]);
+    const priorityIds = useMemo(() => itemsUnion(selectedRows.map(row => sourceItemsOf(row.source, machines, belts, chests, getRecipeInfo, inserters, drills))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters, drills]);
+    const bulkItems = useMemo(() => itemsUnion(selectedRows.map(row => itemsAround(row, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills))), [selectedRows, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills]);
     const itemKeys = useMemo(() => inserters.map(row => row._uuid), [inserters]);
     const rowOrder = useRef(itemKeys);
     useEffect(() => { rowOrder.current = itemKeys; }, [itemKeys]);
@@ -312,7 +315,7 @@ function InsertersFormComponent({
             <Box sx={{ ...LIST_GRID_SX, rowGap: 1 }}>
             <SortableList itemKeys={itemKeys} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
+                <InserterRow key={inserter._uuid} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
                     onDuplicate={duplicate} onReorder={onReorder} canMoveDown={index < inserters.length - 1}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}

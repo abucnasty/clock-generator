@@ -130,7 +130,7 @@ export interface DrillFormData {
     speed_bonus: number;
     /** The drill's mining productivity in percent: the research and its productivity modules together */
     productivity: number;
-    /** A machine, picked in the form; or a chest, kept as the config gives it (shown, not edited) */
+    /** What it drops into: a machine, or a chest of any type (a car, a tank, a cargo wagon, a rocket silo), picked in one Target field */
     target: { type: 'machine'; id: number } | { type: 'chest'; id: number };
     overrides?: DrillOverrides;
     /** Where it stands and the way it faces in the game; Sidecar exports them, nothing reads them */

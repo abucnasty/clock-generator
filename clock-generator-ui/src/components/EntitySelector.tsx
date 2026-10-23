@@ -6,9 +6,12 @@ import { ENTITY_TYPE_LABELS, entitySelectorKey, entitySelectorLabel, searchEntit
 import { ContentIcons, RouteBadge } from './RouteIdentity';
 
 /** One searchable picker and identity for route endpoints and timeline inspection. */
-export function EntitySelector<T extends EntitySelectorOption>({ options, value, onChange, label, ariaLabel = label, helperText, error = false, readOnly = false, rowFirst = false, sx }: {
+export function EntitySelector<T extends EntitySelectorOption>({ options, value, onChange, label, ariaLabel = label, helperText, error = false, readOnly = false, rowFirst = false, disabledReason, sx }: {
     options: readonly T[]; value: T | null | undefined; onChange(option: T): void;
-    label: string; ariaLabel?: string; helperText?: ReactNode; error?: boolean; readOnly?: boolean; rowFirst?: boolean; sx?: SxProps<Theme>;
+    label: string; ariaLabel?: string; helperText?: ReactNode; error?: boolean; readOnly?: boolean; rowFirst?: boolean;
+    /** Why an option cannot be picked now, shown in its place of the item list; none when it can */
+    disabledReason?: (option: T) => string | undefined;
+    sx?: SxProps<Theme>;
 }) {
     const { itemLabel } = useGameNames();
     const [search, setSearch] = useState<string>();
@@ -22,6 +25,7 @@ export function EntitySelector<T extends EntitySelectorOption>({ options, value,
         groupBy={option => ENTITY_TYPE_LABELS[option.type]}
         filterOptions={(choices, state) => searchEntityOptions(choices, state.inputValue, itemLabel)}
         isOptionEqualToValue={(a, b) => entitySelectorKey(a) === entitySelectorKey(b)}
+        getOptionDisabled={disabledReason && (option => disabledReason(option) !== undefined)}
         autoHighlight disableClearable data-row-first={rowFirst ? '' : undefined}
         noOptionsText="No matching entities"
         slotProps={{ popper: { role: 'region', 'aria-label': `${label} options` } }}
@@ -31,12 +35,13 @@ export function EntitySelector<T extends EntitySelectorOption>({ options, value,
             } }} />}
         renderOption={(props, option, { selected }) => {
             const { key, ...rest } = props;
+            const disabled = disabledReason?.(option);
             return <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <RouteBadge option={option} />
                 <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">{option.label}</Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><ContentIcons option={option} size={16} />
-                        <Typography variant="caption" color="text.secondary">{option.sublabel ?? (option.ingredientIcons?.map(itemLabel).join(' · ') || 'No items')}</Typography></Box>
+                        <Typography variant="caption" color="text.secondary">{disabled ?? option.sublabel ?? (option.ingredientIcons?.map(itemLabel).join(' · ') || 'No items')}</Typography></Box>
                 </Box>
                 {selected && <Check aria-hidden sx={{ fontSize: 18, color: 'text.secondary', flexShrink: 0 }} />}
             </Box>;

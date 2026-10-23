@@ -102,7 +102,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const options = useMemo(() => entityOptions(props.config, props.selected), [props.config, props.selected]);
     const identities = useMemo(() => {
         const form = props.config ? configToFormData(props.config) : null;
-        return new Map((form ? entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel }) : []).map(option => [entitySelectorKey(option), option]));
+        return new Map((form ? entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel }, { drills: form.drills?.configs }) : []).map(option => [entitySelectorKey(option), option]));
     }, [props.config, itemLabel, recipeLabel]);
     const selectorOptions = useMemo(() => options.map((entity): EntitySelectorOption => identities.get(entity.id) ?? {
         type: entity.type, id: Number(entity.id.split(':')[1]), label: entityLabel(entity.type, Number(entity.id.split(':')[1])),

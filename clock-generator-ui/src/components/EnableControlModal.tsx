@@ -103,6 +103,7 @@ const MODES: EnableControlMode[] = [
 ];
 
 const DRILL_NO_CONDITIONAL = "Not available for mining drills: conditions read an inserter's source, destination and hand.";
+const DRILL_NO_NEVER = 'Not available for a drill into a container: it would fill nothing.';
 const REPEAT_HELPER = (cycleTicks: number | null) =>
     cycleTicks === null
         ? 'Leave empty to repeat every crafting cycle.'
@@ -206,7 +207,9 @@ export function EnableControlFormContent({
     );
     const override = useMemo(() => buildEnableControlOverride(draft), [draft]);
     const changed = useMemo(() => enableControlDraftChanged(draft, initial), [draft, initial]);
-    const problems = useMemo(() => ruleProblemsOf(draft, { entityType, timing, idPrefix }), [draft, entityType, timing, idPrefix]);
+    // a drill into a container can't be Never on (the config schema's rule), as no drill can be Conditional
+    const intoContainer = entityType === 'drill' && sinkType === TargetType.CHEST;
+    const problems = useMemo(() => ruleProblemsOf(draft, { entityType, timing, idPrefix, intoContainer }), [draft, entityType, timing, idPrefix, intoContainer]);
     const problemMap = useMemo(() => new Map(problems.map((p) => [p.fieldId, p])), [problems]);
     const warnings = useMemo(() => ruleWarningsOf(draft, timing), [draft, timing]);
 
@@ -223,10 +226,11 @@ export function EnableControlFormContent({
         touchAll(problems.map((p) => p.fieldId));
     }
     const modeId = modeFieldId(idPrefix, EnableControlMode.CONDITIONAL);
+    const neverId = modeFieldId(idPrefix, EnableControlMode.NEVER);
     const shownProblems = useMemo(
         // the drill's problem is the stored rule's, not a field's: it always shows
-        () => new Map(problems.filter((p) => p.fieldId === modeId || touched.has(p.fieldId)).map((p) => [p.fieldId, p])),
-        [problems, touched, modeId],
+        () => new Map(problems.filter((p) => p.fieldId === modeId || p.fieldId === neverId || touched.has(p.fieldId)).map((p) => [p.fieldId, p])),
+        [problems, touched, modeId, neverId],
     );
 
     // the rule in words: a wake window with a problem is left out, and the sentence says so; one with nothing typed in it
@@ -345,7 +349,9 @@ export function EnableControlFormContent({
     // a drill can't run a Conditional rule (the engine needs an inserter for it); a stored one stays pickable, with its
     // problem, so that the player sees what it is
     const conditionalOff = entityType === 'drill' && currentOverride?.mode !== EnableControlMode.CONDITIONAL;
-    const modeProblem = shownProblems.get(modeId);
+    // the same for Never on, for a drill into a container
+    const neverOff = intoContainer && currentOverride?.mode !== EnableControlMode.NEVER;
+    const modeProblems: Partial<Record<EnableControlMode, RuleProblem>> = { [EnableControlMode.CONDITIONAL]: shownProblems.get(modeId), [EnableControlMode.NEVER]: shownProblems.get(neverId) };
 
     const rulePeriod = mode === EnableControlMode.CLOCKED ? rulePeriodOf(draft, timing) : null;
     const reference = planned && rulePeriod === timing.periodTicks ? planned : null;
@@ -445,8 +451,8 @@ export function EnableControlFormContent({
                         onChange={(e) => setMode(e.target.value as EnableControlMode)}
                     >
                         {MODES.map((m) => {
-                            const off = m === EnableControlMode.CONDITIONAL && conditionalOff;
-                            const problem = m === EnableControlMode.CONDITIONAL ? modeProblem : undefined;
+                            const off = (m === EnableControlMode.CONDITIONAL && conditionalOff) || (m === EnableControlMode.NEVER && neverOff);
+                            const problem = modeProblems[m];
                             const captionId = `${idPrefix}-mode-${m}-caption`;
                             return (
                                 <FormControlLabel
@@ -468,7 +474,7 @@ export function EnableControlFormContent({
                                                 color={problem ? 'error' : 'text.secondary'}
                                                 sx={{ display: 'block' }}
                                             >
-                                                {problem ? problem.text : off ? DRILL_NO_CONDITIONAL : MODE_DESCRIPTIONS[m]}
+                                                {problem ? problem.text : off ? (m === EnableControlMode.NEVER ? DRILL_NO_NEVER : DRILL_NO_CONDITIONAL) : MODE_DESCRIPTIONS[m]}
                                             </Typography>
                                         </Box>
                                     }

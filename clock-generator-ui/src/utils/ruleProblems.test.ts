@@ -108,6 +108,15 @@ describe('ruleProblemsOf, Conditional', () => {
         expect(problems[0]).toEqual({ fieldId: 'p-mode-CONDITIONAL', field: 'Mode', text: PROBLEM_TEXT.drillConditional });
     });
 
+    it('refuses Never on for a drill into a container, and only there', () => {
+        const never: EnableControlDraft = { ...enableControlDraftOf(), mode: 'NEVER' };
+        expect(ruleProblemsOf(never, { ...ctx, entityType: 'drill', intoContainer: true }))
+            .toEqual([{ fieldId: 'p-mode-NEVER', field: 'Mode', text: PROBLEM_TEXT.drillNeverIntoContainer }]);
+        expect(ruleProblemsOf(never, { ...ctx, entityType: 'drill' })).toEqual([]);
+        expect(ruleProblemsOf(never, { ...ctx, intoContainer: true })).toEqual([]);
+        expect(ruleProblemsOf({ ...never, mode: 'ALWAYS' }, { ...ctx, entityType: 'drill', intoContainer: true })).toEqual([]);
+    });
+
     it('gives every problem its own field id', () => {
         const ruleSet: RuleSet = { operator: 'AND', rules: [empty('INVENTORY_ITEM'), { operator: 'OR', rules: [empty('INVENTORY_ITEM')] }] };
         const ids = ruleProblemsOf(conditionalDraft(ruleSet, ruleSet), { ...ctx, entityType: 'drill' }).map((p) => p.fieldId);

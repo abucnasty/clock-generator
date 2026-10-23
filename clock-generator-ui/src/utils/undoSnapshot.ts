@@ -140,7 +140,7 @@ const ascending = (ids: number[]) => [...ids].sort((a, b) => a - b);
 /**
  * What deleting the entity at the index did, from the forms before and after it, in the form's words: which one went,
  * which of its kind were renumbered, and which inserters and drills lost what pointed at it, one sentence per kind.
- * "Deleted Machine 2. Machines 3–4 are now 2–3. Inserters 1–2 have no Source now. Drill 1 has no Target Machine now."
+ * "Deleted Machine 2. Machines 3–4 are now 2–3. Inserters 1–2 have no Source now. Drill 1 has no Target now."
  * Null when there is no entity at the index.
  */
 export function describeRemoval(before: ConfigFormData, after: ConfigFormData, kind: EntityKind, index: number): string | null {
@@ -170,15 +170,12 @@ export function describeRemoval(before: ConfigFormData, after: ConfigFormData, k
         sentences.push(`${ends.join(' and ')} now.`);
     }
     const drillsBefore = new Map((before.drills?.configs ?? []).map((drill) => [drill._uuid, drill]));
-    const unset = (type: 'machine' | 'chest') => ascending((after.drills?.configs ?? []).filter((drill) => {
+    const unset = ascending((after.drills?.configs ?? []).filter((drill) => {
         const was = drillsBefore.get(drill._uuid);
-        return was !== undefined && drill.target.type === type && was.target.id !== 0 && drill.target.id === 0;
+        return was !== undefined && was.target.id !== 0 && drill.target.id === 0;
     }).map((drill) => drill.id));
-    for (const [type, field] of [['machine', 'Target Machine'], ['chest', 'Target chest']] as const) {
-        const drills = unset(type);
-        if (drills.length > 0) {
-            sentences.push(`${named('drills', drills)} ${hasOrHave(drills)} no ${field} now.`);
-        }
+    if (unset.length > 0) {
+        sentences.push(`${named('drills', unset)} ${hasOrHave(unset)} no Target now.`);
     }
     return sentences.join(' ');
 }

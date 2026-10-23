@@ -15,6 +15,7 @@ import { blockedSummaryOf } from '../utils/ruleProblems';
 import type {
     BeltFormData,
     ChestFormData,
+    DrillFormData,
     InserterFormData,
     MachineFormData,
 } from '../hooks/useConfigForm';
@@ -37,6 +38,8 @@ interface InserterConfigPanelProps {
     inserters: InserterFormData[];
     belts: BeltFormData[];
     chests: ChestFormData[];
+    /** The drills: a container holds what the ones that drop into it mine */
+    drills?: readonly DrillFormData[];
     itemNames: string[];
     getRecipeInfo: (name: string) => RecipeInfo | null;
     /** Called once, on Save, with the changed fields */
@@ -79,6 +82,7 @@ export function InserterConfigPanel({
     inserters,
     belts,
     chests,
+    drills,
     itemNames,
     getRecipeInfo,
     onUpdate,
@@ -101,13 +105,13 @@ export function InserterConfigPanel({
     const savedRule = describeEnableRule(currentOverride, { forcedAlways: inserter._forced_always });
 
     const craftingMachines = useCraftingMachines();
-    const availableItems = useMemo(() => itemsAround(draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines), [draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines]);
+    const availableItems = useMemo(() => itemsAround(draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills), [draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills]);
 
     // the items the inserter moves: its filters, else what the game would pick; a template's item picker starts on them
     const movedItems = useMemo<string[]>(() => {
         const filters = draft.filters?.filter(Boolean) ?? [];
-        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines);
-    }, [draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines]);
+        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills);
+    }, [draft, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills]);
 
     const copyFromOptions = useMemo<CopyFromOption[]>(() => {
         return inserters
@@ -195,6 +199,7 @@ export function InserterConfigPanel({
                     inserters={inserters}
                     belts={belts}
                     chests={chests}
+                    drills={drills}
                     itemNames={itemNames}
                     getRecipeInfo={getRecipeInfo}
                     onChange={handleDraftUpdate}

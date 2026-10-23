@@ -6,7 +6,7 @@ import { containerItems, isBufferChest, isInfinityChest } from '../hooks/useConf
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { describeEnableRule } from './enableRuleLabel';
 import { entityLabel } from './entityLabel';
-import { inferInserterItems } from './inferInserterItems';
+import { drillItemsInto, inferInserterItems } from './inferInserterItems';
 import { assignFlowPorts } from './flowRouting';
 
 // The sizes the nodes are drawn at (the components use the widths) and the layout places them by: the layout's must be
@@ -288,7 +288,7 @@ export function buildFlowGraph(
             filterIcons = items.length > 0 ? items : undefined;
         } else {
             iconName = chest.type;
-            const items = containerItems(chest);
+            const items = [...new Set([...containerItems(chest), ...drillItemsInto(chest.id, drills)])];
             filterIcons = items.length > 0 ? items : undefined;
         }
         pushEntityNode({
@@ -310,7 +310,7 @@ export function buildFlowGraph(
         // Derive displayed items: explicit filters first, then auto-infer from source/sink
         const inferred = inserter.filters && inserter.filters.length > 0
             ? inserter.filters
-            : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo, inserters);
+            : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo, inserters, undefined, drills);
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         const rule = describeEnableRule(inserter.overrides?.enable_control, { forcedAlways: inserter._forced_always });
         const height = Math.max(nodeHeight, INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT));

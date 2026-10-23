@@ -2,16 +2,16 @@ import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
-    FormControl,
     IconButton,
-    InputLabel,
-    MenuItem,
-    Select,
     TextField,
     Typography,
 } from '@mui/material';
-import { useState, memo } from 'react';
-import type { DrillFormData } from '../hooks/useConfigForm';
+import { TargetType } from 'clock-generator/light';
+import { useState, memo, useMemo } from 'react';
+import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import type { DrillTargetBuild } from '../utils/drillTarget';
+import { DrillTargetField } from './DrillTargetField';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
@@ -41,7 +41,12 @@ const PRODUCTIVITY_COMMAND = '/c game.print(game.player.selected.productivity_bo
 interface DrillsFormProps {
     drills: DrillFormData[];
     resourceNames: string[];
-    machineIds: number[];
+    /** The build's other entities: a drill drops into one of its machines or containers */
+    machines: MachineFormData[];
+    belts: BeltFormData[];
+    chests: ChestFormData[];
+    inserters: InserterFormData[];
+    getRecipeInfo?: (name: string) => RecipeInfo | null;
     /** Adds a drill, and turns drills on in the build if they were not */
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
@@ -51,8 +56,9 @@ interface DrillsFormProps {
 }
 
 
-function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: Pick<DrillsFormProps, 'resourceNames' | 'machineIds' | 'onUpdate'> & {
+function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: Pick<DrillsFormProps, 'resourceNames' | 'getRecipeInfo' | 'onUpdate'> & {
     drill: DrillFormData;
+    build: DrillTargetBuild;
     index: number;
     onRemove: (index: number) => void;
     onDuplicate: () => void;
@@ -83,31 +89,8 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
 
                 </Box>
                 <Box sx={{ minWidth: 0, gridColumn: 3, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 3 } }}>
-                            {drill.target.type === 'chest' ? (
-                                // a drill into a chest keeps its target as the config gives it: shown, not edited here
-                                <TextField size="small" sx={{ minWidth: 0, width: '100%' }} label="Target" value={entityLabel('chest', drill.target.id)}
-                                    slotProps={{ input: { readOnly: true } }} inputProps={{ 'aria-label': 'Target chest' }} />
-                            ) : (
-                            <FormControl size="small" sx={{ minWidth: 0, width: '100%' }} error={!machineIds.includes(drill.target.id)}>
-                                <InputLabel>Target Machine</InputLabel>
-                                <Select
-                                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
-                                    value={drill.target.id}
-                                    label="Target Machine"
-                                    onChange={(e) =>
-                                        onUpdate(index, {
-                                            target: { type: 'machine', id: e.target.value as number },
-                                        })
-                                    }
-                                >
-                                    {machineIds.map((id) => (
-                                        <MenuItem key={id} value={id}>
-                                            {entityLabel('machine', id)}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            )}
+                            <DrillTargetField drill={drill} build={build} getRecipeInfo={getRecipeInfo} sx={{ minWidth: 0, width: '100%' }}
+                                onChange={target => onUpdate(index, { target })} />
 
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gridColumn: 4, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: 2 } }}>
@@ -119,7 +102,7 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
                     Speed bonus {Number((drill.speed_bonus * 100).toFixed(2))}% · Productivity {Number(drill.productivity.toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
                 </Typography>} tabs={[{ label: 'Enable control', content: <EnableControlFormContent
                     key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
-                    currentOverride={drill.overrides?.enable_control} sinkType="machine" availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
+                    currentOverride={drill.overrides?.enable_control} sinkType={drill.target.type === 'chest' ? TargetType.CHEST : TargetType.MACHINE} availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
                     onCancel={() => setRuleRevision(previous => previous + 1)}
                     onSave={override => {
                         if (enableControlOverrideChanged(override, drill.overrides?.enable_control)) onUpdate(index, { overrides: { ...drill.overrides, enable_control: override } });
@@ -169,7 +152,11 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
 function DrillsFormComponent({
     drills,
     resourceNames,
-    machineIds,
+    machines,
+    belts,
+    chests,
+    inserters,
+    getRecipeInfo,
     onAdd,
     onUpdate,
     onRemove,
@@ -177,6 +164,7 @@ function DrillsFormComponent({
     onDuplicate,
 }: DrillsFormProps) {
 
+    const build = useMemo(() => ({ machines, belts, chests, inserters, drills }), [machines, belts, chests, inserters, drills]);
     // the row's delete button goes with it: the keyboard moves on to a neighbour's, or to the Add row
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(drills.length, onRemove);
     const announce = useAnnounce();
@@ -237,7 +225,7 @@ function DrillsFormComponent({
             ) : (
                 <>
                     <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
-                    {drills.map((drill, index) => <DrillRow key={drill._uuid} drill={drill} index={index} resourceNames={resourceNames} machineIds={machineIds}
+                    {drills.map((drill, index) => <DrillRow key={drill._uuid} drill={drill} index={index} resourceNames={resourceNames} build={build} getRecipeInfo={getRecipeInfo}
                         onUpdate={onUpdate} onRemove={remove} onDuplicate={() => duplicate(index)}
                         onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
                         onMoveDown={index < drills.length - 1 ? () => onReorder(index, index + 1) : undefined} />)}
