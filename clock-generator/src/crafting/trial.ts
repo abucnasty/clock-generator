@@ -46,9 +46,14 @@ export interface ClockAssessment {
     /**
      * Whether the clock gets back to its expected output after each loss of its build, and the losses it does not get
      * back from (see backpressure-loss.ts). Null when no loss was tried: the clock does not hold its expected output
-     * to begin with, or the trials could not be run on it.
+     * to begin with, or the trials could not be run on it (then `backpressure_loss_not_tried` says why).
      */
     backpressure_loss: BackpressureLossVerdict | null;
+    /**
+     * Why the losses could not be tried on a clock that holds its expected output: the trials' error, such as a period
+     * that does not repeat in whole ticks. Absent when they were tried, or the clock does not hold.
+     */
+    backpressure_loss_not_tried?: string;
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
     /**
@@ -70,7 +75,9 @@ export interface ClockAssessment {
  * The one word for a clock (GOALS.md, "Backpressure Loss"): stable when it holds its expected output and gets back to
  * it by itself after every backpressure loss of its build (and, when the start dependence was checked, reaches it from every
  * start); no recovery when it holds and does not get back from some
- * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on is taken by what it holds.
+ * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on keeps
+ * the word of what it holds, stable, and `backpressure_loss_not_tried` says why they were not: it ranks below every
+ * clock tried and getting back, and above every clock tried and not (`recoveryUntried`, rank.ts).
  */
 export type ClockVerdict = "stable" | "no recovery" | "unstable";
 
@@ -918,25 +925,29 @@ export function startDependenceVerdictOf(
     }
 }
 
+/** What the backpressure loss trials of a clock found, or why they could not be run on it */
+export type BackpressureLossAssessment = Pick<ClockAssessment, "backpressure_loss" | "backpressure_loss_not_tried">;
+
 /**
- * Tries a clock that holds its expected output for backpressure loss. Null when the trials cannot be run on it, which
- * is logged: such a clock is taken by what it holds.
+ * Tries a clock that holds its expected output for backpressure loss. When the trials cannot be run on it, which is
+ * logged, the verdict is null and `backpressure_loss_not_tried` is the reason (see `clockVerdictOf`).
  */
 export function backpressureLossVerdictOf(
     planned_on: Config,
     result: BlueprintGenerationResult,
     logger: Logger,
     report?: (detail: string) => void,
-): BackpressureLossVerdict | null {
+): BackpressureLossAssessment {
     // the config the clock was planned on has its output swings per cycle
     const config = { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: result.used_terminal_swing_count } };
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     try {
-        return verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items,
-            quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`)));
+        return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
+            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`))) };
     } catch (error) {
-        logger.log(`Backpressure loss could not be tried: ${error instanceof Error ? error.message : error}`);
-        return null;
+        const reason = error instanceof Error ? error.message : String(error);
+        logger.log(`Backpressure loss could not be tried: ${reason}`);
+        return { backpressure_loss: null, backpressure_loss_not_tried: reason };
     }
 }
 

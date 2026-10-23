@@ -1075,7 +1075,7 @@ function backpressureLossOf(
     const repeat = subtickClockForPeriod(loss_period);
     const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
         : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
-    assert(bin !== null, `A clock of ${loss_period} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
+    assert(bin !== null, `A clock of ${Number(loss_period.toFixed(3))} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
     const own_clock_ticks = Array.from(controlled.inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
     // boundaries a whole proven bin apart repeat for good; in bins of the period that is every `stride`-th boundary
     const proven_bin = provenRepeatBin(config, loss_period);

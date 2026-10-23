@@ -39,6 +39,7 @@ export const SUMMARY_COPY = {
         ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.`
         : 'In the simulator, after it is starved or jammed, it does not get back to its rate by itself.',
     recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
+    recoversNotTriedDetail: (reason: string) => `Recovery could not be tried in the simulator: ${reason.replace(/\.$/, '')}.`,
     recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
     beltMoving: 'Moving',
     beltBackedUp: 'Backed up',
@@ -140,8 +141,9 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
     if (loss?.survives === true) return { kind: 'yes', value: SUMMARY_COPY.recoversYes, detail: SUMMARY_COPY.recoversYesDetail };
     if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock)) };
     if (loss?.survives === false) return { kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail };
+    const notTried = clock.assessment.backpressure_loss_not_tried;
     return { kind: 'not-tested', value: clock.assessment.holds ? SUMMARY_COPY.recoversUnavailable : SUMMARY_COPY.recoversNotTested,
-        detail: SUMMARY_COPY.recoversNotTestedDetail };
+        detail: notTried !== undefined ? SUMMARY_COPY.recoversNotTriedDetail(notTried) : SUMMARY_COPY.recoversNotTestedDetail };
 }
 
 /** What the clock makes, for all the copies, and the line under it: "240/s", "all 11 copies" (nothing for one copy) */

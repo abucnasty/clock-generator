@@ -19,7 +19,7 @@ import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
-import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
+import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
 import { START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
 import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
 import { NotMadeClock, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
@@ -567,9 +567,12 @@ function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_outp
     return notes;
 }
 
-/** A sentence for an alternative's description about the losses its clock does not get back from */
-function backpressureLossNote(verdict: BackpressureLossVerdict | null): string {
-    if (verdict === null || verdict.survives) {
+/** A sentence for an alternative's description about the losses its clock does not get back from, or why none was tried */
+function backpressureLossNote(verdict: BackpressureLossVerdict | null, not_tried: string | undefined): string {
+    if (verdict === null) {
+        return not_tried === undefined ? "" : ` Its backpressure losses could not be tried, so whether it gets back after one is not known: ${not_tried.replace(/\.$/, "")}.`;
+    }
+    if (verdict.survives) {
         return "";
     }
     return verdict.broken_by.length === 0 ? " It was off its expected output in the run the backpressure losses are tried on, so it is not counted as stable."
@@ -588,7 +591,7 @@ function itemsPerSecondOverCopies(items_per_period: number, period_ticks: number
     return fraction(copies).multiply(items_per_period * 60).divide(period_ticks).toDecimal();
 }
 
-type VerificationAssessment = Pick<ClockAssessment, "backpressure_loss" | "start_dependence">;
+type VerificationAssessment = BackpressureLossAssessment & Pick<ClockAssessment, "start_dependence">;
 
 /** Whether a clock has windows the generator made for a drill into a chest */
 function plannedChestDrillWindows(result: BlueprintGenerationResult): boolean {
@@ -626,12 +629,13 @@ function runAlternative(
     // where the exported clock does not; in game, recordings matched the clock-only check
     let held = holds(result);
     const cached = verification_cache?.get(signature);
-    let backpressure_loss = cached ? cached.backpressure_loss
-        : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
+    let loss: BackpressureLossAssessment = cached
+        ? { backpressure_loss: cached.backpressure_loss, backpressure_loss_not_tried: cached.backpressure_loss_not_tried }
+        : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
     // the drills into chests on their fewest windows: a clock that does not meet goal 1 with them is made again with
     // them a tick longer, then always enabled, as it was before they had windows, and the first that does is kept
     let used = definition;
-    const fallbacks = cached === undefined && !(held && backpressure_loss?.survives !== false) && plannedChestDrillWindows(result)
+    const fallbacks = cached === undefined && !(held && loss.backpressure_loss?.survives !== false) && plannedChestDrillWindows(result)
         ? definition.chest_drill_fallbacks ?? [] : [];
     for (const [index, fallbackOf] of fallbacks.entries()) {
         const fallback = fallbackOf();
@@ -646,15 +650,16 @@ function runAlternative(
         result = made;
         used = fallback;
         held = holds(result);
-        backpressure_loss = held ? backpressureLossVerdictOf(fallback.planned_on ?? config, result, logger, report) : null;
-        logger.log(`Clock alternative "${definition.label}": the fewest drill windows did not meet goal 1; ${index === 0 ? "a tick longer" : "always enabled"}: holds=${held} survives=${backpressure_loss?.survives ?? "not tried"}`);
-        if (held && backpressure_loss?.survives !== false) break;
+        loss = held ? backpressureLossVerdictOf(fallback.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
+        logger.log(`Clock alternative "${definition.label}": the fewest drill windows did not meet goal 1; ${index === 0 ? "a tick longer" : "always enabled"}: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
+        if (held && loss.backpressure_loss?.survives !== false) break;
     }
     if (used !== definition && !plannedChestDrillWindows(result) && result.chest_drills !== undefined) {
         // left always enabled by the fallback: say so, not that the config asks for it
         result = { ...result, chest_drills: result.chest_drills.map(drill => drill.enabled_ticks !== null ? drill
             : { ...drill, planned: true, always_enabled_because: "the clock does not meet goal 1 with its fewest windows, nor with them a tick longer" }) };
     }
+    const { backpressure_loss, backpressure_loss_not_tried } = loss;
     const label = withOutputSwings(definition, result.used_terminal_swing_count);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
@@ -666,7 +671,7 @@ function runAlternative(
     // a fallback's verdicts are of its clock, not of the one the signature names: a run that makes that clock again
     // makes its own fallback
     if (used === definition) {
-        verification_cache?.set(signature, {backpressure_loss, start_dependence});
+        verification_cache?.set(signature, {...loss, start_dependence});
     }
     const start_dependence_note = start_dependence === null ? null
         : startDependenceNote(start_dependence, items => itemsPerSecondOverCopies(items, result.simulation_duration.ticks, copies));
@@ -684,7 +689,7 @@ function runAlternative(
     const { belt } = result;
     const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
     const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
-        + backpressureLossNote(backpressure_loss) + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`);
+        + backpressureLossNote(backpressure_loss, backpressure_loss_not_tried) + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`);
     // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
     const insights = [
         ...clockInsights(result, held, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS),
@@ -700,7 +705,8 @@ function runAlternative(
     const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
     /** The alternative for the clock run at `clock_period` ticks a period: the exact period, or the rounded one */
     const alternativeAt = (clock_period: number, row: { id: string; label: string; description: string; result: BlueprintGenerationResult }): ClockAlternative => {
-        const assessment: ClockAssessment = { holds: held, backpressure_loss, items_per_second: itemsPerSecondOverCopies(achieved_output_items, clock_period, copies), wake_ups_per_minute, start_dependence };
+        const assessment: ClockAssessment = { holds: held, backpressure_loss, ...(backpressure_loss_not_tried !== undefined && { backpressure_loss_not_tried }),
+            items_per_second: itemsPerSecondOverCopies(achieved_output_items, clock_period, copies), wake_ups_per_minute, start_dependence };
         const clock = { ...row, inserter_window_count, ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         return { ...clock, ranking: rankingOf(clock, config) };
     };
@@ -859,8 +865,8 @@ export function generateClockAlternatives(
     // Request-local: a new generation (or changed config/data) never inherits another run's verdict.
     const verification_cache = new Map<string, VerificationAssessment>();
     if (plan.primary?.alternatives[0]) {
-        const {backpressure_loss, start_dependence} = plan.primary.alternatives[0].assessment;
-        verification_cache.set(plan.primary.signature, {backpressure_loss, start_dependence});
+        const {backpressure_loss, backpressure_loss_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
+        verification_cache.set(plan.primary.signature, {backpressure_loss, backpressure_loss_not_tried, start_dependence});
     }
     const known_stable = (id: string) => stable_by_id.get(id);
     const definitions = alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable);
