@@ -387,21 +387,32 @@ describe("a build that holds the config more than once", () => {
     });
 
     it("matches each copy by itself, with its own unit numbers", () => {
-        expect(matchBuiltCopies(described(), config)).toEqual([
+        expect(matchBuiltCopies(described(), config, 2)).toEqual([
             new Map([[1, 100], [2, 101], [3, 102]]),
             new Map([[1, 103], [2, 104], [3, 105]]),
         ]);
     });
 
     it("finds nothing missing from the config in two copies, and a third output inserter on the second, named by the config machine it takes from", () => {
-        expect(buildPartsMissingFromConfig(described(), config)).toEqual([]);
+        expect(buildPartsMissingFromConfig(described(), config, 2)).toEqual([]);
         const extra = { id: 7, unit_number: 106, name: "inserter", stack_size: 1, source: { type: "machine", id: 4 }, sink: { type: "belt", id: 2 } };
-        expect(buildPartsMissingFromConfig(described([...inserters, extra]), config).map(it => it.description))
+        expect(buildPartsMissingFromConfig(described([...inserters, extra]), config, 2).map(it => it.description))
             .toEqual(["inserter machine 2 (inserter) -> transport-belt (unit 106)"]);
     });
 
-    it("refuses to place one cell of a build that holds the config twice", () => {
-        expect(() => matchBuiltInserters(described(), config)).toThrow("holds the config 2 times");
+    it("refuses a count that is not the one found, in either direction", () => {
+        expect(() => matchBuiltCopies(described(), config, 3)).toThrow("holds the config 3 times, and the build holds it 2");
+        expect(() => matchBuiltCopies(described(), config, 1)).toThrow("holds the config 1 time, and the build holds it 2");
+        expect(() => buildPartsMissingFromConfig(described(), config, 3)).toThrow("the build holds it 2");
+    });
+
+    it("is matched as one copy without the count, as it was: the second copy is a machine beyond the config and refused", () => {
+        // the first copy's machines match; the second copy's are machines and inserters the config does not have
+        const missing = buildPartsMissingFromConfig(described(), config);
+        expect(missing.length).toBeGreaterThan(0);
+        expect(missing.map(it => it.description).join(" ")).toContain("beyond the 1 the config has of that recipe");
+        expect(matchBuiltCopies(described(), config)).toHaveLength(1);
+        expect(matchBuiltCopies(described(), config)[0].size).toBeLessThan(6);
     });
 });
 
@@ -418,6 +429,14 @@ describe("a clock the build came with", () => {
     it("is cut by the period it is named with, which the limit on a recording is checked against", async () => {
         await expect(run({ built_clock: { counter: 5, period: 100_000, first_value: 0 } }, counter(99_999))).rejects.toThrow("records 100000");
         await expect(run({ built_clock: { counter: 5, period: 216, first_value: 0 } }, counter(215))).rejects.toThrow("Factorio not found");
+    });
+
+    it("is told the copies of the config only with a clock to wire to them", async () => {
+        const swapped = { blueprint: "0", schedule: { counted_ticks: 100, inserter_combinators: [] } };
+        await expect(run({ copies: 3 })).rejects.toThrow("it needs a clock");
+        await expect(run({ copies: 0, clock: swapped, config: {} })).rejects.toThrow("whole number of copies");
+        await expect(run({ copies: 2, clock: swapped, config: {}, staged_start: { build_order: "ascending" } })).rejects.toThrow("staged start places one cell");
+        await expect(run({ copies: 3, clock: swapped, config: {} })).rejects.toThrow("Factorio not found");
     });
 
     it("is refused with an unclocked run, a staged start, or a blueprint it does not fit", async () => {

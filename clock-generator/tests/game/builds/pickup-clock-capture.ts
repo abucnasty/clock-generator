@@ -29,6 +29,8 @@ export interface PickupClockScenario {
      */
     built_clock?: BuiltClock;
     keep_built_clock?: boolean;
+    /** The copies of the config the build holds, for a generated clock wired to each (HarnessOptions.copies) */
+    copies?: number;
     outagePeriods?: number;
     /** Interventions of a probe of its own, in place of pickupClockInterventions(outagePeriods) */
     interventions?: [number, number, number][];
@@ -133,7 +135,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         const lastPeriod = plannedInterventions[plannedInterventions.length - 1][2];
         const settle = (lastPeriod + 10) * period;
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
-            : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock,
+            : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
                 out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
                 ticks: 2 * period, warmup_ticks: 3600, settle_ticks: settle, seed: [], unclocked: false,
                 lua: composeProbeSource(scenario.probeFile ?? path.join(__dirname, "pickup-clock-speed-probe.lua"), {

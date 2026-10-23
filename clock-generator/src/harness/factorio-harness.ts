@@ -10,6 +10,7 @@ import { encodeBlueprintFile } from "../blueprints/serde";
 import { Config } from "../config";
 import { ClockSchedule } from "../crafting/blueprint";
 import { matchCopies } from "../verification/entity-copies";
+import { matchRecordingToConfig } from "../verification/entity-matching";
 import { BuiltClock, blueprintWithNamedClock, recordingOfBuiltClock } from "./built-clock";
 import { parseRecording, Recording } from "../verification/recording";
 import { RconClient } from "./rcon";
@@ -113,6 +114,13 @@ export interface HarnessOptions {
      * make room for it. Not with `unclocked`, nor in a staged start.
      */
     built_clock?: BuiltClock;
+    /**
+     * How many times the build holds the config, for a build of copies that share belts: a generated `clock` is wired to the
+     * inserters of each. The copies are found from the build's machines and inserters (see matchCopies) and the run is refused
+     * when their count differs. Absent, the build is one copy, and a machine or inserter beyond the config is refused as a
+     * mismatch. Needs `clock`; not in a staged start.
+     */
+    copies?: number;
     /** Remove the clock of the build and let its inserters run freely */
     unclocked: boolean;
     surface?: string;
@@ -394,8 +402,12 @@ export function scheduledDrillIds(blueprint: string): number[] {
     return Array.from(new Set(entities.flatMap(scheduledDrillIdsOf))).sort((a, b) => a - b);
 }
 
-/** The build as a recording without samples, matched to the config by structure, as a recording is */
-function matchBuild(described: any, config: Config) {
+/**
+ * The build as a recording without samples, matched to the config by structure, as a recording is: as one copy of the
+ * config, whatever else the build holds, unless the test names the copies the build holds (see HarnessOptions.copies),
+ * which are then found and counted
+ */
+function matchBuild(described: any, config: Config, named_copies?: number) {
     const as_recording = parseRecording({
         format: "clock-generator-recording",
         version: 1,
@@ -411,7 +423,15 @@ function matchBuild(described: any, config: Config) {
             samples: { status: [], crafting_progress: [], bonus_progress: [], products_finished: [], inputs: {}, outputs: {} },
         })),
     });
+    if (named_copies === undefined) {
+        const match = matchRecordingToConfig(as_recording, config);
+        return { as_recording, match, copies: [match] };
+    }
     const { copies, merged } = matchCopies(as_recording, config);
+    if (copies.length !== named_copies) {
+        throw new Error(`The test says the build holds the config ${named_copies} time${named_copies === 1 ? "" : "s"}, and the build holds it ${copies.length}: `
+            + "a copy is a group of machines that inserters move items between, with a machine for every machine of the config");
+    }
     return { as_recording, match: merged, copies };
 }
 
@@ -446,19 +466,16 @@ export function clockPeriodTicks(blueprint: string): number | null {
  * so the build is matched to the config by structure, as a recording is.
  */
 export function matchBuiltInserters(described: any, config: Config): Map<number, number> {
-    const copies = matchBuiltCopies(described, config);
-    if (copies.length > 1) {
-        throw new Error(`The build holds the config ${copies.length} times, and this places one cell of it`);
-    }
-    return copies[0];
+    return matchBuiltCopies(described, config)[0];
 }
 
 /**
- * The same for a build that holds the config more than once (see matchCopies): per copy, the unit number of the
- * built inserter behind each config inserter id, the copies in the order of their lowest machine ids
+ * The same for a build the test says holds the config more than once (see matchCopies; refused when the count differs):
+ * per copy, the unit number of the built inserter behind each config inserter id, the copies in the order of their lowest
+ * machine ids. Without the count the build is one copy and anything beyond the config is left for buildPartsMissingFromConfig.
  */
-export function matchBuiltCopies(described: any, config: Config): Map<number, number>[] {
-    const { as_recording, copies } = matchBuild(described, config);
+export function matchBuiltCopies(described: any, config: Config, named_copies?: number): Map<number, number>[] {
+    const { as_recording, copies } = matchBuild(described, config, named_copies);
     return copies.map(match => {
         const unit_numbers = new Map<number, number>();
         for (const inserter of as_recording.inserters) {
@@ -502,11 +519,11 @@ const BELT_ENTITY_TYPES = new Set(["transport-belt", "underground-belt", "splitt
  * Inserters between belts and chests only, such as the ones that feed a scaffold's belt, and machines with other
  * recipes are the scaffold's own and not the config's business.
  */
-export function buildPartsMissingFromConfig(described: any, config: Config): BuildPartMissingFromConfig[] {
+export function buildPartsMissingFromConfig(described: any, config: Config, named_copies?: number): BuildPartMissingFromConfig[] {
     if (described.movers === undefined) {
         throw new Error("The recorder mod did not list the build's inserters and loaders (movers): it is older than this harness");
     }
-    const { as_recording, match, copies } = matchBuild(described, config);
+    const { as_recording, match, copies } = matchBuild(described, config, named_copies);
     const recipeOf = (config_id: number | undefined) => config.machines.find(machine => machine.id === config_id)?.recipe;
     /** unit number of a built machine -> the config machine it is */
     const config_machines = new Map<number, number>();
@@ -698,6 +715,9 @@ export function drillResourceOf(options: Pick<BuildOptions, "drill_resource" | "
 function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
+    }
+    if (options.copies !== undefined && (!Number.isInteger(options.copies) || options.copies < 1 || !options.clock || options.staged_start)) {
+        throw new Error("`copies` is a whole number of copies of the config that a generated clock is wired to: it needs a clock, and a staged start places one cell");
     }
     if (options.built_clock && (options.unclocked || options.staged_start)) {
         throw new Error("A named clock of the build is kept or replaced: it cannot be asked for with an unclocked run or a staged start");
@@ -899,7 +919,7 @@ export class HarnessSession {
         let clock: { blueprint: string; inserters: Record<string, number | number[]> } | undefined;
         if (options.clock && options.config) {
             const described = await this.call("harness_describe");
-            const copies = matchBuiltCopies(described, options.config);
+            const copies = matchBuiltCopies(described, options.config, options.copies);
             const scheduled = scheduledInserterIds(options.clock.schedule);
             const missing = copies.flatMap((unit_numbers, copy) => scheduled.filter(id => !unit_numbers.has(id)).map(id => ({ id, copy })));
             if (missing.length > 0) {
@@ -910,7 +930,7 @@ export class HarnessSession {
             if (copies.length > 1) {
                 options.log(`The build holds the config ${copies.length} times: the clock is wired to each copy`);
             }
-            const not_in_config = buildPartsMissingFromConfig(described, options.config);
+            const not_in_config = buildPartsMissingFromConfig(described, options.config, options.copies);
             if (not_in_config.length > 0) {
                 throw new Error(missingFromConfigMessage(not_in_config));
             }

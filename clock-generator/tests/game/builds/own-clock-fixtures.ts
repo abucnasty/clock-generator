@@ -83,7 +83,7 @@ export async function ownClockScenario(variant: OwnClockCase): Promise<PickupClo
         scaffold: () => fs.readFileSync(SCAFFOLD, "utf8").trim(),
         built_clock: OWNER_CLOCK,
         keep_built_clock: !generated,
-        ...(generated && {alternative: variant.alternative}),
+        ...(generated && {alternative: variant.alternative, copies: COPIES}),
         // the family's protocol: 64 untouched periods, the ore cut at 66-68, the output blocked at 84-88, the circuits cut at 104-106
         interventions: pickupClockInterventions(),
         probeFile: path.join(__dirname, "own-clock-probe.lua"),
