@@ -23,9 +23,7 @@ every tick the bars, whether the drill is disabled, its sink's count and the tak
 Each build checks three things:
 
 - **The productivity.** The drill's `productivity_bonus` in the game is the force's research bonus and its productivity
-  modules' together, and the config takes it x 100, as Sidecar exports it. Sidecar exports a drill into a car only once
-  the drill has dropped into it, from its first enabled tick on, so the recording, made from the first tick, has no
-  drill: the probe reads the drill.
+  modules' together, and the config takes it x 100, as Sidecar exports it. The probe reads the drill.
 - **The drill against the game's, every tick.** The simulator's drill is driven by the game's sink: in each tick the sink
   first loses what the game's taker took (its hand's growth) or what a craft took (the machine's count falls), and the
   drill is disabled where the game's was. Its sink's count and both bars equal the game's in every tick. Into a machine
@@ -101,4 +99,21 @@ every tick. Also asserted:
 ```bash
 DRILLS_CAPTURE_DIR=.scratch/chest-run \
   npm run test:game -- tests/game/mechanics/drills/chest.game.test.ts -t 'gated-l7999$'
+```
+
+## Sidecar's export of a drill
+
+`sidecar-export.game.test.ts` checks that Sidecar exports a drill that has not mined or dropped yet (#316): the game
+gives a drill no `mining_target` until it first mines and no `drop_target` until it first drops. Its probe
+([sidecar-export-probe.lua](sidecar-export-probe.lua)) selects as the selection tool does (its entity type filters over
+the build) and exports with the sidecar's own sources.
+
+| Build | What it checks |
+| --- | --- |
+| the steel wagon build | its drill fast-replaced by a legendary one, as the editor upgrades it, beside the wagon (legendary) with its ore slots full: before the new drill's first tick and 300 ticks on (it has still mined nothing) the export has the drill into the wagon, with the old drill's speed bonus and productivity; earlier builds of Sidecar 0.12.0 selected no drill there |
+| 39 legendary drills on a surface of their own | before the first tick, a legendary chest, car, tank, cargo wagon, rocket silo or furnace against its drop position, reaching into the tile under it or not: the export's target is the one the game then fills, and a drill whose target does not reach is left out as dropping onto the ground. The reach is 12/256 of a tile (a box 11/256 into the tile gets nothing), on each side of the tile, the drill facing north and east. Two kinds of ore under a drill, or two containers at its drop tile, leave it out until it has mined or dropped |
+
+```bash
+DRILLS_CAPTURE_DIR=.scratch/sidecar-export-run \
+  npm run test:game -- tests/game/mechanics/drills/sidecar-export.game.test.ts
 ```
