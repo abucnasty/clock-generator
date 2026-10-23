@@ -3,7 +3,7 @@ import { TimelineAxis } from './BeltChart';
 import type { Theme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
 import { Box, Typography } from '@mui/material';
-import { Loop, MoreTime, TimerOutlined, ToggleOnOutlined, TrendingUp } from '@mui/icons-material';
+import { BedtimeOutlined, Loop, MoreTime, TimerOutlined, ToggleOnOutlined, TrendingUp } from '@mui/icons-material';
 import {
     memo,
     useCallback,
@@ -182,6 +182,8 @@ const NOTE_ICONS: Record<WatchNoteKind, ComponentType<{ fontSize?: 'inherit'; 'a
     short: TimerOutlined,
     wraps: Loop,
     'most-woken': TrendingUp,
+    // asleep: on, and nothing wakes it
+    'never-woken': BedtimeOutlined,
 };
 
 function WatchNotes(props: { row: WakeWindowRow; periodTicks: number; mostWakeUpsId: string | null; indent: string | number }) {
