@@ -42,23 +42,23 @@ export function MachinePrototypeField({ machine, onPatch, inputAriaLabel, sx }: 
     </Tooltip>;
 }
 
-/** The machine's quality, a label only: the game's pip on its icon. Its help says it changes neither speed nor clock. */
+/**
+ * The machine's quality, a label only: the game's pip on its icon. Its help says it changes neither speed nor clock. A
+ * machine without one (an older build's) is Normal, as every entity in the game is unless built otherwise.
+ */
 export function MachineQualityField({ machine, onPatch, inputAriaLabel, sx }: {
     machine: MachineFormData; onPatch: Patch; inputAriaLabel: string; sx?: SxProps<Theme>;
 }) {
-    const shown = (quality: string) => quality === ''
-        ? <Typography variant="body2" component="span" color="text.secondary">Not set</Typography>
-        : <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <QualityPip quality={quality} size={16} />
-            {qualityLabel(quality as typeof MACHINE_QUALITIES[number])}
-        </Box>;
+    const shown = (quality: string) => <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <QualityPip quality={quality} size={16} />
+        {qualityLabel(quality as typeof MACHINE_QUALITIES[number])}
+    </Box>;
     return <Box sx={[{ display: 'flex', alignItems: 'center', gap: 0.5 }, ...(Array.isArray(sx) ? sx : [sx])]}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 0 }}>
             <InputLabel shrink>Quality</InputLabel>
-            <Select value={machine.quality ?? ''} label="Quality" notched displayEmpty renderValue={shown}
+            <Select value={machine.quality ?? 'normal'} label="Quality" notched renderValue={shown}
                 inputProps={{ 'aria-label': inputAriaLabel }}
-                onChange={event => { const value: string = event.target.value; onPatch({ quality: value === '' ? undefined : value as MachineFormData['quality'] }); }}>
-                <MenuItem value="">{shown('')}</MenuItem>
+                onChange={event => onPatch({ quality: event.target.value as MachineFormData['quality'] })}>
                 {MACHINE_QUALITIES.map(quality => <MenuItem key={quality} value={quality}>{shown(quality)}</MenuItem>)}
             </Select>
         </FormControl>

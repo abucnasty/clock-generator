@@ -17,3 +17,16 @@ export function drillsListed({ drillCount, focusInSection }: DrillsSectionState)
 export function focusLeaves(section: Node, next: Node | null): boolean {
     return next === null || !section.contains(next);
 }
+
+/**
+ * The mining speed bonus as the game shows it, in percent: the config keeps the multiplier the drill reads (17.5 is
+ * 1750%). Rounded to drop float noise (0.3 is 30%, not 30.000000000000004%).
+ */
+export function speedBonusPercent(speed_bonus: number): number {
+    return Number((speed_bonus * 100).toFixed(6));
+}
+
+/** The multiplier the config keeps of a mining speed bonus in percent */
+export function speedBonusOfPercent(percent: number): number {
+    return Number((percent / 100).toFixed(8));
+}

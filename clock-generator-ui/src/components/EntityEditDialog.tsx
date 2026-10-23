@@ -24,7 +24,7 @@ import { isBufferChest, isContainerChest, isInfinityChest } from '../hooks/useCo
 import { chestTypeIcon } from '../utils/configForm/formData';
 import type { BufferChestFormData } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
-import { entityLabel } from '../utils/entityLabel';
+import { chestLabel, entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES } from '../utils/a11yLabels';
 import type { EntityClickType } from './ConfigFlowDiagram';
 import { BeltLaneFields, BeltStrategyField, ChestFields, EntityTypeField, MachineSettingsFields } from './EntityFields';
@@ -44,6 +44,7 @@ import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { BELT_TYPES, DRILL_TYPES, entityTypeLabel } from './entityTypes';
 import { DROP_BELT_READ_ONLY, beltGeometryEditProblem, hasImportedBeltDrops } from '../utils/inserterMetadata';
+import { speedBonusOfPercent, speedBonusPercent } from '../utils/drillsSection';
 
 // ---- Props ----
 
@@ -107,11 +108,11 @@ function DrillEditSection({
             />
 
             <NumberField
-                label="Speed Bonus"
-                value={drill.speed_bonus}
-                onValueChange={(val) => onUpdate(entityIndex, { speed_bonus: val ?? 0 })}
+                label="Mining speed bonus (%)"
+                value={speedBonusPercent(drill.speed_bonus)}
+                onValueChange={(val) => onUpdate(entityIndex, { speed_bonus: speedBonusOfPercent(val ?? 0) })}
                 min={0}
-                step={0.1}
+                step={10}
                 defaultValue={0}
                 size="small"
             />
@@ -172,7 +173,7 @@ export function EntityEditDialog({
                 const idx = chests.findIndex(c => c.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const c = chests[idx];
-                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: chestTypeIcon(c.type) };
+                return { entity: c, entityIndex: idx, title: chestLabel(c), iconName: chestTypeIcon(c.type) };
             }
             case 'inserter': {
                 const idx = inserters.findIndex(i => i.id === entityId);

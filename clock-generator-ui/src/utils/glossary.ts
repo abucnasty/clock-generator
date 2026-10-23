@@ -124,7 +124,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'clock',
         term: 'clock',
-        definition: 'The set of combinators that switches your inserters on in their wake windows and repeats every clock '
+        definition: 'The set of combinators that switches your inserters and mining drills on in their wake windows and repeats every clock '
             + 'period. The tool makes several and recommends one.',
         insteadOf: 'potential clock',
     },
