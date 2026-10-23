@@ -18,6 +18,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - The paste preview names each chest's type, says "Imported as one unit" only for an export of several copies, and describes the inserters in the game's words.
 - The wiring reference shows each combinator's first line as the game does, with the same icons, drills included.
 - The machine is picked as a recipe is (groups, search, icons), from the row's machine icon. A row says when its machine cannot make its recipe, and Crafting Speed shows the machine's own speed at its quality.
+- The results read in plain words: "Belt pickups: None" for a build with no belt pickups, a note on an inserter that is on for part of the period but woken 0 times, the first note of a clock that holds its rate no longer reads as a fault, and the details say how the clock was checked and how wake windows and swings differ.
 
 ## [0.20.0] - 2026-10-23
 
