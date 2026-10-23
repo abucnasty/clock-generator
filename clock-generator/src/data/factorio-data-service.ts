@@ -1,4 +1,4 @@
-import { ContainerPrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype } from "./factorio-data-types";
+import { ContainerPrototype, CraftingMachinePrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
 
@@ -121,6 +121,12 @@ export class FactorioDataService {
 
     public static readonly DEFAULT_ENERGY_REQUIRED = 0.5
 
+    /** The recipe of that name as the data holds it; null when there is none (own keys only) */
+    public static findRecipe(recipeName: string): Recipe | null {
+        const recipes = this.getData().recipe;
+        return Object.prototype.hasOwnProperty.call(recipes, recipeName) ? recipes[recipeName] : null;
+    }
+
     public static findRecipeOrThrow(recipeName: string): EnrichedRecipe {
         const recipe = this.getData().recipe[recipeName]
 
@@ -230,6 +236,17 @@ export class FactorioDataService {
             throw new Error(`${name} is not a rocket silo of the game data`);
         }
         return silos[name];
+    }
+
+    /** The crafting machine prototype of that name (an assembling machine or a furnace); null when the data has none */
+    public static findCraftingMachine(name: string): CraftingMachinePrototype | null {
+        const machines = this.getData().crafting_machine ?? {};
+        return Object.prototype.hasOwnProperty.call(machines, name) ? machines[name] : null;
+    }
+
+    /** Every crafting machine prototype of the data, in its order */
+    public static getAllCraftingMachines(): CraftingMachinePrototype[] {
+        return Object.values(this.getData().crafting_machine ?? {});
     }
 
     /** An item's weight as the game holds it; an item without one is refused */

@@ -107,6 +107,20 @@ export interface RocketSiloPrototype {
   lift_weight: number
 }
 
+/**
+ * A crafting machine of the game data (an assembling machine or a furnace prototype): what the simulation rule of a
+ * machine and the recipes it can make follow from (resources/filter-raw.js keeps these)
+ */
+export interface CraftingMachinePrototype {
+  name: string
+  /** The prototype's type in the game: a furnace picks its recipe from what it is given; an assembling machine is set to one */
+  type: "assembling-machine" | "furnace"
+  /** The crafting categories of the recipes it can make */
+  crafting_categories: string[]
+  /** The fuel categories it burns when its energy source is a burner; none for any other energy source */
+  burner_fuel_categories: string[]
+}
+
 export interface FactorioData {
   "recipe": Record<RecipeName, Recipe>
   "item": Record<ItemName, Item>
@@ -118,6 +132,7 @@ export interface FactorioData {
   "container": Record<string, ContainerPrototype>
   "quality_inventory": Record<QualityName, QualityInventory>
   "rocket_silo": Record<string, RocketSiloPrototype>
+  "crafting_machine": Record<string, CraftingMachinePrototype>
   /** Every item's weight as the running game holds it (in 1/65536 parts; resources/dump-item-weights.js) */
   "item_weight": Record<ItemName, number>
 }

@@ -60914,6 +60914,149 @@
       "lift_weight": 1000000
     }
   },
+  "crafting_machine": {
+    "assembling-machine-1": {
+      "name": "assembling-machine-1",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "crafting",
+        "advanced-crafting"
+      ],
+      "burner_fuel_categories": []
+    },
+    "assembling-machine-2": {
+      "name": "assembling-machine-2",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "crafting",
+        "advanced-crafting",
+        "crafting-with-fluid"
+      ],
+      "burner_fuel_categories": []
+    },
+    "assembling-machine-3": {
+      "name": "assembling-machine-3",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "crafting",
+        "advanced-crafting",
+        "crafting-with-fluid"
+      ],
+      "burner_fuel_categories": []
+    },
+    "oil-refinery": {
+      "name": "oil-refinery",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "oil-processing"
+      ],
+      "burner_fuel_categories": []
+    },
+    "chemical-plant": {
+      "name": "chemical-plant",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "chemistry"
+      ],
+      "burner_fuel_categories": []
+    },
+    "centrifuge": {
+      "name": "centrifuge",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "centrifuging"
+      ],
+      "burner_fuel_categories": []
+    },
+    "biochamber": {
+      "name": "biochamber",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "organic"
+      ],
+      "burner_fuel_categories": [
+        "nutrients"
+      ]
+    },
+    "crusher": {
+      "name": "crusher",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "crushing"
+      ],
+      "burner_fuel_categories": []
+    },
+    "foundry": {
+      "name": "foundry",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "metallurgy"
+      ],
+      "burner_fuel_categories": []
+    },
+    "captive-biter-spawner": {
+      "name": "captive-biter-spawner",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "captive-spawner-process"
+      ],
+      "burner_fuel_categories": [
+        "food"
+      ]
+    },
+    "electromagnetic-plant": {
+      "name": "electromagnetic-plant",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "electromagnetics"
+      ],
+      "burner_fuel_categories": []
+    },
+    "cryogenic-plant": {
+      "name": "cryogenic-plant",
+      "type": "assembling-machine",
+      "crafting_categories": [
+        "cryogenics"
+      ],
+      "burner_fuel_categories": []
+    },
+    "stone-furnace": {
+      "name": "stone-furnace",
+      "type": "furnace",
+      "crafting_categories": [
+        "smelting"
+      ],
+      "burner_fuel_categories": [
+        "chemical"
+      ]
+    },
+    "electric-furnace": {
+      "name": "electric-furnace",
+      "type": "furnace",
+      "crafting_categories": [
+        "smelting"
+      ],
+      "burner_fuel_categories": []
+    },
+    "steel-furnace": {
+      "name": "steel-furnace",
+      "type": "furnace",
+      "crafting_categories": [
+        "smelting"
+      ],
+      "burner_fuel_categories": [
+        "chemical"
+      ]
+    },
+    "recycler": {
+      "name": "recycler",
+      "type": "furnace",
+      "crafting_categories": [
+        "recycling"
+      ],
+      "burner_fuel_categories": []
+    }
+  },
   "item": {
     "item-unknown": {
       "name": "item-unknown",
