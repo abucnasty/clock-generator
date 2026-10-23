@@ -87,3 +87,35 @@ export function machineSpeedText(machine: Pick<CraftingMachineInfo, 'crafting_sp
         ? `Crafting speed ${speed}×`
         : `Crafting speed ${speed}× at ${qualityLabel(quality!)} (${shownNumber(machine.crafting_speed)}× base)`;
 }
+
+/**
+ * The hint under the Crafting Speed field: what the machine does at its quality on its own, and that modules and beacons
+ * change it. The field is not changed: the clock uses the speed as exported.
+ */
+export function craftingSpeedHint(row: Pick<MachineFormData, 'prototype' | 'quality'>, data: CraftingMachineData,
+    machineName: (id: string) => string): string {
+    const machine = craftingMachineOf(data, row.prototype);
+    const end = 'The clock uses the speed in this field.';
+    if (machine === undefined) return `Modules, beacons and the machine's quality change a machine's speed. ${end}`;
+    const quality = row.quality !== undefined && row.quality !== 'normal' ? ` (${qualityLabel(row.quality)})` : '';
+    return `${machineName(machine.name)}${quality}: ${machineSpeedAtQuality(machine, row.quality)}× before modules and beacons, which change it. ${end}`;
+}
+
+/** The machines of the data that can make a recipe, in the data's order */
+function machinesThatMake(recipe: string, data: CraftingMachineData): CraftingMachineInfo[] {
+    return data.machines.filter(machine => machineCanMake(machine, data.recipeCategories[recipe] ?? []));
+}
+
+/**
+ * What a row says when its machine cannot make its recipe, in the game's words ("Assembling machine 1 can't craft
+ * Lithium. Machines that can: Cryogenic plant."); undefined when it can, or when the machine or the recipe is unknown
+ */
+export function recipeNotMadeText(row: Pick<MachineFormData, 'prototype' | 'recipe'>, data: CraftingMachineData,
+    machineName: (id: string) => string, recipeName: (id: string) => string): string | undefined {
+    const machine = craftingMachineOf(data, row.prototype);
+    const categories = data.recipeCategories[row.recipe];
+    if (machine === undefined || categories === undefined || machineCanMake(machine, categories)) return undefined;
+    const can = machinesThatMake(row.recipe, data).map(it => machineName(it.name));
+    return `${machineName(machine.name)} can't craft ${recipeName(row.recipe)}. `
+        + (can.length === 0 ? 'No machine of the game data can.' : `Machines that can: ${can.join(', ')}.`);
+}

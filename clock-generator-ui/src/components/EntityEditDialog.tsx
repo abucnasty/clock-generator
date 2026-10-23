@@ -27,6 +27,7 @@ import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { chestLabel, entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES } from '../utils/a11yLabels';
 import type { EntityClickType } from './ConfigFlowDiagram';
+import { RecipeNotMadeNote } from './MachineFields';
 import { BeltLaneFields, BeltStrategyField, ChestFields, EntityTypeField, MachineSettingsFields } from './EntityFields';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { DraftFooter } from './DraftFooter';
@@ -341,6 +342,7 @@ export function EntityEditDialog({
                                 <ItemSelector kind="recipe" options={machineRecipes.options} searchOnlyIds={machineRecipes.searchOnly} value={(draft as MachineFormData).recipe || null}
                                     onChange={value => updateDraft(entityIndex, recipePatch(draft as MachineFormData, value || '', craftingMachines))}
                                     label="Recipe" placeholder="Search recipes..." freeSolo />
+                                <RecipeNotMadeNote machine={draft as MachineFormData} sx={{ mt: -1 }} />
                                 <MachineSettingsFields machine={draft as MachineFormData} dialog
                                     onChange={(field, value) => updateDraft(entityIndex, { [field]: value })}
                                     onPatch={patch => updateDraft(entityIndex, patch)} />

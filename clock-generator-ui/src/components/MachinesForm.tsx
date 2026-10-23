@@ -20,7 +20,7 @@ import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
 import { MachineSettingsFields } from './EntityFields';
 import { MachineIcon } from './MachineIcon';
-import { MachineIconPicker } from './MachineFields';
+import { MachineIconPicker, RecipeNotMadeNote } from './MachineFields';
 import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
 import { burnsNutrients, machineIconText, recipePatch } from '../utils/machinePrototype';
 import { HelpCommand } from './HelpButton';
@@ -264,6 +264,7 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
                     </IconButton>
                 </Box>
             </Box>
+            <RecipeNotMadeNote machine={machine} sx={{ mb: 1 }} />
             <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[{ label: 'Machine facts', content: !machine.recipe
                 ? <Typography variant="body2">Choose a recipe to see machine facts.</Typography>
                 : updating || (atTarget && targetUpdating)

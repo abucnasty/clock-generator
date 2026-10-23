@@ -1,10 +1,11 @@
+import { WarningAmber } from '@mui/icons-material';
 import { Box, ButtonBase, FormControl, InputLabel, MenuItem, Select, Tooltip, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData } from '../utils/configForm/formData';
-import { craftingMachineOf, MACHINE_QUALITIES, MACHINE_QUALITY_HELP, machineSpeedText, prototypeSourceText, qualityLabel } from '../utils/machinePrototype';
+import { craftingMachineOf, craftingSpeedHint, MACHINE_QUALITIES, MACHINE_QUALITY_HELP, machineSpeedText, prototypeSourceText, qualityLabel, recipeNotMadeText } from '../utils/machinePrototype';
 import { FilterItemPicker } from './FilterItemPicker';
 import { HelpButton } from './HelpButton';
 import { ItemPickerField } from './ItemPickerField';
@@ -69,6 +70,25 @@ export function MachineIconPicker({ machine, onPatch, buttonName, rowName, child
         {anchor && <FilterItemPicker anchor={anchor} label={`Choose a machine for ${rowName}`} kind="machine" initialItem={machine.prototype ?? null}
             itemNames={names} detailOf={detailOf} onClose={close} onApply={name => { onPatch(chosen(name)); close(); }} />}
     </>;
+}
+
+/** The hint under the Crafting Speed field: the machine's speed at its quality, and that modules and beacons change it */
+export function CraftingSpeedHint({ machine, sx }: { machine: Pick<MachineFormData, 'prototype' | 'quality'>; sx?: SxProps<Theme> }) {
+    const data = useCraftingMachines();
+    const { itemLabel } = useGameNames();
+    return <Typography variant="caption" color="text.secondary" sx={sx}>{craftingSpeedHint(machine, data, itemLabel)}</Typography>;
+}
+
+/** What a row says when its machine cannot make its recipe; nothing when it can */
+export function RecipeNotMadeNote({ machine, sx }: { machine: Pick<MachineFormData, 'prototype' | 'recipe'>; sx?: SxProps<Theme> }) {
+    const data = useCraftingMachines();
+    const { itemLabel, recipeLabel } = useGameNames();
+    const text = recipeNotMadeText(machine, data, itemLabel, recipeLabel);
+    if (text === undefined) return null;
+    return <Box sx={[{ display: 'flex', alignItems: 'flex-start', gap: 0.5, color: 'warning.main' }, ...(Array.isArray(sx) ? sx : [sx])]}>
+        <WarningAmber fontSize="small" sx={{ flexShrink: 0 }} />
+        <Typography variant="caption" sx={{ overflowWrap: 'anywhere', pt: 0.25 }}>{text}</Typography>
+    </Box>;
 }
 
 /**
