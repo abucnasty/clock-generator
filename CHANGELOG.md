@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
-## [0.20.0] - Unreleased
+## [0.20.0] - 2026-10-23
 
 ### Added
 - Cars, tanks, cargo wagons and rocket silos can be chests, with mixed items, filtered slots and slots by quality. Sidecar 0.12.0 exports them.

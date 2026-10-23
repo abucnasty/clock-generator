@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.12.0
+Date: 2026-10-23
   Features:
     - exports cars, tanks, cargo wagons and rocket silos as chests, with their slot filters and quality, exported empty
     - exports mining drills that drop into a chest, car, tank, cargo wagon or rocket silo
