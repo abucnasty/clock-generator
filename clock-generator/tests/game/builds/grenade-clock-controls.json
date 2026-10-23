@@ -4,8 +4,8 @@
     "owner-one-copy": {
       "recorded": {
         "pr": 0,
-        "commit": "ed393757",
-        "frozen_head": "ed393757",
+        "commit": "8ce582fe",
+        "frozen_head": "8ce582fe",
         "note": "recorded before the PR was opened; pr is set when it is",
         "clock_sha256": "5a96caa4224f0b4a7e6dbb7b22ba9424cc3f972c8ed3495d960b24475f5434d2",
         "clock_basis": "built"
@@ -191,8 +191,8 @@
     "owner-full-build": {
       "recorded": {
         "pr": 0,
-        "commit": "ed393757",
-        "frozen_head": "ed393757",
+        "commit": "8ce582fe",
+        "frozen_head": "8ce582fe",
         "note": "recorded before the PR was opened; pr is set when it is",
         "clock_sha256": "5a96caa4224f0b4a7e6dbb7b22ba9424cc3f972c8ed3495d960b24475f5434d2",
         "clock_basis": "built"
@@ -378,8 +378,8 @@
     "generated-one-copy": {
       "recorded": {
         "pr": 0,
-        "commit": "ed393757",
-        "frozen_head": "ed393757",
+        "commit": "8ce582fe",
+        "frozen_head": "8ce582fe",
         "note": "recorded before the PR was opened; pr is set when it is",
         "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23",
         "clock_basis": "capture"
@@ -577,8 +577,8 @@
     "generated-full-build": {
       "recorded": {
         "pr": 0,
-        "commit": "ed393757",
-        "frozen_head": "ed393757",
+        "commit": "8ce582fe",
+        "frozen_head": "8ce582fe",
         "note": "recorded before the PR was opened; pr is set when it is",
         "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23",
         "clock_basis": "capture"
