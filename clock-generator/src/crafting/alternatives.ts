@@ -3,13 +3,14 @@ import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
 import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
+import { warnSideLoadedDrops } from "../config/side-loaded-drop";
 import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
+import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, sideLoadedDropInsights, startDependenceInsight } from "./insights";
 import { chestDrillFallbackConfig, hasPlannedChestDrill } from "./chest-drill-windows";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
@@ -714,6 +715,7 @@ function runAlternative(
             ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
             ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
             ...beltPickupNotTestedInsights(config),
+            ...sideLoadedDropInsights(config),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
             ...chestDrillInsights(trial.result),
         ];
@@ -824,6 +826,7 @@ export function planClockAlternatives(
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
     warnLanesSharedByCopies(config, logger);
+    warnSideLoadedDrops(config, logger);
     warnMachinePrototypes(config, logger);
     const primary = withChestDrillFallbacks([definition], config, true,
         fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0];

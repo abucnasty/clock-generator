@@ -405,6 +405,13 @@ const InserterBeltSourceConfigSchema = z.object({
     drop: InserterBeltDropConfigSchema.optional()
 });
 
+const SideLoadedDropCaptureSchema = z.object({
+    status: z.literal("side-loaded"),
+    /** The belt tiles from the drop tile to the belt its stream side-loads onto */
+    tiles: z.number().int().positive(),
+    sidecar_version: z.string().optional(),
+});
+
 const InserterBeltSinkConfigSchema = z.object({
     type: z.literal(TargetType.BELT),
     id: z.number().int().positive(),
@@ -412,7 +419,12 @@ const InserterBeltSinkConfigSchema = z.object({
      * Where the inserter drops on a shared lane. Omitted positions use independent local output tiles with
      * retained stock. It is all or none per belt: when any inserter that drops on a belt has it, every one must.
      */
-    drop: InserterBeltDropConfigSchema.optional()
+    drop: InserterBeltDropConfigSchema.optional(),
+    /**
+     * Sidecar 0.13.0 marks a drop whose stream side-loads onto a belt that is fed from behind, `tiles` along the belt
+     * from the drop. It is a note for the result and changes nothing in the clock (docs/game-data-and-scope.md).
+     */
+    drop_capture: SideLoadedDropCaptureSchema.optional()
 });
 
 const InserterMachineConfigSchema = z.object({

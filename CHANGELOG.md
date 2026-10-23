@@ -10,6 +10,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ## [0.21.0] - Unreleased
 
+### Added
+- Sidecar 0.13.0 marks a drop onto a belt that side-loads onto another belt, and the result names it as a known limit.
+
 ### Changed
 - The wiring reference shows each combinator's first line as the game does, with the same icons, drills included.
 - The machine is picked as a recipe is (groups, search, icons), from the row's machine icon. A row says when its machine cannot make its recipe, and Crafting Speed shows the machine's own speed at its quality.
