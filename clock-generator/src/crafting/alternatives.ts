@@ -741,9 +741,16 @@ function runAlternative(
     const runs_fast = rounded_rate / target - 1;
     const within_machines = rounded_rate <= outputCapacityPerSecond(config) * (1 + 1e-9);
     const may_meet = roundedRateAllowed({ runs_fast, within_machines });
+    let not_tried_on_its_period: string | null = null;
     const rounded_trial: Trial | null = may_meet ? (() => {
-        const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
-        return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_period: rounded_ticks };
+        try {
+            const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
+            return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_period: rounded_ticks };
+        } catch (error) {
+            not_tried_on_its_period = error instanceof Error ? error.message : String(error);
+            logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks could not be tried on its own period: ${not_tried_on_its_period}`);
+            return null;
+        }
     })() : null;
     const rounded: RoundedClock = { period_ticks: rounded_ticks, runs_fast, within_machines, tried_on_its_period: rounded_trial !== null };
     const fast = `${fastPercent(runs_fast)} fast`;
@@ -754,8 +761,10 @@ function runAlternative(
             + `rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
             + (rounded_trial !== null
                 ? `: within the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run and what the machines make, so it is checked on its own ${rounded_ticks}-tick period.`
-                : `, ${within_machines ? `more than the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run` : "more than the machines make"}; `
-                + "the clock-only check models the exact period."),
+                : not_tried_on_its_period !== null
+                    ? `; it could not be tried on its own period (${(not_tried_on_its_period as string).replace(/\.$/, "")}), so the clock-only check models the exact period.`
+                    : `, ${within_machines ? `more than the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run` : "more than the machines make"}; `
+                    + "the clock-only check models the exact period."),
         result: rounded_trial?.result ?? result,
         rounded,
     });
