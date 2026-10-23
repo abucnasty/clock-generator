@@ -16,6 +16,11 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ### Changed
 - A clock that does not hold is listed by what it makes over a long run, not by one period, so the closest clock is the one that keeps making the most.
 
+## [0.21.1] - 2026-10-23
+
+### Fixed
+- Generating a large build no longer fails with "Maximum call stack size exceeded" when its clock is turned into a blueprint.
+
 ## [0.21.0] - 2026-10-23
 
 ### Added

@@ -537,7 +537,10 @@ export function createSignalPerInserterBlueprint(
         }
         if (fuel_clock_signal) {
             // wired with the other deciders, to the network that carries every modulo of the clock
-            deciderCombinatorEntities.push(...window_deciders);
+            // not push(...window_deciders): a big clock has more deciders than a worker's stack takes arguments
+            for (const decider of window_deciders) {
+                deciderCombinatorEntities.push(decider);
+            }
             return;
         }
         const fuel_clock = DeciderCombinatorEntity

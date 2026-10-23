@@ -112,7 +112,10 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
         for (const list of [this.plugins, this.tick_plugins]) {
             const kept = list.filter(plugin => !plugins.has(plugin));
             list.length = 0;
-            list.push(...kept);
+            // not list.push(...kept): a build has more plugins than a call takes arguments
+            for (const plugin of kept) {
+                list.push(plugin);
+            }
         }
     }
 
