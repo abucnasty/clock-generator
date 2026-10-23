@@ -4,7 +4,7 @@ import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
-import { beltPickupSlackTicks } from "../clock";
+import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { runClockOnBuild } from "../trial";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
@@ -373,8 +373,16 @@ export function groupedHandsClock(
         }
         throw error;
     }
-    // the windows carry the belt pickup slack themselves (on a moving belt): the clock only names the belt it is made for
-    const result = checkedClock(made, clockOfPlan(made, { ...options, belt_pickup_slack: "always" }), found!, { ...options, verify_as_built: true });
+    // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
+    const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
+    const slack = beltPickupSlackTicks(made.run.simulation_context.entity_registry);
+    const belt_fed = Array.from(found!.keys()).filter(id => slack.has(id));
+    const moving = made.config.overrides?.backed_up_belts !== true;
+    const belt: ClockBelt | null = belt_fed.length === 0 ? null
+        : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
+    const named = { ...exported, belt, belt_pickup_slack_left_out: false,
+        applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
+    const result = checkedClock(made, named, found!, { ...options, verify_as_built: true });
     result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
     return result;
 }
