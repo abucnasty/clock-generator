@@ -8,6 +8,7 @@ import {
     useStore,
     type EdgeMarker,
     type NodeTypes,
+    type NodeProps,
     type NodeMouseHandler,
     type Connection,
     type Edge,
@@ -37,10 +38,15 @@ import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
 import { useFlowPortUpdates } from '../hooks/useFlowPortUpdates';
 
+/**
+ * A node draws only its data, so it renders again only when that changes: React Flow passes a new width and height when
+ * it measures the nodes, and a hover or selection gives each node a new object with the same data.
+ */
+const sameData = (before: NodeProps, after: NodeProps) => before.data === after.data;
 const nodeTypes: NodeTypes = {
-    entityNode: EntityFlowNode,
-    inserterNode: InserterFlowNode,
-    drillNode: DrillFlowNode,
+    entityNode: memo(EntityFlowNode, sameData),
+    inserterNode: memo(InserterFlowNode, sameData),
+    drillNode: memo(DrillFlowNode, sameData),
 };
 
 /** The edges of a hovered node, and their arrowheads */
