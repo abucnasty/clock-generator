@@ -92,12 +92,6 @@ export const ExpectedRefusals = {
         reason: "The coverage check's deliberate fixture (PR #53): a machine with no inserters",
         error: 'Missing inserter coverage',
     },
-    REAL_STUPIDFATHOBBIT_CELL02: {
-        reason: 'A real cell (PR #189) whose inserter 12 puts electronic circuits on belt 3 for the rest of a utility science '
-            + 'design the config does not include, so the belt needs an export rate: refused until 0.20.0 measures it',
-        error: 'Inserter 12 puts electronic-circuit onto belt 3, but nothing in the config takes it off. '
-            + 'Make it an export belt with a consumption rate (items/s) on that lane.',
-    },
 } as const satisfies Partial<Record<keyof typeof ConfigPaths, ExpectedRefusal>>;
 
 /** Whether the sample of a `ConfigPaths` key is one of the expected refusals */
