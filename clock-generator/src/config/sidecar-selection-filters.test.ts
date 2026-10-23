@@ -82,6 +82,14 @@ describe("the sidecar's selection tool", () => {
         expect(read_types.passes).toEqual(expect.arrayContaining(["mining-drill", "inserter", "transport-belt", "underground-belt"]));
     });
 
+    it("finds a drill's container among every machine and chest type the extraction exports (#316)", () => {
+        // a drill that has not dropped yet is given the machine or chest under its drop position, searched by type
+        const sinks = strings(tableAfter(extraction, "DRILL_SINK_TYPES"));
+        const exported = [...read_types.chests, ...read_types.machines.filter(type => type !== "mining-drill")];
+        expect([...new Set(exported)].filter(type => !sinks.includes(type))).toEqual([]);
+        expect(sinks.filter(type => !exported.includes(type))).toEqual([]);
+    });
+
     for (const mode of ["select", "alt_select"]) {
         describe(mode, () => {
             const settings = tableAfter(data, mode);
