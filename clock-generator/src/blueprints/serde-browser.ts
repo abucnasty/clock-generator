@@ -1,6 +1,9 @@
 import pako from 'pako';
 import { FactorioBlueprintFile } from './blueprint';
 
+/** Bytes passed to one `String.fromCharCode` call; an argument list has a limit, and a worker's stack is small */
+const BASE64_CHUNK_BYTES = 0x8000;
+
 /**
  * Encode a blueprint file to a Factorio-compatible string (Browser version).
  * Uses pako for compression, compatible with browser environments.
@@ -10,8 +13,12 @@ export function encodeBlueprintFileBrowser(blueprint: FactorioBlueprintFile): st
 
     const deflated = pako.deflate(new TextEncoder().encode(jsonString));
 
-    // Convert Uint8Array to base64
-    const base64 = btoa(String.fromCharCode(...deflated));
+    // Convert Uint8Array to base64, in chunks: one argument per byte overflows the stack of a web worker
+    let binary = '';
+    for (let i = 0; i < deflated.length; i += BASE64_CHUNK_BYTES) {
+        binary += String.fromCharCode(...deflated.subarray(i, i + BASE64_CHUNK_BYTES));
+    }
+    const base64 = btoa(binary);
 
     return "0" + base64;
 }

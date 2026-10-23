@@ -158,8 +158,8 @@ function compareFuel(recorded: RecordedMachine, config_id: number, config: Confi
         consumed_items: consumed_mj / fuel_value_mj,
         expected_items: expected_mj / fuel_value_mj,
         no_fuel_ticks,
-        slot_min: slot_counts && slot_counts.length > 0 ? Math.min(...slot_counts) : 0,
-        slot_max: slot_counts && slot_counts.length > 0 ? Math.max(...slot_counts) : 0,
+        slot_min: slot_counts && slot_counts.length > 0 ? slot_counts.reduce((least, count) => Math.min(least, count), Infinity) : 0,
+        slot_max: slot_counts && slot_counts.length > 0 ? slot_counts.reduce((most, count) => Math.max(most, count), -Infinity) : 0,
     };
 }
 
