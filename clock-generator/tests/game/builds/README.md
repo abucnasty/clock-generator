@@ -16,6 +16,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `steel-wagon-clock.game.test.ts`: the owner's steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
 - `own-clock.game.test.ts`: the owner's inserter build on three copies, once with the owner's own clock and once with the generated clock.
 - `grenade-clock.game.test.ts`: the owner's grenade build on one copy and on its full build of seven, each with the owner's clock and with the generated clock.
+- `thaeln-cell09-clock.game.test.ts`: Thaeln's cell 09 (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
 
 From `clock-generator/`, select a file or case:
 
@@ -583,4 +584,31 @@ pins the generated clock and checks the owner's clock in the simulator. All four
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/grenade-clock.game.test.ts
+```
+
+## Thaeln's cell 09
+
+`thaeln-cell09-clock.game.test.ts` records the generator's selected clock for `REAL_THAELN_CELL09` (480 utility science packs a second
+over 3.5 copies; the scaffold is one copy, 137.14 a second, 384 packs in a period of 168 ticks) on the sample's scaffold. The clock is
+`planned-belt-slack`: the windows of `src/crafting/candidates/grouped-hands.ts` (hands rounded up where they are fractional, the
+order of the chain of machines), made without a search. The harness wires it to the inserters of the cell. The protocol is the
+family's with the losses the cell has: 63 whole periods, then the coal cut for 6 periods (the cell holds about two periods of it),
+the two output loaders taken away for 4 periods and rebuilt, and the processing units cut for 2. The probe counts the drops of the
+eight output inserters per period.
+
+[thaeln-cell09-clock-controls.json](thaeln-cell09-clock-controls.json) holds the native summary and the pin of the clock
+(`src/crafting/thaeln-cell09.generation.test.ts` checks the pin): 384 in all 63 baseline periods, and 384 again after each loss.
+
+Thaeln's own clock for the build, given on 2026-10-23, was recorded on the same scaffold while the rule was written (it is a
+blueprint of five combinators with no wires to inserters, so the harness wired it): a counter of 0 to 335 (336 ticks, two cycles) and four
+window combinators, each outputting the signal of the item the inserters it switches move (utility science pack for the 8 output
+inserters, processing unit for the 8 that take units and frames off the belts, low density structure for the 8 between foundries
+and machines, plastic bar for the 4 between the cryogenic plant and the foundries). **The coal inserter has no signal and is not
+on the clock: it runs all the time.** It makes 768 packs in every one of 107 periods and gets back from a cut of the coal, the output
+and the units (184.8 wake-ups a minute by the series' method, 211.8 in the simulator). It is evidence and a benchmark for the rule, not
+a control of this family.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/thaeln-cell09-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/thaeln-cell09-clock.game.test.ts
 ```

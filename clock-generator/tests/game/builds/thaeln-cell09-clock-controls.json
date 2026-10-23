@@ -1,0 +1,190 @@
+{
+ "meaning": "Native summary of Thaeln's cell 09 (REAL_THAELN_CELL09, 480 utility science packs a second over 3.5 copies, so 137.14 a second and 384 a period of 168 ticks for the one copy of the scaffold) in Factorio 2.1.21, with the generator's selected clock (the 168-tick clock, windows made from the hands, rounded up where they are fractional, in the order of the chain of machines), wired to the cell's inserters by the harness. The family's protocol with the losses the cell has: 63 whole periods before the first disturbance, which comes at period 66, then the coal cut for 6 periods (the cell holds about 2 periods of it), the output loaders taken away for 4 periods and rebuilt, and the processing units cut for 2. 'expected' is what the cell makes in a period. After each loss the periods before the output is back at 384 are the clock's own recovery.",
+ "cases": {
+  "generated-one-copy": {
+   "recorded": {
+    "pr": 0,
+    "commit": "7432f043",
+    "frozen_head": "7432f043",
+    "note": "recorded before the PR was opened; pr is set when it is",
+    "clock_sha256": "cf0e6cb014231f0c4aa262a80a859f99f0dbe0ffb8649ecb5a1bb8b39304e008",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "generationVerdict": "stable",
+    "target": 137.14285714285714,
+    "period": 168,
+    "expected": 384,
+    "baseline": [
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384,
+     384
+    ],
+    "recovery": [
+     {
+      "cut": 66,
+      "during": [
+       384,
+       384,
+       384,
+       384,
+       384,
+       336,
+       64
+      ],
+      "recovered": [
+       256,
+       368,
+       272,
+       336,
+       352,
+       368,
+       384,
+       384,
+       384
+      ]
+     },
+     {
+      "cut": 88,
+      "during": [
+       384,
+       160,
+       96,
+       0,
+       192
+      ],
+      "recovered": [
+       336,
+       368,
+       384,
+       336,
+       384,
+       368,
+       384,
+       384,
+       384
+      ]
+     },
+     {
+      "cut": 108,
+      "during": [
+       384,
+       208,
+       0
+      ],
+      "recovered": [
+       368,
+       384,
+       336,
+       384,
+       368,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384,
+       384
+      ]
+     }
+    ],
+    "interventions": [
+     [
+      66,
+      72,
+      88
+     ],
+     [
+      88,
+      92,
+      108
+     ],
+     [
+      108,
+      110,
+      136
+     ]
+    ]
+   },
+   "generation": {
+    "period": 168,
+    "expected": 384,
+    "verdict": "stable",
+    "selection": {
+     "id": "planned-belt-slack",
+     "holds": true,
+     "rate": 480,
+     "supply": "moving"
+    },
+    "clock_sha256": "cf0e6cb014231f0c4aa262a80a859f99f0dbe0ffb8649ecb5a1bb8b39304e008"
+   }
+  }
+ }
+}
