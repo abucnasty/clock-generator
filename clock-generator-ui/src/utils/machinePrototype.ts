@@ -67,3 +67,23 @@ export function machineIconText(machine: Pick<MachineFormData, 'prototype' | 'qu
     const quality = machine.quality ? ` (${qualityLabel(machine.quality)})` : '';
     return `${machineName(machine.prototype)}${quality}, ${prototypeSourceText(machine._prototype_source)}`;
 }
+
+/** Each quality's level in the game data: a machine's crafting speed rises 30% of its base with each */
+const QUALITY_LEVELS: Record<MachineQuality, number> = { normal: 0, uncommon: 1, rare: 2, epic: 3, legendary: 5 };
+const QUALITY_SPEED_STEP = 0.3;
+
+/** A number of the form, without float noise: 2.375, not 2.3750000000000004 */
+const shownNumber = (value: number) => Number(value.toFixed(3));
+
+/** A machine's crafting speed at a quality, before modules and beacons: its base speed plus 30% of it per quality level */
+export function machineSpeedAtQuality(machine: Pick<CraftingMachineInfo, 'crafting_speed'>, quality: MachineQuality | undefined): number {
+    return shownNumber(machine.crafting_speed * (1 + QUALITY_SPEED_STEP * QUALITY_LEVELS[quality ?? 'normal']));
+}
+
+/** The picker's line under a machine: "Crafting speed 5× at Legendary (2× base)" */
+export function machineSpeedText(machine: Pick<CraftingMachineInfo, 'crafting_speed'>, quality: MachineQuality | undefined): string {
+    const speed = machineSpeedAtQuality(machine, quality);
+    return speed === shownNumber(machine.crafting_speed)
+        ? `Crafting speed ${speed}×`
+        : `Crafting speed ${speed}× at ${qualityLabel(quality!)} (${shownNumber(machine.crafting_speed)}× base)`;
+}

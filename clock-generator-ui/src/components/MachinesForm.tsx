@@ -20,6 +20,7 @@ import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
 import { MachineSettingsFields } from './EntityFields';
 import { MachineIcon } from './MachineIcon';
+import { MachineIconPicker } from './MachineFields';
 import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
 import { burnsNutrients, machineIconText, recipePatch } from '../utils/machinePrototype';
 import { HelpCommand } from './HelpButton';
@@ -35,7 +36,7 @@ import { useGameNames } from '../hooks/useGameNames';
 import { nameWithId } from '../utils/gameNames';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
-import { BUTTON_NAMES, recipeName } from '../utils/a11yLabels';
+import { BUTTON_NAMES, changeMachineName, recipeName } from '../utils/a11yLabels';
 
 interface MachinesFormProps {
     engineConfig: Config;
@@ -133,10 +134,13 @@ function MachinesFormComponent({
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}
-                        displayTitle={machineIconText(machine, itemLabel)}
-                        displayLabel={<EntityBadge id={machine.id}>
-                            <MachineIcon machine={machine} size={28} />
-                        </EntityBadge>}>
+                        displayTitle={`${machineIconText(machine, itemLabel)}. Click to change the machine.`}
+                        displayLabel={<MachineIconPicker machine={machine} onPatch={patch => onPatch(index, patch)}
+                            buttonName={changeMachineName(entityLabel('machine', machine.id))} rowName={entityLabel('machine', machine.id)}>
+                            <EntityBadge id={machine.id}>
+                                <MachineIcon machine={machine} size={28} />
+                            </EntityBadge>
+                        </MachineIconPicker>}>
                         {(dragHandle) => (
                             <MachineRow
                                 machine={machine}

@@ -1,45 +1,74 @@
-import { Box, FormControl, InputLabel, MenuItem, Select, Tooltip, Typography } from '@mui/material';
+import { Box, ButtonBase, FormControl, InputLabel, MenuItem, Select, Tooltip, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData } from '../utils/configForm/formData';
-import { craftingMachineOf, MACHINE_QUALITIES, MACHINE_QUALITY_HELP, prototypeSourceText, qualityLabel } from '../utils/machinePrototype';
+import { craftingMachineOf, MACHINE_QUALITIES, MACHINE_QUALITY_HELP, machineSpeedText, prototypeSourceText, qualityLabel } from '../utils/machinePrototype';
+import { FilterItemPicker } from './FilterItemPicker';
 import { HelpButton } from './HelpButton';
+import { ItemPickerField } from './ItemPickerField';
 import { MachineIcon } from './MachineIcon';
 import { QualityPip } from './QualityBadge';
 
 type Patch = (patch: Partial<MachineFormData>) => void;
 
-/** The value of the Machine picker for a row without a machine */
-const NO_MACHINE = '';
+/**
+ * The Machine picker's choices for a row: the crafting machines of the game data (a machine the data does not hold, a
+ * mod's, stays one, so the row keeps showing it), and the line the picker puts under each, its crafting speed at the
+ * row's quality
+ */
+function useMachineChoices(machine: Pick<MachineFormData, 'prototype' | 'quality'>) {
+    const data = useCraftingMachines();
+    const names = useMemo(() => [...data.machines.map(it => it.name), ...(machine.prototype && !craftingMachineOf(data, machine.prototype) ? [machine.prototype] : [])],
+        [data, machine.prototype]);
+    const detailOf = useCallback((name: string) => {
+        const info = craftingMachineOf(data, name);
+        return info && machineSpeedText(info, machine.quality);
+    }, [data, machine.quality]);
+    return { names, detailOf };
+}
+
+/** The patch that sets a row's machine, chosen by hand */
+const chosen = (prototype: string): Partial<MachineFormData> => ({ prototype, _prototype_source: 'hand' });
 
 /**
- * The machine a row is: a crafting machine of the game data, set by Sidecar, picked for the row's recipe or chosen here;
- * the engine works out how it is simulated from it. A row without one (an older build's) shows "Not set" until one is
- * chosen.
+ * The machine a row is: a crafting machine of the game data, set by Sidecar, picked for the row's recipe or chosen here
+ * in the picker the recipe has (groups, search, an icon grid); the engine works out how it is simulated from it. A row
+ * without one (an older build's) shows no machine until one is chosen.
  */
 export function MachinePrototypeField({ machine, onPatch, inputAriaLabel, sx }: {
     machine: MachineFormData; onPatch: Patch; inputAriaLabel: string; sx?: SxProps<Theme>;
 }) {
-    const data = useCraftingMachines();
     const { itemLabel } = useGameNames();
-    // a machine the data does not hold (a mod's) stays an option, so the row keeps showing it
-    const names = [...data.machines.map(it => it.name), ...(machine.prototype && !craftingMachineOf(data, machine.prototype) ? [machine.prototype] : [])];
-    const shown = (name: string) => name === NO_MACHINE
-        ? <Typography variant="body2" component="span" color="text.secondary">Not set</Typography>
-        : <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-            <MachineIcon machine={{ prototype: name, quality: machine.quality }} size={20} />
-            <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{itemLabel(name)}</Box>
-        </Box>;
+    const { names, detailOf } = useMachineChoices(machine);
     return <Tooltip title={machine.prototype ? `${itemLabel(machine.prototype)}, ${prototypeSourceText(machine._prototype_source)}` : ''} describeChild placement="top">
-        <FormControl size="small" sx={sx}>
-            <InputLabel shrink>Machine</InputLabel>
-            <Select value={machine.prototype ?? NO_MACHINE} label="Machine" notched displayEmpty renderValue={shown}
-                inputProps={{ 'aria-label': inputAriaLabel }} onChange={event => onPatch({ prototype: event.target.value, _prototype_source: 'hand' })}>
-                {names.map(name => <MenuItem key={name} value={name}>{shown(name)}</MenuItem>)}
-            </Select>
-        </FormControl>
+        <Box sx={[{ display: 'flex', minWidth: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}>
+            <ItemPickerField kind="machine" label="Machine" inputAriaLabel={inputAriaLabel} value={machine.prototype ?? null} options={names} detailOf={detailOf}
+                icon={machine.prototype ? <MachineIcon machine={machine} size={20} /> : undefined}
+                onChange={value => { if (value) onPatch(chosen(value)); }} />
+        </Box>
     </Tooltip>;
+}
+
+/**
+ * A row's machine icon as the button that opens the Machine picker, the one the Machine field has: picking a machine
+ * there and here is the same
+ */
+export function MachineIconPicker({ machine, onPatch, buttonName, rowName, children }: {
+    machine: MachineFormData; onPatch: Patch; buttonName: string; rowName: string; children: ReactNode;
+}) {
+    const { names, detailOf } = useMachineChoices(machine);
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+    const close = () => setAnchor(null);
+    return <>
+        <ButtonBase aria-label={buttonName} aria-haspopup="dialog" aria-expanded={anchor !== null} onClick={event => setAnchor(event.currentTarget)}
+            sx={{ pointerEvents: 'auto', display: 'inline-flex', borderRadius: 0.5 }}>
+            {children}
+        </ButtonBase>
+        {anchor && <FilterItemPicker anchor={anchor} label={`Choose a machine for ${rowName}`} kind="machine" initialItem={machine.prototype ?? null}
+            itemNames={names} detailOf={detailOf} onClose={close} onApply={name => { onPatch(chosen(name)); close(); }} />}
+    </>;
 }
 
 /**
