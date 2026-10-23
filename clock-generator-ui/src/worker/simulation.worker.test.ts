@@ -1,6 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { afterEach, expect, it, vi } from 'vitest';
-import type { Config } from 'clock-generator/browser';
+import { LATEST_SIDECAR_VERSION, type Config } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
@@ -22,7 +22,7 @@ it.each(['blocked', 'markers'] as const)('keeps blocked container slots through 
     const slot_filters = [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => spelling === 'blocked'
         ? { slot: i + 2, blocked: true } : { slot: i + 2, item: i % 2 ? 'no-item' : 'deconstruction-planner' })];
     const result = await send({ type: 'query', requestId: 200, query: {
-        kind: 'pasted-entities', sidecar_version: '0.13.0', suggested_target: undefined, drills: [], belts: [],
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [], belts: [],
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         chests: [
             { id: 1, type: 'car', slot_filters },
@@ -130,11 +130,11 @@ it('keeps a captured inserter kind, quality and filter mode through paste, save 
     await import('./simulation.worker');
     const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
     await send({ type: 'initialize', factorioData });
-    // A Sidecar 0.13.0 export (its pickups captured as 0.11.0 captures them): a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
+    // An export of the current Sidecar (its pickups captured as 0.11.0 captures them): a legendary stack inserter picks up from a straight belt, a normal fast inserter empties the machine
     const pickup = { type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
         entity_type: 'transport-belt', entity_name: 'turbo-transport-belt', sidecar_version: '0.11.0', model: 'belt', model_version: 2 } };
     const exported = (output: object, input: object = {}) => ({
-        kind: 'pasted-entities' as const, sidecar_version: '0.13.0', suggested_target: undefined, drills: [],
+        kind: 'pasted-entities' as const, sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [],
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0, type: 'machine' }],
         inserters: [
             { source: pickup, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16, ...input },

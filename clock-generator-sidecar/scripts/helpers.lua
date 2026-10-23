@@ -240,8 +240,8 @@ function helpers.resolve_recipe_id(recipe_id)
     return nil
 end
 
----Normalize belt name to transport belt type (converts underground belts and splitters)
----@param name string The entity name (e.g., "turbo-underground-belt", "fast-splitter")
+---Normalize belt name to transport belt type (converts underground belts, splitters and loaders)
+---@param name string The entity name (e.g., "turbo-underground-belt", "fast-splitter", "turbo-loader")
 ---@return string The normalized transport belt name (e.g., "turbo-transport-belt", "fast-transport-belt")
 function helpers.normalize_belt_type(name)
     -- Map underground belts to transport belts
@@ -260,7 +260,29 @@ function helpers.normalize_belt_type(name)
         ["turbo-splitter"] = "turbo-transport-belt"
     }
     
-    return underground_to_belt[name] or splitter_to_belt[name] or name
+    -- Map loaders to transport belts
+    local loader_to_belt = {
+        ["loader"] = "transport-belt",
+        ["loader-1x1"] = "transport-belt",
+        ["fast-loader"] = "fast-transport-belt",
+        ["express-loader"] = "express-transport-belt",
+        ["turbo-loader"] = "turbo-transport-belt"
+    }
+
+    return underground_to_belt[name] or splitter_to_belt[name] or loader_to_belt[name] or name
+end
+
+---The belt type of a belt line: that of its first transport belt, underground belt or splitter, so a loader or a linked
+---belt built before them does not name the line; a line of those pieces only takes its first piece's type
+---@param pieces LuaEntity[] The pieces of the line, in unit-number order
+---@return string The transport belt name (e.g., "turbo-transport-belt")
+function helpers.belt_type_of_pieces(pieces)
+    for _, piece in ipairs(pieces) do
+        if piece.type == "transport-belt" or piece.type == "underground-belt" or piece.type == "splitter" then
+            return helpers.normalize_belt_type(piece.name)
+        end
+    end
+    return helpers.normalize_belt_type(pieces[1].name)
 end
 
 

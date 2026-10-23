@@ -197,8 +197,9 @@ end
 
 ---Extract data from a chest (buffer chest or infinity chest)
 ---@param entity LuaEntity
+---@param inferred_item string|nil The item of an empty buffer chest, worked out from the inserters around it (infer_empty_chest_items)
 ---@return ChestData|nil
-local function extract_chest_data(entity)
+local function extract_chest_data(entity, inferred_item)
     if not entity or not entity.valid then
         return nil
     end
@@ -233,8 +234,12 @@ local function extract_chest_data(entity)
         if not inventory then return nil end
         local contents = inventory.get_contents()
         local storage_size = inventory.supports_bar() and (inventory.get_bar() - 1) or #inventory
-        -- Buffer chests still need one known item to infer their filter.
+        -- A buffer chest has no filter in the game: its item is the first one it holds, else the one the inserters around
+        -- it say (inferred_item); a chest that has neither is left out.
         local first_item = contents and contents[1]
+        if not first_item and inferred_item then
+            first_item = { name = inferred_item }
+        end
         if not first_item then
             return nil
         end
@@ -249,6 +254,133 @@ local function extract_chest_data(entity)
             item_filter = first_item.name
         }
     end
+end
+
+---The items a recipe's products or ingredients name, fluids left out, as a set
+---@param recipe_name string|nil
+---@param field "products"|"ingredients"
+---@return table<string, true>|nil nil when the recipe is unknown or names no item
+local function recipe_items(recipe_name, field)
+    local recipe = recipe_name and prototypes.recipe[recipe_name]
+    if not recipe then
+        return nil
+    end
+    local items = {}
+    local any = false
+    for _, entry in pairs(recipe[field]) do
+        if entry.type == "item" then
+            items[entry.name] = true
+            any = true
+        end
+    end
+    return any and items or nil
+end
+
+---The items a chest empty at export time can hold, from the inserters and drills around it. Each one that touches the
+---chest must move the chest's item, so each gives a set of items the chest's item is in, and the chest's item is in all
+---of them. An inserter's whitelist gives its set; without one, the items of what it takes from (into the chest) or puts
+---into (out of it): a machine's recipe products or ingredients, the lanes of a belt, the item of another chest, once
+---known. A drill that drops into the chest gives the item it mines. A blacklist, a machine without a recipe and a chest
+---of no known item give no set. A chest with exactly one item left is resolved; the others are repeated over until none
+---changes, so a chain of empty chests resolves from either end.
+---@param result ExtractionResult The machines, drills, belts, inserters and the chests that hold something
+---@param empty_chests LuaEntity[] The buffer chests that hold nothing
+---@param known table<number, table<string, true>> A chest's unit number -> the items it holds or has filters for
+---@return table<number, string> The chest's unit number -> its item, for each chest resolved
+local function infer_empty_chest_items(result, empty_chests, known)
+    local inferred = {}
+
+    -- the items of the end of an inserter that is not the chest: nil when they are not known
+    local function items_of_end(target, as_source)
+        if not target or not target.unit_number then
+            return nil
+        end
+        if target.type == "machine" then
+            local machine = result.machines[result.unit_number_to_id[target.unit_number] or 0]
+            return machine and recipe_items(machine.recipe, as_source and "products" or "ingredients") or nil
+        elseif target.type == "belt" then
+            local belt = result.belts[result.belt_unit_number_to_id[target.unit_number] or 0]
+            if not belt then
+                return nil
+            end
+            local items, any = {}, false
+            for _, lane in ipairs(belt.lanes) do
+                if lane.ingredient then
+                    items[lane.ingredient] = true
+                    any = true
+                end
+            end
+            return any and items or nil
+        elseif target.type == "chest" then
+            return known[target.unit_number]
+        end
+        return nil
+    end
+
+    -- the set an inserter that touches the chest gives, nil when it gives none
+    local function items_of_inserter(inserter, other_end, other_is_source)
+        if inserter.filter_mode == "whitelist" and #inserter.filters > 0 then
+            local items = {}
+            for _, name in ipairs(inserter.filters) do
+                items[name] = true
+            end
+            return items
+        end
+        return items_of_end(other_end, other_is_source)
+    end
+
+    local changed = true
+    while changed do
+        changed = false
+        for _, chest in ipairs(empty_chests) do
+            local unit_number = chest.unit_number
+            if unit_number and not inferred[unit_number] then
+                local candidates = nil -- nil: no set yet
+                local function narrow(items)
+                    if not items then
+                        return
+                    end
+                    if not candidates then
+                        candidates = {}
+                        for name in pairs(items) do
+                            candidates[name] = true
+                        end
+                    else
+                        for name in pairs(candidates) do
+                            if not items[name] then
+                                candidates[name] = nil
+                            end
+                        end
+                    end
+                end
+                for _, inserter in ipairs(result.inserters) do
+                    if inserter.sink and inserter.sink.type == "chest" and inserter.sink.unit_number == unit_number then
+                        narrow(items_of_inserter(inserter, inserter.source, true))
+                    end
+                    if inserter.source and inserter.source.type == "chest" and inserter.source.unit_number == unit_number then
+                        narrow(items_of_inserter(inserter, inserter.sink, false))
+                    end
+                end
+                for _, drill in ipairs(result.drills) do
+                    if drill.drop_target_unit_number == unit_number and drill.mined_item_name then
+                        narrow({ [drill.mined_item_name] = true })
+                    end
+                end
+                if candidates then
+                    local only, count = nil, 0
+                    for name in pairs(candidates) do
+                        only, count = name, count + 1
+                    end
+                    if count == 1 then
+                        inferred[unit_number] = only
+                        known[unit_number] = { [only] = true }
+                        changed = true
+                    end
+                end
+            end
+        end
+    end
+    return inferred
 end
 
 ---Extract data from an inserter
@@ -636,7 +768,7 @@ function extraction.extract_all_entities(entities, force)
                 id = belt_id
                 ---@type BeltData
                 local data = {
-                    belt_type = helpers.normalize_belt_type(belt_pieces[1].name),
+                    belt_type = helpers.belt_type_of_pieces(belt_pieces),
                     unit_number = belt_pieces[1].unit_number,
                     lanes = lanes
                 }
@@ -680,11 +812,30 @@ function extraction.extract_all_entities(entities, force)
         end
     end
 
-    -- Fifth pass: extract chests and build chest unit_number -> id mapping
+    -- Fifth pass: extract chests and build chest unit_number -> id mapping. A buffer chest that holds nothing at this
+    -- instant has the item the inserters and drills around it say, if they say one.
+    local known = {} -- chest unit_number -> set of the items it holds or filters for
+    local empty_chests = {}
+    for _, entity in pairs(entities) do
+        if is_chest_entity(entity) and entity.unit_number then
+            local data = extract_chest_data(entity)
+            if data and data.chest_type == "buffer-chest" then
+                known[entity.unit_number] = { [data.item_filter] = true }
+            elseif data and data.chest_type == "infinity-chest" and #data.item_filters > 0 then
+                known[entity.unit_number] = {}
+                for _, filter in ipairs(data.item_filters) do
+                    known[entity.unit_number][filter.item_name] = true
+                end
+            elseif not data and (entity.type == "container" or entity.type == "logistic-container") then
+                table.insert(empty_chests, entity)
+            end
+        end
+    end
+    local inferred = infer_empty_chest_items(result, empty_chests, known)
     local chest_id = 0
     for _, entity in pairs(entities) do
         if is_chest_entity(entity) then
-            local data = extract_chest_data(entity)
+            local data = extract_chest_data(entity, entity.unit_number and inferred[entity.unit_number])
             if data then
                 chest_id = chest_id + 1
                 table.insert(result.chests, data)
