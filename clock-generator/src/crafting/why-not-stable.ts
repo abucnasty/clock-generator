@@ -1,11 +1,13 @@
 /**
  * Why the selected clock does not meet goal 1 (GOALS.md: hold the target rate and get back to it after a loss), in one
- * of three causes, each told from what the alternatives already carry: no search is added and nothing is generated
+ * of four causes, each told from what the alternatives already carry: no search is added and nothing is generated
  * again.
  *
  * - **Moving lane phases:** the clock is made for a moving belt and holds from the modeled start, but falls short from
  *   another lane phase of the belt: at the start (`as_built.failed_pickup_phases`), or only after a loss
  *   (`backpressure_loss.broken_at_other_lane_phases` holds every loss it does not get back from).
+ * - **Output chest full:** the build puts its output into a chest nothing takes from, and where the run that failed the
+ *   clock ended the chest had no room left for it: the same chest the web form warns can fill up.
  * - **No recovery:** it holds the rate, and does not get back to it after the losses it names.
  * - **Nothing holds:** it does not hold the rate; the nearest clock is selected, and the clocks that could not be made
  *   are listed with their reasons.
@@ -14,11 +16,12 @@
  */
 import type { BackpressureLossVerdict } from "./backpressure-loss";
 import type { ClockBelt } from "./clock";
+import type { FullOutputChest } from "./full-output-chests";
 import type { ClockInsight } from "./insights";
 import type { ClockRanking } from "./rank";
 import type { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict } from "./trial";
 
-export type WhyNotStableCause = "moving lane phases" | "no recovery" | "nothing holds";
+export type WhyNotStableCause = "moving lane phases" | "output chest full" | "no recovery" | "nothing holds";
 
 export interface WhyNotStable {
     cause: WhyNotStableCause;
@@ -62,6 +65,8 @@ export interface WhyNotStableClock {
     /** What the clock-only check moved from the start it reports: a period, or over `repeat_periods` */
     as_built_output?: { items: number; repeat_periods?: number; repeat_output_items?: number };
     spare_time: SpareTime | null;
+    /** The chests the output goes into that nothing empties and that were full where the run that failed the clock ended */
+    full_output_chests: readonly FullOutputChest[];
 }
 
 /**
@@ -90,6 +95,7 @@ export function whyNotStableClockOf(clock: {
         ...(as_built && { as_built_output: { items: as_built.actual_output_items, repeat_periods: as_built.repeat_periods,
             repeat_output_items: as_built.repeat_output_items } }),
         spare_time: clock.insights.find(it => it.spare_time !== undefined)?.spare_time ?? null,
+        full_output_chests: as_built?.full_output_chests ?? [],
     };
 }
 
@@ -101,7 +107,11 @@ const figure = (value: number) => Number(value.toFixed(2)).toString();
 
 /** "Inserter 2" or "inserters 2 and 4", from "inserter:2"-style keys */
 function insertersOf(phases: Record<string, readonly [number, number]>): string {
-    const ids = Object.keys(phases).map(key => key.replace(/^inserter:/, ""));
+    return insertersNumbered(Object.keys(phases).map(key => key.replace(/^inserter:/, "")));
+}
+
+/** "inserter 2" or "inserters 2 and 4", from the inserters' numbers */
+function insertersNumbered(ids: readonly string[]): string {
     return ids.length === 1 ? `inserter ${ids[0]}` : `inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]}`;
 }
 
@@ -203,17 +213,49 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
  * that holds the target and does not recover is told by noRecovery, so no clock holds the target here
  */
 function nothingHolds(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable {
-    const { target_items_per_second: target, not_made } = build;
-    const rate = clock.assessment.items_per_second;
-    const off = rate - target;
-    const nearest = Math.abs(off) < MIN_OFF_TARGET
-        ? `The closest, ${clock.label}, moves ${figure(rate)} a second from the modeled start, and does not keep it up from every start.`
-        : `The closest, ${clock.label}, moves ${figure(rate)} a second, ${figure(Math.abs(off))} ${off < 0 ? "under" : "over"} the target.`;
-    const reasons = not_made.length === 0 ? ""
-        : ` Not made: ${not_made.map(it => `${it.label} (${it.reason.replace(/\.$/, "")})`).join("; ")}.`;
     return {
         cause: "nothing holds",
-        message: `No clock holds the target rate of ${figure(target)} a second. ${nearest}${reasons}`,
+        message: `No clock holds the target rate of ${figure(build.target_items_per_second)} a second. ${nearestOf(clock, build)}${notMadeOf(build)}`,
+    };
+}
+
+/** The clock nearest to the target, with how far it is off */
+function nearestOf(clock: WhyNotStableClock, build: WhyNotStableBuild): string {
+    const rate = clock.assessment.items_per_second;
+    const off = rate - build.target_items_per_second;
+    return Math.abs(off) < MIN_OFF_TARGET
+        ? `The closest, ${clock.label}, moves ${figure(rate)} a second from the modeled start, and does not keep it up from every start.`
+        : `The closest, ${clock.label}, moves ${figure(rate)} a second, ${figure(Math.abs(off))} ${off < 0 ? "under" : "over"} the target.`;
+}
+
+/** " Not made: ...", the clocks that could not be made with their reasons; empty when all were */
+function notMadeOf(build: WhyNotStableBuild): string {
+    return build.not_made.length === 0 ? ""
+        : ` Not made: ${build.not_made.map(it => `${it.label} (${it.reason.replace(/\.$/, "")})`).join("; ")}.`;
+}
+
+/** A count as a player reads it, with thousands separators: "9,600" */
+const count = (value: number) => value.toLocaleString("en-US");
+
+/** "Chest 1 fills up. Nothing takes any electromagnetic science pack out of it, so it holds 9,600 of 9,600 and inserters 1 and 2 have nowhere to drop." */
+function fullChestSentence(chest: FullOutputChest): string {
+    const inserters = chest.inserter_ids.map(String);
+    return `${chest.name} fills up. Nothing takes any ${chest.item_label} out of it, so it holds ${count(chest.held)} of ${count(chest.capacity)} `
+        + `and ${insertersNumbered(inserters)} ${inserters.length === 1 ? "has" : "have"} nowhere to drop.`;
+}
+
+/**
+ * The failing clock's run ended with a chest it puts its output into full, and nothing takes from it: the rate falls
+ * short because of the chest, whatever else the clock does
+ */
+function outputChestFull(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable | null {
+    if (clock.full_output_chests.length === 0) {
+        return null;
+    }
+    return {
+        cause: "output chest full",
+        message: `No clock holds the target rate of ${figure(build.target_items_per_second)} a second: ${clock.full_output_chests.map(fullChestSentence).join(" ")} `
+            + `${nearestOf(clock, build)} Use an infinity chest, or add an inserter that takes the items out, and generate again.${notMadeOf(build)}`,
     };
 }
 
@@ -228,6 +270,7 @@ export function whyNotStable(clocks: readonly WhyNotStableClock[], selected_inde
     }
     // a clock that does not recover is told so when it holds the target itself, not another rate
     const at_target = Math.abs(clock.assessment.items_per_second - build.target_items_per_second) < MIN_OFF_TARGET;
-    return movingLanePhases(clock, build)
+    return outputChestFull(clock, build)
+        ?? movingLanePhases(clock, build)
         ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock) : nothingHolds(clock, build));
 }

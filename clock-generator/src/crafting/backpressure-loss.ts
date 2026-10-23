@@ -183,12 +183,13 @@ export function backpressureLossesOf(entity_registry: Pick<ReadableEntityRegistr
     ];
 }
 
-function isEmptiedByTheBuild(inserters: readonly { source: { entity_id: EntityId } }[], chest_id: EntityId): boolean {
+/** Whether an inserter of the build takes from the chest, so that what is put into it does not stay */
+export function isEmptiedByTheBuild(inserters: readonly { source: { entity_id: EntityId } }[], chest_id: EntityId): boolean {
     return inserters.some(it => it.source.entity_id.id === chest_id.id);
 }
 
 /** The items an inserter moves: its filters, or without any, what the machine it takes from makes */
-function itemsCarried(entity_registry: Pick<ReadableEntityRegistry, "getEntityById">, inserter: { filtered_items: Set<ItemName>; source: { entity_id: EntityId } }): ItemName[] {
+export function itemsCarried(entity_registry: Pick<ReadableEntityRegistry, "getEntityById">, inserter: { filtered_items: Set<ItemName>; source: { entity_id: EntityId } }): ItemName[] {
     if (inserter.filtered_items.size > 0) {
         return Array.from(inserter.filtered_items);
     }
