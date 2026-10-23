@@ -330,7 +330,8 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
         id: "unstable",
         scope: "clock",
         title: "This clock does not hold the target rate",
-        what: `Driven only by its clock windows, the build moved ${actual} of ${check.expected_output_items} items in a clock period`
+        what: `Driven only by its clock windows, the build moved ${actual} of ${check.expected_output_items} items `
+            + (as_built?.output_basis === "long-run mean" ? "a clock period on average over a long run" : "in a clock period")
             + (offset ? ` when the clock started ${offset} ticks later relative to the machines` : "") + `.${repeats}`,
         why: "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start "
             + "points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand "

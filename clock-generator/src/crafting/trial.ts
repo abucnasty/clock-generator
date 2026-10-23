@@ -96,6 +96,14 @@ export interface AsBuiltStabilityCheck {
     holds: boolean;
     /** Output of the first failing stock/clock start, or of the unshifted clock when all pass. */
     actual_output_items: number;
+    /**
+     * What `actual_output_items` is, on a clock assessed for listing (see `settledOutputOf`) that fails its first
+     * check: the mean items a period over the judged part of the clock's long run, or, where its period is too long
+     * for a long run, the one period the check measured. Absent on a check as the generator makes it.
+     */
+    output_basis?: "long-run mean" | "one period";
+    /** The unshifted clock did not hold its first period: `actual_output_items` is that one period (see `withSettledOutput`) */
+    first_check_failed?: true;
     /** Number of clock start phases simulated (stops at the first failure) */
     start_phases_checked: number;
     /** Clock offset of the first failing start phase */
@@ -640,6 +648,7 @@ export function runAsBuiltCheck(
         holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
         start_phases_checked: 1,
+        ...(!result.stability_check.holds && { first_check_failed: true as const }),
         repeat_periods: result.stability_check.repeat_periods,
         repeat_output_items: result.stability_check.repeat_output_items,
     };
@@ -1025,6 +1034,40 @@ export function roundedClockTrial(
         ? startDependenceVerdictOf(planned_on, rounded, holds, logger, report) : null;
     // the result keeps the period the plan has: the rounded clock is the same export, counting it rounded down
     return { result: { ...rounded, simulation_duration: result.simulation_duration }, holds, loss, start_dependence };
+}
+
+/**
+ * What a clock that failed its first check moves a period, for listing it. The first check measures one period after
+ * a warm-up, and a build that does not repeat with its clock moves different amounts in the periods that follow (cell
+ * 02 of stupidfathobbit: 480 to 608 items, 608 in the period measured, 546 on average, which is what the game makes), so
+ * a clock that fails it is listed by the mean items a period over the judged part of its long run, as one that fails
+ * later is (`longRunOfFreeRunningBuild`). The check itself, and the clocks the generator picks by it, are not changed.
+ * A period too long for a long run keeps the one period the check measured, and says so.
+ */
+export function withSettledOutput(
+    planned_on: Config,
+    result: BlueprintGenerationResult,
+    period: number,
+    logger: Logger,
+): BlueprintGenerationResult {
+    const { as_built } = result.stability_check;
+    if (as_built === undefined || as_built.first_check_failed !== true) {
+        return result;
+    }
+    const one_period = { ...as_built, output_basis: "one period" as const };
+    const reported = (check: AsBuiltStabilityCheck): BlueprintGenerationResult =>
+        ({ ...result, stability_check: { ...result.stability_check, as_built: check } });
+    try {
+        const config = { ...planned_on, overrides: { ...planned_on.overrides, derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } };
+        const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
+            [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), period);
+        const long_run = longRunOfFreeRunningBuild(config, windows, period, result.stability_check.expected_output_items, quietLogger(logger));
+        return reported(long_run === null ? one_period
+            : { ...as_built, actual_output_items: long_run.output_items_per_period, output_basis: "long-run mean" });
+    } catch (error) {
+        logger.log(`The long run of a clock that fails its first check could not be made, so it is listed by the one period measured: ${error instanceof Error ? error.message : String(error)}`);
+        return reported(one_period);
+    }
 }
 
 /**

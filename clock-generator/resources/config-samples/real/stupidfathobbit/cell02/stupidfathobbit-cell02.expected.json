@@ -238,13 +238,30 @@
  },
  "owner_scaffold": {
   "date": "2026-10-23",
-  "note": "measured in the harness (Factorio 2.1.21) on the owner's scaffold with its circuit export throttled to 80 a second, 36,000 ticks after 3,600 of warm-up and 4,800 of settling; the figures above are the cell in the save, whose output backs up 7.7% of the time",
+  "note": "measured in the harness (Factorio 2.1.21) on the owner's scaffold with its circuit export throttled to 80 a second, 36,000 ticks after 3,600 of warm-up and 4,800 of settling; the figures above are the cell in the save, whose output backs up 7.7% of the time; a clock that fails its first check is listed by the mean of its long run, and each clock's game figure is products finished over 36,000 ticks",
   "unclocked_items_per_second": 82.86,
   "selected_clock": {
-   "alternative": "swings-1",
+   "alternative": "swings-3",
    "verdict": "unstable",
-   "simulated_items_per_second": 69.09,
-   "game_items_per_second": 62.0
-  }
+   "simulated_items_per_second": 65.19,
+   "game_items_per_second": 66.42
+  },
+  "nearest_clocks": [
+   {
+    "alternative": "swings-1",
+    "simulated_items_per_second": 61.93,
+    "game_items_per_second": 62.0
+   },
+   {
+    "alternative": "swings-2",
+    "simulated_items_per_second": 63.3,
+    "game_items_per_second": 62.14
+   },
+   {
+    "alternative": "swings-3",
+    "simulated_items_per_second": 65.19,
+    "game_items_per_second": 66.42
+   }
+  ]
  }
 }
