@@ -8,6 +8,7 @@ import {
     useStore,
     type EdgeMarker,
     type NodeTypes,
+    type NodeProps,
     type NodeMouseHandler,
     type Connection,
     type Edge,
@@ -35,11 +36,17 @@ import { flowFocus, flowEntityKey } from '../utils/flowFocus';
 import { FlowTileBackground } from './FlowTileBackground';
 import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
+import { useFlowPortUpdates } from '../hooks/useFlowPortUpdates';
 
+/**
+ * A node draws only its data, so it renders again only when that changes: React Flow passes a new width and height when
+ * it measures the nodes, and a hover or selection gives each node a new object with the same data.
+ */
+const sameData = (before: NodeProps, after: NodeProps) => before.data === after.data;
 const nodeTypes: NodeTypes = {
-    entityNode: EntityFlowNode,
-    inserterNode: InserterFlowNode,
-    drillNode: DrillFlowNode,
+    entityNode: memo(EntityFlowNode, sameData),
+    inserterNode: memo(InserterFlowNode, sameData),
+    drillNode: memo(DrillFlowNode, sameData),
 };
 
 /** The edges of a hovered node, and their arrowheads */
@@ -204,6 +211,7 @@ function FlowContent({
     })), [graphNodes, focus, selection, activeNodeId]);
     const measured = useMeasuredFlowNodes(nodes);
     const routes = useFlowRoutes(graphNodes, edges, measured.measurements);
+    useFlowPortUpdates(graphNodes);
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
     const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
     const edgesWithSelection = useMemo(() => edges.map(edge => {
