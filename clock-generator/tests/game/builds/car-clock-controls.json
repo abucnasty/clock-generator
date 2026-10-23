@@ -377,7 +377,7 @@
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "71cf809040c82fabf07a7810d7d013ac66d5e58b5541d0f0435fe65fcd75fa59"
+        "clock_sha256": "fac7369e94a0aa5dc952b67405305bda2ab6938c2a2bdb175c8d327c9bb158d2"
       }
     },
     "car-swings-3-takers-last": {
@@ -756,7 +756,7 @@
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "71cf809040c82fabf07a7810d7d013ac66d5e58b5541d0f0435fe65fcd75fa59"
+        "clock_sha256": "fac7369e94a0aa5dc952b67405305bda2ab6938c2a2bdb175c8d327c9bb158d2"
       }
     },
     "car-swings-1": {
@@ -1135,7 +1135,7 @@
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "c970ce2df238af8c72eb45c05a8ac4773a4ed470ec3ec782e95e06a9e7c614d8"
+        "clock_sha256": "80cbf4e03faec66331994d5fd52cd1cf19d34ec1d658e852aa37a89fe43fc5f0"
       }
     }
   }

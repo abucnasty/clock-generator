@@ -173,6 +173,11 @@ export interface DeciderWindows {
     subtick_scale?: number;
 }
 
+/** A window's clock values as its conditions read them: "2–4", or "28" for a window of one value */
+function rangeText(range: OpenRange): string {
+    return range.start_inclusive === range.end_inclusive ? `${range.start_inclusive}` : `${range.start_inclusive}–${range.end_inclusive}`;
+}
+
 /** Windows are listed by their values when there are at most this many */
 const LISTED_WINDOWS = 3;
 
@@ -202,7 +207,7 @@ export function plannedDescriptionLines(
     const what = EntityId.isDrill(entity_ids[0])
         ? `Mines ${formatCount(swings_a_period.multiply(DRILL_ITEMS_PER_SWING))}`
         : `${formatCount(swings_a_period)} ${plural(swings_a_period.toDecimal() === 1 ? 1 : 2, "swing")}`;
-    const listed = windows.listed === null ? "" : `: open ${windows.listed.map(range => `${range.start_inclusive}–${range.end_inclusive}`).join(", ")}`;
+    const listed = windows.listed === null ? "" : `: open ${windows.listed.map(rangeText).join(", ")}`;
     const unusual = [
         ...(windows.repeat ? [`Windows repeat every ${windows.repeat.modulus} ticks: ${SignalId.toDescriptionString(windows.repeat.signal)} = clock mod ${windows.repeat.modulus}`] : []),
         ...(windows.subtick_scale ? [`Reads the subtick clock: windows in 1/${windows.subtick_scale} ticks`] : []),
@@ -215,9 +220,9 @@ export function plannedDescriptionLines(
     ];
 }
 
-/** The windows' line: "in 1 window per 72-tick period: open 28–28" */
+/** The windows' line: "in 1 window per 72-tick period: open 28" */
 function windowsText(windows: DeciderWindows, period_text: string): string {
-    const listed = windows.listed === null ? "" : `: open ${windows.listed.map(range => `${range.start_inclusive}–${range.end_inclusive}`).join(", ")}`;
+    const listed = windows.listed === null ? "" : `: open ${windows.listed.map(rangeText).join(", ")}`;
     return `${windows.count} ${plural(windows.count, "window")} per ${period_text}-tick period${listed}`;
 }
 
@@ -232,7 +237,7 @@ function unusualWindowLines(windows: DeciderWindows): string[] {
 /**
  * The description of a drill into a chest, whose windows are made from the takes out of the chest (see
  * chestDrillWindows), outside the swing counts:
- * "[entity=big-mining-drill] [item=iron-ore] → [entity=car]  (drill 1)", "Open in 1 window per 72-tick period: open 28–28".
+ * "[entity=big-mining-drill] [item=iron-ore] → [entity=car]  (drill 1)", "Open in 1 window per 72-tick period: open 28".
  */
 export function chestDrillDescriptionLines(
     drill_ids: EntityId[],
@@ -265,7 +270,7 @@ export function unplannedDescriptionLines(
     signal: SignalId | null,
 ): string[] {
     const items = itemIcons(item_names);
-    const open = `${signal === null ? CLOCK_ICON : SignalId.toDescriptionString(signal)} ${window.start_inclusive}–${window.end_inclusive}`;
+    const open = `${signal === null ? CLOCK_ICON : SignalId.toDescriptionString(signal)} ${rangeText(window)}`;
     if (inserter_clock.kind === "fuel") {
         const { first, routes } = identityLines(inserter_ids, registry, items, "Fuel: ");
         return [
