@@ -1,5 +1,6 @@
 import { Config } from "../config";
 import { EnableControlMode } from "../common/enable-control-types";
+import { ChestType, chestName } from "../common/entity-types";
 import { clockPosition } from "../control-logic/enable-control";
 import { DrillChestWorkingMode } from "../control-logic/drill/modes/chest-working-mode";
 import { OpenRange } from "../data-types";
@@ -19,6 +20,8 @@ export interface ChestDrillClock {
     drill_id: number;
     /** The config id of the chest it drops into */
     chest_id: number;
+    /** What the chest is: a car, a cargo wagon, a buffer chest ... (chestName names it) */
+    chest_type: ChestType;
     item: string;
     /** Ticks it is enabled in a period, on average where the period is not a whole number of ticks; null when always enabled */
     enabled_ticks: number | null;
@@ -500,7 +503,7 @@ export function chestDrillWindows(config: Config, windows: Map<string, OpenRange
     const reports: ChestDrillClock[] = [];
     for (const { plan, mode, extra_ticks, clocked } of drills) {
         const key = plan.drill.entity_id.id;
-        const report = { drill_id: plan.drill_id, chest_id: plan.chest_id, item: plan.item, planned: mode === "AUTO" };
+        const report = { drill_id: plan.drill_id, chest_id: plan.chest_id, chest_type: plan.chest.chest_type, item: plan.item, planned: mode === "AUTO" };
         const given = windows.get(key);
         if (given !== undefined) {
             reports.push(given.length === 0
@@ -568,7 +571,7 @@ export function chestDrillFallbackConfig(config: Config, fallback: "one tick lon
 
 /** One line per drill into a chest: its windows, or why it stays always enabled */
 export function chestDrillClockLine(drill: ChestDrillClock): string {
-    const what = `Drill ${drill.drill_id} into chest ${drill.chest_id}`;
+    const what = `Drill ${drill.drill_id} into ${chestName(drill.chest_type, drill.chest_id)}`;
     if (drill.enabled_ticks === null) {
         return `${what}: always enabled, since ${drill.always_enabled_because}`;
     }

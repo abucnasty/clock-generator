@@ -1,4 +1,4 @@
-import { SlotContainerType } from "../../common/entity-types";
+import { chestName, SlotContainerType } from "../../common/entity-types";
 import { BLOCKED_SLOT, SlotFilter } from "../../common/slot-filter";
 import { SlotContainerConfig, SlotContentConfig } from "../../config/schema";
 import { FactorioDataService, ItemName } from "../../data";
@@ -62,7 +62,7 @@ export class SlotContainer implements Chest {
 function fromConfig(config: SlotContainerConfig, items_put_in: readonly ItemName[] = []): SlotContainer {
     const quality = ("quality" in config ? config.quality : undefined) ?? "normal";
     const slots = FactorioDataService.containerSlots(config.type, quality);
-    const where = `Chest ${config.id} (${config.type})`;
+    const where = chestName(config.type, config.id);
     const filters: SlotFilter[] = new Array(slots).fill(null);
     for (const filter of config.slot_filters ?? []) {
         if (filter.slot > slots) {

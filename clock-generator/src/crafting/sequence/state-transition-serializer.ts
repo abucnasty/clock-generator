@@ -1,5 +1,6 @@
 import { Entity, EntityType, ReadableEntityRegistry } from "../../entities";
 import { StateTransitionHistory, StateTransitionEntityType } from "./state-transition-history";
+import { chestName } from "../../common/entity-types";
 
 /**
  * A single state transition entry that is JSON-serializable
@@ -206,6 +207,9 @@ function getEntityLabel(entity: Entity): string {
     }
     if (Entity.isInserter(entity)) {
         return `Inserter ${entity.entity_id.number}`;
+    }
+    if (Entity.isChest(entity)) {
+        return chestName(entity.chest_type, entity.entity_id.number);
     }
     return entity.entity_id.id;
 }

@@ -66,12 +66,12 @@ describe("a car, a tank or a cargo wagon from its config", () => {
 
     it("refuses slot filters and contents it cannot hold", () => {
         expect(() => SlotContainer.fromConfig({ type: "cargo-wagon", id: 3, slot_filters: [{ slot: 41, item: "coal" }] }))
-            .toThrow("Chest 3 (cargo-wagon): slot filter 41 is past its 40 slots");
+            .toThrow("Cargo wagon 3: slot filter 41 is past its 40 slots");
         expect(() => SlotContainer.fromConfig({ type: "car", id: 3, contents: [{ slot: 1, item: "coal", count: 51 }] }))
-            .toThrow("Chest 3 (car): 51 coal in slot 1, more than a stack of 50");
+            .toThrow("Car 3: 51 coal in slot 1, more than a stack of 50");
         expect(() => SlotContainer.fromConfig({ type: "car", id: 3, slot_filters: [{ slot: 2, item: "coal" }],
-            contents: [{ slot: 2, item: "wood", count: 1 }] })).toThrow("Chest 3 (car): slot 2 is filtered to coal and cannot hold wood");
+            contents: [{ slot: 2, item: "wood", count: 1 }] })).toThrow("Car 3: slot 2 is filtered to coal and cannot hold wood");
         expect(() => SlotContainer.fromConfig({ type: "car", id: 3, slot_filters: [{ slot: 2, item: "coal" }, { slot: 2, item: "wood" }] }))
-            .toThrow("Chest 3 (car): slot 2 is filtered twice");
+            .toThrow("Car 3: slot 2 is filtered twice");
     });
 });
