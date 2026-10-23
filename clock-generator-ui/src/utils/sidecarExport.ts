@@ -114,6 +114,14 @@ export function looksLikeSidecarExport(text: string): boolean {
 }
 
 /**
+ * What the paste preview says of a drop the Sidecar marked as side-loading onto another belt, `tiles` along the belt from
+ * the drop. The drop is imported as any other: the mark is a known limit of the result.
+ */
+export function sideLoadedDropMessage(tiles: number): string {
+    return `drops onto a ${tiles} tile belt buffer that side-loads onto another belt. Imported as an ordinary drop: where the other belt is busy, the game has less room than the clock generator assumes.`;
+}
+
+/**
  * What a capture warning says about its pickup. A splitter and a side-loaded pickup tile are out of scope, so their
  * warnings say so rather than that the geometry is waiting to be calibrated.
  */

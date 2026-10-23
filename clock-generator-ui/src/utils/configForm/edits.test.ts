@@ -131,6 +131,27 @@ describe('inserters', () => {
         expect(config.inserters[2]).toMatchObject({ id: 3, stack_size: 4, filters: ['iron-plate'], source: { type: 'machine', id: 1 } });
     });
 
+    describe('marked as side-loading onto another belt', () => {
+        const mark = { status: 'side-loaded', tiles: 3 } as const;
+        const marked = (): ConfigFormData => {
+            const config = form();
+            config.inserters[2] = { ...config.inserters[2], sink: { type: 'belt', id: 1, drop_capture: mark } };
+            return config;
+        };
+
+        it('keeps the mark when the sink is picked again as it is, and when other fields change', () => {
+            expect(edits.updateInserter(marked(), 2, { stack_size: 4 }).inserters[2].sink).toEqual({ type: 'belt', id: 1, drop_capture: mark });
+            expect(edits.updateInserter(marked(), 2, { sink: { type: 'belt', id: 1, drop_capture: mark } }).inserters[2].sink)
+                .toEqual({ type: 'belt', id: 1, drop_capture: mark });
+        });
+
+        it('loses the mark when the sink is pointed at another belt, a machine or a chest', () => {
+            for (const sink of [{ type: 'belt', id: 2 }, { type: 'machine', id: 2 }, { type: 'chest', id: 1 }] as const) {
+                expect(edits.updateInserter(marked(), 2, { sink }).inserters[2].sink).toEqual(sink);
+            }
+        });
+    });
+
     it('removes the inserter at an index and renumbers the rest', () => {
         const config = edits.removeInserter(form(), 1);
         expect(ids(config.inserters)).toEqual([1, 2]);
