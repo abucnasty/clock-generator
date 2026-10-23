@@ -41,6 +41,10 @@ A start-dependent clock is listed as unstable in the one word of the clock (`ver
 
 The requested override alone is not evidence that a check completed. A null `assessment.start_dependence` can mean not requested or unavailable; the UI preserves the request and generation completion separately and counts actual returned starts. Fractional periods omit shifted-phase samples. Holding from the modeled cold start, numerical rate, sampled-start verdict and evaluated recovery are separate facts: a start-dependent clock can hold its requested rate and have usable loss-trial results while its overall verdict is unstable.
 
+### The rate of a clock that fails its first check
+
+The first check measures one period, the eleventh after a cold start. A build whose state does not repeat with its clock moves different amounts in the periods that follow, so that one period can be far from what the clock makes: on the stupidfathobbit cell 02 sample the 1-swing clock moves 480 to 608 items in a period of 528 ticks, 608 in the period measured and 546 on average, and the game makes 546 (62.0 a second where the one period said 69.09). A clock that fails its first check is therefore listed, ranked and described by the mean items a period over the judged part of its long run, the figure a clock that fails the long run already gets, and its check says which it is (`as_built.output_basis`: `long-run mean`, or `one period` where the period is too long for a long run). The check, the clocks that are made and every verdict are unchanged. The long run is made where the primary clock does not hold, since the rates rank the selection only where no clock holds. On the sample the clock with the highest rate by the mean is the 3-swing one (65.19 a second), which makes 66.4 in the game; the 1-swing clock the one period favoured makes 62.0.
+
 ### How a clock is tried for it
 
 Ordinary moving pickups are checked with independent phases on their two lanes, for both settled output and
