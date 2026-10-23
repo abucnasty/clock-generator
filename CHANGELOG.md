@@ -13,7 +13,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ### Added
 - Cars, tanks, cargo wagons and rocket silos can be chests, with mixed items, filtered slots and wagon slots by quality; a silo fills its rocket by weight. The web form adds and edits them, and Sidecar 0.12.0 exports them.
 - Container slots filtered to No item or Deconstruction planner stay blocked, including when pasted from Sidecar; a config marks such a slot `blocked: true`. The inventory editor can block all remaining unfiltered slots at once.
-- A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo. Sidecar 0.12.0 exports it, and the web form shows its chest.
+- A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo. Sidecar 0.12.0 exports it, and the web form picks it in the drill's Target, with the machines; the inserters that take from it know the ore it holds.
 - A mining drill that drops into a chest is switched on only for the ticks it needs to top the chest up just in time for the inserters that take from it, instead of always; the clock says to wire it with Read resources off.
 - A build's product can leave through the car, wagon or chest its machine fills, and a container used as a hub by several machines warms up and gets a clock.
 - Every clock says which generator made it, with the version and the site, in the blueprint's description, on the clock combinator and in its tags. The clock combinator also lists the inserters and drills that are not on the clock, when there is room.
