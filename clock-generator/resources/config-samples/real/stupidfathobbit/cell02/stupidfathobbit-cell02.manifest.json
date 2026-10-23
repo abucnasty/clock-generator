@@ -1042,5 +1042,22 @@
       },
       "n": 1
     }
+  ],
+  "replaced": [
+    {
+      "date": "2026-10-23",
+      "what": "scaffold and config",
+      "note": "given by the owner after an in-game check, replacing the extracted ones (the extracted scaffold was not the build). The scaffold has 111 entities: 20 beacons (one more, on the first advanced circuit machine) and a plastic line and a circuit line. The circuit export is throttled to the config's 80 a second (40 a lane) by a constant combinator's signal S: four inserters take from the circuit line into infinity chests, and they and their chests and combinators are environment, not in the config. The config is the Sidecar's export of the build, with the circuit belt (belt 2) exported at 40 a second a lane, the draw measured from the save the cell came from (#189). The extraction record in steps is kept as it was.",
+      "files": [
+        {
+          "file": "stupidfathobbit-cell02-scaffold.txt",
+          "sha256": "a83ef10325178d103db2b8a837a6b7936e9b779bbe86a852ee3a8528062edfd1"
+        },
+        {
+          "file": "stupidfathobbit-cell02.json",
+          "sha256": "6ba78ed31943b79181217f53f0e8181187da7e1622b358eb6890e4f1c64bfa9e"
+        }
+      ]
+    }
   ]
 }
