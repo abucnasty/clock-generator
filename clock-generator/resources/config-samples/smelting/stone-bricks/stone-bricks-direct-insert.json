@@ -10,7 +10,7 @@
       "recipe": "stone-brick",
       "productivity": 50,
       "crafting_speed": 91.899995803833,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     }
   ],
   "drills": {

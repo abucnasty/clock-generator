@@ -10,35 +10,35 @@
       "recipe": "casting-iron",
       "productivity": 150,
       "crafting_speed": 157.075,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 2,
       "recipe": "logistic-science-pack",
       "productivity": 100,
       "crafting_speed": 63.00781250000001,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 3,
       "recipe": "transport-belt",
       "productivity": 50,
       "crafting_speed": 186.75,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 4,
       "recipe": "casting-iron-gear-wheel",
       "productivity": 150,
       "crafting_speed": 157.075,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 5,
       "recipe": "logistic-science-pack",
       "productivity": 100,
       "crafting_speed": 63.00781250000001,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     }
   ],
   "inserters": [

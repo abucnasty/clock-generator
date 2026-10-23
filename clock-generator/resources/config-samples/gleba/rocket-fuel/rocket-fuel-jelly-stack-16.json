@@ -10,7 +10,7 @@
       "recipe": "rocket-fuel-from-jelly",
       "productivity": 300,
       "crafting_speed": 84.6655,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 1245.8600000000001
     },
     {
@@ -18,7 +18,7 @@
       "recipe": "jellynut-processing",
       "productivity": 150,
       "crafting_speed": 56.122,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 926.17
     },
     {
@@ -26,7 +26,7 @@
       "recipe": "rocket-fuel-from-jelly",
       "productivity": 300,
       "crafting_speed": 84.6655,
-      "type": "biochamber",
+      "prototype": "biochamber",
       "energy_consumption_bonus": 1245.8600000000001
     }
   ],

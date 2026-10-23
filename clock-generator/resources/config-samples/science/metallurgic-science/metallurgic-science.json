@@ -10,28 +10,28 @@
       "recipe": "carbon",
       "productivity": 200,
       "crafting_speed": 68.875,
-      "type": "machine"
+      "prototype": "cryogenic-plant"
     },
     {
       "id": 2,
       "recipe": "tungsten-carbide",
       "productivity": 100,
       "crafting_speed": 40.3125,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 3,
       "recipe": "metallurgic-science-pack",
       "productivity": 150,
       "crafting_speed": 180.75,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 4,
       "recipe": "tungsten-plate",
       "productivity": 150,
       "crafting_speed": 191.481,
-      "type": "machine"
+      "prototype": "foundry"
     }
   ],
   "inserters": [

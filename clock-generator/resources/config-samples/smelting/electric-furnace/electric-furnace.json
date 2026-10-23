@@ -22,21 +22,21 @@
       "recipe": "stone-brick",
       "productivity": 50,
       "crafting_speed": 80.05,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     },
     {
       "id": 4,
       "recipe": "stone-brick",
       "productivity": 50,
       "crafting_speed": 80.05,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     },
     {
       "id": 5,
       "recipe": "stone-brick",
       "productivity": 50,
       "crafting_speed": 80.05,
-      "type": "furnace"
+      "prototype": "electric-furnace"
     }
   ],
   "drills": {

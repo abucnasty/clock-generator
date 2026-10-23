@@ -10,28 +10,28 @@
       "recipe": "utility-science-pack",
       "productivity": 100,
       "crafting_speed": 52.9159375,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 2,
       "recipe": "utility-science-pack",
       "productivity": 100,
       "crafting_speed": 52.9159375,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 3,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
       "crafting_speed": 225.33100000000002,
-      "type": "machine"
+      "prototype": "foundry"
     },
     {
       "id": 4,
       "recipe": "plastic-bar",
       "productivity": 300,
       "crafting_speed": 99.19399999999999,
-      "type": "machine"
+      "prototype": "cryogenic-plant"
     }
   ],
   "inserters": [

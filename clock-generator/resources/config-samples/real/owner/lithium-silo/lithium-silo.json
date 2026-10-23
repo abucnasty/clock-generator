@@ -10,7 +10,6 @@
       "recipe": "lithium",
       "productivity": 200,
       "crafting_speed": 53.122,
-      "type": "machine",
       "prototype": "cryogenic-plant"
     },
     {
@@ -18,7 +17,6 @@
       "recipe": "lithium",
       "productivity": 200,
       "crafting_speed": 53.122,
-      "type": "machine",
       "prototype": "cryogenic-plant"
     },
     {
@@ -26,7 +24,6 @@
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace",
       "prototype": "electric-furnace"
     },
     {
@@ -34,7 +31,6 @@
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace",
       "prototype": "electric-furnace"
     },
     {
@@ -42,7 +38,6 @@
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace",
       "prototype": "electric-furnace"
     },
     {
@@ -50,7 +45,6 @@
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace",
       "prototype": "electric-furnace"
     },
     {
@@ -58,7 +52,6 @@
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace",
       "prototype": "electric-furnace"
     },
     {
@@ -66,7 +59,6 @@
       "recipe": "lithium-plate",
       "productivity": 50,
       "crafting_speed": 66,
-      "type": "furnace",
       "prototype": "electric-furnace"
     }
   ],

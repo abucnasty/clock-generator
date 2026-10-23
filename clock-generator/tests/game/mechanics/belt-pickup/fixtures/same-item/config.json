@@ -10,7 +10,7 @@
       "recipe": "iron-gear-wheel",
       "productivity": 0,
       "crafting_speed": 3.125,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     }
   ],
   "inserters": [

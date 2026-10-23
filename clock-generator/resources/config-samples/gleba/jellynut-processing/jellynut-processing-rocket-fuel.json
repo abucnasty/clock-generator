@@ -9,22 +9,20 @@
       "id": 1,
       "recipe": "rocket-fuel-from-jelly",
       "productivity": 300,
-      "crafting_speed": 84.6655,
-      "type": "machine"
+      "crafting_speed": 84.6655
     },
     {
       "id": 2,
       "recipe": "jellynut-processing",
       "productivity": 150,
       "crafting_speed": 56.122,
-      "type": "machine"
+      "prototype": "assembling-machine-3"
     },
     {
       "id": 3,
       "recipe": "rocket-fuel-from-jelly",
       "productivity": 300,
-      "crafting_speed": 84.6655,
-      "type": "machine"
+      "crafting_speed": 84.6655
     }
   ],
   "inserters": [
