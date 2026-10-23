@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltCopies, matchBuiltInserters, MAX_RECORDED_TICKS,
+    assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
@@ -398,6 +398,22 @@ describe("a build that holds the config more than once", () => {
         const extra = { id: 7, unit_number: 106, name: "inserter", stack_size: 1, source: { type: "machine", id: 4 }, sink: { type: "belt", id: 2 } };
         expect(buildPartsMissingFromConfig(described([...inserters, extra]), config, 2).map(it => it.description))
             .toEqual(["inserter machine 2 (inserter) -> transport-belt (unit 106)"]);
+    });
+
+    it("matches the drills of each copy to the config's, by the machine each drops into", () => {
+        const drilled = {
+            ...config,
+            drills: { configs: [{ id: 1, type: "electric-mining-drill", mined_item_name: "coal", speed_bonus: 0, productivity: 0, target: { type: "machine", id: 1 } }] },
+        };
+        // listed in the other order than the copies, and each with the recorder's machine id behind its target
+        const build = { ...described(), drills: [
+            { id: 2, unit_number: 301, name: "electric-mining-drill", mined_item_name: "coal", target: { type: "machine", id: 3 } },
+            { id: 1, unit_number: 300, name: "electric-mining-drill", mined_item_name: "coal", target: { type: "machine", id: 1 } },
+        ] };
+        expect(matchBuiltDrills(build, drilled, 2)).toEqual([new Map([[1, 300]]), new Map([[1, 301]])]);
+        // a drill into the machine the config's drill does not feed is left out
+        const other = { ...build, drills: [{ id: 3, unit_number: 302, name: "electric-mining-drill", mined_item_name: "coal", target: { type: "machine", id: 2 } }] };
+        expect(matchBuiltDrills(other, drilled, 2)).toEqual([new Map(), new Map()]);
     });
 
     it("refuses a count that is not the one found, in either direction", () => {

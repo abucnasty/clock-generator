@@ -71,6 +71,8 @@ export const ConfigPaths = {
     REAL_OWNER_LITHIUM_SILO: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'lithium-silo', 'lithium-silo.json'),
     /** The owner's iron plate build, 80 a second: a big mining drill drops ore into a car, which two furnaces empty */
     REAL_OWNER_CAR: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'car', 'car.json'),
+    /** The owner's grenade build, 240 a second over 7 copies: four assemblers, a foundry and four drills a copy, the grenades on a belt of two full lanes */
+    REAL_OWNER_GRENADE: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'grenade', 'grenade.json'),
     /** The owner's steel build, 26 a second: one cargo wagon as a hub between a mining drill and two furnaces */
     STEEL_CARGO_WAGON: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'steel-wagon', 'steel-wagon.json'),
 } as const;

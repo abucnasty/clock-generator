@@ -1,0 +1,777 @@
+{
+  "meaning": "Native summaries of the owner's grenade build (REAL_OWNER_GRENADE, 240 a second over 7 copies) in Factorio 2.1.21, on one copy and on the full build of seven, once with the owner's clock, kept as the build came (a counter of 0 to 111, 112 ticks, and six window deciders), and once with the generator's selected clock (the 112-tick clock, windows made from the hands and the sources), wired to the inserters and drills of every copy with the owner's deciders taken out. The family's protocol, except for the output block: 63 whole periods before the first disturbance, which comes at period 66, then the foundries stopped for 2 periods (the iron stops), the output loader taken away for 30 periods and rebuilt (a copy's belt takes 6 periods of grenades before it is full), and the drills stopped for 2 (the coal stops). 'expected' is what the build makes in a period: 64 for one copy, 448 for seven. A period of a copy's recovery after the block is one the belt's unclogging takes: the full build needs 9 periods to be back at 448.",
+  "cases": {
+    "owner-one-copy": {
+      "recorded": {
+        "pr": 0,
+        "commit": "8ce582fe",
+        "frozen_head": "8ce582fe",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "5a96caa4224f0b4a7e6dbb7b22ba9424cc3f972c8ed3495d960b24475f5434d2",
+        "clock_basis": "built"
+      },
+      "native": {
+        "generationVerdict": "the build's own clock",
+        "target": 34.285714285714285,
+        "period": 112,
+        "expected": 64,
+        "baseline": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              32,
+              0,
+              64
+            ],
+            "recovered": [
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              32,
+              32,
+              28,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              84,
+              64
+            ],
+            "recovered": [
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64
+            ]
+          },
+          {
+            "cut": 130,
+            "during": [
+              32,
+              0,
+              32
+            ],
+            "recovered": [
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            114,
+            130
+          ],
+          [
+            130,
+            132,
+            150
+          ]
+        ]
+      }
+    },
+    "owner-full-build": {
+      "recorded": {
+        "pr": 0,
+        "commit": "8ce582fe",
+        "frozen_head": "8ce582fe",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "5a96caa4224f0b4a7e6dbb7b22ba9424cc3f972c8ed3495d960b24475f5434d2",
+        "clock_basis": "built"
+      },
+      "native": {
+        "generationVerdict": "the build's own clock",
+        "target": 240,
+        "period": 112,
+        "expected": 448,
+        "baseline": [
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              224,
+              0,
+              448
+            ],
+            "recovered": [
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              208,
+              176,
+              128,
+              112,
+              64,
+              64,
+              64,
+              64,
+              32,
+              32,
+              32,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              96,
+              144
+            ],
+            "recovered": [
+              432,
+              432,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448
+            ]
+          },
+          {
+            "cut": 130,
+            "during": [
+              224,
+              0,
+              224
+            ],
+            "recovered": [
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            114,
+            130
+          ],
+          [
+            130,
+            132,
+            150
+          ]
+        ]
+      }
+    },
+    "generated-one-copy": {
+      "recorded": {
+        "pr": 0,
+        "commit": "8ce582fe",
+        "frozen_head": "8ce582fe",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 34.285714285714285,
+        "period": 112,
+        "expected": 64,
+        "baseline": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              64,
+              32,
+              0
+            ],
+            "recovered": [
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              32,
+              32,
+              24,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              88
+            ],
+            "recovered": [
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64
+            ]
+          },
+          {
+            "cut": 130,
+            "during": [
+              64,
+              0,
+              0
+            ],
+            "recovered": [
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64,
+              64
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            114,
+            130
+          ],
+          [
+            130,
+            132,
+            150
+          ]
+        ]
+      },
+      "generation": {
+        "period": 112,
+        "expected": 64,
+        "verdict": "stable",
+        "selection": {
+          "id": "planned-belt-slack",
+          "holds": true,
+          "rate": 240,
+          "supply": null
+        },
+        "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23"
+      }
+    },
+    "generated-full-build": {
+      "recorded": {
+        "pr": 0,
+        "commit": "8ce582fe",
+        "frozen_head": "8ce582fe",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 240,
+        "period": 112,
+        "expected": 448,
+        "baseline": [
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448,
+          448
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              448,
+              224,
+              0
+            ],
+            "recovered": [
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              344,
+              208,
+              144,
+              128,
+              112,
+              64,
+              64,
+              64,
+              64,
+              32,
+              32,
+              32,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              96
+            ],
+            "recovered": [
+              404,
+              440,
+              440,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448
+            ]
+          },
+          {
+            "cut": 130,
+            "during": [
+              448,
+              0,
+              0
+            ],
+            "recovered": [
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448,
+              448
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            114,
+            130
+          ],
+          [
+            130,
+            132,
+            150
+          ]
+        ]
+      },
+      "generation": {
+        "period": 112,
+        "expected": 448,
+        "verdict": "stable",
+        "selection": {
+          "id": "planned-belt-slack",
+          "holds": true,
+          "rate": 240,
+          "supply": null
+        },
+        "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23"
+      }
+    }
+  }
+}

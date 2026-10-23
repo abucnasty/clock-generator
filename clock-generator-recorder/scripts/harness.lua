@@ -399,7 +399,7 @@ end
 
 ---Wire the schedule combinators of a generated clock to the inserters their tags name
 ---@param state table storage.harness
----@param clock {blueprint: string, inserters: table<string, uint|uint[]>} blueprint: each schedule combinator tagged with the config ids of its inserters; inserters: config inserter id -> unit number, or a list of them where the build holds the config more than once
+---@param clock {blueprint: string, inserters: table<string, uint|uint[]>, drills: table<string, uint|uint[]>|nil} blueprint: each schedule combinator tagged with the config ids of its inserters; inserters: config inserter id -> unit number, or a list of them where the build holds the config more than once
 ---@return table report
 local function wire_clock(state, clock)
     local surface = game.surfaces[state.surface_index]
@@ -436,19 +436,34 @@ local function wire_clock(state, clock)
         local ids = tags[combinator.unit_number] and tags[combinator.unit_number][INSERTERS_TAG]
         local drill_ids = tags[combinator.unit_number] and tags[combinator.unit_number][DRILLS_TAG]
         if drill_ids then
-            if #drills ~= 1 then
-                error("the clock enables drill " .. table.concat(drill_ids, ", ") .. ", and the build has " .. #drills .. " mining drills: the harness wires a drill only in a build with one")
-            end
-            local drill = drills[1]
             local output = combinator.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
-            output.connect_to(drill.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.player)
-            local behavior = drill.get_or_create_control_behavior()
-            -- a drill that reads its resources puts the ore under it on the wire, which "anything > 0" would read as on
-            behavior.circuit_read_resources = false
-            behavior.circuit_enable_disable = true
-            behavior.circuit_condition = ANYTHING_POSITIVE
             for _, id in ipairs(drill_ids) do
-                table.insert(report.wired_drills, { drill = id, unit_number = drill.unit_number })
+                -- drills matched to the config's by the caller (units by config id, a list where the build holds copies); a build with one mining drill needs no list
+                local units = clock.drills and clock.drills[tostring(id)]
+                if units == nil and #drills == 1 then
+                    units = { drills[1].unit_number }
+                elseif type(units) ~= "table" then
+                    units = { units or -1 }
+                end
+                if #units == 0 or units[1] == -1 then
+                    error("the clock enables drill " .. id .. ", which was not matched to a drill of the build (" .. #drills .. " mining drills)")
+                end
+                for _, unit_number in ipairs(units) do
+                    local drill
+                    for _, candidate in ipairs(drills) do
+                        if candidate.unit_number == unit_number then drill = candidate end
+                    end
+                    if not drill then
+                        error("the clock names drill " .. id .. ", whose unit " .. unit_number .. " is not a drill of the build")
+                    end
+                    output.connect_to(drill.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.player)
+                    local behavior = drill.get_or_create_control_behavior()
+                    -- a drill that reads its resources puts the ore under it on the wire, which "anything > 0" would read as on
+                    behavior.circuit_read_resources = false
+                    behavior.circuit_enable_disable = true
+                    behavior.circuit_condition = ANYTHING_POSITIVE
+                    table.insert(report.wired_drills, { drill = id, unit_number = drill.unit_number })
+                end
             end
         elseif ids then
             local output = combinator.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
