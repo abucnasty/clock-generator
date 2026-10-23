@@ -1,15 +1,16 @@
-import { Block, ContentCopy, DeleteOutline, FilterAlt } from '@mui/icons-material';
-import { Box, Button, ButtonBase, Tooltip, Typography } from '@mui/material';
+import { Block, ContentCopy, DeleteOutline } from '@mui/icons-material';
+import { Box, Button, ButtonBase, Tooltip, Typography, alpha } from '@mui/material';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useGameNames } from '../hooks/useGameNames';
 import { useAnnounce } from '../hooks/useMessages';
-import { BLOCK_MARKERS, containerSlotCount, isBlockMarker, paintSlotFilters, shownSlotFilter, slotRange } from '../utils/containerSlotFilters';
+import { BLOCK_MARKERS, containerSlotCount, isBlockMarker, paintSlotFilters, shownSlotFilter, slotCounts, slotCountsText, slotRange } from '../utils/containerSlotFilters';
 import type { SlotContainerFormData, SlotFilterFormData } from '../utils/configForm/formData';
-import { entityLabel } from '../utils/entityLabel';
+import { chestLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterItemPicker } from './FilterItemPicker';
 import { ItemSelector } from './ItemSelector';
 import { insetSlotSx } from './insetSlot';
+import { themeTokens } from '../theme/runtimeTokens';
 
 interface Props {
     chest: SlotContainerFormData;
@@ -26,7 +27,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
     const count = containerSlotCount(chest);
     const filterOptions = [...new Set([...BLOCK_MARKERS, ...itemNames])];
     const blockPriority = { label: 'Block slots', ids: [...BLOCK_MARKERS] };
-    const name = entityLabel('chest', chest.id);
+    const name = chestLabel(chest);
     const { itemLabel } = useGameNames();
     const announce = useAnnounce();
     const helpId = useId();
@@ -42,7 +43,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
     const bySlot = new Map(visibleFilters.map(filter => [filter.slot, shownSlotFilter(filter)]));
     const outside = filters.filter(filter => filter.slot < 1 || filter.slot > count || !Number.isInteger(filter.slot));
     const filled = Array.from({ length: count }, (_, i) => i + 1).filter(slot => bySlot.get(slot));
-    const blocked = visibleFilters.filter(filter => filter.blocked && filter.slot >= 1 && filter.slot <= count).length;
+    const counts = slotCounts(visibleFilters, count);
     const currentSlot = Math.min(focusSlot, count);
     const rowStart = Math.floor((currentSlot - 1) / columns) * columns + 1;
 
@@ -93,10 +94,11 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
         containerType: 'inline-size', containerName: 'inventory-filters' }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 1 }}>
             <Typography variant="subtitle2">Filtered slots</Typography>
-            <Typography variant="caption" color="text.secondary">{filled.length} / {count} filtered{blocked > 0 ? ` · ${blocked} blocked` : ''} · Unfiltered slots accept any item</Typography>
+            <Typography variant="caption" color="text.secondary">{slotCountsText(counts)}{counts.free > 0 ? ' · Unfiltered slots accept any item' : ''}</Typography>
         </Box>
         <Typography id={helpId} variant="caption" color="text.secondary">
-            Choose an item, then click or drag across slots. Shift + right-click copies; Shift + click pastes. Right-click or Delete clears.
+            Choose an item, then click or drag across slots. Middle-click a slot to set its filter, as in the game. Shift + right-click copies;
+            Shift + click pastes. Right-click or Delete clears.
         </Typography>
         <Typography variant="caption" color="text.secondary">
             No item and Deconstruction planner block a slot so inserters cannot fill it.
@@ -161,15 +163,14 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
                                 if (next !== undefined) { event.preventDefault(); buttons.current[Math.max(1, Math.min(count, next)) - 1]?.focus(); }
                             }
                         }}
+                        // drawn as the game draws an empty inventory: a filter as its item faded, a blocked slot tinted red as past the
+                        // inventory limit, and no number in the corner, where the game shows a count
                         sx={[...(Array.isArray(base) ? base : [base]), { width: '100%', height: 'auto', aspectRatio: '1', touchAction: 'pan-y',
-                            userSelect: 'none', bgcolor: item ? 'action.selected' : undefined,
+                            userSelect: 'none', bgcolor: isBlocked ? (theme) => alpha(themeTokens(theme).role.red.main, 0.35) : undefined,
                             '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'text.primary', outlineOffset: 1, zIndex: 1 } }]}>
-                        {item && <>
+                        {item && !isBlocked && <Box component="span" aria-hidden sx={{ display: 'flex', opacity: 0.45, filter: 'grayscale(0.4)' }}>
                             <FactorioIcon name={item} size={24} alt="" />
-                            {isBlocked && item !== BLOCK_MARKERS[0] && <Block aria-hidden sx={{ position: 'absolute', top: 1, left: 1, fontSize: 10, color: 'text.secondary' }} />}
-                            {!isBlocked && <FilterAlt aria-hidden sx={{ position: 'absolute', top: 1, left: 1, fontSize: 10, color: 'text.secondary' }} />}
-                        </>}
-                        <Box component="span" aria-hidden sx={{ position: 'absolute', bottom: 0, right: 2, fontSize: 9, lineHeight: 1.2, color: 'text.secondary' }}>{slot}</Box>
+                        </Box>}
                     </ButtonBase>
                 </Tooltip>;
             })}

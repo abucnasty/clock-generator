@@ -1,7 +1,7 @@
 import { TargetType } from 'clock-generator/light';
 import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from './configForm/formData';
 import { containerItems, isBufferChest, isContainerChest, isInfinityChest, machineIconName } from './configForm/formData';
-import { entityLabel } from './entityLabel';
+import { chestLabel, entityLabel } from './entityLabel';
 import type { EntitySelectorOption } from './entitySelector';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { drillItemsInto, sourceItemsOf } from './inferInserterItems';
@@ -24,7 +24,7 @@ export function entityOptionsOf(machines: MachineFormData[], belts: BeltFormData
             const items = isBufferChest(c) ? (c.item_filter ? [c.item_filter] : []) : isInfinityChest(c) ? c.item_filter.map(f => f.item_name).filter(Boolean)
                 : context?.getRecipeInfo ? sourceItemsOf({ type: 'chest', id: c.id }, machines, belts, chests, context.getRecipeInfo, context.inserters, context.drills)
                 : [...new Set([...containerItems(c), ...drillItemsInto(c.id, context?.drills)])];
-            return { type: TargetType.CHEST, id: c.id, label: entityLabel('chest', c.id), icon: isInfinityChest(c) ? 'infinity-chest' : isContainerChest(c) ? c.type : 'steel-chest', sublabel: isInfinityChest(c) && c.remove_unfiltered_items ? (items.length ? `${items.map(labels.item).join(', ')} · removes unfiltered items` : 'Removes all incoming items') : items.length ? items.map(labels.item).join(', ') : isBufferChest(c) ? 'No item filter' : isContainerChest(c) ? 'No items inferred' : 'No filters', ingredientIcons: items.length ? items : undefined };
+            return { type: TargetType.CHEST, id: c.id, label: chestLabel(c), icon: isInfinityChest(c) ? 'infinity-chest' : isContainerChest(c) ? c.type : 'steel-chest', sublabel: isInfinityChest(c) && c.remove_unfiltered_items ? (items.length ? `${items.map(labels.item).join(', ')} · removes unfiltered items` : 'Removes all incoming items') : items.length ? items.map(labels.item).join(', ') : isBufferChest(c) ? 'No item filter' : isContainerChest(c) ? 'No items inferred' : 'No filters', ingredientIcons: items.length ? items : undefined };
         }),
     ];
 }

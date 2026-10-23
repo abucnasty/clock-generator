@@ -134,9 +134,9 @@ function routesOf(entity_ids: EntityId[], registry: ReadableEntityRegistry, by_p
 
 /**
  * Line 1 of an enabling combinator, and the line of each route when its inserters or drills take more than one:
- * "[entity=car] → machine 1 [recipe=iron-plate]  [item=iron-ore]  (inserter 1)",
- * "6 inserters, each [entity=rocket-silo] → [entity=electric-furnace] [recipe=lithium-plate]  [item=lithium]  (7, 8, 9, 10, 13, 14)".
- * A drill's line starts at the drill with its item: "[entity=big-mining-drill] [item=stone] → machine 2 [recipe=rail]  (drill 1)".
+ * "[entity=car] → machine 1 [recipe=iron-plate] [item=iron-ore] (inserter 1)",
+ * "6 inserters, each [entity=rocket-silo] → [entity=electric-furnace] [recipe=lithium-plate] [item=lithium] (7, 8, 9, 10, 13, 14)".
+ * A drill's line starts at the drill with its item: "[entity=big-mining-drill] [item=stone] → machine 2 [recipe=rail] (drill 1)".
  */
 function identityLines(entity_ids: EntityId[], registry: ReadableEntityRegistry, item_icons: string, prefix = "", by_product = false): { first: string; routes: string[] } {
     const sorted = entity_ids.map(it => it.number).sort((a, b) => a - b);
@@ -144,14 +144,14 @@ function identityLines(entity_ids: EntityId[], registry: ReadableEntityRegistry,
     const noun = drill ? "drill" : "inserter";
     const tag = sorted.length === 1 ? `(${noun} ${sorted[0]})` : `(${sorted.join(", ")})`;
     const routes = routesOf(entity_ids, registry, by_product);
-    const items_after = (route: string) => drill ? route.replace(" → ", ` ${item_icons} → `) : `${route}  ${item_icons}`;
+    const items_after = (route: string) => drill ? route.replace(" → ", ` ${item_icons} → `) : `${route} ${item_icons}`;
     if (routes.length === 1) {
         const [route] = routes;
         const lead = sorted.length === 1 ? "" : `${sorted.length} ${noun}s${route.several_ends ? ":" : ", each"} `;
-        return { first: `${prefix}${lead}${items_after(route.text)}  ${tag}`, routes: [] };
+        return { first: `${prefix}${lead}${items_after(route.text)} ${tag}`, routes: [] };
     }
     return {
-        first: `${prefix}${sorted.length} ${noun}s  ${item_icons}  ${tag}`,
+        first: `${prefix}${sorted.length} ${noun}s ${item_icons} ${tag}`,
         routes: routes.map(route => `- ${route.ids.join(", ")}: ${route.text}`),
     };
 }
@@ -207,37 +207,50 @@ export function plannedDescriptionLines(
     const what = EntityId.isDrill(entity_ids[0])
         ? `Mines ${formatCount(swings_a_period.multiply(DRILL_ITEMS_PER_SWING))}`
         : `${formatCount(swings_a_period)} ${plural(swings_a_period.toDecimal() === 1 ? 1 : 2, "swing")}`;
-    const listed = windows.listed === null ? "" : `: open ${windows.listed.map(rangeText).join(", ")}`;
-    const unusual = [
-        ...(windows.repeat ? [`Windows repeat every ${windows.repeat.modulus} ticks: ${SignalId.toDescriptionString(windows.repeat.signal)} = clock mod ${windows.repeat.modulus}`] : []),
-        ...(windows.subtick_scale ? [`Reads the subtick clock: windows in 1/${windows.subtick_scale} ticks`] : []),
-    ];
     return [
         first,
-        `${what}${each} in ${windows.count} ${plural(windows.count, "window")} per ${period_text}-tick period${listed}`,
-        ...unusual,
+        `${what}${each} in ${windowsText(windows, period_text)}`,
+        ...unusualWindowLines(windows),
         ...routes,
     ];
 }
 
-/** The windows' line: "in 1 window per 72-tick period: open 28" */
+/**
+ * The windows' line: "1 window per 72-tick period: open 28". On a subtick clock the unit of the windows is on the same
+ * line, so the numbers are not read as ticks: "1 window per 886.154-tick period: open 4486–4499 (in 1/13 ticks)", or
+ * "19 windows per 886.154-tick period; windows in 1/13 ticks" when they are too many to list.
+ */
 function windowsText(windows: DeciderWindows, period_text: string): string {
-    const listed = windows.listed === null ? "" : `: open ${windows.listed.map(rangeText).join(", ")}`;
+    const unit = windows.subtick_scale ? `in 1/${windows.subtick_scale} ticks` : null;
+    const listed = windows.listed === null
+        ? unit === null ? "" : `; windows ${unit}`
+        : `: open ${windows.listed.map(rangeText).join(", ")}${unit === null ? "" : ` (${unit})`}`;
     return `${windows.count} ${plural(windows.count, "window")} per ${period_text}-tick period${listed}`;
 }
 
-/** What a decider's windows say beyond when they open: a repeat on a modulo of the clock, a subtick clock */
+/** What a decider's windows say beyond when they open: a repeat on a modulo of the clock */
 function unusualWindowLines(windows: DeciderWindows): string[] {
-    return [
-        ...(windows.repeat ? [`Windows repeat every ${windows.repeat.modulus} ticks: ${SignalId.toDescriptionString(windows.repeat.signal)} = clock mod ${windows.repeat.modulus}`] : []),
-        ...(windows.subtick_scale ? [`Reads the subtick clock: windows in 1/${windows.subtick_scale} ticks`] : []),
-    ];
+    return windows.repeat ? [`Windows repeat every ${windows.repeat.modulus} ticks: ${SignalId.toDescriptionString(windows.repeat.signal)} = clock mod ${windows.repeat.modulus}`] : [];
+}
+
+/** The chest the drills drop into, as the lines about it name it: "the [entity=car]", "chest 2"; null when they drop into several */
+function sinkOfDrills(drill_ids: EntityId[], registry: ReadableEntityRegistry): string | null {
+    const sinks = new Set(drill_ids.flatMap(drill_id => {
+        const drill = registry.getEntityById(drill_id);
+        if (drill === null || !Entity.isDrill(drill)) {
+            return [];
+        }
+        const end = endOf(drill.sink_id, registry, false);
+        return [end.by_id ? end.render([end.id]) : `the ${end.render([end.id])}`];
+    }));
+    return sinks.size === 1 ? Array.from(sinks)[0] : null;
 }
 
 /**
  * The description of a drill into a chest, whose windows are made from the takes out of the chest (see
- * chestDrillWindows), outside the swing counts:
- * "[entity=big-mining-drill] [item=iron-ore] → [entity=car]  (drill 1)", "Open in 1 window per 72-tick period: open 28".
+ * chestDrillWindows), outside the swing counts: "[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)",
+ * "Tops the [entity=car] up just in time, 1 window per 72-tick period: open 28",
+ * "Not counted as swings: opens just before the inserters take from the [entity=car]".
  */
 export function chestDrillDescriptionLines(
     drill_ids: EntityId[],
@@ -247,11 +260,12 @@ export function chestDrillDescriptionLines(
     period_text: string,
 ): string[] {
     const { first, routes } = identityLines(drill_ids, registry, itemIcons(item_names));
+    const sink = sinkOfDrills(drill_ids, registry);
     return [
         first,
-        `Tops the chest up just in time, ${windowsText(windows, period_text)}`,
+        `Tops ${sink ?? "each drill's container"} up just in time, ${windowsText(windows, period_text)}`,
         ...unusualWindowLines(windows),
-        "Outside the swing counts: timed by the takes out of the chest",
+        `Not counted as swings: opens just before the inserters take from ${sink ?? "it"}`,
         ...routes,
     ];
 }

@@ -74,7 +74,7 @@ describe("clockOfBlueprintString", () => {
         const tagged = encodeBlueprintFile({
             blueprint: {
                 entities: [
-                    { entity_number: 1, player_description: "[entity=big-mining-drill] [item=iron-ore] → [entity=car]  (drill 1)", tags: { clock_generator: { drills: [1] } } },
+                    { entity_number: 1, player_description: "[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)", tags: { clock_generator: { drills: [1] } } },
                     { entity_number: 2, player_description: "Drill 4 for [item=stone]", tags: { clock_generator: { inserters: [2] } } },
                 ],
             },

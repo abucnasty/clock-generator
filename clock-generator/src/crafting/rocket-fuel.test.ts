@@ -42,7 +42,7 @@ describe("generateClockForConfig", () => {
             const described = by_product.blueprint.entities
                 .map(entity => entity.player_description ?? "")
                 .find(description => description.startsWith("By-product: "));
-            expect(described).toContain("[item=jellynut-seed]  (inserter 11)");
+            expect(described).toContain("[item=jellynut-seed] (inserter 11)");
             expect(described).toContain("of every 32 ticks; outside the main plan");
         });
 

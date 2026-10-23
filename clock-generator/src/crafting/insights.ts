@@ -10,6 +10,7 @@ import type { SpareTime } from "./why-not-stable";
 import { FactorioDataService } from "../data";
 import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPickups } from "../config/pickup-calibration";
 import type { Config } from "../config/schema";
+import { chestName } from "../common/entity-types";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -451,10 +452,10 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
     return [{
         id: "chest-drill-windows",
         scope: "clock",
-        title: clocked.length === drills.length ? "The drills into chests are enabled just in time"
-            : clocked.length === 0 ? "The drills into chests are always enabled" : "Some drills into chests are always enabled",
+        title: clocked.length === drills.length ? "The drills into containers are enabled just in time"
+            : clocked.length === 0 ? "The drills into containers are always enabled" : "Some drills into containers are always enabled",
         what: drills.map(drill => {
-            const into = `Drill ${drill.drill_id} drops ${drill.item.replace(/-/g, " ")} into chest ${drill.chest_id}`;
+            const into = `Drill ${drill.drill_id} drops ${drill.item.replace(/-/g, " ")} into ${chestName(drill.chest_type, drill.chest_id)}`;
             if (drill.enabled_ticks === null) {
                 return `${into} and is always enabled: ${drill.always_enabled_because}.`;
             }

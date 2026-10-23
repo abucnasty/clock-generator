@@ -3,7 +3,7 @@ import { ChestType } from 'clock-generator/light';
 import type { ChestFormData, InserterFormData } from '../hooks/useConfigForm';
 import { outputChestIssues, outputChestIssueTitle, type OutputChestIssue } from '../utils/outputChestIssues';
 import { CHEST_TYPE_LABELS, chestTypeIcon, isBufferChest, isRocketSilo, type ContainerChestFormData } from '../utils/configForm/formData';
-import { entityLabel } from '../utils/entityLabel';
+import { chestLabel } from '../utils/entityLabel';
 import { EntityBadge } from './EntityBadge';
 import { FactorioIcon } from './FactorioIcon';
 import { useGameNames } from '../hooks/useGameNames';
@@ -47,7 +47,7 @@ export function OutputChestAlert({ chests, inserters, onSwitchType, onEnableRemo
                         ? `No inserter takes ${chest.item_filter ? itemLabel(chest.item_filter).toLowerCase() : 'items'} out of this buffer chest. The simulator does not empty it, so once it fills up, production can stop. Use an infinity chest with Remove unfiltered items enabled to model output being taken away continuously.`
                         : 'An inserter already delivers to this infinity chest, but it has no filters and Remove unfiltered items is off. Enable it to remove all incoming items and accept output through the existing connection.'}
                 </Typography>
-                <Button size="small" color="inherit" variant="outlined" aria-label={`${kind === 'finite' ? 'Use infinity chest' : 'Enable Remove unfiltered items'} for ${entityLabel('chest', chest.id)}`}
+                <Button size="small" color="inherit" variant="outlined" aria-label={`${kind === 'finite' ? 'Use infinity chest' : 'Enable Remove unfiltered items'} for ${chestLabel(chest)}`}
                     onClick={() => kind === 'finite' ? onSwitchType(index, ChestType.INFINITY_CHEST, true) : onEnableRemoval(index)}>
                     {kind === 'finite' ? 'Use infinity chest' : 'Enable removal'}
                 </Button>

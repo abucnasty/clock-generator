@@ -33,9 +33,9 @@ import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
 import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
 import { EntityTypeField } from './EntityFields';
-import { drillsListed, focusLeaves } from '../utils/drillsSection';
+import { drillsListed, focusLeaves, speedBonusOfPercent, speedBonusPercent } from '../utils/drillsSection';
 
-const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
+const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus * 100)';
 const PRODUCTIVITY_COMMAND = '/c game.print(game.player.selected.productivity_bonus * 100)';
 
 interface DrillsFormProps {
@@ -99,7 +99,7 @@ function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, onUpdate,
                     <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete=""><Delete /></IconButton>
                 </Box>
                 <EntitySettings label={label} actionContainerId={`settings-actions-drill-${drill.id}`} summary={<Typography variant="body2">
-                    Speed bonus {Number((drill.speed_bonus * 100).toFixed(2))}% · Productivity {Number(drill.productivity.toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
+                    Mining speed bonus {Number(speedBonusPercent(drill.speed_bonus).toFixed(2))}% · Productivity {Number(drill.productivity.toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
                 </Typography>} tabs={[{ label: 'Enable control', content: <EnableControlFormContent
                     key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
                     currentOverride={drill.overrides?.enable_control} sinkType={drill.target.type === 'chest' ? TargetType.CHEST : TargetType.MACHINE} availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
@@ -113,15 +113,15 @@ function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, onUpdate,
                                 inputAriaLabel={SELECT_NAMES.drillType} nameOf={value => entityTypeLabel(value, itemLabel)}
                                 onChange={type => onUpdate(index, { type: type as DrillFormData['type'] })} sx={{ minWidth: 0, flex: '1 1 200px' }} />
                             <TextField
-                                label="Speed Bonus"
+                                label="Mining speed bonus (%)"
                                 type="number"
-                                value={drill.speed_bonus}
+                                value={speedBonusPercent(drill.speed_bonus)}
                                 onChange={(e) =>
                                     onUpdate(index, {
-                                        speed_bonus: parseFloat(e.target.value) || 0,
+                                        speed_bonus: speedBonusOfPercent(parseFloat(e.target.value) || 0),
                                     })
                                 }
-                                inputProps={{ step: 0.1 }}
+                                inputProps={{ step: 10 }}
                                 sx={{ minWidth: 0, flex: '1 1 140px' }}
                                 size="small"
                             />
@@ -203,7 +203,7 @@ function DrillsFormComponent({
                 content: (
                     <>
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                            To get the speed bonus of a mining drill in Factorio, hover over the drill and run this command:
+                            To get the mining speed bonus of a drill in Factorio, in percent, hover over the drill and run this command:
                         </Typography>
                         <HelpCommand command={SPEED_BONUS_COMMAND} />
                         <Typography variant="body2" sx={{ my: 1 }}>

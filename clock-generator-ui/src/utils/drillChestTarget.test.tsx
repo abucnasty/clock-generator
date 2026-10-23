@@ -30,7 +30,7 @@ it("shows a drill's container in the one Target picker, with its icon and the or
         machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
         onAdd={() => { }} onUpdate={() => { }} onRemove={() => { }} onReorder={() => { }} onDuplicate={() => { }} />);
     expect(html).toContain('aria-label="Target, Drill 1"');
-    expect(html).toContain('value="Chest 1 - iron-ore"');
+    expect(html).toContain('value="Car 1 - iron-ore"');
     expect(html).toContain('/icons/car.png');
     expect(html).not.toMatch(/readonly/i);
     expect(html).not.toContain('Target chest');
@@ -49,5 +49,5 @@ it('unsets the target of a drill whose chest is removed, and keeps it on a machi
     const form = configToFormData(config);
     expect(removeMachine(form, 0).drills!.configs[0].target).toEqual({ type: 'chest', id: 1 });
     expect(removeChest(form, 0).drills!.configs[0].target).toEqual({ type: 'chest', id: 0 });
-    expect(removalMessage(form, 'chests', 0)).toBe('Deleted Chest 1. Inserter 1 has no Source now. Drill 1 has no Target now.');
+    expect(removalMessage(form, 'chests', 0)).toBe('Deleted Car 1. Inserter 1 has no Source now. Drill 1 has no Target now.');
 });

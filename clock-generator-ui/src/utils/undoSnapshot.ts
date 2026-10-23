@@ -2,7 +2,7 @@ import { idList, selectionLabel } from './bulkEdit';
 import { ChestType } from 'clock-generator/light';
 import * as edits from './configForm/edits';
 import { CHEST_TYPE_LABELS, type ConfigFormData, type EntityKind } from './configForm/formData';
-import { deleteButtonLabel, entityLabel, type LabelKind } from './entityLabel';
+import { chestLabel, entityLabel, type LabelKind } from './entityLabel';
 import type { MessageInput } from './messages';
 import { exampleTitle, type ExampleBuild } from './exampleBuilds';
 
@@ -27,6 +27,11 @@ const KINDS: Record<EntityKind, { one: LabelKind; many: string }> = {
     chests: { one: 'chest', many: 'Chests' },
     drills: { one: 'drill', many: 'Drills' },
 };
+
+/** The name of one row of the form: "Machine 2", and a chest by what it is, "Car 1" */
+function rowLabel(kind: EntityKind, row: { id: number; type?: unknown }): string {
+    return kind === 'chests' ? chestLabel(row as { id: number; type?: ChestType }) : entityLabel(KINDS[kind].one, row.id);
+}
 
 /**
  * What one Undo message is about. `before` is the form when it was made; `snapshot` is that form when the message
@@ -111,10 +116,10 @@ export function describeConfigEdit(before: ConfigFormData, after: ConfigFormData
         const next = itemsOf(after, kind);
         if (!changed(previous, next)) continue;
         const added = next.find(item => !previous.some(old => old._uuid === item._uuid));
-        if (added) return { message: `Added ${entityLabel(KINDS[kind].one, added.id)}.`, key: `${kind}:add` };
+        if (added) return { message: `Added ${rowLabel(kind, added)}.`, key: `${kind}:add` };
         const edited = next.find(item => changed(previous.find(old => old._uuid === item._uuid), item));
         if (edited) {
-            return { message: `Updated ${entityLabel(KINDS[kind].one, edited.id)}.`, key: `${kind}:${edited._uuid}` };
+            return { message: `Updated ${rowLabel(kind, edited)}.`, key: `${kind}:${edited._uuid}` };
         }
         return { message: `Updated ${KINDS[kind].many.toLowerCase()}.`, key: kind };
     }
@@ -148,7 +153,7 @@ export function describeRemoval(before: ConfigFormData, after: ConfigFormData, k
     if (!removed) {
         return null;
     }
-    const sentences = [`Deleted ${entityLabel(KINDS[kind].one, removed.id)}.`];
+    const sentences = [`Deleted ${rowLabel(kind, removed)}.`];
 
     const newIds = new Map(itemsOf(after, kind).map((item) => [item._uuid, item.id]));
     const moved = itemsOf(before, kind).filter((item) => newIds.has(item._uuid) && newIds.get(item._uuid) !== item.id);
@@ -196,7 +201,7 @@ export function removalMessage(form: ConfigFormData, kind: EntityKind, index: nu
 /** The name of the deleted entity's delete button, which is back after an Undo, for focus to go to; null if none */
 export function removedDeleteLabel(form: ConfigFormData, kind: EntityKind, index: number): string | null {
     const removed = itemsOf(form, kind)[index];
-    return removed ? deleteButtonLabel(KINDS[kind].one, removed.id) : null;
+    return removed ? `Delete ${rowLabel(kind, removed)}` : null;
 }
 
 /** "Chest 2 changed to Infinity chest."; null when the chest is already of that type or there is none */
@@ -206,7 +211,7 @@ export function describeChestSwitch(form: ConfigFormData, index: number, newType
         return null;
     }
     const type = chest.type ?? ChestType.BUFFER_CHEST;
-    return type === newType ? null : `${entityLabel('chest', chest.id)} changed to ${CHEST_TYPE_LABELS[newType]}.`;
+    return type === newType ? null : `${chestLabel(chest)} changed to ${CHEST_TYPE_LABELS[newType]}.`;
 }
 
 /** "Imported 3 machines, 1 inserter from Factorio." */
@@ -221,7 +226,7 @@ export function describeReorder(before: ConfigFormData, after: ConfigFormData, k
     const newIds = new Map(itemsOf(after, kind).map(item => [item._uuid, item.id]));
     const destination = newIds.get(moved._uuid);
     if (destination === undefined || destination === moved.id) return null;
-    const sentences = [`Moved ${entityLabel(KINDS[kind].one, moved.id)} to ${destination}.`];
+    const sentences = [`Moved ${rowLabel(kind, moved)} to ${destination}.`];
     const others = itemsOf(before, kind).filter(item => item._uuid !== moved._uuid && newIds.has(item._uuid) && newIds.get(item._uuid) !== item.id);
     if (others.length > 0) sentences.push(`${named(kind, others.map(item => item.id))} ${others.length === 1 ? 'is' : 'are'} now ${idList(others.map(item => newIds.get(item._uuid)!))}.`);
     return sentences.join(' ');

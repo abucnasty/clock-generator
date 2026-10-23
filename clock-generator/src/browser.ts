@@ -227,6 +227,7 @@ export {
     BeltType,
     BeltStrategy,
     ChestType,
+    chestName,
     MiningDrillType,
 } from './common/entity-types';
 

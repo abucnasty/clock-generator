@@ -298,6 +298,7 @@ export const createDefaultConfig = (): ConfigFormData => ({
             recipe: '',
             productivity: 0,
             crafting_speed: 1,
+            quality: 'normal',
         },
     ],
     inserters: [],

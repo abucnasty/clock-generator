@@ -124,6 +124,8 @@ export function addMachine(prev: ConfigFormData): ConfigFormData {
                 recipe: '',
                 productivity: 0,
                 crafting_speed: 1,
+                // every entity in the game has a quality, Normal unless built otherwise
+                quality: 'normal',
             }
         ],
     };

@@ -7,7 +7,8 @@ import {
     type ChestFormData, type ContainerChestFormData, type ItemCountFormData, type QualityName, type RocketSiloFormData,
     type SlotContainerFormData, type SlotContentFormData,
 } from '../utils/configForm/formData';
-import { entityLabel } from '../utils/entityLabel';
+import { containerSlotCount, slotCounts, slotCountsText } from '../utils/containerSlotFilters';
+import { chestLabel } from '../utils/entityLabel';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { ContainerFilterGrid } from './ContainerFilterGrid';
@@ -25,15 +26,12 @@ export function ContainerChestSummary({ chest }: { chest: ContainerChestFormData
     const contents = (chest.contents ?? []).filter(row => row.item.trim() !== '');
     const items = contents.reduce((total, row) => total + row.count, 0);
     const stock = items === 0 ? 'Starts empty' : `Starts with ${items} ${items === 1 ? 'item' : 'items'}`;
-    const filters = !isRocketSilo(chest) ? (chest.slot_filters ?? []).filter(row => row.blocked || row.item.trim() !== '') : [];
-    const blocked = filters.filter(row => row.blocked).length;
-    const filtered = filters.length - blocked;
     const details = isRocketSilo(chest)
-        ? [`Speed ${chest.crafting_speed ?? 1}×`, `Productivity ${chest.productivity ?? 0}%`, `${qualityLabel(chest.recipe_quality)} recipe`, stock]
+        ? [`Speed ${chest.crafting_speed ?? 1}×`, `Productivity ${chest.productivity ?? 0}%`, `Recipe quality: ${qualityLabel(chest.recipe_quality)}`, stock]
         : [
             ...(chest.type === ChestType.CARGO_WAGON ? [`${qualityLabel(chest.quality)} quality`] : []),
-            `${filtered} filtered ${filtered === 1 ? 'slot' : 'slots'}`,
-            ...(blocked ? [`${blocked} blocked`] : []),
+            // the same count as the grid's
+            slotCountsText(slotCounts(chest.slot_filters ?? [], containerSlotCount(chest))),
             stock,
         ];
     return <Typography variant="caption">{details.join(' · ')}</Typography>;
@@ -45,7 +43,7 @@ export function ContainerChestSummary({ chest }: { chest: ContainerChestFormData
  * What is wrong with a value (a slot past the last, more than a stack) is the generator's to say, on Check.
  */
 export function ContainerChestFields({ chest, itemNames, onChange, dialog = false }: Props) {
-    const name = entityLabel('chest', chest.id);
+    const name = chestLabel(chest);
     const fieldSx = dialog ? { flex: '1 1 160px', minWidth: 0 } : { minWidth: 0, flex: '1 1 140px' };
     return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0, width: '100%', flexBasis: '100%' }}>
         {isRocketSilo(chest) ? <SiloFields chest={chest} itemNames={itemNames} onChange={onChange} name={name} fieldSx={fieldSx} />

@@ -58,7 +58,7 @@ describe('the windows of a drill into a chest', () => {
         // 617 ore a tick against 64 a period: the window drops what the drill holds, and it mines again once in ten periods
         const { windows, drills } = chestDrillWindows(build(), windowsOf(CAR_WINDOWS), 72);
         expect(pairs(windows.get('drill:1'))).toEqual([[27, 27]]);
-        expect(drills).toEqual([{ drill_id: 1, chest_id: 1, item: 'iron-ore', planned: true, enabled_ticks: 1, window_count: 1 }]);
+        expect(drills).toEqual([{ drill_id: 1, chest_id: 1, chest_type: 'car', item: 'iron-ore', planned: true, enabled_ticks: 1, window_count: 1 }]);
         // the inserters' windows are not touched
         expect(pairs(windows.get('inserter:1'))).toEqual([[28, 41]]);
     });

@@ -157,10 +157,12 @@ describe('a clock for a drill into a car between two furnaces', () => {
         const decider = selected.result.blueprint.entities.find(entity => entity.tags?.clock_generator?.drills !== undefined);
         const window = selected.result.clock_windows['drill:1'][0];
         expect(decider?.tags?.clock_generator?.drills).toEqual([1]);
+        // the blueprint's name is the item's icon and its name in the game
+        expect(selected.result.blueprint.label).toBe('[item=iron-plate] Iron plate clock');
         expect(decider?.player_description?.split('\n')).toEqual([
-            '[entity=big-mining-drill] [item=iron-ore] → [entity=car]  (drill 1)',
-            `Tops the chest up just in time, 1 window per 72-tick period: open ${window.start + 1}`,
-            'Outside the swing counts: timed by the takes out of the chest',
+            '[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)',
+            `Tops the [entity=car] up just in time, 1 window per 72-tick period: open ${window.start + 1}`,
+            'Not counted as swings: opens just before the inserters take from the [entity=car]',
         ]);
         // a window of one tick is one condition, the clock equal to it
         const conditions = (decider?.control_behavior as { decider_conditions: { conditions: unknown[] } }).decider_conditions.conditions;

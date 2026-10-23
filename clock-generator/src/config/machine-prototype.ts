@@ -40,10 +40,14 @@ export function machinePrototypeIssues(config: Pick<Config, "machines">): Machin
         }
         const recipe = FactorioDataService.findRecipe(machine.recipe);
         if (recipe !== null && !machineCanMake(prototype, recipe.categories)) {
+            // in the game's words: "Assembling machine 1 can't craft Lithium. Machines that can: Cryogenic plant."
+            const can = FactorioDataService.getAllCraftingMachines().filter(it => machineCanMake(it, recipe.categories))
+                .map(it => FactorioDataService.itemDisplayName(it.name));
             issues.push({ machine_id: machine.id, kind: "recipe-not-made",
-                message: `Machine ${machine.id} (${machine.prototype}) cannot make ${machine.recipe}: it makes recipes of `
-                    + `${prototype.crafting_categories.join(", ")}, and the recipe is ${recipe.categories.join(", ")}. The clock is `
-                    + "made as configured, but the game does not let this machine be set to the recipe." });
+                message: `Machine ${machine.id}: ${FactorioDataService.itemDisplayName(machine.prototype)} can't craft `
+                    + `${FactorioDataService.recipeDisplayName(machine.recipe)}. `
+                    + (can.length === 0 ? "No machine of the game data can. " : `Machines that can: ${can.join(", ")}. `)
+                    + "The clock is made as configured, but the game does not let this machine be set to the recipe." });
         }
     }
     return issues;

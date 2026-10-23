@@ -10,10 +10,11 @@ import { InventoryTransferHistory } from "./sequence/inventory-transfer-history"
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
 import {
-    chestDrillDescriptionLines, clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, lockFilterDescription, PART_OF_THE_CLOCK,
+    chestDrillDescriptionLines, clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, itemIcons, lockFilterDescription, PART_OF_THE_CLOCK,
     plannedDescriptionLines, shownPeriodTicks, unplannedDescriptionLines,
 } from "./descriptions";
 import { GENERATOR } from "../generator";
+import { FactorioDataService } from "../data/factorio-data-service";
 
 /** The config's inserters and drills that are not among those with windows: no combinator switches them on */
 function notClocked(entity_registry: ReadableEntityRegistry, clocked: EntityId[]): { inserters: number[]; drills: number[] } {
@@ -354,7 +355,8 @@ export function createSignalPerInserterBlueprint(
 
     const inventory_transfers = history.getAllTransfers()
 
-    let blueprint_label: string = final_output_item_name + " Inserter Clock Schedule"
+    // the game draws the icon in a label too: "[item=iron-plate] Iron plate clock"
+    let blueprint_label = `${itemIcons([final_output_item_name])} ${FactorioDataService.itemDisplayName(final_output_item_name)} clock`
     let x = 0.5;
 
 
@@ -462,7 +464,7 @@ export function createSignalPerInserterBlueprint(
     const lock = ConstantCombinatorEntity.lock({
         position: Position.fromXY(clock.position.x, 1.5),
         description: [
-            "Clock lock: switch on to stop every clock; no inserter is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off",
+            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off",
         ],
     });
 

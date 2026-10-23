@@ -7,7 +7,7 @@
  * browser.test.ts keeps it small.
  */
 
-export { ChestType } from "./common/entity-types";
+export { ChestType, chestName } from "./common/entity-types";
 
 export {
     EnableControlMode,

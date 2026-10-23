@@ -24,7 +24,7 @@ import { PanelSection } from './Panel';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
 import { useAnnounce } from '../hooks/useMessages';
-import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { chestLabel } from '../utils/entityLabel';
 
 interface ChestsFormProps {
     chests: ChestFormData[];
@@ -50,15 +50,15 @@ function ChestsFormComponent({
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(chests.length, onRemove);
     const announce = useAnnounce();
-    const addedLabel = () => entityLabel('chest', Math.max(0, ...chests.map(row => row.id)) + 1);
+    const addedLabel = (type: ChestType | undefined) => chestLabel({ id: Math.max(0, ...chests.map(row => row.id)) + 1, type });
     const duplicate = (index: number) => {
         afterAdd(() => onDuplicate(index));
-        announce(`Added ${addedLabel()}, a copy of ${entityLabel('chest', chests[index].id)}.`);
+        announce(`Added ${addedLabel(chests[index].type)}, a copy of ${chestLabel(chests[index])}.`);
     };
 
     const add = (type: ChestType) => {
         afterAdd(() => onAdd(type));
-        announce(`Added ${addedLabel()}.`);
+        announce(`Added ${addedLabel(type)}.`);
     };
 
     return (
@@ -119,12 +119,12 @@ function ChestsFormComponent({
                 >
                     <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
                     {chests.map((chest, index) => (
-                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)} displayLabel={<EntityBadge id={chest.id}><FactorioIcon name={chestTypeIcon(chest.type)} size={28} alt="" /></EntityBadge>}>
+                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={chestLabel(chest)} displayLabel={<EntityBadge id={chest.id}><FactorioIcon name={chestTypeIcon(chest.type)} size={28} alt="" /></EntityBadge>}>
                             {(dragHandle) => (
                         <Box
                             id={`entity-chest-${chest.id}`}
                             role="group"
-                            aria-label={entityLabel('chest', chest.id)}
+                            aria-label={chestLabel(chest)}
                             sx={{
                                 mb: 2,
                                 p: 2,
@@ -142,16 +142,16 @@ function ChestsFormComponent({
                             </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gridColumn: 3, gridRow: 1, '@container chest-row (max-width: 600px)': { gridColumn: 2 } }}>
                                     {isContainerChest(chest) && <Box id={`settings-actions-chest-${chest.id}`} sx={{ display: 'flex' }} />}
-                                    <RowActionsMenu label={entityLabel('chest', chest.id)} onDuplicate={() => duplicate(index)}
+                                    <RowActionsMenu label={chestLabel(chest)} onDuplicate={() => duplicate(index)}
                                         onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
                                         onMoveDown={index < chests.length - 1 ? () => onReorder(index, index + 1) : undefined} />
-                                    <IconButton onClick={() => remove(index)} color="error" aria-label={deleteButtonLabel('chest', chest.id)} data-row-delete="">
+                                    <IconButton onClick={() => remove(index)} color="error" aria-label={`Delete ${chestLabel(chest)}`} data-row-delete="">
                                         <Delete />
                                     </IconButton>
                                 </Box>
                             </Box>
                             {isContainerChest(chest) && <Box sx={{ mt: 1 }}>
-                                <EntitySettings actionContainerId={`settings-actions-chest-${chest.id}`} label={entityLabel('chest', chest.id)}
+                                <EntitySettings actionContainerId={`settings-actions-chest-${chest.id}`} label={chestLabel(chest)}
                                     summary={<ContainerChestSummary chest={chest} />}>
                                     <ContainerChestFields chest={chest} itemNames={itemNames} dialog onChange={updates => onUpdate(index, updates)} />
                                 </EntitySettings>

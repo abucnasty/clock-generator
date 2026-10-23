@@ -647,3 +647,10 @@ describe('a captured blacklist', () => {
         expect(edits.updateInserter(before, 0, { stack_size: 4 }).inserters[0].filter_mode).toBe('blacklist');
     });
 });
+
+describe('a new machine', () => {
+    it('is of Normal quality, as every entity in the game is unless built otherwise', () => {
+        expect(createDefaultConfig().machines[0].quality).toBe('normal');
+        expect(edits.addMachine(createDefaultConfig()).machines[1].quality).toBe('normal');
+    });
+});

@@ -111,13 +111,13 @@ describe("combinator descriptions of the rocket fuel biochambers", async () => {
 
     it("name the two ends of every inserter, the biochambers by the machine their former type gives them", () => {
         expect(first_lines.sort()).toEqual([
-            "2 inserters, each [entity=biochamber] → [entity=turbo-transport-belt]  [item=rocket-fuel]  (2, 4)",
-            "2 inserters, each [entity=turbo-transport-belt] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]  [item=bioflux]  (1, 5)",
-            "4 inserters, each [entity=biochamber] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]  [item=jelly]  (6, 7, 8, 9)",
-            "By-product: [entity=biochamber] [recipe=jellynut-processing] → [entity=turbo-transport-belt]  [item=jellynut-seed]  (inserter 11)",
-            "Fuel: 2 inserters, each [entity=turbo-transport-belt] → [entity=biochamber] [recipe=rocket-fuel-from-jelly]  [item=nutrients]  (10, 13)",
-            "Fuel: [entity=turbo-transport-belt] → [entity=biochamber] [recipe=jellynut-processing]  [item=nutrients]  (inserter 12)",
-            "[entity=turbo-transport-belt] → [entity=biochamber] [recipe=jellynut-processing]  [item=jellynut]  (inserter 3)",
+            "2 inserters, each [entity=biochamber] → [entity=turbo-transport-belt] [item=rocket-fuel] (2, 4)",
+            "2 inserters, each [entity=turbo-transport-belt] → [entity=biochamber] [recipe=rocket-fuel-from-jelly] [item=bioflux] (1, 5)",
+            "4 inserters, each [entity=biochamber] → [entity=biochamber] [recipe=rocket-fuel-from-jelly] [item=jelly] (6, 7, 8, 9)",
+            "By-product: [entity=biochamber] [recipe=jellynut-processing] → [entity=turbo-transport-belt] [item=jellynut-seed] (inserter 11)",
+            "Fuel: 2 inserters, each [entity=turbo-transport-belt] → [entity=biochamber] [recipe=rocket-fuel-from-jelly] [item=nutrients] (10, 13)",
+            "Fuel: [entity=turbo-transport-belt] → [entity=biochamber] [recipe=jellynut-processing] [item=nutrients] (inserter 12)",
+            "[entity=turbo-transport-belt] → [entity=biochamber] [recipe=jellynut-processing] [item=jellynut] (inserter 3)",
         ]);
     });
 
@@ -369,7 +369,7 @@ describe("the count of a clock", async () => {
             is_on: false,
         });
         expect(constants[0].player_description).toBe(
-            "Clock lock: switch on to stop every clock; no inserter is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off");
+            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off");
     });
 
     it.each(blueprints)("is counted by deciders that start over at 1 and wait there while the lock is on (%s)", (_, blueprint) => {
