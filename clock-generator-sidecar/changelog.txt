@@ -2,6 +2,7 @@
 Version: 0.13.1
   Bugfixes:
     - exports a belt that has a loader in it, which the Clock Generator refused to import (#363)
+    - exports a chest that is empty when you select the build, with the item the inserters into and out of it move (#366)
 ---------------------------------------------------------------------------------------------------
 Version: 0.13.0
 Date: 2026-10-23
