@@ -539,7 +539,8 @@ copy into loaders and void chests (drained and moving); the copies are not alike
   recorder schema reads a clock that counts from 0 only when the recording names its period (the harness writes it), and then
   checks every sample against the clock's count, so a missing signal is still refused.
 - `generated-three-copies`: the same blueprint with the owner's three combinators taken out and the generator's selected clock
-  for the config (`swings-2`, 72 ticks, 2 output swings) wired to the inserters of each copy. The harness finds the copies
+  for the config (`swings-2`, 72 ticks, 2 output swings) wired to the inserters of each copy. The test says the build holds 3
+  copies (`copies: 3`; without it a build is one copy and a machine beyond the config is refused), and the harness finds them
   from the build's machines and inserters (machines that inserters move items between are one copy; belts, which the copies
   share, do not join them) and matches each to the config by itself. The inserters the owner's clock held run free while
   the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched.
