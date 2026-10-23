@@ -43,7 +43,7 @@ export function slotRange(from: number, to: number): number[] {
 }
 
 /** The slots of an inventory: filtered to an item, blocked, and free (unfiltered, taking any item); slots past its last are not counted */
-export interface SlotCounts { filtered: number; blocked: number; free: number }
+interface SlotCounts { filtered: number; blocked: number; free: number }
 
 export function slotCounts(filters: readonly SlotFilterFormData[], count: number): SlotCounts {
     const inside = new Map(filters
