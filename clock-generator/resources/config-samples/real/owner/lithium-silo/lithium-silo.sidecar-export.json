@@ -1,5 +1,5 @@
 {
-  "sidecar_version": "0.13.0",
+  "sidecar_version": "0.13.1",
   "machines": [
     {
       "id": 1,
@@ -373,7 +373,7 @@
         "drop_capture": {
           "status": "side-loaded",
           "tiles": 3,
-          "sidecar_version": "0.13.0"
+          "sidecar_version": "0.13.1"
         }
       },
       "prototype": "stack-inserter",
@@ -396,7 +396,7 @@
         "drop_capture": {
           "status": "side-loaded",
           "tiles": 3,
-          "sidecar_version": "0.13.0"
+          "sidecar_version": "0.13.1"
         }
       },
       "prototype": "stack-inserter",

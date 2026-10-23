@@ -8,7 +8,7 @@ import { machineRuleOf } from "./machine-prototype";
  * The newest version of the sidecar mod. The mod has a version of its own (see "Versioning" in the README) and
  * this is bumped with it, when the mod changes: a paste from an older mod is told to update to this version.
  */
-export const LATEST_SIDECAR_VERSION = "0.13.0";
+export const LATEST_SIDECAR_VERSION = "0.13.1";
 
 /** The first version of the sidecar mod that exports the energy consumption of biochambers. */
 export const SIDECAR_VERSION_WITH_ENERGY_CONSUMPTION = "0.6.0";
