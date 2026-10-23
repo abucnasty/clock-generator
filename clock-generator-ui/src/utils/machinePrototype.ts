@@ -67,3 +67,55 @@ export function machineIconText(machine: Pick<MachineFormData, 'prototype' | 'qu
     const quality = machine.quality ? ` (${qualityLabel(machine.quality)})` : '';
     return `${machineName(machine.prototype)}${quality}, ${prototypeSourceText(machine._prototype_source)}`;
 }
+
+/** Each quality's level in the game data: a machine's crafting speed rises 30% of its base with each */
+const QUALITY_LEVELS: Record<MachineQuality, number> = { normal: 0, uncommon: 1, rare: 2, epic: 3, legendary: 5 };
+const QUALITY_SPEED_STEP = 0.3;
+
+/** A number of the form, without float noise: 2.375, not 2.3750000000000004 */
+const shownNumber = (value: number) => Number(value.toFixed(3));
+
+/** A machine's crafting speed at a quality, before modules and beacons: its base speed plus 30% of it per quality level */
+export function machineSpeedAtQuality(machine: Pick<CraftingMachineInfo, 'crafting_speed'>, quality: MachineQuality | undefined): number {
+    return shownNumber(machine.crafting_speed * (1 + QUALITY_SPEED_STEP * QUALITY_LEVELS[quality ?? 'normal']));
+}
+
+/** The picker's line under a machine: "Crafting speed 5× at Legendary (2× base)" */
+export function machineSpeedText(machine: Pick<CraftingMachineInfo, 'crafting_speed'>, quality: MachineQuality | undefined): string {
+    const speed = machineSpeedAtQuality(machine, quality);
+    return speed === shownNumber(machine.crafting_speed)
+        ? `Crafting speed ${speed}×`
+        : `Crafting speed ${speed}× at ${qualityLabel(quality!)} (${shownNumber(machine.crafting_speed)}× base)`;
+}
+
+/**
+ * The hint under the Crafting Speed field: what the machine does at its quality on its own, and that modules and beacons
+ * change it. The field is not changed: the clock uses the speed as exported.
+ */
+export function craftingSpeedHint(row: Pick<MachineFormData, 'prototype' | 'quality'>, data: CraftingMachineData,
+    machineName: (id: string) => string): string {
+    const machine = craftingMachineOf(data, row.prototype);
+    const end = 'The clock uses the speed in this field.';
+    if (machine === undefined) return `Modules, beacons and the machine's quality change a machine's speed. ${end}`;
+    const quality = row.quality !== undefined && row.quality !== 'normal' ? ` (${qualityLabel(row.quality)})` : '';
+    return `${machineName(machine.name)}${quality}: ${machineSpeedAtQuality(machine, row.quality)}× before modules and beacons, which change it. ${end}`;
+}
+
+/** The machines of the data that can make a recipe, in the data's order */
+function machinesThatMake(recipe: string, data: CraftingMachineData): CraftingMachineInfo[] {
+    return data.machines.filter(machine => machineCanMake(machine, data.recipeCategories[recipe] ?? []));
+}
+
+/**
+ * What a row says when its machine cannot make its recipe, in the game's words ("Assembling machine 1 can't craft
+ * Lithium. Machines that can: Cryogenic plant."); undefined when it can, or when the machine or the recipe is unknown
+ */
+export function recipeNotMadeText(row: Pick<MachineFormData, 'prototype' | 'recipe'>, data: CraftingMachineData,
+    machineName: (id: string) => string, recipeName: (id: string) => string): string | undefined {
+    const machine = craftingMachineOf(data, row.prototype);
+    const categories = data.recipeCategories[row.recipe];
+    if (machine === undefined || categories === undefined || machineCanMake(machine, categories)) return undefined;
+    const can = machinesThatMake(row.recipe, data).map(it => machineName(it.name));
+    return `${machineName(machine.name)} can't craft ${recipeName(row.recipe)}. `
+        + (can.length === 0 ? 'No machine of the game data can.' : `Machines that can: ${can.join(', ')}.`);
+}

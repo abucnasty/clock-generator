@@ -120,6 +120,9 @@ export function recipeName(owner: string): string {
     return `Recipe, ${owner}`;
 }
 
+/** The name of the button on a row's machine icon, which opens the Machine picker: "Change machine, Machine 2" */
+export const changeMachineName = (owner: string) => `Change machine, ${owner}`;
+
 /** The name of the target's recipe field */
 export const TARGET_RECIPE_NAME = 'Recipe, Target Output';
 

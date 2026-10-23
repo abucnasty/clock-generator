@@ -15,7 +15,7 @@ import { HelpButton } from './HelpButton';
 import { InfinityChestSettings } from './InfinityChestSettings';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
-import { MachinePrototypeField, MachineQualityField } from './MachineFields';
+import { CraftingSpeedHint, MachinePrototypeField, MachineQualityField } from './MachineFields';
 import { CHEST_TYPES, CHEST_TYPE_LABELS, chestTypeIcon } from '../utils/configForm/formData';
 
 /** Controlled type fields shared by the list and diagram editors. Draft ownership stays with the caller. */
@@ -64,6 +64,7 @@ export function MachineSettingsFields({ machine, onChange, onPatch, dialog = fal
             min={0.01} step={0.1} defaultValue={1} sx={fieldSx} size="small" />
         {!dialog && nutrients && <NumberField label="Energy Consumption (%)" value={machine.energy_consumption_bonus ?? 0}
             onValueChange={value => onChange('energy_consumption_bonus', value ?? 0)} min={-80} step={1} defaultValue={0} sx={fieldSx} size="small" />}
+        <CraftingSpeedHint machine={machine} sx={{ gridColumn: '1 / -1', width: dialog ? '100%' : undefined, minWidth: 0 }} />
     </Box>;
 }
 
