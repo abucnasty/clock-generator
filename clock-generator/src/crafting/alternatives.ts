@@ -473,7 +473,7 @@ function alternativeDefinitionsFor(
             description: "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
                 + "the output inserters clocked and every other inserter running freely; each inserter's windows are the ticks "
                 + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
-                + `one per craft, so there are usually more windows than ${BATCHED_SWINGS_LABEL} has. An inserter between two machines that waits at `
+                + `one per craft, so its inserters usually have more wake windows than in ${BATCHED_SWINGS_LABEL}, which groups several swings into one window. An inserter between two machines that waits at `
                 + "its source for a full hand gets short, evenly spaced windows instead when they stay stable, so it grabs a hand "
                 + "that is already there rather than staying enabled while the machine crafts.",
             run: () => generateClockWithSwingBackoff(base_config, quiet, (swings_config, options) => observedWindowsClock(swings_config, options, "always")),
