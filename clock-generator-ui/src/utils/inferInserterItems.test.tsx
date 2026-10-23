@@ -4,7 +4,8 @@ import type { Config } from 'clock-generator/browser';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FilterSlotSelector } from '../components/FilterSlotSelector';
 import { configToFormData } from './configForm/configMapping';
-import { inferInserterItems, sourceItemsOf } from './inferInserterItems';
+import { drillItemsInto, inferInserterItems, itemsAround, sourceItemsOf } from './inferInserterItems';
+import { buildFlowGraph, flowNodeEntity } from './buildFlowGraph';
 import { entityOptionsOf, findOption } from './inserterOptions';
 import { InserterEditor } from '../components/InserterEditor';
 
@@ -125,4 +126,61 @@ it('explains empty automatic slots without labelling explicit filters as uninfer
         onFilterChange={() => {}} onRemoveFilter={() => {}} />);
     expect(render()).toContain('No items inferred. Choose an item to set an explicit filter.');
     expect(render(['lithium'])).not.toContain('No items inferred');
+});
+
+describe('a container filled by drills', () => {
+    // the owner's car build: a big mining drill drops iron ore into a car, two inserters take it to two furnaces
+    const car = () => configToFormData({
+        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0 }, { id: 2, recipe: 'iron-plate', crafting_speed: 5, productivity: 0 }],
+        drills: { configs: [{ id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 0, target: { type: 'chest', id: 1 } }] },
+        belts: [],
+        inserters: [
+            { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 } },
+            { id: 2, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 2 } },
+        ],
+        chests: [{ id: 1, type: 'car' }, { id: 2, type: 'tank' }],
+    } satisfies Config);
+    const smelting: Record<string, RecipeInfo> = { 'iron-plate': { ingredients: ['iron-ore'], results: ['iron-plate'] } };
+    const smeltingInfo = (name: string) => smelting[name] ?? null;
+
+    it("infers the drill's ore for the car's takers, as the engine counts it", () => {
+        const form = car(), drills = form.drills!.configs;
+        expect(drillItemsInto(1, drills)).toEqual(['iron-ore']);
+        expect(sourceItemsOf({ type: 'chest', id: 1 }, form.machines, form.belts, form.chests, smeltingInfo, form.inserters, drills)).toEqual(['iron-ore']);
+        for (const taker of form.inserters) {
+            expect(inferInserterItems(taker, form.machines, form.belts, form.chests, smeltingInfo, form.inserters, undefined, drills)).toEqual(['iron-ore']);
+            expect(itemsAround(taker, form.machines, form.belts, form.chests, smeltingInfo, form.inserters, undefined, drills)).toContain('iron-ore');
+        }
+        // without the drills, nothing is known of the car: what the form showed before
+        expect(inferInserterItems(form.inserters[0], form.machines, form.belts, form.chests, smeltingInfo, form.inserters)).toEqual([]);
+    });
+
+    it("shows the ore on the car's option, with or without the incoming routes, and not on another container", () => {
+        const form = car(), drills = form.drills!.configs;
+        const labels = { item: (id: string) => id.toUpperCase(), recipe: (id: string) => id };
+        for (const context of [{ inserters: form.inserters, getRecipeInfo: smeltingInfo, drills }, { drills }]) {
+            const options = entityOptionsOf(form.machines, form.belts, form.chests, labels, context);
+            expect(findOption(options, 'chest', 1)).toMatchObject({ icon: 'car', sublabel: 'IRON-ORE', ingredientIcons: ['iron-ore'] });
+            expect(findOption(options, 'chest', 2)).toMatchObject({ sublabel: 'No items inferred', ingredientIcons: undefined });
+        }
+    });
+
+    it('follows the drill: retargeted, without a resource, or into a machine, it puts nothing into the car', () => {
+        const form = car(), drill = form.drills!.configs[0];
+        const into = (changes: Partial<typeof drill>) => sourceItemsOf({ type: 'chest', id: 1 }, form.machines, form.belts, form.chests, smeltingInfo, form.inserters, [{ ...drill, ...changes }]);
+        expect(into({ target: { type: 'chest', id: 2 } })).toEqual([]);
+        expect(into({ mined_item_name: '' })).toEqual([]);
+        expect(into({ target: { type: 'machine', id: 1 } })).toEqual([]);
+        expect(into({ mined_item_name: 'copper-ore' })).toEqual(['copper-ore']);
+    });
+
+    it("draws the ore on the car's diagram node and on its takers", () => {
+        const form = car();
+        const { nodes } = buildFlowGraph(form.machines, form.inserters, form.belts, form.chests, form.drills!.configs, smeltingInfo);
+        const icons = (type: string, id: number) => nodes.filter(node => flowNodeEntity(node).type === type && flowNodeEntity(node).id === id)
+            .map(node => (node.data as { filterIcons?: string[] }).filterIcons);
+        expect(icons('chest', 1)).toContainEqual(['iron-ore']);
+        expect(icons('inserter', 1)).toEqual([['iron-ore']]);
+    });
 });

@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from '@mui/material';
 import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { memo, useMemo, useRef, type ReactNode } from 'react';
-import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useGameNames } from '../hooks/useGameNames';
 import { useAnnounce } from '../hooks/useMessages';
@@ -26,6 +26,8 @@ export interface InserterEditorProps {
     inserters: InserterFormData[];
     belts: BeltFormData[];
     chests: ChestFormData[];
+    /** The drills: a container holds what the ones that drop into it mine */
+    drills?: readonly DrillFormData[];
     itemNames: string[];
     getRecipeInfo: (name: string) => RecipeInfo | null;
     onChange: (updates: Partial<InserterFormData>) => void;
@@ -38,8 +40,10 @@ export interface InserterEditorProps {
     options?: EntityOption[];
 }
 
+const NO_DRILLS: readonly DrillFormData[] = [];
+
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
-export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
+export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, drills = NO_DRILLS, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
     const row = layout === 'row';
     const capacity = effectiveInserterStackSize(value);
     const timing = inserterTimingLabels(value);
@@ -48,10 +52,10 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     const { itemLabel, recipeLabel } = useGameNames();
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
-    const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo }), [options, machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo]);
+    const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo, drills }), [options, machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo, drills]);
     const craftingMachines = useCraftingMachines();
-    const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo, inserters, craftingMachines), [value, machines, belts, chests, getRecipeInfo, inserters, craftingMachines]);
-    const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo, inserters) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo, inserters]);
+    const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills), [value, machines, belts, chests, getRecipeInfo, inserters, craftingMachines, drills]);
+    const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo, inserters, drills) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo, inserters, drills]);
     const filterChange = (result: ReturnType<typeof setFilterSlot>) => {
         onChange({ filters: result.filters });
         if (result.becameExplicit) announce(`${label}'s filters are now set by hand.`);

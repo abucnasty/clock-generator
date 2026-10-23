@@ -1245,6 +1245,7 @@ function App() {
                                             machines={config.machines}
                                             belts={config.belts}
                                             chests={config.chests}
+                                            drills={drillConfigs}
                                             itemNames={itemNamesComposite}
                                             getRecipeInfo={getRecipeInfo}
                                             onAdd={addInserter}

@@ -404,6 +404,7 @@ export function EntityEditDialog({
                             inserters={inserters}
                             belts={belts}
                             chests={chests}
+                            drills={drills}
                             itemNames={itemNames}
                             getRecipeInfo={getRecipeInfo}
                             onUpdate={onUpdateInserter}
