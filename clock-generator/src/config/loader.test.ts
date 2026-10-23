@@ -59,7 +59,8 @@ describe("parseConfig", () => {
                 recipe: "iron-gear-wheel",
                 productivity: 0.5,
                 crafting_speed: 1.25,
-                type: "machine"
+                // the former type, read as a machine of that rule that makes the recipe
+                prototype: "assembling-machine-3"
             });
         });
 
@@ -850,7 +851,7 @@ describe("parseConfig", () => {
             }`;
 
             const config = await parseConfig(json);
-            expect(config.machines[0].type).toBeUndefined();
+            expect(config.machines[0]).not.toHaveProperty("type");
             expect(config.drills).toBeUndefined();
             expect(config.overrides).toBeUndefined();
         });

@@ -16,23 +16,25 @@ export interface MachineFormData {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace' | 'biochamber';
-    /** Energy consumption effect in percent; only used by biochambers. */
+    /** Energy consumption effect in percent; only used by machines burning nutrients (biochambers). */
     energy_consumption_bonus?: number;
     fuel?: Config['machines'][number]['fuel'];
-    /** The machine's prototype name ("electric-furnace"), shown as its icon; Sidecar exports it, or it is chosen by hand */
+    /**
+     * What the machine is ("electric-furnace"), shown as its icon; the engine works out how to simulate it from it. Sidecar
+     * exports it, it is chosen by hand, or picked for the recipe of a row without one
+     */
     prototype?: string;
     /** UI-only: where `prototype` came from, for its tooltip; none for a build file, a share link or an older saved build */
-    _prototype_source?: 'sidecar' | 'sample' | 'hand';
+    _prototype_source?: 'sidecar' | 'sample' | 'hand' | 'recipe';
     quality?: Config['machines'][number]['quality'];
     recipe_quality?: Config['machines'][number]['recipe_quality'];
     /** Where it stands in the game; Sidecar exports it, nothing reads it */
     position?: Config['machines'][number]['position'];
 }
 
-/** The icon of a machine: its prototype when the config has it, else one for its type */
-export function machineIconName(machine: Pick<MachineFormData, 'prototype' | 'type'> | undefined): string {
-    return machine?.prototype ?? (machine?.type === 'biochamber' ? 'biochamber' : machine?.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3');
+/** The icon of a machine: its prototype when the config has it, else an assembling machine's, as it is simulated */
+export function machineIconName(machine: Pick<MachineFormData, 'prototype'> | undefined): string {
+    return machine?.prototype ?? 'assembling-machine-3';
 }
 
 // Enable rule types come from the engine's config schema

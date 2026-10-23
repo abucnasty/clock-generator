@@ -29,3 +29,38 @@ export function machineRuleOfPrototype(prototype: CraftingMachineRuleFacts): Mac
 export function machineCanMake(prototype: Pick<CraftingMachineRuleFacts, "crafting_categories">, recipe_categories: readonly string[]): boolean {
     return recipe_categories.some(category => prototype.crafting_categories.includes(category));
 }
+
+/** A crafting machine prototype of the game data with its name and base crafting speed, as the data lists them */
+export interface NamedCraftingMachine extends CraftingMachineRuleFacts {
+    readonly name: string;
+    /** The prototype's crafting speed, before modules, beacons and quality */
+    readonly crafting_speed: number;
+}
+
+/**
+ * The machine to set for a recipe of these categories, among `machines` (in the data's order): of those that can make
+ * the recipe, the one with the highest base crafting speed (the one a player most likely built), then one that burns no
+ * fuel, then the first in the data. Undefined when none can make it. No name decides it.
+ */
+export function machineForRecipe<T extends NamedCraftingMachine>(recipe_categories: readonly string[], machines: readonly T[]): T | undefined {
+    const better = (machine: T, best: T) => machine.crafting_speed !== best.crafting_speed
+        ? machine.crafting_speed > best.crafting_speed
+        : machine.burner_fuel_categories.length === 0 && best.burner_fuel_categories.length > 0;
+    return machines.filter(machine => machineCanMake(machine, recipe_categories))
+        .reduce<T | undefined>((best, machine) => best === undefined || better(machine, best) ? machine : best, undefined);
+}
+
+/**
+ * The machine a config's former `type` (a rule) stands for, for a recipe of these categories: the machine
+ * `machineForRecipe` picks among those of that rule. When no machine of the rule can make the recipe, a furnace or
+ * biochamber rule still needs a machine to keep its rule (the first of the rule that burns no fuel, else the first),
+ * and the crafting rule needs none (a machine without a prototype is simulated under it), so it is undefined.
+ */
+export function machineForRule<T extends NamedCraftingMachine>(rule: MachineType, recipe_categories: readonly string[], machines: readonly T[]): T | undefined {
+    const of_rule = machines.filter(machine => machineRuleOfPrototype(machine) === rule);
+    const able = machineForRecipe(recipe_categories, of_rule);
+    if (able !== undefined || rule === MachineType.MACHINE) {
+        return able;
+    }
+    return of_rule.find(machine => machine.burner_fuel_categories.length === 0) ?? of_rule[0];
+}

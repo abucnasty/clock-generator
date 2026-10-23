@@ -1,6 +1,8 @@
 import { FactorioDataService } from "../data/factorio-data-service";
 import { Option } from "../data-types/option";
 import { ImportInput, ImportedMachine, ImportPipeline, ImportStep } from "./import-pipeline";
+import { MachineType } from "../entities/machine/machine-type";
+import { machineRuleOf } from "./machine-prototype";
 
 /**
  * The newest version of the sidecar mod. The mod has a version of its own (see "Versioning" in the README) and
@@ -64,10 +66,13 @@ export function sidecarFeatureStep(feature: SidecarFeature): ImportStep {
 
 /** Biochambers before 0.6.0 were exported as plain machines, so they are told apart by their recipe. */
 function maybeBiochamber(machine: ImportedMachine): boolean {
-    if (machine.type === "biochamber") {
+    if (machine.type === MachineType.BIOCHAMBER) {
         return true;
     }
     if (!FactorioDataService.isInitialized()) {
+        return true;
+    }
+    if (machine.prototype !== undefined && machineRuleOf(machine) === MachineType.BIOCHAMBER) {
         return true;
     }
     try {
@@ -97,6 +102,13 @@ const MOVING_PICKUP_FEATURE: SidecarFeature = {
         && "type" in inserter.source && inserter.source.type === "belt"),
     missing: () => "Physical belt pickup geometry was not exported. Update Sidecar and recapture these inputs; a straight-belt default does not establish their support.",
 };
+/** Before 0.12.0 each machine's kind (furnace, biochamber or other), not the machine: one is picked for it on import */
+export const MACHINE_PROTOTYPE_FEATURE: SidecarFeature = {
+    name: "machine-prototype", since: "0.12.0",
+    appliesTo: input => input.machines.length > 0,
+    missing: () => "Each machine's kind (a furnace, a biochamber or another) was exported, not the machine, so each got a "
+        + "machine of its kind that can make its recipe: check each machine.",
+};
 /** Before 0.12.0 one mining productivity level for every drill, read as each drill's productivity: no modules in it */
 export const DRILL_PRODUCTIVITY_FEATURE: SidecarFeature = {
     name: "drill-productivity", since: "0.12.0",
@@ -105,7 +117,7 @@ export const DRILL_PRODUCTIVITY_FEATURE: SidecarFeature = {
         + "mining productivity research only. Check each drill's productivity by hand.",
 };
 export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE,
-    DRILL_PRODUCTIVITY_FEATURE];
+    MACHINE_PROTOTYPE_FEATURE, DRILL_PRODUCTIVITY_FEATURE];
 
 /** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
 const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";

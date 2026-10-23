@@ -63,7 +63,7 @@ beforeEach(() => {
     runner.reset(); vi.clearAllMocks(); entry = { current: null };
     const currentForm = createDefaultConfig();
     currentForm.inserters = [{ id: 1, _uuid: 'existing-inserter', source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 0 } }];
-    incoming = { machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0, type: 'machine' }],
+    incoming = { machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0, prototype: 'assembling-machine-1' }],
         drills: [], inserters: [], belts: [], chests: [], guidance: Option.none(), suggested_target: Option.none() };
     runner.validate.mockResolvedValue(incoming);
     vi.stubGlobal('document', { activeElement: null });
@@ -109,7 +109,7 @@ describe('Paste acknowledgment bound to the actual preview', () => {
         acknowledge(); expect(apply().disabled).toBe(false); clickApply();
         expect(props.onApplyPaste).toHaveBeenCalledOnce();
         const next = vi.mocked(props.onApplyPaste).mock.calls[0][0];
-        expect(next.machines).toEqual(incoming.machines.map(row => ({ ...row, _uuid: expect.any(String) })));
+        expect(next.machines).toEqual(incoming.machines.map(row => ({ ...row, _prototype_source: 'sidecar', _uuid: expect.any(String) })));
         expect(next.inserters).toBe(props.currentForm.inserters);
         expect(props.onUndoable).toHaveBeenCalledExactlyOnceWith('Imported 1 machine from Factorio.');
         expect(props.onBuildReplaced).toHaveBeenCalledOnce();

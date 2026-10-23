@@ -68,7 +68,8 @@ export function applyPaste(current: ConfigFormData, incoming: PastedEntities, se
         ...current,
         target_output: selections.target && target ? target : current.target_output,
         machines: replacing('machines')
-            ? incoming.machines.map(row => withUuid({ ...row, ...(row.prototype !== undefined && { _prototype_source: 'sidecar' as const }) }))
+            ? incoming.machines.map(row => withUuid({ ...row, ...(row.prototype !== undefined
+                && { _prototype_source: incoming.picked_machines?.includes(row.id) ? 'recipe' as const : 'sidecar' as const }) }))
             : current.machines,
         inserters: replacing('inserters')
             ? incoming.inserters.map((row, index) => withUuid({ ...row, id: row.id ?? index + 1 }))

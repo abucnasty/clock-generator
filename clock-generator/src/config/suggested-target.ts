@@ -1,7 +1,6 @@
 import { Option } from "../data-types/option";
 import { Machine } from "../entities/machine/machine";
 import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
-import { machineRuleOf } from "./machine-prototype";
 import { MachineConfiguration, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
 
 /**
@@ -39,7 +38,7 @@ function outputRateOf(machine: MachineConfiguration): number | null {
             recipe: machine.recipe,
             productivity: machine.productivity,
             crafting_speed: machine.crafting_speed,
-            type: machineRuleOf(machine),
+            prototype: machine.prototype,
             energy_consumption_bonus: machine.energy_consumption_bonus,
             fuel: machine.fuel,
         }).output_rate_per_second;

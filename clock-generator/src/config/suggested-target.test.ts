@@ -15,7 +15,7 @@ function machines(...inputs: MachineInput[]): MachineConfiguration[] {
 
 /** An assembling machine 2 with no modules */
 function assembler(recipe: string, crafting_speed = 0.75, productivity = 0): MachineInput {
-    return { recipe, crafting_speed, productivity, type: "machine" };
+    return { recipe, crafting_speed, productivity };
 }
 
 /** What the site's machine facts show as the output rate of this machine */
@@ -24,7 +24,7 @@ function factsRate(machine: MachineInput): number {
         recipe: machine.recipe,
         productivity: machine.productivity,
         crafting_speed: machine.crafting_speed,
-        type: machine.type,
+        prototype: machine.prototype,
         energy_consumption_bonus: machine.energy_consumption_bonus,
         fuel: machine.fuel,
     }).output_rate_per_second;
@@ -124,7 +124,7 @@ describe("inferSuggestedTarget", () => {
     });
 
     it("counts the part of a product productivity ignores as the machine facts do, and a recipe consuming its own product is final", () => {
-        const egg: MachineInput = { recipe: "pentapod-egg", crafting_speed: 2, productivity: 50, type: "biochamber" };
+        const egg: MachineInput = { recipe: "pentapod-egg", crafting_speed: 2, productivity: 50, prototype: "biochamber" };
         const suggested = Option.toNullable(inferSuggestedTarget(machines(egg)));
         expect(suggested).toEqual({ recipe: "pentapod-egg", items_per_second: factsRate(egg), copies: 1 });
         // (2 - 1) * 1.5 + 1 eggs per 15 s craft at speed 2

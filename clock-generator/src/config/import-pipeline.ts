@@ -12,7 +12,9 @@ import { Option } from "../data-types/option";
 
 export interface ImportedMachine {
     recipe: string;
+    /** The former simulation rule, which sidecars before 0.12.0 exported */
     type?: string;
+    prototype?: string;
 }
 
 /** What a step gets to look at */

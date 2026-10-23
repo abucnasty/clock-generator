@@ -4,30 +4,23 @@ import { machineCanMake, machineRuleOfPrototype } from "../entities/machine/mach
 import { MachineType } from "../entities/machine/machine-type";
 import type { Config, MachineConfiguration } from "./schema";
 
-/** The simulation rule of a machine of the config: its `type` when set, else the rule of its prototype, else the crafting rule */
-export function machineRuleOf(machine: Pick<MachineConfiguration, "type" | "prototype">): MachineType {
-    if (machine.type !== undefined) {
-        return machine.type;
-    }
+/**
+ * The simulation rule of a machine of the config, internal to the engine: its prototype's (machine-rule.ts), else the
+ * crafting rule, for a machine without a prototype or with one the game data does not hold
+ */
+export function machineRuleOf(machine: Pick<MachineConfiguration, "prototype">): MachineType {
     const prototype = machine.prototype === undefined ? null : FactorioDataService.findCraftingMachine(machine.prototype);
     return prototype === null ? MachineType.MACHINE : machineRuleOfPrototype(prototype);
 }
 
-/** The names of the rules in the warnings */
-const RULE_NAMES: Record<MachineType, string> = {
-    [MachineType.MACHINE]: "the crafting rule (machine)",
-    [MachineType.FURNACE]: "the furnace rule (furnace)",
-    [MachineType.BIOCHAMBER]: "the biochamber rule (biochamber)",
-};
-
 /**
  * What a machine's prototype says against the rest of its config: a prototype that is no crafting machine of the game
- * data, a `type` other than the prototype's rule (the `type` is used), or a recipe the prototype cannot make (the clock
- * is made as configured). Warnings only: such a config loads, and its clock is what it was before the data named them.
+ * data (it is simulated as an assembling machine), or a recipe the prototype cannot make (the clock is made as
+ * configured). Warnings only: such a config loads, and its clock is what it was before the data named them.
  */
 export interface MachinePrototypeIssue {
     machine_id: number;
-    kind: "unknown-prototype" | "rule-disagrees" | "recipe-not-made";
+    kind: "unknown-prototype" | "recipe-not-made";
     message: string;
 }
 
@@ -42,14 +35,8 @@ export function machinePrototypeIssues(config: Pick<Config, "machines">): Machin
         if (prototype === null) {
             issues.push({ machine_id: machine.id, kind: "unknown-prototype",
                 message: `Machine ${machine.id} names ${machine.prototype}, which is no crafting machine of the game data: it is `
-                    + `simulated under ${RULE_NAMES[machineRuleOf(machine)]}, from its type.` });
+                    + "simulated as an assembling machine." });
             continue;
-        }
-        const derived = machineRuleOfPrototype(prototype);
-        if (machine.type !== undefined && machine.type !== derived) {
-            issues.push({ machine_id: machine.id, kind: "rule-disagrees",
-                message: `Machine ${machine.id} (${machine.prototype}) crafts under ${RULE_NAMES[derived]}, but its type is `
-                    + `${machine.type}: it is simulated under ${RULE_NAMES[machine.type]}. Remove the type to follow the machine.` });
         }
         const recipe = FactorioDataService.findRecipe(machine.recipe);
         if (recipe !== null && !machineCanMake(prototype, recipe.categories)) {

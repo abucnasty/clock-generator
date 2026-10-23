@@ -21,7 +21,7 @@ import type { Theme } from '@mui/material/styles';
 import { MachineSettingsFields } from './EntityFields';
 import { MachineIcon } from './MachineIcon';
 import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
-import { machineIconText } from '../utils/machinePrototype';
+import { burnsNutrients, machineIconText, recipePatch } from '../utils/machinePrototype';
 import { HelpCommand } from './HelpButton';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
@@ -69,7 +69,7 @@ function MachinesFormComponent({
     const common = machines.length === 0 ? [] : [
         machines.every(row => row.productivity === machines[0].productivity) ? `productivity ${machines[0].productivity}%` : null,
         machines.every(row => row.crafting_speed === machines[0].crafting_speed) ? `speed ${machines[0].crafting_speed}×` : null,
-        machines.every(row => row.type === 'biochamber' && (row.energy_consumption_bonus ?? 0) === (machines[0].energy_consumption_bonus ?? 0)) ? `energy consumption ${machines[0].energy_consumption_bonus ?? 0}%` : null,
+        machines.every(row => burnsNutrients(row, craftingMachines) && (row.energy_consumption_bonus ?? 0) === (machines[0].energy_consumption_bonus ?? 0)) ? `energy consumption ${machines[0].energy_consumption_bonus ?? 0}%` : null,
     ].filter(Boolean);
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(machines.length, onRemove);
@@ -133,7 +133,7 @@ function MachinesFormComponent({
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}
-                        displayTitle={machineIconText(machine, itemLabel, craftingMachines)}
+                        displayTitle={machineIconText(machine, itemLabel)}
                         displayLabel={<EntityBadge id={machine.id}>
                             <MachineIcon machine={machine} size={28} />
                         </EntityBadge>}>
@@ -181,12 +181,13 @@ interface MachineRowProps {
 
 function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetUpdating, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
     const { itemLabel, recipeLabel } = useGameNames();
+    const craftingMachines = useCraftingMachines();
     const recipes = useMachineRecipeOptions(machine.prototype, recipeNames);
     const { facts, error, updating } = useMachineFacts({
         recipe: machine.recipe,
         productivity: machine.productivity,
         crafting_speed: machine.crafting_speed,
-        type: machine.type,
+        prototype: machine.prototype,
         energy_consumption_bonus: machine.energy_consumption_bonus,
         fuel: machine.fuel,
     });
@@ -236,7 +237,7 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
                             options={recipes.options}
                             searchOnlyIds={recipes.searchOnly}
                             value={machine.recipe || null}
-                            onChange={(newValue) => onUpdate(index, 'recipe', newValue || '')}
+                            onChange={(newValue) => onPatch(index, recipePatch(machine, newValue || '', craftingMachines))}
                             label="Recipe"
                             placeholder="Search recipes..."
                             // the label says "Recipe" in every row: say whose it is
@@ -272,12 +273,12 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
                         : facts && !error && (!atTarget || targetRate) && <MachineProductionSummary facts={facts} targetRate={atTarget ? targetRate : undefined} />}
                     <Typography variant="caption">
                         Speed {Number(machine.crafting_speed.toFixed(3))}× · Productivity {machine.productivity}%
-                        {machine.type === 'biochamber' && ` · Energy ${Number((machine.energy_consumption_bonus ?? 0).toFixed(2))}%`}
+                        {burnsNutrients(machine, craftingMachines) && ` · Energy ${Number((machine.energy_consumption_bonus ?? 0).toFixed(2))}%`}
                     </Typography>
                 </Box>
             }>
             <MachineSettingsFields machine={machine} onChange={(field, value) => onUpdate(index, field, value)} onPatch={patch => onPatch(index, patch)}
-                blockedAt={facts && !error ? `${facts.output_block_size} ${itemLabel(facts.output_item)}` : undefined} />
+                nutrients={burnsNutrients(machine, craftingMachines)} />
 
             {machine.fuel !== undefined && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }} title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
             </EntitySettings>

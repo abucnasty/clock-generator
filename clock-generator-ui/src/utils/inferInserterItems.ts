@@ -1,6 +1,8 @@
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { containerItems, isBufferChest, isInfinityChest, isRocketSilo } from './configForm/formData';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import type { CraftingMachineData } from '../worker/types';
+import { burnsNutrients, NO_CRAFTING_MACHINES } from './machinePrototype';
 
 type EntityRef = { type: 'machine' | 'belt' | 'chest'; id: number };
 
@@ -55,13 +57,14 @@ function getSinkNeeds(
     machines: MachineFormData[],
     chests: ChestFormData[],
     getRecipeInfo?: (name: string) => RecipeInfo | null,
+    craftingMachines: CraftingMachineData = NO_CRAFTING_MACHINES,
 ): string[] {
     if (sink.type === 'machine') {
         const m = machines.find(m => m.id === sink.id);
         if (m?.recipe && getRecipeInfo) {
             const ingredients = getRecipeInfo(m.recipe)?.ingredients ?? [];
             // Fuel is accepted separately from recipe inputs, including recipes that produce their own nutrients.
-            const fuel = m.fuel ?? (m.type === 'biochamber' ? 'nutrients' : undefined);
+            const fuel = m.fuel ?? (burnsNutrients(m, craftingMachines) ? 'nutrients' : undefined);
             return [...new Set([...ingredients, ...(fuel ? [fuel] : [])])];
         }
     } else if (sink.type === 'belt') {
@@ -90,25 +93,28 @@ export function inferInserterItems(
     chests: ChestFormData[],
     getRecipeInfo?: (name: string) => RecipeInfo | null,
     inserters: InserterFormData[] = [],
+    /** The crafting machines of the game data: a machine burning nutrients takes them as fuel */
+    craftingMachines: CraftingMachineData = NO_CRAFTING_MACHINES,
 ): string[] {
     const sourceItems = sourceItemsOf(inserter.source, machines, belts, chests, getRecipeInfo, inserters);
     const chest = inserter.sink.type === 'chest' ? chests.find(chest => chest.id === inserter.sink.id) : undefined;
     if (chest && isInfinityChest(chest) && !chest.remove_unfiltered_items && !chest.item_filter.some(filter => filter.item_name)) return [];
-    const sinkNeeds = getSinkNeeds(inserter.sink, sourceItems, machines, chests, getRecipeInfo);
+    const sinkNeeds = getSinkNeeds(inserter.sink, sourceItems, machines, chests, getRecipeInfo, craftingMachines);
 
     if (sinkNeeds.length === 0) return sourceItems;
     return sourceItems.filter(item => sinkNeeds.includes(item));
 }
 
 /** Items available to rule expressions at either end, including a machine's inputs and outputs. */
-export function itemsAround(inserter: InserterFormData, machines: MachineFormData[], belts: BeltFormData[], chests: ChestFormData[], getRecipeInfo?: (name: string) => RecipeInfo | null, inserters: InserterFormData[] = []): string[] {
+export function itemsAround(inserter: InserterFormData, machines: MachineFormData[], belts: BeltFormData[], chests: ChestFormData[], getRecipeInfo?: (name: string) => RecipeInfo | null, inserters: InserterFormData[] = [],
+    craftingMachines: CraftingMachineData = NO_CRAFTING_MACHINES): string[] {
     const items = new Set<string>();
     for (const ref of [inserter.source, inserter.sink]) {
         sourceItemsOf(ref, machines, belts, chests, getRecipeInfo, inserters).forEach(item => items.add(item));
         if (ref.type === 'machine') {
             const machine = machines.find(m => m.id === ref.id);
             if (machine?.recipe) getRecipeInfo?.(machine.recipe)?.ingredients.forEach(item => items.add(item));
-            const fuel = machine?.fuel ?? (machine?.type === 'biochamber' ? 'nutrients' : undefined);
+            const fuel = machine?.fuel ?? (machine && burnsNutrients(machine, craftingMachines) ? 'nutrients' : undefined);
             if (fuel) items.add(fuel);
         }
     }

@@ -1,6 +1,6 @@
 import { TargetType } from 'clock-generator/light';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from './configForm/formData';
-import { containerItems, isBufferChest, isContainerChest, isInfinityChest } from './configForm/formData';
+import { containerItems, isBufferChest, isContainerChest, isInfinityChest, machineIconName } from './configForm/formData';
 import { entityLabel } from './entityLabel';
 import type { EntitySelectorOption } from './entitySelector';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
@@ -14,7 +14,7 @@ export interface EntityOption extends EntitySelectorOption {
 export function entityOptionsOf(machines: MachineFormData[], belts: BeltFormData[], chests: ChestFormData[], labels: { recipe: (id: string) => string; item: (id: string) => string },
     context?: { inserters: InserterFormData[]; getRecipeInfo: (name: string) => RecipeInfo | null }): EntityOption[] {
     return [
-        ...machines.map(m => ({ type: TargetType.MACHINE, id: m.id, label: entityLabel('machine', m.id), icon: m.type === 'biochamber' ? 'biochamber' : m.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3', sublabel: m.recipe ? labels.recipe(m.recipe) : 'No recipe', ingredientIcons: m.recipe ? [m.recipe] : undefined })),
+        ...machines.map(m => ({ type: TargetType.MACHINE, id: m.id, label: entityLabel('machine', m.id), icon: machineIconName(m), sublabel: m.recipe ? labels.recipe(m.recipe) : 'No recipe', ingredientIcons: m.recipe ? [m.recipe] : undefined })),
         ...belts.map(b => ({ type: TargetType.BELT, id: b.id, label: entityLabel('belt', b.id), icon: b.type, ingredientIcons: b.lanes.map(l => l.ingredient).filter(Boolean), belt: b })),
         ...chests.map(c => {
             const items = isBufferChest(c) ? (c.item_filter ? [c.item_filter] : []) : isInfinityChest(c) ? c.item_filter.map(f => f.item_name).filter(Boolean)

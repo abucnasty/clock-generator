@@ -9,7 +9,7 @@ import { DrillsForm } from '../components/DrillsForm';
 // a big mining drill dropping into a car, which two inserters empty into a furnace
 const config: Config = {
     target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
-    machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
+    machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, prototype: 'electric-furnace' }],
     drills: { configs: [
         { id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 17.5, productivity: 80000, target: { type: 'chest', id: 1 } }] },
     belts: [],

@@ -40,7 +40,8 @@ import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS 
 import { FactorioIcon } from './FactorioIcon';
 import { OutputChestAlert } from './OutputChestAlert';
 import { ItemSelector } from './ItemSelector';
-import { useMachineRecipeOptions } from '../hooks/useCraftingMachines';
+import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
+import { recipePatch } from '../utils/machinePrototype';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
@@ -234,6 +235,7 @@ export function EntityEditDialog({
     // Each opening starts from the current saved entity.
     const [inserterDirty, setInserterDirty] = useState(false);
     const [draft, setDraft] = useState(entity);
+    const craftingMachines = useCraftingMachines();
     const machineRecipes = useMachineRecipeOptions(entityType === 'machine' ? (draft as MachineFormData | null)?.prototype : undefined, recipeNames);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [saveProblem, setSaveProblem] = useState<string | null>(null);
@@ -321,7 +323,7 @@ export function EntityEditDialog({
         recipe: machineEntity?.recipe ?? '',
         productivity: machineEntity?.productivity ?? 0,
         crafting_speed: machineEntity?.crafting_speed ?? 1,
-        type: machineEntity?.type,
+        prototype: machineEntity?.prototype,
     });
 
     return (
@@ -358,12 +360,11 @@ export function EntityEditDialog({
                         <Box sx={{ p: 2 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <ItemSelector kind="recipe" options={machineRecipes.options} searchOnlyIds={machineRecipes.searchOnly} value={(draft as MachineFormData).recipe || null}
-                                    onChange={value => updateDraft(entityIndex, { recipe: value || '' })}
+                                    onChange={value => updateDraft(entityIndex, recipePatch(draft as MachineFormData, value || '', craftingMachines))}
                                     label="Recipe" placeholder="Search recipes..." freeSolo />
                                 <MachineSettingsFields machine={draft as MachineFormData} dialog
                                     onChange={(field, value) => updateDraft(entityIndex, { [field]: value })}
-                                    onPatch={patch => updateDraft(entityIndex, patch)}
-                                    blockedAt={machineFacts && !machineFactsError ? `${machineFacts.output_block_size} ${itemLabel(machineFacts.output_item)}` : undefined} />
+                                    onPatch={patch => updateDraft(entityIndex, patch)} />
                             </Box>
                             {machineEntity?.recipe && (
                                 <MachineFactsAccordion machineId={entityId ?? 0} facts={machineFacts} error={machineFactsError} headingLevel={3} />

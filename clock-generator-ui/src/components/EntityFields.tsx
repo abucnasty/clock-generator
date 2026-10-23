@@ -15,7 +15,7 @@ import { HelpButton } from './HelpButton';
 import { InfinityChestSettings } from './InfinityChestSettings';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
-import { MachinePrototypeField, MachineQualityField, MachineRuleField } from './MachineFields';
+import { MachinePrototypeField, MachineQualityField } from './MachineFields';
 import { CHEST_TYPES, CHEST_TYPE_LABELS, chestTypeIcon } from '../utils/configForm/formData';
 
 /** Controlled type fields shared by the list and diagram editors. Draft ownership stays with the caller. */
@@ -38,17 +38,17 @@ export function EntityTypeField<T extends string>({ label, value, options, nameO
     </FormControl>;
 }
 
-export function MachineSettingsFields({ machine, onChange, onPatch, dialog = false, blockedAt }: {
+export function MachineSettingsFields({ machine, onChange, onPatch, dialog = false, nutrients = false }: {
     machine: MachineFormData; onChange: (field: keyof MachineFormData, value: string | number) => void;
-    /** Sets several fields at once (the machine, its source and its rule); undefined removes a field */
+    /** Sets several fields at once (the machine and its source); undefined removes a field */
     onPatch: (patch: Partial<MachineFormData>) => void; dialog?: boolean;
-    /** Where this machine stops taking ingredients ("146 Plastic bar"), for the rule's tooltip, when its facts are known */
-    blockedAt?: string;
+    /** The machine burns nutrients (a biochamber), so its energy consumption counts */
+    nutrients?: boolean;
 }) {
     const fieldSx = dialog ? { flex: 1 } : { minWidth: 0, width: '100%' };
     const ownerName = (name: string) => dialog ? name : `${name}, ${entityLabel('machine', machine.id)}`;
     return <Box sx={dialog ? { display: 'flex', flexWrap: 'wrap', gap: 2 } : {
-        display: 'grid', gap: 1, gridTemplateColumns: `repeat(${machine.type === 'biochamber' ? 3 : 2}, minmax(0, 1fr))`,
+        display: 'grid', gap: 1, gridTemplateColumns: `repeat(${nutrients ? 3 : 2}, minmax(0, 1fr))`,
         '@container machine-row (max-width: 520px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
         '@container machine-row (max-width: 360px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
     }}>
@@ -62,10 +62,8 @@ export function MachineSettingsFields({ machine, onChange, onPatch, dialog = fal
             min={0} step={1} defaultValue={0} sx={fieldSx} size="small" />
         <NumberField label="Crafting Speed" value={machine.crafting_speed} onValueChange={value => onChange('crafting_speed', value ?? 1)}
             min={0.01} step={0.1} defaultValue={1} sx={fieldSx} size="small" />
-        {!dialog && machine.type === 'biochamber' && <NumberField label="Energy Consumption (%)" value={machine.energy_consumption_bonus ?? 0}
+        {!dialog && nutrients && <NumberField label="Energy Consumption (%)" value={machine.energy_consumption_bonus ?? 0}
             onValueChange={value => onChange('energy_consumption_bonus', value ?? 0)} min={-80} step={1} defaultValue={0} sx={fieldSx} size="small" />}
-        <MachineRuleField machine={machine} onPatch={onPatch} blockedAt={blockedAt} inputAriaLabel={ownerName(SELECT_NAMES.machineRule)}
-            sx={dialog ? { width: '100%' } : { gridColumn: '1 / -1', minWidth: 0 }} />
     </Box>;
 }
 

@@ -1,4 +1,5 @@
 import { Box, Button, Typography } from '@mui/material';
+import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { memo, useMemo, useRef, type ReactNode } from 'react';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
@@ -48,7 +49,8 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
     const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo }), [options, machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo]);
-    const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo, inserters), [value, machines, belts, chests, getRecipeInfo, inserters]);
+    const craftingMachines = useCraftingMachines();
+    const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo, inserters, craftingMachines), [value, machines, belts, chests, getRecipeInfo, inserters, craftingMachines]);
     const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo, inserters) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo, inserters]);
     const filterChange = (result: ReturnType<typeof setFilterSlot>) => {
         onChange({ filters: result.filters });

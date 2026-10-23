@@ -9,7 +9,7 @@ import { MachineState } from "../../../state/machine-state";
  * to its insertion limit.
  */
 function plasticPlant(crafting_speed: number): MachineState {
-    const machine = Machine.fromConfig({ id: 1, recipe: "plastic-bar", crafting_speed, productivity: 0, type: "machine" });
+    const machine = Machine.fromConfig({ id: 1, recipe: "plastic-bar", crafting_speed, productivity: 0 });
     const state = MachineState.forMachine(machine);
     state.inventoryState.setQuantity("plastic-bar", 100);
     return state;

@@ -7,7 +7,8 @@ interface UseMachineFactsParams {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace' | 'biochamber';
+    /** The machine's prototype, from which the engine works out how it is simulated */
+    prototype?: string;
     energy_consumption_bonus?: number;
     fuel?: string;
 }
@@ -22,16 +23,16 @@ interface UseMachineFactsResult {
 const requests = new Map<string, Promise<SerializableMachineFacts | null>>();
 const known = new Map<string, SerializableMachineFacts | null>();
 
-type FactsKey = [string, number, number, UseMachineFactsParams['type'] | null, number | null, string | null];
+type FactsKey = [string, number, number, string | null, number | null, string | null];
 
-function keyOf({ recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel }: UseMachineFactsParams): string {
-    const key: FactsKey = [recipe, productivity, crafting_speed, type ?? null, energy_consumption_bonus ?? null, fuel ?? null];
+function keyOf({ recipe, productivity, crafting_speed, prototype, energy_consumption_bonus, fuel }: UseMachineFactsParams): string {
+    const key: FactsKey = [recipe, productivity, crafting_speed, prototype ?? null, energy_consumption_bonus ?? null, fuel ?? null];
     return JSON.stringify(key);
 }
 
 function paramsOf(key: string): UseMachineFactsParams {
-    const [recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel] = JSON.parse(key) as FactsKey;
-    return { recipe, productivity, crafting_speed, type: type ?? undefined, energy_consumption_bonus: energy_consumption_bonus ?? undefined, fuel: fuel ?? undefined };
+    const [recipe, productivity, crafting_speed, prototype, energy_consumption_bonus, fuel] = JSON.parse(key) as FactsKey;
+    return { recipe, productivity, crafting_speed, prototype: prototype ?? undefined, energy_consumption_bonus: energy_consumption_bonus ?? undefined, fuel: fuel ?? undefined };
 }
 
 function requestFacts(key: string, params: UseMachineFactsParams): Promise<SerializableMachineFacts | null> {
@@ -62,7 +63,7 @@ function requestFacts(key: string, params: UseMachineFactsParams): Promise<Seria
  * last ones stay shown, so the form does not flicker.
  */
 export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsResult {
-    const { recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel } = params;
+    const { recipe, productivity, crafting_speed, prototype, energy_consumption_bonus, fuel } = params;
     const key = keyOf(params);
     const [shown, setShown] = useState<{ key: string; facts: SerializableMachineFacts | null; error: string | null }>({ key: '', facts: null, error: null });
 
@@ -71,7 +72,7 @@ export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsR
             return;
         }
         let current = true;
-        requestFacts(key, { recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel }).then(
+        requestFacts(key, { recipe, productivity, crafting_speed, prototype, energy_consumption_bonus, fuel }).then(
             (facts) => {
                 if (current) setShown({ key, facts, error: null });
             },
@@ -82,7 +83,7 @@ export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsR
         return () => {
             current = false;
         };
-    }, [key, recipe, productivity, crafting_speed, type, energy_consumption_bonus, fuel]);
+    }, [key, recipe, productivity, crafting_speed, prototype, energy_consumption_bonus, fuel]);
 
     if (!recipe) {
         return { facts: null, error: null, updating: false };

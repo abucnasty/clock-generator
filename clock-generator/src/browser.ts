@@ -95,6 +95,7 @@ export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/picku
 export { laneCapacityIssues, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
 export type { UncalibratedBeltPickup } from './config/pickup-calibration';
 export { machinePrototypeIssues, machineRuleOf } from './config/machine-prototype';
+export { migrateMachineTypes } from './config/migrate-machine-type';
 export type { MachinePrototypeIssue } from './config/machine-prototype';
 
 // ============================================================================

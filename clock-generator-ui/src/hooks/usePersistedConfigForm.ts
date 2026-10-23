@@ -410,10 +410,10 @@ export function usePersistedConfigForm() {
             else finish();
         };
         askEngine({ kind: 'saved-config', config: savedConfig }).then(
-            (problem) => complete(() => {
+            ({ problem, form }) => complete(() => {
                 if (problem === null) {
-                    // unless the config was replaced (imported or reset) in the meantime
-                    if (load.owner.form === defaultConfig) commitBuildReplacement(load.owner, savedConfig, () => {});
+                    // unless the config was replaced (imported or reset) in the meantime; with its machines' former types read
+                    if (load.owner.form === defaultConfig) commitBuildReplacement(load.owner, form as ConfigFormData, () => {});
                 } else {
                     console.warn('Saved config in localStorage is invalid, using defaults:', problem);
                     setLoadNotice(backUpSavedConfig(pageLocal, stored.text, backupKey(opened.activeId)));
@@ -528,11 +528,13 @@ export function usePersistedConfigForm() {
             // listed but never saved: a new build is saved on its first change
             return { form: createDefaultConfig(), text: null };
         }
-        const form = readSavedConfig(text);
+        let form = readSavedConfig(text);
         let problem: string | null = form === null ? 'not the form state' : null;
         if (form !== null) {
             try {
-                problem = await askEngine({ kind: 'saved-config', config: form });
+                const checked = await askEngine({ kind: 'saved-config', config: form });
+                problem = checked.problem;
+                form = checked.form as ConfigFormData;
             } catch (e) {
                 problem = e instanceof Error ? e.message : 'the check failed';
             }
@@ -647,11 +649,13 @@ export function usePersistedConfigForm() {
         if (episode.status === 'none') return false;
         const load = beginLoad();
         const id = idRef.current;
-        const form = readSavedConfig(episode.text);
+        let form = readSavedConfig(episode.text);
         let problem: string | null = form === null ? 'It is not a build.' : null;
         if (form !== null) {
             try {
-                problem = await askEngine({ kind: 'saved-config', config: form });
+                const checked = await askEngine({ kind: 'saved-config', config: form });
+                problem = checked.problem;
+                form = checked.form as ConfigFormData;
             } catch (e) {
                 problem = e instanceof Error ? e.message : 'The check failed.';
             }
