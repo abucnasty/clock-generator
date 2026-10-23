@@ -18,7 +18,7 @@ import {composeProbeSource} from "../../helpers/probe-source";
  */
 
 // Factorio permits require only while parsing control.lua: the sidecar's sources are loaded into closures of the chunk
-const MODULES = ["types", "helpers", "pickup-supply", "suggested-target", "extraction", "export"];
+const MODULES = ["types", "helpers", "pickup-supply", "drop-merge", "suggested-target", "extraction", "export"];
 const sidecarModules = `local capture_modules, require = {}, nil
 require = function(name) return assert(capture_modules[name], name) end
 ` + MODULES.map(name => {
