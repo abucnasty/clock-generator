@@ -329,10 +329,11 @@ export interface ErrorResponse {
     recovery?: RepeatedUnitsRecovery;
 }
 
+/** `repeatedGroups` on a refusal: how many identical groups the config holds, which is 1 for a build of one copy */
 export type CheckedRepeatedUnitConversion =
     | { kind: 'available'; plan: RepeatedUnitConversionPlan; validation: ConfigValidation }
-    | { kind: 'unavailable'; stage: 'proof'; reason: RepeatedUnitConversionReason }
-    | { kind: 'unavailable'; stage: 'check'; reason: { code: 'candidate-check-failed'; message: string } };
+    | { kind: 'unavailable'; stage: 'proof'; reason: RepeatedUnitConversionReason; repeatedGroups: number }
+    | { kind: 'unavailable'; stage: 'check'; reason: { code: 'candidate-check-failed'; message: string }; repeatedGroups: number };
 
 export interface RepeatedUnitsRecovery {
     kind: 'repeated-units';
