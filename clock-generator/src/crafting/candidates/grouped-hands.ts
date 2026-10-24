@@ -429,11 +429,9 @@ function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options
  */
 export function groupedHandsClock(
     plan: PlanRun,
-    planned: ReturnType<typeof clockOfPlan>,
     options: GenerateClockOptions = {},
 ): BlueprintGenerationResult | null {
     let made = plan;
-    let clock = planned;
     let finished: BlueprintGenerationResult | null = null;
     const reasons: string[] = [];
     try {
@@ -443,7 +441,6 @@ export function groupedHandsClock(
         const cycles = groupedHandsCycles(plan.run.simulation_context.entity_registry, plan.run.swing_counts);
         if (cycles !== null && plan.config.overrides?.lcm === undefined && cycles !== plan.run.recipe_lcm) {
             made = planRun({ ...plan.config, overrides: { ...plan.config.overrides, lcm: cycles } }, options);
-            clock = clockOfPlan(made, { ...options, belt_pickup_slack: "never" });
         }
         const { simulation_context, swing_counts, recipe_lcm, duration } = made.run;
         const tried = new Set<string>();
