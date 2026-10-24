@@ -20,6 +20,28 @@ import { migrateMachineTypeStep } from "./migrate-machine-type";
 import { FactorioDataService } from "../data/factorio-data-service";
 import { machinePlacesResults } from "./machine-prototype";
 
+/**
+ * The results of a recipe that a rocket silo used as a machine's result target keeps in its input slots: those its fixed
+ * recipe takes as ingredients, where that recipe is of normal quality, the quality of the build's items (recorded on a
+ * recycler on scrap into a rocket silo, 2.1.21: processing units and low density structure filled its input slots to a
+ * stack and 64, no inserter took them out, and the recycler stopped for good in 24 minutes; with the silo's recipe at
+ * another quality every result went into its rocket inventory). None for any other container, from the game data.
+ */
+function resultsTrappedInSilo(recipe: string, chest: { type: string; recipe_quality?: string } | undefined): string[] {
+    if (chest?.type !== ChestType.ROCKET_SILO) return [];
+    const silo_recipe = FactorioDataService.findRecipeOrThrow(FactorioDataService.findRocketSiloOrThrow(chest.type).fixed_recipe);
+    if (FactorioDataService.findQualityOrThrow(chest.recipe_quality ?? "normal").level !== 0) return [];
+    const ingredients = new Set(silo_recipe.ingredients.map(ingredient => ingredient.name));
+    let results: string[];
+    try {
+        results = FactorioDataService.findRecipeOrThrow(recipe).results.map(result => result.name);
+    } catch {
+        // an unknown recipe is refused where recipes are read
+        return [];
+    }
+    return results.filter(name => ingredients.has(name));
+}
+
 // ============================================================================
 // Machine Configuration
 // ============================================================================
@@ -881,6 +903,14 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
                 message: `Machine ${machine.id}${machine.prototype === undefined ? " names no prototype, so it" : ` (${machine.prototype})`} `
                     + "does not place its results itself: only a machine that does (a recycler) has a `result_target`; "
                     + "an inserter takes the results out of any other" });
+        }
+        const trapped = FactorioDataService.isAvailable() ? resultsTrappedInSilo(machine.recipe, config.chests?.find(chest => chest.id === chest_id)) : [];
+        if (trapped.length > 0) {
+            context.addIssue({ code: "custom", path: ["chests", config.chests!.findIndex(chest => chest.id === chest_id), "recipe_quality"],
+                message: `Machine ${machine.id} places ${trapped.join(" and ")} into rocket silo ${chest_id}, whose rocket part recipe takes `
+                    + `${trapped.length === 1 ? "it" : "them"} at normal quality: ${trapped.length === 1 ? "it goes" : "they go"} into the silo's input slots, `
+                    + "where no inserter takes them out, and once those are full the machine stops for good. Set the silo's `recipe_quality` "
+                    + "to another quality, so that every result goes into its rocket inventory." });
         }
     });
     config.drills?.configs.forEach((drill, index) => {

@@ -159,3 +159,34 @@ describe('a machine that places its results itself, with no result target', () =
         expect([...stack.keys()]).toEqual([16]);
     });
 });
+
+/** A recycler on scrap placing its results into a rocket silo, one inserter per result out of the silo */
+async function scrapIntoSilo(recipe_quality?: string, productivity = 0): Promise<string> {
+    const { RecipeMetadata } = await import('../entities/machine/recipe/recipe-metadata');
+    const results = RecipeMetadata.fromRecipeName('scrap-recycling').outputs.map(it => it.name);
+    return JSON.stringify({
+        target_output: { recipe: 'scrap', items_per_second: 2, copies: 1, counts: 'destroyed' },
+        machines: [{ id: 1, recipe: 'scrap-recycling', productivity, crafting_speed: 0.5, prototype: 'recycler', result_target: { type: 'chest', id: 2 } }],
+        inserters: [
+            { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, filters: ['scrap'] },
+            ...results.map((item, index) => ({ id: index + 2, source: { type: 'chest', id: 2 }, sink: { type: 'chest', id: index + 3 }, filters: [item] })),
+        ],
+        belts: [],
+        chests: [
+            { type: 'infinity-chest', id: 1, item_filter: [{ item_name: 'scrap', request_count: 100 }] },
+            { type: 'rocket-silo', id: 2, ...(recipe_quality !== undefined && { recipe_quality }) },
+            ...results.map((_, index) => ({ type: 'infinity-chest', id: index + 3, item_filter: [], remove_unfiltered_items: true })),
+        ],
+    });
+}
+
+describe('a rocket silo as the result target', () => {
+    it('is refused where its rocket part recipe is of normal quality and takes some of the results', async () => {
+        // recorded: processing units and low density structure fill its input slots, and the recycler stops for good
+        await expect(parseConfig(await scrapIntoSilo())).rejects.toThrow('Machine 1 places processing-unit and low-density-structure into rocket silo 2, '
+            + 'whose rocket part recipe takes them at normal quality');
+        await expect(parseConfig(await scrapIntoSilo('normal'))).rejects.toThrow("Set the silo's `recipe_quality` to another quality");
+        await expect(parseConfig(await scrapIntoSilo('uncommon'))).resolves.toBeDefined();
+    });
+
+});
