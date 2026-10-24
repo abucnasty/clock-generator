@@ -34,10 +34,12 @@ describe("a recycler that voids iron ore at exact speed", () => {
         }
     });
 
-    test("selects even hands, which wakes no inserter", () => {
+    test("selects even hands, whose inserters out of the car are woken the least by the ore it places there", () => {
         const selected = generated.alternatives[generated.selected_index];
         expect(selected.id).toBe("even-hands");
-        expect(selected.assessment.wake_ups_per_minute).toBe(0);
+        const [planned, even] = generated.alternatives.map(it => it.assessment.wake_ups_per_minute);
+        expect(even).toBeLessThan(planned!);
+        expect(even).toBeGreaterThan(0);
     });
 
     test("gives the windows that take the returns out of the car three standard deviations of room or more", () => {

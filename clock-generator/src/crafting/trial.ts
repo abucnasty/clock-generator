@@ -428,10 +428,15 @@ export function backpressureLossOf(
 /** The machines at the ends of every inserter of the config */
 function inserterEnds(config: Config): InserterEnds[] {
     const machineId = (entity_id: EntityId) => EntityId.isMachine(entity_id) ? entity_id.id : null;
-    return createEntityRegistryFromConfig(config).getAll().filter(Entity.isInserter).map(inserter => ({
+    const registry = createEntityRegistryFromConfig(config);
+    // a chest a machine places its results into is watched through that machine
+    const placers = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>
+        machine.result_target === undefined ? [] : [[machine.result_target.id, machine.entity_id.id] as const]));
+    return registry.getAll().filter(Entity.isInserter).map(inserter => ({
         inserter_id: inserter.entity_id.id,
         source_machine_id: machineId(inserter.source.entity_id),
         sink_machine_id: machineId(inserter.sink.entity_id),
+        ...(placers.has(inserter.source.entity_id.id) && { source_placer_id: placers.get(inserter.source.entity_id.id)! }),
     }));
 }
 

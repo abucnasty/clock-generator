@@ -174,6 +174,7 @@ export class MachineWorkingMode implements MachineMode {
             if (amount > 0) {
                 this.inventory_state.removeQuantity(output.item_name, amount);
                 target.inventoryState.addQuantity(output.item_name, amount);
+                this.state.resultsPlaced += amount;
             }
         }
     }
@@ -403,6 +404,7 @@ export class MachineWorkingMode implements MachineMode {
             const whole = Math.floor(total + PROGRESS_EPSILON);
             if (whole > 0) {
                 this.inventory_state.addQuantity(by_product.output.item_name, whole);
+                this.countPlacedInOutput(whole);
             }
             this.state.byProductCarry.set(by_product.output.item_name, Math.max(0, total - whole));
         }
@@ -430,6 +432,14 @@ export class MachineWorkingMode implements MachineMode {
     private addOutput(amount: number): void {
         this.inventory_state.addQuantity(this.state.machine.output.ingredient.name, amount);
         this.state.totalCrafted += amount;
+        this.countPlacedInOutput(amount);
+    }
+
+    /** Results a machine that places its results itself puts in its own output, where it has no result target to place them into */
+    private countPlacedInOutput(amount: number): void {
+        if (this.hot.places_results && this.result_target === null) {
+            this.state.resultsPlaced += amount;
+        }
     }
 
     private consumeInputsForCraft(): void {

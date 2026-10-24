@@ -40,6 +40,11 @@ export interface WatchingInserter {
     source_machine_id: string | null;
     /** The machine it puts into; null when it puts onto a belt or into a chest */
     sink_machine_id: string | null;
+    /**
+     * The machine that places its results itself into the chest it takes from (that chest is the machine's result
+     * target): its placings wake it while it waits there for items. Null or absent for any other source.
+     */
+    source_placer_id?: string | null;
     /** The state the game shows for it after each tick (`defines.entity_status`) */
     states: readonly string[];
 }
@@ -55,6 +60,13 @@ export interface WatchedMachine {
      * 0.13.0, and the machine is named in `true_starts_unknown`.
      */
     true_starts?: readonly boolean[];
+    /**
+     * Results placed so far where inserters take them, after each tick, for a machine that places its results itself
+     * (rule 18): into its result target, else into its own output. What alarms the inserters that take them, in place of
+     * `products_finished`: a craft that gives no result wakes none of them (recorded on a recycler on scrap). Absent for
+     * any other machine.
+     */
+    results_placed?: readonly number[];
 }
 
 export interface InserterWakeUps {
@@ -90,7 +102,10 @@ const TICKS_PER_MINUTE = 3600;
  * out a productivity bar (D7 b, part hands); the inserters that put into a machine are woken when it starts a craft,
  * consuming its ingredients, and not by a payout (D7 a1, confirmed on two designs of one machine type, the advanced
  * circuit electromagnetic plant; other machine types untested). Before 0.13.0 both lists were woken by finishes and
- * payouts. A belt and a chest finish no crafts and wake no one here.
+ * payouts. A machine that places its results itself wakes the inserters that take them when it places one, into its own
+ * output or into its result target (a chest), and not when a craft gives none (rule 18; recorded on a recycler on scrap,
+ * 2.1.21: a stack inserter waiting with a part hand showed working in each of 1,708 ticks a result of another item came,
+ * and in none of 1,198 in which a craft gave nothing). Any other belt and chest finishes no crafts and wakes no one here.
  */
 export function wakeUps(
     inserters: readonly WatchingInserter[],
@@ -102,6 +117,8 @@ export function wakeUps(
     const ticks = Math.max(0, to_tick - first);
     const finished = new Map(machines.map(machine => [machine.machine_id, machine.products_finished]));
     const started = new Map(machines.flatMap(machine => machine.true_starts === undefined ? [] : [[machine.machine_id, machine.true_starts] as const]));
+    const placed = new Map(machines.flatMap(machine => machine.results_placed === undefined ? [] : [[machine.machine_id, machine.results_placed] as const]));
+    const rose = (list: readonly number[]) => (tick: number) => list[tick] > list[tick - 1] ? 1 : 0;
     const true_starts_unknown = machines.filter(machine => machine.true_starts === undefined).map(machine => machine.machine_id);
     // a tick at which the machine alarmed the list: the sink list on a true start, the source list on a finish or payout
     const alarmed = (end: WatchedEnd, machine_id: string | null): ((tick: number) => number) | undefined => {
@@ -112,15 +129,24 @@ export function wakeUps(
         if (starts !== undefined) {
             return tick => starts[tick] ? 1 : 0;
         }
+        const placings = end === "source" ? placed.get(machine_id) : undefined;
+        if (placings !== undefined) {
+            return rose(placings);
+        }
         const list = finished.get(machine_id);
-        return list === undefined ? undefined : tick => list[tick] > list[tick - 1] ? 1 : 0;
+        return list === undefined ? undefined : rose(list);
+    };
+    // the chest a machine places its results into: its takers are alarmed by the placings alone
+    const placedInto = (placer_id: string | null | undefined): ((tick: number) => number) | undefined => {
+        const placings = placer_id === null || placer_id === undefined ? undefined : placed.get(placer_id);
+        return placings === undefined ? undefined : rose(placings);
     };
     const per_minute = (count: number) => ticks === 0 ? 0 : count * TICKS_PER_MINUTE / ticks;
     const share = (count: number) => ticks === 0 ? 0 : count / ticks;
 
     const counted = inserters.map(inserter => {
         const lists: Record<WatchedEnd, ((tick: number) => number) | undefined> = {
-            source: alarmed("source", inserter.source_machine_id),
+            source: inserter.source_machine_id !== null ? alarmed("source", inserter.source_machine_id) : placedInto(inserter.source_placer_id),
             sink: alarmed("sink", inserter.sink_machine_id),
         };
         const alarmedIn = (end: WatchedEnd, tick: number) => lists[end]?.(tick) ?? 0;
@@ -164,6 +190,8 @@ export interface InserterEnds {
     inserter_id: string;
     source_machine_id: string | null;
     sink_machine_id: string | null;
+    /** The machine whose result target the inserter takes from (see WatchingInserter) */
+    source_placer_id?: string | null;
 }
 
 /** Wake-ups of a simulated run, from the tick `from_tick` to its end */
@@ -177,6 +205,7 @@ export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnd
         machine_id: machine.machine_id,
         products_finished: machine.products_finished,
         true_starts: machine.crafts_started.map((started, tick) => tick > 0 && started > machine.crafts_started[tick - 1]),
+        ...(machine.results_placed !== undefined && { results_placed: machine.results_placed }),
     }));
     return wakeUps(inserters, machines, from_tick, stock.ticks);
 }

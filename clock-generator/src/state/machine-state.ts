@@ -60,6 +60,14 @@ export class MachineState implements EntityState {
     public craftsStarted: number = 0;
 
     /**
+     * Results a machine that places its results itself (rule 18) has placed so far where inserters take them: into its
+     * result target, or into its own output where it has none. A tick in which it grew woke the inserters waiting there
+     * for items (recorded on a recycler on scrap: a stack inserter waiting with a part hand was woken by every result
+     * put in, of whatever item, and by no craft that gave none). Always 0 for any other machine, whose finishes wake them.
+     */
+    public resultsPlaced: number = 0;
+
+    /**
      * Whether the main product was at the output block when the machine's last tick was done. Inserters are updated
      * before machines, so an inserter that finds this set and the block gone knows that another inserter took the
      * products down in the tick it is in.
@@ -212,6 +220,7 @@ function clone(machineState: MachineState): MachineState {
     cloned.pendingOutput = machineState.pendingOutput;
     cloned.productsFinished = machineState.productsFinished;
     cloned.craftsStarted = machineState.craftsStarted;
+    cloned.resultsPlaced = machineState.resultsPlaced;
     cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
     cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.startedCraftInLastTick = machineState.startedCraftInLastTick;

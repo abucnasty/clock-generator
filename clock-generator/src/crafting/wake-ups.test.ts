@@ -110,3 +110,23 @@ describe("wakeUps", () => {
         });
     });
 });
+
+describe("wakeUps of a machine that places its results itself", () => {
+    // crafts finish in ticks 1 to 5, and results come of those in ticks 2 and 4 only
+    const placer = (): WatchedMachine => ({ ...machine("machine:1", 6, [1, 2, 3, 4, 5]), results_placed: [0, 0, 1, 1, 3, 3] });
+    const waiting = [MORE, MORE, MORE, MORE, MORE, MORE];
+
+    it("wakes the inserters that take from its output when it places a result there, not when a craft gives none", () => {
+        const result = wakeUps([inserter(waiting)], [placer()], 0, 6);
+        expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 5);
+    });
+
+    it("wakes the inserters that take from the chest it places its results into, and no others there", () => {
+        const from_chest = { source_machine_id: null, source_placer_id: "machine:1" };
+        const result = wakeUps([inserter(waiting, from_chest)], [placer()], 0, 6);
+        expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 5);
+        // a chest no machine places into wakes no one
+        const other = wakeUps([inserter(waiting, { source_machine_id: null })], [placer()], 0, 6);
+        expect(other.inserters[0].wake_ups_per_minute).toBe(0);
+    });
+});
