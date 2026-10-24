@@ -5,6 +5,7 @@ import {backpressureLossOf, simulateClockOnly} from "./trial";
 import {OpenRange} from "../data-types";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
 import {clockHash, readControls} from "../../tests/game/builds/clock-controls";
+import {expectColdStartRunsOnSelection} from "../../tests/game/builds/pickup-clock-cold-start-runs";
 
 const controls = readControls("pickup-clock-controls.json").cases;
 
@@ -36,6 +37,9 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
         expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as the pin (its identity: no text or metadata)")
             .toBe(pin!.clock_sha256);
+        // the cold-start runs of this fixture name the selection as the clock they were recorded on: checked on this
+        // generation, and not again by generating the fixture in pickup-clock-cold-start.generation.test.ts
+        expectColdStartRunsOnSelection(variant.name, selected);
         expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
             supply: selected.belt?.kind ?? null}).toEqual(pin!.selection);
         expect(result.why_not_stable?.cause).toBe(pin!.why_not_stable);

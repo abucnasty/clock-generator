@@ -1,4 +1,6 @@
 import {createHash} from "crypto";
+import fs from "node:fs";
+import path from "node:path";
 import {describe, expect, test} from "vitest";
 import {clockFromWindows, runClockOnBuild} from "./trial";
 import {generateClockAlternatives} from "./generate-blueprint";
@@ -9,6 +11,7 @@ import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/
 import {overHoodClockCases, overHoodClockConfig} from "../../tests/game/builds/over-hood-clock-fixtures";
 import {clockHash, readControls} from "../../tests/game/builds/clock-controls";
 import {reversedDeciders} from "../../tests/game/builds/reversed-deciders";
+import {beltPickupVariantOf} from "../../tests/game/builds/pickup-clock-cold-start-runs";
 
 interface ColdStartClock {
     period: number;
@@ -125,9 +128,24 @@ describe("clocked cold starts from placement", () => {
 // beginning (`rotate` 0), the pinned windows built into a clock for the others, with the deciders in the mirror order where
 // the run was. The game test checks this hash against the clock it builds; nothing else did, so a selection that moved
 // left these runs pinned to the old one (#275).
+// The runs of a side pickup fixture on near lane 1 name the selection of a config that belt-pickup-clock.generation.test.ts
+// generates too; they are checked there, on that generation (expectColdStartRunsOnSelection).
 describe("cold start runs name the clock they were recorded on", () => {
     const selected = new Map<string, Promise<{blueprint: any; schedule: any}>>();
-    test.each(Object.keys(controls.runs))("%s", async name => {
+    test("the runs on the selection of a side pickup fixture are checked on the generation of belt-pickup-clock.generation.test.ts", () => {
+        const variants = pickupClockSpeedCases("electromagnetic").map(it => it.name);
+        let shared = 0;
+        for (const [name, run] of Object.entries(controls.runs)) {
+            const variant = beltPickupVariantOf(run);
+            if (variant === undefined) continue;
+            shared++;
+            expect(variants, `${name} names ${variant}, which belt-pickup-clock.generation.test.ts does not generate`).toContain(variant);
+        }
+        expect(shared).toBeGreaterThan(0);
+        expect(fs.readFileSync(path.join(__dirname, "belt-pickup-clock.generation.test.ts"), "utf8"),
+            "belt-pickup-clock.generation.test.ts no longer checks these runs").toContain("expectColdStartRunsOnSelection(variant.name,");
+    });
+    test.each(Object.keys(controls.runs).filter(name => beltPickupVariantOf(controls.runs[name]) === undefined))("%s", async name => {
         const run = controls.runs[name];
         const clock = controls.clocks[run.clock];
         const config = await configOf(run.case);

@@ -49,6 +49,11 @@ Group assertions about the same unmodified build under a shared `beforeAll`, so 
 Keep changed configs, explicit searches and start-dependence overrides as independent generations. Share
 results only within that test run; persisted generation caches can hide regressions.
 
+A generation is shared within a file and no further: Vitest runs each file in a context of its own. When a check in
+one file needs the selection of a build that another file generates from the same config, make the check in the file
+that generates it (`expectPinnedScaffoldClock` and `expectColdStartRunsOnSelection` in `tests/game/builds/` do), and
+keep a test in the first file that the other still makes it.
+
 Prioritize reducing repeated generation and simulation work; adding workers is not a substitute, especially
 on CI runners with limited CPU capacity. Preserve every case, phase, clock offset and recovery check.
 CI runs the generation tests in four shards (`vitest --shard`, files shared out by the hash of their paths; the
