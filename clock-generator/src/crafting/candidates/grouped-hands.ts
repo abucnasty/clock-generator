@@ -9,6 +9,7 @@ import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
 import type { AlwaysOnReason } from "../always-on-reasons";
+import { supplyShortfall, WalkedHand } from "./hand-walks";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -32,6 +33,12 @@ export interface GroupedHandsOptions {
     feeder_offset: number;
     /** The takers whose windows open on the same tick share one window: the longest any of them needs */
     share_windows: boolean;
+    /**
+     * Outside a chain, the groups are the fewest the supply walk passes (hand-walks.ts) in place of the inequality of a source's
+     * draw against its stock and rate, and where none does, each taker's hands are split into bursts with pauses for the source
+     * to refill. A chain is placed as without it
+     */
+    computed?: boolean;
 }
 
 const DEFAULT_OPTIONS: GroupedHandsOptions = { surplus_guard: false, feeder_offset: 1, share_windows: false };
@@ -94,6 +101,11 @@ interface Taker {
     /** Items the taker moves a period */
     items: number;
     window_ticks: number;
+    /** Outside a chain: the items of its hand, its hands a period, the hands that follow each other under the sink's limit and the starts its window has beyond them */
+    hand?: number;
+    hands?: number;
+    room?: number;
+    extra_starts?: number;
     /** Takes a machine's product into a chest that others take from: a taker of that machine, whose hand the machine does not hold ready */
     drain?: boolean;
 }
@@ -252,6 +264,8 @@ export function groupedHandsPlan(
             let count = 0;
             let items = 0;
             let more_room_than_a_hand_over = false;
+            const rooms = new Map<string, number>();
+            const room_of = (item: string): number => rooms.get(item)!;
             for (const item of carried) {
                 const input = machine.getInsertableInput(item.item_name);
                 if (input === undefined) refuse(`${sink.entity_id.id} has no input for ${item.item_name}`);
@@ -267,14 +281,17 @@ export function groupedHandsPlan(
                     stack_size: inserter.metadata.stack_size,
                     animation_total_ticks: cycle,
                 });
-                if (hands > room) refuse(`${hands} hands of ${inserter.entity_id.id} do not follow each other under the limit of ${sink.entity_id.id} (${room} do)`);
+                rooms.set(item.item_name, room);
+                // outside a chain, the computed placement splits more hands than the limit lets follow each other into bursts
+                if (hands > room && !(options.computed === true && !chained)) refuse(`${hands} hands of ${inserter.entity_id.id} do not follow each other under the limit of ${sink.entity_id.id} (${room} do)`);
                 if (room > hands + 1) more_room_than_a_hand_over = true;
                 count += hands;
                 items += hands * hand;
             }
             const starts = options.surplus_guard && more_room_than_a_hand_over && !EntityId.isBelt(source.entity_id) ? count : count + 1;
             const slack = EntityId.isBelt(source.entity_id) ? belt_slack.get(inserter.entity_id.id) ?? 0 : 0;
-            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + slack });
+            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + slack,
+                ...(!chained && { hand: items / count, hands: count, room: room_of(carried[0].item_name), extra_starts: starts - count }) });
         } else if (EntityId.isMachine(source.entity_id) && EntityId.isChest(sink.entity_id) && chests_taken_from.has(sink.entity_id.id)) {
             // it takes what the machine made, and the chest takes every hand: one swing more than the hands, and the draw is not tested
             const carried = transfers.get(inserter.entity_id.id)?.item_transfers ?? [];
@@ -308,11 +325,12 @@ export function groupedHandsPlan(
 
     // the machines, in the order of their ids, and the fewest groups every source can serve
     const machines = Array.from(sinks).sort((a, b) => Number(a.split(":")[1]) - Number(b.split(":")[1]));
-    const sources = new Map<string, { machine: Machine | null; draws: Map<string, number> }>();
+    const sources = new Map<string, { machine: Machine | null; draws: Map<string, number>; takers: WalkedHand[] }>();
     for (const taker of takers.filter(it => it.drain !== true)) {
         const known = sources.get(taker.source.id) ?? { machine: EntityId.isMachine(taker.source)
-            ? entity_registry.getEntityByIdOrThrow(taker.source) as Machine : null, draws: new Map<string, number>() };
+            ? entity_registry.getEntityByIdOrThrow(taker.source) as Machine : null, draws: new Map<string, number>(), takers: [] };
         known.draws.set(taker.sink.id, (known.draws.get(taker.sink.id) ?? 0) + taker.items);
+        if (taker.hands !== undefined) known.takers.push({ id: taker.inserter.entity_id.id, hand: taker.hand!, hands: taker.hands, cycle: taker.inserter.animation.total.ticks });
         sources.set(taker.source.id, known);
     }
     /** Which group a machine is in, by the order the machines are dealt out in (round robin, or in blocks of neighbours) */
@@ -328,8 +346,36 @@ export function groupedHandsPlan(
         });
     // the draw against what a source holds and makes in a window is the rule for sources that only give; a source that is
     // filled in turn (a chain) is placed in one group, and the clock-only check and the shifted runs judge it
+    // The computed placement: the windows of the takers for a dealing, each taker's hands in `bursts` runs evenly over the period
+    // (the groups take turns inside each run's share of it), and whether the supply walk of every source machine passes them
+    let bursts = 1;
+    const start_of_group = (group: number, groups: number): number => Math.round(group * period / (groups * bursts));
+    const takerWindows = (group_of: ReadonlyMap<string, number>, groups: number, runs: number): Map<string, OpenRange[]> => new Map(gated.map(taker => {
+        const start = Math.round(group_of.get(taker.sink.id)! * period / (groups * runs)) + INPUT_OFFSET_TICKS;
+        if (runs === 1 || taker.hands === undefined) return [taker.inserter.entity_id.id, windowFrom(start, taker.window_ticks, period)];
+        const ranges = Array.from({ length: runs }, (_, run) => Math.floor(taker.hands! / runs) + (run < taker.hands! % runs ? 1 : 0))
+            .flatMap((hands, run) => hands === 0 ? [] : windowFrom(start + Math.round(run * period / runs),
+                (hands - 1 + taker.extra_starts!) * taker.inserter.animation.total.ticks + WINDOW_MARGIN_TICKS, period));
+        return [taker.inserter.entity_id.id, OpenRange.reduceRanges(ranges)];
+    }));
+    const supplied = (windows: ReadonlyMap<string, OpenRange[]>, whole_hands = false): boolean => Array.from(sources.values()).every(source => source.machine === null
+        || supplyShortfall({ stock: Math.max(source.machine.output.outputBlock.held_limit, source.machine.output.outputBlock.max_stack_size),
+            rate: source.machine.output.production_rate.amount_per_tick.toDecimal() }, source.takers, windows, period, whole_hands) === null);
+    const serves = (groups: number, group_of: ReadonlyMap<string, number> = assignment(machines, groups, false)): boolean =>
+        options.computed === true ? supplied(takerWindows(group_of, groups, 1)) && gated.every(it => it.hands === undefined || it.hands <= it.room!) : fits(groups, group_of);
     let groups = 1;
-    while (!chained && groups <= machines.length && !fits(groups)) groups++;
+    while (!chained && groups <= machines.length && !serves(groups)) groups++;
+    if (groups > machines.length && options.computed === true) {
+        // no grouping serves: each machine alone in its turn, and the hands of each taker in the fewest bursts the supply walk
+        // passes with every hand whole when it is due (no hand waits for the source: the pauses refill it), a burst no more hands
+        // than the sink's limit lets follow each other and its window inside its share of the period
+        groups = machines.length;
+        const fit = (runs: number) => gated.every(it => it.hands === undefined || (Math.ceil(it.hands / runs) <= it.room!
+            && (Math.ceil(it.hands / runs) - 1 + it.extra_starts!) * it.inserter.animation.total.ticks + WINDOW_MARGIN_TICKS + INPUT_OFFSET_TICKS <= period / runs));
+        const most = Math.max(...gated.map(it => it.hands ?? 1));
+        for (bursts = 2; bursts <= most && !(fit(bursts) && supplied(takerWindows(assignment(machines, groups, false), groups, bursts), true)); bursts++);
+        if (bursts > most) refuse("a source cannot serve even one machine at a time, in one run or in bursts");
+    }
     if (groups > machines.length) refuse("a source cannot serve even one machine at a time");
 
     // Machines dealt out round robin in the order of their ids serve the sources as well as machines dealt out in the order
@@ -357,7 +403,7 @@ export function groupedHandsPlan(
         let fewest = collisions(group_of);
         for (const blocks of [false, true]) {
             const dealt = assignment(on_the_belt, groups, blocks);
-            if (fewest === 0 || !fits(groups, dealt)) continue;
+            if (fewest === 0 || !serves(groups, dealt)) continue;
             const pairs = collisions(dealt);
             if (pairs < fewest) { fewest = pairs; group_of = dealt; }
         }
@@ -395,8 +441,9 @@ export function groupedHandsPlan(
         if (options.share_windows) sharedWindows(windows, gated, period);
         return { ...leaveOpen(windows), turns: [] };
     }
-    const start_of = (machine: string): number => Math.round(group_of.get(machine)! * period / groups);
-    for (const taker of takers) {
+    const start_of = (machine: string): number => start_of_group(group_of.get(machine)!, groups);
+    for (const [id, ranges] of takerWindows(group_of, groups, bursts)) windows.set(id, ranges);
+    for (const taker of takers.filter(open_all_period)) {
         windows.set(taker.inserter.entity_id.id, windowFrom(start_of(taker.sink.id) + INPUT_OFFSET_TICKS, taker.window_ticks, period));
     }
     for (const output of outputs) {
@@ -420,7 +467,7 @@ export function groupedHandsPlan(
     // enabled all the time are named as well: a window that one of them is given later stands in its group
     const byNumber = (a: { entity_id: EntityId }, b: { entity_id: EntityId }) => a.entity_id.number - b.entity_id.number;
     const turns: TurnGroup[] = groups === 1 ? [] : Array.from({ length: groups }, (_, group) => ({
-        start: Math.round(group * period / groups),
+        start: start_of_group(group, groups),
         entity_ids: [
             ...outputs.filter(it => group_of.get(it.source.entity_id.id) === group).sort(byNumber),
             ...takers.map(it => it.inserter).filter(it => group_of.get(it.sink.entity_id.id) === group).sort(byNumber),

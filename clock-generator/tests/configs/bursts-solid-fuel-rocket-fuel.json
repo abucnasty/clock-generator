@@ -1,0 +1,15 @@
+{
+  "target_output": { "recipe": "rocket-fuel", "items_per_second": 1.6, "copies": 1 },
+  "machines": [
+    { "id": 1, "recipe": "solid-fuel-from-light-oil", "productivity": 0, "crafting_speed": 24, "prototype": "chemical-plant", "quality": "normal", "recipe_quality": "normal" },
+    { "id": 2, "recipe": "rocket-fuel", "productivity": 0, "crafting_speed": 200, "prototype": "assembling-machine-3", "quality": "legendary", "recipe_quality": "normal" }
+  ],
+  "inserters": [
+    { "id": 1, "source": { "type": "machine", "id": 1 }, "sink": { "type": "machine", "id": 2 }, "prototype": "stack-inserter", "quality": "legendary", "stack_size": 16 },
+    { "id": 2, "source": { "type": "machine", "id": 2 }, "sink": { "type": "belt", "id": 1, "belt_direction": 12 }, "prototype": "stack-inserter", "quality": "legendary", "stack_size": 16 }
+  ],
+  "belts": [
+    { "id": 1, "type": "turbo-transport-belt", "lanes": [ { "ingredient": "rocket-fuel", "stack_size": 4 }, { "ingredient": "rocket-fuel", "stack_size": 4 } ] }
+  ],
+  "chests": []
+}

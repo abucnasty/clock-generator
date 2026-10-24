@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import path from "path";
+import { beforeAll, describe, expect, it } from "vitest";
+import { loadConfigFromFile } from "../../config/loader";
+import { ConfigPaths } from "../../config/config-paths";
+import type { Config } from "../../config/schema";
 import { OpenRange } from "../../data-types";
+import { quiet } from "../generate-blueprint-test-helpers";
+import { planRun } from "../plan/plan-run";
+import { GroupedHandsOptions, groupedHandsPlan } from "./grouped-hands";
 import { handsInWindow, handsInWindows, supplyShortfall } from "./hand-walks";
+
+const ranges = (windows: Map<string, OpenRange[]>, id: string) => windows.get(id)!.map(range => [range.start_inclusive, range.end_inclusive]);
+const COMPUTED: GroupedHandsOptions = { surplus_guard: false, feeder_offset: 1, share_windows: false, computed: true };
 
 describe("hands a window starts", () => {
     it("starts one hand every cycle from its first tick", () => {
@@ -35,5 +45,37 @@ describe("the supply walk", () => {
 
     it("passes bursts that the foundry refills between", () => {
         expect(supplyShortfall(foundry, takers, same([2, 19], [44, 61], [86, 95]), 112)).toBeNull();
+    });
+});
+
+describe("the computed placement of hands", () => {
+    let grenade: Config;
+    let bursts: Config;
+    beforeAll(async () => {
+        grenade = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+        bursts = await loadConfigFromFile(path.join(__dirname, "../../../tests/configs/bursts-solid-fuel-rocket-fuel.json"));
+    });
+    const planOf = (config: Config) => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        return (way: GroupedHandsOptions = COMPUTED) => groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true, way);
+    };
+
+    it("makes the grenade build's two groups, as the inequality of a source's stock and rate does", () => {
+        const made = planOf(grenade);
+        expect(made().windows).toEqual(made({ surplus_guard: false, feeder_offset: 16, share_windows: false }).windows);
+        expect(ranges(made().windows, "inserter:4")).toEqual([[2, 43]]);
+        expect(ranges(made().windows, "inserter:3")).toEqual([[58, 99]]);
+    });
+
+    it("splits the hands of a taker its source cannot serve in one run into bursts, with pauses for the source to refill", () => {
+        // a chemical plant holds a stack of 50 solid fuel and makes 0.4 a tick; the rocket fuel assembler takes ten hands of 16 a period of 600
+        // ticks. One run of ten hands in 82 ticks gets 50 + 0.4 x 72 = 79 of the 160 at most; a burst of three hands needs 48 of the 50 + 0.4 x 16,
+        // so four bursts of 3, 3, 2 and 2 hands a quarter of the period apart: a burst of three leaves about 8, and 104 ticks refill it to
+        // 50, where the next burst opens 124 ticks after the last one closes
+        const made = planOf(bursts);
+        expect(() => made({ surplus_guard: false, feeder_offset: 16, share_windows: false })).toThrow("a source cannot serve even one machine at a time");
+        expect(ranges(made().windows, "inserter:1")).toEqual([[2, 27], [152, 177], [302, 319], [452, 469]]);
+        expect(ranges(made().windows, "inserter:2")).toEqual([[0, 0]]);
     });
 });
