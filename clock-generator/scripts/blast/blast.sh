@@ -23,7 +23,9 @@
 # Env: BLAST_GROUPS, BLAST_SKIP (default REAL_THAELN_CELL09: Thaeln's cell 09 is out of scope for 0.19.0, decided
 # 2026-10-20; it is in no cache entry), BLAST_ONLY (run only; never cached), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
-# <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository).
+# <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
+# that lets one blast generate at a time on the machine, default <main checkout>/work/blast-cache/.generate.lock where
+# that folder exists, else <cache>/.generate.lock: a copy of this tool kept outside the repository takes the first).
 # Needs the worktree's own node_modules (scripts/worktree/setup.sh). N defaults to 4: each process is one vitest run
 # and one fork worker on one core; keep the machine's total in mind when other sessions run.
 set -u
@@ -31,6 +33,9 @@ HERE=$(cd "$(dirname "$0")" && pwd -P)
 # the main checkout: the parent of the repository's common git folder, the same from every worktree
 MAIN=$(cd "$(git -C "$HERE" rev-parse --path-format=absolute --git-common-dir)/.." && pwd -P)
 CACHE=${BLAST_CACHE:-$MAIN/clock-generator/.scratch/blast-cache}
+if [ -n "${BLAST_LOCK:-}" ]; then LOCK=$BLAST_LOCK
+elif [ -d "$MAIN/work/blast-cache" ]; then LOCK=$MAIN/work/blast-cache/.generate.lock
+else LOCK=$CACHE/.generate.lock; fi
 SCRATCH=tests/game/builds/.scratch
 TEST=$SCRATCH/blast.blastrun.ts
 die() { echo "blast.sh: $*" >&2; exit 1; }
@@ -91,6 +96,9 @@ generate() {
   # a claim without its job file was left by a process that stopped: free it
   for c in "$out"/.claims/*; do [ -d "$c" ] && [ ! -f "$out/$(basename "$c").json" ] && rmdir "$c"; done
   if [ "$build" = 1 ]; then say "npm run build ($E)"; (cd "$E" && npm run --silent build) || { rm -rf "$out/.lock"; die "npm run build failed"; }; fi
+  # one blast generates at a time on the machine (memory: two at once ran it out on 2026-10-23)
+  mkdir -p "$(dirname "$LOCK")"; exec 9>"$LOCK"
+  if ! flock -n 9; then say "waiting for another blast's generation to end"; flock 9; fi
   say "generating into $out with $n processes (logs in $out/.logs/)"
   PIDS=()
   set -m
