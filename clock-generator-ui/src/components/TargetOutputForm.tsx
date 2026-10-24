@@ -26,6 +26,8 @@ interface TargetOutputFormProps {
     /** Whether to ask for it: the copies drop onto a belt from inserters whose places are known */
     showCopyOffset?: boolean;
     onCopyOffsetChange?: (value: CopyOffset | undefined) => void;
+    /** What the engine says of whether the copies' drops fit at that gap, for the period estimated from the settings; null while it says nothing */
+    copyOffsetNote?: string | null;
 }
 
 export function TargetOutputForm({
@@ -40,6 +42,7 @@ export function TargetOutputForm({
     copyOffset,
     showCopyOffset = false,
     onCopyOffsetChange,
+    copyOffsetNote,
 }: TargetOutputFormProps) {
     const shown = copyOffsetShown(copyOffset);
     return (
@@ -125,6 +128,9 @@ export function TargetOutputForm({
                         <Typography variant="body2" sx={{ mb: 1 }}>Where the next copy of the build stands, so that the drops of all the copies onto a shared belt can be checked. Leave it empty when the copies have belts of their own.</Typography>
                     </HelpButton>
                 </Box>
+            )}
+            {showCopyOffset && onCopyOffsetChange && copyOffsetNote && (
+                <Typography variant="body2" color="text.secondary" role="status" data-testid="copy-offset-note" sx={{ mt: 0.5 }}>{copyOffsetNote}</Typography>
             )}
             <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 0.75, mt: 0.5 }}>
                 <Box component="span">{itemsPerSecondHelper(itemsPerSecond, copies)}</Box>
