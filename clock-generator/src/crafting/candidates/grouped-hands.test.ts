@@ -5,7 +5,7 @@ import type { Config } from "../../config/schema";
 import { quiet } from "../generate-blueprint-test-helpers";
 import { planRun } from "../plan/plan-run";
 import { dropSpacing, dropTieBreak } from "../../config/drop-spacing";
-import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsWindows } from "./grouped-hands";
+import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsPlan, groupedHandsWindows } from "./grouped-hands";
 
 // The grenade build (REAL_OWNER_GRENADE), one copy: a foundry (3) fills four assembling machines (1, 2, 4, 5) with iron
 // plates through inserters 4, 3, 6 and 5, five hands of 16 a period each; a drill into each machine brings the coal; inserters 1,
@@ -43,6 +43,23 @@ describe("hands in groups", () => {
         // a drill's window opens with its machine's inputs
         expect(ranges(windows, "drill:1")[0][0]).toBe(2);
         expect(ranges(windows, "drill:2")[0][0]).toBe(58);
+    });
+
+    it("names the groups that take turns: each starts where its output swings open, with its outputs, then its inputs, then its drills", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        const turnsOf = (drops: ReturnType<typeof dropTieBreak> | null) =>
+            groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true, undefined, drops).turns;
+        // dealt out by ids: the machines alternate between the two groups
+        expect(turnsOf(null)).toEqual([
+            { start: 0, entity_ids: ["inserter:1", "inserter:7", "inserter:4", "inserter:6", "drill:1", "drill:3"] },
+            { start: 56, entity_ids: ["inserter:2", "inserter:8", "inserter:3", "inserter:5", "drill:2", "drill:4"] },
+        ]);
+        // dealt out by the belt the hands drop on: the machines of one row of it are a group
+        expect(turnsOf(dropTieBreak(config, duration.ticks))).toEqual([
+            { start: 0, entity_ids: ["inserter:1", "inserter:2", "inserter:3", "inserter:4", "drill:1", "drill:2"] },
+            { start: 56, entity_ids: ["inserter:7", "inserter:8", "inserter:5", "inserter:6", "drill:3", "drill:4"] },
+        ]);
     });
 
     it("gives the drills of one group one window, as long as the ticks the slowest of them needs to mine its machine's coal", () => {
@@ -140,6 +157,15 @@ describe("hands in a chain of machines", () => {
         for (const id of [5, 6, 7, 8, 22, 23, 25, 26]) expect(ranges(windows, `inserter:${id}`)).toEqual([[54, 71]]);
         for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[55, 80]]);
         expect(ranges(windows, "inserter:11")).toEqual([[56, 83]]);
+    });
+
+    it("has no groups that take turns: one group serves the chain", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        const made = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+            { surplus_guard: true, feeder_offset: 1, share_windows: false });
+        expect(made.windows.size).toBeGreaterThan(0);
+        expect(made.turns).toEqual([]);
     });
 });
 

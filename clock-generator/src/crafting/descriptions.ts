@@ -317,6 +317,16 @@ export function unplannedDescriptionLines(
     ];
 }
 
+/**
+ * The line on the first combinator of a group that takes its turn, when the combinators stand in groups: which group it is and
+ * the ticks of its turn, as the clock counts them (the windows' own numbers, so a turn that runs over the end of the period is two):
+ * "Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick period. Its combinators stand together, in the order of the turn."
+ */
+export function turnLine(group: number, groups: number, turn: OpenRange[], period_text: string): string {
+    return `Group ${group} of ${groups}: takes its turn in ticks ${turn.map(rangeText).join(" and ")} of the ${period_text}-tick period. `
+        + "Its combinators stand together, in the order of the turn.";
+}
+
 /** The line that says which generator made a clock, the clock decider's last: "Made by Clock Generator 0.20.0: clock-generator-self.vercel.app" */
 export function generatorLine(): string {
     return `Made by ${GENERATOR.name} ${GENERATOR.version}: ${GENERATOR_SITE_TEXT}`;

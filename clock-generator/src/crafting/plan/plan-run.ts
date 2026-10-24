@@ -55,6 +55,7 @@ import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
+import type { TurnGroup } from "../turn-groups";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
 /**
@@ -1223,6 +1224,8 @@ interface PlannedClock {
     fuel_hand_room: Map<string, number>;
     /** The clock-only check the slack decision already ran on exactly `windows`, which checkedClock reuses */
     as_built_run: AsBuiltRun | null;
+    /** The groups that take turns in the windows, which the blueprint lays its combinators out by; absent where the windows are not in groups */
+    turns?: TurnGroup[];
 }
 
 /**
@@ -1332,6 +1335,7 @@ export function exportClock(
             subtick_clock,
             use_modulo,
             inserter_clocks,
+            clock.turns,
         );
     };
     const moduloBlueprintFor = (all_windows: Map<string, OpenRange[]>) => {
