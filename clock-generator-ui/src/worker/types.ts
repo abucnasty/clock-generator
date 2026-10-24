@@ -164,6 +164,11 @@ export interface ClockAlternativeView {
     /** Null unless this clock moved a crafting cycle or an output swing */
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
+    /**
+     * The ticks the blueprint counts when the period is not a whole number of ticks and the clock runs it rounded down;
+     * missing for any other clock, and from clocks kept before it was carried
+     */
+    roundedPeriodTicks?: number;
     swingBackoffReport: SwingBackoffReport | null;
     /** Exact independent inserter clocks exported with this alternative, including measured fuel clocks. */
     inserterClocks?: RecordTimelineRequest['inserter_clocks'];

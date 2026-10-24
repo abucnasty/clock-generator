@@ -4,7 +4,7 @@ import { ConfigPaths } from "../../config/config-paths";
 import type { Config } from "../../config/schema";
 import { quiet } from "../generate-blueprint-test-helpers";
 import { planRun } from "../plan/plan-run";
-import { GroupedHandsNotApplicable, groupedHandsWindows } from "./grouped-hands";
+import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsWindows } from "./grouped-hands";
 
 // The owner's grenade build (REAL_OWNER_GRENADE), one copy: a foundry (3) fills four assembling machines (1, 2, 4, 5) with iron
 // plates through inserters 4, 3, 6 and 5, five hands of 16 a period each; a drill into each machine brings the coal; inserters 1,
@@ -47,10 +47,42 @@ describe("hands in groups", () => {
         for (const id of [1, 2, 7, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 0]]);
     });
 
-    it("does not apply to a build of machines that hand products on by several hands a period, or with a belt pickup", async () => {
+    it("does not apply to a build of machines that hand products on by several hands a period", async () => {
         const accumulator = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
         expect(windowsOf(accumulator)).toThrow(GroupedHandsNotApplicable);
-        const belted = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
-        expect(windowsOf(belted)).toThrow(GroupedHandsNotApplicable);
+    });
+});
+
+// Thaeln's cell 09 (REAL_THAELN_CELL09): thirteen machines in a chain, a cryogenic plant (7) fills four foundries' worth of plastic
+// through inserters 10, 12, 19 and 20 and has coal from a belt (11); foundries (3, 4, 10, 11) fill the eight assemblers with low
+// density structure; units and frames come off two belts; eight inserters take the packs out onto belts. The cycle is 168 ticks.
+describe("hands in a chain of machines", () => {
+    let config: Config;
+    beforeAll(async () => {
+        config = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
+    });
+
+    it("asks for one cycle: the hands of the inserters that fill a machine are rounded up, only the output's must be whole", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
+        // the plan itself needs 8 cycles for the coal inserter's 15/8 hands
+        expect(plan.run.recipe_lcm).toBe(8);
+        expect(groupedHandsCycles(plan.run.simulation_context.entity_registry, plan.run.swing_counts)).toBe(1);
+    });
+
+    it("puts the windows in the order of the chain: output, units, low density structure, plastic and coal a tick behind", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        expect(duration.ticks).toBe(168);
+        // the way the sample's clock is made: a hand's worth for the plastic, whose foundries would keep a surplus hand, and the compact order
+        const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, plan.unslacked_windows, true,
+            { surplus_guard: true, feeder_offset: 1 });
+        // three hands of 12 ticks onto the belt; then, as the last of them starts, the units and frames (two hands of 11, a third start the
+        // limit refuses, and the belt pickup slack of 4); the low density structure behind them (two hands of 8 and a third start); the plastic
+        // a tick after it (four hands of 8: no more than four) and the coal after that (two hands of 11 and a third start, and the slack)
+        for (const id of [3, 4, 9, 13, 18, 21, 24, 27]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 36]]);
+        for (const id of [1, 2, 14, 15, 16, 17, 28, 29]) expect(ranges(windows, `inserter:${id}`)).toEqual([[26, 53]]);
+        for (const id of [5, 6, 7, 8, 22, 23, 25, 26]) expect(ranges(windows, `inserter:${id}`)).toEqual([[54, 71]]);
+        for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[55, 80]]);
+        expect(ranges(windows, "inserter:11")).toEqual([[56, 83]]);
     });
 });

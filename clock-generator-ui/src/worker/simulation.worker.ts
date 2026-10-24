@@ -156,6 +156,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
+        ...(alternative.rounded && { roundedPeriodTicks: alternative.rounded.period_ticks }),
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
         backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
