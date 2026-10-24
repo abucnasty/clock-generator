@@ -57,6 +57,24 @@ describe("a result's chance in the 2.1 data", () => {
         expect(expectedAmount(seed)).toBeCloseTo(0.02, 9);
     });
 
+    it("reads a recycling recipe's extra count fraction as the chance of one item, and its variance as a Bernoulli's", async () => {
+        // measured on the recycler (2.1.21): a gear gives an iron plate at 0.4978 over 47,992 crafts; an electronic
+        // circuit an iron plate at 0.2527 and a copper cable at 0.7487 over 19,196; iron ore itself back at 0.2511
+        const { RecipeMetadata, expectedAmount, amountVariance } = await import("../entities/machine/recipe/recipe-metadata");
+        const gear = RecipeMetadata.fromRecipeName("iron-gear-wheel-recycling");
+        expect(gear.outputs.map(it => [it.name, expectedAmount(it)])).toEqual([["iron-plate", 0.5]]);
+        expect(amountVariance(gear.output)).toBeCloseTo(0.25, 12);
+        const circuit = RecipeMetadata.fromRecipeName("electronic-circuit-recycling");
+        expect(circuit.output.name).toBe("copper-cable");
+        expect(Object.fromEntries(circuit.outputs.map(it => [it.name, expectedAmount(it)]))).toEqual({ "copper-cable": 0.75, "iron-plate": 0.25 });
+        expect(amountVariance(circuit.output)).toBeCloseTo(0.1875, 12);
+        const ore = RecipeMetadata.fromRecipeName("iron-ore-recycling");
+        expect(expectedAmount(ore.output)).toBe(0.25);
+        expect(amountVariance(ore.output)).toBeCloseTo(0.1875, 12);
+        // a result that always comes in its amount has none
+        expect(amountVariance(RecipeMetadata.fromRecipeName("iron-gear-wheel").output)).toBe(0);
+    });
+
     it("gives a car and a tank 80 slots at every quality, and a cargo wagon 40 to 100 by its quality", () => {
         // measured in the game: get_inventory_size of each prototype at each quality, and built cars and tanks
         for (const quality of ["normal", "uncommon", "rare", "epic", "legendary"]) {
