@@ -181,6 +181,23 @@ describe('a drop marked as side-loading onto another belt', () => {
     });
 });
 
+describe('the way the belt runs at a drop and the gap between copies', () => {
+    const config = {
+        ...imported,
+        target_output: { ...imported.target_output, copies: 7, copy_offset: { x: 12, y: 0 } },
+        inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, belt_direction: 12 }, stack_size: 16, position: { x: 1.5, y: 2.5 }, direction: 8 }],
+    } as unknown as Config;
+
+    it('go through the form and back as the export and the player gave them', () => {
+        const form = configToFormData(config);
+        expect(form.target_output.copy_offset).toEqual({ x: 12, y: 0 });
+        expect(form.inserters[0].sink).toEqual({ type: 'belt', id: 1, belt_direction: 12 });
+        const back = formDataToConfig(form);
+        expect(back.target_output.copy_offset).toEqual({ x: 12, y: 0 });
+        expect(back.inserters[0].sink).toEqual({ type: 'belt', id: 1, belt_direction: 12 });
+    });
+});
+
 describe('configToFormData and the forced flag', () => {
     it('never flags an inserter, even one with an ALWAYS rule', () => {
         const always = {

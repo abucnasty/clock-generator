@@ -523,7 +523,7 @@ function App() {
             machinesMax,
         }),
         coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
-        sideLoadedDrop: checkedCoverage?.sideLoadedDrop,
+        sideLoadedDrop: checkedCoverage?.sideLoadedDrop, lanesExactlyFull: checkedCoverage?.lanesExactlyFull, copyGapNeeded: checkedCoverage?.copyGapNeeded,
         machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),
@@ -1190,6 +1190,9 @@ function App() {
                                 onRecipeChange={(recipe) => updateTargetOutput('recipe', recipe)}
                                 onItemsPerSecondChange={(value) => updateTargetOutput('items_per_second', value)}
                                 onCopiesChange={(value) => updateTargetOutput('copies', value)}
+                                copyOffset={config.target_output.copy_offset}
+                                showCopyOffset={config.target_output.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
+                                onCopyOffsetChange={(value) => updateTargetOutput('copy_offset', value)}
                             />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
