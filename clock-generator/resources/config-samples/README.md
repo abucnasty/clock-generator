@@ -47,7 +47,7 @@ Conventions:
 
 | Build | Scaffold | Recorded | Note |
 |---|---|---|---|
-| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock was the one selected from 2026-10-10; since 2026-10-14 (issue 152) batched swings gets back from every loss and is selected again, and the game tests recorded it that day both ways, 400 in every period | in `test:game`, both ways; with "Backed-up belts" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
+| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock was the one selected from 2026-10-10; since 2026-10-14 (issue 152) batched swings gets back from every loss and is selected again, and the game tests recorded it that day both ways, 400 in every period; the 2-swing clock again while batched swings' nutrients trials dipped a hand late in their 40 periods, and batched swings since such a trial runs on (2026-10-24), recorded that day both ways, 400 in every period, and with the three family cuts (bioflux 2 periods, output 4, nutrients 2): back at 400 from the first or second period after each and for the 62 periods after the last | in `test:game`, both ways; with "Backed-up belts" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
 | science/logistic-science, direct-insert | yes (2026-10-21) | selected clock exact, with "Backed-up belts" off and on: 64 in each of 374 periods of 96 ticks (fractional swings, 2 output swings per cycle; 40 a second a copy, 240 over 6 copies), 200.0 wake-ups a minute in the game against 175.0 in the simulator (2026-10-24). The config is the build on turbo belts, each science assembler with an input belt of its own; it replaced a yellow-belt config whose transport belt machine could not be built. The transport belt foundry's productivity of 50 is what the game records. With the ingredients cut twice and the outputs blocked once, the clocks selected on 2026-10-21 (288 ticks) made 192 again from the first period after each | in `test:game`, both ways |
@@ -136,10 +136,11 @@ Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
   clock nor any trial for backpressure loss gets the build into it. Under batched swings the game made 192 in each
   of 53 periods. How the build gets there under uneven output swings is not traced, by decision: it is a known risk
   of the build. The recording is `.scratch/recordings/utility-science-backpressure-uneven-output-on.json`.
-- **Agricultural science with "Backed-up belts" on**: the 2-swing clock moves its 800 packs in every period. The
+- **Agricultural science with "Backed-up belts" on**: the 2-swing clock moved its 800 packs in every period. The
   four inserters that bring nutrients to the egg biochambers moved 979.89 nutrients a period in the game and 980.85
-  in the simulator, a difference the game test of the build left open; the game test of 2026-10-24 finds none in any
-  inserter or machine, and holds them all.
+  in the simulator, a difference the game test of the build left open; the game test of 2026-10-24 found none in any
+  inserter or machine. Since a loss trial short only late in its 40 periods runs on, batched swings is selected with
+  or without the switch, and the game test of 2026-10-24 on it finds 400 in every period and no difference.
 
 Known gaps of the trials:
 

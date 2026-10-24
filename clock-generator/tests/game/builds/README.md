@@ -248,9 +248,9 @@ the family's `*.generation.test.ts` (pull requests to master).
 - The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
   `clock_sha256` (checked by `pickup-clock-cold-start.generation.test.ts` against the selection or the pinned windows)
   and `recorded_clock_sha256` (checked by the game test).
-- Three scaffold-recordings builds expect values that belong to one clock (agricultural science's dips and open issue,
-  agricultural science with backed-up belts having no difference, and the moved inserters of chemical science with a
-  shared foundry): `scaffold-recordings-clock-pins.json`.
+- Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
+  difference after its staged start, agricultural science with backed-up belts having no difference, and the moved
+  inserters of chemical science with a shared foundry): `scaffold-recordings-clock-pins.json`.
 
 ## Over-the-hood operating clocks
 

@@ -14,6 +14,8 @@ import {
     makesText,
     plainClockName,
     recoversOf,
+    lossLimitText,
+    minutesAndSecondsText,
     wakeUpsText,
     worksOf,
     type SummaryClock,
@@ -206,6 +208,37 @@ describe('recoversOf', () => {
 
     it('says not tested for a clock that does not hold its rate', () => {
         expect(recoversOf(clock('a', { verdict: 'unstable' }))).toMatchObject({ kind: 'not-tested', value: 'Not tested' });
+    });
+});
+
+describe('lossLimitText', () => {
+    const names: Record<string, string> = { nutrients: 'Nutrients', 'iron-bacteria': 'Iron bacteria' };
+    const itemLabel = (id: string) => names[id] ?? id;
+    const limited = (ticks: number, item: string, verdict: 'stable' | 'no recovery' = 'stable') => {
+        const limitedClock = clock('a', { verdict });
+        limitedClock.assessment.backpressure_loss = { ...limitedClock.assessment.backpressure_loss!, loss_limit: { ticks, item } };
+        return limitedClock;
+    };
+
+    it('names the longest loss checked and the item that spoils first, for a build whose items spoil', () => {
+        expect(lossLimitText(limited(13500, 'nutrients'), itemLabel))
+            .toBe('Checked for losses up to 3 min 45 s. A longer loss spoils the nutrients in the build, and no clock brings it back.');
+        expect(lossLimitText(limited(2700, 'iron-bacteria', 'no recovery'), itemLabel))
+            .toBe('Checked for losses up to 45 s. A longer loss spoils the iron bacteria in the build, and no clock brings it back.');
+    });
+
+    it('says nothing for a build whose items do not spoil, or a clock whose losses were not tried', () => {
+        expect(lossLimitText(clock('a'), itemLabel)).toBeNull();
+        const untried = clock('b');
+        untried.assessment.backpressure_loss = null;
+        expect(lossLimitText(untried, itemLabel)).toBeNull();
+    });
+
+    it('says a stretch in minutes and seconds', () => {
+        expect(minutesAndSecondsText(2700)).toBe('45 s');
+        expect(minutesAndSecondsText(10800)).toBe('3 min');
+        expect(minutesAndSecondsText(40500)).toBe('11 min 15 s');
+        expect(minutesAndSecondsText(750)).toBe('12.5 s');
     });
 });
 

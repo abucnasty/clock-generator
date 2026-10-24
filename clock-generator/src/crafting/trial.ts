@@ -9,7 +9,7 @@ import { Logger, defaultLogger } from "../common/logger";
 import { StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
-import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, verdictOf } from "./backpressure-loss";
+import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, lossLimitOf, reportOf, verdictOf } from "./backpressure-loss";
 import { CIRCUIT_LATENCY_TICKS, SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
@@ -376,10 +376,13 @@ export function backpressureLossOf(
     const outcomeOf = (loss: BackpressureLossOptions["loss"], phases?: MovingPickupPhases): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
         factorio_states: false,
         moving_pickup_phases: phases,
-        backpressure_loss: { ...options, loss, period_ticks, expected_output_items },
+        backpressure_loss: { loss_limit_ticks: loss_limit?.ticks, ...options, loss, period_ticks, expected_output_items },
     }).backpressure_loss!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
-    const losses = backpressureLossesOf(createEntityRegistryFromConfig(config), config.target_output.recipe);
+    const registry = createEntityRegistryFromConfig(config);
+    const losses = backpressureLossesOf(registry, config.target_output.recipe);
+    // a build whose items spoil is tried with losses shorter than its loss limit only
+    const loss_limit = lossLimitOf(registry);
     const tried = (loss: BackpressureLoss, index: number): LossOutcome => {
         on_loss?.(loss, index, losses.length + 1);
         const canonical = outcomeOf(loss);
@@ -396,7 +399,7 @@ export function backpressureLossOf(
         return {...canonical, ticks, recovered_after_bins: recovery, stopped_after_ticks: stopped,
             pickup_phase_starts_checked: phase_starts.length};
     };
-    return reportOf(period_ticks, expected_output_items, tried({ kind: "none" }, 0), losses.map((loss, index) => tried(loss, index + 1)));
+    return reportOf(period_ticks, expected_output_items, tried({ kind: "none" }, 0), losses.map((loss, index) => tried(loss, index + 1)), loss_limit);
 }
 
 /** The machines at the ends of every inserter of the config */

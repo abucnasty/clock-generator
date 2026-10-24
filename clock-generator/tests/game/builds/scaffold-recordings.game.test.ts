@@ -109,26 +109,22 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
         settle_ticks: 4800,
-        // Recorded 2026-10-16 (swings-2 is the selected clock): 800 in every period but two in a row, one hand (16) short each
-        // time, in periods 8 and 9 of the settling after the staged start; the same clock in the game a run before gave the
-        // same two, and the batched clock holds its 400 in all 119 periods of a run of 57,600 ticks. The simulator has such a
-        // one-hand dip too, twice, but since #333 it runs a clock of whole ticks by its own period (960 ticks, where the plan
-        // of this clock has 480): its run is 54,720 ticks and its two dips fall before the first third the comparison leaves
-        // out. Inserter 11 moves 371.33 items a period in the game against 370.16 in the simulator (368.00 before #333): the
-        // game's ticks 12,000 to 36,000 after the staged start are laid against the simulator's 18,240 to 54,720, while the
-        // science biochamber is still filling its stock in the game. Over the same stretch of both recordings the two agree
-        // to 0.64 a period on every inserter, and from the prepared start inserter 11 moves 370.16 against 370.11.
+        // Recorded 2026-10-24 on batched swings (5 output swings per cycle), selected since a loss trial short only late in
+        // its 40 periods runs on: 400 in every one of 74 periods after the staged start, and the simulator moves what the
+        // game moved through every inserter and machine. The 2-swing clock selected before (recorded 2026-10-16) was one
+        // hand short in periods 8 and 9 of the settling after the staged start, and inserter 11 moved 371.33 items a period
+        // in the game against 370.16 in the simulator.
         staged_start: {
-            dips: [{ start: 7680, items: 784 }, { start: 8640, items: 784 }],
-            open_issues: [
-                "Inserter 11 (belt 1 -> machine 5) moves 371.33 items a period in the game and 370.16 in the simulator.",
-            ],
+            dips: [],
+            open_issues: [],
         },
     },
     // its clocks have no belt pickup slack: batched swings has room for a hand of fuel in the windows of the three
-    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Since the rules of
-    // issue 152 (2026-10-14) batched swings gets back from every loss and is selected; from 2026-10-10 until then the
-    // clock with 2 output swings per cycle was, since batched swings did not get back from a loss of nutrients
+    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Batched swings is
+    // selected, the same clock as with belts that move (recorded 2026-10-24: 400 in every one of 74 periods, no
+    // difference between the game and the simulator); the 2-swing clock was while a loss of nutrients broke batched
+    // swings (2026-10-10 to 2026-10-14), and again while its nutrients trials dipped a hand late in their 40 periods,
+    // until such a trial ran on (2026-10-24)
     "agricultural science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE,

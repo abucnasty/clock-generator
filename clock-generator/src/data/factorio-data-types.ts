@@ -30,6 +30,8 @@ export type Item = {
   type: "item"
   name: ItemName
   stack_size: number
+  /** The ticks the item takes to spoil; absent for an item that does not spoil */
+  spoil_ticks?: number
 } & Record<string, any>
 
 export interface MiningDrillSpec {

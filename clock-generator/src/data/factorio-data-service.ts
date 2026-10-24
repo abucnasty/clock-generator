@@ -182,6 +182,12 @@ export class FactorioDataService {
         return result;
     }
 
+    /** The ticks an item takes to spoil, as the game data has them; null for an item that does not spoil or that the data does not have */
+    public static itemSpoilTicks(itemName: ItemName): number | null {
+        const spoil_ticks = this.getData().item[itemName]?.spoil_ticks;
+        return typeof spoil_ticks === "number" && spoil_ticks > 0 ? spoil_ticks : null;
+    }
+
     public static getMiningDrillSpec(type: MiningDrillType): MiningDrillSpec {
         const spec = this.getData()["mining-drill"][type];
         assert(spec, `Mining drill spec for type ${type} was not found`);

@@ -22,8 +22,9 @@ describe("generateClockForConfig", () => {
             // it puts into is at its block) the sample with hands of 12 keeps no windows for its feeders, and the case is
             // made with egg biochambers at speed 80 and feeder hands of 8: 118 windows with the feeders', 108 without.
             //
-            // Among the clocks that hold, the 5-swing one has the fewest wake-ups. Under it the build does not get back
-            // to its rate from every loss, and the 2-swing clock is selected (GOALS.md, "Backpressure Loss").
+            // Among the clocks that hold, the 5-swing one has the fewest wake-ups. Under it the build gets back to its rate
+            // from every loss since a trial short only late in its 40 periods runs on (docs/stability.md), and it is
+            // selected; before, the 2-swing clock was (GOALS.md, "Backpressure Loss").
             const config: Config = {
                 ...sample,
                 machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 80 } : it),
@@ -41,9 +42,8 @@ describe("generateClockForConfig", () => {
             for (const other of alternatives.filter(it => it.verdict !== "unstable" && it !== five_swings)) {
                 expect(five_swings.assessment.wake_ups_per_minute!).toBeLessThan(other.assessment.wake_ups_per_minute!);
             }
-            expect(five_swings.assessment.backpressure_loss?.survives).toBe(false);
-            expect(five_swings.assessment.backpressure_loss?.broken_by).toContain("nutrients stops arriving");
-            expect(alternatives[selected_index].id).toBe("swings-2");
+            expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
+            expect(alternatives[selected_index].id).toBe("planned-belt-slack");
             expect(alternatives[selected_index].verdict).toBe("stable");
         });
     });
