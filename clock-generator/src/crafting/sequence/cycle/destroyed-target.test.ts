@@ -43,6 +43,15 @@ describe("a target that counts an item destroyed", () => {
         expect(EntityTransferLcm(plan)).toBe(12);
     });
 
+    it("is what a target written as the recycler's returns is refused for, with the rate to write", async () => {
+        // the cut of the benchmark as it was first written: the 400/3 ore a second the recycler gives back, as made
+        const as_cut = (config: Config): Config => ({ ...config, target_output: { recipe: "iron-ore", items_per_second: 133.333333333, copies: 1 } });
+        await expect(planOf(as_cut)).rejects.toThrow("Machine 1 places the iron-ore of the target into chest:1, and the build takes all of it "
+            + "back into the machine: none leaves the build, so it is not made. A machine that destroys an item it is brought is planned "
+            + "on what it destroys: set `target_output.counts` to \"destroyed\" and `items_per_second` to the iron-ore it is brought from "
+            + "outside, 400 for the 133.333333 a second it gives back.");
+    });
+
     it("is refused where the machine does not place its results itself, or nothing takes them out of its container", async () => {
         await expect(planOf(config => ({ ...config, machines: config.machines.map(({ result_target: _, ...machine }) => machine) })))
             .rejects.toThrow("Machine 1 destroys iron-ore, which is planned for a machine that places its results itself into a container");

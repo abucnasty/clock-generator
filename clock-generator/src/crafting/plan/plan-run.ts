@@ -20,7 +20,7 @@ import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../co
 import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
-import { TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
+import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
@@ -1630,6 +1630,10 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
 
     // Find all output machines: the machines that produce the target output item, or that destroy it
     const target = { item: target_production_rate.machine_production_rate.item, counts: target_production_rate.counts };
+    const returned = returnedTargetRefusal(target, target_production_rate.total_production_rate.amount_per_second.toDecimal(), simulation_context.entity_registry);
+    if (returned !== null) {
+        throw new Error(returned);
+    }
     const target_machine_ids = new Set(targetMachinesOf(target, simulation_context.entity_registry).map(it => it.entity_id.id));
     const output_machine_state_machines = simulation_context.machines.filter(it => target_machine_ids.has(it.machine_state.entity_id.id));
     assert(

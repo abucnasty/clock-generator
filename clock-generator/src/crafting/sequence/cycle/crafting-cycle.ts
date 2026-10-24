@@ -6,7 +6,7 @@ import { buildOutputInsertersOf, EntityTransferCountMap } from "./swing-counts";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
-import { targetInsertersOf, targetMachinesOf } from "./target-ends";
+import { returnedTargetRefusal, targetInsertersOf, targetMachinesOf } from "./target-ends";
 
 export interface CraftingCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
@@ -107,6 +107,11 @@ function createPlan(
 ): CraftingCyclePlan {
     if (target_production_rate.counts === "destroyed") {
         return createDestroyedPlan(target_production_rate, entity_registry, config_overrides);
+    }
+    const returned = returnedTargetRefusal({ item: target_production_rate.machine_production_rate.item, counts: "made" },
+        target_production_rate.total_production_rate.amount_per_second.toDecimal(), entity_registry);
+    if (returned !== null) {
+        throw new Error(returned);
     }
 
     const output_machines = entity_registry
