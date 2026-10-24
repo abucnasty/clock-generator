@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockAlternatives, simulateClockOnly, validateConfig, type ClockAlternative, type SerializableClockWindows } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { alwaysOnReasonProblemsOf } from "./generate-blueprint-test-helpers";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 import { expectPinnedScaffoldClock } from "../../tests/game/builds/scaffold-recordings-clock-pins";
 
@@ -34,6 +35,10 @@ describe("generateClockForConfig", () => {
             windows = one_swing.result.clock_windows;
             five_swings = alternatives.find(a => a.id === "planned-belt-slack")!;
             five_swing_windows = five_swings.result.clock_windows;
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
         });
 
         // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and

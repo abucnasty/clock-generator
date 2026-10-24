@@ -13,3 +13,4 @@ export { feedersOfOutputMachines, anyFeederCarriesFuel } from "./candidates/outp
 export { ClockRanking, rankingOf, rankingWindowCount, combineClockAlternativeRuns, selectableAsStable, searchesAreNeeded } from "./rank";
 export { ClockAlternative, ClockAlternativesResult, ClockAlternativeRun, ClockAlternativeContext, ClockAlternativeTask, ClockAlternativesPlan, planClockAlternatives, runClockAlternativeTask, generateClockAlternatives } from "./alternatives";
 export { blueprintFileFor } from "./blueprint-export";
+export type { AlwaysOnReason, AlwaysOnReasons } from "./always-on-reasons";

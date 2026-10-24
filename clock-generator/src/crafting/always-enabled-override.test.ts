@@ -86,7 +86,8 @@ describe("an inserter the config sets to always enabled", () => {
         expect(Object.keys(result.clock_windows)).not.toContain("drill:1");
         expect(result.blueprint.entities.filter(entity => (entity.player_description ?? "").startsWith("Drill"))).toHaveLength(0);
         expect(result.chest_drills).toEqual([{ drill_id: 1, chest_id: 1, chest_type: "car", item: "iron-ore", planned: false, enabled_ticks: null, window_count: 0,
-            always_enabled_because: "the config sets it to always enabled" }]);
+            always_enabled_because: { kind: "config" } }]);
+        expect(result.always_on_reasons).toEqual({ "drill:1": { kind: "enable-rule" } });
         // the inserters' windows are the same either way: the drill's are made after them
         const { "drill:1": _drill, ...inserters } = clocked.clock_windows;
         expect(result.clock_windows).toEqual(inserters);

@@ -143,6 +143,8 @@ export {
     SimulationStabilityCheck,
     SwingAttemptResult,
     SwingBackoffReport,
+    AlwaysOnReason,
+    AlwaysOnReasons,
 } from './crafting/generate-blueprint';
 
 export {

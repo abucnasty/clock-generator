@@ -4,16 +4,24 @@ import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blu
 import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
+import type {Config} from "../config/schema";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {steelWagonCases} from "../../tests/game/builds/steel-wagon-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
 // each clock pinned beside the in-game recording of it
 const controls = readControls("steel-wagon-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
+let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON), {logger: quiet});
+    config = await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON);
+    generated = generateClockAlternatives(config, {logger: quiet});
+});
+
+test("steel wagon: every inserter and drill a clock leaves always on says why", () => {
+    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("steel wagon: the clock with belt slack is selected, and the drill into the wagon is enabled before the ore is taken", () => {

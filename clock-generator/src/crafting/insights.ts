@@ -12,6 +12,7 @@ import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPi
 import type { Config } from "../config/schema";
 import { describeSideLoadedDrop, SIDE_LOADED_DROP_ADVICE, SIDE_LOADED_DROP_TITLE, sideLoadedDrops } from "../config/side-loaded-drop";
 import { chestName } from "../common/entity-types";
+import { chestDrillBecause } from "./chest-drill-windows";
 import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/drop-spacing";
 import { lanesExactlyFull, lanesExactlyFullNote } from "../config/lane-capacity-validator";
 
@@ -516,7 +517,7 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
         what: drills.map(drill => {
             const into = `Drill ${drill.drill_id} drops ${drill.item.replace(/-/g, " ")} into ${chestName(drill.chest_type, drill.chest_id)}`;
             if (drill.enabled_ticks === null) {
-                return `${into} and is always enabled: ${drill.always_enabled_because}.`;
+                return `${into} and is always enabled: ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because)}.`;
             }
             const ticks = Number(drill.enabled_ticks.toFixed(2));
             return `${into} and is enabled ${ticks} tick${ticks === 1 ? "" : "s"} of the ${period}-tick period, in ${drill.window_count} window${drill.window_count === 1 ? "" : "s"}.`;

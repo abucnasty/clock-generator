@@ -3,6 +3,7 @@ import {generateClockAlternatives} from "./generate-blueprint";
 import {rotateRanges, SerializableClockWindows} from "./clock";
 import {backpressureLossOf, simulateClockOnly} from "./trial";
 import {OpenRange} from "../data-types";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
 import {clockHash, readControls} from "../../tests/game/builds/clock-controls";
 import {expectColdStartRunsOnSelection} from "../../tests/game/builds/pickup-clock-cold-start-runs";
@@ -33,6 +34,7 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         expect(pin, "and a pin of the selection its native summary was recorded on").toBeDefined();
         const config = await pickupClockConfig(variant);
         const result = generateClockAlternatives(config, {logger: quiet});
+        expect(alwaysOnReasonProblemsOf(config, result), "every inserter and drill a clock leaves always on says why").toEqual([]);
         const selected = result.alternatives[result.selected_index];
         const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
         expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as the pin (its identity: no text or metadata)")

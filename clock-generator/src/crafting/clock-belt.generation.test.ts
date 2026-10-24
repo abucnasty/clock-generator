@@ -3,7 +3,7 @@ import { clockBeltLabel, generateClockAlternatives, type ClockAlternative, type 
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-import { quiet, withSearches } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblemsOf, quiet, withSearches } from "./generate-blueprint-test-helpers";
 import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
 import { expectPinnedScaffoldClock } from "../../tests/game/builds/scaffold-recordings-clock-pins";
 
@@ -37,14 +37,20 @@ describe("the belt a clock is made for", () => {
         const alternative = (id: string) => alternatives.find(a => a.id === id)!;
 
         let by_default: ClockAlternativesResult;
+        let problems: string[];
 
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
             by_default = generateClockAlternatives(backedUpBelts(config), { logger: quiet });
+            problems = alwaysOnReasonProblemsOf(backedUpBelts(config), by_default);
             // with the searches, for the clocks of theirs that get back from every loss
             const generated = generateClockAlternatives(withSearches(backedUpBelts(config)), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(problems).toEqual([]);
         });
 
         it("makes every clock without the slack, also one that only holds with it", () => {
@@ -102,12 +108,18 @@ describe("the belt a clock is made for", () => {
     describe("agricultural science, with backed-up belts", () => {
         let selected: ClockAlternative;
         let batched: ClockAlternative;
+        let problems: string[];
 
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
             const generated = generateClockAlternatives(backedUpBelts(config), { logger: quiet });
+            problems = alwaysOnReasonProblemsOf(backedUpBelts(config), generated);
             selected = generated.alternatives[generated.selected_index];
             batched = generated.alternatives.find(a => a.id === "planned-belt-slack")!;
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(problems).toEqual([]);
         });
 
         it("makes batched swings with room for a hand of fuel, as a clock for a backed-up belt, and it holds the target rate", () => {
@@ -155,12 +167,18 @@ describe("the belt a clock is made for", () => {
     describe("automation science, with backed-up belts", () => {
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
+        let problems: string[];
 
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
             const generated = generateClockAlternatives(backedUpBelts(config), { logger: quiet });
+            problems = alwaysOnReasonProblemsOf(backedUpBelts(config), generated);
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(problems).toEqual([]);
         });
 
         it("makes full-hand output swings from batched swings that cannot get back to their rate", () => {

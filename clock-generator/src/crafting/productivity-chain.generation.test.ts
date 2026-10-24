@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
+import type { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { generateClockAlternatives, type ClockAlternativesResult } from "./generate-blueprint";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
 import { clockIdentity } from "./clock-identity";
 import { createHash } from "crypto";
 import { readControls } from "../../tests/game/builds/clock-controls";
@@ -12,10 +13,15 @@ import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/productivity-chai
 // between them, 1.3% of room in the whole chain. No clock observed from the plan holds. Windows made from the hands, rounded up where
 // they are fractional, and from the order of the chain (src/crafting/candidates/grouped-hands.ts) hold in one cycle (72 ticks).
 describe("a clock for the productivity module chain from the hands and the order of the chain", () => {
+    let config: Config;
     let result: ClockAlternativesResult;
     beforeAll(async () => {
-        const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PRODUCTIVITY_CHAIN);
+        config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PRODUCTIVITY_CHAIN);
         result = generateClockAlternatives(config, { logger: quiet });
+    });
+
+    it("names why every inserter and drill a clock leaves always on is", () => {
+        expect(alwaysOnReasonProblemsOf(config, result)).toEqual([]);
     });
 
     it("selects a stable clock of one cycle at the target rate, and runs no search", () => {

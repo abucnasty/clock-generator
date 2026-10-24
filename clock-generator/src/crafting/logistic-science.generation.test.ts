@@ -3,7 +3,7 @@ import {loadConfigFromFile} from "../config/loader";
 import {ConfigPaths} from "../config/config-paths";
 import type {Config} from "../config/schema";
 import {generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult} from "./generate-blueprint";
-import {quiet, withSearches, SEARCH_IDS, SEARCH_LABELS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf, quiet, withSearches, SEARCH_IDS, SEARCH_LABELS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
 
 const backedUpBelts = (config: Config): Config => ({...config, overrides: {...config.overrides, backed_up_belts: true}});
 let config: Config;
@@ -16,6 +16,10 @@ beforeAll(async () => {
     by_default = generateClockAlternatives(config, {logger: quiet});
     moving = by_default.alternatives;
     moving_selected = selectedOf(by_default);
+});
+
+it("names why every inserter and drill a clock leaves always on is", () => {
+    expect(alwaysOnReasonProblemsOf(config, by_default)).toEqual([]);
 });
 
 describe("the belt a clock is made for", () => {

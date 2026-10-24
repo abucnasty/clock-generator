@@ -4,16 +4,24 @@ import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blu
 import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
+import type {Config} from "../config/schema";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {GENERATED_ALTERNATIVE, ownClockCases} from "../../tests/game/builds/own-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
 // the generated clock pinned beside the in-game recording of it on the build's three copies
 const controls = readControls("own-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
+let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING), {logger: quiet});
+    config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING);
+    generated = generateClockAlternatives(config, {logger: quiet});
+});
+
+test("own clock: every inserter and drill a clock leaves always on says why", () => {
+    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("own clock: the selected clock is the one recorded on the three copies", () => {

@@ -8,6 +8,7 @@ import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
+import type { AlwaysOnReason } from "../always-on-reasons";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -188,6 +189,8 @@ export interface GroupedHandsPlan {
      * machines, which one group serves).
      */
     turns: TurnGroup[];
+    /** The ids of the takers busy all the time, whose hands take the whole period: they have no window */
+    busy: string[];
 }
 
 /** The windows of `groupedHandsWindows`, with the groups whose turns they are */
@@ -297,9 +300,10 @@ export function groupedHandsPlan(
     const gated = takers.filter(it => !open_all_period(it));
     if (gated.length === 0) refuse(`every taker is busy the whole period of ${period} ticks`);
     const longest = Math.max(...gated.map(it => it.window_ticks));
-    const leaveOpen = (made: Map<string, OpenRange[]>): Map<string, OpenRange[]> => {
-        for (const taker of takers.filter(open_all_period)) made.delete(taker.inserter.entity_id.id);
-        return made;
+    const leaveOpen = (made: Map<string, OpenRange[]>): Pick<GroupedHandsPlan, "windows" | "busy"> => {
+        const busy = takers.filter(open_all_period).map(taker => taker.inserter.entity_id.id);
+        for (const id of busy) made.delete(id);
+        return { windows: made, busy };
     };
 
     // the machines, in the order of their ids, and the fewest groups every source can serve
@@ -389,7 +393,7 @@ export function groupedHandsPlan(
         const unplaced = takers.find(it => !placed(it));
         if (unplaced !== undefined) refuse(`${unplaced.inserter.entity_id.id} fills ${unplaced.sink.id}, which is neither an output machine nor taken from`);
         if (options.share_windows) sharedWindows(windows, gated, period);
-        return { windows: leaveOpen(windows), turns: [] };
+        return { ...leaveOpen(windows), turns: [] };
     }
     const start_of = (machine: string): number => Math.round(group_of.get(machine)! * period / groups);
     for (const taker of takers) {
@@ -423,7 +427,7 @@ export function groupedHandsPlan(
             ...drills.filter(it => group_of.get(it.sink_id.id) === group).sort(byNumber),
         ].map(it => it.entity_id.id),
     }));
-    return { windows: leaveOpen(windows), turns };
+    return { ...leaveOpen(windows), turns };
 }
 
 /**
@@ -461,7 +465,14 @@ const SHARED_TRIES: GroupedHandsOptions[] = SEPARATE_TRIES.map(way => ({ ...way,
  * The clock of the windows as the generator exports it, checked as a clock with windows of its own is (the clock-only runs
  * from the start phases and the long run): it holds when that check does
  */
-function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, turns: TurnGroup[], options: GenerateClockOptions): BlueprintGenerationResult {
+function finishedClock(
+    made: PlanRun,
+    windows: Map<string, OpenRange[]>,
+    turns: TurnGroup[],
+    options: GenerateClockOptions,
+    /** The takers busy the whole period, which the windows leave out */
+    left_open: ReadonlyMap<string, AlwaysOnReason>,
+): BlueprintGenerationResult {
     // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
     const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
     const slack = beltPickupSlackTicks(made.run.simulation_context.entity_registry);
@@ -471,7 +482,7 @@ function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, turns: 
         : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
     const named = { ...exported, belt, belt_pickup_slack_left_out: false, turns,
         applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
-    const result = checkedClock(made, named, windows, { ...options, verify_as_built: true });
+    const result = checkedClock(made, named, windows, { ...options, verify_as_built: true }, { left_open });
     result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
     return result;
 }
@@ -503,15 +514,16 @@ export function groupedHandsClock(
         const tried = new Set<string>();
         const drops = dropTieBreak(made.config, duration.ticks);
         for (const way of options.shared_windows === true ? SHARED_TRIES : SEPARATE_TRIES) {
-            const { windows, turns } = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
+            const { windows, turns, busy } = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
                 made.config.overrides?.backed_up_belts !== true, way, drops);
+            const left_open = new Map<string, AlwaysOnReason>(busy.map(id => [id, { kind: "busy", period_ticks: duration.ticks }]));
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
             if (tried.has(key)) continue;
             tried.add(key);
             const unmoved = holdsWithMargin(made, windows, duration.ticks);
             if (unmoved !== null) { reasons.push(unmoved); continue; }
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
-            const clock_of_windows = finishedClock(made, windows, turns, options);
+            const clock_of_windows = finishedClock(made, windows, turns, options, left_open);
             if (way.share_windows) {
                 // shared windows are kept only if the clock gets back from every loss, as the separate ones are kept when it does
                 if (!clock_of_windows.stability_check.holds) { reasons.push(`the shared windows ${key} do not hold from every start`); continue; }

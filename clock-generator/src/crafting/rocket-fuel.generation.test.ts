@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
-import { rocketFuelSample, type RocketFuelSample } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblemsOf, rocketFuelSample, type RocketFuelSample } from "./generate-blueprint-test-helpers";
 
 describe("generateClockForConfig", () => {
 
@@ -16,6 +16,10 @@ describe("generateClockForConfig", () => {
         beforeAll(async () => {
             sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL);
             ({ alternative, moved, period } = sample);
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(alwaysOnReasonProblemsOf(sample.config, sample)).toEqual([]);
         });
 
         // 16 jelly a hand is 15/4 hands a 32 tick cycle
@@ -118,6 +122,10 @@ describe("generateClockForConfig", () => {
         beforeAll(async () => {
             sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL_JELLY_STACK_15);
             ({ alternative, period, jelly_inserter_ids, jellynut_inserter_id } = sample);
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(alwaysOnReasonProblemsOf(sample.config, sample)).toEqual([]);
         });
 
         it("sets the jelly inserters to 15 a hand", () => {

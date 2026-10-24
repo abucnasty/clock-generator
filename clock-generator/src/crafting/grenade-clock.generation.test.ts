@@ -4,6 +4,8 @@ import {ClockAlternativesResult, backpressureLossOf, clockFromWindows, generateC
 import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
+import type {Config} from "../config/schema";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {GENERATED_ALTERNATIVE, grenadeClockCases} from "../../tests/game/builds/grenade-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 import {GROUP_GAP_TILES} from "./turn-groups";
@@ -12,10 +14,16 @@ import {GROUP_GAP_TILES} from "./turn-groups";
 // and on the full build of seven, and the hand-made clock judged by the simulator
 const controls = readControls("grenade-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
+let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE), {logger: quiet});
+    config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    generated = generateClockAlternatives(config, {logger: quiet});
+});
+
+test("grenade: every inserter and drill a clock leaves always on says why", () => {
+    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("grenade: the 112-tick clock holds the target and is selected; the longer ones, planned the same way, do not", () => {
