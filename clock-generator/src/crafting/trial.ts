@@ -28,6 +28,7 @@ import { ResultsTaken, resultsTakenOf } from "./results-taken";
 import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
 import { TakerOrder, takerOrderName, takerOrdersToCheck } from "../control-logic/inserter/competing-takers";
 import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./primitive-grouped-policy";
+import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -68,9 +69,18 @@ export interface ClockAssessment {
      * Wake-ups a minute, summed over the inserters of one copy of the build in the long run of the clock (see
      * wake-ups.ts); null when the clock had no long run. Fewer is better: each one is a machine waking an inserter
      * that a narrower window would have left disabled. Among the clocks that meet the target rate, the one with the
-     * fewest is selected.
+     * fewest is selected. On a build with a loop of machines or a machine that makes its own ingredient, whose
+     * wake-ups depend on how it starts, their mean over the starts (`wake_ups_from_starts`); the cold start's own figure
+     * stays in the as-built check.
      */
     wake_ups_per_minute: number | null;
+    /**
+     * The wake-ups of the clock from each start of wake-ups-from-starts.ts and their mean, which `wake_ups_per_minute`
+     * is, on a build with a loop of machines or a machine that makes its own ingredient. Absent on any other build, and
+     * on a clock that does not meet the target rate, whose wake-ups do not decide the selection and keep the cold
+     * start's figure.
+     */
+    wake_ups_from_starts?: WakeUpsFromStarts;
     /**
      * Where the clock gets to from the starts of CLOCK_STARTS (see start-dependence.ts); null when the config did not ask
      * for start dependence to be checked (`overrides.check_start_dependence`), and the clock was judged from the cold
@@ -645,6 +655,55 @@ export function startDependenceOf(
         };
     });
     return { verdict: startVerdictOf(outcomes), starts: outcomes, expected_output_items };
+}
+
+/**
+ * The wake-ups of a clock from the starts of wake-ups-from-starts.ts, or null where its build holds no stock the clock
+ * does not set (no loop of machines, no machine that makes its own ingredient: nothing is run) or a start has no long
+ * run. Each start is the cold start with the clock standing at a place in its period, run as the long run of the clock
+ * is (`longRunOfFreeRunningBuild`, `long_run_ticks` long, as the clock's own was) and counted over whole bins of its
+ * judged part, a period or the repeat of a fractional one, so that two starts that settle alike give the same figure
+ * whatever place they start at. The config is the one the clock was planned on, with its output swings.
+ */
+export function wakeUpsFromStartsOf(
+    config: Config,
+    clock_windows: SerializableClockWindows,
+    period: number,
+    expected_output_items: number,
+    long_run_ticks: number,
+    logger: Logger,
+): WakeUpsFromStarts | null {
+    const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    if (!hasStockTheClockDoesNotSet(createEntityRegistryFromConfig(check_config))) {
+        return null;
+    }
+    const windows = withChestDrillWindows(check_config, new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), period);
+    const ends = inserterEnds(check_config);
+    const repeat = subtickClockForPeriod(period);
+    const bin = Number.isInteger(period) ? period : repeat?.period_ticks ?? null;
+    const quiet = quietLogger(logger);
+    const figureAt = (place: number): number | null => {
+        const standing = place === 0 ? windows
+            : new Map(Array.from(windows, ([key, ranges]) => [key, rotateRanges(ranges, place, period)] as const));
+        const long_run = longRunOfFreeRunningBuild(check_config, standing, period, expected_output_items, quiet, long_run_ticks);
+        if (long_run === null) {
+            return null;
+        }
+        const { stock } = long_run;
+        // a proven run is counted on its cycle; a sampled one over the whole bins after its first third
+        const settled = Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE);
+        let from = settled;
+        let to = stock.ticks;
+        if (long_run.proven) {
+            from = long_run.first_judged_tick;
+        } else if (bin !== null) {
+            from = Math.ceil(settled / bin) * bin;
+            to = from + Math.floor((stock.ticks - from) / bin) * bin;
+        }
+        return to > from ? wakeUpsOfStock({ ...stock, ticks: to }, ends, from).wake_ups_per_minute : null;
+    };
+    return wakeUpsFromStarts(period, figureAt);
 }
 
 /** Crossings a phase run of the exhaustive check may take to resolve before it is judged on its last bin instead */
