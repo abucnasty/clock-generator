@@ -177,6 +177,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         id: 'recovers',
         term: 'recovers',
         definition: 'In the simulator\'s evaluated loss trials, after the build is starved or jammed it gets back to its rate by itself. '
+            + 'A clock that fails one loss is not tried on the others. '
             + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
         insteadOf: 'survives backpressure loss, no recovery',
     },

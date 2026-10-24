@@ -6,7 +6,7 @@ import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
-import type { SpareTime } from "./why-not-stable";
+import { notTriedSentence, type SpareTime } from "./why-not-stable";
 import { FactorioDataService } from "../data";
 import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPickups } from "../config/pickup-calibration";
 import type { Config } from "../config/schema";
@@ -365,7 +365,7 @@ export function startDependenceInsight(note: string, dependence: StartDependence
 export function backpressureLossInsight(verdict: BackpressureLossVerdict, expected_output_items: number): ClockInsight {
     const what = verdict.broken_by.length > 0
         ? `This clock moves its ${expected_output_items} items every clock period for as long as nothing runs out and nothing backs up. `
-            + `It does not get back to them after a loss: ${verdict.broken_by.join("; ")}.`
+            + `It does not get back to them after a loss: ${verdict.broken_by.join("; ")}.${notTriedSentence(verdict.not_tried)}`
         : `The run the losses are tried on did not hold ${expected_output_items} items a clock period with nothing cut, so no loss says `
             + "anything about this clock.";
     return {

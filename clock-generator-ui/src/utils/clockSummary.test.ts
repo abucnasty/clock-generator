@@ -192,6 +192,17 @@ describe('recoversOf', () => {
         expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toContain('an input stops arriving');
     });
 
+    it('says which losses were not tried, since the clock already failed one', () => {
+        const stopped = clock('a', { verdict: 'no recovery', brokenBy: ['coal stops arriving'] });
+        stopped.assessment.backpressure_loss!.not_tried = ['iron-plate stops arriving', 'iron-gear-wheel is not taken away'];
+        expect(recoversOf(stopped).detail).toBe('In the simulator, after coal stops arriving for a while, it does not get back to its rate by itself. '
+            + 'Not tried, since one failure is enough: iron-plate stops arriving, iron-gear-wheel is not taken away.');
+        expect(rateWarningOf(stopped)).toContain('after coal stops arriving for a while, the build does not get back to its rate by itself in the simulator. '
+            + 'Not tried, since one failure is enough: iron-plate stops arriving, iron-gear-wheel is not taken away.');
+        // all tried: nothing is said
+        expect(recoversOf(clock('b', { verdict: 'no recovery', brokenBy: ['coal stops arriving'] })).detail).not.toContain('Not tried');
+    });
+
     it('says "in the simulator" for yes and for no alike', () => {
         expect(recoversOf(clock('a')).detail).toMatch(/^In the simulator, /);
         expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toMatch(/^In the simulator, /);

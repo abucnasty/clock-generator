@@ -16,6 +16,11 @@
  * the clock stands when the item comes back decides which window sees a machine first, and a loss that ends before
  * the build has stopped leaves the machines part empty or part full, which one that runs its course never does.
  * One run makes the trials of a loss one after the other.
+ *
+ * A clock is not tried further than it has to be. The trials of a loss stop at the first that does not get back, and
+ * the losses of a clock at the first it does not get back from (see backpressureLossOf): the clock does not recover
+ * whatever the rest do, and the losses left are reported as not tried. A clock that gets back from everything runs
+ * every trial.
  */
 import { SimulationTick } from "./runner/simulation-tick";
 import { FactorioDataService, ItemName } from "../data";
@@ -249,7 +254,7 @@ export interface LossOutcome {
     /** Clock periods in a bin */
     periods_per_bin: number;
     expected_per_bin: number;
-    /** Trials from the canonical start, or the first lane-phase start that fails. */
+    /** Trials from the canonical start, or the first lane-phase start that fails, up to the first that does not recover. */
     trials: LossTrial[];
     /** Every trial recovers at every checked lane-phase start. */
     recovers: boolean;
@@ -382,7 +387,9 @@ export function judgedWithExports(
 }
 
 /**
- * Runs the trials of one loss on a build that is running on its clock, and leaves it wherever the last one ends.
+ * Runs the trials of one loss on a build that is running on its clock, and leaves it wherever the last one ends. The
+ * trials stop at the first that does not get back to the expected output: the loss is one the clock does not recover
+ * from, and the trials after it would say nothing more.
  *
  * @param context the build on its clock windows, warmed up
  * @param output_inserters the inserters whose drops are the output of the build
@@ -585,6 +592,9 @@ export function runLossTrials(
             ...judgedWithExports(judged, watched_exports, export_per_bin, bin.ticks, repeats_from, judged_hold_bins),
             ...(ran_on_bins > 0 && { ran_on_bins }),
         });
+        if (!trials[trials.length - 1].recovers) {
+            break;
+        }
         if (!part_of_the_way_planned && index === plans.length - 1) {
             part_of_the_way_planned = true;
             const stops_after_ticks = Math.max(...trials.map(trial => trial.stopped_after_ticks ?? max_loss_ticks));
@@ -614,8 +624,10 @@ export interface BackpressureLossReport {
     expected_output_items: number;
     /** The run with nothing cut, counted as the others: a clock that is off here is off without any loss */
     undisturbed: LossOutcome;
-    /** One for each loss of the build (see backpressureLossesOf) */
+    /** Those of the losses of the build (see backpressureLossesOf) that were tried, in the order they were tried */
     losses: LossOutcome[];
+    /** The losses after the first the clock does not get back from, which were not tried (see backpressureLossOf) */
+    not_tried: BackpressureLoss[];
     /** The clock holds its expected output undisturbed and gets back to it after every loss */
     survives: boolean;
     /** The losses it does not get back from, by lossId */
@@ -634,6 +646,7 @@ export function reportOf(
     undisturbed: LossOutcome,
     losses: LossOutcome[],
     loss_limit: LossLimit | null = null,
+    not_tried: BackpressureLoss[] = [],
 ): BackpressureLossReport {
     const broken_by = losses.filter(outcome => !outcome.recovers).map(outcome => lossId(outcome.loss));
     const survives = undisturbed.recovers && broken_by.length === 0;
@@ -642,6 +655,7 @@ export function reportOf(
         expected_output_items,
         undisturbed,
         losses,
+        not_tried,
         survives,
         broken_by,
         recovered_after_periods: survives ? Math.max(0, ...losses.map(outcome => (outcome.recovered_after_bins ?? 0) * outcome.periods_per_bin)) : null,
@@ -656,6 +670,12 @@ export interface BackpressureLossVerdict {
     survives: boolean;
     /** The losses it does not get back from, as lossLabel words them: "coal stops arriving" */
     broken_by: string[];
+    /**
+     * The losses that were not tried, as lossLabel words them, since an earlier loss already showed that the clock does
+     * not recover: the ones after the first that it does not get back from at the modeled phase. Absent when every loss
+     * was tried.
+     */
+    not_tried?: string[];
     /**
      * The losses of `broken_by` it gets back from at the lanes' modeled phase, and not from a start where a moving lane
      * comes back in another phase (the loss's `failed_pickup_phases`). Absent from results made before it was kept.
@@ -673,6 +693,7 @@ export function verdictOf(report: BackpressureLossReport): BackpressureLossVerdi
         broken_by: report.losses.filter(outcome => !outcome.recovers).map(outcome => lossLabel(outcome.loss)),
         broken_at_other_lane_phases: report.losses.filter(outcome => !outcome.recovers && outcome.failed_pickup_phases !== undefined)
             .map(outcome => lossLabel(outcome.loss)),
+        ...(report.not_tried.length > 0 && { not_tried: report.not_tried.map(lossLabel) }),
         recovered_after_periods: report.recovered_after_periods,
         ...(report.loss_limit !== null && { loss_limit: report.loss_limit }),
     };

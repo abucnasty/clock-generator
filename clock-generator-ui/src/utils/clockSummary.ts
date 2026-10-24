@@ -1,6 +1,6 @@
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
-import { lossesOf } from './rateWarning';
+import { lossesOf, notTriedOf } from './rateWarning';
 import type { PickRule } from './recommendedClock';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
@@ -36,8 +36,8 @@ export const SUMMARY_COPY = {
     recoversNotTested: 'Not tested',
     recoversUnavailable: 'Unavailable',
     recoversYesDetail: 'In the simulator, it gets back to its rate by itself after it is starved or jammed.',
-    recoversNoDetail: (losses: string) => losses
-        ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.`
+    recoversNoDetail: (losses: string, notTried = '') => losses
+        ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.${notTried}`
         : 'In the simulator, after it is starved or jammed, it does not get back to its rate by itself.',
     recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
     recoversNotTriedDetail: (reason: string) => `Recovery could not be tried in the simulator: ${reason.replace(/\.$/, '')}.`,
@@ -148,7 +148,7 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
 } {
     const loss = clock.assessment.backpressure_loss;
     if (loss?.survives === true) return { kind: 'yes', value: SUMMARY_COPY.recoversYes, detail: SUMMARY_COPY.recoversYesDetail };
-    if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock)) };
+    if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock), notTriedOf(clock)) };
     if (loss?.survives === false) return { kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail };
     const notTried = clock.assessment.backpressure_loss_not_tried;
     return { kind: 'not-tested', value: clock.assessment.holds ? SUMMARY_COPY.recoversUnavailable : SUMMARY_COPY.recoversNotTested,

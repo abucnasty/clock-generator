@@ -27,6 +27,15 @@ export function lossesOf(alternative: Pick<ClockAlternativeView, 'assessment'>):
 }
 
 /**
+ * The sentence for the losses that were not tried because the clock already failed one, to follow another sentence
+ * (" Not tried, since one failure is enough: coal stops arriving, iron-plate is not taken away."); empty when all were tried
+ */
+export function notTriedOf(alternative: Pick<ClockAlternativeView, 'assessment'>): string {
+    const notTried = alternative.assessment.backpressure_loss?.not_tried ?? [];
+    return notTried.length === 0 ? '' : ` Not tried, since one failure is enough: ${notTried.join(', ')}.`;
+}
+
+/**
  * What to tell whoever copies the blueprint of a clock: that it does not hold the target rate, as happens when no
  * clock does and the one nearest to it is selected; that it holds it and does not recover after the build is
  * starved or jammed; and that its build has a deadlock risk, with the two inserters that share an item. Null for a stable clock
@@ -54,7 +63,7 @@ function clockWarningOf(
     if (alternative.assessment.backpressure_loss?.survives === false || alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
         warnings.push(losses
-            ? `This clock does not recover: after ${losses} for a while, the build does not get back to its rate by itself in the simulator.`
+            ? `This clock does not recover: after ${losses} for a while, the build does not get back to its rate by itself in the simulator.${notTriedOf(alternative)}`
             : alternative.assessment.backpressure_loss === null
                 ? 'No usable recovery result is available for this clock.'
                 : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');

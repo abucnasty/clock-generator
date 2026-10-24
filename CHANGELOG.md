@@ -21,6 +21,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - A chain of machines that feed each other gets the clock with the fewest wake-ups among those that hold and recover, not the first that holds.
 - A clock that falls short only late in the 40 periods it has to get back after a loss is followed on, and counts as recovered once 40 periods at its rate follow, so some builds get a clock with fewer wake-ups.
 - A build whose items spoil is checked for losses shorter than three quarters of its shortest spoil time, since a longer one spoils it in the game whatever the clock, and Recovers says the limit.
+- A clock that does not get back after a loss is not tried on the losses after it, which the result shows as "Not tried"; builds with such clocks generate faster.
 
 ### Removed
 - Clocks for a shorter period, labelled "shorter period (… not in the period)", are no longer offered: where one was selected, batched swings or shifted swings are now (the swing plan's "Exclude from LCM" leaves an ingredient out of the period by hand).

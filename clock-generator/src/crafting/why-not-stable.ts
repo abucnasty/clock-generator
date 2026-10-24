@@ -57,7 +57,7 @@ export interface WhyNotStableClock {
     /** Goal 1, as the selection reads it (`ClockRanking.meets_target_rate`) */
     meets_target_rate: boolean;
     assessment: Pick<ClockAssessment, "holds" | "items_per_second"> & {
-        backpressure_loss: Pick<BackpressureLossVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases"> | null;
+        backpressure_loss: Pick<BackpressureLossVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "not_tried"> | null;
     };
     /** Whether the clock is made for a moving belt (its belt pickups have belt pickup slack) */
     moving_belt: boolean;
@@ -123,6 +123,15 @@ function insertersNumbered(ids: readonly string[]): string {
 
 /** "a, or after b, or after c" */
 const lossList = (losses: readonly string[]) => losses.join(", or after ");
+
+/**
+ * The sentence for the losses a verdict did not try (`not_tried`), with a space before it to follow another sentence:
+ * " Not tried, since one failure is enough: coal stops arriving, iron-plate is not taken away." Empty when every loss was tried.
+ */
+export function notTriedSentence(not_tried: readonly string[] | undefined): string {
+    return not_tried === undefined || not_tried.length === 0 ? ""
+        : ` Not tried, since one failure is enough: ${not_tried.join(", ")}.`;
+}
 
 /** What the clock moved from the start that fell short: "880 of 1056 items over 6 periods" */
 function shortfallOf(clock: WhyNotStableClock): string {
@@ -209,7 +218,7 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
         : "was off its expected output in the run the losses are tried on, so whether it gets back after one is not known.";
     return {
         cause: "no recovery",
-        message: `The selected clock (${clock.label}) holds the target rate, but ${losses}${spareTimeSentence(clock.spare_time)}`
+        message: `The selected clock (${clock.label}) holds the target rate, but ${losses}${notTriedSentence(clock.assessment.backpressure_loss?.not_tried)}${spareTimeSentence(clock.spare_time)}`
             + " A buffer, or a faster machine, lets it catch up.",
     };
 }

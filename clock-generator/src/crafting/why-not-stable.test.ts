@@ -86,6 +86,16 @@ describe("why the selected clock does not meet goal 1", () => {
         expect(whyNotStable([noRecovery(["tungsten-ore stops arriving"], [], { moving_belt: true })], 0, moving)?.cause).toBe("no recovery");
     });
 
+    it("names the losses that were not tried once one broke the clock", () => {
+        const stopped = noRecovery(["coal stops arriving"], [], {
+            assessment: { holds: true, items_per_second: 7.5, backpressure_loss: { survives: false, broken_by: ["coal stops arriving"],
+                broken_at_other_lane_phases: [], not_tried: ["iron-plate stops arriving", "iron-gear-wheel is not taken away"] } },
+        });
+        expect(whyNotStable([stopped], 0, moving)?.message).toBe("The selected clock (Batched swings: 2 output swings per cycle) holds "
+            + "the target rate, but does not get back to it by itself after coal stops arriving. Not tried, since one failure is enough: "
+            + "iron-plate stops arriving, iron-gear-wheel is not taken away. A buffer, or a faster machine, lets it catch up.");
+    });
+
     it("names only the losses it does not get back from, of a clock that gets back from some", () => {
         // the verdict lists the losses that break it; the ones it gets back from are not in it (see verdictOf)
         const message = whyNotStable([noRecovery(["iron-ore stops arriving", "iron-gear-wheel is not taken away"])], 0, moving)!.message;

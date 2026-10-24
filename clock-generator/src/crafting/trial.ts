@@ -353,7 +353,8 @@ export function clockFromWindows(
  * Whether a clock survives backpressure loss (GOALS.md): the build is run on the windows alone, as its blueprint runs
  * it, once undisturbed and once for every loss it can have (each item that comes off a belt or out of a chest stops
  * arriving, each item it puts on a belt or in a chest is not taken away), and has to be back at exactly its expected
- * output after each. Ordinary moving pickups are also tried with independent lane phases, one pickup at a time.
+ * output after each. Ordinary moving pickups are also tried with independent lane phases, one pickup at a time. The
+ * losses stop at the first the clock does not get back from; the ones left are reported as not tried.
  * See backpressure-loss.ts for how a loss is run and judged.
  *
  * The config has to be the one the clock was planned on, as for clockFromWindows: the plan gives a fuel inserter its
@@ -399,7 +400,22 @@ export function backpressureLossOf(
         return {...canonical, ticks, recovered_after_bins: recovery, stopped_after_ticks: stopped,
             pickup_phase_starts_checked: phase_starts.length};
     };
-    return reportOf(period_ticks, expected_output_items, tried({ kind: "none" }, 0), losses.map((loss, index) => tried(loss, index + 1)), loss_limit);
+    const undisturbed = tried({ kind: "none" }, 0);
+    // The losses are tried in the order backpressureLossesOf gives: the supplies, then the outputs, the product's first.
+    // Of the losses the clocks of the samples do not get back from, the supplies are the more often, and no other order
+    // saves more than a point and a half of the trials. They stop at the first the clock does not get back from at the
+    // modeled phase: it does not recover whatever the rest do, and the rest are reported as not tried. A loss it gets back
+    // from there and not from another lane phase does not stop them, so that this cause stays apart from the others
+    // (see why-not-stable.ts).
+    const outcomes: LossOutcome[] = [];
+    for (const loss of losses) {
+        const outcome = tried(loss, outcomes.length + 1);
+        outcomes.push(outcome);
+        if (!outcome.recovers && outcome.failed_pickup_phases === undefined) {
+            break;
+        }
+    }
+    return reportOf(period_ticks, expected_output_items, undisturbed, outcomes, loss_limit, losses.slice(outcomes.length));
 }
 
 /** The machines at the ends of every inserter of the config */
