@@ -12,7 +12,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Added
 - A build whose machines take from machines or chests that nothing feeds gets a holding clock where the planned windows did not: one window for each inserter's hands, the machines of a shared source taking turns.
-- A build of machines in a chain, such as Thaeln's utility science cell, gets a clock that holds and recovers, found about ten times faster than before.
+- A build whose machines feed one another, one machine's product going into the next, now gets a clock that holds and recovers, without the slow search the generator used to fall back to.
 - The result says whether the drops of the copies onto a shared belt fit between each other or land on each other (give how far apart the copies stand), and a note says when the lanes of a belt are exactly full.
 
 ### Changed
