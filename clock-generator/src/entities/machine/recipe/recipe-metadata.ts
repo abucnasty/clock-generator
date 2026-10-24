@@ -52,6 +52,15 @@ export function expectedAmount(result: Ingredient): number {
 }
 
 /**
+ * What one roll of a result yields: `amount` with `chance`, and one more at `extra` when it comes (the parts of
+ * `expectedAmount`); a chance of 1 and no extra for a result that always comes in its amount
+ */
+export function yieldOf(result: Ingredient): { amount: number; chance: number; extra: number } {
+    const extras = result as Ingredient & ResultExtras;
+    return { amount: result.amount, chance: chanceOf(extras), extra: extras.extra_count_fraction ?? 0 };
+}
+
+/**
  * The variance of what one craft yields of a result, before productivity: 0 for a result that always comes in the same
  * amount. A craft yields the amount, and one more at `extra_count_fraction`, all with the result's chance, each roll on
  * its own (recorded on the recycler: the returns of a tick follow a binomial of its crafts).

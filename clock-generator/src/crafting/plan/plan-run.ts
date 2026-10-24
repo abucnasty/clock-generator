@@ -1313,7 +1313,8 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
 /**
  * A clock's windows with room for the spread of the results that come by chance (see randomAmountMargins): the windows
  * of the inserters that take such a result out of where a machine places it are lengthened by whole swings where they
- * have less than RANDOM_MARGIN_SIGMAS standard deviations of room. The same windows, and no margins, for any other build.
+ * have less room than a period gives over its mean in all but 1 in 740 periods (the binomial's quantile at
+ * RANDOM_MARGIN_LEVEL). The same windows, and no margins, for any other build.
  */
 export function withRoomForRandomAmounts(plan: PlanRun, windows: Map<string, OpenRange[]>): {
     windows: Map<string, OpenRange[]>;
@@ -1327,7 +1328,8 @@ export function withRoomForRandomAmounts(plan: PlanRun, windows: Map<string, Ope
     const added = margins.margins.filter(it => it.added_hands > 0);
     for (const margin of added) {
         logger.log(`Machine ${margin.machine_id}: the windows of ${margin.inserter_ids.join(", ")} get ${margin.added_hands} hand(s) `
-            + `of room each for ${margin.item}, ${margin.sigmas.toFixed(2)} standard deviations of it`);
+            + `of room each for ${margin.item}: ${margin.room_items} over the ${margin.expected_items} a period brings on average, `
+            + `against ${margin.needed_items.toFixed(1)} needed`);
     }
     return { windows: added.length === 0 ? windows : margins.windows, random_margins: { windows: margins.margins, crafting: margins.crafting } };
 }

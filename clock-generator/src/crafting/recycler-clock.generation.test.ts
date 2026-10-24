@@ -3,7 +3,6 @@ import { ClockAlternativesResult, generateClockAlternatives } from "./generate-b
 import { backpressureLossOf } from "./trial";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { RANDOM_MARGIN_SIGMAS } from "./random-margins";
 import { ConfigPaths } from "../config/config-paths";
 
 // The exact-speed recycler cell of the ore voider benchmark (save F, the benchmark's waste inserters clocked): a recycler at
@@ -42,17 +41,20 @@ describe("a recycler that voids iron ore at exact speed", () => {
         expect(even).toBeGreaterThan(0);
     });
 
-    test("gives the windows that take the returns out of the car three standard deviations of room or more", () => {
+    test("gives the windows that take the returns out of the car the room for all but 1 in 740 periods' returns", () => {
         for (const alternative of generated.alternatives) {
             const margins = alternative.result.random_margins!;
             expect(margins.windows.map(it => it.item), alternative.id).toEqual(["iron-ore"]);
             const [returns] = margins.windows;
             expect(returns.expected_items).toBe(320);
             expect(returns.sigma_items).toBeCloseTo(15.4919, 4);
-            expect(returns.sigmas, alternative.id).toBeGreaterThanOrEqual(RANDOM_MARGIN_SIGMAS);
-            // the recycler's own room is one standard deviation a period, three over 1216 ticks, which the car takes up
+            // the binomial of 1280 crafts at 1/4 is under 367 in all but 1 in 740 periods: 47 over the 320
+            expect(returns.needed_items).toBe(47);
+            expect(returns.room_items, alternative.id).toBeGreaterThanOrEqual(returns.needed_items);
+            // the recycler's own room is one standard deviation a period, enough for what comes back over 1233 ticks,
+            // which the car takes up
             expect(margins.crafting[0].sigmas).toBeCloseTo(1.0328, 4);
-            expect(margins.crafting[0].ticks_to_cover).toBe(1216);
+            expect(margins.crafting[0].ticks_to_cover).toBe(1233);
         }
         // even hands' windows take one hand each: two of each taker's ten get a swing more
         expect(generated.alternatives[1].result.random_margins!.windows[0].added_hands).toBe(2);
