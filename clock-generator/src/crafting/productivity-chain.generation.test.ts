@@ -30,9 +30,9 @@ describe("a clock for the productivity module chain from the hands and the order
         expect(selected.verdict).toBe("stable");
         expect(selected.result.simulation_duration.ticks).toBe(72);
         expect(selected.assessment.items_per_second).toBeCloseTo(80, 6);
-        expect(selected.assessment.wake_ups_per_minute).toBeCloseTo(843.75, 2);
+        expect(selected.assessment.wake_ups_per_minute).toBeCloseTo(575.625, 2);
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);
-        expect(selected.assessment.backpressure_loss?.recovered_after_periods).toBe(11);
+        expect(selected.assessment.backpressure_loss?.recovered_after_periods).toBe(7);
         expect(result.skipped_searches.length).toBeGreaterThan(0);
         expect(result.why_not_stable).toBeNull();
     });

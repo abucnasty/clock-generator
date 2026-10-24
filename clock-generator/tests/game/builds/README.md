@@ -624,13 +624,15 @@ the order of the chain of machines), made without a search. The harness wires it
 family's with the losses the build has, each long enough to be felt, since the build holds stock: 63 whole periods, then the coal
 cut for 40 periods (the inserter that puts the coal on the belt is switched off and the belt emptied; the output first falls short
 about 33 periods in), the output loader taken away for 24 (the output belt takes about 11 periods of modules before it is full) and
-rebuilt, and the two foundries casting iron stopped for 26 (the output falls short after about 14). The probe counts the drops of
+rebuilt, and the two foundries casting iron stopped for 26 (the output falls short after about 13). The probe counts the drops of
 the output inserter per period.
 
 [productivity-chain-clock-controls.json](productivity-chain-clock-controls.json) holds the native summary and the pin of the clock
 (`src/crafting/productivity-chain.generation.test.ts` checks the pin): 16 in all 63 baseline periods, and 16 again after each loss.
 Recorded for 36,000 ticks after the warm-up and settle with `scripts/record-clock.js`, the same clock made 16 in all 499 periods,
-with 858.5 wake-ups a minute against the simulator's 843.8, and the simulator laid against the game entity by entity had no issues.
+with 602.8 wake-ups a minute against the simulator's 575.6, and the simulator laid against the game entity by entity had no issues;
+the clock made for "Backed-up belts" did the same. The clock before the rule ranked its placements (staged, the first that held)
+had 858.5 in the game and 843.8 in the simulator.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/productivity-chain-new BELT_CLOCK_CALIBRATE=1 \
