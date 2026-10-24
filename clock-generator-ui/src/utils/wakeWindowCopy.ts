@@ -2,6 +2,7 @@
  * Every string the Wake windows view shows, in the glossary's terms (1.12). The provisional wake-up definition
  * lives in glossary.ts, to be updated there after the strict-definition experiment.
  */
+import type { AlwaysOnReason } from 'clock-generator/browser';
 import { PROVISIONAL_WAKE_UP_DEFINITION } from './glossary';
 import { formatNumberText } from './numberText';
 import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
@@ -55,6 +56,7 @@ export const KEYBOARD_HINT = 'Up and down arrow keys move between rows. Left and
     + 'of a row. Click or tap a bar for details. Home and End jump to the first and last wake window, and Escape clears the selection.';
 export const SHOW_AS_TABLE = 'Show as table';
 
+/** A row the clock leaves always on, where the engine does not say why */
 export const ALWAYS_ON_TEXT = 'Always on: not on the clock';
 export const NEVER_TEXT = 'Never switched on';
 export const WAKE_UPS_ROW_LABEL = 'Wake-ups/min';
@@ -140,16 +142,68 @@ export function rowDetailText(row: Pick<WakeWindowRow, 'items' | 'route'>, itemL
     return what && row.route ? `${what}: ${row.route}` : what || row.route;
 }
 
+/**
+ * Why the clock leaves an inserter or drill always on, in the words of the glossary: "Always on: its swings fill the
+ * whole clock period (24 ticks), so a wake window would never switch it off". The old words when the engine gives none.
+ */
+export function alwaysOnText(reason: AlwaysOnReason | undefined): string {
+    if (reason === undefined) {
+        return ALWAYS_ON_TEXT;
+    }
+    switch (reason.kind) {
+        case 'enable-rule':
+            return 'Always on: its enable rule is Always on';
+        case 'loop':
+            return 'Always on: it moves items between machines that feed each other in a loop, which the clock leaves running';
+        case 'from-loop':
+            return 'Always on: it takes from a machine in a loop, which the clock leaves running';
+        case 'busy':
+            return `Always on: its swings fill the whole clock period (${ticksText(reason.period_ticks)}), so a wake window would never switch it off`;
+        case 'no-swing':
+            return 'Always on: it made no swing in the run the wake windows are read from, so the clock has no window for it';
+        case 'chest-drill':
+            return `Always on: ${chestDrillWhyText(reason.why)}`;
+    }
+}
+
+/** Why nothing can time a drill into a chest */
+function chestDrillWhyText(why: Extract<AlwaysOnReason, { kind: 'chest-drill' }>['why']): string {
+    switch (why.kind) {
+        case 'other-drill':
+            return `drill ${num(why.drill_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
+        case 'filler':
+            return `inserter ${num(why.inserter_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
+        case 'no-taker':
+            return 'no inserter takes its item out of its chest, so there is nothing to time it by';
+        case 'taker-without-window':
+            return `inserter ${num(why.inserter_number)} takes its item out of its chest and has no wake window, so there is nothing to time it by`;
+        case 'no-take':
+            return 'no wake window takes its item out of its chest, so there is nothing to time it by';
+        case 'no-room':
+            return 'its chest has no room for its item';
+        case 'needs-whole-period':
+            return 'no wake windows shorter than the clock period keep the inserters that take from its chest supplied';
+        case 'would-cover-period':
+            return 'its wake windows would cover the whole clock period';
+        case 'fallback':
+            return 'the clock does not hold its rate with the fewest wake windows for it, nor with them a tick longer';
+        case 'windows-did-not-hold':
+            return 'its wake windows did not hold the clock';
+        case 'no-window':
+            return 'its Clocked rule leaves no wake window inside the clock period';
+    }
+}
+
 /** "Own clock: on 6 ticks every 400 (fuel)" */
 export function ownClockText(clock: OwnClock): string {
     return `Own clock: on ${ticksText(clock.windowTicks)} every ${num(clock.everyTicks)} (fuel)`;
 }
 
 /** The words that stand in for a row's bars, or null when it has bars */
-export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock'>): string | null {
+export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | 'alwaysOnReason'>): string | null {
     switch (row.mode) {
         case 'always-on':
-            return ALWAYS_ON_TEXT;
+            return alwaysOnText(row.alwaysOnReason);
         case 'never':
             return NEVER_TEXT;
         case 'own-clock':
@@ -183,7 +237,7 @@ export function wakeUpsRowText(row: Pick<WakeWindowRow, 'kind' | 'wakeUpsPerMinu
 }
 
 /** "Windows: 3", or what stands in for them */
-export function windowCountText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | 'windows'>): string {
+export function windowCountText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | 'alwaysOnReason' | 'windows'>): string {
     return modeText(row) ?? num(row.windows.length);
 }
 

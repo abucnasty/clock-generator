@@ -153,6 +153,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
         fuelView: fuelViewOf(result),
         clockWindows: result.clock_windows,
+        alwaysOnReasons: result.always_on_reasons ?? {},
         beltPickupSlackTicks: result.belt_pickup_slack_ticks,
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
