@@ -33,6 +33,7 @@ import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../control-logic/inserter/co
 import { DeciderOrder } from "../decider-order";
 import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
+import { ExportShortfall, exportShortfallsOfPeriod, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
 import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
@@ -140,6 +141,8 @@ export interface SimulationStabilityCheck {
     as_built?: AsBuiltStabilityCheck;
     /** The chests the output goes into that nothing empties and that are full where the run ended; absent when none is */
     full_output_chests?: FullOutputChest[];
+    /** The export belts that received less than their consumers take over the period judged; absent when none did */
+    export_shortfalls?: ExportShortfall[];
 }
 
 
@@ -1022,9 +1025,9 @@ function checkOutput(
     }
     const used_terminal_swing_count = Math.max(1, Math.round(swings_of_first_output_machine));
 
-    const exported_short = exportedLanesShortOfConsumption(simulation_context.entity_registry, final_history, output_inserter_ids, duration.ticks);
-    for (const lane of exported_short) {
-        logger.log(`Stability check: belt ${lane.belt_id} ${lane.item_name} exported ${lane.actual}, consumers take ${lane.expected}`);
+    const export_shortfalls = exportedLanesShortOfConsumption(simulation_context.entity_registry, final_history, output_inserter_ids, duration.ticks);
+    for (const lane of export_shortfalls) {
+        logger.log(`Stability check: belt ${lane.belt_id} ${lane.item} exported ${Number(lane.delivered_per_second.toFixed(2))} a second, consumers take ${lane.expected_per_second}`);
     }
 
     const full_output_chests = fullOutputChestsOf(controlled.new_simulation_context, output_inserter_states);
@@ -1046,7 +1049,7 @@ function checkOutput(
         || Math.abs(repeat_output_items - total_expected_output_float * repeat_periods) <= LCM_STABILITY_TOLERANCE * repeat_periods;
 
     const stability_check: SimulationStabilityCheck = {
-        holds: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && exported_short.length === 0
+        holds: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && export_shortfalls.length === 0
             && repeats_at_expected_output,
         actual_output_items: total_actual_output,
         expected_output_items: total_expected_output,
@@ -1054,6 +1057,7 @@ function checkOutput(
         repeat_periods,
         repeat_output_items,
         ...(full_output_chests.length > 0 && { full_output_chests }),
+        ...(export_shortfalls.length > 0 && { export_shortfalls }),
     };
     logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.holds} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
@@ -1775,15 +1779,14 @@ function assertBeltFillersPlanned(entity_registry: ReadableEntityRegistry, swing
 
 /**
  * Belt lanes with a consumption rate must be filled at that rate (outside consumers would run dry otherwise).
- * Returns the lanes that fell short over the period.
+ * Returns the belts that fell short over the period, by item (see exportedItemsOf).
  */
 function exportedLanesShortOfConsumption(
     entity_registry: ReadableEntityRegistry,
     history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
     period_ticks: number,
-): { belt_id: string, item_name: string, actual: number, expected: number }[] {
-    const inserters = entity_registry.getAll().filter(Entity.isInserter);
+): ExportShortfall[] {
     const moved = new Map<string, number>();
     for (const [entity_id, transfers] of history.entries()) {
         for (const transfer of transfers) {
@@ -1791,24 +1794,8 @@ function exportedLanesShortOfConsumption(
             moved.set(key, (moved.get(key) ?? 0) + transfer.amount);
         }
     }
-    const short = [];
-    for (const belt of entity_registry.getAll().filter(Entity.isBelt)) {
-        for (const lane of belt.lanes) {
-            if (!lane.consumption_per_second) {
-                continue;
-            }
-            const fillers = inserters.filter(it => it.sink.entity_id.id === belt.entity_id.id && it.filtered_items.has(lane.ingredient_name));
-            if (fillers.length === 0 || fillers.some(it => output_inserter_ids.has(it.entity_id.id))) {
-                continue;
-            }
-            const actual = fillers.reduce((sum, it) => sum + (moved.get(`${it.entity_id.id}|${lane.ingredient_name}`) ?? 0), 0);
-            const expected = Math.round(lane.consumption_per_second * period_ticks / 60);
-            if (expected - actual > LCM_STABILITY_TOLERANCE) {
-                short.push({ belt_id: belt.entity_id.id, item_name: lane.ingredient_name, actual, expected });
-            }
-        }
-    }
-    return short;
+    return exportShortfallsOfPeriod(exportedItemsOf(entity_registry, output_inserter_ids),
+        (inserter_id, item) => moved.get(`${inserter_id}|${item}`) ?? 0, period_ticks, LCM_STABILITY_TOLERANCE);
 }
 
 /**
