@@ -250,6 +250,22 @@ changes no verdict or selection in the blast or on those 16 clocks
 ([experiments](belt-pickup/experiments.md#generated-clocks-and-drops)). External incoming traffic still needs its own
 modeled transport geometry. Other inserter prototypes and qualities remain uncalibrated.
 
+### Drops of several copies onto one belt
+
+The simulator drops each output inserter's hand on a belt of its own, so it never sees the hands of other inserters or of the other copies
+on the same stretch of belt. The result says what the lane model above would do with them
+(`src/config/drop-spacing.ts`). Output inserters that drop straight onto a belt from the same side, in the same row, are one line; copy `k`
+of the unit stands `k` times `target_output.copy_offset` from it (copies in rows of their own never meet). Seen from the moving belt a hand
+that starts at tick `t` at place `p` lies at `(p - v t) mod L` with `v` the tiles the belt moves in a tick and `L = v P` the tiles it moves in
+a period of `P` ticks, and takes a quarter tile for each stack of the hand: a hand of 16 at stack size 4 takes one tile. Two hands land on each
+other when these stretches overlap. This agrees with replaying `LaneTraffic` on random layouts (`drop-spacing.test.ts`); the replay gives the
+ticks a hand waits. On the grenade build (seven copies 12 tiles apart, a turbo belt that moves 14 tiles in 112 ticks) the 14 hands of a line
+fit when the inserters of a line start together and land on each other when the two inserters of each copy start 56 ticks apart; in the game a
+hand moved one tile off its place waited 6 ticks and the others did not wait. Places come from the exported positions and the side each
+inserter takes from, the way the belt runs from Sidecar 0.13.1 (without it the check is made both ways and told only when they agree), and
+the gap between copies from the repeated-unit conversion or from the player. A drop marked as side-loading onto another belt is left to the
+merge, and the belt is taken to run straight past the inserters.
+
 ### Two inserters that bring the same item
 
 When two inserters bring the same item to a machine, one of them can be left holding it. If it starts picking the item up after the other has already put it in, the item is at its insertion limit by the time its hand is ready, and it holds the hand until the machine has used enough for it to drop.

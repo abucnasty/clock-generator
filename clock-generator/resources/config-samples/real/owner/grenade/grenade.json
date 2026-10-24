@@ -2,7 +2,11 @@
   "target_output": {
     "recipe": "grenade",
     "items_per_second": 240,
-    "copies": 7
+    "copies": 7,
+    "copy_offset": {
+      "x": 12,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -79,7 +83,8 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 12
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -98,7 +103,8 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 12
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -193,7 +199,8 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 12
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -212,7 +219,8 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 12
       },
       "prototype": "stack-inserter",
       "quality": "legendary",

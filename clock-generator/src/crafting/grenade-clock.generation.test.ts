@@ -30,6 +30,19 @@ test("grenade: the 112-tick clock holds the target and is selected; the longer o
     expect(generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE).every(it => it.verdict === "unstable")).toBe(true);
 });
 
+test("grenade: every alternative says the lanes of the belt are exactly full, and the selected clock's hands land on each other", () => {
+    for (const alternative of generated.alternatives) {
+        expect(alternative.insights.find(it => it.id === "lanes-exactly-full")?.title).toBe("Both lanes of belt 1 are exactly full");
+        expect(alternative.insights.find(it => it.id === "drop-spacing")).toBeDefined();
+    }
+    // the first inserter of each line starts at tick 6 and the second 56 ticks later: 7 tiles of belt put each second hand on a first one
+    const selected = generated.alternatives[generated.selected_index];
+    const spacing = selected.insights.find(it => it.id === "drop-spacing")!;
+    expect(spacing.title).toBe("Drops onto belt 1 land on each other");
+    expect(spacing.table?.rows).toEqual([["1 and 2", "14", "12", "14", "7", "8"], ["7 and 8", "14", "12", "14", "7", "8"]]);
+    expect(spacing.explanation).toContain("The hands would fit with inserter 2 starting at tick 54 or 70, or at the same tick as inserter 1.");
+});
+
 test("grenade: the owner's clock, as windows, holds in the simulator and gets back after every loss", async () => {
     const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
     const range = (start: number, end: number) => [{start, end}];

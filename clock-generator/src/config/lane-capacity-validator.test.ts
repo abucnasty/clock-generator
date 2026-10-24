@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { assertLaneCapacity, laneCapacity, laneCapacityIssues, lanesSharedByCopies, laneSharedByCopiesWarning, warnLanesSharedByCopies } from './lane-capacity-validator';
+import { assertLaneCapacity, laneCapacity, laneCapacityIssues, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, warnLanesSharedByCopies } from './lane-capacity-validator';
 import { LaneCapacityError } from './errors';
 import { Config } from './schema';
 import { validateConfig } from '../crafting/plan/validate-config';
@@ -182,6 +182,32 @@ describe('copies', () => {
 
     it('gives no warning for a config whose plan cannot be made', () => {
         expect(laneSharedByCopiesWarning({ ...gears({ items_per_second: 60, copies: 3 }), inserters: [] })).toBeNull();
+    });
+});
+
+describe('lanes exactly full', () => {
+    it('says so of the lanes the drops of the copies fill exactly, here both lanes of a belt that lists one', () => {
+        // 2 copies of a unit that drops 120 gears a second on a belt of 2 x 120
+        const config = gears({ items_per_second: 240, copies: 2 });
+        expect(lanesExactlyFull(config).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second, issue.capacity_per_second])).toEqual([['drop', 2, [1, 2], 120, 240]]);
+        expect(lanesExactlyFullWarning(config)).toBe('Both lanes of belt 2 are exactly full at the target: the 2 copies drop 2 × 120 = 240 a second onto lanes that carry 240. '
+            + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
+    });
+
+    it('says so of one lane, and of a build of one copy', () => {
+        const lane = gears({ items_per_second: 120, copies: 3, drop_lane: 1, output: belt(2, ['iron-gear-wheel', 'iron-gear-wheel']) });
+        expect(lanesExactlyFullWarning(lane)).toBe('Lane 1 of belt 2 is exactly full at the target: the 3 copies drop 3 × 40 = 120 a second onto a lane that carries 120. '
+            + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
+        expect(lanesExactlyFullWarning(gears({ items_per_second: 240 }))).toBe('Both lanes of belt 2 are exactly full at the target: the build drops 240 a second onto lanes that carry 240. '
+            + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
+    });
+
+    it('says nothing below capacity, above it, of takes, or of a config whose plan cannot be made', () => {
+        expect(lanesExactlyFullWarning(gears({ items_per_second: 239, copies: 2 }))).toBeNull();
+        expect(lanesExactlyFullWarning(gears({ items_per_second: 242, copies: 2 }))).toBeNull();
+        // 60 gears a second take 120 plates a second from lane 1, which carries 120: a take, not told
+        expect(lanesExactlyFullWarning(gears({ items_per_second: 60 }))).toBeNull();
+        expect(lanesExactlyFullWarning({ ...gears({ items_per_second: 240, copies: 2 }), inserters: [] })).toBeNull();
     });
 });
 
