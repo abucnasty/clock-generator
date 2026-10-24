@@ -408,8 +408,8 @@ from period 96 to 130. The capture runner takes the scenario's own probe, interv
 (a chest-fed input, crafting speed 3.125, every drop the case's stack size, hands of 15 at stack size 3 and 16 otherwise).
 
 [blocked-output-clock-controls.json](blocked-output-clock-controls.json) holds the 16 native summaries, recorded on
-Factorio 2.1.21 on `b9fd341b` (#277). **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery
-output (33 periods).** Output stops one to ten periods into the block, once the belt behind the drop is full (about 39
+Factorio 2.1.21 on `b9fd341b` (#277); express stack 3 again on `6367fc83`, for the shifted swings clock of 1,440 ticks it selects
+now. **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery output (33 periods).** Output stops one to ten periods into the block, once the belt behind the drop is full (about 39
 stacks), where the simulator holds the output inserter at once; the periods judged after the release are the same in
 both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-and-drops)). The portable
 `blocked-output-clock.generation.test.ts` pins each selection and its exported clock (each entry's `generation`) and

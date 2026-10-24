@@ -32,9 +32,9 @@
       "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"ca401aaec747646b9300524ef04faf4ae98a01589f66c8d778c766df1099da5e"}
     },
     "blocked-output-express-stack-3": {
-      "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"a59826cc808e19f06550d1ad60e2a168e100334658215d008c5b955691445e1a","clock_basis":"capture"},
-      "native": {"generationVerdict":"stable","target":5,"period":180,"expected":15,"baseline":[15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15],"recovery":[{"cut":66,"during":[15,15,15,15,15,15,15,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,15],"recovered":[15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]}],"interventions":[[66,90,130]]},
-      "generation": {"period":180,"expected":15,"verdict":"stable","selection":{"id":"derived-lean-iron-plate","holds":true,"rate":5,"supply":null},"clock_sha256":"a59826cc808e19f06550d1ad60e2a168e100334658215d008c5b955691445e1a"}
+      "recorded": {"pr":0,"commit":"6367fc83","frozen_head":"6367fc83","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"45084334c1a365790000a2f3eb647f618cbb6955f859be111f8b2ae583f861c7","clock_basis":"capture"},
+      "native": {"generationVerdict":"stable","target":5,"period":1440,"expected":120,"baseline":[120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120],"recovery":[{"cut":66,"during":[117,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,120],"recovered":[120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120,120]}],"interventions":[[66,90,130]]},
+      "generation": {"period":1440,"expected":120,"verdict":"stable","selection":{"id":"shifted-swings","holds":true,"rate":5,"supply":null},"clock_sha256":"45084334c1a365790000a2f3eb647f618cbb6955f859be111f8b2ae583f861c7"}
     },
     "blocked-output-express-stack-4": {
       "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"e6017b7dae30696b5d536e1167c95ae3f42774d7d7e2aff9900fb20aafca076d","clock_basis":"capture"},
