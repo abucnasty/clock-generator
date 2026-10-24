@@ -67,3 +67,32 @@ describe("a recycler that voids iron ore at exact speed", () => {
         }
     });
 });
+
+// The same cell with six beacons on its recycler (save B): 852.3 crafts a second, 2045.5 a period against the 1280 it needs
+describe("a recycler that voids iron ore with crafts to spare", () => {
+    let overbeaconed: Config;
+    let alternatives: ClockAlternativesResult;
+    beforeAll(async () => {
+        overbeaconed = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_OVERBEACONED);
+        alternatives = generateClockAlternatives(overbeaconed, { logger: quiet });
+    });
+
+    test("gets the same two clocks on the same hands, both stable, and selects even hands", () => {
+        expect(alternatives.alternatives.map(it => [it.id, it.verdict, it.assessment.items_per_second, it.result.simulation_duration.ticks]))
+            .toEqual([["planned-belt-slack", "stable", 400, 144], ["even-hands", "stable", 400, 144]]);
+        expect(alternatives.alternatives[alternatives.selected_index].id).toBe("even-hands");
+    });
+
+    test("needs no more room of its recycler: what comes back over the mean is covered within a tick", () => {
+        const [crafting] = alternatives.alternatives[0].result.random_margins!.crafting;
+        expect(crafting.capacity).toBeCloseTo(2045.52, 2);
+        expect(crafting.ticks_to_cover).toBe(1);
+    });
+
+    test("is back at 960 ore a period after the ore stops coming, on every clock", () => {
+        for (const alternative of alternatives.alternatives) {
+            const report = backpressureLossOf(overbeaconed, alternative.result.clock_windows, 144, 960, quiet);
+            expect(report.losses.map(it => [it.loss, it.recovers]), alternative.id).toEqual([[{ kind: "supply", item: "iron-ore" }, true]]);
+        }
+    });
+});
