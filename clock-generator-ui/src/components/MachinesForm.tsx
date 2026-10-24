@@ -10,9 +10,10 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { Config, MachineTargetRate } from 'clock-generator/browser';
-import type { MachineFormData } from '../hooks/useConfigForm';
+import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useMachineTargetRates } from '../hooks/useMachineTargetRates';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
@@ -22,7 +23,9 @@ import { MachineSettingsFields } from './EntityFields';
 import { MachineIcon } from './MachineIcon';
 import { MachineIconPicker, RecipeNotMadeNote } from './MachineFields';
 import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
-import { burnsNutrients, machineIconText, recipePatch } from '../utils/machinePrototype';
+import { burnsNutrients, machineIconText, placesResults, recipePatch } from '../utils/machinePrototype';
+import type { ResultTargetBuild } from '../utils/resultTarget';
+import { ResultTargetField } from './ResultTargetField';
 import { HelpCommand } from './HelpButton';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
@@ -41,6 +44,12 @@ import { BUTTON_NAMES, changeMachineName, recipeName } from '../utils/a11yLabels
 interface MachinesFormProps {
     engineConfig: Config;
     machines: MachineFormData[];
+    /** The build's other entities: a machine that places its results itself puts them into one of its containers */
+    belts: BeltFormData[];
+    chests: ChestFormData[];
+    inserters: InserterFormData[];
+    drills: readonly DrillFormData[];
+    getRecipeInfo?: (name: string) => RecipeInfo | null;
     recipeNames: string[];
     onAdd: () => void;
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
@@ -55,6 +64,11 @@ const CRAFTING_SPEED_COMMAND = '/c game.print(game.player.selected.crafting_spee
 function MachinesFormComponent({
     engineConfig,
     machines,
+    belts,
+    chests,
+    inserters,
+    drills,
+    getRecipeInfo,
     recipeNames,
     onAdd,
     onUpdate,
@@ -67,6 +81,7 @@ function MachinesFormComponent({
     const craftingMachines = useCraftingMachines();
     const [rateView, setRateView] = useState<'max' | 'target'>('max');
     const targetRates = useMachineTargetRates(engineConfig, rateView === 'target');
+    const build = useMemo(() => ({ machines, belts, chests, inserters, drills }), [machines, belts, chests, inserters, drills]);
     const common = machines.length === 0 ? [] : [
         machines.every(row => row.productivity === machines[0].productivity) ? `productivity ${machines[0].productivity}%` : null,
         machines.every(row => row.crafting_speed === machines[0].crafting_speed) ? `speed ${machines[0].crafting_speed}×` : null,
@@ -146,6 +161,8 @@ function MachinesFormComponent({
                                 machine={machine}
                                 index={index}
                                 recipeNames={recipeNames}
+                                build={build}
+                                getRecipeInfo={getRecipeInfo}
                                 atTarget={rateView === 'target'}
                                 targetRate={targetRates.rates?.find(rate => rate.machine_id === machine.id)}
                                 targetUpdating={targetRates.updating}
@@ -173,6 +190,8 @@ interface MachineRowProps {
     machine: MachineFormData;
     index: number;
     recipeNames: string[];
+    build: ResultTargetBuild;
+    getRecipeInfo?: (name: string) => RecipeInfo | null;
     canDelete: boolean;
     onDuplicate: () => void;
     onMoveUp?: () => void;
@@ -183,7 +202,7 @@ interface MachineRowProps {
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetUpdating, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
+function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarget, targetRate, targetUpdating, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
     const { itemLabel, recipeLabel } = useGameNames();
     const craftingMachines = useCraftingMachines();
     const recipes = useMachineRecipeOptions(machine.prototype, recipeNames);
@@ -265,6 +284,9 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
                 </Box>
             </Box>
             <RecipeNotMadeNote machine={machine} sx={{ mb: 1 }} />
+            {/* only a machine that places its results itself (by its game data) has somewhere to put them */}
+            {placesResults(machine, craftingMachines) && <ResultTargetField machine={machine} machineLabel={entityLabel('machine', machine.id)} build={build}
+                getRecipeInfo={getRecipeInfo} sx={{ mb: 1.5 }} onChange={result_target => onPatch(index, { result_target })} />}
             <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[{ label: 'Machine facts', content: !machine.recipe
                 ? <Typography variant="body2">Choose a recipe to see machine facts.</Typography>
                 : updating || (atTarget && targetUpdating)

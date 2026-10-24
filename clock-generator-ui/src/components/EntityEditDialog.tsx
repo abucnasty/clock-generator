@@ -39,7 +39,8 @@ import type { DrillTargetBuild } from '../utils/drillTarget';
 import { OutputChestAlert } from './OutputChestAlert';
 import { ItemSelector } from './ItemSelector';
 import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
-import { recipePatch } from '../utils/machinePrototype';
+import { placesResults, recipePatch } from '../utils/machinePrototype';
+import { ResultTargetField } from './ResultTargetField';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
@@ -343,6 +344,9 @@ export function EntityEditDialog({
                                     onChange={value => updateDraft(entityIndex, recipePatch(draft as MachineFormData, value || '', craftingMachines))}
                                     label="Recipe" placeholder="Search recipes..." freeSolo />
                                 <RecipeNotMadeNote machine={draft as MachineFormData} sx={{ mt: -1 }} />
+                                {placesResults(draft as MachineFormData, craftingMachines) && <ResultTargetField machine={draft as MachineFormData} machineLabel={title}
+                                    build={drillTargetBuild} getRecipeInfo={getRecipeInfo} sx={{ width: '100%' }}
+                                    onChange={result_target => updateDraft(entityIndex, { result_target })} />}
                                 <MachineSettingsFields machine={draft as MachineFormData} dialog
                                     onChange={(field, value) => updateDraft(entityIndex, { [field]: value })}
                                     onPatch={patch => updateDraft(entityIndex, patch)} />

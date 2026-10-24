@@ -1214,6 +1214,11 @@ function App() {
                                         <MachinesForm
                                             engineConfig={engineConfig}
                                             machines={config.machines}
+                                            belts={config.belts}
+                                            chests={config.chests}
+                                            inserters={config.inserters}
+                                            drills={drillConfigs}
+                                            getRecipeInfo={getRecipeInfo}
                                             recipeNames={recipeNames}
                                             onAdd={addMachine}
                                             onUpdate={updateMachine}

@@ -369,6 +369,8 @@ export interface CraftingMachineInfo {
 }
 
 export interface CraftingMachineData {
+    /** Where it places its results itself, from its centre in tiles: only a machine that does (the recycler) has it */
+    vector_to_place_result?: number[];
     machines: CraftingMachineInfo[];
     /** By recipe id, hidden ones included */
     recipeCategories: Record<string, string[]>;
