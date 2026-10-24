@@ -37,6 +37,25 @@ describe("the productivity chain: the separate windows are selected, the shared 
         expect(shared.description).toContain("share one wake window");
     });
 
+    test("a decider of inserters that carry different items names them all, and each count where they move different numbers", () => {
+        const descriptions = (id: string) => generated.alternatives.find(it => it.id === id)!.result.blueprint.entities
+            .filter(entity => entity.name === "decider-combinator")
+            .map(entity => (entity.player_description ?? "").split("\n").slice(0, 2));
+        expect(descriptions("planned-belt-slack")).toContainEqual([
+            "2 inserters [item=plastic-bar] [item=copper-cable] (4, 12)",
+            "2.424 to 2.645 swings (inserter 4: 2.424; inserter 12: 2.645) in 2 windows per 72-tick period: open 1–4, 51–72",
+        ]);
+        // the same count for every inserter of a decider reads as it did, whatever they carry
+        expect(descriptions("planned-belt-slack")).toContainEqual([
+            "2 inserters [item=advanced-circuit] [item=electronic-circuit] (8, 10)",
+            "3.333 swings each in 1 window per 72-tick period: open 3–36",
+        ]);
+        expect(descriptions("planned-belt-slack-shared")).toContainEqual([
+            "4 inserters [item=copper-cable] [item=plastic-bar] [item=iron-plate] (3, 4, 11, 12)",
+            "0.882 to 4.848 swings (inserter 11: 0.882; inserter 4: 2.424; inserter 12: 2.645; inserter 3: 4.848) in 2 windows per 72-tick period: open 1–20, 51–72",
+        ]);
+    });
+
     test("every alternative counts the deciders of its blueprint", () => {
         for (const alternative of generated.alternatives) {
             expect(alternative.deciders, alternative.id).toBe(windowDeciderCount(alternative.result.blueprint));

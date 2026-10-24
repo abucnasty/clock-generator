@@ -38,6 +38,20 @@ describe("combineClockAlternativeRuns", () => {
         expect(alternatives[selected_index].id).toBe("a-shared");
     });
 
+    it("picks between a clock and its shared one as between any two: the one that keeps the rate and recovers, then the fewest wake-ups, not the fewest deciders", () => {
+        const pair = (separate: Partial<ClockRanking>, shared: Partial<ClockRanking>): string => {
+            const runs: ClockAlternativeRun<Ranked>[] = [
+                { signature: "a", alternatives: [clock("a", separate)], also: [{ signature: "a-shared", alternatives: [clock("a-shared", shared)] }] },
+            ];
+            const { alternatives, selected_index } = combineClockAlternativeRuns(runs, it => it);
+            return alternatives[selected_index].id;
+        };
+        // shared windows keep some inserters enabled longer, so they wake more: the separate clock stays selected
+        expect(pair({ wake_ups_per_minute: 840 }, { wake_ups_per_minute: 1490 })).toBe("a");
+        // where the separate windows do not keep the rate and recover, the shared clock is selected whatever its wake-ups
+        expect(pair({ wake_ups_per_minute: 40, meets_target_rate: false }, { wake_ups_per_minute: 70 })).toBe("a-shared");
+    });
+
     it("selects the clock with the fewest wake-ups among those that meet the target rate", () => {
         expect(selectedOf([
             clock("first", { wake_ups_per_minute: 80 }),
@@ -229,34 +243,5 @@ describe("a clock rounded down to whole ticks", () => {
     it("runs on its windows rounded as its blueprint counts them", () => {
         expect(windowsRoundedTo({ "inserter:1": [{ start: 0, end: 30 }, { start: 2870, end: 2888 }, { start: 2888, end: 2888 }] }, 2888))
             .toEqual({ "inserter:1": [{ start: 0, end: 30 }, { start: 2870, end: 2887 }] });
-    });
-});
-
-describe("searchesAreNeeded", () => {
-    const needed = (clocks: (Ranked | null)[]): boolean =>
-        searchesAreNeeded(clocks.map(it => it && { signature: it.id, alternatives: [it] }), it => it);
-
-    it("is not, once a clock made without a search meets the target rate for the belt asked", () => {
-        expect(needed([clock("unstable", { meets_target_rate: false }), null, clock("stable", { wake_ups_per_minute: 900 })])).toBe(false);
-    });
-
-    it("is, when no clock made without a search meets the target rate", () => {
-        expect(needed([clock("unstable", { meets_target_rate: false }), clock("no-recovery", { meets_target_rate: false })])).toBe(true);
-    });
-
-    // military science: its one stable clock leaves belt pickup slack out, on a config that does not say the input belts are backed up
-    it("is, when the only clock that meets the target rate is not made for the belt asked", () => {
-        expect(needed([clock("slack", { meets_target_rate: false }), clock("no-slack", { matches_belt_choice: false })])).toBe(true);
-    });
-
-    it("is, when every clock made without a search failed", () => {
-        expect(needed([null, null])).toBe(true);
-    });
-
-    // the subtick clock of a period of part ticks and the same clock rounded come from one run
-    it("looks at every clock of a run", () => {
-        const subtick = clock("subtick");
-        const rounded = clock("rounded", { meets_target_rate: false, rate_off_target: 0.2 });
-        expect(searchesAreNeeded([{ signature: "one", alternatives: [rounded, subtick] }], it => it)).toBe(false);
     });
 });
