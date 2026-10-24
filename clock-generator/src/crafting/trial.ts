@@ -11,6 +11,7 @@ import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, verdictOf } from "./backpressure-loss";
 import { CIRCUIT_LATENCY_TICKS, SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
+import { currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
@@ -1013,6 +1014,25 @@ export function backpressureLossVerdictOf(
     logger: Logger,
     report?: (detail: string) => void,
 ): BackpressureLossAssessment {
+    // a clock is tried once in a generation, whichever alternative asks: the trials take seconds, and the one that picks the
+    // windows of a clock and the one that assesses it are of the same clock
+    const memo = currentRunMemo();
+    let key: string | undefined;
+    try {
+        key = memo === undefined ? undefined : backpressureLossKey(planned_on, result);
+    } catch {
+        // a clock whose key cannot be made is tried as before, and fails in the trial if it cannot be tried
+    }
+    return memo === undefined || key === undefined ? triedBackpressureLoss(planned_on, result, logger, report)
+        : memo.backpressureLoss(key, () => triedBackpressureLoss(planned_on, result, logger, report));
+}
+
+function triedBackpressureLoss(
+    planned_on: Config,
+    result: BlueprintGenerationResult,
+    logger: Logger,
+    report?: (detail: string) => void,
+): BackpressureLossAssessment {
     // the config the clock was planned on has its output swings per cycle
     const config = { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: result.used_terminal_swing_count } };
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
@@ -1117,27 +1137,50 @@ export function withSettledOutput(
 }
 
 /**
- * Identity of a candidate's verification, not its planning strategy or export object order.
- * Recovery forces the actual output swing count and turns off window derivation. All physical config, including
- * supply, geometry, seeds, entity order and overrides, stays in the key, along with the observed clock-only check.
+ * The config a clock is verified on: the one it was planned on with its output swings per cycle and without the derivation
+ * of windows, built as the clock is (`buildAsBuiltConfig`). All physical config, including supply, geometry, seeds, entity
+ * order and overrides, stays in it.
  */
-export function clockVerificationSignature(config: Config, result: BlueprintGenerationResult): string {
-    const period = result.simulation_duration.ticks;
+function verificationConfigOf(config: Config, result: BlueprintGenerationResult): Config {
     const windows = new Map(Object.entries(result.clock_windows).map(([id, ranges]) =>
         [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const verification_config = buildAsBuiltConfig({ ...config, overrides: { ...config.overrides,
-        derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } }, windows, period);
+        derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } }, windows, result.simulation_duration.ticks);
     const fully_controlled = verification_config.inserters.every(inserter => inserter.overrides?.enable_control?.mode !== "AUTO")
         && (verification_config.drills?.configs.every(drill => drill.overrides?.enable_control?.mode !== "AUTO") ?? true);
     // At a forced whole swing count, fractional mode changes only the AUTO swing distribution. Clocked/always/never
     // controls do not use that distribution. Keep the flag when any own-clock fuel inserter still needs AUTO.
     verification_config.overrides!.use_fractional_swings = fully_controlled && Number.isInteger(result.used_terminal_swing_count)
         ? false : config.overrides?.use_fractional_swings === true;
-    return canonicalVerificationJson({ config: verification_config, period, windows: result.clock_windows,
+    return verification_config;
+}
+
+/**
+ * Identity of a candidate's verification, not its planning strategy or export object order.
+ * Recovery forces the actual output swing count and turns off window derivation. All physical config, including
+ * supply, geometry, seeds, entity order and overrides, stays in the key, along with the observed clock-only check.
+ */
+export function clockVerificationSignature(config: Config, result: BlueprintGenerationResult): string {
+    return canonicalVerificationJson({ config: verificationConfigOf(config, result), period: result.simulation_duration.ticks, windows: result.clock_windows,
         belt_kind: result.belt?.kind ?? null, belt_pickup_slack_left_out: result.belt_pickup_slack_left_out,
         expected_output: result.stability_check.expected_output_items,
         base_cycle_ticks: result.crafting_cycle_plan.total_duration.ticks,
         transfer_plan: result.serializable_transfer_plan,
         inserter_clocks: result.unplanned_inserter_clocks,
         check: result.stability_check.as_built ?? result.stability_check });
+}
+
+/**
+ * What the trials of a loss are a function of: the config the clock is verified on, its windows and period, and the items it
+ * is expected to move a period. The trials run on nothing else, so two clocks with this key have the same verdict. The cycles
+ * of the clock (`overrides.lcm`) are left out where they set nothing: they set the period of a run that is not given one, which
+ * a whole period is, and the clocks of the inserters outside the plan, which a build without any has none of.
+ */
+export function backpressureLossKey(planned_on: Config, result: BlueprintGenerationResult): string {
+    const period = result.simulation_duration.ticks;
+    const verification_config = verificationConfigOf(planned_on, result);
+    const cycles_set_nothing = Number.isInteger(period)
+        && unplannedInserterClocks(createEntityRegistryFromConfig(verification_config), period, new Map(), new Map(), alwaysEnabledByConfig(verification_config)).size === 0;
+    const config = cycles_set_nothing ? { ...verification_config, overrides: { ...verification_config.overrides, lcm: undefined } } : verification_config;
+    return canonicalVerificationJson({ config, period, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items });
 }
