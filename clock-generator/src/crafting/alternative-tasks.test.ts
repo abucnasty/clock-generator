@@ -62,3 +62,22 @@ describe("moving belt fallback task", () => {
         expect(plan.tasks.some(task => task.id === "planned-moving-belt")).toBe(false);
     });
 });
+
+describe("output swing counts above the planned one", () => {
+    const swingTasks = (plan: ReturnType<typeof planClockAlternatives>) => plan.tasks.map(task => task.id).filter(id => /^swings-\d+$/.test(id));
+
+    // a cycle takes its output swings from a machine that holds the planned count when they start: the count three
+    // above it held on no sample or fixture but as a multiple of the planned count (6 at 3)
+    it("are tried up to two above it, and three above only where that is a multiple of it", async () => {
+        const units = planClockAlternatives(await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS), options);
+        expect(units.context.planned_swings).toBe(2);
+        expect(swingTasks(units)).toEqual(["swings-3", "swings-4", "swings-1"]);
+        const utility = planClockAlternatives(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS), options);
+        expect(utility.context.planned_swings).toBe(3);
+        expect(swingTasks(utility)).toEqual(["swings-4", "swings-5", "swings-6", "swings-2", "swings-1"]);
+        // a planned count of 1 is not counted as having multiples: 4 at 1 held nowhere
+        const grenade = planClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE), options);
+        expect(grenade.context.planned_swings).toBe(1);
+        expect(swingTasks(grenade)).toEqual(["swings-2", "swings-3"]);
+    });
+});

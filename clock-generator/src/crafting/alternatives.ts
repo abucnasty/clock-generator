@@ -444,9 +444,12 @@ function alternativeDefinitionsFor(
     const swings_forced = config.overrides?.terminal_swing_count !== undefined;
     const lower_counts = swings_forced ? [] : Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
     // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
-    // output inserter takes hands, so longer cycles can work too
+    // output inserter takes hands, so longer cycles can work too, but the machine holds the planned count when a cycle's
+    // swings start: the farthest count is only tried as a multiple of it (the planned cycle repeated)
+    const planned = context.planned_swings ?? swings;
     const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
-        : Array.from({ length: Math.max(swings, context.planned_swings ?? swings) + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i);
+        : Array.from({ length: planned + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i)
+            .filter(count => count < planned + EXTENDED_SWING_COUNTS || (planned > 1 && count % planned === 0));
     // Supply still matters for always-enabled and fuel pickups, even when the clock has no belt windows.
     const offer_backed_up_belt = config.overrides?.backed_up_belts !== true
         && config.inserters.some(inserter => inserter.source.type === "belt");
