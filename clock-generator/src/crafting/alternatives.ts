@@ -388,6 +388,12 @@ function withChestDrillFallbacks(
 }
 
 /** The alternatives as the config asks for them, each made once */
+const EVEN_HANDS_DESCRIPTION = "One window for each hand an inserter moves in the clock period, the windows spread evenly over the period "
+    + "and each a tick shorter than the inserter's hand cycle, so a window moves one hand whenever in it the source "
+    + "has the hand and the sink takes it. Inserters that move the same hands a period, such as those of two "
+    + "halves of a build that do the same thing, get the same windows and share a window decider. Only offered "
+    + "where every inserter takes from a machine or a chest and moves a whole number of hands a period.";
+
 function alternativeDefinitionsFor(
     config: Config,
     context: ClockAlternativeContext,
@@ -416,6 +422,16 @@ function alternativeDefinitionsFor(
     const offer_moving_belt = config.overrides?.backed_up_belts === true
         && config.inserters.some(inserter => inserter.source.type === "belt");
 
+    // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
+    // out, not tried, so no other count or search is offered; even hands moves the same hands
+    if (config.target_output.counts === "destroyed") {
+        return [{
+            id: "even-hands",
+            label: "Even hands",
+            description: EVEN_HANDS_DESCRIPTION,
+            run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
+        }];
+    }
     return [
         ...(offer_moving_belt ? [{
             id: FOR_A_MOVING_BELT_ID,
@@ -451,11 +467,7 @@ function alternativeDefinitionsFor(
         {
             id: "even-hands",
             label: "Even hands",
-            description: "One window for each hand an inserter moves in the clock period, the windows spread evenly over the period "
-                + "and each a tick shorter than the inserter's hand cycle, so a window moves one hand whenever in it the source "
-                + "has the hand and the sink takes it. Inserters that move the same hands a period, such as those of two "
-                + "halves of a build that do the same thing, get the same windows and share a window decider. Only offered "
-                + "where every inserter takes from a machine or a chest and moves a whole number of hands a period.",
+            description: EVEN_HANDS_DESCRIPTION,
             run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
         },
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
