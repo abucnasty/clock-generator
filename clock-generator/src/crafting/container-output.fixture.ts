@@ -4,7 +4,7 @@ export const stack = (source: object, sink: object, filters?: string[]) =>
     ({ source, sink, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16, ...(filters ? { filters } : {}) });
 
 /**
- * The owner's steel build in small: a drill fills a wagon with ore, one furnace makes plates from it and puts them back
+ * The steel build in small: a drill fills a wagon with ore, one furnace makes plates from it and puts them back
  * into the wagon, the other makes steel from the plates and puts it back too, and the steel is taken out of the wagon
  * onto a belt. The wagon is a hub: source and sink of every item of the chain.
  */

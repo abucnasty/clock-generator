@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.22.0] - Unreleased
+
+### Added
+- A build where several machines draw from one source, such as one foundry feeding four assemblers, now gets a clock that holds where the planned windows did not: each inserter gets one window long enough for all its hands, the machines a source cannot feed at once take turns in as few groups as its stock and output allow, and each output inserter swings once at the start of its group's turn. Where copies drop onto a shared belt, the machines are grouped so that their drops fit between each other.
+- A direct insertion build now gets a clock that holds and recovers: each inserter moves whole hands every cycle (a machine's input limit takes off any surplus), an inserter busy the whole cycle stays on, the inserters open in order from the output back to the raw inputs, and the clock is kept only if it holds from every start and still holds with its windows moved a tick. The slow search the generator used to fall back to is no longer needed.
+- The result says whether the drops of the copies onto a shared belt fit between each other or land on each other (give how far apart the copies stand), and a note says when the lanes of a belt are exactly full. It also lists the spacings of the copies and the distances between a copy's inserters at which the drops fit, or says why none can when the copies drop more hands than the belt has room for, and the editor says so before Generate.
+
+### Changed
+- A clock that does not hold is listed by what it makes over a long run, not by one period, so the closest clock is the one that keeps making the most.
+- A clock is stable only if every export belt gets what its consumers take; one that gives a belt less is unstable, and the result card says which belt gets how much.
+
+### Fixed
+- The Diagram of a belt with the same item on both lanes no longer logs a duplicate-key error.
+- The Swing Plan of a build whose export belt carries the same item on both lanes no longer logs a duplicate-key error.
+- The clock timeline's header shows the rounded period of a rounded clock.
+
 ## [0.21.1] - 2026-10-23
 
 ### Fixed

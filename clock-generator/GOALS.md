@@ -5,7 +5,7 @@
 
 The goals above are listed in priority order.
 
-Goal 2 was first written as "minimize active inserter windows whenever possible to reduce update time in factorio". Its aim is the update time itself (the owner, 2026-10-15: "The specific goal is to reduce UPS. Goal as stated is outdated."). The selection does not measure update time yet: it ranks clocks by their wake-ups ("Wake-ups, the measure for goal 2"), which stand in for it. The wake-ups stay the measure until a plan to measure update time replaces them.
+Goal 2 was first written as "minimize active inserter windows whenever possible to reduce update time in factorio". Its aim is the update time itself (decided 2026-10-15: "The specific goal is to reduce UPS. Goal as stated is outdated."). The selection does not measure update time yet: it ranks clocks by their wake-ups ("Wake-ups, the measure for goal 2"), which stand in for it. The wake-ups stay the measure until a plan to measure update time replaces them.
 
 ### Goal 1: match the target rate exactly
 
@@ -13,7 +13,7 @@ Goal 2 was first written as "minimize active inserter windows whenever possible 
 >
 > A clock that does this survives backpressure loss, and one that does not cannot survive backpressure loss. This is what "stable" has meant in this project: a stable clock is one that survives backpressure loss. A clock that only makes its target rate from a clean start, with every machine full of ingredients and emptied of products, does not meet goal 1.
 
-"Exactly" allows one thing: a clock whose period is not a whole number of ticks and whose blueprint counts it rounded down to whole ticks (where no subtick clock gives the exact period, or as the rounded alternative of one) meets goal 1 when it runs at most 0.1% faster than the target and within what the machines can make, tried on its own whole-tick period like any other clock. It is labelled with how much it runs fast, and a clock at exactly the target rate comes first (the owner, 2026-10-23: Atlan cell 29's 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game, #332).
+"Exactly" allows one thing: a clock whose period is not a whole number of ticks and whose blueprint counts it rounded down to whole ticks (where no subtick clock gives the exact period, or as the rounded alternative of one) meets goal 1 when it runs at most 0.1% faster than the target and within what the machines can make, tried on its own whole-tick period like any other clock. It is labelled with how much it runs fast, and a clock at exactly the target rate comes first (decided 2026-10-23: Atlan cell 29's 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game, #332).
 
 The detail is in [docs/stability.md](docs/stability.md).
 

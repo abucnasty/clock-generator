@@ -13,13 +13,13 @@ import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The owner's iron plate build, 80 a second from one copy (`REAL_OWNER_CAR`): a big mining drill drops iron ore into a
+ * The iron plate build, 80 a second from one copy (`REAL_OWNER_CAR`): a big mining drill drops iron ore into a
  * car, two stack inserters take it into two furnaces, and their output inserters put plates onto a belt that a loader
  * empties into a disposal chest. The harness puts the ore under the drill. At the harness's research the drill makes far
  * more than the furnaces take, so the car is full whenever the drill runs.
  *
  * The selected clock (3 output swings) is recorded in two build orders. The game serves inserters that act on one entity
- * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the owner's blueprint
+ * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
  * has them, the two inserters that take from the car are built before the output inserters; `takers-last` builds them
  * after. The clock with 1 output swing is a second check.
  */

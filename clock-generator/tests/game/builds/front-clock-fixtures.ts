@@ -20,7 +20,7 @@ type Family = "different-items" | "same-item";
 export interface FrontClockCase {name: string; endpoint: "entrance" | "exit"; family: Family; speed: FixtureBeltSpeed;
     mirrored: boolean; backed: boolean}
 
-/** The front entrance on the owner's compact assembler scaffold, at every tier, mirroring state, supply and family. */
+/** The front entrance on the compact assembler scaffold, at every tier, mirroring state, supply and family. */
 export function frontEntranceClockCases(family: Family): FrontClockCase[] {
     return BELT_SPEEDS.flatMap(speed => [false, true].flatMap(mirrored => [false, true].map(backed => ({
         name: `front-entrance-${speed.name}-${mirrored ? "mirrored" : "unmirrored"}-${backed ? "backed" : "moving"}-${family}`,

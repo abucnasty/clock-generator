@@ -101,15 +101,13 @@ function removeAndRenumber<T extends { id: number }>(items: T[], index: number):
 export function updateTargetOutput(
     prev: ConfigFormData,
     field: keyof ConfigFormData['target_output'],
-    value: string | number,
+    value: string | number | { x: number; y: number } | undefined,
 ): ConfigFormData {
-    return {
-        ...prev,
-        target_output: {
-            ...prev.target_output,
-            [field]: value,
-        },
-    };
+    // an optional field cleared is left out, not kept as undefined
+    const target: Record<string, unknown> = { ...prev.target_output };
+    if (value === undefined) delete target[field];
+    else target[field] = value;
+    return { ...prev, target_output: target as ConfigFormData['target_output'] };
 }
 
 // Machines

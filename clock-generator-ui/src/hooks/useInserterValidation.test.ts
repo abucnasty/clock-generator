@@ -30,7 +30,7 @@ const blacklisting = (fields: object = {}): Config => ({
     belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
     chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
 } as Config);
-const refused: LiveCoverage = { issues: [], refusal: 'Inserter 2: `filter_mode` "blacklist" is refused', pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null, machinePrototypes: [] };
+const refused: LiveCoverage = { issues: [], refusal: 'Inserter 2: `filter_mode` "blacklist" is refused', pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
 
 /** Renders the hook, runs its effects and lets the debounced engine question go out */
 function render(config: Config) {

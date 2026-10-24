@@ -56,3 +56,38 @@ describe("matching a build to a config whose inserters name their items", () => 
         expect(match.unmatched_config_inserters).toEqual([]);
     });
 });
+
+describe("matching machines that stand alike in the structure", () => {
+    const samples = { status: [], crafting_progress: [], bonus_progress: [], products_finished: [], inputs: {}, outputs: {} };
+    const held = { held_count: [], held_item: [], status: [] };
+    const belts = [
+        { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-plate", stack_size: 4 }] },
+        { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "automation-science-pack", stack_size: 4 }] },
+    ];
+    /** Two machines that each take from belt 1 and give to belt 2; machine `i` of the list stands at the place given */
+    const unit = (places: { x: number; y: number }[]) => [1, 2].flatMap(id => [
+        { id: 2 * id - 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id }, stack_size: 16, position: places[id - 1] },
+        { id: 2 * id, source: { type: "machine", id }, sink: { type: "belt", id: 2 }, stack_size: 16, position: places[id - 1] },
+    ]);
+    const machinesAt = (places: { x: number; y: number }[]) => [1, 2].map(id => ({ id, recipe: "automation-science-pack", position: places[id - 1] }));
+
+    test("the order that keeps the layout is taken, whatever the shift of the build", () => {
+        const built = [{ x: 410, y: 0 }, { x: 410, y: 5 }];
+        const recording = parseRecording({
+            format: "clock-generator-recording", version: 1, start_game_tick: 0, sample_count: 0,
+            config: { machines: machinesAt(built), inserters: unit(built), belts },
+            machines: [1, 2].map(id => ({ id, name: "assembling-machine-3", recipe: "automation-science-pack", samples })),
+            inserters: unit(built).map(inserter => ({ ...inserter, name: "stack-inserter", samples: held })),
+        });
+        // the config lists the machine that stands south first: in id order the build's machines would be matched crosswise
+        const placed = [{ x: -3, y: 5 }, { x: -3, y: 0 }];
+        const laid = { ...config, machines: machinesAt(placed).map(machine => ({ ...config.machines[0], ...machine })), inserters: unit(placed), belts } as unknown as Config;
+        const match = matchRecordingToConfig(recording, laid);
+        expect(match.machines.get(1)).toBe(2);
+        expect(match.machines.get(2)).toBe(1);
+        expect(match.inserters.get(2)).toBe(4);
+        // without places the first order that matches every inserter is kept
+        const bare = { ...laid, machines: laid.machines.map(({ position: _p, ...machine }) => machine) } as unknown as Config;
+        expect(matchRecordingToConfig(recording, bare).machines.get(1)).toBe(1);
+    });
+});

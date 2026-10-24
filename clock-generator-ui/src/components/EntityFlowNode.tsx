@@ -9,6 +9,7 @@ import { GameName } from './GameName';
 import { ENTITY_NODE_WIDTH, type EntityNodeData, type MachineNodeParams } from '../utils/buildFlowGraph';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { formatNumberText, machineNodeCraftLine } from '../utils/numberText';
+import { keyedItems } from '../utils/keyedItems';
 import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
 const TYPE_LABELS: Record<EntityNodeData['entityType'], string> = {
@@ -111,8 +112,8 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                         )}
                         {data.filterIcons && data.filterIcons.length > 0 && (
                             <Box sx={{ display: 'flex', gap: 0.25, mt: 0.25, flexWrap: 'wrap' }}>
-                                {data.filterIcons.slice(0, 4).map(icon => (
-                                    <FactorioIcon key={icon} name={icon} size={14} titled />
+                                {keyedItems(data.filterIcons.slice(0, 4)).map(({ item, key }) => (
+                                    <FactorioIcon key={key} name={item} size={14} titled />
                                 ))}
                             </Box>
                         )}

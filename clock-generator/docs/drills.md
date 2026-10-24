@@ -44,7 +44,7 @@ Since 0.20.0 a drill into a chest is clocked just in time (`src/crafting/chest-d
 - what a window mines in its last tick is held while the drill is disabled and dropped first in its next window, so in the steady state a window costs no extra tick for the drop. A window of one tick that has to mine when the hold runs out brings less than a period's takes, which the chest covers or the window is two ticks;
 - a clock that does not meet goal 1 with these windows (the clock-only check or a backpressure loss) is made again with them a tick longer, then with the drill always enabled; the first that does is kept, and the result says why a drill stays always enabled. It stays so where nothing times it too: no inserter of the plan takes its item out of the chest, another drill or an inserter fills the chest with the same item.
 
-The windows are not part of the swing counts and do not stretch the period. The wake-ups count inserters only, so a drill's window changes them only through what the inserters do: a clocked drill's first ore comes up to a period later than an always-on drill's, and on the steel wagon the furnaces then run at another phase against the clock (81.6 against 84.1 wake-ups a minute on its selected clock), while each disabled tick saves the drill's own update. The owner's car (617 ore a tick against 64 a 72-tick period) gets one tick a period, the steel wagon (a period of 886.15 ticks) a window of two positions, enabled 1 or 2 ticks a period, 1.08 on average.
+The windows are not part of the swing counts and do not stretch the period. The wake-ups count inserters only, so a drill's window changes them only through what the inserters do: a clocked drill's first ore comes up to a period later than an always-on drill's, and on the steel wagon the furnaces then run at another phase against the clock (81.6 against 84.1 wake-ups a minute on its selected clock), while each disabled tick saves the drill's own update. The car build (617 ore a tick against 64 a 72-tick period) gets one tick a period, the steel wagon (a period of 886.15 ticks) a window of two positions, enabled 1 or 2 ticks a period, 1.08 on average.
 
 ### The fill time and the extra tick
 
@@ -81,7 +81,7 @@ The stop into a machine was changed in #310 to the larger of the stack and the i
 ## Known limits
 
 - A chest drill's windows are made from the takes the plan gives its takers: the steel wagon's ore taker takes 320 ore a period in the clock-only run where the plan gives it 160. The clock-only check, the loss trials and the fallback decide goal 1; the windows can be longer than they need where the plan undercounts.
-- The recording harness wires a clocked drill only in a build with one drill.
+- The recording harness wires a clocked drill to the built drill that drops into the machine the config's drill does, in each copy of the build (since 0.22.0; before, only in a build with one drill).
 
 - The first-tick offset above is not modelled.
 - A mining bar that moves a mining time or more in a tick (several items a tick from the mining bar, on scrap a mining speed of 30 a second) is not recorded; the simulator makes one item a tick from it at most.

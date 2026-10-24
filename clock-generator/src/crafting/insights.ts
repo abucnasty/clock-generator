@@ -12,6 +12,8 @@ import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPi
 import type { Config } from "../config/schema";
 import { describeSideLoadedDrop, SIDE_LOADED_DROP_ADVICE, SIDE_LOADED_DROP_TITLE, sideLoadedDrops } from "../config/side-loaded-drop";
 import { chestName } from "../common/entity-types";
+import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/drop-spacing";
+import { lanesExactlyFull, lanesExactlyFullNote } from "../config/lane-capacity-validator";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -330,7 +332,8 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
         id: "unstable",
         scope: "clock",
         title: "This clock does not hold the target rate",
-        what: `Driven only by its clock windows, the build moved ${actual} of ${check.expected_output_items} items in a clock period`
+        what: `Driven only by its clock windows, the build moved ${actual} of ${check.expected_output_items} items `
+            + (as_built?.output_basis === "long-run mean" ? "a clock period on average over a long run" : "in a clock period")
             + (offset ? ` when the clock started ${offset} ticks later relative to the machines` : "") + `.${repeats}`,
         why: "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start "
             + "points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand "
@@ -438,6 +441,43 @@ export function sideLoadedDropInsights(config: Config): ClockInsight[] {
         why: "",
         explanation: SIDE_LOADED_DROP_ADVICE,
     }];
+}
+
+/**
+ * Where the drops of the output inserters onto a shared belt land, for the clock the result follows (config/drop-spacing.ts):
+ * whether the hands of all the copies fit between each other or land on each other. None when the config does not say enough
+ * (no places, copies without a gap) or no output inserter drops on a belt.
+ */
+export function dropSpacingInsights(result: Pick<BlueprintGenerationResult, "clock_only_run" | "serializable_state_transition_history">, config: Config): ClockInsight[] {
+    const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
+    const starts = new Map<number, number[]>();
+    config.inserters.forEach((inserter, index) => {
+        const id = inserter.id ?? index + 1;
+        if (inserter.sink.type === "belt") starts.set(id, dropTicks(run, `inserter:${id}`));
+    });
+    const spacing = dropSpacing(config, starts, run.total_duration_ticks);
+    if (spacing === null) {
+        return [];
+    }
+    const text = describeDropSpacing(spacing);
+    return [{ id: "drop-spacing", scope: "clock", title: text.title, what: text.what, why: text.why, explanation: text.explanation, table: dropSpacingTable(spacing) }];
+}
+
+/** That the drops of the copies fill the lanes of a belt exactly, so that nothing is left over for a wait */
+export function lanesExactlyFullInsights(config: Config): ClockInsight[] {
+    let issues;
+    try {
+        issues = lanesExactlyFull(config);
+    } catch {
+        return [];
+    }
+    const note = lanesExactlyFullNote(issues);
+    if (note === null) {
+        return [];
+    }
+    const lanes = issues.map(issue => issue.lanes.length === 1 ? `lane ${issue.lanes[0]} of belt ${issue.belt_id}` : `both lanes of belt ${issue.belt_id}`).join(" and ");
+    const title = `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${issues.length === 1 && issues[0].lanes.length === 1 ? "is" : "are"} exactly full`;
+    return [{ id: "lanes-exactly-full", scope: "build", title, what: note, why: "", explanation: "" }];
 }
 
 export function clockInsights(result: BlueprintGenerationResult, holds: boolean, loop_seed_items = DEFAULT_LOOP_SEED_ITEMS): ClockInsight[] {

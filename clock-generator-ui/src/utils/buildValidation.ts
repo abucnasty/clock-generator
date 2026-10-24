@@ -10,7 +10,7 @@ export type ValidationDiagnostic =
 
 export interface BuildValidationIssue extends Problem {
     id: string;
-    severity: 'error' | 'warning';
+    severity: 'error' | 'warning' | 'info';
     blocksGeneration: boolean;
     /**
      * 'calibration': the engine's warning that a belt pickup's timing is not tested; 'lanes': its warning that the copies
@@ -49,6 +49,10 @@ interface Input {
     laneSharedByCopies?: string | null;
     /** The live note for drops marked as side-loading onto another belt: a known limit, never blocking */
     sideLoadedDrop?: string | null;
+    /** The live note for drops that fill the lanes of a belt exactly: a note, never blocking */
+    lanesExactlyFull?: string | null;
+    /** The live note that the gap between copies is needed to check their drops onto a belt: a note, never blocking */
+    copyGapNeeded?: string | null;
     /** The live warnings for machines whose prototype disagrees with their type or cannot make their recipe: advice, never blocking */
     machinePrototypes?: readonly MachinePrototypeIssue[];
     failure?: { message: string; diagnostics?: ValidationDiagnostic[] };
@@ -115,6 +119,16 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
     if (input.sideLoadedDrop) {
         const id = 'side-loaded-drop';
         add({ id, text: input.sideLoadedDrop, severity: 'warning', blocksGeneration: false, source: 'drop',
+            target: { kind: 'validation-issue', id } });
+    }
+    if (input.lanesExactlyFull) {
+        const id = 'lanes-exactly-full';
+        add({ id, text: input.lanesExactlyFull, severity: 'info', blocksGeneration: false, source: 'lanes',
+            target: { kind: 'validation-issue', id } });
+    }
+    if (input.copyGapNeeded) {
+        const id = 'copy-gap-needed';
+        add({ id, text: input.copyGapNeeded, severity: 'info', blocksGeneration: false, source: 'drop',
             target: { kind: 'validation-issue', id } });
     }
     for (const issue of input.machinePrototypes ?? []) {

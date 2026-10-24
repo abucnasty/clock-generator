@@ -97,7 +97,13 @@ export const TargetProductionRateConfigSchema = z.object({
     items_per_second: z.number().positive(),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
-    })
+    }),
+    /**
+     * Where the next copy stands from this one, in tiles and in the coordinates of the exported positions. It lets the
+     * result check whether the copies' drops onto a shared belt fit between each other (config/drop-spacing.ts); nothing
+     * else reads it. Omitted where it is not known.
+     */
+    copy_offset: MapPositionSchema.optional()
 });
 
 export type TargetProductionRateConfig = z.infer<typeof TargetProductionRateConfigSchema>;
@@ -424,7 +430,12 @@ const InserterBeltSinkConfigSchema = z.object({
      * Sidecar 0.13.0 marks a drop whose stream side-loads onto a belt that is fed from behind, `tiles` along the belt
      * from the drop. It is a note for the result and changes nothing in the clock (docs/game-data-and-scope.md).
      */
-    drop_capture: SideLoadedDropCaptureSchema.optional()
+    drop_capture: SideLoadedDropCaptureSchema.optional(),
+    /**
+     * The way the belt runs at the drop tile (DirectionSchema, the cardinal ones), which Sidecar 0.14.0 exports. It
+     * orders the drops along the belt in the check of config/drop-spacing.ts and changes nothing in the clock.
+     */
+    belt_direction: DirectionSchema.optional()
 });
 
 const InserterMachineConfigSchema = z.object({

@@ -12,7 +12,7 @@ export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict'
  */
 const MIN_OFF_TARGET = 0.005;
 
-/** Every player-facing string of the clock summary, in one place for the glossary and the owner's review */
+/** Every player-facing string of the clock summary, in one place for the glossary and for review */
 export const SUMMARY_COPY = {
     // plain names: what a clock is for, against the others of the same generation
     offTarget: (rate: string, target: string) => `Runs at ${rate}/s, not ${target}/s`,

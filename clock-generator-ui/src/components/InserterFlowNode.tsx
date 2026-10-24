@@ -6,6 +6,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { FlowNodeHandles } from './FlowNodeHandles';
 import { INSERTER_NODE_CHIP_WIDTH, INSERTER_NODE_WIDTH, type InserterNodeData } from '../utils/buildFlowGraph';
 import { entityLabel } from '../utils/entityLabel';
+import { keyedItems } from '../utils/keyedItems';
 import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
 type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
@@ -53,8 +54,8 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                 </Box>
                 {data.filterIcons && data.filterIcons.length > 0 && (
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                        {data.filterIcons.map(icon => (
-                            <FactorioIcon key={icon} name={icon} size={14} titled />
+                        {keyedItems(data.filterIcons).map(({ item, key }) => (
+                            <FactorioIcon key={key} name={item} size={14} titled />
                         ))}
                     </Box>
                 )}

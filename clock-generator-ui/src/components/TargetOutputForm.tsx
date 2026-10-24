@@ -1,4 +1,5 @@
-import { Box, Paper, Typography } from '@mui/material';
+import { Box, MenuItem, Paper, TextField, Typography } from '@mui/material';
+import { COPY_OFFSET_MIN_TILES, copyOffsetOf, copyOffsetShown, SIDES, type CopyOffset, type Side } from '../utils/copyOffset';
 import { HelpButton } from './HelpButton';
 import { copiesProblem } from '../utils/copiesProblem';
 import { ItemSelector } from './ItemSelector';
@@ -20,6 +21,13 @@ interface TargetOutputFormProps {
     onRecipeChange: (recipe: string) => void;
     onItemsPerSecondChange: (value: number) => void;
     onCopiesChange: (value: number) => void;
+    /** Where the next copy stands from this one, in tiles; undefined while not given */
+    copyOffset?: CopyOffset;
+    /** Whether to ask for it: the copies drop onto a belt from inserters whose places are known */
+    showCopyOffset?: boolean;
+    onCopyOffsetChange?: (value: CopyOffset | undefined) => void;
+    /** What the engine says of whether the copies' drops fit at that gap, for the period estimated from the settings; null while it says nothing */
+    copyOffsetNote?: string | null;
 }
 
 export function TargetOutputForm({
@@ -31,7 +39,12 @@ export function TargetOutputForm({
     onRecipeChange,
     onItemsPerSecondChange,
     onCopiesChange,
+    copyOffset,
+    showCopyOffset = false,
+    onCopyOffsetChange,
+    copyOffsetNote,
 }: TargetOutputFormProps) {
+    const shown = copyOffsetShown(copyOffset);
     return (
         // the heading is focused by script when the intro card or a dialog that held the focus goes
         <Paper component="section" variant="outlined" data-build-anchor="target" aria-labelledby={TARGET_OUTPUT_HEADING_ID}
@@ -86,6 +99,41 @@ export function TargetOutputForm({
                     preserveInputOnBlur={Boolean(copiesProblem(copies))}
                 />
             </Box>
+            {showCopyOffset && onCopyOffsetChange && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1, rowGap: 0.5, mt: 1 }}>
+                    <Typography variant="body2" component="span">Next copy stands</Typography>
+                    {shown === 'diagonal' ? (
+                        <Typography variant="body2" component="span">{`${Math.abs(copyOffset!.x)} tiles ${copyOffset!.x < 0 ? 'west' : 'east'} and ${Math.abs(copyOffset!.y)} tiles ${copyOffset!.y < 0 ? 'north' : 'south'}`}</Typography>
+                    ) : (
+                        <NumberField
+                            id={ELEMENT_IDS.targetCopyOffset}
+                            aria-label="Tiles to the next copy"
+                            value={shown.tiles}
+                            onValueChange={(val) => onCopyOffsetChange(copyOffsetOf(val ?? null, shown.side))}
+                            // no tiles is no gap, which the field shows empty: a step down to 0 would empty it, and a step up from
+                            // empty would land on 0 and empty it again
+                            min={COPY_OFFSET_MIN_TILES}
+                            step={1}
+                            sx={{ width: 110 }}
+                            size="small"
+                        />
+                    )}
+                    <Typography variant="body2" component="span">tiles</Typography>
+                    {shown !== 'diagonal' && (
+                        <TextField select size="small" value={shown.side} aria-label="Side of the next copy"
+                            onChange={(event) => onCopyOffsetChange(copyOffsetOf(shown.tiles, event.target.value as Side))} sx={{ minWidth: 100 }}>
+                            {SIDES.map(side => <MenuItem key={side} value={side}>{side}</MenuItem>)}
+                        </TextField>
+                    )}
+                    <Typography variant="body2" component="span">of this one</Typography>
+                    <HelpButton label="About the next copy">
+                        <Typography variant="body2" sx={{ mb: 1 }}>Where the next copy of the build stands, so that the drops of all the copies onto a shared belt can be checked. Leave it empty when the copies have belts of their own.</Typography>
+                    </HelpButton>
+                </Box>
+            )}
+            {showCopyOffset && onCopyOffsetChange && copyOffsetNote && (
+                <Typography variant="body2" color="text.secondary" role="status" data-testid="copy-offset-note" sx={{ mt: 0.5 }}>{copyOffsetNote}</Typography>
+            )}
             <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 0.75, mt: 0.5 }}>
                 <Box component="span">{itemsPerSecondHelper(itemsPerSecond, copies)}</Box>
                 <HelpButton label="About copies">

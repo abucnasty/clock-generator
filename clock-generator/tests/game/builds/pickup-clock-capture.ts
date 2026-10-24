@@ -33,6 +33,8 @@ export interface PickupClockScenario {
     builtClockSha256?: () => string;
     /** The copies of the config the build holds, for a generated clock wired to each (HarnessOptions.copies) */
     copies?: number;
+    /** The share of the config's target the build makes, where it holds fewer copies than the config says (1/7 for one copy of seven) */
+    share?: number;
     outagePeriods?: number;
     /** Interventions of a probe of its own, in place of pickupClockInterventions(outagePeriods) */
     interventions?: [number, number, number][];
@@ -186,7 +188,8 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
             return {cut, during: during.map(value => value.items), recovered: after.map(value => value.items),
                 ...(zeroBaseline && {not_assessed: "baseline already contains zero-output periods"})};
         });
-        const summary = {generationVerdict: prepared.generationVerdict, target: config.target_output.items_per_second, period, expected,
+        const share = scenario.share ?? 1;
+        const summary = {generationVerdict: prepared.generationVerdict, target: config.target_output.items_per_second * share, period, expected: Math.round(expected * share * 1e6) / 1e6,
             baseline: baseline.map(value => value.items), recovery,
             ...(report.interventions && {interventions: report.interventions})};
         fs.writeFileSync(path.join(capture.directory, "summary.json"), JSON.stringify(summary) + "\n");

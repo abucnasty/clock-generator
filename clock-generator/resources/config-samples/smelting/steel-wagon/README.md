@@ -1,6 +1,6 @@
 # Steel plates around one cargo wagon
 
-The owner's build: one cargo wagon is a hub. A big mining drill with 4 legendary speed modules 3 drops iron ore into it.
+The build: one cargo wagon is a hub. A big mining drill with 4 legendary speed modules 3 drops iron ore into it.
 A stack inserter takes the ore into a legendary electric furnace making iron plates (2 legendary productivity modules 3,
 6 legendary beacons), and another puts the plates back into the wagon. A stack inserter takes plates into a second
 legendary electric furnace making steel (2 legendary speed modules 3, 8 legendary beacons), and another puts the steel
@@ -8,7 +8,7 @@ back. One stack inserter takes the steel out of the wagon onto a turbo belt that
 Every inserter is filtered to its item. The wagon's slots are filtered too: 20 to iron ore, 5 to iron plates, 5 to steel,
 and 10 blocked (a deconstruction planner in the game). The target is 26 steel plates a second from one copy.
 
-- `steel-wagon-scaffold.txt`: the owner's blueprint as given. The loader and disposal chest are part of it.
+- `steel-wagon-scaffold.txt`: the build's blueprint as given. The loader and disposal chest are part of it.
 - `steel-wagon.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
   2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
   (and an inserter's or drill's direction).

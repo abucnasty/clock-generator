@@ -156,6 +156,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
+        ...(alternative.rounded && { roundedPeriodTicks: alternative.rounded.period_ticks }),
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
         backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
@@ -380,8 +381,11 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config));
             const laneSharedByCopies = clockGenerator.laneSharedByCopiesWarning(query.config);
             const sideLoadedDrop = clockGenerator.sideLoadedDropWarning(query.config);
+            const lanesExactlyFull = clockGenerator.lanesExactlyFullWarning(query.config);
+            const copyGapNeeded = clockGenerator.copyGapNeededNote(query.config);
+            const dropRoom = clockGenerator.dropRoomNote(query.config);
             const machinePrototypes = clockGenerator.machinePrototypeIssues(query.config);
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies, sideLoadedDrop, machinePrototypes };
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies, sideLoadedDrop, lanesExactlyFull, copyGapNeeded, dropRoom, machinePrototypes };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);

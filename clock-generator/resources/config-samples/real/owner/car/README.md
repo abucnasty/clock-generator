@@ -1,11 +1,11 @@
 # Iron plates through a car
 
-The owner's build: a big mining drill with 4 legendary speed modules 3 mines iron ore and drops it into a car, which is
+The build: a big mining drill with 4 legendary speed modules 3 mines iron ore and drops it into a car, which is
 used as a chest. Two legendary stack inserters take the ore from the car into two legendary electric furnaces, each with
 2 legendary productivity modules 3 and 7 legendary beacons. Their output inserters put the plates onto a turbo belt that
 a loader empties into a disposal chest. The target is 80 plates a second from one copy.
 
-- `car-scaffold.txt`: the owner's blueprint as given. The loader and disposal chest are part of it.
+- `car-scaffold.txt`: the build's blueprint as given. The loader and disposal chest are part of it.
 - `car.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
   2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
   (and an inserter's or drill's direction).

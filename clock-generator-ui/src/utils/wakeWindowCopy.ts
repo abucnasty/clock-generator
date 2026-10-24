@@ -1,6 +1,6 @@
 /**
  * Every string the Wake windows view shows, in the glossary's terms (1.12). The provisional wake-up definition
- * lives in glossary.ts, where the owner can update it after the strict-definition experiment.
+ * lives in glossary.ts, to be updated there after the strict-definition experiment.
  */
 import { PROVISIONAL_WAKE_UP_DEFINITION } from './glossary';
 import { formatNumberText } from './numberText';

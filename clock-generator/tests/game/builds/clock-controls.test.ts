@@ -2,6 +2,7 @@ import fs from "fs";
 import {describe, expect, test} from "vitest";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {ClockControl, pinMismatches, readControls} from "./clock-controls";
+import {ownerClockHash as grenadeClockHash} from "./grenade-clock-fixtures";
 import {ownerClockHash} from "./own-clock-fixtures";
 
 /**
@@ -10,13 +11,16 @@ import {ownerClockHash} from "./own-clock-fixtures";
  * fail where a pin was moved to follow a selection and its recording was not made again: the generation tests (pull
  * requests to master) find the selection that moved, this finds the pin that was edited to follow it.
  */
-const FAMILIES = ["blocked-output", "car", "container", "front", "lithium-silo", "over-hood", "own", "pickup", "steel-wagon"]
+const FAMILIES = ["blocked-output", "car", "container", "front", "grenade", "lithium-silo", "over-hood", "own", "pickup", "productivity-chain", "steel-wagon", "stupidfathobbit-cell02", "thaeln-cell09"]
     .map(family => `${family}-clock-controls.json`);
 const hash = /^[0-9a-f]{64}$/;
 /** Entries whose native summary has no known clock yet: the list may only shrink */
 const NOT_YET_TIED: Record<string, string[]> = {};
-/** Entries that are the clock of an owner's build, not a selection: the identity of that clock in the blueprint the test builds */
-const OWNER_CLOCKS: Record<string, Record<string, string>> = {"own-clock-controls.json": {"own-clock-three-copies": ownerClockHash()}};
+/** Entries that are a build's hand-made clock, not a selection: the identity of that clock in the blueprint the test builds */
+const OWNER_CLOCKS: Record<string, Record<string, string>> = {
+    "own-clock-controls.json": {"own-clock-three-copies": ownerClockHash()},
+    "grenade-clock-controls.json": {"owner-one-copy": grenadeClockHash("one copy"), "owner-full-build": grenadeClockHash("full build")},
+};
 
 test("every family of game tests with a controls file is checked here", () => {
     const files = fs.readdirSync(__dirname).filter(file => file.endsWith("-clock-controls.json") && !file.includes("history")).sort();
@@ -72,7 +76,7 @@ describe("pinMismatches", () => {
     });
 });
 
-describe("pinMismatches for a clock the owner built", () => {
+describe("pinMismatches for a hand-made clock", () => {
     const hash = "c".repeat(64);
     const owner = (recorded: object = {}, extra: object = {}): ClockControl => ({
         recorded: {pr: 1, commit: "c0ffee", frozen_head: null, clock_basis: "built", clock_sha256: hash, ...recorded},
@@ -81,7 +85,7 @@ describe("pinMismatches for a clock the owner built", () => {
     });
     const built = {one: hash};
 
-    test("accepts a recording on the owner's clock, with no pin", () => {
+    test("accepts a recording on the hand-made clock, with no pin", () => {
         expect(pinMismatches({one: owner()}, [], built)).toEqual([]);
     });
     test("fails a recording of another clock than the blueprint's, a missing hash, or another basis", () => {
@@ -94,7 +98,7 @@ describe("pinMismatches for a clock the owner built", () => {
         expect(pinMismatches({one: owner({}, {generation: pin})}, [], built)).toHaveLength(1);
         expect(pinMismatches({one: owner({carried: "x"})}, [], built)).toHaveLength(1);
     });
-    test("does not let a generated entry take the basis: it is not named as a clock the owner built", () => {
+    test("does not let a generated entry take the basis: it is not named as a hand-made clock", () => {
         expect(pinMismatches({one: owner()})).toHaveLength(1);
         expect(pinMismatches({one: owner()}, ["one"])).toHaveLength(1);
     });

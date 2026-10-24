@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ChestType } from "../common/entity-types";
+import type { ExportShortfall } from "./export-delivery";
 import type { FullOutputChest } from "./full-output-chests";
 import { NotMadeClock, whyNotStable, WhyNotStableBuild, WhyNotStableClock, whyNotStableClockOf } from "./why-not-stable";
 
@@ -15,6 +16,7 @@ function clock(overrides: Partial<WhyNotStableClock> = {}): WhyNotStableClock {
         as_built_output: { items: 176 },
         spare_time: null,
         full_output_chests: [],
+        export_shortfalls: [],
         ...overrides,
     };
 }
@@ -200,6 +202,42 @@ describe("an output chest that fills up", () => {
     });
 });
 
+const circuits: ExportShortfall = { belt_id: 2, item: "electronic-circuit", item_label: "electronic circuit", expected_per_second: 80, delivered_per_second: 73.4,
+    inserter_ids: [16, 17] };
+
+describe("an export belt that gets less than it is taken off at", () => {
+    const short = (shortfalls: ExportShortfall[], overrides: Partial<WhyNotStableClock> = {}) => clock({ verdict: "unstable", meets_target_rate: false,
+        assessment: { holds: false, items_per_second: 80, backpressure_loss: null }, export_shortfalls: shortfalls, ...overrides });
+    const build: WhyNotStableBuild = { target_items_per_second: 80, backed_up_belts: false, not_made: [] };
+
+    it("is told as the cause, with the belt, the item and both rates", () => {
+        expect(whyNotStable([short([circuits])], 0, build)).toEqual({
+            cause: "export belt short",
+            message: "The selected clock (Batched swings: 2 output swings per cycle) moves 80 a second, but Belt 2 gets 73.4 a second of electronic circuit, "
+                + "and 80 a second is taken off it (inserters 16 and 17 fill it).",
+        });
+    });
+
+    it("names an inserter alone in the singular, and each belt", () => {
+        const cable: ExportShortfall = { ...circuits, belt_id: 3, item_label: "copper cable", expected_per_second: 1, delivered_per_second: 0.5, inserter_ids: [4] };
+        expect(whyNotStable([short([circuits, cable])], 0, build)?.message).toContain(
+            "and 80 a second is taken off it (inserters 16 and 17 fill it). Belt 3 gets 0.5 a second of copper cable, and 1 a second is taken off it (inserter 4 fills it).");
+    });
+
+    it("is not said of a clock that is off the target, or that meets it", () => {
+        expect(whyNotStable([short([circuits], { assessment: { holds: false, items_per_second: 65, backpressure_loss: null } })], 0, build)?.cause).toBe("nothing holds");
+        expect(whyNotStable([short([circuits], { meets_target_rate: true })], 0, build)).toBeNull();
+    });
+
+    it("is read from the as-built check of the alternative", () => {
+        const view = { label: "x", verdict: "unstable" as const, ranking: { meets_target_rate: false },
+            assessment: { holds: false, items_per_second: 80, backpressure_loss: null }, expected_output_items: 4, insights: [] };
+        const as_built = { holds: false, actual_output_items: 4, start_phases_checked: 1, export_shortfalls: [circuits] };
+        expect(whyNotStableClockOf({ ...view, as_built }).export_shortfalls).toEqual([circuits]);
+        expect(whyNotStableClockOf({ ...view, as_built: undefined }).export_shortfalls).toEqual([]);
+    });
+});
+
 describe("what the summary reads of a clock", () => {
     it("reads the alternative's fields under their names", () => {
         const assessment = { holds: false, items_per_second: 7.5, backpressure_loss: null };
@@ -215,7 +253,7 @@ describe("what the summary reads of a clock", () => {
             failed_pickup_phases: { "inserter:2": [3, 0] }, expected_output_items: 176,
             as_built_output: { items: 176, repeat_periods: 6, repeat_output_items: 880 },
             spare_time: { machine: "Machine 1 (assembling-machine)", spare_ticks: 3, working_ticks: 160, recovery_periods: 40 },
-            full_output_chests: [],
+            full_output_chests: [], export_shortfalls: [],
         });
     });
 
@@ -224,7 +262,7 @@ describe("what the summary reads of a clock", () => {
             assessment: { holds: true, items_per_second: 1, backpressure_loss: null }, as_built: null, expected_output_items: 4, insights: [] };
         expect(whyNotStableClockOf(view)).toEqual({ label: "Observed windows", verdict: "stable", meets_target_rate: true,
             assessment: view.assessment, moving_belt: false, expected_output_items: 4, spare_time: null,
-            full_output_chests: [] });
+            full_output_chests: [], export_shortfalls: [] });
         expect(whyNotStableClockOf({ ...view, belt: { kind: "backed_up" } }).moving_belt).toBe(false);
     });
 });

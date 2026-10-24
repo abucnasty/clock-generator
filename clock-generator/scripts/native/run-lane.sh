@@ -9,7 +9,7 @@
 # Before every case it stops ("STOP: ...", exit 1) when the worktree's HEAD is not the frozen head or a tracked file
 # changed, or when a Factorio of this lane is still running. It waits while the machine already runs the cap of harness
 # Factorio processes (a watched run is two). Factorio processes are found by path (scripts/worktree/procs.py: the harness's
-# arguments, and the lane's folders on the command line), never by name; the owner's game is never counted.
+# arguments, and the lane's folders on the command line), never by name; a game the harness did not start is never counted.
 #
 #   -w <worktree>       the frozen worktree (its own node_modules: scripts/worktree/setup.sh)
 #   -r <root>           evidence root, e.g. clock-generator/.scratch/<topic>/<run>: captures in <root>/<lane>/, logs in <root>/logs/<lane>/, TMPDIR <root>/tmp/<lane>/

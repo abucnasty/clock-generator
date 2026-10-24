@@ -23,6 +23,7 @@ import { Chest, Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { EntityState, InserterState } from "../state";
 import { simulationStateKey } from "./runner/steady-state";
 import { SimulationContext } from "./sequence/simulation-context";
+import { ExportShortfall, ExportedItem, exportShortfallOfBins } from "./export-delivery";
 
 export type BackpressureLoss =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -131,6 +132,17 @@ export interface LossTrial {
     proven: boolean;
     /** The bins the build ended in: those that repeat when `proven`, or the last ones it was held to */
     ends_in: number[];
+    /**
+     * The export belts that received less than their consumers take in those bins; absent when none did. A build that
+     * is at its expected output and shortchanges an export has not recovered.
+     */
+    export_shortfalls?: ExportShortfall[];
+}
+
+/** An export belt of the build, with the inserters that fill it as the simulation holds them */
+export interface WatchedExport {
+    exported: ExportedItem;
+    fillers: readonly InserterState[];
 }
 
 export interface LossOutcome {
@@ -253,6 +265,26 @@ export function judgeRecovery(
 }
 
 /**
+ * A recovery that also holds the export belts to what their consumers take, in the bins the output is judged on: the bins
+ * that repeat when the state did, or the last ones the build was held to. A build at its expected output that comes up short
+ * on an export has not recovered.
+ */
+export function judgedWithExports(
+    judged: Pick<LossTrial, "recovers" | "recovered_after_bins" | "proven" | "ends_in">,
+    watched: readonly WatchedExport[],
+    export_per_bin: readonly (readonly number[])[],
+    bin_ticks: number,
+    repeats_from: number | null,
+    hold_bins: number,
+): Pick<LossTrial, "recovers" | "recovered_after_bins" | "proven" | "ends_in" | "export_shortfalls"> {
+    const short = watched.flatMap((it, at) => {
+        const bins = repeats_from !== null ? export_per_bin[at].slice(repeats_from) : export_per_bin[at].slice(-hold_bins);
+        return bins.length === 0 ? [] : exportShortfallOfBins(it.exported, bins, bin_ticks, judged.proven) ?? [];
+    });
+    return short.length === 0 ? judged : { ...judged, recovers: false, recovered_after_bins: null, export_shortfalls: short };
+}
+
+/**
  * Runs the trials of one loss on a build that is running on its clock, and leaves it wherever the last one ends.
  *
  * @param context the build on its clock windows, warmed up
@@ -260,6 +292,8 @@ export function judgeRecovery(
  * @param bin whole ticks the output is counted in, and the clock periods they are
  * @param quiet_ticks ticks without anything done after which the build has stopped: a period, or the longest clock of
  *                    an inserter that has one of its own
+ * @param watched_exports the belts with a consumption rate, whose deliveries in the bins the build ends in are held to what their
+ *                consumers take as the output is held to its expected output
  * @param proof_stride bins between boundaries whose equal states repeat for good: 1 when every inserter is on the
  *                     clock of the period or always enabled, more when inserters have clocks of their own (fuel),
  *                     which stand at the same place only every merged period (see provenRepeatBin); null when a
@@ -272,6 +306,7 @@ export function runLossTrials(
     bin: { ticks: number; periods: number },
     quiet_ticks: number,
     proof_stride: number | null,
+    watched_exports: readonly WatchedExport[] = [],
 ): LossOutcome {
     const { loss } = options;
     const expected_per_bin = options.expected_output_items * bin.periods;
@@ -390,6 +425,7 @@ export function runLossTrials(
         const restore_at = (now() - start_tick) % bin.ticks;
 
         const output_per_bin: number[] = [];
+        const export_per_bin: number[][] = watched_exports.map(() => []);
         const bin_by_state = new Map<string, number>();
         let repeats_from: number | null = null;
         if (proof_stride !== null) {
@@ -397,10 +433,12 @@ export function runLossTrials(
         }
         while (output_per_bin.length < max_recovery_bins && repeats_from === null) {
             const before = dropped();
+            const exported_before = watched_exports.map(it => it.fillers.reduce((sum, state) => sum + state.items_dropped, 0));
             for (let tick = 0; tick < bin.ticks; tick++) {
                 step();
             }
             output_per_bin.push(dropped() - before);
+            watched_exports.forEach((it, at) => export_per_bin[at].push(it.fillers.reduce((sum, state) => sum + state.items_dropped, 0) - exported_before[at]));
             // only boundaries a whole stride apart have every clock standing at the same place, so only they compare
             if (proof_stride !== null && output_per_bin.length % proof_stride === 0) {
                 const key = simulationStateKey(context);
@@ -416,7 +454,7 @@ export function runLossTrials(
             output_during_loss,
             stopped_after_ticks,
             output_per_bin,
-            ...judgeRecovery(output_per_bin, expected_per_bin, repeats_from, hold_bins),
+            ...judgedWithExports(judgeRecovery(output_per_bin, expected_per_bin, repeats_from, hold_bins), watched_exports, export_per_bin, bin.ticks, repeats_from, hold_bins),
         });
         if (!part_of_the_way_planned && index === plans.length - 1) {
             part_of_the_way_planned = true;
