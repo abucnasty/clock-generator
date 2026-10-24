@@ -168,6 +168,12 @@ interface AlternativeDefinition {
      * it has none.
      */
     shared_windows?: () => AlternativeDefinition | undefined;
+    /**
+     * The same alternative with the inserters that take out of a loop always enabled (`loop_windows` of
+     * GenerateClockOptions false): made when its clock has windows for them (`loop_windows` of the result) and does not
+     * hold, or does not get back from a loss, with them.
+     */
+    without_loop_windows?: () => AlternativeDefinition | undefined;
 }
 
 /** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
@@ -324,11 +330,16 @@ function alternativeDefinitions(
 ): AlternativeDefinition[] {
     const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
         with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
-    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule
+    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule, and
+    // with the inserters that take out of a loop always enabled, made when a clock with windows for them does not meet goal 1
     let shared: AlternativeDefinition[] | undefined;
+    let without_loop: AlternativeDefinition[] | undefined;
     return definitions.map(definition => ({ ...definition, shared_windows: () => {
         shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
         return shared.find(it => it.id === definition.id);
+    }, without_loop_windows: () => {
+        without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false }, known_stable);
+        return without_loop.find(it => it.id === definition.id);
     } }));
 }
 
@@ -667,9 +678,25 @@ function runAlternativeOf(
     let loss: BackpressureLossAssessment = cached
         ? { backpressure_loss: cached.backpressure_loss, backpressure_loss_not_tried: cached.backpressure_loss_not_tried }
         : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
+    let used = definition;
+    // the inserters that take out of a loop on windows: a clock that does not meet goal 1 with them is made again with
+    // them always enabled, as every clock was before they had windows (see trialWithLoopWindows)
+    if (cached === undefined && result.loop_windows !== undefined && !(held && loss.backpressure_loss?.survives !== false)) {
+        const without = definition.without_loop_windows?.();
+        try {
+            if (without !== undefined) {
+                result = without.run();
+                used = without;
+                held = holds(result);
+                loss = held ? backpressureLossVerdictOf(without.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
+                logger.log(`Clock alternative "${definition.label}": the windows out of its loop did not meet goal 1; always enabled: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
+            }
+        } catch (error) {
+            logger.log(`Clock alternative "${definition.label}" with the inserters out of its loop always enabled could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
     // the drills into chests on their fewest windows: a clock that does not meet goal 1 with them is made again with
     // them a tick longer, then always enabled, as it was before they had windows, and the first that does is kept
-    let used = definition;
     const fallbacks = cached === undefined && !(held && loss.backpressure_loss?.survives !== false) && plannedChestDrillWindows(result)
         ? definition.chest_drill_fallbacks ?? [] : [];
     for (const [index, fallbackOf] of fallbacks.entries()) {
@@ -699,7 +726,7 @@ function runAlternativeOf(
     const label = withOutputSwings(definition, result.used_terminal_swing_count);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
-    const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.output_feeders);
+    const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.loop_windows);
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
     const start_dependence = cached ? cached.start_dependence : config.overrides?.check_start_dependence === true
         ? startDependenceVerdictOf(used.planned_on ?? config, result, held, logger, report)
@@ -889,6 +916,7 @@ function planPrimaryAndTasks(
         ...withChestDrillFallbacks([definition], config, true,
             fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0],
         shared_windows: () => primaryDefinition(config, { ...options, shared_windows: true }, options.on_progress_detail),
+        without_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: false }, options.on_progress_detail),
     };
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,

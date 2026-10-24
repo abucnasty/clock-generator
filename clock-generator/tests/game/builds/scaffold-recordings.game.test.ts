@@ -56,6 +56,17 @@ const RECORDED_TICKS = 36_000;
  */
 const WAKE_UPS_TOLERANCE = 0.25;
 /**
+ * Agricultural science: an inserter that brings nutrients to an egg biochamber shows "waiting for source items" in the
+ * first tick of its window, and in the next the nutrient biochamber it takes from, at its output block, puts out the
+ * products it holds as the inserter takes. The game counts a wake there, the simulator does not (docs/simulator.md,
+ * "Products a machine cannot put out"). The gap was inside the tolerance while the inserters into the science biochamber
+ * were always on (3,187.9 a minute in the game against 2,673.8 on the same clock, 2026-10-24), and is not since they
+ * have windows.
+ */
+const AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN = "the game counts a wake of the inserters that bring nutrients to the egg biochambers in the tick after "
+    + "their window opens, where the nutrient biochamber puts out the products it holds as they take, and the simulator does not: "
+    + "134.3 a minute each in the game against 36.6 in the simulator, 1,791.4 in all against 1,257.8 (1,821.3 with belts backed up; 2026-10-24)";
+/**
  * Places in the period the simulator starts the clock at to find the steady state the game settled into, when the
  * wake-ups of its own run are not the game's. Batched swings on utility science makes 192 a period at 10.7, 26.8 or
  * 32.1 wake-ups a minute depending on where the clock starts; the game shows 26.8, as the generator's run does from the staged start (it counted 10.7 from the prepared build).
@@ -109,15 +120,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
         settle_ticks: 4800,
-        // Recorded 2026-10-24 on batched swings (5 output swings per cycle), selected since a loss trial short only late in
-        // its 40 periods runs on: 400 in every one of 74 periods after the staged start, and the simulator moves what the
-        // game moved through every inserter and machine. The 2-swing clock selected before (recorded 2026-10-16) was one
-        // hand short in periods 8 and 9 of the settling after the staged start, and inserter 11 moved 371.33 items a period
-        // in the game against 370.16 in the simulator.
+        // Recorded 2026-10-24 on batched swings (5 output swings per cycle) with windows on the two inserters that take eggs
+        // out of the loop into the science biochamber (ticks 23 to 46 of every 96): 400 in every one of 74 periods after the
+        // staged start, and the simulator moves what the game moved through every inserter and machine; the same clock with
+        // them always on made the same that day, and so did the family cuts on the new one (64 periods, then back at 400
+        // from the second period after each cut). The 2-swing clock selected before (recorded 2026-10-16) was one hand short
+        // in periods 8 and 9 of the settling after the staged start.
         staged_start: {
             dips: [],
             open_issues: [],
         },
+        wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
     // its clocks have no belt pickup slack: batched swings has room for a hand of fuel in the windows of the three
     // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Batched swings is
@@ -132,6 +145,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 300,
         settle_ticks: 4800,
         backed_up_belts: true,
+        wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
     "automation science": {
         scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-scaffold.txt"),

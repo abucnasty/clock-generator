@@ -35,7 +35,8 @@ export function fuelOnlyInserters(entity_registry: ReadableEntityRegistry): Inse
 /**
  * Inserters between machines that feed each other in a loop, like two pentapod egg biochambers that give each other
  * eggs. A hand of such an inserter fills as slowly as the loop makes its item, and the loop stops for good if it ever
- * runs dry, so these inserters are left always enabled: they take what there is whenever their machine has room.
+ * runs dry, so the plan leaves these inserters always enabled: they take what there is whenever their machine has room
+ * (see `alwaysEnabledInserters` for the windows of the inserters that take from the loop).
  */
 export function loopInserters(entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
@@ -73,10 +74,10 @@ export function loopInserters(entity_registry: Pick<ReadableEntityRegistry, "get
  * An inserter between machines that takes from a machine outside the loop (nutrients for the egg biochambers) keeps
  * its clock: that machine has a hand ready whenever the window opens.
  *
- * "Always enabled" is where the plan leaves them. An inserter that puts into the machine the build's output is taken
- * from (the eggs for the science biochamber), unless it can carry that machine's fuel, is given windows by `windowsOfInsertersFeedingTheOutputMachine` when
- * the clock leaves that machine blocked for a stretch of every cycle and the build passes the as-built check with them,
- * and stays always enabled otherwise.
+ * "Always enabled" is where the plan leaves them. A clock gives an inserter that takes from the loop to a machine
+ * outside it windows (`loopInserterWindows`) where that machine takes nothing for a stretch of every cycle, its output
+ * being at its block, when the clock holds and gets back from every loss with them; the inserters of the loop itself
+ * stay always enabled.
  */
 export function alwaysEnabledInserters(entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
     const in_a_loop = loopInserters(entity_registry);

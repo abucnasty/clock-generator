@@ -8,7 +8,7 @@ import { runBuild } from "./plan/plan-run";
 import { removedBetween, RuleRemoval } from "./rule-call";
 import { ruleCount, RuleCountRun } from "./rule-count";
 import { ruleCountInputOfStock } from "./rule-count-stock";
-import { FREE_RUNNING_CHECK_TICKS, longRunPeriodsOf, OUTPUT_FEEDER_CHECK_TICKS, runClockOnBuild } from "./trial";
+import { FREE_RUNNING_CHECK_TICKS, longRunPeriodsOf, LOOP_WINDOW_CHECK_TICKS, runClockOnBuild } from "./trial";
 import { LONG_RUN_SETTLE_SHARE } from "./long-run";
 import { wakeUpsOfStock } from "./wake-ups";
 import { Entity, EntityId } from "../entities";
@@ -54,10 +54,10 @@ function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logg
         + "before the long run, or the period is too long for one");
     const windows = new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    // the long run is the standard length, or twice that for a clock with output feeder windows (OUTPUT_FEEDER_CHECK_TICKS);
+    // the long run is the standard length, or twice that for a clock with the windows of a loop (LOOP_WINDOW_CHECK_TICKS);
     // the one that gives the ticks the long run counted is the one the generator ran
     const tried = new Set<number>();
-    for (const check_ticks of [FREE_RUNNING_CHECK_TICKS, OUTPUT_FEEDER_CHECK_TICKS]) {
+    for (const check_ticks of [FREE_RUNNING_CHECK_TICKS, LOOP_WINDOW_CHECK_TICKS]) {
         const periods = longRunPeriodsOf(period, check_ticks);
         if (periods <= 1 || tried.has(periods)) {
             continue;

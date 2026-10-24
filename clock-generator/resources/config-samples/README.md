@@ -140,7 +140,11 @@ Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
   four inserters that bring nutrients to the egg biochambers moved 979.89 nutrients a period in the game and 980.85
   in the simulator, a difference the game test of the build left open; the game test of 2026-10-24 found none in any
   inserter or machine. Since a loss trial short only late in its 40 periods runs on, batched swings is selected with
-  or without the switch, and the game test of 2026-10-24 on it finds 400 in every period and no difference.
+  or without the switch, and the game test of 2026-10-24 on it finds 400 in every period and no difference. With the
+  inserters that take eggs out of the loop on windows (later that day) it finds the same, 400 in every one of 74
+  periods with and without the switch, and the game test leaves the wake-ups open: the game counts 134.3 a minute for
+  each inserter that brings nutrients to an egg biochamber, the simulator 36.6 (a wake in the tick after the window
+  opens, where the nutrient biochamber puts out the products it holds), 1,791.4 a minute in all against 1,257.8.
 
 Known gaps of the trials:
 

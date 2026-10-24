@@ -58,7 +58,7 @@ import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../ches
 import type { TurnGroup } from "../turn-groups";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
 import { RunMemo, currentRunMemo } from "./run-memo";
-import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 /**
  * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
@@ -249,11 +249,11 @@ export interface BlueprintGenerationResult {
     /** For observed windows (`observedWindowsClock`, and `config.overrides.derive_clock_windows`) */
     derived_clock_windows?: DerivedClockWindowsReport;
     /**
-     * Present when the exported clock has windows for the inserters that feed the machine the output is taken from
-     * (see `windowsOfInsertersFeedingTheOutputMachine`): their ids, and how many windows they had without. These
-     * windows only reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
+     * Present when the exported clock has windows for the inserters that take out of a loop of machines, which the plan
+     * leaves always enabled (see `loopInserterWindows`): their ids, and how many windows they had without. These windows
+     * only reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
      */
-    output_feeders?: { inserter_ids: string[]; window_count_without_feeder_windows: number };
+    loop_windows?: { inserter_ids: string[]; window_count_without_loop_windows: number };
     /**
      * Each drill that drops into a chest: the windows the clock gives it, from the windows of the inserters that take
      * from the chest (see chestDrillWindows), or why it stays always enabled. Absent when the build has none.
@@ -316,6 +316,12 @@ export interface GenerateClockOptions {
      * groupedHandsClock), or not at all: it needs `verify_as_built`, and throws where no shared windows hold.
      */
     shared_windows?: boolean;
+    /**
+     * False leaves the inserters that take out of a loop always enabled, as every clock did before they were given
+     * windows where the clock holds with them (see `trialWithLoopWindows`): the clock is made so again where the one with
+     * them does not get back from a loss.
+     */
+    loop_windows?: boolean;
 }
 
 /** What a machine holds when a run starts: see GenerateClockOptions.start_stock */
@@ -1294,7 +1300,7 @@ interface ClockExportExtras {
      */
     histories?: TrialRun;
     clock_only_run?: ClockOnlyRun;
-    output_feeders?: BlueprintGenerationResult["output_feeders"];
+    loop_windows?: BlueprintGenerationResult["loop_windows"];
     search?: SearchReport;
     derived_clock_windows?: DerivedClockWindowsReport;
     /** Item names for the blueprint in place of the plan's: identical windows and items share one combinator */
@@ -1412,7 +1418,7 @@ export function exportClock(
         fuel_hand_room_ticks: extras.fuel_hand_room_ticks ?? Object.fromEntries(clock.fuel_hand_room),
         belt: clock.belt,
         crafting_cycle_plan,
-        output_feeders: extras.output_feeders,
+        loop_windows: extras.loop_windows,
         search: extras.search,
         clock_only_run: extras.clock_only_run,
         fuel_consumption_view,
@@ -1514,7 +1520,12 @@ export function clockOnlyRunOf(run: TrialRun): ClockOnlyRun {
 /**
  * The tail every clock made from a plan goes through: with `verify_as_built`, the clock-only check of the windows
  * (the build driven by them alone, from several start phases and over a long run) and, where it holds, the windows
- * of the inserters feeding the output machine; then the export. The plan's `stability_check` takes the check's verdict.
+ * of the inserters that take out of a loop of machines (unless `loop_windows` is false); then the export. The
+ * plan's `stability_check` takes the check's verdict.
+ *
+ * The windows of the loop are tried wherever the clock-only check holds, whether the planning run held or not: the
+ * planning run of a build with a loop lets the loop run free, and on agricultural science makes 432 of the 400 a period
+ * of every clock, whose verdict follows the clock-only check alone (see `holds` in alternatives.ts).
  */
 export function checkedClock(
     plan: PlanRun,
@@ -1526,9 +1537,9 @@ export function checkedClock(
         verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
     } = {},
 ): BlueprintGenerationResult {
-    const { config, logger, run: { stability_check, total_expected_output, all_output_inserters, duration } } = plan;
+    const { config, logger, run: { stability_check, total_expected_output, duration } } = plan;
     let clock_only_run: ClockOnlyRun | undefined;
-    let output_feeders: BlueprintGenerationResult["output_feeders"];
+    let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
     if (options.verify_as_built ?? false) {
         // the identical check may have run for the slack decision on exactly these windows (see clockOfPlan)
@@ -1540,14 +1551,13 @@ export function checkedClock(
                 extras.verified !== undefined && extras.verified.windows === windows
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);
         let kept_run = as_built_run;
-        if (stability_check.holds && as_built_run.check.holds) {
-            const fed = trialWithOutputFeeders(config, windows, duration.ticks, new Set(all_output_inserters.map(os => os.inserter.source.entity_id.id)),
-                as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail);
-            if (fed !== null) {
-                kept_run = fed;
-                windows = fed.windows;
-                output_feeders = fed.output_feeders;
-                item_names = fed.item_names;
+        if (as_built_run.check.holds && options.loop_windows !== false) {
+            const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail);
+            if (looped !== null) {
+                kept_run = looped;
+                windows = looped.windows;
+                loop_windows = looped.loop_windows;
+                item_names = looped.item_names;
             }
         }
         stability_check.as_built = kept_run.check;
@@ -1555,7 +1565,7 @@ export function checkedClock(
         stability_check.holds = stability_check.holds && stability_check.as_built.holds;
         logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
     }
-    return exportClock(plan, clock, windows, options, { clock_only_run, output_feeders, item_names, search: extras.search, left_open: extras.left_open });
+    return exportClock(plan, clock, windows, options, { clock_only_run, loop_windows, item_names, search: extras.search, left_open: extras.left_open });
 }
 
 /** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */
