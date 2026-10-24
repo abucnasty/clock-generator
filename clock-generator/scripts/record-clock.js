@@ -40,6 +40,7 @@ const BUILDS = {
     "utility-science": { scaffold: "science/utility-science/utility-science-scaffold.txt", config: "UTILITY_SCIENCE", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
     "utility-science-belted-blue-and-lds": { scaffold: "science/utility-science/utility-science-belted-combined-blue-and-lds-scaffold.txt", config: "UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
     "accumulator": { scaffold: "intermediates/accumulator/accumulator-640-scaffold.txt", config: "ACCUMULATOR_640", seed: [], warmup_ticks: 3600, settle_ticks: 7200 },
+    "productivity-chain": { scaffold: "real/owner/productivity-chain/productivity-chain-scaffold.txt", config: "REAL_OWNER_PRODUCTIVITY_CHAIN", seed: [], warmup_ticks: 3600, settle_ticks: 4800 },
     "iron-bacteria": { scaffold: "gleba/iron-bacteria-cultivation/iron-bacteria-cultivation-scaffold.txt", config: "IRON_BACTERIA_CULTIVATION", seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }], warmup_ticks: 300, settle_ticks: 3600 },
 };
 // TICKS=<n> in the environment records that many instead (at most 72,000)

@@ -11,8 +11,8 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.22.0] - Unreleased
 
 ### Added
-- A build whose machines take from machines or chests that nothing feeds gets a holding clock where the planned windows did not: one window for each inserter's hands, the machines of a shared source taking turns.
-- A build of machines in a chain, such as Thaeln's utility science cell, gets a clock that holds and recovers, found about ten times faster than before.
+- A build where several machines draw from one source, such as one foundry feeding four assemblers, now gets a clock that holds where the planned windows did not: each inserter gets one window long enough for all its hands, the machines a source cannot feed at once take turns in as few groups as its stock and output allow, and each output inserter swings once at the start of its group's turn.
+- A direct insertion build now gets a clock that holds and recovers: each inserter moves whole hands every cycle (a machine's input limit takes off any surplus), the inserters open in order from the output back to the raw inputs, and the clock is kept only if it still holds with its windows moved a tick. The slow search the generator used to fall back to is no longer needed.
 - The result says whether the drops of the copies onto a shared belt fit between each other or land on each other (give how far apart the copies stand), and a note says when the lanes of a belt are exactly full.
 
 ### Changed
@@ -21,6 +21,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Fixed
 - The Diagram of a belt with the same item on both lanes no longer logs a duplicate-key error.
+- The Swing Plan of a build whose export belt carries the same item on both lanes no longer logs a duplicate-key error.
 - The clock timeline's header shows the rounded period of a rounded clock.
 
 ## [0.21.1] - 2026-10-23

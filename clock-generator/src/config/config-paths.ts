@@ -73,6 +73,8 @@ export const ConfigPaths = {
     REAL_OWNER_CAR: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'car', 'car.json'),
     /** The grenade build, 240 a second over 7 copies: four assemblers, a foundry and four drills a copy, the grenades on a belt of two full lanes */
     REAL_OWNER_GRENADE: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'grenade', 'grenade.json'),
+    /** A productivity module build, 80 a second over 6 copies: a chain of nine machines (plastic, cables, circuits, advanced circuits and the modules) with chests between them, a coal belt and an output belt */
+    REAL_OWNER_PRODUCTIVITY_CHAIN: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'productivity-chain', 'productivity-chain.json'),
     /** The steel build, 26 a second: one cargo wagon as a hub between a mining drill and two furnaces */
     STEEL_CARGO_WAGON: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'steel-wagon', 'steel-wagon.json'),
 } as const;
