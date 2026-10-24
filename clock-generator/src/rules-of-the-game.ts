@@ -149,12 +149,15 @@ export { MiningProgress } from "./control-logic/drill/modes/mining-progress";
 /**
  * 18. A machine that places its results itself (the recycler, by its prototype's `vector_to_place_result`; docs/simulator.md
  * "A machine that places its results itself"): its results go into its output whatever it holds, any number of stacks, and
- * it starts no craft while a stack of one of them waits there; with a result target (the container at its result spot)
- * it first puts what waits into that container each tick, as far as it has room. A result that comes by chance is made
+ * while a stack of any one of them waits there it starts no craft and takes no ingredients; with a result target (the
+ * container at its result spot) it first puts what waits into that container each tick, as far as it has room. At its
+ * output a bulk inserter waits for a full hand, and any other swings what it holds. A result that comes by chance is made
  * at its expected amount, the fraction carried to the next craft (`expectedAmount`: the chance times the amount and its
  * extra count fraction). Cases: `crafting/places-results.test.ts`. Recorded in the game (2.1.21, a lab on the ore voider
  * benchmark's saves): 4 crafts a tick at crafting speed 7.5, iron ore back at 0.2511 a craft over 47,992, gears at 0.4978,
  * returns a tick a binomial of its crafts, and 50 ore waiting in its output when its car was full, its 12 result slots
- * not filled. The order within a tick (placing before crafting) is not recorded.
+ * not filled; on scrap (a lab beside it), each result in a slot of its own, a full stack of the rarest result stopping it
+ * as one of the commonest did, a stack inserter waiting with a part hand and a long-handed inserter swinging each low
+ * density structure on its own. The order within a tick (placing before crafting) is not recorded.
  */
 export { MachineWorkingMode } from "./control-logic/machine/modes/machine-working-mode";

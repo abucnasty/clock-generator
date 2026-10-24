@@ -110,6 +110,20 @@ function recyclerWithTakers(recipe: string, ingredient: string, takers: { protot
     }) as Config;
 }
 
+/** The hands an inserter drops in a run, by their size */
+function handsDropped(context: SimulationContext, inserter_id: string, ticks: number): Map<number, number> {
+    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const state = context.state_registry.getAllStates().filter(EntityState.isInserter).find(it => it.entity_id.id === inserter_id)!;
+    const hands = new Map<number, number>();
+    for (let i = 0; i < ticks; i++) {
+        const before = state.items_dropped;
+        tick.executeForTick();
+        const dropped = state.items_dropped - before;
+        if (dropped > 0) hands.set(dropped, (hands.get(dropped) ?? 0) + 1);
+    }
+    return hands;
+}
+
 describe('a machine that places its results itself, with no result target', () => {
     it('stops, and takes no ingredients, while a stack of any one of its results waits in its output', async () => {
         // recycling electronic circuits gives a copper cable at 3/4 and an iron plate at 1/4: nothing takes the plates
@@ -133,4 +147,15 @@ describe('a machine that places its results itself, with no result target', () =
         expect(machine.craftCount).toBeGreaterThan(crafts);
     });
 
+    it('is emptied a part hand at a time by an inserter that is no bulk one, and a full hand at a time by a bulk one', async () => {
+        // iron ore back at 1/4 of 16 crafts a second: one every 15 ticks, so a hand of 4 or 16 never waits full
+        const long_handed = handsDropped(SimulationContext.fromConfig(recyclerWithTakers('iron-ore-recycling', ORE,
+            [{ prototype: 'long-handed-inserter', item: ORE }])), 'inserter:2', 60 * 60);
+        expect(Math.max(...long_handed.keys())).toBeLessThan(4);
+        // 240 ore back in the minute, every one of them carried
+        expect([...long_handed].reduce((sum, [size, count]) => sum + size * count, 0)).toBeGreaterThan(230);
+        const stack = handsDropped(SimulationContext.fromConfig(recyclerWithTakers('iron-ore-recycling', ORE,
+            [{ prototype: 'stack-inserter', item: ORE }])), 'inserter:2', 60 * 60);
+        expect([...stack.keys()]).toEqual([16]);
+    });
 });

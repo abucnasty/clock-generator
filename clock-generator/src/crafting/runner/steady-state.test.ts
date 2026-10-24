@@ -28,6 +28,8 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     ChestPickupLogic: ["current_tick"],
     IdleModeTransitionEvaluator: ["saw_sink_blocked", "window_opens"],
     InserterSwingModeTransitionEvaluator: ["entered_tick", "from"],
+    // whether it swings a part hand at its source (a machine that places its results itself), the same in every tick
+    PickupModeTransitionEvaluator: ["swings_part_hands"],
 };
 
 function plainFields(value: object, skip: string[] = []): string[] {
