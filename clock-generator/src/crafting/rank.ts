@@ -135,7 +135,10 @@ export function searchesAreNeeded<T>(
     runs: (ClockAlternativeRun<T> | null)[],
     rankingOf: (alternative: T) => ClockRanking,
 ): boolean {
-    return !runs.some(run => run !== null && run.alternatives.some(alternative => selectableAsStable(rankingOf(alternative))));
+    // a run's clock made with shared windows is on offer as much as the run's own
+    const offersStable = (run: ClockAlternativeRun<T> | null): boolean => run !== null
+        && (run.alternatives.some(alternative => selectableAsStable(rankingOf(alternative))) || (run.also ?? []).some(offersStable));
+    return !runs.some(offersStable);
 }
 
 /**

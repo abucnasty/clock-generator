@@ -245,3 +245,40 @@ describe("a clock rounded down to whole ticks", () => {
             .toEqual({ "inserter:1": [{ start: 0, end: 30 }, { start: 2870, end: 2887 }] });
     });
 });
+
+describe("searchesAreNeeded", () => {
+    const needed = (clocks: (Ranked | null)[]): boolean =>
+        searchesAreNeeded(clocks.map(it => it && { signature: it.id, alternatives: [it] }), it => it);
+
+    it("is not, once a clock made without a search meets the target rate for the belt asked", () => {
+        expect(needed([clock("unstable", { meets_target_rate: false }), null, clock("stable", { wake_ups_per_minute: 900 })])).toBe(false);
+    });
+
+    it("is, when no clock made without a search meets the target rate", () => {
+        expect(needed([clock("unstable", { meets_target_rate: false }), clock("no-recovery", { meets_target_rate: false })])).toBe(true);
+    });
+
+    // military science: its one stable clock leaves belt pickup slack out, on a config that does not say the input belts are backed up
+    it("is, when the only clock that meets the target rate is not made for the belt asked", () => {
+        expect(needed([clock("slack", { meets_target_rate: false }), clock("no-slack", { matches_belt_choice: false })])).toBe(true);
+    });
+
+    it("is, when every clock made without a search failed", () => {
+        expect(needed([null, null])).toBe(true);
+    });
+
+    // the subtick clock of a period of part ticks and the same clock rounded come from one run
+    it("looks at every clock of a run", () => {
+        const subtick = clock("subtick");
+        const rounded = clock("rounded", { meets_target_rate: false, rate_off_target: 0.2 });
+        expect(searchesAreNeeded([{ signature: "one", alternatives: [rounded, subtick] }], it => it)).toBe(false);
+    });
+});
+
+describe("searchesAreNeeded", () => {
+    it("counts the clock made with shared windows as on offer: no search is needed where it can be selected as stable", () => {
+        const separate = clock("separate", { meets_target_rate: false });
+        expect(searchesAreNeeded([{ signature: "one", alternatives: [separate] }], it => it)).toBe(true);
+        expect(searchesAreNeeded([{ signature: "one", alternatives: [separate], also: [{ signature: "one-shared", alternatives: [clock("shared")] }] }], it => it)).toBe(false);
+    });
+});
