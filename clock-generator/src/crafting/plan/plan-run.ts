@@ -22,7 +22,7 @@ import { MachineStateMachine } from "../../control-logic/machine/machine-state-m
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
-import { carriedItemsOf } from "../result-windows";
+import { carriedItemsOf, RESULT_WINDOWS_CHECK_PERIODS, ResultWindowsPlan } from "../result-windows";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
@@ -275,6 +275,12 @@ export interface BlueprintGenerationResult {
      * Absent for any other build.
      */
     random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
+    /**
+     * Where results come too rarely for whole hands in a period: the windows of their takers, worked out by arithmetic,
+     * one plan a machine (result-windows.ts), and whether the arithmetic holds (every container holds its results at the
+     * worst moment of the period in all but 1 in 740 periods). Absent for any other clock.
+     */
+    result_windows?: { plans: ResultWindowsPlan[]; holds: boolean };
 }
 
 /**
@@ -1584,7 +1590,11 @@ export function checkedClock(
         verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
     } = {},
 ): BlueprintGenerationResult {
-    const { config, logger, run: { stability_check, total_expected_output, duration } } = plan;
+    const { config, logger, run: { stability_check, total_expected_output, duration, crafting_cycle_plan } } = plan;
+    // windows that carry part hands from one period to the next are run for several periods, to see every result taken
+    // out as it comes (result-windows.ts)
+    const long_run_ticks = crafting_cycle_plan.result_windows === undefined ? FREE_RUNNING_CHECK_TICKS
+        : Math.max(FREE_RUNNING_CHECK_TICKS, RESULT_WINDOWS_CHECK_PERIODS * duration.ticks);
     let clock_only_run: ClockOnlyRun | undefined;
     let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
@@ -1593,7 +1603,7 @@ export function checkedClock(
         const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
             : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
                 (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`),
-                FREE_RUNNING_CHECK_TICKS,
+                long_run_ticks,
                 // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
                 extras.verified !== undefined && extras.verified.windows === windows
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);

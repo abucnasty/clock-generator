@@ -2,6 +2,7 @@ import { Config } from "../config";
 import { defaultLogger } from "../common/logger";
 import { groupedHandsClock } from "./candidates/grouped-hands";
 import { observedWindowsClock } from "./candidates/observed-windows";
+import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
 import { BlueprintGenerationResult, GenerateClockOptions, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, planRun } from "./plan/plan-run";
 
 /**
@@ -23,6 +24,10 @@ export function generateClockForConfig(
         return observedWindowsClock(config, options, "prefer_planned");
     }
     const plan = planRun(config, options);
+    if (plan.run.crafting_cycle_plan.result_windows !== undefined) {
+        // results that come too rarely for whole hands in a period: their windows are the arithmetic's (result-windows.ts)
+        return resultWindowsClockOfPlan(plan, options);
+    }
     if (options.shared_windows === true) {
         // only the grouped hands' windows with the takers that open together sharing one; where there are none the clock is the
         // plan's, not checked and not holding, so that the output swings back off to the next count
