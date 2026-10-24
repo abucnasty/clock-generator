@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Config } from "./index";
 import { ConfigPaths } from "./config-paths";
 import { loadConfigFromFile } from "./loader";
-import { copyGapNeededNote, describeDropRoom, describeDropSpacing, dropLines, dropSpacing } from "./drop-spacing";
+import { copyGapNeededNote, describeDropRoom, describeDropSpacing, DROP_SPACING_UNCHECKED, dropLines, dropSpacing, uncheckedDrops } from "./drop-spacing";
 import { LaneTraffic } from "../state/lane-traffic";
 
 /**
@@ -36,7 +36,7 @@ describe("the drops of the grenade build onto its belt", () => {
             + "so the hands of all the copies have to land in the gaps the others leave.");
         expect(text.explanation).toBe("This holds for this spacing and these start ticks. Moving one inserter by a tile, or starting one group of inserters at another "
             + "tick, puts hands on top of each other."
-            + " The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks). The belt is taken to run straight past these inserters.");
+            + " The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks). The belt is taken to run straight past these inserters. This assumes every copy drops onto the belt the way this one does.");
     });
 
     it("land on each other when the first inserters of the lines start together and the second ones 56 ticks later", async () => {
@@ -51,7 +51,7 @@ describe("the drops of the grenade build onto its belt", () => {
             + "The copies stand 12 tiles apart and the belt moves 14 tiles in a period.");
         expect(text.explanation).toBe("The simulator does not count this wait: it drops each inserter's hand on a belt of its own, so the rate and stability shown for this "
             + "clock were worked out without it. The hands would fit with inserter 2 starting at tick 54 or 70, or at the same tick "
-            + "as inserter 1. The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks). The belt is taken to run straight past these inserters.");
+            + "as inserter 1. The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks). The belt is taken to run straight past these inserters. This assumes every copy drops onto the belt the way this one does.");
     });
 
     it("land on each other when the first inserter of every copy stands a tile off its place", async () => {
@@ -110,6 +110,36 @@ describe("the drops of the grenade build onto its belt", () => {
         expect((await dropSpacing(await grenade(), BY_LINE, 112))!.room!.crowded).toBeNull();
         // the same at a period of 100 ticks, 12.5 tiles
         expect(dropSpacing(await grenade(), BY_LINE, 100)!.room!.crowded).toEqual({ hands: 14, belt_tiles: 12.5, hand_tiles: 1 });
+    });
+
+    it("leave out the drops marked as side-loaded, count the hands of what is checked, and say the rest is not checked", async () => {
+        const mark = (...ids: number[]) => (config: Config) => config.inserters.forEach((inserter, index) => {
+            if (ids.includes(inserter.id ?? index + 1) && inserter.sink.type === "belt") inserter.sink.drop_capture = { status: "side-loaded", tiles: 3 };
+        });
+        // inserters 1 and 7 drop straight, 2 side-loads, 8 side-loads: the lines are what is left
+        const some = dropSpacing(await grenade(mark(2, 8)), starts({ 1: 0, 7: 0 }), 112)!;
+        expect(some.lines.map(line => [line.inserter_ids, line.hands, line.fits])).toEqual([[[1], 7, true], [[7], 7, true]]);
+        expect(some.unchecked).toEqual([2, 8]);
+        expect(describeDropSpacing(some).explanation).toContain(`${DROP_SPACING_UNCHECKED} `.trim());
+        expect(DROP_SPACING_UNCHECKED).toBe("Drops that are side-loaded or go through a splitter are not checked here.");
+        // a third kind: a drop onto another belt that nothing marks (a belt the stream may go on from) is a line of its own on that belt, and counted there
+        const mixed = await grenade(it => {
+            mark(2)(it);
+            it.belts.push({ ...structuredClone(it.belts[0]), id: 2 });
+            it.inserters.push({ ...structuredClone(it.inserters[0]), id: 9, position: { x: it.inserters[0].position!.x, y: it.inserters[0].position!.y - 3 }, sink: { type: "belt", id: 2, belt_direction: 12 } });
+        });
+        const three = dropSpacing(mixed, starts({ 1: 0, 7: 0, 8: 0, 9: 0 }), 112)!;
+        expect(three.lines.map(line => [line.belt_id, line.inserter_ids, line.hands])).toEqual([[1, [1], 7], [1, [7, 8], 14], [2, [9], 7]]);
+        expect(three.unchecked).toEqual([2]);
+        // none marked: nothing to say about what is left out
+        const none = dropSpacing(await grenade(), BY_LINE, 112)!;
+        expect(none.unchecked).toEqual([]);
+        expect(describeDropSpacing(none).explanation).not.toContain(DROP_SPACING_UNCHECKED);
+        // every output inserter marked: no line is checked
+        const all = await grenade(mark(1, 2, 7, 8));
+        expect(dropLines(all)).toEqual([]);
+        expect(dropSpacing(all, BY_LINE, 112)).toBeNull();
+        expect(uncheckedDrops(all)).toEqual([1, 2, 7, 8]);
     });
 
     it("agree with the rule of the tiles for every spacing 1 to 28 and distance 1 to 13 between a copy's inserters, 7 copies on 14 tiles", async () => {

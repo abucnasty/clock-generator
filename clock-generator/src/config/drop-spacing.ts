@@ -25,6 +25,12 @@ import type { Config } from "./schema";
 /** The text added to the insight: the check follows no bend of the belt */
 export const DROP_SPACING_STRAIGHT_BELT = "The belt is taken to run straight past these inserters.";
 
+/** The text said where drops are left out of the check: the ones marked as side-loaded (Sidecar 0.13.0) */
+export const DROP_SPACING_UNCHECKED = "Drops that are side-loaded or go through a splitter are not checked here.";
+
+/** The text said wherever copies share a belt: the config describes one copy and the check repeats it */
+export const DROP_SPACING_COPIES_ALIKE = "This assumes every copy drops onto the belt the way this one does.";
+
 const EPSILON = 1e-9;
 const QUARTER_TILE = 0.25;
 /** The most periods a replay runs, and the periods it runs after the lane is full of the line's hands */
@@ -136,6 +142,12 @@ export function dropLines(config: Config): DropLine[] {
     return lines.sort((a, b) => a.inserters[0].id - b.inserters[0].id);
 }
 
+/** The output inserters whose drop onto a belt is marked as side-loaded: the merge decides where those land, and the check does not cover them */
+export function uncheckedDrops(config: Config): number[] {
+    return config.inserters.flatMap((inserter, index) =>
+        inserter.sink.type === "belt" && inserter.sink.drop_capture !== undefined ? [inserter.id ?? index + 1] : []);
+}
+
 /** A hand of a line: where it starts, when, and how much of the lane it takes */
 interface Hand {
     inserter_id: number;
@@ -241,6 +253,8 @@ export interface DropSpacing {
     hand: number;
     lane_stack: number;
     lines: DropSpacingLine[];
+    /** Output inserters whose drops are marked as side-loaded and so left out of the lines */
+    unchecked: number[];
     /** The spacings of the copies, and the offsets between a copy's inserters, at which the lines fit; none when the gap is not given or the lines are not all shared */
     room?: DropRoom;
     /** For the first line that does not fit: the inserter to start at another tick, the ticks that fit nearest to its own, and the inserter whose tick it could share */
@@ -295,6 +309,7 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
         belt_tiles: first.line.tiles_per_tick * period,
         hand: first.line.hand, lane_stack: first.line.lane_stack,
         lines: results.map(it => it.result),
+        unchecked: uncheckedDrops(config),
     };
     if (shared) spacing.room = dropRoom(config, results.map(it => it.line), period) ?? undefined;
     if (!results.every(it => it.result.fits)) {
@@ -571,12 +586,13 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
     const tile = hand_tiles === 1 ? `A tile of a belt lane holds one hand of ${spacing.hand} at stack size ${spacing.lane_stack}.`
         : `A tile of a belt lane holds ${4 * spacing.lane_stack} items at stack size ${spacing.lane_stack}, and a hand of ${spacing.hand} takes ${tiles(hand_tiles)} of a tile.`;
     const why = `${tile} A hand dropped where items already lie waits until they have moved on, so the hands of all the copies have to land in the gaps the others leave.`;
+    const uncheckedText = `${spacing.gap !== null ? ` ${DROP_SPACING_COPIES_ALIKE}` : ""}${spacing.unchecked.length > 0 ? ` ${DROP_SPACING_UNCHECKED}` : ""}`;
     const roomText = spacing.room === undefined ? "" : ` ${describeDropRoom(spacing.room)}`;
     if (fits) {
         return {
             fits, title: `Drops onto ${belt} fit between each other`, what: `${sentences.join(" ")} ${closing}`, why,
             explanation: "This holds for this spacing and these start ticks. Moving one inserter by a tile, or starting one group of inserters at another tick, "
-                + `puts hands on top of each other.${roomText} ${DROP_SPACING_STRAIGHT_BELT}`,
+                + `puts hands on top of each other.${roomText} ${DROP_SPACING_STRAIGHT_BELT}${uncheckedText}`,
         };
     }
     const parts: string[] = [];
@@ -590,7 +606,7 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
     return {
         fits, title: `Drops onto ${belt} land on each other`, what: `${sentences.join(" ")} ${closing}`, why,
         explanation: "The simulator does not count this wait: it drops each inserter's hand on a belt of its own, so the rate and stability shown for this clock "
-            + `were worked out without it.${fit}${roomText} ${DROP_SPACING_STRAIGHT_BELT}`,
+            + `were worked out without it.${fit}${roomText} ${DROP_SPACING_STRAIGHT_BELT}${uncheckedText}`,
     };
 }
 

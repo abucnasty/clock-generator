@@ -1,5 +1,5 @@
 import { Config } from "../config";
-import { crowdedText, dropLines, dropRoom, dropSpacing, type DropRoom } from "../config/drop-spacing";
+import { crowdedText, DROP_SPACING_COPIES_ALIKE, DROP_SPACING_UNCHECKED, dropLines, dropRoom, dropSpacing, uncheckedDrops, type DropRoom } from "../config/drop-spacing";
 import { Entity, handSizeFor } from "../entities";
 import { computeMachineTargetRates } from "./machine-target-rates";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -76,12 +76,14 @@ export function dropRoomNote(config: Config): string | null {
     } catch {
         return null;
     }
-    if (lines.length === 0) return null;
+    const left_out = uncheckedDrops(config).length > 0 ? ` ${DROP_SPACING_UNCHECKED}` : "";
+    if (lines.length === 0) return left_out === "" ? null : DROP_SPACING_UNCHECKED;
     const period = estimatedPeriod(config);
-    if (period === null) return DROP_ROOM_NOT_ESTIMATED;
+    if (period === null) return `${DROP_ROOM_NOT_ESTIMATED}${left_out}`;
     const room = dropRoom(config, lines, period);
     if (room === null) return null;
-    if (room.crowded !== null) return `At about ${period} ticks a period, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}`;
+    const unchecked = ` ${DROP_SPACING_COPIES_ALIKE}${left_out}`;
+    if (room.crowded !== null) return `At about ${period} ticks a period, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}${unchecked}`;
     const together = new Map(lines.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));
     const spacing = dropSpacing(config, together, period);
     if (spacing === null) return null;
@@ -91,9 +93,9 @@ export function dropRoomNote(config: Config): string | null {
     const more = alsoFits(room);
     const plus = room.loop !== null ? `, and at any of these plus ${room.loop}` : "";
     if (spacing.lines.every(line => line.fits)) {
-        return `${lead} fit between each other on ${belt}, if the inserters of a copy start together.${more.length > 0 ? ` They would also fit with ${more.join(", or ")}${plus}.` : ""}`;
+        return `${lead} fit between each other on ${belt}, if the inserters of a copy start together.${more.length > 0 ? ` They would also fit with ${more.join(", or ")}${plus}.` : ""}${unchecked}`;
     }
     return `${lead} land on each other on ${belt}, if the inserters of a copy start together, and some of them wait for room. `
         + (more.length > 0 ? `They would fit with ${more.join(", or ")}${plus}.`
-            : `No spacing of the copies from ${room.low} to ${room.high} tiles fits${room.loop !== null ? `, nor any of these plus ${room.loop}` : ""}.`);
+            : `No spacing of the copies from ${room.low} to ${room.high} tiles fits${room.loop !== null ? `, nor any of these plus ${room.loop}` : ""}.`) + unchecked;
 }
