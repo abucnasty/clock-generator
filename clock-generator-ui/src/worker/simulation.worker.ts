@@ -118,6 +118,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         label: alternative.label,
         description: alternative.description,
         inserterWindowCount: alternative.inserter_window_count,
+        deciders: alternative.deciders,
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
         assumptions: {
@@ -161,7 +162,9 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         inserterClocks: result.unplanned_inserter_clocks ?? {},
         backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
     }));
-    return { signature: run.signature, alternatives };
+    // the same clock made with shared windows, listed after it
+    const also = run.also?.flatMap(it => toRunView(it, config) ?? []);
+    return { signature: run.signature, alternatives, ...(also?.length ? { also } : {}) };
 }
 
 /** Runs one plan or task with streamed logs and progress; errors are posted instead of thrown */

@@ -9,6 +9,8 @@ import { BlueprintGenerationResult, GenerateClockOptions, SwingAttemptResult, Sw
  * (`clockOfPlan`), and the clock-only check and export (`checkedClock`). The config override `derive_clock_windows`
  * makes the observed windows candidate instead, keeping the planned windows where they pass.
  *
+ * With `options.shared_windows` it makes only the clock of the grouped hands with shared windows; where there is none the result does not hold.
+ *
  * @param config The configuration for the simulation
  * @param options Optional generation options (debug, logger, the clock-only check, belt pickup slack, …)
  * @returns The generated blueprint and related metadata
@@ -21,6 +23,16 @@ export function generateClockForConfig(
         return observedWindowsClock(config, options, "prefer_planned");
     }
     const plan = planRun(config, options);
+    if (options.shared_windows === true) {
+        // only the grouped hands' windows with the takers that open together sharing one; where there are none the clock is the
+        // plan's, not checked and not holding, so that the output swings back off to the next count
+        if (options.verify_as_built !== true) throw new Error("shared windows are made for a clock that is checked as built");
+        const shared = groupedHandsClock(plan, options);
+        if (shared !== null && shared.stability_check.holds) return shared;
+        const unmade = clockOfPlan(plan, { ...options, belt_pickup_slack: "always" });
+        const unchecked = checkedClock(plan, unmade, unmade.windows, { ...options, verify_as_built: false, modulo_blueprint: false, fuel_consumption_view: false });
+        return { ...unchecked, stability_check: { ...unchecked.stability_check, holds: false } };
+    }
     const clock = clockOfPlan(plan, options);
     const planned = checkedClock(plan, clock, clock.windows, options);
     // where the planned windows do not hold, windows made from the hands and the sources take their place, if they do

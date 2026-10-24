@@ -1,5 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/real/owner/grenade/grenade.json?raw';
+import militarySample from '../../../clock-generator/resources/config-samples/science/military-science/military-science-1-inserter.json?raw';
 import { afterEach, expect, it, vi } from 'vitest';
 import { LATEST_SIDECAR_VERSION, type Config } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
@@ -341,4 +342,19 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
     const without = await live(undefined);
     expect(without.dropRoom).toBeNull();
     expect(without.copyGapNeeded).not.toBeNull();
+});
+
+it('passes on the clock made with shared windows after the clock it shares, with each clock\'s decider count', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    await port.onmessage!({ data: { type: 'initialize', factorioData } });
+    await port.onmessage!({ data: { type: 'plan', runId: 50, config: JSON.parse(militarySample) as Config, debugSteps: { prepare: false, warm_up: false, simulate: false }, streamLogs: false } });
+    const completed = posted.find(response => response.type === 'primary-completed');
+    expect(completed?.type).toBe('primary-completed');
+    const primary = completed?.type === 'primary-completed' ? completed.primary : null;
+    expect(primary?.alternatives.map(it => [it.id, it.deciders])).toEqual([['planned-belt-slack', 5]]);
+    expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['planned-belt-slack-shared', 4, 'stable']]);
 });

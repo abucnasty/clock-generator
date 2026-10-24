@@ -135,7 +135,10 @@ export function searchesAreNeeded<T>(
     runs: (ClockAlternativeRun<T> | null)[],
     rankingOf: (alternative: T) => ClockRanking,
 ): boolean {
-    return !runs.some(run => run !== null && run.alternatives.some(alternative => selectableAsStable(rankingOf(alternative))));
+    // a run's clock made with shared windows is on offer as much as the run's own
+    const offersStable = (run: ClockAlternativeRun<T> | null): boolean => run !== null
+        && (run.alternatives.some(alternative => selectableAsStable(rankingOf(alternative))) || (run.also ?? []).some(offersStable));
+    return !runs.some(offersStable);
 }
 
 /**
@@ -173,12 +176,15 @@ export function combineClockAlternativeRuns<T>(
 ): { alternatives: T[]; selected_index: number } {
     const seen = new Set<string>();
     const alternatives: T[] = [];
-    for (const run of runs) {
+    const list = (run: ClockAlternativeRun<T> | null): void => {
         if (run && !seen.has(run.signature)) {
             seen.add(run.signature);
             alternatives.push(...run.alternatives);
+            // the same clock with shared windows follows it
+            run.also?.forEach(list);
         }
-    }
+    };
+    runs.forEach(list);
     const rank = (alternative: T): number[] => {
         const ranking = rankingOf(alternative);
         return [

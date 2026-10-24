@@ -259,7 +259,8 @@ function printInventoryTransfers(
 }
 
 /**
- * if two entities have the exact same transfer ranges and items, we can reduce them to one entity
+ * if two entities have the exact same transfer ranges and items, we can reduce them to one entity. The planned
+ * entities of a clock all carry the same name here (see exportClock): they share a combinator whatever they carry.
  */
 function deduplicateEntityTransfers(
     transfers: ReadonlyMap<EntityId, InventoryTransfer[]>,

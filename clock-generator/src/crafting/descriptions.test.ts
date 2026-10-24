@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fraction } from "../data-types/fraction";
+import Fraction, { fraction } from "../data-types/fraction";
 import { OpenRange } from "../data-types";
 import { SignalId } from "../blueprints/components";
 import { EntityId, ReadableEntityRegistry } from "../entities";
@@ -40,8 +40,9 @@ describe("the description of an enabling combinator", () => {
     } as unknown as ReadableEntityRegistry;
     const values = (ranges: OpenRange[]) => ranges.map(range => OpenRange.from(range.start_inclusive + 1, range.end_inclusive + 1));
     const two_windows = deciderWindows([OpenRange.from(26, 38), OpenRange.from(71, 83)], values);
-    const planned = (ids: EntityId[], swings = fraction(2), windows = two_windows) =>
-        plannedDescriptionLines(ids, registry, ["jelly"], swings, windows, "144");
+    /** `swings` is the count of every entity, or one count for each */
+    const planned = (ids: EntityId[], swings: Fraction | Fraction[] = fraction(2), windows = two_windows) =>
+        plannedDescriptionLines(ids, registry, ["jelly"], ids.map((entity_id, index) => ({ entity_id, swings: Array.isArray(swings) ? swings[index] : swings })), windows, "144");
 
     it("names both ends by their icons, the machine it fills with its recipe, and lists a few windows", () => {
         expect(planned([EntityId.forInserter(4)])).toEqual([
@@ -66,6 +67,19 @@ describe("the description of an enabling combinator", () => {
             "2 inserters: [entity=turbo-transport-belt] → machines 1, 3 [recipe=rocket-fuel-from-jelly] [item=jelly] (1, 5)",
             "2 swings each in 2 windows per 144-tick period: open 27–39, 72–84",
         ]);
+    });
+
+    it("gives the range and each count by who moves it when the inserters of one combinator move different numbers", () => {
+        const ids = [EntityId.forInserter(1), EntityId.forInserter(5), EntityId.forInserter(3)];
+        expect(planned(ids, [fraction(2), fraction(3), fraction(2)])[1])
+            .toBe("2 to 3 swings (inserters 1, 3: 2; inserter 5: 3) in 2 windows per 144-tick period: open 27–39, 72–84");
+        expect(planned([EntityId.forInserter(4), EntityId.forInserter(5)], [fraction(5, 4), fraction(2)])[1])
+            .toBe("1.25 to 2 swings (inserter 4: 1.25; inserter 5: 2) in 2 windows per 144-tick period: open 27–39, 72–84");
+    });
+
+    it("gives the range and each count of the drills of one combinator that mine different amounts", () => {
+        expect(planned([EntityId.forDrill(1), EntityId.forDrill(2), EntityId.forDrill(3)], [fraction(15), fraction(15), fraction(19)])[1])
+            .toBe("Mines 240 to 304 (drills 1, 2: 240; drill 3: 304) in 2 windows per 144-tick period: open 27–39, 72–84");
     });
 
     it("gives each route a line after the counts when the inserters of one combinator work with different machines", () => {

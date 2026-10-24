@@ -64,6 +64,12 @@ function createDeciderCombinatorForTransfers(
     }
 
     const entity_ids = [entity_id, ...merged_entity_ids];
+    // the entities that share a decider carry the items of all of them
+    for (const merged_id of merged_entity_ids) {
+        const merged = entity_registry.getEntityById(merged_id);
+        if (merged !== null && Entity.isInserter(merged)) merged.filtered_items.forEach(item_name => items.add(item_name));
+        else if (merged !== null && Entity.isDrill(merged)) items.add(merged.item.name);
+    }
     const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));
 
     if (swing_counts) {
@@ -71,7 +77,10 @@ function createDeciderCombinatorForTransfers(
             entity_ids,
             entity_registry,
             items,
-            swing_counts.total_transfer_count.multiply(cycles_in_period),
+            entity_ids.flatMap(id => {
+                const counts = cycle.entity_transfer_map.get(id);
+                return counts === undefined ? [] : [{ entity_id: id, swings: counts.total_transfer_count.multiply(cycles_in_period) }];
+            }),
             deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, period.subtick_scale),
             period.ticks,
         );
