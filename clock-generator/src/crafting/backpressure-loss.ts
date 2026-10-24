@@ -141,9 +141,9 @@ const RECOVERY_HOLD_PERIODS = 8;
  * A trial that is short late in its window runs on (see runsOn): until this many periods at the expected output follow
  * its last short one, or its state repeats, and is judged on them. More than any stretch at the expected output that a
  * short period followed in the samples' trials (35 periods, agricultural science's batched swings after a loss of
- * nutrients, run on to 200 periods); as many as the window has.
+ * nutrients, run on to 200 periods); as many as the window has (MAX_RECOVERY_PERIODS), a choice of its own.
  */
-export const RUN_ON_EXACT_PERIODS = MAX_RECOVERY_PERIODS;
+export const RUN_ON_EXACT_PERIODS = 40;
 /** A trial that runs on ends at the latest this many periods after the item is back */
 export const MAX_RUN_ON_PERIODS = 200;
 /**
