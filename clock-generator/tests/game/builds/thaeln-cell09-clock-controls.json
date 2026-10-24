@@ -4,8 +4,8 @@
   "generated-one-copy": {
    "recorded": {
     "pr": 0,
-    "commit": "7432f043",
-    "frozen_head": "7432f043",
+    "commit": "e94996b2",
+    "frozen_head": "e94996b2",
     "note": "recorded before the PR was opened; pr is set when it is",
     "clock_sha256": "cf0e6cb014231f0c4aa262a80a859f99f0dbe0ffb8649ecb5a1bb8b39304e008",
     "clock_basis": "capture"
