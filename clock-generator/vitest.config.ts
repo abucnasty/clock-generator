@@ -63,8 +63,8 @@ function engineFromBuild(): Plugin {
  * Two projects: `npm test` runs the unit tests, which take under a minute; `npm run test:generation` the generation
  * tests, which generate the clock alternatives of whole samples and take as long as the slowest of them (a few minutes,
  * most of it one test); `npm run test:all` runs both. The generation tests are the files named `*.generation.test.ts`.
- * Pull requests run the unit tests; pull requests to master and releases run the generation tests too
- * (.github/workflows/test.yml).
+ * Pull requests run the unit tests; pull requests to master (unless they change documentation only) and releases run
+ * the generation tests too, in shards (.github/workflows/test.yml).
  */
 export default defineConfig({
     plugins: [],

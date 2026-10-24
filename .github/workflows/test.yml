@@ -2,8 +2,8 @@ name: Test
 
 # Pull requests run the unit tests, build the UI and generate a clock in it in a browser. Pull requests to master, which
 # are what gets released, run the generation tests as well: they generate the clock alternatives of whole samples and
-# take minutes, most of it one test. "Run workflow" (or `gh workflow run test.yml --ref <branch>`) runs them all on any
-# branch.
+# take minutes, except when the pull request changes documentation only (see the `changes` job). "Run workflow" (or
+# `gh workflow run test.yml --ref <branch>`) runs them all on any branch.
 # release.yml and publish-sidecar.yml call this workflow and do nothing unless it passes; a release runs the generation
 # tests too, publishing the sidecar does not.
 on:
@@ -66,13 +66,76 @@ jobs:
       - name: Unit tests
         run: npm test -- --reporter=default
 
-  generation:
-    name: Generation tests
+  # Whether the generation tests have anything to test: not when a pull request to master changes documentation only.
+  # Decided by the files the pull request changes, never by its branch name. A run asked for the generation tests (by
+  # hand, or a release) runs them whatever it changes. Anything this cannot tell, such as a checkout that is not a merge
+  # commit, runs them.
+  changes:
+    name: Changed files
     # the input rather than the event, since a called run has the event of its caller: a push or a run by hand
     if: inputs.generation || github.base_ref == 'master'
     runs-on: ubuntu-latest
-    # the suite took 1,488 s on an AMD EPYC 7763 runner (4 vCPU) on 2026-10-23, about half that on an EPYC 9V45
-    timeout-minutes: 45
+    timeout-minutes: 5
+    outputs:
+      generation: ${{ steps.files.outputs.generation }}
+    steps:
+      # a pull request is checked out as the merge of its head into master: the first parent of that commit is master,
+      # the second the head, and the two together are what the pull request changes
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Files the pull request changes
+        id: files
+        env:
+          REQUESTED: ${{ inputs.generation }}
+        run: |
+          set -eu
+          if [ "$REQUESTED" = "true" ]; then
+            echo "generation=true" >> "$GITHUB_OUTPUT"
+            echo "The generation tests were asked for: they run." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! git rev-parse --verify --quiet HEAD^2 > /dev/null; then
+            echo "generation=true" >> "$GITHUB_OUTPUT"
+            echo "The checkout is not a merge commit, so what the pull request changes is not known: the generation tests run." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # --no-renames lists both paths of a rename, so that moving code to a Markdown file is a change of code
+          git diff --name-only --no-renames HEAD^1 HEAD > changed.txt
+          echo "The pull request changes $(wc -l < changed.txt) file(s)."
+          code=$(mktemp)
+          # documentation: Markdown anywhere, the docs/ folder of the repository and of the generator
+          while IFS= read -r file; do
+            case "$file" in
+              *.md | docs/* | clock-generator/docs/*) ;;
+              *) echo "$file" >> "$code" ;;
+            esac
+          done < changed.txt
+          if [ -s "$code" ]; then
+            echo "generation=true" >> "$GITHUB_OUTPUT"
+            { echo "The generation tests run: the pull request changes files that are not documentation, such as"; head -n 5 "$code" | sed 's/^/- /'; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "generation=false" >> "$GITHUB_OUTPUT"
+            echo "The generation tests are skipped: the pull request changes documentation only ($(wc -l < changed.txt) file(s))." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # The generation tests, in shards: vitest gives each shard the same share of the files by the hash of their paths, and
+  # the job's wall time is that of the slowest shard. Each shard is a runner of its own (4 vCPUs) and tests with all of
+  # it. The check that is named "Generation tests" is the job after the shards.
+  generation-shards:
+    name: Generation tests (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
+    needs: changes
+    if: needs.changes.outputs.generation == 'true'
+    runs-on: ubuntu-latest
+    # the whole suite took 1,302 s on an Intel Xeon 8573C runner and 1,490 s on an AMD EPYC 7763 on 2026-10-24 (one
+    # runner, 3 workers); a shard has about a quarter of it, and a single file takes up to 6.5 minutes
+    timeout-minutes: 25
+    strategy:
+      # every shard finishes, so that a pull request shows all its failures at once
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     defaults:
       run:
         working-directory: clock-generator
@@ -89,14 +152,14 @@ jobs:
 
       # Vitest starts the files that took longest in the run before; without its results it starts the largest files,
       # and over-hood-clock, a short file and one of the slowest, started last and ran alone for minutes. The results
-      # are saved at the end of every run (one cache entry each) and the newest is restored, after `npm ci`, which
-      # empties node_modules.
+      # are saved at the end of every run (one cache entry each, one series for each shard) and the newest of the shard
+      # is restored, after `npm ci`, which empties node_modules.
       - name: Durations of the last generation tests
         uses: actions/cache@v4
         with:
           path: clock-generator/node_modules/.vite/vitest
-          key: generation-durations-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: generation-durations-
+          key: generation-shard-durations-${{ strategy.job-total }}-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: generation-shard-durations-${{ strategy.job-total }}-${{ matrix.shard }}-
 
       - name: Build
         run: npm run build
@@ -107,7 +170,7 @@ jobs:
 
       - name: Generation tests
         run: >-
-          npm run test:generation -- --reporter=default
+          npm run test:generation -- --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=default
           --reporter=json --outputFile.json=.scratch/test-results/generation.json
           --reporter=junit --outputFile.junit=.scratch/test-results/generation.xml
 
@@ -115,10 +178,42 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: generation-test-results
+          name: generation-test-results-${{ matrix.shard }}
           path: clock-generator/.scratch/test-results/generation.*
           if-no-files-found: ignore
           retention-days: 14
+
+  # The check "Generation tests": one name for the shards, whatever their number. It reports success when the pull
+  # request changes documentation only (the shards are skipped then), and fails when the changed files could not be read or a
+  # shard failed. It is skipped, as the generation tests always were, where they are not asked for.
+  generation:
+    name: Generation tests
+    needs: [changes, generation-shards]
+    # not skipped with the shards: it is the job that tells what became of them
+    if: ${{ !cancelled() && (inputs.generation || github.base_ref == 'master') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Result of the generation tests
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          GENERATION: ${{ needs.changes.outputs.generation }}
+          SHARDS: ${{ needs.generation-shards.result }}
+        run: |
+          set -eu
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::The files the pull request changes could not be read ($CHANGES), so it is not known whether the generation tests were due."
+            exit 1
+          fi
+          if [ "$GENERATION" != "true" ]; then
+            echo "The generation tests were not due: the pull request changes documentation only." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$SHARDS" != "success" ]; then
+            echo "::error::The generation tests did not pass: the shards ended $SHARDS."
+            exit 1
+          fi
+          echo "The generation tests passed in every shard." | tee -a "$GITHUB_STEP_SUMMARY"
 
   ui:
     name: UI build

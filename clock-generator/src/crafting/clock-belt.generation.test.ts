@@ -5,6 +5,7 @@ import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { quiet, withSearches } from "./generate-blueprint-test-helpers";
 import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
+import { expectPinnedScaffoldClock } from "../../tests/game/builds/scaffold-recordings-clock-pins";
 
 const backedUpBelts = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
 
@@ -129,6 +130,12 @@ describe("the belt a clock is made for", () => {
             expect(selected.id).toBe("planned-belt-slack");
             expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "backed_up" });
+        });
+
+        // The values the scaffold recordings expect of this build with backed-up belts were seen on one clock. The build is
+        // generated here, from the same config, and not again for that test (scaffold-recordings-clock.generation.test.ts).
+        it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
+            expectPinnedScaffoldClock("agricultural science (belts are backed up)", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: true }, selected);
         });
 
         it("lengthens every window of those inserters by the fill of a hand of nutrients", () => {

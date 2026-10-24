@@ -49,10 +49,21 @@ Group assertions about the same unmodified build under a shared `beforeAll`, so 
 Keep changed configs, explicit searches and start-dependence overrides as independent generations. Share
 results only within that test run; persisted generation caches can hide regressions.
 
+A generation is shared within a file and no further: Vitest runs each file in a context of its own. When a check in
+one file needs the selection of a build that another file generates from the same config, make the check in the file
+that generates it (`expectPinnedScaffoldClock` and `expectColdStartRunsOnSelection` in `tests/game/builds/` do), and
+keep a test in the first file that the other still makes it.
+
 Prioritize reducing repeated generation and simulation work; adding workers is not a substitute, especially
 on CI runners with limited CPU capacity. Preserve every case, phase, clock offset and recovery check.
-CI uploads `generation-test-results` with JSON test outcomes and a JUnit report, including when assertions fail.
-Use the JUnit suite durations to include shared `beforeAll` work; individual test durations alone omit it.
+CI runs the generation tests in four shards (`vitest --shard`, files shared out by the hash of their paths; the
+count is the `shard` list of the `generation-shards` job in `.github/workflows/test.yml`), so a pull request waits for
+the slowest shard. A file is never split between shards, so the slowest file sets a floor under that time however many
+shards there are.
+The check named "Generation tests" is the job after the shards. A pull request to master that changes only Markdown,
+`docs/` or `clock-generator/docs/` skips the shards, and the check reports success; a run by hand and a release run
+them. CI uploads `generation-test-results-<shard>` with JSON test outcomes and a JUnit report, including when assertions
+fail. Use the JUnit suite durations to include shared `beforeAll` work; individual test durations alone omit it.
 
 For a local timing comparison, run the same affected cases before and after, with the same Node version,
 worker count and machine load. Save a fresh report for each run, for example from `clock-generator/`:
