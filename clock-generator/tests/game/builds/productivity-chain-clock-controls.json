@@ -4,10 +4,10 @@
   "generated-one-copy": {
    "recorded": {
     "pr": 0,
-    "commit": "79c70eab",
-    "frozen_head": "79c70eab",
-    "note": "recorded before the PR was opened; pr is set when it is",
-    "clock_sha256": "4eb1109c89f80dc978d86ac375139ca84019c87f2562393bb32a2132fb70330b",
+    "commit": "8d491a98",
+    "frozen_head": "8d491a98",
+    "note": "re-recorded when inserters with the same windows came to share a decider: the native summary is the same as before; pr is set when the PR is opened",
+    "clock_sha256": "1084647805b2ae1ff68d5e1a232efa76e70cc3fe2373ede9aa100763517a1f7c",
     "clock_basis": "capture"
    },
    "native": {
@@ -265,7 +265,7 @@
      "rate": 80,
      "supply": "moving"
     },
-    "clock_sha256": "4eb1109c89f80dc978d86ac375139ca84019c87f2562393bb32a2132fb70330b"
+    "clock_sha256": "1084647805b2ae1ff68d5e1a232efa76e70cc3fe2373ede9aa100763517a1f7c"
    }
   }
  }

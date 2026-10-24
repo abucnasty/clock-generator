@@ -4,10 +4,10 @@
   "generated-as-is": {
    "recorded": {
     "pr": 0,
-    "commit": "52a43950",
-    "frozen_head": "52a43950",
-    "note": "recorded before the PR was opened; pr is set when it is",
-    "clock_sha256": "8592990cad73296132d3b405c5a741d11f06b9b424477751a5ce66b3afd2b3b6",
+    "commit": "8d491a98",
+    "frozen_head": "8d491a98",
+    "note": "re-recorded when inserters with the same windows came to share a decider: the native summary is the same as before; pr is set when the PR is opened",
+    "clock_sha256": "52b9b1596a8238aace79bfcca6c4d2de988b0fb6a48d773ce6e4578295a32329",
     "clock_basis": "capture"
    },
    "native": {
@@ -507,16 +507,16 @@
      "rate": 80,
      "supply": "moving"
     },
-    "clock_sha256": "8592990cad73296132d3b405c5a741d11f06b9b424477751a5ce66b3afd2b3b6"
+    "clock_sha256": "52b9b1596a8238aace79bfcca6c4d2de988b0fb6a48d773ce6e4578295a32329"
    }
   },
   "generated-backed-up": {
    "recorded": {
     "pr": 0,
-    "commit": "52a43950",
-    "frozen_head": "52a43950",
-    "note": "recorded before the PR was opened; pr is set when it is",
-    "clock_sha256": "f7cb7e8be5f0f0cfa10a5d75494e737d447c06437981d7c86ef85ade6dce7d74",
+    "commit": "8d491a98",
+    "frozen_head": "8d491a98",
+    "note": "re-recorded when inserters with the same windows came to share a decider: the native summary is the same as before; pr is set when the PR is opened",
+    "clock_sha256": "430a8c6f199c3affacda6a26dc8c21ddee0eb3b30b436fc82b4b0891924d823f",
     "clock_basis": "capture"
    },
    "native": {
@@ -1008,7 +1008,7 @@
      "rate": 80,
      "supply": "backed_up"
     },
-    "clock_sha256": "f7cb7e8be5f0f0cfa10a5d75494e737d447c06437981d7c86ef85ade6dce7d74"
+    "clock_sha256": "430a8c6f199c3affacda6a26dc8c21ddee0eb3b30b436fc82b4b0891924d823f"
    }
   }
  }
