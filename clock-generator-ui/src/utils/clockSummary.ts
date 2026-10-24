@@ -1,7 +1,7 @@
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 import { lossesOf, notTriedOf } from './rateWarning';
-import { fewestDecidersReason, type PickRule } from './recommendedClock';
+import { fewestDecidersReason, recommendedIndexOf, type PickRule } from './recommendedClock';
 import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
@@ -121,13 +121,20 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
         const contenders = clocks.filter(isContender);
         const wakeUps = wakeUpsKey(clock.ranking.wake_ups_per_minute);
         const counted = contenders.map(it => wakeUpsKey(it.ranking.wake_ups_per_minute)).filter(it => it !== null);
-        if (wakeUps !== null && wakeUps === Math.min(...counted)) {
+        const fewestWakeUps = Math.min(...counted);
+        if (wakeUps !== null && wakeUps === fewestWakeUps) {
             return SUMMARY_COPY.fewestWakeUps;
         }
-        // the fewest decider combinators of clocks that do not all have the same number
+        // the fewest decider combinators of clocks that do not all have the same number, and fewer than the clocks with the
+        // fewest wake-ups and the recommended one have: a clock that only ties them has no name of its own for it
         const deciders = contenders.map(it => it.deciders);
-        if (clock.deciders === Math.min(...deciders) && Math.min(...deciders) < Math.max(...deciders)) {
-            return SUMMARY_COPY.fewestDeciders;
+        const fewest = Math.min(...deciders);
+        if (clock.deciders === fewest && fewest < Math.max(...deciders)) {
+            const recommended = recommendedIndexOf(clocks);
+            const toBeat = clocks.filter((it, at) => at === recommended || (isContender(it) && wakeUpsKey(it.ranking.wake_ups_per_minute) === fewestWakeUps));
+            if (toBeat.every(it => fewest < it.deciders)) {
+                return SUMMARY_COPY.fewestDeciders;
+            }
         }
         if (clock.ranking.window_count === Math.min(...contenders.map(it => it.ranking.window_count))) {
             return SUMMARY_COPY.fewestWakeWindows;

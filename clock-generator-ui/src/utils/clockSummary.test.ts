@@ -121,6 +121,38 @@ describe('plainClockName', () => {
         expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
     });
 
+    it('does not name a clock Fewest deciders when it only ties the recommended clock, whose name it leaves to the windows', () => {
+        const clocks = [
+            clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
+            clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
+            clock('c', { wake_ups_per_minute: 15, window_count: 3, deciders: 6 }),
+        ];
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+        expect(nameOf(clocks, 'b')).toBe('Another way to make 240/s');
+        expect(nameOf(clocks, 'c')).toBe('Fewest wake windows');
+    });
+
+    it('does not name a clock Fewest deciders when it only ties a clock tied for the fewest wake-ups', () => {
+        const clocks = [
+            clock('a', { wake_ups_per_minute: 8.0001, window_count: 6, deciders: 8 }),
+            clock('b', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
+            clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
+        ];
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+        expect(nameOf(clocks, 'b')).toBe('Fewest wake-ups');
+        expect(nameOf(clocks, 'c')).not.toBe('Fewest deciders');
+    });
+
+    it('names a clock Fewest deciders when it has fewer than the recommended clock and every clock with the fewest wake-ups', () => {
+        const clocks = [
+            clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 5 }),
+            clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
+            clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
+        ];
+        expect(nameOf(clocks, 'b')).toBe('Fewest deciders');
+        expect(nameOf(clocks, 'c')).toBe('Fewest deciders');
+    });
+
     it('does not name a clock by its deciders when every clock has as many', () => {
         const clocks = [clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })];
         expect(nameOf(clocks, 'b')).toBe('Fewest wake windows');
