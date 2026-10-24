@@ -12,7 +12,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Added
 - A build whose machines take from machines or chests that nothing feeds gets a holding clock where the planned windows did not: one window for each inserter's hands, the machines of a shared source taking turns.
-- A build whose machines feed one another, one machine's product going into the next, now gets a clock that holds and recovers, without the slow search the generator used to fall back to.
+- A build whose machines feed one another, one machine's product going into the next, now gets a clock that holds and recovers: each inserter moves whole hands every cycle (a machine's input limit takes off any surplus), the inserters open in order from the output back to the raw inputs, and the clock is kept only if it still holds with its windows moved a tick. The slow search the generator used to fall back to is no longer needed.
 - The result says whether the drops of the copies onto a shared belt fit between each other or land on each other (give how far apart the copies stand), and a note says when the lanes of a belt are exactly full.
 
 ### Changed
