@@ -4,7 +4,9 @@ import { ConfigPaths, ExpectedRefusals } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { DebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
 import { generateClockAlternatives } from "../alternatives";
-import { planRun, runBuild } from "./plan-run";
+import { generateClockForConfig } from "../generate-clock";
+import { backpressureLossKey, backpressureLossVerdictOf } from "../trial";
+import { BlueprintGenerationResult, planRun, runBuild } from "./plan-run";
 import { RUN_MEMO_MIN_TICKS, RunMemo, canonicalKey, currentRunMemo, withRunMemo } from "./run-memo";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -176,5 +178,58 @@ describe("the memo of the runs of a generation", () => {
         expect(without.hits).toBe(0);
         expect(with_memo.hits).toBeGreaterThan(0);
         expect(with_memo.result).toEqual(without.result);
+    });
+});
+
+describe("the memo of the backpressure loss verdicts of a generation", () => {
+    let config: Config;
+    let clock: BlueprintGenerationResult;
+    beforeAll(async () => {
+        config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        clock = generateClockForConfig(config, { logger: quiet, verify_as_built: false, fuel_consumption_view: false, modulo_blueprint: false, factorio_states: false });
+    });
+
+    it("tries a clock once in a generation, whichever alternative asks, and every time outside one", () => {
+        const fresh = backpressureLossVerdictOf(config, clock, quiet);
+        expect(backpressureLossVerdictOf(config, clock, quiet)).not.toBe(fresh);
+        withRunMemo(() => {
+            const memo = currentRunMemo()!;
+            const first = backpressureLossVerdictOf(config, clock, quiet);
+            expect(first).toEqual(fresh);
+            expect(backpressureLossVerdictOf(config, clock, quiet)).toBe(first);
+            // the way an alternative reaches the same clock: planned with fractional swings, or with the cycles of its own
+            expect(backpressureLossVerdictOf({ ...config, overrides: { ...config.overrides, use_fractional_swings: true } }, clock, quiet)).toBe(first);
+            expect(backpressureLossVerdictOf({ ...config, overrides: { ...config.overrides, lcm: 7 } }, clock, quiet)).toBe(first);
+            expect(memo.loss_hits).toBe(3);
+        });
+    });
+
+    it("tries a clock again when its windows, its period or the build differ", () => {
+        const key = backpressureLossKey(config, clock);
+        const other_windows = { ...clock, clock_windows: { ...clock.clock_windows, "inserter:1": [{ start: 0, end: 1 }] } };
+        const other_period = { ...clock, simulation_duration: clock.simulation_duration.add(clock.simulation_duration) };
+        const other_output = { ...clock, stability_check: { ...clock.stability_check, expected_output_items: clock.stability_check.expected_output_items + 1 } };
+        const keys = [other_windows, other_period, other_output].map(it => backpressureLossKey(config, it));
+        keys.push(backpressureLossKey({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, clock));
+        keys.push(backpressureLossKey({ ...config, overrides: { ...config.overrides, loop_seed_items: 17 } }, clock));
+        expect(new Set([key, ...keys]).size).toBe(keys.length + 1);
+    });
+
+    it("tells clocks apart by the cycles they are planned on where those set the clocks of the inserters outside the plan", async () => {
+        const fuel = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const built = generateClockForConfig(fuel, { logger: quiet, verify_as_built: false, fuel_consumption_view: false, modulo_blueprint: false, factorio_states: false });
+        expect(Object.keys(built.unplanned_inserter_clocks ?? {})).not.toEqual([]);
+        expect(backpressureLossKey({ ...fuel, overrides: { ...fuel.overrides, lcm: 7 } }, built)).not.toBe(backpressureLossKey(fuel, built));
+    });
+
+    it("keeps no verdict for a clock that could not be tried", () => {
+        withRunMemo(() => {
+            const memo = currentRunMemo()!;
+            let tried = 0;
+            const none = () => { tried++; return { backpressure_loss: null, backpressure_loss_not_tried: "no" }; };
+            memo.backpressureLoss("clock", none);
+            memo.backpressureLoss("clock", none);
+            expect([tried, memo.loss_hits]).toEqual([2, 0]);
+        });
     });
 });

@@ -1,5 +1,6 @@
 import type { BuildRun, RunOptions } from "./plan-run";
 import type { Config } from "../../config";
+import type { BackpressureLossAssessment } from "../trial";
 
 /**
  * A run shorter than this is simulated again rather than kept. A run of 100,000 ticks takes seconds; a shorter one
@@ -87,6 +88,10 @@ function writeObject(value: object | null, out: string[], depth: number): boolea
  * are checked from the same starts. The memo lives as long as the generation that opened it (`withRunMemo`), so no
  * generation meets the runs of another, and a change of the game data or of the engine between two of them cannot
  * leave a run behind.
+ *
+ * It also keeps what the backpressure loss trials of a clock found (`backpressureLoss`): the trials are many short runs
+ * of the build, each too short to be kept above, and a clock is tried by the alternative that picks its windows and by
+ * the one that assesses it.
  */
 export class RunMemo {
     /** Runs handed out again, to count what the memo saved */
@@ -98,6 +103,28 @@ export class RunMemo {
     /** Runs kept so far */
     get size(): number {
         return this.kept.size;
+    }
+
+    /** What the backpressure loss trials of a clock found, by what they are a function of (see `backpressureLoss`) */
+    private readonly losses = new Map<string, BackpressureLossAssessment>();
+    /** Verdicts handed out again */
+    loss_hits = 0;
+
+    /**
+     * The verdict of the loss trials of a clock: the one kept, or the one `tried` makes. A clock that cannot be tried
+     * is tried again, so that what is logged about it is logged by each.
+     */
+    backpressureLoss(key: string, tried: () => BackpressureLossAssessment): BackpressureLossAssessment {
+        const kept = this.losses.get(key);
+        if (kept !== undefined) {
+            this.loss_hits++;
+            return kept;
+        }
+        const verdict = tried();
+        if (verdict.backpressure_loss !== null) {
+            this.losses.set(key, verdict);
+        }
+        return verdict;
     }
 
     /**
