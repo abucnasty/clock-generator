@@ -335,9 +335,9 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
     };
     const lead = "At about 112 ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the 7 copies";
     expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on belt 1, if the inserters of a copy start together. `
-        + 'They would also fit with the copies 16, 18, 20, 22 or 24 tiles apart.');
+        + 'They would also fit with the copies 16, 18, 20, 22 or 24 tiles apart, and at any of these plus 14.');
     expect((await live({ x: 13, y: 0 })).dropRoom).toBe(`${lead} land on each other on belt 1, if the inserters of a copy start together, and some of them wait for room. `
-        + 'They would fit with the copies 12, 16, 18, 20, 22, 24 or 26 tiles apart, or 13 tiles apart with the inserters of a copy 7 tiles apart.');
+        + 'They would fit with the copies 12, 16, 18, 20, 22 or 24 tiles apart, or 13 tiles apart with the inserters of a copy 7 tiles apart, and at any of these plus 14.');
     const without = await live(undefined);
     expect(without.dropRoom).toBeNull();
     expect(without.copyGapNeeded).not.toBeNull();

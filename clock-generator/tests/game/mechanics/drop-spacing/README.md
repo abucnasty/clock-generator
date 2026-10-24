@@ -37,6 +37,11 @@ places, so the hands of one line (the output inserters of one side of the belt, 
   circle. The grenade build makes 240 a second over 7 copies of 4 machines, a hand of 16 every 112 ticks, and so `L` = 14 tiles.
 - **The pitch** (the copies' distance) puts copy `c` at `c * pitch mod L`. With `g` the greatest common divisor of the pitch and `L` the copies can only
   take `L / g` different tiles; with more copies than that, two copies drop on the same tile whatever else is done.
+  Moving the pitch by a whole `L` moves every hand once round the circle, so whether the hands fit depends on the pitch less whole multiples of `L`
+  only: one loop of pitches, from the width of a copy for `L` tiles, holds every answer, and the editor and the result list that loop and say the
+  rest are the same plus `L`. Where `L` is not a whole number there is no such loop and a fixed range from the width of a copy is listed.
+- **Too many hands.** When the hands dropped on one lane in a period take more of it than the `L` tiles the belt moves in the period (9 copies of one
+  inserter on `L` = 4.5), some hands wait whatever the pitch and offset; the editor and the result say so instead of listing spacings.
 - **The offset** between a copy's inserters (the second inserter's place, from the first's) moves the second inserter's hands by `offset` tiles
   against the first's, which is what lets them take the tiles the first ones leave.
 

@@ -1,5 +1,5 @@
 import { Config } from "../config";
-import { dropLines, dropRoom, dropSpacing, type DropRoom } from "../config/drop-spacing";
+import { crowdedText, dropLines, dropRoom, dropSpacing, type DropRoom } from "../config/drop-spacing";
 import { Entity, handSizeFor } from "../entities";
 import { computeMachineTargetRates } from "./machine-target-rates";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -55,9 +55,9 @@ const listedSpacings = (values: readonly number[]): string => values.length > MA
 /** What else fits, as the end of the note: the other spacings, and the spacing the config has with another distance between a copy's inserters */
 function alsoFits(room: DropRoom): string[] {
     const pieces: string[] = [];
-    const others = room.fits.filter(spacing => spacing !== room.gap);
+    const others = room.fits.filter(spacing => spacing !== room.gap_in_scan);
     if (others.length > 0) pieces.push(`the copies ${listedSpacings(others)} tiles apart`);
-    const here = room.only_with.find(group => group.spacings.includes(room.gap));
+    const here = room.only_with.find(group => group.spacings.includes(room.gap_in_scan));
     if (here !== undefined) pieces.push(`${room.gap} tiles apart with the inserters of a copy ${listedSpacings(here.apart)} tiles apart`);
     return pieces;
 }
@@ -81,6 +81,7 @@ export function dropRoomNote(config: Config): string | null {
     if (period === null) return DROP_ROOM_NOT_ESTIMATED;
     const room = dropRoom(config, lines, period);
     if (room === null) return null;
+    if (room.crowded !== null) return `At about ${period} ticks a period, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}`;
     const together = new Map(lines.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));
     const spacing = dropSpacing(config, together, period);
     if (spacing === null) return null;
@@ -88,9 +89,11 @@ export function dropRoomNote(config: Config): string | null {
     const belt = belts.length === 1 ? `belt ${belts[0]}` : `belts ${belts.join(", ")}`;
     const lead = `At about ${period} ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the ${copies} copies`;
     const more = alsoFits(room);
+    const plus = room.loop !== null ? `, and at any of these plus ${room.loop}` : "";
     if (spacing.lines.every(line => line.fits)) {
-        return `${lead} fit between each other on ${belt}, if the inserters of a copy start together.${more.length > 0 ? ` They would also fit with ${more.join(", or ")}.` : ""}`;
+        return `${lead} fit between each other on ${belt}, if the inserters of a copy start together.${more.length > 0 ? ` They would also fit with ${more.join(", or ")}${plus}.` : ""}`;
     }
     return `${lead} land on each other on ${belt}, if the inserters of a copy start together, and some of them wait for room. `
-        + (more.length > 0 ? `They would fit with ${more.join(", or ")}.` : `No spacing of the copies from ${room.low} to ${room.high} tiles fits.`);
+        + (more.length > 0 ? `They would fit with ${more.join(", or ")}${plus}.`
+            : `No spacing of the copies from ${room.low} to ${room.high} tiles fits${room.loop !== null ? `, nor any of these plus ${room.loop}` : ""}.`);
 }

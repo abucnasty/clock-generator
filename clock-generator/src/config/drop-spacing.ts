@@ -338,6 +338,8 @@ const MAX_OFFSET_TILES = 64;
 const MAX_DELAY_TICKS = 1000;
 /** The narrowest machine or drill of the game is 3 tiles across: the span of the positions of a copy, plus one such entity */
 const NARROWEST_ENTITY_TILES = 3;
+/** How near a whole number the tiles the belt moves in a period must be to count as one */
+const LOOP_SLACK = 1e-9;
 
 /** Whether no two hands overlap on the circle of the belt's tiles in a period: the test of collidingPairs, sorted */
 function handsFit(hands: readonly Hand[], tiles_per_tick: number, period: number): boolean {
@@ -351,9 +353,17 @@ function handsFit(hands: readonly Hand[], tiles_per_tick: number, period: number
 
 /** What the scan of the spacings of the copies finds, at the period it was made for, for inserters that start in the same tick */
 export interface DropRoom {
-    /** The spacings tried, whole tiles from `low` to `high` */
+    /** The spacings tried, whole tiles from `low` to `high`: the width of a copy, and on to one full loop of the belt's tiles where that is a whole number */
     low: number;
     high: number;
+    /**
+     * The tiles the belt moves in a period when that is a whole number the same on every shared line: whether the hands fit then depends on
+     * the spacing less a whole number of loops only, so a spacing fits when the spacing plus this much does. Null otherwise.
+     */
+    loop: number | null;
+    /** The copies, and the hands they drop on a lane in a period when these take more of the lane than the belt moves in it: no spacing fits then. Null otherwise */
+    copies: number;
+    crowded: { hands: number; belt_tiles: number; hand_tiles: number } | null;
     /** The spacings at which the lines fit with the inserters where they stand */
     fits: number[];
     /** Spacings at which they fit only with another distance between the two inserters of a copy: the distances (whole tiles) */
@@ -368,8 +378,9 @@ export interface DropRoom {
     belt_tiles: number;
     ticks_per_tile: number;
     hand_tiles: number;
-    /** The spacing the config has */
+    /** The spacing the config has, and the spacing in the scan that fits as it does (the same unless it lies beyond one loop of the scan) */
     gap: number;
+    gap_in_scan: number;
 }
 
 /** The span of the copy's positions along an axis, plus the narrowest entity; null when an entity has no position */
@@ -381,8 +392,9 @@ function copyWidth(config: Config, axis: "x" | "y"): number | null {
 }
 
 /**
- * The spacings of the copies, from the width of a copy up to twice the spacing it has, at which every shared line fits when its
- * inserters start in the same tick; for a line of two inserters in a copy, the distances between them that fit at the spacings that
+ * The spacings of the copies, from the width of a copy for one full loop of the belt's tiles in a period (the same list whatever
+ * spacing the config has; where that is not a whole number, a fixed range), at which every shared line fits when its
+ * inserters start in the same tick, or none when the hands of a lane take more of it than the belt moves in a period; for a line of two inserters in a copy, the distances between them that fit at the spacings that
  * do not, and the start delays of the second one that fit. Arithmetic on the places alone: no run of the build. Null where
  * the copies' gap is not given or no line is shared.
  */
@@ -396,9 +408,17 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
     const first = shared[0];
     const tiles_per_tick = first.tiles_per_tick;
     const width = copyWidth(config, first.axis);
-    const low = Math.max(1, Math.min(width ?? 1, Math.floor(gap)));
-    const high = Math.max(low, Math.floor(2 * gap));
+    const low = Math.max(1, width ?? 1);
     const together = new Map<number, readonly number[]>(shared.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));
+    const loops = shared.map(line => line.tiles_per_tick * period);
+    const whole = Math.round(loops[0]);
+    const loop = whole >= 1 && loops.every(it => Math.abs(it - whole) < LOOP_SLACK) ? whole : null;
+    const crowded = shared.map((line, index) => {
+        const hands = handsOf(line, together, copies, { along: gap, shared: true }, 1);
+        return { hands: hands.length, belt_tiles: loops[index], hand_tiles: QUARTER_TILE * line.inserters[0].stacks, taken: hands.reduce((sum, hand) => sum + QUARTER_TILE * hand.stacks, 0) };
+    }).find(it => it.taken > it.belt_tiles + EPSILON);
+    const high = crowded !== undefined ? low - 1 : loop !== null ? low + loop - 1 : low + 2 * Math.ceil(loops[0]);
+    const gap_in_scan = loop !== null ? low + (((Math.round(gap) - low) % loop) + loop) % loop : gap;
     const fitsWith = (candidates: readonly DropLine[], pitch: number, starts: ReadonlyMap<number, readonly number[]>): boolean =>
         candidates.every((line, index) => (line.flow === null ? [1, -1] as const : [line.flow] as const)
             .every(sense => handsFit(handsOf(line, starts, copies, { along: signs[index] * pitch, shared: true }, sense), line.tiles_per_tick, period)));
@@ -426,7 +446,7 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
         }
     }
     const starts_after: number[] = [];
-    if (pairable) {
+    if (pairable && crowded === undefined) {
         for (let delay = 1; delay <= Math.min(period - 1, MAX_DELAY_TICKS) && starts_after.length < 3; delay++) {
             const later = new Map(together);
             shared.forEach(line => later.set(line.inserters[1].id, [delay]));
@@ -434,9 +454,10 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
         }
     }
     return {
-        low, high, fits, only_with: [...only.values()], never,
+        low, high, loop, copies, crowded: crowded === undefined ? null : { hands: crowded.hands, belt_tiles: crowded.belt_tiles, hand_tiles: crowded.hand_tiles },
+        fits, only_with: [...only.values()], never,
         pair: pairable ? { first: first.inserters[0].id, second: first.inserters[1].id, apart: Math.abs(first.inserters[1].along - first.inserters[0].along) } : null,
-        starts_after, belt_tiles: tiles_per_tick * period, ticks_per_tile: 1 / tiles_per_tick, hand_tiles: first.inserters[0].stacks * QUARTER_TILE, gap,
+        starts_after, belt_tiles: tiles_per_tick * period, ticks_per_tile: 1 / tiles_per_tick, hand_tiles: first.inserters[0].stacks * QUARTER_TILE, gap, gap_in_scan,
     };
 }
 
@@ -490,12 +511,20 @@ const whoOf = (line: DropSpacingLine, copies: number) =>
 const listedSpacings = (values: readonly number[], word = "or"): string =>
     values.length > MAX_LISTED ? `${values.slice(0, MAX_LISTED).join(", ")} and others` : listed(values, word);
 
+/** Why no spacing fits: "The belt moves 4.5 tiles a period, but the 9 copies drop 9 hands on it, so no spacing of the copies fits: some hands always wait for room." */
+export function crowdedText(crowded: { hands: number; belt_tiles: number; hand_tiles: number }, copies: number): string {
+    const hands = crowded.hand_tiles === 1 ? `${crowded.hands} hands` : `${crowded.hands} hands of ${tiles(crowded.hand_tiles)} of a tile`;
+    return `The belt moves ${tiles(crowded.belt_tiles)} tiles a period, but the ${copies} copies drop ${hands} on it, so no spacing of the copies fits: some hands always wait for room.`;
+}
+
 /**
  * What the scan of the spacings says, as a paragraph: "The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With
  * inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16 or 24 tiles apart; 13 or 15 apart only with a copy's
- * inserters 7 tiles apart; 14 or 21 apart never. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks)."
+ * inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks
+ * after inserter 1 also fits (a tile every 8 ticks)."
  */
 export function describeDropRoom(room: DropRoom): string {
+    if (room.crowded !== null) return crowdedText(room.crowded, room.copies);
     const lead = Number.isInteger(room.belt_tiles) && room.hand_tiles === 1
         ? `The belt moves ${tiles(room.belt_tiles)} tiles a period, so each hand lands on one of ${tiles(room.belt_tiles)} tiles.`
         : `The belt moves ${tiles(room.belt_tiles)} tiles a period, and a hand takes ${tiles(room.hand_tiles)} of a tile.`;
@@ -507,7 +536,8 @@ export function describeDropRoom(room: DropRoom): string {
     const later = room.pair !== null && room.starts_after.length > 0
         ? ` Starting inserter ${room.pair.second} ${listed(room.starts_after.map(tick => String(tick)), "or")} ticks after inserter ${room.pair.first} also fits (a tile every ${tiles(room.ticks_per_tile)} ticks).`
         : "";
-    return `${lead} ${stand}, ${clauses.join("; ")}.${later}`;
+    const plus = room.loop !== null ? ` The same holds at any of these spacings plus ${room.loop}.` : "";
+    return `${lead} ${stand}, ${clauses.join("; ")}.${plus}${later}`;
 }
 
 /** The text a result gives of the drops onto the shared belt, as an insight's pieces */
