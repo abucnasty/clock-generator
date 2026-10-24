@@ -36,8 +36,8 @@ describe('a machine that places its results itself', () => {
         expect(machine.craftCount).toBeGreaterThan(4700);
         const waiting = machine.inventoryState.getQuantity(ORE);
         expect(car.getCurrentQuantity(ORE) + waiting).toBe(Math.floor(machine.craftCount / 4));
-        // placed in the tick after it was made: what waits is a tick's returns at most
-        expect(waiting).toBeLessThanOrEqual(3);
+        // placed in the tick it was made, as recorded: nothing waits while the car has room
+        expect(waiting).toBe(0);
         // nothing it was given is taken for what it made: the given ore is kept apart and was not seeded
         expect(machine.selfIngredients.getQuantity(ORE)).toBeLessThan(100);
     });

@@ -18,8 +18,9 @@ const PROGRESS_EPSILON = 1e-9;
  * item, the main product as the by-products. A machine that places its results itself (a recycler, `places_results`)
  * puts them in its output whatever it holds, any number of stacks, and starts no craft while a stack of one of them
  * waits there (recorded on the recycler: it stops with 50 ore waiting, not with its 12 result slots full). With a
- * result target it first puts what waits into that container each tick, as far as it has room, as a drill drops what
- * it holds before it mines (the order on the recycler is not recorded).
+ * result target it puts what waits into that container each tick as far as it has room, what its crafts of the tick
+ * gave included (recorded on the recycler of the ore voider: with room in its car, nothing was left in its output after
+ * any of 216,000 ticks).
  */
 export class MachineWorkingMode implements MachineMode {
     public readonly status = MachineStatus.WORKING;
@@ -158,7 +159,7 @@ export class MachineWorkingMode implements MachineMode {
 
     /**
      * A machine that places its results itself, with a result target: what waits in its output goes into the
-     * container, each result as far as it has room. Done every tick, before anything else of the machine's.
+     * container, each result as far as it has room. Done every tick before the machine crafts and again after it.
      */
     public placeResults(): void {
         const target = this.result_target;

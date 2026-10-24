@@ -26,7 +26,8 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
 
     /**
      * Products the machine holds go to its output in the tick there is room for them, whatever mode it is in; a machine
-     * that places its results itself first puts what waits in its output into its result target
+     * that places its results itself puts what waits in its output into its result target, before it crafts and again
+     * after, so that what a tick's crafts give is in the container when the tick ends (recorded on the recycler)
      */
     public override executeForTick(): void {
         this.working_mode.placeResults();
@@ -40,6 +41,7 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
             this.current_evaluator = this.entered_evaluator ?? this.modeEvaluatorForMode(next);
         }
         next.executeForTick();
+        this.working_mode.placeResults();
         const tick_plugins = this.tick_plugins;
         for (let index = 0; index < tick_plugins.length; index++) {
             tick_plugins[index].executeForTick!();
