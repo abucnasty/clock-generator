@@ -83,6 +83,11 @@ export const ConfigPaths = {
     REAL_OWNER_ORE_VOIDER_EXACT_SPEED: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'ore-voider', 'ore-voider-exact-speed.json'),
     /** The same cell with six beacons on the recycler (26.634, 852.3 crafts a second), 400 ore a second destroyed (save B) */
     REAL_OWNER_ORE_VOIDER_OVERBEACONED: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'ore-voider', 'ore-voider-overbeaconed.json'),
+    /**
+     * A recycler on scrap at +300% productivity, 2 scrap a second destroyed, placing its twelve results into a rocket
+     * silo (rocket part recipe of uncommon quality), one filter stack inserter for each result out of the silo
+     */
+    RECYCLING_SCRAP_SILO: path.join(CONFIG_SAMPLES_DIR, 'recycling', 'scrap-silo', 'scrap-silo.json'),
     /** The steel build, 26 a second: one cargo wagon as a hub between a mining drill and two furnaces */
     STEEL_CARGO_WAGON: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'steel-wagon', 'steel-wagon.json'),
 } as const;
