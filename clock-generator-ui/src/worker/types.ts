@@ -41,6 +41,7 @@ import type {
 } from 'clock-generator/browser';
 import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
+import type { TargetCounts } from '../utils/targetCounts';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
 export interface FuelSwing {
@@ -127,6 +128,8 @@ export interface ClockAlternativeView {
     assumptions: ClockModelAssumptions;
     /** Copies of the build the target rate is shared over; the rate in the assessment is the total for all of them */
     copies: number;
+    /** What the rate counts: the item made (none set, as before) or the item destroyed, which the results say in their words */
+    counts?: TargetCounts;
     /** The one word for the clock: stable, no recovery, or unstable */
     verdict: ClockVerdict;
     /** How the clock ranks against the others; the selection compares these, in order */
@@ -366,11 +369,11 @@ export interface CraftingMachineInfo {
     burner_fuel_categories: string[];
     /** Base crafting speed, which picks the machine for a recipe */
     crafting_speed: number;
+    /** Where it places its results itself, from its centre in tiles: only a machine that does (the recycler) has it */
+    vector_to_place_result?: number[];
 }
 
 export interface CraftingMachineData {
-    /** Where it places its results itself, from its centre in tiles: only a machine that does (the recycler) has it */
-    vector_to_place_result?: number[];
     machines: CraftingMachineInfo[];
     /** By recipe id, hidden ones included */
     recipeCategories: Record<string, string[]>;

@@ -1,6 +1,7 @@
 import type { Config } from 'clock-generator/browser';
 import { combineClockAlternativeRuns } from 'clock-generator/light';
 import type { ClockAlternativeView } from '../worker/types';
+import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** What the selection rule is given by the config a generation ran with */
 export interface PickRule {
@@ -13,6 +14,8 @@ export interface PickRule {
 /** The fields of a clock the recommendation is worked out from, so the tests need not build a whole view */
 type PickableClock = Pick<ClockAlternativeView, 'id' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'inserterWindowCount'> & {
     assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'> & Partial<Pick<ClockAlternativeView['assessment'], 'start_dependence' | 'backpressure_loss'>>;
+    /** What the rate counts, which the sentences say in their words: none is the item made */
+    counts?: TargetCounts;
 };
 
 /** A row of the clock table: the clock and its index in the list, which selecting it goes by */
@@ -55,7 +58,8 @@ export const RECOMMENDED_COPY = {
      * The clocks the pick was compared with: those that hold the rate and recover, or on a build with a deadlock risk
      * those that hold the rate (the glossary's words, not the table's old "Stable")
      */
-    contenders: (rate: string, deadlock: boolean) => deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep making ${rate}/s and recover`,
+    contenders: (rate: string, deadlock: boolean, counts?: TargetCounts) =>
+        deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep ${rateVerbs(counts).ing} ${rate}/s and recover`,
     fewestWakeUps: (contenders: string, belt: string) => `Fewest wake-ups of ${contenders}${belt}.`,
     onlyContender: (rate: string, belt: string, deadlock: boolean) =>
         deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only clock that holds ${rate}/s and recovers${belt}.`,
@@ -169,7 +173,7 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
     if (others.length === 0) {
         return RECOMMENDED_COPY.onlyContender(rate, belt, deadlock) + recovery;
     }
-    const contenders = RECOMMENDED_COPY.contenders(rate, deadlock);
+    const contenders = RECOMMENDED_COPY.contenders(rate, deadlock, pick.counts);
     // uncounted wake-ups rank after any count, so when the pick's were not counted no contender's were
     if (ranking.wake_ups_per_minute === null) {
         return RECOMMENDED_COPY.wakeUpsNotCounted(contenders, belt) + recovery;

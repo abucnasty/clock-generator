@@ -392,7 +392,7 @@ export function ClockAlternativesPanel({
                                 </>
                             ) : (
                                 <>
-                                    {fold === null && <TableCell align="right">{makesHeader(copies)}</TableCell>}
+                                    {fold === null && <TableCell align="right">{makesHeader(copies, alternatives[0]?.counts)}</TableCell>}
                                     <TableCell align="right"><TermsHeader label={WAKE_UPS_HEADER} focus={TERMS_FOCUS.wakeUps} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={DECIDERS_HEADER} help={COMPARE_COPY.decidersHelp} /></TableCell>
                                     <TableCell><TermsHeader label={COMPARE_COPY.works} focus={TERMS_FOCUS.works} /></TableCell>

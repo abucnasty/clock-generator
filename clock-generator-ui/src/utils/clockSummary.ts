@@ -2,9 +2,10 @@ import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 import { lossesOf, notTriedOf } from './rateWarning';
 import type { PickRule } from './recommendedClock';
+import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
-export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'deciders'>;
+export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'deciders'> & { counts?: TargetCounts };
 
 /**
  * The smallest distance from the target rate that names a clock by its rate, as the Copy button's "below target"
@@ -24,7 +25,7 @@ export const SUMMARY_COPY = {
     fewestWakeUps: 'Fewest wake-ups',
     fewestDeciders: 'Fewest deciders',
     fewestWakeWindows: 'Fewest wake windows',
-    another: (rate: string) => `Another way to make ${rate}/s`,
+    another: (rate: string, counts?: TargetCounts) => `Another way to ${rateVerbs(counts).base} ${rate}/s`,
     // the card's tiles
     makes: (rate: string) => `${rate}/s`,
     allCopies: (copies: number) => `all ${copies} copies`,
@@ -53,7 +54,7 @@ export const SUMMARY_COPY = {
     beltLineBackedUp: 'Made for backed-up belts.',
     beltLineNone: 'No inserter on the clock picks up from a belt.',
     // how a selected clock differs from the recommended one
-    differsRate: (rate: string, target: string) => `This one makes ${rate}/s, not ${target}/s.`,
+    differsRate: (rate: string, target: string, counts?: TargetCounts) => `This one ${rateVerbs(counts).third} ${rate}/s, not ${target}/s.`,
     differsMoreWakeUps: (n: number) => `It wakes inserters ${n} more ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
     differsFewerWakeUps: (n: number) => `It wakes inserters ${n} fewer ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
     differsBelt: 'It is made for backed-up belts.',
@@ -61,7 +62,7 @@ export const SUMMARY_COPY = {
     differsUnstable: 'It does not hold its rate.',
     differsNothing: 'It is not the recommended clock.',
     // the compare table
-    foldedMakes: (count: number, rate: string) => `All ${count} clocks make ${rate}/s.`,
+    foldedMakes: (count: number, rate: string, counts?: TargetCounts) => `All ${count} clocks ${rateVerbs(counts).base} ${rate}/s.`,
     worksYes: 'Yes',
     worksBackedUpBelts: 'Designed for backed-up supply',
     worksOffTarget: (rate: string) => `Misses the rate (${rate}/s)`,
@@ -132,7 +133,7 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
             return SUMMARY_COPY.fewestWakeWindows;
         }
     }
-    return SUMMARY_COPY.another(rateText(clock.assessment.items_per_second));
+    return SUMMARY_COPY.another(rateText(clock.assessment.items_per_second), clock.counts);
 }
 
 /** The engine's own name for a clock, which says how it is made; the card and the table say it the same way */
@@ -235,7 +236,7 @@ export function differenceFromRecommended(selected: SummaryClock, recommended: S
     const sentences: string[] = [];
     if (isStartDependent(selected)) sentences.push('It depends on how it is started.');
     if (isOffTarget(selected)) {
-        sentences.push(SUMMARY_COPY.differsRate(rateText(selected.assessment.items_per_second), rateText(targetOf(selected))));
+        sentences.push(SUMMARY_COPY.differsRate(rateText(selected.assessment.items_per_second), rateText(targetOf(selected)), selected.counts));
     }
     const mine = selected.assessment.wake_ups_per_minute;
     const theirs = recommended.assessment.wake_ups_per_minute;
@@ -269,12 +270,12 @@ const FOLD_MIN_ROWS = 3;
  * "All 5 clocks make 240/s." when 3 or more clocks shown make the same rate at two decimals, so the compare table can
  * leave out a column that says the same on every row; null when they differ, or there are too few to fold.
  */
-export function foldedMakes(clocks: Pick<SummaryClock, 'assessment'>[]): string | null {
+export function foldedMakes(clocks: Pick<SummaryClock, 'assessment' | 'counts'>[]): string | null {
     if (clocks.length < FOLD_MIN_ROWS) {
         return null;
     }
     const rates = new Set(clocks.map(clock => clock.assessment.items_per_second.toFixed(2)));
-    return rates.size === 1 ? SUMMARY_COPY.foldedMakes(clocks.length, rateText(clocks[0].assessment.items_per_second)) : null;
+    return rates.size === 1 ? SUMMARY_COPY.foldedMakes(clocks.length, rateText(clocks[0].assessment.items_per_second), clocks[0].counts) : null;
 }
 
 /**

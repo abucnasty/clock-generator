@@ -3,6 +3,7 @@ import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
+import { rateVerbs, type TargetCounts } from '../utils/targetCounts';
 import {
     beltLine,
     beltValue,
@@ -28,7 +29,6 @@ import { useGameNames } from '../hooks/useGameNames';
 const CARD_COPY = {
     heading: 'Selected clock',
     makingFirst: 'Making the first clock…',
-    makes: 'Makes',
     wakeUps: 'Wake-ups',
     recovers: 'Recovers',
     belt: 'Belt pickups',
@@ -139,7 +139,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                     mt: 1.5,
                 }}
             >
-                <Fact label={CARD_COPY.makes} value={makes.value} sub={makes.sub} />
+                <Fact label={rateVerbs(selected.counts).title} value={makes.value} sub={makes.sub} />
                 <Fact label={CARD_COPY.wakeUps} value={wakeUps.value.replace(' a minute', '/min')} sub={wakeUps.sub} />
                 <Fact label={CARD_COPY.recovers} value={recovers.value} icon={RECOVERS_ICON[recovers.kind]} />
                 <Fact label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={beltValueSub(props.pickRule, selected.beltLabel) ?? (selected.ranking.matches_belt_choice ? undefined : 'Different setting')} />
@@ -151,8 +151,8 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
 }
 
 /** Whether the clock keeps its rate once the machines have warmed up, as a sentence */
-function holdStatusText(rate: string, holds: boolean | null | undefined): string {
-    if (holds === true) return `It keeps making ${rate} once warmed up: yes.`;
+function holdStatusText(rate: string, holds: boolean | null | undefined, counts?: TargetCounts): string {
+    if (holds === true) return `It keeps ${rateVerbs(counts).ing} ${rate} once warmed up: yes.`;
     if (holds === false) return 'It does not keep its rate once warmed up.';
     return 'Whether it keeps its rate once warmed up is unavailable.';
 }
@@ -170,7 +170,7 @@ function ClockExplanation(props: SelectedProps) {
             {COLD_START} {startCheckSummary([selected], props.generationAssumptions ?? null)}
         </Typography>
         <Typography variant="body2" data-hold-status>
-            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds)}
+            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds, selected.counts)}
         </Typography>
         {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
         {props.runAssumptions}

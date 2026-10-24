@@ -42,6 +42,7 @@ const manifest = EXAMPLES.map(({ id, path }) => {
         file,
         recipe: config.target_output.recipe,
         items_per_second: config.target_output.items_per_second,
+        ...(config.target_output.counts === 'destroyed' && { counts: 'destroyed' }),
         copies: config.target_output.copies ?? 1,
         machines: count(config.machines),
         inserters: count(config.inserters),
