@@ -26,6 +26,8 @@ inserters, so the question is only whether the hands of one period, wrapped arou
   the hands then fit only edge to edge, and nothing is left over.
 - **They collide** when two stretches overlap. The hand that starts later is the one that waits.
 
+![One lane of the belt as a loop of 14 slots in a period: the first inserters of the 7 copies on the even slots, the second inserters on the odd slots, every slot once](images/drop-spacing-loop.svg)
+
 Copy `k` of a build stands `k * pitch` from the first (`target_output.copy_offset`), and the inserters of a copy stand at their own
 places, so the hands of one line (the output inserters of one side of the belt, in one row) are at `p = copy * pitch + place of the inserter`.
 
@@ -52,10 +54,17 @@ different. An odd pitch not a multiple of 7 (`g` = 1) puts the 7 copies on 7 of 
 tiles of copies 7 to 13 (since `7 * pitch` is 7 mod 14), which the first row does not use. A pitch that is a multiple of 7 has `g` = 7: the 7 copies share 2 tiles.
 The build's pitch of 12 with inserters 3 tiles apart is the first row; its offset can be any odd number.
 
+![Copies 12 tiles apart fill the 14 slots once; copies 14 tiles apart put 7 hands on each of two slots](images/drop-spacing-fit-collide.svg)
+
 **A start tick can stand in for a tile.** A hand that starts 8 ticks later is one tile further along the belt (on a turbo belt), so starting the second inserter
 `d` ticks after the first has the effect of an offset of `offset - d / 8`. At pitch 12 and offset 3 the second inserter fits starting 0, 16, 32, 48, 64, 80 or 96 ticks after the first, and collides at
 the other multiples of 8 (an even offset in effect). The clock that the generator selected before the tie-break of the groups started the second
 inserters 56 ticks after the first: 3 - 7 = -4, even, and every second hand landed on a first hand's tile.
+
+![The second inserter starting 0, 8 and 16 ticks after the first: fit, collide, fit](images/drop-spacing-start-tick.svg)
+
+The diagrams are written by `scripts/drop-spacing-diagrams.js`, which takes every slot from the model (`src/config/drop-spacing.ts`) and fails if the model's
+verdict for a diagram is not the one drawn.
 
 ## What a collision costs
 
