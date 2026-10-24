@@ -241,8 +241,8 @@ export interface DropSpacing {
     hand: number;
     lane_stack: number;
     lines: DropSpacingLine[];
-    /** Spacings (tiles) that nearest to the gap below and above make every line fit; empty when none or when the gap is not given */
-    fitting_gaps: number[];
+    /** The spacings of the copies, and the offsets between a copy's inserters, at which the lines fit; none when the gap is not given or the lines are not all shared */
+    room?: DropRoom;
     /** For the first line that does not fit: the inserter to start at another tick, the ticks that fit nearest to its own, and the inserter whose tick it could share */
     fitting_start?: { inserter_id: number; ticks: number[]; same_as?: number };
 }
@@ -295,10 +295,9 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
         belt_tiles: first.line.tiles_per_tick * period,
         hand: first.line.hand, lane_stack: first.line.lane_stack,
         lines: results.map(it => it.result),
-        fitting_gaps: [],
     };
+    if (shared) spacing.room = dropRoom(config, results.map(it => it.line), period) ?? undefined;
     if (!results.every(it => it.result.fits)) {
-        if (shared) spacing.fitting_gaps = fittingGaps(config, results.map(it => it.line), starts, period, spacing.gap!);
         const failing = results.find(it => !it.result.fits)!;
         spacing.fitting_start = fittingStart(config, failing.line, failing.step, failing.sense, starts, period);
     }
@@ -333,21 +332,112 @@ export function dropTieBreak(config: Config, period: number): DropTieBreak | nul
     };
 }
 
-/** The spacings, a whole number of tiles, nearest to `gap` below and above at which the hands of every line fit */
-function fittingGaps(config: Config, lines: DropLine[], starts: ReadonlyMap<number, readonly number[]>, period: number, gap: number): number[] {
-    const offset = config.target_output.copy_offset!;
-    const fits = (spacing: number): boolean => lines.every(line => {
-        const axis_sign = (line.axis === "x" ? offset.x : offset.y) < 0 ? -1 : 1;
-        const step: CopyStep = { along: axis_sign * spacing, shared: true };
-        const senses: (1 | -1)[] = line.flow === null ? [1, -1] : [line.flow];
-        return senses.every(sense => checkLine(config, line, starts, period, step, sense).pairs.length === 0);
+/** The widest a pitch or an offset scan lists, and the longest start delay it tries */
+const MAX_LISTED = 8;
+const MAX_OFFSET_TILES = 64;
+const MAX_DELAY_TICKS = 1000;
+/** The narrowest machine or drill of the game is 3 tiles across: the span of the positions of a copy, plus one such entity */
+const NARROWEST_ENTITY_TILES = 3;
+
+/** Whether no two hands overlap on the circle of the belt's tiles in a period: the test of collidingPairs, sorted */
+function handsFit(hands: readonly Hand[], tiles_per_tick: number, period: number): boolean {
+    if (hands.length < 2) return true;
+    const cycle = tiles_per_tick * period;
+    const mod = (value: number) => ((value % cycle) + cycle) % cycle;
+    const placed = hands.map(hand => ({ at: mod(hand.place - tiles_per_tick * hand.tick), width: QUARTER_TILE * hand.stacks })).sort((a, b) => a.at - b.at);
+    for (let i = 1; i < placed.length; i++) if (placed[i].at - placed[i - 1].at < placed[i].width - EPSILON) return false;
+    return placed[0].at + cycle - placed[placed.length - 1].at >= placed[0].width - EPSILON;
+}
+
+/** What the scan of the spacings of the copies finds, at the period it was made for, for inserters that start in the same tick */
+export interface DropRoom {
+    /** The spacings tried, whole tiles from `low` to `high` */
+    low: number;
+    high: number;
+    /** The spacings at which the lines fit with the inserters where they stand */
+    fits: number[];
+    /** Spacings at which they fit only with another distance between the two inserters of a copy: the distances (whole tiles) */
+    only_with: { spacings: number[]; apart: number[] }[];
+    /** Spacings at which they fit with no distance. Both this and `only_with` are empty for a line with other than two inserters in a copy */
+    never: number[];
+    /** The two inserters of a copy (of the first line) and the tiles between them; null for other lines */
+    pair: { first: number; second: number; apart: number } | null;
+    /** The first ticks after the first inserter at which the second starting makes the lines fit, at the spacing the config has */
+    starts_after: number[];
+    /** Tiles the belt moves in a period, ticks it takes for a tile, and tiles a hand takes */
+    belt_tiles: number;
+    ticks_per_tile: number;
+    hand_tiles: number;
+    /** The spacing the config has */
+    gap: number;
+}
+
+/** The span of the copy's positions along an axis, plus the narrowest entity; null when an entity has no position */
+function copyWidth(config: Config, axis: "x" | "y"): number | null {
+    const entities = [...config.machines, ...config.inserters, ...(config.chests ?? []), ...(config.drills?.configs ?? [])];
+    const places = entities.map(entity => entity.position === undefined ? null : entity.position[axis]);
+    if (places.length === 0 || places.some(place => place === null)) return null;
+    return Math.ceil(Math.max(...(places as number[])) - Math.min(...(places as number[])) - EPSILON) + NARROWEST_ENTITY_TILES;
+}
+
+/**
+ * The spacings of the copies, from the width of a copy up to twice the spacing it has, at which every shared line fits when its
+ * inserters start in the same tick; for a line of two inserters in a copy, the distances between them that fit at the spacings that
+ * do not, and the start delays of the second one that fit. Arithmetic on the places alone: no run of the build. Null where
+ * the copies' gap is not given or no line is shared.
+ */
+export function dropRoom(config: Config, lines: readonly DropLine[], period: number): DropRoom | null {
+    const copies = config.target_output.copies;
+    const offset = config.target_output.copy_offset;
+    const shared = lines.filter(line => copyStepOf(config, line.axis)?.shared === true);
+    if (!(period > 0) || !(copies > 1) || offset === undefined || shared.length === 0) return null;
+    const signs = shared.map(line => ((line.axis === "x" ? offset.x : offset.y) < 0 ? -1 : 1) as 1 | -1);
+    const gap = Math.abs(shared[0].axis === "x" ? offset.x : offset.y);
+    const first = shared[0];
+    const tiles_per_tick = first.tiles_per_tick;
+    const width = copyWidth(config, first.axis);
+    const low = Math.max(1, Math.min(width ?? 1, Math.floor(gap)));
+    const high = Math.max(low, Math.floor(2 * gap));
+    const together = new Map<number, readonly number[]>(shared.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));
+    const fitsWith = (candidates: readonly DropLine[], pitch: number, starts: ReadonlyMap<number, readonly number[]>): boolean =>
+        candidates.every((line, index) => (line.flow === null ? [1, -1] as const : [line.flow] as const)
+            .every(sense => handsFit(handsOf(line, starts, copies, { along: signs[index] * pitch, shared: true }, sense), line.tiles_per_tick, period)));
+    const pairable = shared.every(line => line.inserters.length === 2);
+    // the line with the second inserter of each copy `apart` tiles from the first, in the direction it has
+    const withApart = (apart: number): DropLine[] => shared.map(line => {
+        const [one, two] = line.inserters;
+        return { ...line, inserters: [one, { ...two, along: one.along + (two.along < one.along ? -apart : apart) }] };
     });
-    const found: number[] = [];
-    const below = Math.ceil(gap) - 1;
-    for (let spacing = Math.max(1, below); spacing >= 1; spacing--) if (spacing !== gap && fits(spacing)) { found.push(spacing); break; }
-    const reach = Math.ceil(2 * gap + 2 * lines[0].tiles_per_tick * period + 2);
-    for (let spacing = Math.floor(gap) + 1; spacing <= reach; spacing++) if (fits(spacing)) { found.push(spacing); break; }
-    return found.sort(pair);
+    const fits: number[] = [], never: number[] = [];
+    const only = new Map<string, { spacings: number[]; apart: number[] }>();
+    const reach = Math.min(MAX_OFFSET_TILES, Math.ceil(tiles_per_tick * period) - 1);
+    for (let pitch = low; pitch <= high; pitch++) {
+        if (fitsWith(shared, pitch, together)) {
+            fits.push(pitch);
+        } else if (pairable) {
+            const apart: number[] = [];
+            for (let each = 1; each <= reach; each++) if (fitsWith(withApart(each), pitch, together)) apart.push(each);
+            if (apart.length === 0) never.push(pitch);
+            else {
+                const group = only.get(apart.join()) ?? { spacings: [], apart };
+                group.spacings.push(pitch);
+                only.set(apart.join(), group);
+            }
+        }
+    }
+    const starts_after: number[] = [];
+    if (pairable) {
+        for (let delay = 1; delay <= Math.min(period - 1, MAX_DELAY_TICKS) && starts_after.length < 3; delay++) {
+            const later = new Map(together);
+            shared.forEach(line => later.set(line.inserters[1].id, [delay]));
+            if (fitsWith(shared, gap, later)) starts_after.push(delay);
+        }
+    }
+    return {
+        low, high, fits, only_with: [...only.values()], never,
+        pair: pairable ? { first: first.inserters[0].id, second: first.inserters[1].id, apart: Math.abs(first.inserters[1].along - first.inserters[0].along) } : null,
+        starts_after, belt_tiles: tiles_per_tick * period, ticks_per_tile: 1 / tiles_per_tick, hand_tiles: first.inserters[0].stacks * QUARTER_TILE, gap,
+    };
 }
 
 /**
@@ -396,6 +486,30 @@ const handsWord = (count: number) => `${count} ${count === 1 ? "hand" : "hands"}
 const whoOf = (line: DropSpacingLine, copies: number) =>
     `${inserterWords(line.inserter_ids)}${copies > 1 ? ` of the ${copies} copies` : ""}`;
 
+/** A list of at most MAX_LISTED numbers, "12, 16 or 24", with "and others" where there are more */
+const listedSpacings = (values: readonly number[], word = "or"): string =>
+    values.length > MAX_LISTED ? `${values.slice(0, MAX_LISTED).join(", ")} and others` : listed(values, word);
+
+/**
+ * What the scan of the spacings says, as a paragraph: "The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With
+ * inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16 or 24 tiles apart; 13 or 15 apart only with a copy's
+ * inserters 7 tiles apart; 14 or 21 apart never. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks)."
+ */
+export function describeDropRoom(room: DropRoom): string {
+    const lead = Number.isInteger(room.belt_tiles) && room.hand_tiles === 1
+        ? `The belt moves ${tiles(room.belt_tiles)} tiles a period, so each hand lands on one of ${tiles(room.belt_tiles)} tiles.`
+        : `The belt moves ${tiles(room.belt_tiles)} tiles a period, and a hand takes ${tiles(room.hand_tiles)} of a tile.`;
+    const stand = room.pair !== null ? `With inserters ${room.pair.first} and ${room.pair.second} as they stand (${tiles(room.pair.apart)} tiles apart)` : "With the inserters as they stand";
+    const clauses: string[] = [room.fits.length > 0 ? `the copies fit ${listedSpacings(room.fits)} tiles apart`
+        : `the copies fit at no spacing from ${room.low} to ${room.high} tiles`];
+    for (const group of room.only_with) clauses.push(`${listedSpacings(group.spacings)} apart only with a copy's inserters ${listedSpacings(group.apart)} tiles apart`);
+    if (room.never.length > 0) clauses.push(`${listedSpacings(room.never)} apart never`);
+    const later = room.pair !== null && room.starts_after.length > 0
+        ? ` Starting inserter ${room.pair.second} ${listed(room.starts_after.map(tick => String(tick)), "or")} ticks after inserter ${room.pair.first} also fits (a tile every ${tiles(room.ticks_per_tile)} ticks).`
+        : "";
+    return `${lead} ${stand}, ${clauses.join("; ")}.${later}`;
+}
+
 /** The text a result gives of the drops onto the shared belt, as an insight's pieces */
 export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; title: string; what: string; why: string; explanation: string } {
     const fits = spacing.lines.every(line => line.fits);
@@ -427,15 +541,15 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
     const tile = hand_tiles === 1 ? `A tile of a belt lane holds one hand of ${spacing.hand} at stack size ${spacing.lane_stack}.`
         : `A tile of a belt lane holds ${4 * spacing.lane_stack} items at stack size ${spacing.lane_stack}, and a hand of ${spacing.hand} takes ${tiles(hand_tiles)} of a tile.`;
     const why = `${tile} A hand dropped where items already lie waits until they have moved on, so the hands of all the copies have to land in the gaps the others leave.`;
+    const roomText = spacing.room === undefined ? "" : ` ${describeDropRoom(spacing.room)}`;
     if (fits) {
         return {
             fits, title: `Drops onto ${belt} fit between each other`, what: `${sentences.join(" ")} ${closing}`, why,
             explanation: "This holds for this spacing and these start ticks. Moving one inserter by a tile, or starting one group of inserters at another tick, "
-                + `puts hands on top of each other. ${DROP_SPACING_STRAIGHT_BELT}`,
+                + `puts hands on top of each other.${roomText} ${DROP_SPACING_STRAIGHT_BELT}`,
         };
     }
     const parts: string[] = [];
-    if (spacing.fitting_gaps.length > 0) parts.push(`the copies ${listed(spacing.fitting_gaps, "or")} tiles apart`);
     if (spacing.fitting_start !== undefined) {
         const start = spacing.fitting_start;
         const moves = start.ticks.length > 0 ? `inserter ${start.inserter_id} starting at tick ${listed(start.ticks, "or")}` : "";
@@ -446,7 +560,7 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
     return {
         fits, title: `Drops onto ${belt} land on each other`, what: `${sentences.join(" ")} ${closing}`, why,
         explanation: "The simulator does not count this wait: it drops each inserter's hand on a belt of its own, so the rate and stability shown for this clock "
-            + `were worked out without it.${fit} ${DROP_SPACING_STRAIGHT_BELT}`,
+            + `were worked out without it.${fit}${roomText} ${DROP_SPACING_STRAIGHT_BELT}`,
     };
 }
 

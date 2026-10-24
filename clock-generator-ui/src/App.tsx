@@ -1193,6 +1193,7 @@ function App() {
                                 copyOffset={config.target_output.copy_offset}
                                 showCopyOffset={config.target_output.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
                                 onCopyOffsetChange={(value) => updateTargetOutput('copy_offset', value)}
+                                copyOffsetNote={checkedCoverage?.dropRoom}
                             />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>

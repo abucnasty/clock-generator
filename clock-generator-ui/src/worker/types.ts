@@ -453,6 +453,8 @@ export interface LiveCoverage {
     lanesExactlyFull: string | null;
     /** The engine's note that the copies' gap is needed to check their drops onto a belt, which does not block */
     copyGapNeeded: string | null;
+    /** The engine's note on whether the copies' drops fit between each other at the period estimated from the settings, shown under the gap between copies */
+    dropRoom: string | null;
     /** The engine's warnings for machines whose prototype disagrees with their type or cannot make their recipe; they do not block */
     machinePrototypes: MachinePrototypeIssue[];
 }

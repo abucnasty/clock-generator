@@ -16,6 +16,13 @@ describe('the gap between copies', () => {
         expect(text(form())).not.toContain('Next copy stands');
     });
 
+    it('says under the gap whether the drops fit, when the engine has something to say', () => {
+        const note = 'At about 112 ticks a period, the hands of the 7 copies fit between each other on belt 1.';
+        expect(text(form({ showCopyOffset: true, onCopyOffsetChange: () => {}, copyOffsetNote: note }))).toContain(note);
+        expect(text(form({ showCopyOffset: true, onCopyOffsetChange: () => {}, copyOffsetNote: null }))).not.toContain('At about');
+        expect(text(form({ showCopyOffset: false, onCopyOffsetChange: () => {}, copyOffsetNote: note }))).not.toContain('At about');
+    });
+
     it('is a number of tiles and a side, kept as the step from one copy to the next', () => {
         expect(copyOffsetOf(12, 'east')).toEqual({ x: 12, y: 0 });
         expect(copyOffsetOf(12, 'west')).toEqual({ x: -12, y: 0 });

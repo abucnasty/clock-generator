@@ -94,6 +94,7 @@ export { insertersScopeProblem } from './config/inserter-scope';
 export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/pickup-calibration';
 export { laneCapacityIssues, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
 export { copyGapNeededNote } from './config/drop-spacing';
+export { dropRoomNote } from './crafting/drop-room-note';
 export { sideLoadedDrops, sideLoadedDropWarning } from './config/side-loaded-drop';
 export type { UncalibratedBeltPickup } from './config/pickup-calibration';
 export { machinePrototypeIssues, machineRuleOf } from './config/machine-prototype';

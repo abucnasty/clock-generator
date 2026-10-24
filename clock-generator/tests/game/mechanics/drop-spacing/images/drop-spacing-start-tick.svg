@@ -1,0 +1,198 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="545" viewBox="0 0 1120 545" role="img" aria-labelledby="title desc">
+  <title id="title">A start 8 ticks later lands one slot further along</title>
+  <desc id="desc">Three strips of the 14 slots of one belt lane for copies 12 tiles apart. Starting the second inserter of every copy 0 ticks after the first fits, 8 ticks after puts the second hands on the first hands' slots so they collide, and 16 ticks after fits again, because the belt moves one tile in 8 ticks.</desc>
+  <style>
+    /* Transparent canvas; light colors below remain the fallback for static renderers. */
+    @media (prefers-color-scheme: dark) {
+      [fill="#1565c0"] { fill: #79b8ff; }
+      [fill="#00796b"] { fill: #56d4b0; }
+      [fill="#bd4c0b"] { fill: #ffab70; }
+      [fill="#203047"] { fill: #e6edf3; }
+      [fill="#526176"] { fill: #b3c0d0; }
+      [fill="#eaf3ff"] { fill: #182c44; }
+      [fill="#e3f4ef"] { fill: #17352f; }
+      [fill="#fff2e7"] { fill: #36271d; }
+      [stroke="#1565c0"] { stroke: #79b8ff; }
+      [stroke="#00796b"] { stroke: #56d4b0; }
+      [stroke="#bd4c0b"] { stroke: #ffab70; }
+      [stroke="#ccd5df"] { stroke: #40516a; }
+      [stroke="#8292a7"] { stroke: #91a4b8; }
+    }
+  </style>
+  <defs>
+    <marker id="flow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#1565c0" />
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="20" y="30" font-size="22" fill="#203047" font-weight="bold">A start 8 ticks later is one slot further along</text>
+    <text x="20" y="55" font-size="14" fill="#203047" font-weight="normal">Copies 12 tiles apart, inserters 3 tiles apart. Inserter 2 of every copy starts d ticks after inserter 1; the belt moves one tile in 8 ticks.</text>
+    <text x="20" y="92" font-size="17" fill="#1565c0" font-weight="bold">Inserter 2 starts together with inserter 1 (fit)</text>
+    <rect x="20" y="120" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="57" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">0</text>
+    <text x="57" y="150" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 0</text>
+    <text x="57" y="170" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="98" y="120" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="135" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">1</text>
+    <text x="135" y="150" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 2</text>
+    <text x="135" y="170" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="176" y="120" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="213" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">2</text>
+    <text x="213" y="150" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 1</text>
+    <text x="213" y="170" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="254" y="120" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="291" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">3</text>
+    <text x="291" y="150" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 3</text>
+    <text x="291" y="170" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="332" y="120" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="369" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">4</text>
+    <text x="369" y="150" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 2</text>
+    <text x="369" y="170" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="410" y="120" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="447" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">5</text>
+    <text x="447" y="150" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 4</text>
+    <text x="447" y="170" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="488" y="120" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="525" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">6</text>
+    <text x="525" y="150" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 3</text>
+    <text x="525" y="170" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="566" y="120" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="603" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">7</text>
+    <text x="603" y="150" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 5</text>
+    <text x="603" y="170" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="644" y="120" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="681" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">8</text>
+    <text x="681" y="150" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 4</text>
+    <text x="681" y="170" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="722" y="120" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="759" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">9</text>
+    <text x="759" y="150" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 6</text>
+    <text x="759" y="170" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="800" y="120" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="837" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">10</text>
+    <text x="837" y="150" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 5</text>
+    <text x="837" y="170" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="878" y="120" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="915" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">11</text>
+    <text x="915" y="150" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 0</text>
+    <text x="915" y="170" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="956" y="120" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="993" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">12</text>
+    <text x="993" y="150" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 6</text>
+    <text x="993" y="170" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="1034" y="120" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="1071" y="114" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">13</text>
+    <text x="1071" y="150" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 1</text>
+    <text x="1071" y="170" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <text x="20" y="215" font-size="13" fill="#526176" font-weight="normal">d = 0: the second hands are on the odd slots.</text>
+    <text x="20" y="242" font-size="17" fill="#bd4c0b" font-weight="bold">d = 8 ticks (collide)</text>
+    <rect x="20" y="270" width="74" height="70" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+    <text x="57" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">0</text>
+    <text x="57" y="294" font-size="14" fill="#bd4c0b" font-weight="bold" text-anchor="middle">2 hands</text>
+    <text x="57" y="312" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 1: copy 0</text>
+    <text x="57" y="327" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 2: copy 2</text>
+    <rect x="98" y="270" width="74" height="70" rx="4" fill="none" stroke="#ccd5df" />
+    <text x="135" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">1</text>
+    <rect x="176" y="270" width="74" height="70" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+    <text x="213" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">2</text>
+    <text x="213" y="294" font-size="14" fill="#bd4c0b" font-weight="bold" text-anchor="middle">2 hands</text>
+    <text x="213" y="312" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 1: copy 1</text>
+    <text x="213" y="327" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 2: copy 3</text>
+    <rect x="254" y="270" width="74" height="70" rx="4" fill="none" stroke="#ccd5df" />
+    <text x="291" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">3</text>
+    <rect x="332" y="270" width="74" height="70" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+    <text x="369" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">4</text>
+    <text x="369" y="294" font-size="14" fill="#bd4c0b" font-weight="bold" text-anchor="middle">2 hands</text>
+    <text x="369" y="312" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 1: copy 2</text>
+    <text x="369" y="327" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 2: copy 4</text>
+    <rect x="410" y="270" width="74" height="70" rx="4" fill="none" stroke="#ccd5df" />
+    <text x="447" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">5</text>
+    <rect x="488" y="270" width="74" height="70" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+    <text x="525" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">6</text>
+    <text x="525" y="294" font-size="14" fill="#bd4c0b" font-weight="bold" text-anchor="middle">2 hands</text>
+    <text x="525" y="312" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 1: copy 3</text>
+    <text x="525" y="327" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 2: copy 5</text>
+    <rect x="566" y="270" width="74" height="70" rx="4" fill="none" stroke="#ccd5df" />
+    <text x="603" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">7</text>
+    <rect x="644" y="270" width="74" height="70" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+    <text x="681" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">8</text>
+    <text x="681" y="294" font-size="14" fill="#bd4c0b" font-weight="bold" text-anchor="middle">2 hands</text>
+    <text x="681" y="312" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 1: copy 4</text>
+    <text x="681" y="327" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 2: copy 6</text>
+    <rect x="722" y="270" width="74" height="70" rx="4" fill="none" stroke="#ccd5df" />
+    <text x="759" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">9</text>
+    <rect x="800" y="270" width="74" height="70" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+    <text x="837" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">10</text>
+    <text x="837" y="294" font-size="14" fill="#bd4c0b" font-weight="bold" text-anchor="middle">2 hands</text>
+    <text x="837" y="312" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 1: copy 5</text>
+    <text x="837" y="327" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 2: copy 0</text>
+    <rect x="878" y="270" width="74" height="70" rx="4" fill="none" stroke="#ccd5df" />
+    <text x="915" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">11</text>
+    <rect x="956" y="270" width="74" height="70" rx="4" fill="#fff2e7" stroke="#bd4c0b" />
+    <text x="993" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">12</text>
+    <text x="993" y="294" font-size="14" fill="#bd4c0b" font-weight="bold" text-anchor="middle">2 hands</text>
+    <text x="993" y="312" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 1: copy 6</text>
+    <text x="993" y="327" font-size="11" fill="#bd4c0b" font-weight="normal" text-anchor="middle">ins. 2: copy 1</text>
+    <rect x="1034" y="270" width="74" height="70" rx="4" fill="none" stroke="#ccd5df" />
+    <text x="1071" y="264" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">13</text>
+    <text x="20" y="365" font-size="13" fill="#526176" font-weight="normal">One slot along: the second hands now land on even slots, the first hands' slots.</text>
+    <text x="20" y="392" font-size="17" fill="#1565c0" font-weight="bold">d = 16 ticks (fit)</text>
+    <rect x="20" y="420" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="57" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">0</text>
+    <text x="57" y="450" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 0</text>
+    <text x="57" y="470" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="98" y="420" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="135" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">1</text>
+    <text x="135" y="450" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 3</text>
+    <text x="135" y="470" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="176" y="420" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="213" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">2</text>
+    <text x="213" y="450" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 1</text>
+    <text x="213" y="470" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="254" y="420" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="291" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">3</text>
+    <text x="291" y="450" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 4</text>
+    <text x="291" y="470" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="332" y="420" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="369" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">4</text>
+    <text x="369" y="450" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 2</text>
+    <text x="369" y="470" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="410" y="420" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="447" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">5</text>
+    <text x="447" y="450" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 5</text>
+    <text x="447" y="470" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="488" y="420" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="525" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">6</text>
+    <text x="525" y="450" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 3</text>
+    <text x="525" y="470" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="566" y="420" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="603" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">7</text>
+    <text x="603" y="450" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 6</text>
+    <text x="603" y="470" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="644" y="420" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="681" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">8</text>
+    <text x="681" y="450" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 4</text>
+    <text x="681" y="470" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="722" y="420" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="759" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">9</text>
+    <text x="759" y="450" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 0</text>
+    <text x="759" y="470" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="800" y="420" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="837" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">10</text>
+    <text x="837" y="450" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 5</text>
+    <text x="837" y="470" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="878" y="420" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="915" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">11</text>
+    <text x="915" y="450" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 1</text>
+    <text x="915" y="470" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <rect x="956" y="420" width="74" height="70" rx="4" fill="#eaf3ff" stroke="#1565c0" />
+    <text x="993" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">12</text>
+    <text x="993" y="450" font-size="14" fill="#1565c0" font-weight="bold" text-anchor="middle">copy 6</text>
+    <text x="993" y="470" font-size="12" fill="#1565c0" font-weight="normal" text-anchor="middle">inserter 1</text>
+    <rect x="1034" y="420" width="74" height="70" rx="4" fill="#e3f4ef" stroke="#00796b" />
+    <text x="1071" y="414" font-size="12" fill="#526176" font-weight="normal" text-anchor="middle">13</text>
+    <text x="1071" y="450" font-size="14" fill="#00796b" font-weight="bold" text-anchor="middle">copy 2</text>
+    <text x="1071" y="470" font-size="12" fill="#00796b" font-weight="normal" text-anchor="middle">inserter 2</text>
+    <text x="20" y="515" font-size="13" fill="#526176" font-weight="normal">Two slots along: odd slots again, so a start tick can stand in for two tiles of distance between the inserters.</text>
+  </g>
+</svg>

@@ -1,4 +1,5 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
+import grenadeSample from '../../../clock-generator/resources/config-samples/real/owner/grenade/grenade.json?raw';
 import { afterEach, expect, it, vi } from 'vitest';
 import { LATEST_SIDECAR_VERSION, type Config } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
@@ -220,7 +221,7 @@ it('warns live of a belt pickup whose timing is not tested, as generation logs i
         return (answer as { answer: LiveCoverage }).answer;
     };
 
-    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, machinePrototypes: [] });
+    expect(await live(gears(4))).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] });
     const warning = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
@@ -233,7 +234,7 @@ it('warns live of a belt pickup whose timing is not tested, as generation logs i
         + 'The clock may make less in the game than shown here, most of all when these inserters are switched on at the same time as others '
         + 'that drop onto the belt. Give each of these drops a belt of its own, or check the clock in the game.');
     const untested = await live(gears(2));
-    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, machinePrototypes: [] });
+    expect(untested).toEqual({ issues: [], refusal: null, pickupNotTested: warning, laneSharedByCopies: null, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: untested.issues, scopeRefusal: untested.refusal, pickupNotTested: untested.pickupNotTested,
         chests: [], inserters: [], machines: gears(2).machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
@@ -272,7 +273,7 @@ it('warns live of a lane the copies would ask too much of if they shared it, as 
     const warning = 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
         + 'The config cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
         + 'belts of their own is not affected.';
-    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, machinePrototypes: [] });
+    expect(live).toEqual({ issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: warning, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] });
     expect(buildValidationIssues({ fieldProblems: [], coverage: live.issues, laneSharedByCopies: live.laneSharedByCopies,
         chests: [], inserters: [], machines: config.machines, chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
@@ -316,4 +317,28 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
         machines: [{ id: 1 }], chestIssues: [], coverageText: () => '' })
         .map(({ source, severity, blocksGeneration, fieldTarget }) => ({ source, severity, blocksGeneration, fieldTarget })))
         .toEqual([{ source: 'machine', severity: 'warning', blocksGeneration: false, fieldTarget: { kind: 'machine-recipe', machineId: 1 } }]);
+});
+
+it('says live whether the copies\' drops fit at the gap given, for the period estimated from the settings', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    const live = async (copy_offset: { x: number; y: number } | undefined) => {
+        const grenade = JSON.parse(grenadeSample) as Config;
+        const config = { ...grenade, target_output: { ...grenade.target_output, copy_offset } };
+        const answer = await send({ type: 'query', requestId: 80, query: { kind: 'inserter-coverage', config } });
+        return (answer as { answer: LiveCoverage }).answer;
+    };
+    const lead = "At about 112 ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the 7 copies";
+    expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on belt 1, if the inserters of a copy start together. `
+        + 'They would also fit with the copies 16, 18, 20, 22 or 24 tiles apart.');
+    expect((await live({ x: 13, y: 0 })).dropRoom).toBe(`${lead} land on each other on belt 1, if the inserters of a copy start together, and some of them wait for room. `
+        + 'They would fit with the copies 12, 16, 18, 20, 22, 24 or 26 tiles apart, or 13 tiles apart with the inserters of a copy 7 tiles apart.');
+    const without = await live(undefined);
+    expect(without.dropRoom).toBeNull();
+    expect(without.copyGapNeeded).not.toBeNull();
 });
