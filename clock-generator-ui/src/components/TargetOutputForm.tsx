@@ -1,5 +1,5 @@
 import { Box, MenuItem, Paper, TextField, Typography } from '@mui/material';
-import { copyOffsetOf, copyOffsetShown, SIDES, type CopyOffset, type Side } from '../utils/copyOffset';
+import { COPY_OFFSET_MIN_TILES, copyOffsetOf, copyOffsetShown, SIDES, type CopyOffset, type Side } from '../utils/copyOffset';
 import { HelpButton } from './HelpButton';
 import { copiesProblem } from '../utils/copiesProblem';
 import { ItemSelector } from './ItemSelector';
@@ -110,7 +110,9 @@ export function TargetOutputForm({
                             aria-label="Tiles to the next copy"
                             value={shown.tiles}
                             onValueChange={(val) => onCopyOffsetChange(copyOffsetOf(val ?? null, shown.side))}
-                            min={0}
+                            // no tiles is no gap, which the field shows empty: a step down to 0 would empty it, and a step up from
+                            // empty would land on 0 and empty it again
+                            min={COPY_OFFSET_MIN_TILES}
                             step={1}
                             sx={{ width: 110 }}
                             size="small"
