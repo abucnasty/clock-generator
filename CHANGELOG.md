@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
-## [0.22.0] - Unreleased
+## [0.22.0] - 2026-10-24
 
 ### Added
 - A build where several machines draw from one source, such as one foundry feeding four assemblers, now gets a clock that holds where the planned windows did not: each inserter gets one window long enough for all its hands, the machines a source cannot feed at once take turns in as few groups as its stock and output allow, and each output inserter swings once at the start of its group's turn. Where copies drop onto a shared belt, the machines are grouped so that their drops fit between each other.
