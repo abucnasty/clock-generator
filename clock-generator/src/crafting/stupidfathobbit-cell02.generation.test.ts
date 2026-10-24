@@ -37,7 +37,8 @@ describe("the real stupidfathobbit cell 02", () => {
             "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(pin.clock_sha256);
         expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null}).toEqual(pin.selection);
         expect(selected.result.simulation_duration.ticks).toBe(pin.period);
-    }, 120_000);
+    // about 30 s on a desktop and up to 3.7 times that on a CI runner; the limit is a guard against a slower generation
+    }, 300_000);
 
     it("exports the circuits on belt 2 at 40 a second a lane", async () => {
         const config = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02);
