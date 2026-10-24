@@ -1,4 +1,4 @@
-import { machineCanMake, machineForRecipe, machineRuleOfPrototype, MachineType } from 'clock-generator/light';
+import { machineCanMake, machineForRecipe, machineRuleOfPrototype, MachineType, placesResultsItself } from 'clock-generator/light';
 import type { CraftingMachineData, CraftingMachineInfo } from '../worker/types';
 import type { MachineFormData } from './configForm/formData';
 
@@ -14,6 +14,26 @@ export function craftingMachineOf(data: CraftingMachineData, prototype: string |
 export function burnsNutrients(row: Pick<MachineFormData, 'prototype'>, data: CraftingMachineData): boolean {
     const machine = craftingMachineOf(data, row.prototype);
     return machine !== undefined && machineRuleOfPrototype(machine) === MachineType.BIOCHAMBER;
+}
+
+/**
+ * Whether the row's machine places its results itself, into the container in front of its output side (the recycler), as
+ * its game data says by `vector_to_place_result`; no name decides it. Only such a machine has a result target.
+ */
+export function placesResults(row: Pick<MachineFormData, 'prototype'>, data: CraftingMachineData): boolean {
+    const machine = craftingMachineOf(data, row.prototype);
+    return machine !== undefined && placesResultsItself(machine);
+}
+
+/**
+ * The patch that sets a row's machine, chosen by hand. Only a machine that places its results itself has a result target:
+ * a row that changes to another loses it.
+ */
+export function machineChoicePatch(prototype: string, row: Pick<MachineFormData, 'result_target'>, data: CraftingMachineData): Partial<MachineFormData> {
+    return {
+        prototype, _prototype_source: 'hand',
+        ...(row.result_target !== undefined && !placesResults({ prototype }, data) && { result_target: undefined }),
+    };
 }
 
 /** The machine a row without one gets for its recipe: one that can make it, as the engine picks it; undefined when none can */

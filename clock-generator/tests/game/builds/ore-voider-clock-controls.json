@@ -1,0 +1,313 @@
+{
+  "meaning": "Native summaries of the ore voider's recycler cell (ore-voider-clock-fixtures.ts) in Factorio 2.1.21, on its selected clock: an hour of periods, then the ore supply cut for 20 periods, then 2000 ore put into the car, then the recycler's input watched with its car full and its car inserters disabled by script. What comes back is random in the game, so each entry is one run's figures, judged by assertHolds against the binomial's range, not compared period for period. taker_wake_ups_per_minute in baseline is the game's count (an inserter waiting at the car woken by ore placed into it), in clock the simulator's.",
+  "cases": {
+    "ore-voider-exact-speed": {
+      "recorded": {
+        "pr": 0,
+        "commit": "b3ec2520",
+        "frozen_head": "b3ec2520",
+        "note": "recorded on the engine of b3ec2520 with this probe before it was committed (the same figures as a run on 4305137e); pr is set when the PR is opened",
+        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 400,
+        "period": 144,
+        "expected": 960,
+        "clock": {
+          "id": "even-hands",
+          "period": 144,
+          "expected": 960,
+          "verdict": "stable",
+          "wake_ups_per_minute": 402.7972027972028,
+          "taker_wake_ups_per_minute": 402.7972027972028
+        },
+        "baseline": {
+          "periods": 1500,
+          "fresh_mean": 960,
+          "destroyed_mean": 960.022,
+          "range": 1.2000000000000002,
+          "destroyed_per_second": 400.00916666666666,
+          "crafts": 1920021,
+          "placed": 479988,
+          "returned_share": 0.24999101572326551,
+          "returned_range": 0.0009374948730889318,
+          "car_max": 74,
+          "car_capacity": 4000,
+          "full_ticks": 0,
+          "recycler_status": {
+            "working": 210702,
+            "item_ingredient_shortage": 447,
+            "no_ingredients": 4851
+          },
+          "result_after_tick": {
+            "0": 216000
+          },
+          "taker_wake_ups_per_minute": 355.48333333333335
+        },
+        "cut": {
+          "during": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            960,
+            960,
+            960,
+            960
+          ],
+          "first_back": 0,
+          "car_after": 30
+        },
+        "backlog": {
+          "inserted": 2000,
+          "periods_to_drain": 46,
+          "fresh_while_draining": [
+            960,
+            896,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960,
+            896,
+            960
+          ],
+          "after": {
+            "periods": 354,
+            "at_target": 354
+          }
+        },
+        "blocked_input": {
+          "started": 336001,
+          "filled": 3974,
+          "stopped": 336031,
+          "result_waiting": 50,
+          "source_before": 30,
+          "source_max": 0,
+          "fresh_after": 0,
+          "status": "waiting_for_space_in_destination",
+          "result_waiting_end": 50
+        }
+      },
+      "generation": {
+        "period": 144,
+        "expected": 960,
+        "verdict": "stable",
+        "selection": {
+          "id": "even-hands",
+          "holds": true,
+          "rate": 400,
+          "supply": null
+        },
+        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61"
+      }
+    },
+    "ore-voider-overbeaconed": {
+      "recorded": {
+        "pr": 0,
+        "commit": "b3ec2520",
+        "frozen_head": "b3ec2520",
+        "note": "recorded on the engine of b3ec2520 with this probe before it was committed (the same figures as a run on 4305137e); pr is set when the PR is opened",
+        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 400,
+        "period": 144,
+        "expected": 960,
+        "clock": {
+          "id": "even-hands",
+          "period": 144,
+          "expected": 960,
+          "verdict": "stable",
+          "wake_ups_per_minute": 553.8461538461538,
+          "taker_wake_ups_per_minute": 553.8461538461538
+        },
+        "baseline": {
+          "periods": 1500,
+          "fresh_mean": 960,
+          "destroyed_mean": 959.9926666666667,
+          "range": 1.2000000000000002,
+          "destroyed_per_second": 399.99694444444447,
+          "crafts": 1919952,
+          "placed": 479963,
+          "returned_share": 0.24998697884113769,
+          "returned_range": 0.000937511718969731,
+          "car_max": 66,
+          "car_capacity": 4000,
+          "full_ticks": 0,
+          "recycler_status": {
+            "working": 119997,
+            "no_ingredients": 96003
+          },
+          "result_after_tick": {
+            "0": 216000
+          },
+          "taker_wake_ups_per_minute": 286.45
+        },
+        "cut": {
+          "during": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            960,
+            960,
+            960,
+            960
+          ],
+          "first_back": 0,
+          "car_after": 24
+        },
+        "backlog": {
+          "inserted": 2000,
+          "periods_to_drain": 43,
+          "fresh_while_draining": [
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960,
+            960
+          ],
+          "after": {
+            "periods": 357,
+            "at_target": 357
+          }
+        },
+        "blocked_input": {
+          "started": 336001,
+          "filled": 3952,
+          "stopped": 336030,
+          "result_waiting": 50,
+          "source_before": 29,
+          "source_max": 0,
+          "fresh_after": 0,
+          "status": "waiting_for_space_in_destination",
+          "result_waiting_end": 50
+        }
+      },
+      "generation": {
+        "period": 144,
+        "expected": 960,
+        "verdict": "stable",
+        "selection": {
+          "id": "even-hands",
+          "holds": true,
+          "rate": 400,
+          "supply": null
+        },
+        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61"
+      }
+    }
+  }
+}

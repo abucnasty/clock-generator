@@ -63,6 +63,7 @@ export function configToFormData(imported: Config, prototypeSource?: MachineForm
             ...(m.quality !== undefined && { quality: m.quality }),
             ...(m.recipe_quality !== undefined && { recipe_quality: m.recipe_quality }),
             ...(m.position !== undefined && { position: m.position }),
+            ...(m.result_target !== undefined && { result_target: m.result_target }),
         })),
         inserters: imported.inserters.map((ins, index) => ({
             id: ins.id ?? (index + 1),

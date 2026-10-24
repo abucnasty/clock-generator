@@ -15,4 +15,10 @@ export interface MachineMetadata {
     fuel?: string;
     /** The machine's prototype name in the game data, for labels only (the config's `prototype`) */
     prototype?: string;
+    /**
+     * Whether the machine places its results itself, by its prototype's game data (the recycler, machine-rule.ts): it
+     * puts them in its output any number of stacks at a time and starts no craft while a stack of one of them waits
+     * there, and, with a result target, puts what waits into that container each tick
+     */
+    places_results?: boolean;
 }

@@ -1,0 +1,130 @@
+{
+  "target_output": {
+    "recipe": "iron-ore",
+    "items_per_second": 400,
+    "copies": 1,
+    "counts": "destroyed"
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "iron-ore-recycling",
+      "productivity": 0,
+      "crafting_speed": 16.875,
+      "prototype": "recycler",
+      "result_target": {
+        "type": "chest",
+        "id": 1
+      }
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ]
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ]
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ]
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ]
+    },
+    {
+      "id": 5,
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ]
+    },
+    {
+      "id": 6,
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ]
+    }
+  ],
+  "belts": [],
+  "chests": [
+    {
+      "type": "car",
+      "id": 1
+    },
+    {
+      "type": "infinity-chest",
+      "id": 2,
+      "item_filter": [
+        {
+          "item_name": "iron-ore",
+          "request_count": 1000
+        }
+      ]
+    }
+  ]
+}

@@ -75,6 +75,14 @@ export const ConfigPaths = {
     REAL_OWNER_GRENADE: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'grenade', 'grenade.json'),
     /** A productivity module build, 80 a second over 6 copies: a chain of nine machines (plastic, cables, circuits, advanced circuits and the modules) with chests between them, a coal belt and an output belt */
     REAL_OWNER_PRODUCTIVITY_CHAIN: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'productivity-chain', 'productivity-chain.json'),
+    /**
+     * A recycler voiding iron ore at exact speed (16.875, 540 crafts a second), 400 ore a second destroyed: four inserters
+     * bring it in, the recycler places what it gives back into a car, two inserters bring that back (the ore voider
+     * benchmark's save F)
+     */
+    REAL_OWNER_ORE_VOIDER_EXACT_SPEED: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'ore-voider', 'ore-voider-exact-speed.json'),
+    /** The same cell with six beacons on the recycler (26.634, 852.3 crafts a second), 400 ore a second destroyed (save B) */
+    REAL_OWNER_ORE_VOIDER_OVERBEACONED: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'ore-voider', 'ore-voider-overbeaconed.json'),
     /** The steel build, 26 a second: one cargo wagon as a hub between a mining drill and two furnaces */
     STEEL_CARGO_WAGON: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'steel-wagon', 'steel-wagon.json'),
 } as const;

@@ -126,6 +126,25 @@ describe('a target more than the machines can make', () => {
     });
 });
 
+describe('a target that counts the item destroyed, more than the machines can destroy', () => {
+    // Machine 1 of the exact-speed ore voider: 540 crafts a second, a quarter of an ore given back by each
+    const machinesMax = { machineIds: [1], perCopy: 405, perCopyRatio: { numerator: 405, denominator: 1 } };
+    const target = (items_per_second: number) => ({ recipe: 'iron-ore', items_per_second, copies: 1, counts: 'destroyed' as const });
+
+    it('says destroy, goes to Items per Second, and is not there for the 400 the sample asks', () => {
+        expect(problemsOf(filledIn({ targetOutput: target(406), machinesMax }))).toEqual([
+            { text: 'Items per Second is more than the machines can destroy (at most 405/s)', target: { kind: 'target-rate' } }]);
+        expect(problemsOf(filledIn({ targetOutput: target(400), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(405), machinesMax }))).toEqual([]);
+    });
+
+    it('says make for a target that counts the item made, as before', () => {
+        expect(PROBLEM_TEXT.rateAboveMax(405)).toBe('Items per Second is more than the machines can make (at most 405/s)');
+        expect(PROBLEM_TEXT.rateAboveMax(405, 'made')).toBe('Items per Second is more than the machines can make (at most 405/s)');
+        expect(PROBLEM_TEXT.rateAboveMax(405, 'destroyed')).toBe('Items per Second is more than the machines can destroy (at most 405/s)');
+    });
+});
+
 describe('barNoteOf', () => {
     const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
     const rateProblem: Problem = { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } };

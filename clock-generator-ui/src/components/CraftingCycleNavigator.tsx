@@ -3,11 +3,12 @@ import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { craftingCycleAt, type CraftingCycles } from '../utils/craftingCycles';
 import { GLOSSARY } from '../utils/glossary';
 import { formatNumberText } from '../utils/numberText';
+import { HANDS_TEXT, type TargetCounts } from '../utils/targetCounts';
 
 const definition = GLOSSARY.find(entry => entry.id === 'crafting-cycle')!.definition;
 
-export function CraftingCycleNavigator({ cycles, index, periodTicks, swings, onSelect }: {
-    cycles: CraftingCycles | null; index: number; periodTicks: number; swings: number; onSelect(index: number): void;
+export function CraftingCycleNavigator({ cycles, index, periodTicks, swings, counts, onSelect }: {
+    cycles: CraftingCycles | null; index: number; periodTicks: number; swings: number; counts?: TargetCounts; onSelect(index: number): void;
 }) {
     const cycle = craftingCycleAt(cycles, index);
     const number = (n: number) => formatNumberText(n, { maxDecimals: 3 });
@@ -24,7 +25,8 @@ export function CraftingCycleNavigator({ cycles, index, periodTicks, swings, onS
         </Box>
         <Typography variant="body2" sx={{ mt: 1 }}>
             {number(cycle.start)}–{number(cycle.end)} ticks · {number(cycles.cycleTicks)} ticks per crafting cycle{cycle.partial ? ' · final segment is partial' : ''}.
-            {' '}Each output machine has {number(swings)} total output {swings === 1 ? 'swing' : 'swings'} per crafting cycle.
+            {' '}{counts === 'destroyed' ? HANDS_TEXT.navigator(swings, number(swings))
+                : `Each output machine has ${number(swings)} total output ${swings === 1 ? 'swing' : 'swings'} per crafting cycle.`}
             {' '}The clock repeats every {number(periodTicks)} ticks ({number(periodTicks / cycles.cycleTicks)} crafting cycles).
         </Typography>
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>{definition}</Typography>

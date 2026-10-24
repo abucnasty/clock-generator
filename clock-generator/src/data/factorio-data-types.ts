@@ -123,6 +123,11 @@ export interface CraftingMachinePrototype {
   burner_fuel_categories: string[]
   /** Its base crafting speed, before modules, beacons and quality */
   crafting_speed: number
+  /**
+   * Where it places its results itself, from its centre in tiles, for a machine that does (the recycler): into what
+   * stands there, and into its own output where nothing does. Absent for a machine whose results stay in its output.
+   */
+  vector_to_place_result?: [number, number]
 }
 
 export interface FactorioData {

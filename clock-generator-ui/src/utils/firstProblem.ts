@@ -4,6 +4,7 @@ import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
 import { outputChestIssueElementId } from './outputChestIssues';
 import { isTargetAboveMax, maxRateText, totalMachineCapacity, type MachinesMax } from './targetRateLimit';
+import { countsOf, type TargetCounts } from './targetCounts';
 
 /** The game name of an item id */
 type LabelOf = (id: string) => string;
@@ -18,7 +19,8 @@ export const PROBLEM_TEXT = {
     noRate: 'Set Items per Second in Target Output to more than 0',
     noCopies: COPIES_POSITIVE_PROBLEM,
     noMachines: 'Add a machine',
-    rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${maxRateText(total)})`,
+    rateAboveMax: (total: number, counts: TargetCounts = 'made') =>
+        `Items per Second is more than the machines can ${counts === 'destroyed' ? 'destroy' : 'make'} (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
         `${entityLabel('machine', machineId)} has no inserter bringing in ${itemLabel(item)}`,
@@ -77,9 +79,9 @@ export interface Problem {
 }
 
 interface ProblemsInput {
-    targetOutput: { recipe: string; items_per_second: number; copies: number };
+    targetOutput: { recipe: string; items_per_second: number; copies: number; counts?: TargetCounts };
     machines: { id: number; recipe: string }[];
-    /** The most the machines making the target recipe can make; null or left out while it is not known */
+    /** The most the machines making (or, for a target that counts the item destroyed, destroying) the target item can make; null or left out while it is not known */
     machinesMax?: MachinesMax | null;
 }
 
@@ -115,7 +117,7 @@ export function problemsOf({ targetOutput, machines, machinesMax = null }: Probl
     const capacity = machinesMax ? totalMachineCapacity(machinesMax, targetOutput.copies) : null;
     if (capacity !== null && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
         problems.push({
-            text: PROBLEM_TEXT.rateAboveMax(capacity),
+            text: PROBLEM_TEXT.rateAboveMax(capacity, countsOf(targetOutput)),
             target: { kind: 'target-rate' },
         });
     }

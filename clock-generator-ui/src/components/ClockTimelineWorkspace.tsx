@@ -200,7 +200,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         {recordingWanted && !isFlow && selected?.type === 'belt' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Showing connected inserters. Physical belt contents are not recorded.</Typography>}
         {recordingWanted && !isFlow && selected?.type !== 'belt' && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
-        {inspection.view === 'cycles' && <CraftingCycleNavigator cycles={cycles} index={cycleIndex} periodTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} onSelect={selectCycle} />}
+        {inspection.view === 'cycles' && <CraftingCycleNavigator cycles={cycles} index={cycleIndex} periodTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
             {props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
                 : 'Explore the recorded activity alongside this clock’s assessed output.'}

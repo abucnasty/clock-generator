@@ -1,6 +1,7 @@
 import type { Config } from 'clock-generator/browser';
 import type { ChestType } from 'clock-generator/light';
 import { entityLabelIn, type LabelKind } from './entityLabel';
+import { COUNTS_TEXT, countsLabel, countsOf } from './targetCounts';
 
 /** A rate or count as the sentences print it: at most two decimals, no trailing zeros */
 const figure = (value: number) => Number(value.toFixed(2)).toString();
@@ -48,7 +49,7 @@ function entityChanges(kind: LabelKind, many: string, generated: { id?: number }
 
 /**
  * What changed in the build since the clocks were made for `generated`, in the form's words and in the form's order:
- * "Recipe (logistic-science-pack → automation-science-pack)", "Items per second (240 → 200)", "Copies (1 → 2)", then
+ * "Recipe (logistic-science-pack → automation-science-pack)", "Items per second (240 → 200)", "Copies (1 → 2)", "Counts (Items made → Items destroyed)", then
  * per kind of entity (a drill's productivity is its own), drills turned on or off, the belt answer, the deeper search, the other overrides, and
  * "other settings" for anything else. `recipeLabel` gives a recipe's game name.
  */
@@ -64,6 +65,9 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
     }
     if (before.copies !== after.copies) {
         changes.push(`Copies (${before.copies} → ${after.copies})`);
+    }
+    if (countsOf(before) !== countsOf(after)) {
+        changes.push(`${COUNTS_TEXT.label} (${countsLabel(countsOf(before))} → ${countsLabel(countsOf(after))})`);
     }
     for (const { kind, many, of } of KINDS) {
         const change = entityChanges(kind, many, of(generated), of(current));

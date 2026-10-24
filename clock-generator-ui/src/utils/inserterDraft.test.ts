@@ -49,11 +49,17 @@ describe('changedConfigFields', () => {
 describe('every Diagram draft', () => {
     it('finds changed machine, chest and drill fields without saving identity or rules', () => {
         const machine = { recipe: 'gear', productivity: 0, crafting_speed: 1, prototype: undefined as string | undefined,
-            _prototype_source: undefined as string | undefined, quality: undefined as string | undefined };
+            _prototype_source: undefined as string | undefined, quality: undefined as string | undefined,
+            result_target: undefined as { type: string; id: number } | undefined };
         expect(changedFields({ ...machine, crafting_speed: 2 }, machine, MACHINE_FIELDS)).toEqual({ crafting_speed: 2 });
         expect(changedFields({ ...machine, prototype: 'electric-furnace', _prototype_source: 'hand' }, machine, MACHINE_FIELDS))
             .toEqual({ prototype: 'electric-furnace', _prototype_source: 'hand' });
         expect(changedFields(machine, machine, MACHINE_FIELDS)).toEqual({});
+        // the container a recycler puts its results into, and its removal: the field is there with the value undefined
+        const recycler: typeof machine = { ...machine, result_target: { type: 'chest', id: 1 } };
+        expect(changedFields({ ...recycler, result_target: { type: 'chest', id: 2 } }, recycler, MACHINE_FIELDS)).toEqual({ result_target: { type: 'chest', id: 2 } });
+        expect(changedFields({ ...recycler, result_target: undefined }, recycler, MACHINE_FIELDS)).toEqual({ result_target: undefined });
+        expect(changedFields(recycler, { ...recycler }, MACHINE_FIELDS)).toEqual({});
         const chest = { type: 'buffer-chest', storage_size: 2, item_filter: 'coal', remove_unfiltered_items: undefined as boolean | undefined };
         expect(changedFields({ ...chest, type: 'infinity-chest' }, chest, CHEST_FIELDS)).toEqual({ type: 'infinity-chest' });
         expect(changedFields({ ...chest, remove_unfiltered_items: true }, chest, CHEST_FIELDS)).toEqual({ remove_unfiltered_items: true });

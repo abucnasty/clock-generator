@@ -60,6 +60,14 @@ export class MachineState implements EntityState {
     public craftsStarted: number = 0;
 
     /**
+     * Results a machine that places its results itself (rule 18) has placed so far where inserters take them: into its
+     * result target, or into its own output where it has none. A tick in which it grew woke the inserters waiting there
+     * for items (recorded on a recycler on scrap: a stack inserter waiting with a part hand was woken by every result
+     * put in, of whatever item, and by no craft that gave none). Always 0 for any other machine, whose finishes wake them.
+     */
+    public resultsPlaced: number = 0;
+
+    /**
      * Whether the main product was at the output block when the machine's last tick was done. Inserters are updated
      * before machines, so an inserter that finds this set and the block gone knows that another inserter took the
      * products down in the tick it is in.
@@ -131,6 +139,8 @@ interface UntilWritten {
 
 interface HotViews {
     output: { quantity: LiveQuantity; blocked_at: number } | null;
+    /** Of a machine that places its results itself: one per result, against its stack (see machineIsOutputBlocked) */
+    results: { quantity: LiveQuantity; blocked_at: number }[] | null;
     fuel: { quantity: LiveQuantity; limit: number } | null;
     /** One per ingredient, in `machine.inputs` order, against its insertion limit (see takesNothing) */
     inputs: { quantity: LiveQuantity; limit: number }[] | null;
@@ -141,7 +151,7 @@ interface HotViews {
 
 function hotViewsOf(machineState: MachineState): HotViews {
     type WithViews = MachineState & { [HOT_VIEWS]?: HotViews };
-    return (machineState as WithViews)[HOT_VIEWS] ??= { output: null, fuel: null, inputs: null, inputs_by_name: null, takes_nothing: null };
+    return (machineState as WithViews)[HOT_VIEWS] ??= { output: null, results: null, fuel: null, inputs: null, inputs_by_name: null, takes_nothing: null };
 }
 
 /** Whether the memo still stands, i.e. none of the machine's inventories was written since it was taken */
@@ -188,7 +198,7 @@ function forMachine(machine: Machine): MachineState {
     );
     // a recipe that makes its own ingredient cannot start from nothing: the machine begins with as much of it as
     // inserters would fill it up to, like the eggs a player puts in a pentapod egg biochamber by hand
-    machine.self_ingredients.forEach(item_name =>
+    machine.looping_ingredients.forEach(item_name =>
         state.selfIngredients.addQuantity(item_name, machine.inputs.getOrThrow(item_name).automated_insertion_limit.quantity));
     return state;
 }
@@ -210,6 +220,7 @@ function clone(machineState: MachineState): MachineState {
     cloned.pendingOutput = machineState.pendingOutput;
     cloned.productsFinished = machineState.productsFinished;
     cloned.craftsStarted = machineState.craftsStarted;
+    cloned.resultsPlaced = machineState.resultsPlaced;
     cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
     cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.startedCraftInLastTick = machineState.startedCraftInLastTick;
@@ -459,8 +470,25 @@ function takesNothing(machineState: MachineState): boolean {
     return answer;
 }
 
+/**
+ * Whether the machine takes no more ingredients for its output: its main product at its output block, or, for a machine
+ * that places its results itself (rule 18), a stack of any one of its results waiting in its output, which also stops its
+ * crafts (recorded on a recycler on scrap: a full stack of the rarest result stopped it as one of the commonest did)
+ */
 function machineIsOutputBlocked(machineState: MachineState): boolean {
     const views = hotViewsOf(machineState);
+    if (machineState.machine.metadata.places_results === true) {
+        const results = views.results ??= machineState.machine.outputs.map(output => ({
+            quantity: new LiveQuantity(machineState.inventoryState, output.item_name),
+            blocked_at: output.outputBlock.max_stack_size,
+        }));
+        for (const result of results) {
+            if (result.quantity.get() >= result.blocked_at) {
+                return true;
+            }
+        }
+        return false;
+    }
     const view = views.output ??= {
         quantity: new LiveQuantity(machineState.inventoryState, machineState.machine.output.outputBlock.item_name),
         blocked_at: machineState.machine.output.outputBlock.ingredients_blocked_at,

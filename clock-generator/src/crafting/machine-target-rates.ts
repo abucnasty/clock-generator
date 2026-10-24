@@ -18,7 +18,8 @@ export interface MachineTargetRate {
 
 /**
  * Steady-state demand at the requested target, using the clock planner's routing, productivity,
- * fuel and recipe-loop accounting. A single output swing fixes the units; its size cancels when
+ * fuel and recipe-loop accounting. A machine that places its results itself into a container (a recycler with a
+ * result target) makes what its plan takes out of that container. A single output swing fixes the units; its size cancels when
  * converted to items/second. No prepare simulation or clock search is needed for this preview.
  */
 export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
@@ -31,10 +32,14 @@ export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
     const cycle = CraftingCyclePlan.create(target, registry, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const taken = new Map<string, number>();
+    // a machine that places its results itself into a container: what is taken out of the container is what it made
+    const placing = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>
+        machine.result_target === undefined ? [] : [[machine.result_target.id, machine] as const]));
     for (const transfer of cycle.entity_transfer_map.values()) {
         if (!Entity.isInserter(transfer.entity)) continue;
-        const source = registry.getEntityByIdOrThrow(transfer.entity.source.entity_id);
-        if (!Entity.isMachine(source)) continue;
+        const from = registry.getEntityByIdOrThrow(transfer.entity.source.entity_id);
+        const source = Entity.isMachine(from) ? from : placing.get(from.entity_id.id);
+        if (source === undefined) continue;
         const product = transfer.item_transfers.find(item => item.item_name === source.output.item_name);
         if (!product) continue;
         const rate = product.transfer_count.multiply(handSizeFor(transfer.entity, source.output.item_name))

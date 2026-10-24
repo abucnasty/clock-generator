@@ -17,8 +17,8 @@ describe("a config naming an entity the generator does not support yet", () => {
             "Configuration validation failed at 'machines[0].type': \"rocket-silo\" is not supported yet: a rocket silo as a machine, "
             + "crafting rocket parts and launching, comes with phase 2 of roadmap milestone M2 (containers); a rocket silo is "
             + "taken as a chest: list it under `chests` with type \"rocket-silo\"");
-        await expect(parseConfig(config(buffer, "recycler"))).rejects.toThrow(
-            "\"recycler\" is not supported yet: recyclers come with roadmap milestone M3 (recyclers and quality tiers)");
+        await expect(parseConfig(config(buffer, "lab"))).rejects.toThrow(
+            "\"lab\" is not supported yet: labs are not modelled: they consume no recipe");
     });
 
     it("still lists what it takes for a type it has never heard of", async () => {

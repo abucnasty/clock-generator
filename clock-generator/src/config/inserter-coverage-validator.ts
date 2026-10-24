@@ -255,11 +255,14 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
         }
 
         // ── Output results ───────────────────────────────────────────────────
+        // a machine that places its results itself puts them into its result target, which covers what it takes
+        const resultTarget = machine.result_target === undefined ? undefined : chests.find(chest => chest.id === machine.result_target!.id);
         for (const result of recipe.results) {
             const itemName = result.name;
-            const covered = config.inserters.some((ins) =>
-                inserterCoversOutputItem(ins, machine.id, itemName, chests),
-            );
+            const covered = (resultTarget !== undefined && chestAcceptsItem(resultTarget, itemName))
+                || config.inserters.some((ins) =>
+                    inserterCoversOutputItem(ins, machine.id, itemName, chests),
+                );
 
             if (!covered) {
                 const fixOptions: InserterFixOption[] = [];
@@ -317,7 +320,7 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
     return config => {
         if (!FactorioDataService.isAvailable()) return [];
         const nextCatalog = JSON.stringify({
-            machines: config.machines.map(({ id, recipe, prototype, fuel }) => [id, recipe, prototype, fuel]),
+            machines: config.machines.map(({ id, recipe, prototype, fuel, result_target }) => [id, recipe, prototype, fuel, result_target?.id]),
             belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => lane.ingredient)]),
             chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter
                 : chest.type === 'infinity-chest' ? [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]

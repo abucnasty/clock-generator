@@ -1,4 +1,5 @@
 import assert from "../common/assert";
+import type { TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
@@ -388,6 +389,12 @@ function withChestDrillFallbacks(
 }
 
 /** The alternatives as the config asks for them, each made once */
+const EVEN_HANDS_DESCRIPTION = "One window for each hand an inserter moves in the clock period, the windows spread evenly over the period "
+    + "and each a tick shorter than the inserter's hand cycle, so a window moves one hand whenever in it the source "
+    + "has the hand and the sink takes it. Inserters that move the same hands a period, such as those of two "
+    + "halves of a build that do the same thing, get the same windows and share a window decider. Only offered "
+    + "where every inserter takes from a machine or a chest and moves a whole number of hands a period.";
+
 function alternativeDefinitionsFor(
     config: Config,
     context: ClockAlternativeContext,
@@ -416,6 +423,16 @@ function alternativeDefinitionsFor(
     const offer_moving_belt = config.overrides?.backed_up_belts === true
         && config.inserters.some(inserter => inserter.source.type === "belt");
 
+    // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
+    // out, not tried, so no other count or search is offered; even hands moves the same hands
+    if (config.target_output.counts === "destroyed") {
+        return [{
+            id: "even-hands",
+            label: "Even hands",
+            description: EVEN_HANDS_DESCRIPTION,
+            run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
+        }];
+    }
     return [
         ...(offer_moving_belt ? [{
             id: FOR_A_MOVING_BELT_ID,
@@ -451,11 +468,7 @@ function alternativeDefinitionsFor(
         {
             id: "even-hands",
             label: "Even hands",
-            description: "One window for each hand an inserter moves in the clock period, the windows spread evenly over the period "
-                + "and each a tick shorter than the inserter's hand cycle, so a window moves one hand whenever in it the source "
-                + "has the hand and the sink takes it. Inserters that move the same hands a period, such as those of two "
-                + "halves of a build that do the same thing, get the same windows and share a window decider. Only offered "
-                + "where every inserter takes from a machine or a chest and moves a whole number of hands a period.",
+            description: EVEN_HANDS_DESCRIPTION,
             run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
         },
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
@@ -723,7 +736,7 @@ function runAlternativeOf(
         result = { ...result, chest_drills, always_on_reasons: { ...result.always_on_reasons, ...chestDrillReasons(chest_drills) } };
     }
     const { backpressure_loss } = loss;
-    const label = withOutputSwings(definition, result.used_terminal_swing_count);
+    const label = withOutputSwings(definition, result.used_terminal_swing_count, config.target_output.counts);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
     const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.loop_windows);
@@ -936,14 +949,16 @@ function planPrimaryAndTasks(
 
 /**
  * The label of an alternative with the output swings per cycle it ended up with, e.g. "Batched swings: 6 output swings
- * per cycle". The alternatives named after a swing count already say it.
+ * per cycle", or, for a target that counts an item destroyed, the hands of it brought in a cycle ("Even hands: 5 hands
+ * brought in per cycle"). The alternatives named after a swing count already say it.
  */
-function withOutputSwings(definition: { id: string; label: string }, swings: number): string {
+function withOutputSwings(definition: { id: string; label: string }, swings: number, counts?: TargetCounts): string {
     if (definition.id.startsWith("swings-")) {
         return definition.label;
     }
     const count = Number.isInteger(swings) ? `${swings}` : swings.toFixed(2).replace(/0+$/, "");
-    return `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
+    return counts === "destroyed" ? `${definition.label}: ${count} hand${swings === 1 ? "" : "s"} brought in per cycle`
+        : `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
 }
 
 /** Generates one alternative listed by planClockAlternatives; progress goes to options.on_progress_detail */

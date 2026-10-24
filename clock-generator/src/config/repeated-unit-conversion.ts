@@ -110,6 +110,11 @@ function analyze(config: Config): Analysis {
         const a = keyOf(ins.source.type, ins.source.id), b = keyOf(ins.sink.type, ins.sink.id);
         if (parent.has(a) && parent.has(b)) join(a, b);
     });
+    // the copies of a machine that places its results into a container are not converted (yet): the conversion follows
+    // inserters between entities, not a machine to its result target
+    if (config.machines.some(machine => machine.result_target !== undefined)) {
+        refuse('unsupported-boundary', 'A machine that places its results into a container is not supported in a repeated unit.');
+    }
     config.drills?.configs.forEach(drill => {
         // the copies of a drill into a chest are not converted (yet): the conversion follows a drill to its machine
         if (drill.target.type !== 'machine') refuse('unsupported-boundary', 'A drill into a chest is not supported in a repeated unit.');

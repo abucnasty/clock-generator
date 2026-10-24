@@ -1,4 +1,5 @@
 import assert from "../common/assert";
+import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cycle/target-ends";
 import { Config } from "../config";
 import { EnableControlOverrideConfig, EnableControlRange } from "../config/schema";
 import { InserterClock, unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
@@ -261,10 +262,14 @@ function longRunOfFreeRunningBuild(
     }
     // what the output inserters drop, counted as the recordings of a build are: by whole periods of the clock that
     // is built, which for a fractional period is the subtick clock and its repeat (see long-run.ts)
+    // (or, for a target that counts an item destroyed, what the inserters that bring it in from outside drop)
+    const target = targetItemOf(config.target_output);
     const makers = new Set(registry.getAll().filter(Entity.isMachine)
         .filter(machine => machine.output.item_name === config.target_output.recipe).map(machine => machine.entity_id.id));
-    const output_inserters = registry.getAll().filter(Entity.isInserter)
-        .filter(it => makers.has(it.source.entity_id.id) && !EntityId.isMachine(it.sink.entity_id));
+    const output_inserters = target.counts === "destroyed"
+        ? targetMachinesOf(target, registry).flatMap(machine => targetInsertersOf(machine, target, registry))
+        : registry.getAll().filter(Entity.isInserter)
+            .filter(it => makers.has(it.source.entity_id.id) && !EntityId.isMachine(it.sink.entity_id));
     const output_ids = new Set(output_inserters.map(it => it.entity_id.id));
     const hand = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size));
     const held = stock.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held);
@@ -423,10 +428,15 @@ export function backpressureLossOf(
 /** The machines at the ends of every inserter of the config */
 function inserterEnds(config: Config): InserterEnds[] {
     const machineId = (entity_id: EntityId) => EntityId.isMachine(entity_id) ? entity_id.id : null;
-    return createEntityRegistryFromConfig(config).getAll().filter(Entity.isInserter).map(inserter => ({
+    const registry = createEntityRegistryFromConfig(config);
+    // a chest a machine places its results into is watched through that machine
+    const placers = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>
+        machine.result_target === undefined ? [] : [[machine.result_target.id, machine.entity_id.id] as const]));
+    return registry.getAll().filter(Entity.isInserter).map(inserter => ({
         inserter_id: inserter.entity_id.id,
         source_machine_id: machineId(inserter.source.entity_id),
         sink_machine_id: machineId(inserter.sink.entity_id),
+        ...(placers.has(inserter.source.entity_id.id) && { source_placer_id: placers.get(inserter.source.entity_id.id)! }),
     }));
 }
 

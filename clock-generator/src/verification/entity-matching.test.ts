@@ -91,3 +91,41 @@ describe("matching machines that stand alike in the structure", () => {
         expect(matchRecordingToConfig(recording, bare).machines.get(1)).toBe(1);
     });
 });
+
+describe("matching inserters that take from chests of different types into one machine", () => {
+    // the ore voider's recycler cell: two inserters bring ore back from a car, four bring it in from infinity chests, all
+    // into the recycler; in the config all six name iron ore, in the build only the four do
+    const samples = { status: [], crafting_progress: [], bonus_progress: [], products_finished: [], inputs: {}, outputs: {} };
+    const held = { held_count: [], held_item: [], status: [] };
+    const recycler = { id: 1, recipe: "iron-ore-recycling" };
+    const built_inserters = [
+        { source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 },
+        { source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 },
+        ...[2, 3, 4, 5].map(id => ({ source: { type: "chest", id }, sink: { type: "machine", id: 1 }, stack_size: 16, filters: ["iron-ore"] })),
+    ];
+    const recording = parseRecording({
+        format: "clock-generator-recording", version: 1, start_game_tick: 0, sample_count: 0,
+        config: { machines: [recycler], inserters: built_inserters, belts: [],
+            chests: [{ type: "car", id: 1 }, ...[2, 3, 4, 5].map(id => ({ type: "infinity-chest", id }))] },
+        machines: [{ ...recycler, name: "recycler", samples }],
+        inserters: built_inserters.map((inserter, index) => ({ ...inserter, id: index + 1, name: "stack-inserter", samples: held })),
+    });
+    const voider = {
+        target_output: { recipe: "iron-ore", items_per_second: 400, copies: 1, counts: "destroyed" },
+        machines: [{ ...recycler, productivity: 0, crafting_speed: 16.875, prototype: "recycler", result_target: { type: "chest", id: 1 } }],
+        inserters: [1, 2, 3, 4, 5, 6].map(id => ({ id, source: { type: "chest", id: id <= 2 ? 1 : 2 }, sink: { type: "machine", id: 1 }, stack_size: 16, filters: ["iron-ore"] })),
+        belts: [],
+        chests: [{ type: "car", id: 1 }, { type: "infinity-chest", id: 2, item_filter: [{ item_name: "iron-ore", request_count: 1000 }] }],
+    } as unknown as Config;
+
+    test("an inserter from the car is the config's inserter from the car, filters or not", () => {
+        const match = matchRecordingToConfig(recording, voider);
+        expect([1, 2].map(id => match.inserters.get(id)).sort()).toEqual([1, 2]);
+        expect([3, 4, 5, 6].map(id => match.inserters.get(id)).sort()).toEqual([3, 4, 5, 6]);
+    });
+
+    test("chests the recording names no type of are any chest, as before", () => {
+        const untyped = parseRecording({ ...JSON.parse(JSON.stringify(recording)), config: { ...recording.config, chests: undefined } });
+        expect(matchRecordingToConfig(untyped, voider).inserters.size).toBe(6);
+    });
+});

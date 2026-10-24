@@ -19,7 +19,9 @@ import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
 import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
-import { buildOutputInsertersOf, EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
+import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
+import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
+import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
@@ -266,6 +268,12 @@ export interface BlueprintGenerationResult {
     always_on_reasons?: AlwaysOnReasons;
     /** The windows are the grouped hands rule's (see groupedHandsClock), and whether its inserters share windows; absent for any other clock */
     grouped_hands?: { shared_windows: boolean };
+    /**
+     * Where results come by chance (a target that counts an item destroyed by a recycler): the room of the windows that
+     * carry each result, and of each machine's crafting, against the spread of the game's amounts (random-margins.ts).
+     * Absent for any other build.
+     */
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
 }
 
 /**
@@ -477,7 +485,11 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
 
     const planned_build = recordedBuildOf(config, options, debug, logger);
     const { simulation_context } = planned_build;
-    prepareBuild(planned_build, debug, debug_steps, logger);
+    // a target that counts an item destroyed is planned by arithmetic, with no crafts counted: such a build starts as
+    // its staged scaffold does, and never fills up (what is brought in is destroyed)
+    if (config.target_output.counts !== "destroyed") {
+        prepareBuild(planned_build, debug, debug_steps, logger);
+    }
 
     const planned_cycle = planCraftingCycle(config, simulation_context, logger);
     const { crafting_cycle_plan, all_output_inserters } = planned_cycle;
@@ -781,9 +793,29 @@ interface RunPeriods {
     warmup_period: Duration;
 }
 
+/** The inserter of a plan whose hands a cycle come out whole the least often: the largest denominator, with its item */
+function rarestHands(plan: CraftingCyclePlan): { inserter: number; item: string; hands: string } | null {
+    let rarest: { inserter: number; item: string; hands: string; denominator: number } | null = null;
+    for (const planned of plan.entity_transfer_map.values()) {
+        const denominator = planned.total_transfer_count.getDenominator;
+        if (Entity.isInserter(planned.entity) && (rarest === null || denominator > rarest.denominator)) {
+            rarest = { inserter: planned.entity.entity_id.number, item: planned.item_transfers[0]?.item_name ?? "",
+                // as a short decimal: a count made of floating-point chances is no fraction to read
+                hands: String(Number(planned.total_transfer_count.toDecimal().toPrecision(3))), denominator };
+        }
+    }
+    return rarest === null ? null : { inserter: rarest.inserter, item: rarest.item, hands: rarest.hands };
+}
+
 /** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
 function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
     const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
+    const too_rare = crafting_cycle_plan.production_rate.counts === "destroyed" && !(duration.ticks < MAX_SIMULATION_TICKS) ? rarestHands(crafting_cycle_plan) : null;
+    if (too_rare !== null) {
+        throw new Error(`Inserter ${too_rare.inserter} takes ${too_rare.item} at ${too_rare.hands} of a hand a cycle of ${crafting_cycle_plan.total_duration_ticks.toString()} ticks: `
+            + `its hands come out whole only every ${duration.ticks.toPrecision(3)} ticks, more than the ${MAX_SIMULATION_TICKS} a clock period can be. `
+            + "A clock for results that come this rarely is not planned yet.");
+    }
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     const requested_warmup_periods = options.warmup_periods ?? 10;
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
@@ -1047,11 +1079,14 @@ function checkOutput(
         }
     }
     const total_expected_output = Math.round(total_expected_output_float);
-    // The output swings of one output machine a cycle, over all the inserters that take from it
-    const first_output_machine_id = output_inserters[0].inserter.source.entity_id.id;
+    // The output swings of one output machine a cycle, over all the inserters that take from it; for a target that counts
+    // an item destroyed, the hands brought into one machine that destroys it, over all the inserters that bring them
+    const destroyed = crafting_cycle_plan.production_rate.counts === "destroyed";
+    const endOf = (inserter: Inserter) => destroyed ? inserter.sink.entity_id.id : inserter.source.entity_id.id;
+    const first_output_machine_id = endOf(output_inserters[0].inserter);
     let swings_of_first_output_machine = 0;
     for (const [entity_id, etc] of swing_counts.entries()) {
-        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && etc.entity.source.entity_id.id === first_output_machine_id) {
+        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && endOf(etc.entity) === first_output_machine_id) {
             swings_of_first_output_machine += etc.total_transfer_count.toDecimal();
         }
     }
@@ -1250,6 +1285,8 @@ interface PlannedClock {
     as_built_run: AsBuiltRun | null;
     /** The groups that take turns in the windows, which the blueprint lays its combinators out by; absent where the windows are not in groups */
     turns?: TurnGroup[];
+    /** The room of the windows that carry a random amount, where there are any (see randomAmountMargins) */
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
 }
 
 /**
@@ -1289,7 +1326,35 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
     const verified = use_belt_pickup_slack ? slack_trial?.verified ?? null : null;
     const windows = verified !== null ? verified.windows
         : withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
-    return { windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room, as_built_run: verified?.run ?? null };
+    // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
+    const room = withRoomForRandomAmounts(plan, windows);
+    return { windows: room.windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room,
+        as_built_run: room.windows === windows ? verified?.run ?? null : null,
+        ...(room.random_margins !== undefined && { random_margins: room.random_margins }) };
+}
+
+/**
+ * A clock's windows with room for the spread of the results that come by chance (see randomAmountMargins): the windows
+ * of the inserters that take such a result out of where a machine places it are lengthened by whole swings where they
+ * have less room than a period gives over its mean in all but 1 in 740 periods (the binomial's quantile at
+ * RANDOM_MARGIN_LEVEL). The same windows, and no margins, for any other build.
+ */
+export function withRoomForRandomAmounts(plan: PlanRun, windows: Map<string, OpenRange[]>): {
+    windows: Map<string, OpenRange[]>;
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
+} {
+    const { logger, run: { crafting_cycle_plan, simulation_context, duration, recipe_lcm } } = plan;
+    const margins = randomAmountMargins(crafting_cycle_plan, simulation_context.entity_registry, windows, duration.ticks, recipe_lcm);
+    if (margins.margins.length === 0 && margins.crafting.length === 0) {
+        return { windows };
+    }
+    const added = margins.margins.filter(it => it.added_hands > 0);
+    for (const margin of added) {
+        logger.log(`Machine ${margin.machine_id}: the windows of ${margin.inserter_ids.join(", ")} get ${margin.added_hands} hand(s) `
+            + `of room each for ${margin.item}: ${margin.room_items} over the ${margin.expected_items} a period brings on average, `
+            + `against ${margin.needed_items.toFixed(1)} needed`);
+    }
+    return { windows: added.length === 0 ? windows : margins.windows, random_margins: { windows: margins.margins, crafting: margins.crafting } };
 }
 
 /** What a clock's export carries beyond the plan and its windows */
@@ -1416,6 +1481,7 @@ export function exportClock(
         belt_pickup_slack_ticks: clock.applied_belt_pickup_slack,
         belt_pickup_slack_left_out: clock.belt_pickup_slack_left_out,
         fuel_hand_room_ticks: extras.fuel_hand_room_ticks ?? Object.fromEntries(clock.fuel_hand_room),
+        ...(clock.random_margins !== undefined && { random_margins: clock.random_margins }),
         belt: clock.belt,
         crafting_cycle_plan,
         loop_windows: extras.loop_windows,
@@ -1587,18 +1653,23 @@ interface PlannedCraftingCycle {
 export function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger): PlannedCraftingCycle {
     const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
 
-    // Find all output machines (machines that produce the target output item)
-    const output_machine_state_machines = simulation_context.machines.filter(
-        it => it.machine_state.machine.output.item_name === target_production_rate.machine_production_rate.item
-    );
+    // Find all output machines: the machines that produce the target output item, or that destroy it
+    const target = { item: target_production_rate.machine_production_rate.item, counts: target_production_rate.counts };
+    const returned = returnedTargetRefusal(target, target_production_rate.total_production_rate.amount_per_second.toDecimal(), simulation_context.entity_registry);
+    if (returned !== null) {
+        throw new Error(returned);
+    }
+    const target_machine_ids = new Set(targetMachinesOf(target, simulation_context.entity_registry).map(it => it.entity_id.id));
+    const output_machine_state_machines = simulation_context.machines.filter(it => target_machine_ids.has(it.machine_state.entity_id.id));
     assert(
         output_machine_state_machines.length > 0,
-        `No machine with output item ${target_production_rate.machine_production_rate.item} found`
+        target.counts === "made" ? `No machine with output item ${target.item} found`
+            : `No machine takes ${target.item} in from outside the build to destroy it`
     );
 
     // validate target production rate can be met
     const total_output_capacity_per_second = output_machine_state_machines
-        .map(it => it.machine_state.machine.output.production_rate.amount_per_second)
+        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, simulation_context.entity_registry))
         .reduce((a, b) => a.add(b), fraction(0))
         .multiply(fraction(config.target_output.copies));
     assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
@@ -1611,7 +1682,7 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
     // machine can have several
     const inserter_states = simulation_context.state_registry.getAllStates().filter(EntityState.isInserter);
     const output_ids_by_machine = new Map(output_machine_state_machines.map(machine_state_machine => [machine_state_machine.machine_state.entity_id.id,
-        new Set(buildOutputInsertersOf(machine_state_machine.machine_state.machine, simulation_context.entity_registry).map(it => it.entity_id.id))] as const));
+        new Set(targetInsertersOf(machine_state_machine.machine_state.machine, target, simulation_context.entity_registry).map(it => it.entity_id.id))] as const));
     // machines that put the product into one container share its takers: each is counted once
     const all_output_inserters = Array.from(new Set(Array.from(output_ids_by_machine.values()).flatMap(ids => inserter_states.filter(it => ids.has(it.entity_id.id)))));
     // One of them per output machine, which the swings of a cycle are counted by
@@ -2154,6 +2225,10 @@ function computeCraftingCyclePlan(
         output_machine_states.length > 0,
         "At least one output machine is required"
     );
+    if (target_production_rate.counts === "destroyed") {
+        // planned by arithmetic: no prepare run counts its hands (see CraftingCyclePlan.create)
+        return CraftingCyclePlan.create(target_production_rate, entity_registry, fraction(1), config.overrides ?? {});
+    }
     assert(
         output_machine_states.length === output_inserters.length,
         `Mismatch between output machines (${output_machine_states.length}) and output inserters (${output_inserters.length})`
@@ -2192,6 +2267,22 @@ function computeCraftingCyclePlan(
         max_swings_possible!,
         config.overrides ?? {}
     );
+}
+
+/**
+ * The most of the target a machine can make or destroy a second: what it makes of the item, or, for a target that
+ * counts the item destroyed, its crafts a second times what a craft uses of the item less what comes back into it
+ */
+function targetCapacityPerSecond(machine: Machine, target: TargetItem, registry: ReadableEntityRegistry): Fraction {
+    if (target.counts === "made") {
+        return machine.output.production_rate.amount_per_second;
+    }
+    const used = fraction(machine.inputs.getOrThrow(target.item).ingredient.amount);
+    const result_target = machine.result_target;
+    const comes_back = result_target !== undefined && registry.getAll().filter(Entity.isInserter).some(inserter =>
+        inserter.source.entity_id.id === result_target.id && inserter.sink.entity_id.id === machine.entity_id.id && inserter.filtered_items.has(target.item));
+    const returned = comes_back ? machine.outputs.find(output => output.item_name === target.item)?.amount_per_craft ?? fraction(0) : fraction(0);
+    return fraction(machine.crafting_rate.crafts_per_tick).multiply(60).multiply(used.subtract(returned));
 }
 
 /**

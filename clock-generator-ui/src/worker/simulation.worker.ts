@@ -136,6 +136,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
             machineFuel: config.machines.flatMap(machine => machine.fuel === undefined ? [] : [{ machineId: machine.id, fuel: machine.fuel }]),
         },
         copies: result.crafting_cycle_plan.production_rate.copies,
+        ...(config.target_output.counts === 'destroyed' && { counts: 'destroyed' as const }),
         verdict: alternative.verdict,
         ranking: alternative.ranking,
         deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),
