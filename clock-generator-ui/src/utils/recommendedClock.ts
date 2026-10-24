@@ -61,6 +61,7 @@ export const RECOMMENDED_COPY = {
     contenders: (rate: string, deadlock: boolean, counts?: TargetCounts) =>
         deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep ${rateVerbs(counts).ing} ${rate}/s and recover`,
     fewestWakeUps: (contenders: string, belt: string) => `Fewest wake-ups of ${contenders}${belt}.`,
+    fewestDeciders: (contenders: string, belt: string) => `Fewest deciders of ${contenders}${belt}: the least wiring to do by hand.`,
     onlyContender: (rate: string, belt: string, deadlock: boolean) =>
         deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only clock that holds ${rate}/s and recovers${belt}.`,
     wakeUpsNotCounted: (contenders: string, belt: string) =>
@@ -146,6 +147,26 @@ export function recommendationReason(
     return (stopped ? RECOMMENDED_COPY.stopped : RECOMMENDED_COPY.provisional) + reason;
 }
 
+/** The pick is made for a moving belt, and the player did not say the belts are backed up */
+const isOnMovingBelt = (pick: Pick<PickableClock, 'beltLabel'>, rule: PickRule | null) => !rule?.backedUpBelts && pick.beltLabel.startsWith('moving');
+
+/** The belt a reason says its clocks are made for: " with backed-up belts", " on a moving belt", or nothing */
+const beltWordsOf = (pick: Pick<PickableClock, 'beltLabel'>, rule: PickRule | null) =>
+    rule?.backedUpBelts ? RECOMMENDED_COPY.beltBackedUp : isOnMovingBelt(pick, rule) ? RECOMMENDED_COPY.beltMoving : '';
+
+/**
+ * What the name Fewest deciders means for a clock that has it (see `plainClockName`), in the words of the pick's reason:
+ * "Fewest deciders of the clocks that keep making 240/s and recover: the least wiring to do by hand."
+ */
+export function fewestDecidersReason(
+    clock: Pick<PickableClock, 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'counts'>,
+    rule: PickRule | null,
+): string {
+    const rate = figure(clock.assessment.items_per_second - clock.ranking.rate_off_target);
+    const contenders = RECOMMENDED_COPY.contenders(rate, clock.deadlockRisk !== null, clock.counts);
+    return RECOMMENDED_COPY.fewestDeciders(contenders, beltWordsOf(clock, rule));
+}
+
 function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
     const { ranking } = pick;
     const rate = figure(pick.assessment.items_per_second - ranking.rate_off_target);
@@ -166,8 +187,8 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
                 : RECOMMENDED_COPY.backedUpFewestWakeUps + tieOf(pick, others, '');
         return RECOMMENDED_COPY.noneForMovingBelt(rate, deadlock) + contest + RECOMMENDED_COPY.mayFailOnMovingBelt + recovery;
     }
-    const moving = !rule?.backedUpBelts && pick.beltLabel.startsWith('moving');
-    const belt = rule?.backedUpBelts ? RECOMMENDED_COPY.beltBackedUp : moving ? RECOMMENDED_COPY.beltMoving : '';
+    const moving = isOnMovingBelt(pick, rule);
+    const belt = beltWordsOf(pick, rule);
     const others = alternatives.filter(other => other !== pick
         && other.ranking.meets_target_rate && other.ranking.matches_belt_choice);
     if (others.length === 0) {

@@ -24,6 +24,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - A build whose items spoil is checked for losses shorter than three quarters of its shortest spoil time, since a longer one spoils it in the game whatever the clock, and Recovers says the limit.
 - A clock that does not get back after a loss is not tried on the losses after it, which the result shows as "Not tried"; builds with such clocks generate faster.
 - Inserters that take from a loop of machines into another machine get wake windows where the clock still holds and recovers with them, so builds with such a loop need far fewer wake-ups.
+- Where a loss is told, such as "military science pack is not taken away", the result names the item as the game does, not by its internal id, and a clock named Fewest deciders says what that means.
 
 ### Removed
 - Clocks for a shorter period, labelled "shorter period (… not in the period)", are no longer offered: where one was selected, batched swings or shifted swings are now (the swing plan's "Exclude from LCM" leaves an ingredient out of the period by hand).

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
 import { rateWarningOf } from './rateWarning';
 import { startCheckSummary } from './modelAssumptions';
+import type { PickRule } from './recommendedClock';
 import {
     SUMMARY_COPY,
     beltCellText,
@@ -16,6 +17,7 @@ import {
     recoversOf,
     lossLimitText,
     minutesAndSecondsText,
+    pickNameMeaning,
     wakeUpsText,
     worksOf,
     type SummaryClock,
@@ -119,6 +121,38 @@ describe('plainClockName', () => {
         expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
     });
 
+    it('does not name a clock Fewest deciders when it only ties the recommended clock, whose name it leaves to the windows', () => {
+        const clocks = [
+            clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
+            clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
+            clock('c', { wake_ups_per_minute: 15, window_count: 3, deciders: 6 }),
+        ];
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+        expect(nameOf(clocks, 'b')).toBe('Another way to make 240/s');
+        expect(nameOf(clocks, 'c')).toBe('Fewest wake windows');
+    });
+
+    it('does not name a clock Fewest deciders when it only ties a clock tied for the fewest wake-ups', () => {
+        const clocks = [
+            clock('a', { wake_ups_per_minute: 8.0001, window_count: 6, deciders: 8 }),
+            clock('b', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
+            clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
+        ];
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+        expect(nameOf(clocks, 'b')).toBe('Fewest wake-ups');
+        expect(nameOf(clocks, 'c')).not.toBe('Fewest deciders');
+    });
+
+    it('names a clock Fewest deciders when it has fewer than the recommended clock and every clock with the fewest wake-ups', () => {
+        const clocks = [
+            clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 5 }),
+            clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
+            clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
+        ];
+        expect(nameOf(clocks, 'b')).toBe('Fewest deciders');
+        expect(nameOf(clocks, 'c')).toBe('Fewest deciders');
+    });
+
     it('does not name a clock by its deciders when every clock has as many', () => {
         const clocks = [clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })];
         expect(nameOf(clocks, 'b')).toBe('Fewest wake windows');
@@ -180,25 +214,58 @@ describe('plainClockName', () => {
     });
 });
 
+describe('pickNameMeaning', () => {
+    const decidersAndWakeUps = () => [
+        clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }),
+        clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 }),
+    ];
+    const meaning = (clocks: SummaryClock[], id: string, rule: PickRule | null = null) =>
+        pickNameMeaning(clocks, clocks.findIndex(it => it.id === id), rule);
+
+    it('says what Fewest deciders is for, in the words of the pick\'s reason', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 8, deciders: 10, beltLabel: '' }), clock('b', { wake_ups_per_minute: 12, deciders: 6, beltLabel: '' })];
+        expect(meaning(clocks, 'b')).toBe('Fewest deciders of the clocks that keep making 240/s and recover: the least wiring to do by hand.');
+    });
+
+    it('names the belt the clocks are made for, as the reason does', () => {
+        expect(meaning(decidersAndWakeUps(), 'b'))
+            .toBe('Fewest deciders of the clocks that keep making 240/s and recover on a moving belt: the least wiring to do by hand.');
+        expect(meaning(decidersAndWakeUps(), 'b', { backedUpBelts: true, searchedForFewerWakeUps: false }))
+            .toBe('Fewest deciders of the clocks that keep making 240/s and recover with backed-up belts: the least wiring to do by hand.');
+    });
+
+    it('says the clocks that hold the rate on a build with a deadlock risk, as the reason does', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 8, deciders: 10 }), clock('b', { wake_ups_per_minute: 12, deciders: 6 })];
+        clocks.forEach(it => { it.deadlockRisk = 'Deadlock risk: inserters 1 and 2 both bring the same item.'; });
+        expect(meaning(clocks, 'b')).toBe('Fewest deciders of the clocks that hold 240/s on a moving belt: the least wiring to do by hand.');
+    });
+
+    it('has nothing to say of a clock with any other name', () => {
+        const clocks = decidersAndWakeUps();
+        expect(meaning(clocks, 'a')).toBe('');
+        expect(meaning([clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })], 'b')).toBe('');
+    });
+});
+
 describe('recoversOf', () => {
     it('says yes for a stable clock', () => {
         expect(recoversOf(clock('a'))).toMatchObject({ kind: 'yes', value: 'Yes' });
     });
 
     it('says no, with the causes it does not recover from', () => {
-        const result = recoversOf(clock('a', { verdict: 'no recovery', brokenBy: ['coal stops arriving', 'iron-plate is not taken away'] }));
+        const result = recoversOf(clock('a', { verdict: 'no recovery', brokenBy: ['coal stops arriving', 'iron plate is not taken away'] }));
         expect(result.kind).toBe('no');
-        expect(result.detail).toContain('coal stops arriving, or after iron-plate is not taken away');
+        expect(result.detail).toContain('coal stops arriving, or after iron plate is not taken away');
         expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toContain('an input stops arriving');
     });
 
     it('says which losses were not tried, since the clock already failed one', () => {
         const stopped = clock('a', { verdict: 'no recovery', brokenBy: ['coal stops arriving'] });
-        stopped.assessment.backpressure_loss!.not_tried = ['iron-plate stops arriving', 'iron-gear-wheel is not taken away'];
+        stopped.assessment.backpressure_loss!.not_tried = ['iron plate stops arriving', 'iron gear wheel is not taken away'];
         expect(recoversOf(stopped).detail).toBe('In the simulator, after coal stops arriving for a while, it does not get back to its rate by itself. '
-            + 'Not tried, since one failure is enough: iron-plate stops arriving, iron-gear-wheel is not taken away.');
+            + 'Not tried, since one failure is enough: iron plate stops arriving, iron gear wheel is not taken away.');
         expect(rateWarningOf(stopped)).toContain('after coal stops arriving for a while, the build does not get back to its rate by itself in the simulator. '
-            + 'Not tried, since one failure is enough: iron-plate stops arriving, iron-gear-wheel is not taken away.');
+            + 'Not tried, since one failure is enough: iron plate stops arriving, iron gear wheel is not taken away.');
         // all tried: nothing is said
         expect(recoversOf(clock('b', { verdict: 'no recovery', brokenBy: ['coal stops arriving'] })).detail).not.toContain('Not tried');
     });

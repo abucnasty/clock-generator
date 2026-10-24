@@ -39,6 +39,18 @@ describe("the game data of Factorio 2.1.21", () => {
     });
 });
 
+describe("an item's name in a sentence", () => {
+    it("is the game's name with its first letter lower case", () => {
+        expect(FactorioDataService.itemNameInSentence("military-science-pack")).toBe("military science pack");
+        expect(FactorioDataService.itemNameInSentence("tungsten-ore")).toBe("tungsten ore");
+        expect(FactorioDataService.itemNameInSentence("power-armor-mk2")).toBe("power armor MK2");
+    });
+
+    it("is the id as words for an id the data does not name", () => {
+        expect(FactorioDataService.itemNameInSentence("not-an-item")).toBe("not an item");
+    });
+});
+
 describe("a result's chance in the 2.1 data", () => {
     it("reads a shared probability as the width of the result's slice, so uranium processing keeps its expected amounts", async () => {
         // 2.0 said probability 0.007 and 0.993; 2.1 says shared_probability {0, 0.007} and {0.007, 1}

@@ -55,7 +55,7 @@ export function fullOutputChestsOf(context: SimulationContext, output_inserters:
             chest_type: chest.chest_type,
             name: chestName(chest.chest_type, sink.entity_id.number),
             item,
-            item_label: FactorioDataService.itemDisplayName(item).toLowerCase(),
+            item_label: FactorioDataService.itemNameInSentence(item),
             held: sink.getCurrentQuantity(item),
             capacity: sink.getCapacity(item),
             inserter_ids: [state.inserter.entity_id.number],

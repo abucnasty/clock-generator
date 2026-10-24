@@ -28,7 +28,7 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
         expect(generated.why_not_stable).toEqual({
             cause: "no recovery",
             message: "The selected clock (Batched swings: 6 output swings per cycle, subtick clock) holds the target rate, but does not "
-                + "get back to it by itself after steel-plate is not taken away. A buffer, or a faster machine, lets it catch up.",
+                + "get back to it by itself after steel plate is not taken away. A buffer, or a faster machine, lets it catch up.",
         });
     });
 

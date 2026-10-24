@@ -126,7 +126,7 @@ const lossList = (losses: readonly string[]) => losses.join(", or after ");
 
 /**
  * The sentence for the losses a verdict did not try (`not_tried`), with a space before it to follow another sentence:
- * " Not tried, since one failure is enough: coal stops arriving, iron-plate is not taken away." Empty when every loss was tried.
+ * " Not tried, since one failure is enough: coal stops arriving, iron plate is not taken away." Empty when every loss was tried.
  */
 export function notTriedSentence(not_tried: readonly string[] | undefined): string {
     return not_tried === undefined || not_tried.length === 0 ? ""

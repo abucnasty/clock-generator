@@ -129,8 +129,8 @@ describe("the verdict of a clock's losses", () => {
         ]);
         expect(verdictOf(report)).toEqual({
             survives: false,
-            broken_by: ["coal stops arriving", "copper-plate stops arriving"],
-            broken_at_other_lane_phases: ["copper-plate stops arriving"],
+            broken_by: ["coal stops arriving", "copper plate stops arriving"],
+            broken_at_other_lane_phases: ["copper plate stops arriving"],
             recovered_after_periods: null,
         });
     });
@@ -143,15 +143,15 @@ describe("the verdict of a clock's losses", () => {
             survives: false,
             broken_by: ["coal stops arriving"],
             broken_at_other_lane_phases: [],
-            not_tried: ["iron-plate stops arriving", "iron-gear-wheel is not taken away"],
+            not_tried: ["iron plate stops arriving", "iron gear wheel is not taken away"],
             recovered_after_periods: null,
         });
         expect(verdictOf(reportOf(100, 10, outcome({ kind: "none" }, true), [outcome({ kind: "supply", item: "coal" }, true)]))).not.toHaveProperty("not_tried");
     });
 
     it("says in a sentence what was not tried, and nothing where all was", () => {
-        expect(notTriedSentence(["iron-plate stops arriving", "iron-gear-wheel is not taken away"]))
-            .toBe(" Not tried, since one failure is enough: iron-plate stops arriving, iron-gear-wheel is not taken away.");
+        expect(notTriedSentence(["iron plate stops arriving", "iron gear wheel is not taken away"]))
+            .toBe(" Not tried, since one failure is enough: iron plate stops arriving, iron gear wheel is not taken away.");
         expect(notTriedSentence([])).toBe("");
         expect(notTriedSentence(undefined)).toBe("");
     });
@@ -172,8 +172,15 @@ describe("the losses a build can have", () => {
     it("are one for each item that comes off a belt and one for each that leaves on one, the product of the build among them", () => {
         const losses = backpressureLossesOf(createEntityRegistryFromConfig(structuredClone(config)), "automation-science-pack");
         expect(losses.map(lossId).sort()).toEqual(["output:automation-science-pack", "supply:copper-plate", "supply:iron-gear-wheel"]);
-        expect(losses.map(lossLabel)).toContain("copper-plate stops arriving");
-        expect(losses.map(lossLabel)).toContain("automation-science-pack is not taken away");
+        expect(losses.map(lossLabel)).toContain("copper plate stops arriving");
+        expect(losses.map(lossLabel)).toContain("automation science pack is not taken away");
+    });
+
+    it("are worded with the game's name of the item, not its id", () => {
+        expect(lossLabel({ kind: "supply", item: "tungsten-ore" })).toBe("tungsten ore stops arriving");
+        expect(lossLabel({ kind: "output", item: "military-science-pack" })).toBe("military science pack is not taken away");
+        expect(lossLabel({ kind: "none" })).toBe("nothing is cut");
+        expect(lossId({ kind: "output", item: "military-science-pack" })).toBe("output:military-science-pack");
     });
 });
 

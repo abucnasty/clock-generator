@@ -57,7 +57,7 @@ describe("generateClockForConfig", () => {
         // A build no clock on offer survives backpressure loss on (GOALS.md): it keeps its clocks, named for what they are
         it("calls no clock of the build stable: the one that holds does not get back to its rate once the tungsten ore has run out", () => {
             expect(selected.verdict).toBe("no recovery");
-            expect(selected.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["tungsten-ore stops arriving"] });
+            expect(selected.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["tungsten ore stops arriving"] });
             expect(selected.result.stability_check.as_built?.long_run_proven).toBe(true);
             expect(alternatives.some(a => a.verdict === "stable")).toBe(false);
         });
