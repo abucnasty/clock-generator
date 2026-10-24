@@ -10,7 +10,7 @@ import { Logger, defaultLogger } from "../common/logger";
 import { StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
-import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, lossLimitOf, reportOf, verdictOf } from "./backpressure-loss";
+import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { CIRCUIT_LATENCY_TICKS, SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
@@ -25,6 +25,7 @@ import { withChestDrillWindows } from "./chest-drill-windows";
 import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
+import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -392,6 +393,8 @@ export function backpressureLossOf(
     options: Omit<BackpressureLossOptions, "loss" | "period_ticks" | "expected_output_items"> = {},
     /** Called before the run of each loss, the one with nothing cut included */
     on_loss?: (loss: BackpressureLoss, index: number, total: number) => void,
+    /** Options of one loss over `options`, where a loss is tried in a way of its own (see resultLossOptionsOf) */
+    options_for?: (loss: BackpressureLoss) => Partial<BackpressureLossOptions>,
 ): BackpressureLossReport {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -400,7 +403,7 @@ export function backpressureLossOf(
     const outcomeOf = (loss: BackpressureLossOptions["loss"], phases?: MovingPickupPhases): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
         factorio_states: false,
         moving_pickup_phases: phases,
-        backpressure_loss: { loss_limit_ticks: loss_limit?.ticks, ...options, loss, period_ticks, expected_output_items },
+        backpressure_loss: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, period_ticks, expected_output_items },
     }).backpressure_loss!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
@@ -1088,12 +1091,30 @@ function triedBackpressureLoss(
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     try {
         return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
-            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`))) };
+            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
+            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans))) };
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Backpressure loss could not be tried: ${reason}`);
         return { backpressure_loss: null, backpressure_loss_not_tried: reason };
     }
+}
+
+/**
+ * How the losses of a clock of windows for results that come by small chances are tried: a result's output is not taken
+ * away for a few periods, not until the build stops, and the trial runs on for twice the periods the window's margin
+ * drains what that left (resultLossTrialOf), where the build has to be back at its output and the backlog gone. The
+ * recovery from the worst backlog is the arithmetic's (`drain_periods` of each window, within the periods a trial gives).
+ * Every other loss as for any clock.
+ */
+function resultLossOptionsOf(plans: readonly ResultWindowsPlan[]): (loss: BackpressureLoss) => Partial<BackpressureLossOptions> {
+    return loss => {
+        const trial = loss.kind === "output" ? resultLossTrialOf(plans, loss.item, MAX_RECOVERY_PERIODS - LATE_AFTER_PERIODS) : null;
+        return trial === null ? {} : {
+            fixed_loss_ticks: trial.loss_ticks, max_recovery_periods: trial.recovery_periods,
+            watched_backlog: { container_id: trial.container_id, items: trial.items, limit: trial.backlog_limit },
+        };
+    };
 }
 
 /**

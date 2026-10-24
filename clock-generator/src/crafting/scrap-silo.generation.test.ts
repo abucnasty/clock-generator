@@ -6,8 +6,8 @@ import { ConfigPaths } from "../config/config-paths";
 // The scrap silo sample: a recycler on scrap at +300% productivity destroys 2 scrap a second and places its twelve
 // results into a rocket silo, one filter stack inserter for each result out of it. The results come too rarely for the
 // takers' hands to come out whole in any period the silo holds, so each taker gets one window a period, worked out by
-// arithmetic (result-windows.ts), and the simulator runs the windows for 20 periods. About two minutes, nearly all of it
-// the loss trials of the twelve results (the build takes up to 200 periods to stop with copper cable not taken away).
+// arithmetic (result-windows.ts), and the simulator runs the windows for 20 periods. About half a minute: a result's
+// output is not taken away for 4 periods in its loss trials, and the backlog has to drain at its window's margin.
 const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
 let generated: ClockAlternativesResult;
 

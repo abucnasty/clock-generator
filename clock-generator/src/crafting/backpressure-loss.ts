@@ -206,6 +206,17 @@ export interface BackpressureLossOptions {
     late_after_periods?: number;
     /** A loss lasts fewer ticks than this (see lossLimitOf); without it, as long as the build takes to stop */
     loss_limit_ticks?: number;
+    /**
+     * Every trial cuts the item for this many ticks, at each place, and none runs until the build has stopped: for a loss
+     * whose recovery is worked out by arithmetic and only confirmed here (a result of windows for results that come by
+     * small chances, result-windows.ts)
+     */
+    fixed_loss_ticks?: number;
+    /**
+     * Items whose count in a container is watched: a trial recovers only where, after its recovery periods, the container
+     * holds no more of them than `limit` (the backlog the loss left has drained)
+     */
+    watched_backlog?: { container_id: string; items: readonly ItemName[]; limit: number };
 }
 
 export interface LossTrial {
@@ -235,6 +246,8 @@ export interface LossTrial {
     ends_in: number[];
     /** Bins run past the recovery window, as a trial short late in it runs on; absent when it did not */
     ran_on_bins?: number;
+    /** What the container held of the watched items (BackpressureLossOptions.watched_backlog) after each bin; absent where none are watched */
+    backlog_per_bin?: number[];
     /**
      * The export belts that received less than their consumers take in those bins; absent when none did. A build that
      * is at its expected output and shortchanges an export has not recovered.
@@ -426,10 +439,18 @@ export function runLossTrials(
     const late_after_bins = Math.floor((options.late_after_periods ?? LATE_AFTER_PERIODS) / bin.periods);
     const places = options.places ?? LOSS_PLACES;
     const shares = options.shares ?? LOSS_SHARES;
+    const fixed = loss.kind !== "none" ? options.fixed_loss_ticks : undefined;
     const plans: LossTrialPlan[] = loss.kind === "none" ? [{ cut_at: 0, loss_ticks: 0 }]
+        : fixed !== undefined ? places.map(place => ({ cut_at: Math.floor(place * bin.ticks), loss_ticks: fixed }))
         : shares.includes(1) ? lossTrialsUntilStopped(bin.ticks, places) : [{ cut_at: 0, restore_at: 0 }];
     // the trials that end part of the way are planned once it is known how long the build takes to stop
-    let part_of_the_way_planned = loss.kind === "none";
+    let part_of_the_way_planned = loss.kind === "none" || fixed !== undefined;
+    // the container whose count of some items is watched
+    const watched = options.watched_backlog;
+    const watched_container = watched === undefined ? undefined
+        : context.state_registry.getAllStates().filter(EntityState.isChest).find(state => state.entity_id.id === watched.container_id);
+    const backlogNow = () => watched_container === undefined || watched === undefined ? 0
+        : watched.items.reduce((sum, item) => sum + watched_container.getCurrentQuantity(item), 0);
 
     // a tick as the simulate step runs it
     const control_logic = new SimulationTick(context);
@@ -542,6 +563,7 @@ export function runLossTrials(
         const restore_at = (now() - start_tick) % bin.ticks;
 
         const output_per_bin: number[] = [];
+        const backlog_per_bin: number[] = [];
         const export_per_bin: number[][] = watched_exports.map(() => []);
         const bin_by_state = new Map<string, number>();
         let repeats_from: number | null = null;
@@ -558,6 +580,9 @@ export function runLossTrials(
             }
             const items = dropped() - before;
             output_per_bin.push(items);
+            if (watched_container !== undefined) {
+                backlog_per_bin.push(backlogNow());
+            }
             exact_bins = items === expected_per_bin ? exact_bins + 1 : 0;
             watched_exports.forEach((it, at) => export_per_bin[at].push(it.fillers.reduce((sum, state) => sum + state.items_dropped, 0) - exported_before[at]));
             // only boundaries a whole stride apart have every clock standing at the same place, so only they compare
@@ -581,6 +606,10 @@ export function runLossTrials(
             judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, run_on_bins);
         }
         const ran_on_bins = output_per_bin.length - window_bins;
+        // the backlog the loss left has to be gone by the end, where it is watched
+        if (watched !== undefined && watched_container !== undefined && judged.recovers && backlog_per_bin[backlog_per_bin.length - 1] > watched.limit) {
+            judged = { ...judged, recovers: false, recovered_after_bins: null };
+        }
         trials.push({
             cut_at: plan.cut_at,
             restore_at,
@@ -592,6 +621,7 @@ export function runLossTrials(
             output_per_bin,
             ...judgedWithExports(judged, watched_exports, export_per_bin, bin.ticks, repeats_from, judged_hold_bins),
             ...(ran_on_bins > 0 && { ran_on_bins }),
+            ...(watched_container !== undefined && { backlog_per_bin }),
         });
         if (!trials[trials.length - 1].recovers) {
             break;

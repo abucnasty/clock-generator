@@ -49,6 +49,16 @@ export const RESULT_WINDOWS_CHECK_PERIODS = 20;
  */
 export const RESULT_WINDOWS_RECOVERY_PERIODS = 32;
 
+/**
+ * Periods the output of a result is not taken away for in a loss trial of these windows, at most: the trial confirms
+ * the arithmetic of the recovery (`drain_periods`), and does not run to where the build stops (a silo takes 4,000 copper
+ * cables, 200 periods of 96 s)
+ */
+export const RESULT_WINDOWS_LOSS_PERIODS = 4;
+
+/** The periods after the release of such a loss: twice the predicted drain and the periods a recovery has to hold, within these */
+export const RESULT_WINDOWS_TRIAL_PERIODS = { least: 16, most: 64 } as const;
+
 /** Cells the weight a container lifts is counted in: every result's weight a period is rounded up to a cell */
 const WEIGHT_CELLS = 4096;
 
@@ -75,6 +85,8 @@ export interface ResultWindow {
      * within RESULT_WINDOWS_RECOVERY_PERIODS periods.
      */
     backlog_items: number;
+    /** The hand of each of the inserters */
+    hand: number;
     /**
      * Hands each of the inserters starts in the window, in full hands: the items at the level, or the expected items
      * and the backlog's share of a period where that is more, and the part hands left over
@@ -84,6 +96,12 @@ export interface ResultWindow {
     window_ticks: number;
     /** Tick of the period the window opens at */
     opening: number;
+    /** What the window takes a period at most, in full hands less the part hands left over */
+    room_items: number;
+    /** `room_items` over the expected count: what a backlog falls by a period (E2's R3: recovery is the backlog drained at the margin) */
+    margin_items: number;
+    /** Periods the margin takes to drain `backlog_items` */
+    drain_periods: number;
     /**
      * For an inserter that takes several results: the feed cycles a part hand of the rarest of them may wait to be filled
      * in all but 1 in 740 cases, while it takes nothing else (see waitCycles); 0 for one result
@@ -499,9 +517,11 @@ function planResultWindows(input: ResultWindowsInput): ResultWindowsPlan {
         const hands = Math.max(1, Math.ceil((taken + left_over) / (group.takers * group.hand)));
         const window_ticks = (hands - 1) * group.swing_ticks + 1;
         assert(window_ticks < period, `${name}: ${group.items.join(", ")} need a window of ${window_ticks} ticks a period of ${period}, which is no window`);
+        const room_items = hands * group.takers * group.hand - left_over;
         return {
             items: group.items, inserter_ids: group.inserters.map(it => it.entity_id.id), counted: count.counted,
-            expected_items: expected, items_at_level, backlog_items, hands, window_ticks, opening: openings[index], wait_cycles,
+            expected_items: expected, items_at_level, backlog_items, hand: group.hand, hands, window_ticks, opening: openings[index],
+            room_items, margin_items: room_items - expected, drain_periods: backlog_items / (room_items - expected), wait_cycles,
         };
     });
     const shared_ticks = Math.max(...windows.map(it => it.window_ticks));
@@ -619,4 +639,45 @@ export function takesResultOf(plans: readonly ResultWindowsPlan[], inserter_id: 
 /** The items whose hands the windows carry across periods: no period makes them whole */
 export function carriedItemsOf(plans: readonly ResultWindowsPlan[]): ItemName[] {
     return Array.from(new Set(plans.flatMap(plan => plan.windows.flatMap(window => window.items))));
+}
+
+/** How a loss trial of a result's output is run for these windows, and what its backlog has to fall back to (see backpressureLossOf) */
+export interface ResultLossTrial {
+    /** Ticks the output is not taken away for */
+    loss_ticks: number;
+    /** Periods run after the release */
+    recovery_periods: number;
+    /** The container and the results whose count in it is watched */
+    container_id: string;
+    items: ItemName[];
+    /** What they may hold in it at the end: a normal period's worth at the level and a hand for each taker */
+    backlog_limit: number;
+    /** The backlog the loss leaves, as the arithmetic has it, and the periods its margin drains it in */
+    predicted_backlog: number;
+    predicted_drain_periods: number;
+}
+
+/**
+ * The loss trial of the output of `item` for a clock of these windows: the output is not taken away for at most
+ * RESULT_WINDOWS_LOSS_PERIODS periods (fewer where the window's worst backlog comes sooner), and the build is run for
+ * twice the periods the window's margin drains what that leaves and the periods a recovery holds, between
+ * RESULT_WINDOWS_TRIAL_PERIODS' bounds. Null for an item no window takes.
+ */
+export function resultLossTrialOf(plans: readonly ResultWindowsPlan[], item: ItemName, hold_periods: number): ResultLossTrial | null {
+    for (const plan of plans) {
+        const window = plan.windows.find(it => it.items.includes(item));
+        if (window === undefined) {
+            continue;
+        }
+        const loss_periods = Math.max(1, Math.min(RESULT_WINDOWS_LOSS_PERIODS, Math.ceil(window.backlog_items / window.expected_items)));
+        const predicted_backlog = Math.min(window.backlog_items, loss_periods * window.expected_items);
+        const predicted_drain_periods = predicted_backlog / window.margin_items;
+        const recovery_periods = Math.min(RESULT_WINDOWS_TRIAL_PERIODS.most,
+            Math.max(RESULT_WINDOWS_TRIAL_PERIODS.least, 2 * Math.ceil(predicted_drain_periods) + hold_periods));
+        return {
+            loss_ticks: loss_periods * plan.period, recovery_periods, container_id: plan.container.container_id, items: window.items,
+            backlog_limit: window.items_at_level + window.inserter_ids.length * window.hand, predicted_backlog, predicted_drain_periods,
+        };
+    }
+    return null;
 }
