@@ -10,6 +10,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ## [0.23.0] - Unreleased
 
+### Changed
+- Clocks need fewer decider combinators: inserters with the same wake windows share one decider whatever they carry, and a clock with shared wake windows is offered next to the separate one; the list of clocks shows each one's decider count.
+
 ## [0.22.0] - 2026-10-24
 
 ### Added
