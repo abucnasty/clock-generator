@@ -1,0 +1,508 @@
+{
+  "target_output": {
+    "recipe": "productivity-module",
+    "items_per_second": 80,
+    "copies": 6
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "plastic-bar",
+      "productivity": 300,
+      "crafting_speed": 131.5375,
+      "prototype": "cryogenic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -683.5,
+        "y": -825.5
+      }
+    },
+    {
+      "id": 2,
+      "recipe": "advanced-circuit",
+      "productivity": 175,
+      "crafting_speed": 100.0625,
+      "prototype": "electromagnetic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -676,
+        "y": -823
+      }
+    },
+    {
+      "id": 3,
+      "recipe": "productivity-module",
+      "productivity": 50,
+      "crafting_speed": 135.0625,
+      "prototype": "electromagnetic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -669,
+        "y": -823
+      }
+    },
+    {
+      "id": 4,
+      "recipe": "casting-copper-cable",
+      "productivity": 150,
+      "crafting_speed": 157.075,
+      "prototype": "foundry",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -683.5,
+        "y": -820.5
+      }
+    },
+    {
+      "id": 5,
+      "recipe": "electronic-circuit",
+      "productivity": 175,
+      "crafting_speed": 63.75,
+      "prototype": "electromagnetic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -676,
+        "y": -818
+      }
+    },
+    {
+      "id": 6,
+      "recipe": "electronic-circuit",
+      "productivity": 175,
+      "crafting_speed": 63.75,
+      "prototype": "electromagnetic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -669,
+        "y": -818
+      }
+    },
+    {
+      "id": 7,
+      "recipe": "casting-iron",
+      "productivity": 150,
+      "crafting_speed": 129,
+      "prototype": "foundry",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -678.5,
+        "y": -812.5
+      }
+    },
+    {
+      "id": 8,
+      "recipe": "casting-copper-cable",
+      "productivity": 150,
+      "crafting_speed": 92.38799999999999,
+      "prototype": "foundry",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -672.5,
+        "y": -812.5
+      }
+    },
+    {
+      "id": 9,
+      "recipe": "casting-iron",
+      "productivity": 150,
+      "crafting_speed": 129,
+      "prototype": "foundry",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -666.5,
+        "y": -812.5
+      }
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 2,
+        "pickup_length": 0.5,
+        "pickup_layout": "side-exit",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "underground-belt",
+          "entity_name": "turbo-underground-belt",
+          "sidecar_version": "0.13.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "coal"
+      ],
+      "position": {
+        "x": -681.5,
+        "y": -828.5
+      },
+      "direction": 0,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "belt",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "productivity-module"
+      ],
+      "position": {
+        "x": -667.5,
+        "y": -825.5
+      },
+      "direction": 8,
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ],
+      "position": {
+        "x": -680.5,
+        "y": -822.5
+      },
+      "direction": 12,
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "plastic-bar"
+      ],
+      "position": {
+        "x": -680.5,
+        "y": -823.5
+      },
+      "direction": 12,
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ],
+      "position": {
+        "x": -678.5,
+        "y": -822.5
+      },
+      "direction": 12,
+      "id": 5
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "plastic-bar"
+      ],
+      "position": {
+        "x": -678.5,
+        "y": -823.5
+      },
+      "direction": 12,
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "advanced-circuit"
+      ],
+      "position": {
+        "x": -673.5,
+        "y": -823.5
+      },
+      "direction": 12,
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "advanced-circuit"
+      ],
+      "position": {
+        "x": -671.5,
+        "y": -823.5
+      },
+      "direction": 12,
+      "id": 8
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ],
+      "position": {
+        "x": -674.5,
+        "y": -820.5
+      },
+      "direction": 8,
+      "id": 9
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 6
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ],
+      "position": {
+        "x": -669.5,
+        "y": -820.5
+      },
+      "direction": 8,
+      "id": 10
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 7
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ],
+      "position": {
+        "x": -676.5,
+        "y": -815.5
+      },
+      "direction": 8,
+      "id": 11
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 8
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ],
+      "position": {
+        "x": -674.5,
+        "y": -815.5
+      },
+      "direction": 8,
+      "id": 12
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 8
+      },
+      "sink": {
+        "type": "machine",
+        "id": 6
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ],
+      "position": {
+        "x": -670.5,
+        "y": -815.5
+      },
+      "direction": 8,
+      "id": 13
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 9
+      },
+      "sink": {
+        "type": "machine",
+        "id": 6
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ],
+      "position": {
+        "x": -668.5,
+        "y": -815.5
+      },
+      "direction": 8,
+      "id": 14
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "coal",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "productivity-module",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "buffer-chest",
+      "id": 1,
+      "storage_size": 1,
+      "item_filter": "copper-cable",
+      "prototype": "steel-chest",
+      "position": {
+        "x": -679.5,
+        "y": -822.5
+      }
+    },
+    {
+      "type": "buffer-chest",
+      "id": 2,
+      "storage_size": 1,
+      "item_filter": "plastic-bar",
+      "prototype": "steel-chest",
+      "position": {
+        "x": -679.5,
+        "y": -823.5
+      }
+    },
+    {
+      "type": "buffer-chest",
+      "id": 3,
+      "storage_size": 1,
+      "item_filter": "advanced-circuit",
+      "prototype": "steel-chest",
+      "position": {
+        "x": -672.5,
+        "y": -823.5
+      }
+    }
+  ]
+}
