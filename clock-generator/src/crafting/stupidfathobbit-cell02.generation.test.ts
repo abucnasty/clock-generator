@@ -5,34 +5,34 @@ import {clockIdentity} from "./clock-identity";
 import {loadConfigFromFile} from "../config/loader";
 import {ConfigPaths} from "../config/config-paths";
 import {quiet} from "./generate-blueprint-test-helpers";
+import {readControls} from "../../tests/game/builds/clock-controls";
+import {GENERATED_ALTERNATIVE, STUPIDFATHOBBIT_CELL02_CASES} from "../../tests/game/builds/stupidfathobbit-cell02-clock-fixtures";
 
-// A real cell (#189) on its scaffold: no clock holds the target of 80 a second. The result is pinned as it
-// is, so a change to what the generator makes of it shows
+// A real cell (#189) on its scaffold, at 80 processing units a second. Before windows were left out for the inserters whose hands
+// take the whole cycle, no clock the generator made held the target (the best, 3 output swings, made 65.19 a second). The hands in
+// groups (src/crafting/candidates/grouped-hands.ts) give a clock of one cycle, 24 ticks, that holds and recovers. The selection is
+// pinned as it is, so a change to what the generator makes of it shows
 describe("the real stupidfathobbit cell 02", () => {
-    it.each([["as it is", false], ["with backed-up belts", true]])("selects the 3-swing clock, unstable at 65.19 a second, %s", async (_name, backed_up_belts) => {
+    it.each(STUPIDFATHOBBIT_CELL02_CASES)("selects a stable clock of one cycle at 80 a second, $name", async ({name, backed}) => {
         const loaded = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02);
-        const config = backed_up_belts ? {...loaded, overrides: {...loaded.overrides, backed_up_belts: true}} : loaded;
+        const config = backed ? {...loaded, overrides: {...loaded.overrides, backed_up_belts: true}} : loaded;
         const generated = generateClockAlternatives(config, {logger: quiet});
         const selected = generated.alternatives[generated.selected_index];
-        expect(selected.id).toBe("swings-3");
-        expect(selected.verdict).toBe("unstable");
-        expect(selected.assessment.holds).toBe(false);
-        expect(selected.assessment.items_per_second).toBeCloseTo(65.1894, 4);
-        // a clock that fails its first check is listed by the mean items of its long run, 1721 a period of 1584 ticks
-        expect(selected.result.stability_check.as_built).toMatchObject({holds: false, actual_output_items: 1721, output_basis: "long-run mean"});
-        expect(selected.belt).toEqual({kind: "backed_up"});
+        expect(selected.id).toBe(GENERATED_ALTERNATIVE);
+        expect(selected.verdict).toBe("stable");
+        expect(selected.assessment.holds).toBe(true);
+        expect(selected.assessment.items_per_second).toBeCloseTo(80, 6);
+        expect(selected.assessment.backpressure_loss?.survives).toBe(true);
+        expect(selected.result.simulation_duration.ticks).toBe(24);
+        expect(selected.result.stability_check.as_built).toMatchObject({holds: true, actual_output_items: 32});
+        expect(selected.belt).toEqual(backed ? {kind: "backed_up"} : {kind: "moving", slack_ticks: [4]});
+        expect(generated.why_not_stable).toBeNull();
         const exported = selected.result.subtick ?? selected.result;
-        expect(selected.result.simulation_duration.ticks).toBe(1584);
-        expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"))
-            .toBe("faac97a6a6bc1668c51b229a86c1014aaa0016564caf6eb9b5fbb5b1ba08cce0");
-        // no clock reaches the target, and the generation says so
-        expect(generated.alternatives.every(alternative => alternative.verdict === "unstable")).toBe(true);
-        // listed by the mean of the long run: the game makes 62.1 with swings-1 and 66.4 with swings-3
-        const rates = Object.fromEntries(generated.alternatives.filter(it => it.id.startsWith("swings-")).map(it => [it.id, Number(it.assessment.items_per_second.toFixed(2))]));
-        expect(rates["swings-1"]).toBe(61.93);
-        expect(rates["swings-3"]).toBe(65.19);
-        expect(generated.why_not_stable?.cause).toBe("nothing holds");
-        expect(generated.why_not_stable?.message).toContain("No clock holds the target rate of 80 a second. The closest, 3 output swings per cycle, moves 65.19 a second");
+        const pin = readControls("stupidfathobbit-cell02-clock-controls.json").cases[name].generation!;
+        expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
+            "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(pin.clock_sha256);
+        expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null}).toEqual(pin.selection);
+        expect(selected.result.simulation_duration.ticks).toBe(pin.period);
     }, 120_000);
 
     it("exports the circuits on belt 2 at 40 a second a lane", async () => {
