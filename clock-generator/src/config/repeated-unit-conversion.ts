@@ -157,8 +157,13 @@ function analyze(config: Config): Analysis {
     return { rows, ids, components, componentOf, users };
 }
 
-/** The witness explicitly labels every local member and every private resource alias. */
-function witness(config: Config, analysis: Analysis, component: Component): unknown {
+type Place = { x: number; y: number } | undefined;
+
+/**
+ * The witness explicitly labels every local member and every private resource alias. Where the members stand is no part of
+ * it (copies stand apart); it comes back beside it, in the order of the witness, for the gap between copies.
+ */
+function witness(config: Config, analysis: Analysis, component: Component): { proof: unknown; places: Place[] } {
     const local = new Map<string, string>();
     const members = (kind: NodeKind, rows: { id: number }[]): { id: number }[] => rows.filter(row => component.nodes.has(keyOf(kind, row.id)));
     const machines = members('machine', config.machines);
@@ -172,10 +177,12 @@ function witness(config: Config, analysis: Analysis, component: Component): unkn
         const category = kind === 'belt' ? 'belts' : 'chests';
         return analysis.rows[category][analysis.ids[category].get(Number(id))!];
     };
+    const places: Place[] = [];
     const withoutId = (row: Row): unknown => {
-        const { id: _id, ...rest } = row;
+        const { id: _id, position: _position, ...rest } = row as Row & { position?: { x: number; y: number } };
         return { ownIdPresent: own(row, 'id'), record: rest };
     };
+    const placed = (rows: Row[]): void => rows.forEach(row => places.push((row as Row & { position?: { x: number; y: number } }).position));
     const end = (endpoint: End): unknown => {
         const key = keyOf(endpoint.type, endpoint.id);
         let label: unknown = local.get(key);
@@ -202,11 +209,13 @@ function witness(config: Config, analysis: Analysis, component: Component): unkn
             const sink = config.inserters[index].sink;
             return keyOf(sink.type, sink.id);
         });
+    placed(machines); placed(chests); placed(drills);
+    placed(executionOrder.map(index => config.inserters[index]));
     const inserters = executionOrder.map(index => {
         const ins = config.inserters[index];
         return withoutId({ ...ins, source: end(ins.source), sink: end(ins.sink) } as Row);
     });
-    return {
+    const proof = {
         machines: machines.map(withoutId), chests: chests.map(withoutId),
         drills: drills.map(row => {
             const drill = row as NonNullable<Config['drills']>['configs'][number];
@@ -218,6 +227,7 @@ function witness(config: Config, analysis: Analysis, component: Component): unkn
             return privateRoles.has(key) ? [{ role: privateRoles.get(key), record: withoutId(row) }] : [];
         })),
     };
+    return { proof, places };
 }
 function equalWitness(a: unknown, b: unknown): boolean {
     if (Object.is(a, b)) return true;
@@ -228,6 +238,30 @@ function equalWitness(a: unknown, b: unknown): boolean {
         && equalWitness((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
 }
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+
+/**
+ * Where the next copy stands from the one before it: the same step from every member of a unit to its counterpart in the
+ * next, for every unit of every group. None when a member has no place or the steps differ.
+ */
+function copyOffsetOf(groups: Iterable<{ places: Place[] }[]>, multiplicity: number): { x: number; y: number } | undefined {
+    let offset: { x: number; y: number } | undefined;
+    for (const group of groups) {
+        const step = group.length / multiplicity;
+        for (let unit = 0; unit < step; unit++) {
+            for (let copy = 1; copy < multiplicity; copy++) {
+                const before = group[unit + (copy - 1) * step].places, after = group[unit + copy * step].places;
+                for (let member = 0; member < before.length; member++) {
+                    const a = before[member], b = after[member];
+                    if (a === undefined || b === undefined) return undefined;
+                    const moved = { x: Number((b.x - a.x).toFixed(6)), y: Number((b.y - a.y).toFixed(6)) };
+                    if (offset === undefined) offset = moved;
+                    else if (offset.x !== moved.x || offset.y !== moved.y) return undefined;
+                }
+            }
+        }
+    }
+    return offset !== undefined && (offset.x !== 0 || offset.y !== 0) ? offset : undefined;
+}
 
 function multipliedCopies(copies: number, multiplicity: number): number {
     const source = fraction(copies), exact = source.multiply(multiplicity);
@@ -250,14 +284,14 @@ function multipliedCopies(copies: number, multiplicity: number): number {
 export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversionResult {
     try {
         const analysis = analyze(config);
-        const groups = new Map<string, { component: Component; witness: unknown }[]>();
+        const groups = new Map<string, { component: Component; witness: unknown; places: Place[] }[]>();
         for (const component of analysis.components) {
-            const proof = witness(config, analysis, component), signature = canonical(proof);
+            const { proof, places } = witness(config, analysis, component), signature = canonical(proof);
             const group = groups.get(signature) ?? [];
             if (group.length > 0 && !equalWitness(group[0].witness, proof)) {
                 refuse('nonuniform-units', 'Complete ordered unit correspondence could not be verified.');
             }
-            group.push({ component, witness: proof });
+            group.push({ component, witness: proof, places });
             groups.set(signature, group);
         }
         const multiplicity = [...groups.values()].reduce((value, group) => gcd(value, group.length), 0);
@@ -314,6 +348,10 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
         });
         const copies = multipliedCopies(config.target_output.copies, multiplicity);
         candidate.target_output.copies = copies;
+        // where the next copy stands, read from the places of the copies; a config that had copies already says nothing of it
+        const offset = config.target_output.copies === 1 ? copyOffsetOf(groups.values(), multiplicity) : undefined;
+        delete candidate.target_output.copy_offset;
+        if (offset !== undefined) candidate.target_output.copy_offset = offset;
         if (!ConfigSchema.safeParse(candidate).success) refuse('copies-not-representable', 'The multiplied Copies value is outside the supported schema.');
         analyze(candidate);
         try { validateCopies(candidate); } catch (error) {

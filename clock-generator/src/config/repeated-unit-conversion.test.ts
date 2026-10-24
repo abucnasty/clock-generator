@@ -40,6 +40,27 @@ describe('complete repeated-unit conversion', () => {
         expect(source).toEqual(before);
     });
 
+    it('reads where the next copy stands from the places of the copies, which are no part of what makes them copies', () => {
+        const placed = (gap: (unit: number) => number): Config => {
+            const source = eightUnits();
+            source.target_output.copies = 1;
+            source.machines.forEach((machine, i) => { machine.position = { x: gap(i), y: 3 }; });
+            source.inserters.forEach((inserter, index) => { inserter.position = { x: gap(Math.floor(index / 2)) + 1.5 * (index % 2), y: 5 }; });
+            return source;
+        };
+        const plan = planRepeatedUnitConversion(placed(i => 12 * i - 80.5));
+        expect(plan.kind).toBe('available');
+        if (plan.kind !== 'available') return;
+        expect(plan.candidate.target_output.copy_offset).toEqual({ x: 12, y: 0 });
+        // copies that do not stand a fixed step apart, or a member without a place, leave the gap unsaid
+        const uneven = planRepeatedUnitConversion(placed(i => i * i));
+        expect(uneven.kind === 'available' && uneven.candidate.target_output.copy_offset).toBeUndefined();
+        const missing = placed(i => 12 * i);
+        delete missing.inserters[3].position;
+        const unplaced = planRepeatedUnitConversion(missing);
+        expect(unplaced.kind === 'available' && unplaced.candidate.target_output.copy_offset).toBeUndefined();
+    });
+
     it('retains the complete composite GCD unit, internal buffers/drills, fuel, rules and nontrivial ID maps', () => {
         const source: Config = {
             target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
