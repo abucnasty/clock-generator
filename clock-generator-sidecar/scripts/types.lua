@@ -38,6 +38,7 @@
 ---@field supply_problem "side-loaded"|nil Why the supply is out of scope: another belt side-loads onto the pickup tile
 ---@field pickup_problem string|nil Why the pickup geometry was omitted
 ---@field side_load_tiles number|nil For a drop onto a belt: the tiles to the belt its stream side-loads onto, where that is fed from behind
+---@field belt_direction number|nil For a drop onto a belt: the way the belt runs at the drop tile (defines.direction)
 
 ---@class InfinityFilterData
 ---@field item_name string The item name

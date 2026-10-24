@@ -806,6 +806,8 @@ function extraction.extract_all_entities(entities, force)
                 -- marked with the tiles to the merge.
                 if data.sink and data.sink.type == "belt" and entity.drop_target then
                     data.sink.side_load_tiles = drop_merge.tiles(entity.drop_target, pieces)
+                    -- the way the belt runs at the drop tile, for the order of the drops along it
+                    data.sink.belt_direction = entity.drop_target.direction
                 end
                 table.insert(result.inserters, data)
             end
