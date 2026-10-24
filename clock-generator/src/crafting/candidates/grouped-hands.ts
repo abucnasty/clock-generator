@@ -487,7 +487,7 @@ function bestHolding(made: PlanRun, holding: HoldingWay[], shared: boolean): Hol
         const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
         const windows = inserters.reduce((sum, inserter) => sum + (clock.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
         // to a thousandth, as the selection counts them
-        return [wake_ups === undefined ? Number.MAX_SAFE_INTEGER : Math.round(wake_ups * 1000), rankingWindowCount(windows, clock.clock_windows, clock.output_feeders)];
+        return [wake_ups === undefined ? Number.MAX_SAFE_INTEGER : Math.round(wake_ups * 1000), rankingWindowCount(windows, clock.clock_windows, clock.loop_windows)];
     };
     const ranked = holding.map((held, index) => ({ held, index, rank: rank(held) }))
         .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.index - b.index)

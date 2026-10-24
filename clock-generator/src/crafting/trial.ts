@@ -15,7 +15,7 @@ import { currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
-import { windowsOfInsertersFeedingTheOutputMachine } from "./candidates/output-feeders";
+import { loopInserterWindows } from "./candidates/loop-windows";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 import { canonicalVerificationJson } from "./verification-signature";
@@ -180,13 +180,14 @@ export function runClockOnBuild(
 export const FREE_RUNNING_CHECK_TICKS = 36000;
 
 /**
- * Ticks the long run lasts when it verifies a clock WITH output feeder windows: twice the standard check, the length
- * of one game recording. The windows are an optimisation, so they have to clear a longer run than the clock they are
- * added to: with the standard length a variant of the agricultural science sample (egg biochambers at speed 72, stack
- * size 12 on the feeders) kept windows that came up a hand or more short in two periods of 200. A longer run is
- * still not a proof, only a smaller chance of keeping windows that drift.
+ * Ticks the long run lasts when it verifies a clock WITH the windows of the inserters of a loop (see
+ * `trialWithLoopWindows`): twice the standard check, the length of one game recording. The windows are an
+ * optimisation, so they have to clear a longer run than the clock they are added to: with the standard length a
+ * variant of the agricultural science sample (egg biochambers at speed 72, stack size 12 on the inserters into the
+ * science biochamber) kept windows that came up a hand or more short in two periods of 200. A longer run is still not
+ * a proof, only a smaller chance of keeping windows that drift.
  */
-export const OUTPUT_FEEDER_CHECK_TICKS = 2 * FREE_RUNNING_CHECK_TICKS;
+export const LOOP_WINDOW_CHECK_TICKS = 2 * FREE_RUNNING_CHECK_TICKS;
 
 /**
  * The long run stops at this many periods: a drift shows within a hundred, and short periods would run thousands.
@@ -339,11 +340,12 @@ export function clockFromWindows(
     logger: Logger = defaultLogger,
 ): BlueprintGenerationResult {
     const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger });
-    // the windows are built as they are: nothing is added to them, so the clock goes without belt pickup slack
+    // the windows are built as they are: nothing is added to them, so the clock goes without belt pickup slack, and the
+    // inserters of a loop without windows stay always enabled
     const clock = clockOfPlan(plan, { belt_pickup_slack: "never" });
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    const result = checkedClock(plan, clock, windows, { logger, verify_as_built: true });
+    const result = checkedClock(plan, clock, windows, { logger, verify_as_built: true, loop_windows: false });
     assert(result.simulation_duration.ticks === period_ticks,
         `The windows are of a clock of ${period_ticks} ticks, and the config is planned on one of ${result.simulation_duration.ticks}`);
     return result;
@@ -822,17 +824,17 @@ export function runAsBuiltCheck(
 }
 
 /**
- * The feeders of the output machine are only an optimisation, kept when the build passes the same check with them as
- * it did without: the long run of the check just made (`run`) gives the output of that machine, so no other run is
- * needed to make them. Returns the check with them, the windows with theirs in, their ids and item names (identical
- * windows and items share one combinator, as the nutrient inserters of the egg biochambers do), or null when there are
- * none or the check with them does not pass as without (see `windowsOfInsertersFeedingTheOutputMachine`).
+ * The windows of the inserters that take out of a loop are an optimisation, kept when the build passes the same check
+ * with them as it did without: the long run of the check just made (`run`) gives the output of every machine, so no
+ * other run is needed to make them. Returns the check with them, the windows with theirs in, their ids and item names
+ * (identical windows and items share one combinator, as the nutrient inserters of the egg biochambers do), or null when
+ * there are none or the check with them does not pass as without (see `loopInserterWindows`). Whether the clock with
+ * them gets back from a loss is judged where the clock is assessed (see `runAlternativeOf`).
  */
-export function trialWithOutputFeeders(
+export function trialWithLoopWindows(
     config: Config,
     windows: Map<string, OpenRange[]>,
     period: number,
-    output_machine_ids: ReadonlySet<string>,
     run: { check: AsBuiltStabilityCheck; stock?: StockRecording },
     start_phases: number,
     logger: Logger,
@@ -844,36 +846,36 @@ export function trialWithOutputFeeders(
     check: AsBuiltStabilityCheck;
     stock?: StockRecording;
     windows: Map<string, OpenRange[]>;
-    output_feeders: NonNullable<BlueprintGenerationResult["output_feeders"]>;
+    loop_windows: NonNullable<BlueprintGenerationResult["loop_windows"]>;
     item_names: Map<string, string>;
 } | null {
     if (run.stock === undefined) {
         return null;
     }
-    const feeders = windowsOfInsertersFeedingTheOutputMachine(config, windows, period, run.stock, output_machine_ids, logger);
-    if (feeders.size === 0) {
+    const loop = loopInserterWindows(config, period, run.stock, logger);
+    if (loop.size === 0) {
         return null;
     }
-    const fed_windows = new Map(windows);
-    for (const [inserter_id, feeder] of feeders) {
-        fed_windows.set(inserter_id, feeder.windows);
+    const looped_windows = new Map(windows);
+    for (const [inserter_id, it] of loop) {
+        looped_windows.set(inserter_id, it.windows);
     }
-    const fed_run = runAsBuiltCheck(config, fed_windows, period, logger, start_phases,
-        (n, total) => report?.(`Checking output feeder windows, clock start ${n}/${total}`), OUTPUT_FEEDER_CHECK_TICKS, undefined, pickup_phase_cycles);
-    const passes_as_before = fed_run.check.holds && fed_run.check.failed_start_offset === undefined
-        && fed_run.check.start_phases_checked === run.check.start_phases_checked;
-    logger.log(`Output feeders: ${passes_as_before ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
+    const looped_run = runAsBuiltCheck(config, looped_windows, period, logger, start_phases,
+        (n, total) => report?.(`Checking the windows out of the loop, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles);
+    const passes_as_before = looped_run.check.holds && looped_run.check.failed_start_offset === undefined
+        && looped_run.check.start_phases_checked === run.check.start_phases_checked;
+    logger.log(`Loop windows: ${passes_as_before ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
     if (!passes_as_before) {
         return null;
     }
     return {
-        ...fed_run,
-        windows: fed_windows,
-        output_feeders: {
-            inserter_ids: Array.from(feeders.keys()),
-            window_count_without_feeder_windows: Array.from(feeders.keys()).reduce((sum, id) => sum + (windows.get(id)?.length ?? 0), 0),
+        ...looped_run,
+        windows: looped_windows,
+        loop_windows: {
+            inserter_ids: Array.from(loop.keys()),
+            window_count_without_loop_windows: Array.from(loop.keys()).reduce((sum, id) => sum + (windows.get(id)?.length ?? 0), 0),
         },
-        item_names: new Map(Array.from(feeders, ([inserter_id, feeder]) => [inserter_id, feeder.item_name])),
+        item_names: new Map(Array.from(loop, ([inserter_id, it]) => [inserter_id, it.item_name])),
     };
 }
 

@@ -7,11 +7,11 @@ import { quiet } from "./generate-blueprint-test-helpers";
 
 describe("generateClockForConfig", () => {
 
-    // The windows of the inserters that bring eggs to the science biochamber are an optimisation: kept only when the clock
-    // passes the as-built check with them as it did without. Variations of the agricultural science sample, 5 output swings.
-    // This test is apart from the rest of the describe, in agricultural-science-feeders.generation.test.ts: it takes three
+    // The windows of the inserters of the egg loop are an optimisation: kept only when the clock passes the as-built
+    // check with them as it did without. Variations of the agricultural science sample, 5 output swings. This test is
+    // apart from the rest of the describe, in agricultural-science-loop-windows.generation.test.ts: it takes three
     // minutes, the longest of the suite, which would hold up the others.
-    describe("agricultural science: windows for the inserters feeding the output machine", async () => {
+    describe("agricultural science: windows for the inserters of the egg loop", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
 
         it("counts a clock's windows without those of its feeders, where the clock with them has the fewest wake-ups of those that hold", () => {

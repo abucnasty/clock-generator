@@ -94,9 +94,12 @@ describe("generateClockForConfig", () => {
             expect(one_swing.assessment.items_per_second).toBeCloseTo(250, 6);
         });
 
-        it("leaves the inserters that take eggs from the egg biochambers into the science biochamber always enabled on the 1-swing clock, and clocks the rest", () => {
+        // one output window a period: the science biochamber is under its block for 400 ticks of it, and the windows of 9
+        // and 10 take all but 72 of them (160 eggs a period, 27 under its insertion limit, a third of an egg a tick)
+        it("gives the inserters that take eggs into the science biochamber long windows on the 1-swing clock, and leaves those of the loop always on", () => {
             const clocked = Object.keys(windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
+            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
+            expect(windows["inserter:9"].reduce((sum, it) => sum + it.end - it.start + 1, 0)).toBe(480 - 72);
         });
 
         it("leaves inserters 9 and 10 always enabled on the 2-swing clock too, where the science biochamber is at its block at the end of most output windows", () => {
@@ -105,14 +108,16 @@ describe("generateClockForConfig", () => {
             expect(Object.keys(two_swings.result.clock_windows).sort()).not.toContain("inserter:10");
         });
 
-        // Until the rules of issue 152 the 5-swing clock gave them windows of their own (0 to 67 of every 96 ticks), which
-        // the as-built check passed. Since a hand from a machine waits while the machine it puts into is at its block,
-        // the generator keeps no windows for them on this sample: they stay always enabled. Variants with other hands
-        // still get them (agricultural-science-feeders.generation.test.ts).
-        it("leaves the inserters that take eggs into the science biochamber always enabled on the 5-swing clock too", () => {
+        // The inserters that take out of the egg loop get windows where the science biochamber was under its output block
+        // in the clock's long run (agricultural-science-loop-windows.generation.test.ts); those of the loop stay always on.
+        // The clock holds from every start and gets back from every loss with them, at 1,258 wake-ups a minute against 2,674
+        // with them always enabled.
+        it("clocks the inserters that take eggs into the science biochamber on the 5-swing clock, and leaves those of the loop always on", () => {
             const clocked = Object.keys(five_swing_windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
+            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
+            expect(five_swings.result.loop_windows?.inserter_ids.slice().sort()).toEqual(["inserter:10", "inserter:9"]);
             expect(five_swing_windows["inserter:12"].slice(0, 2)).toEqual([{ start: 0, end: 36 }, { start: 96, end: 132 }]);
+            expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(1300);
         });
 
         it("gives the inserters bringing nutrients to the egg biochambers windows of two hands, 44 hands for the 35 planned a period", () => {
