@@ -3,6 +3,7 @@ import { generateClockAlternatives, simulateClockOnly, validateConfig, type Cloc
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
+import { expectPinnedScaffoldClock } from "../../tests/game/builds/scaffold-recordings-clock-pins";
 
 describe("generateClockForConfig", () => {
 
@@ -81,6 +82,13 @@ describe("generateClockForConfig", () => {
                     expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(other.assessment.wake_ups_per_minute!);
                 }
             }
+        });
+
+        // The values the scaffold recordings expect of this build (the dips and open issues of its staged start) were seen on
+        // one clock. The build is generated here, from the same config, and not again for that test
+        // (scaffold-recordings-clock.generation.test.ts).
+        it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
+            expectPinnedScaffoldClock("agricultural science", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: false }, alternatives[selected_index]);
         });
 
         it("also holds it with one output swing per cycle", () => {
