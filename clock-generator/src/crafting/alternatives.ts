@@ -21,6 +21,7 @@ import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
+import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
 import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, roundedClockTrial, startDependenceVerdictOf, withSettledOutput } from "./trial";
@@ -922,6 +923,14 @@ export function planClockAlternatives(
      */
     on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
 ): ClockAlternativesPlan {
+    return withRunMemo(() => planPrimaryAndTasks(config, options, on_tasks));
+}
+
+function planPrimaryAndTasks(
+    config: Config,
+    options: GenerateClockOptions,
+    on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
+): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
     const definition = primaryDefinition(config, options, options.on_progress_detail);
     const result = definition.run();
@@ -974,6 +983,16 @@ export function runClockAlternativeTask(
     /** Signatures of clocks other runs assess, as the primary alternative's (see planClockAlternatives) */
     assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
+    return withRunMemo(() => runTask(config, context, task_id, options, assessed_signatures));
+}
+
+function runTask(
+    config: Config,
+    context: ClockAlternativeContext,
+    task_id: string,
+    options: GenerateClockOptions,
+    assessed_signatures: readonly string[],
+): ClockAlternativeRun | null {
     const logger = options.logger ?? defaultLogger;
     const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
         .find(it => it.id === task_id);
@@ -1018,6 +1037,10 @@ export function generateClockAlternatives(
     config: Config,
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
+    return withRunMemo(() => generateAllAlternatives(config, options));
+}
+
+function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
     const logger = options.logger ?? defaultLogger;
     let current_step = BATCHED_SWINGS_LABEL;
     let completed = 0;
