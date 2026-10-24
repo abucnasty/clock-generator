@@ -30,7 +30,7 @@ export function machineRuleOfPrototype(prototype: CraftingMachineRuleFacts): Mac
  * container that stands at its result spot, else into its output, any number of stacks, as long as no stack of a result
  * waits there. A machine that does not keeps its results in its output until an inserter takes them. No name decides it.
  */
-export function placesResultsItself(prototype: { readonly vector_to_place_result?: readonly [number, number] }): boolean {
+export function placesResultsItself(prototype: { readonly vector_to_place_result?: readonly number[] }): boolean {
     return prototype.vector_to_place_result !== undefined;
 }
 

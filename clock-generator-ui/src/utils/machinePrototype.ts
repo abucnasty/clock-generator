@@ -1,4 +1,4 @@
-import { machineCanMake, machineForRecipe, machineRuleOfPrototype, MachineType } from 'clock-generator/light';
+import { machineCanMake, machineForRecipe, machineRuleOfPrototype, MachineType, placesResultsItself } from 'clock-generator/light';
 import type { CraftingMachineData, CraftingMachineInfo } from '../worker/types';
 import type { MachineFormData } from './configForm/formData';
 
@@ -21,7 +21,8 @@ export function burnsNutrients(row: Pick<MachineFormData, 'prototype'>, data: Cr
  * its game data says by `vector_to_place_result`; no name decides it. Only such a machine has a result target.
  */
 export function placesResults(row: Pick<MachineFormData, 'prototype'>, data: CraftingMachineData): boolean {
-    return craftingMachineOf(data, row.prototype)?.vector_to_place_result !== undefined;
+    const machine = craftingMachineOf(data, row.prototype);
+    return machine !== undefined && placesResultsItself(machine);
 }
 
 /**
