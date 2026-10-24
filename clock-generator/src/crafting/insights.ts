@@ -322,7 +322,7 @@ function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEnti
 }
 
 /**
- * The wake-ups insight of a clock whose wake-ups depend on how it starts (see wake-ups-from-starts.ts): its title is the mean it is
+ * The wake-ups insight of a clock of a build with a loop, whose wake-ups depend on how it starts (see wake-ups-from-starts.ts): its title is the mean it is
  * ranked by, and it says the range over the starts before what the long run from the cold start found, which its table
  * stays of. The other insights are returned as they are.
  */
@@ -331,11 +331,11 @@ export function withWakeUpsFromStarts(insights: readonly ClockInsight[], from_st
     return insights.map(insight => insight.id !== "wake-ups" ? insight : {
         ...insight,
         title: `Machines wake the inserters ${round(from_starts.mean)} times a minute on average`,
-        what: `How often depends on where the clock is when the build starts: ${round(Math.min(...figures))} to `
-            + `${round(Math.max(...figures))} times a minute from ${figures.length} places in its period, ${round(from_starts.mean)} on average. `
+        what: `With a loop in the build, how often depends on where the clock is when the build starts: ${round(Math.min(...figures))} to `
+            + `${round(Math.max(...figures))} times a minute from ${figures.length} start points, ${round(from_starts.mean)} on average. `
             + insight.what.replace("In a long run of this clock the machines", "In a long run of this clock from the cold start the machines"),
-        explanation: `${insight.explanation} A build can settle into more than one steady state, and which one depends on how it `
-            + "starts; each wakes the inserters a different number of times, so a clock is compared by their average.",
+        explanation: `${insight.explanation} A build with a loop can settle into more than one steady state, and which one depends `
+            + "on how it starts; each wakes the inserters a different number of times, so a clock is compared by their average.",
     });
 }
 

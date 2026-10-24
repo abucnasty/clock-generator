@@ -629,13 +629,13 @@ function itemsPerSecondOverCopies(items_per_period: number, period_ticks: number
 }
 
 type VerificationAssessment = BackpressureLossAssessment & Pick<ClockAssessment, "start_dependence"> & {
-    /** The wake-ups of the clock from the starts, once tried: null where they do not depend on the start */
+    /** The wake-ups of the clock from the starts, once tried: null where its build has no loop */
     wake_ups_from_starts?: WakeUpsFromStarts | null;
 };
 
 /**
- * A sentence for an alternative's description about its wake-ups from more than one start, where they depend on the
- * start: the mean it is ranked by, the cold start's figure and the range.
+ * A sentence for an alternative's description about its wake-ups from more than one start, on a build with a loop, whose
+ * wake-ups depend on the start: the mean it is ranked by, the cold start's figure and the range.
  */
 function wakeUpsFromStartsNote(from_starts: WakeUpsFromStarts | undefined, cold: number | null): string {
     if (from_starts === undefined) {
@@ -643,9 +643,9 @@ function wakeUpsFromStartsNote(from_starts: WakeUpsFromStarts | undefined, cold:
     }
     const figures = from_starts.wake_ups_per_minute;
     const round = (figure: number) => Math.round(figure).toLocaleString("en-US");
-    return ` Its wake-ups depend on where its clock is when the build starts: from ${figures.length} places in its period,`
+    return ` With a loop in the build, its wake-ups depend on where its clock is when the build starts: from ${figures.length} start points,`
         + ` ${round(Math.min(...figures))} to ${round(Math.max(...figures))} a minute, ${round(from_starts.mean)} on average, which it is ranked by`
-        + (cold === null ? "." : ` (${round(cold)} from the cold start).`);
+        + (cold === null ? "." : ` (${round(cold)} from a cold start).`);
 }
 
 /** Whether a clock has windows the generator made for a drill into a chest */
@@ -906,7 +906,7 @@ function runAlternativeOf(
         const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         const ranking = rankingOf(clock, config);
-        // where its wake-ups decide the selection, a clock whose wake-ups depend on how it starts is ranked by their mean
+        // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
         // over the starts; the clock of a trial that is neither the exact one nor the rounded one tried meets no target
         const is_exact = tried_as === exact_trial;
         const from_starts = ranking.meets_target_rate && assessment.wake_ups_per_minute !== null && (is_exact || tried_as === rounded_trial)
