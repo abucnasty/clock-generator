@@ -15,6 +15,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Changed
 - A clock that does not hold is listed by what it makes over a long run, not by one period, so the closest clock is the one that keeps making the most.
+- A clock is stable only if every export belt gets what its consumers take; one that gives a belt less is unstable, and the result card says which belt gets how much.
 
 ## [0.21.1] - 2026-10-23
 
