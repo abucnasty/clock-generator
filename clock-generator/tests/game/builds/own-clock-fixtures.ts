@@ -11,15 +11,15 @@ import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capture";
 
 /**
- * The owner's inserter build (`LOGISTIC_SCIENCE_INSERTER_CRAFTING`, 240 a second over three copies, 80 a second each) as
- * the owner built it: three copies in a row, the ore lines of the copies running on past the last into loaders and
- * void chests (drained and moving), the circuits and the product from chests and a loader. The owner's clock is in it,
+ * The inserter build (`LOGISTIC_SCIENCE_INSERTER_CRAFTING`, 240 a second over three copies, 80 a second each) as
+ * it was built: three copies in a row, the ore lines of the copies running on past the last into loaders and
+ * void chests (drained and moving), the circuits and the product from chests and a loader. The hand-made clock is in it,
  * one for the three copies: a counter of the clock signal that counts 0 to 215 (a period of 216 ticks), and two window
  * combinators, an iron plate signal on ticks 1-33 and 109-138 for the 12 ore and 12 plate inserters and an iron gear
  * wheel signal on ticks 1-65 and 109-173 for the 3 gear inserters; the circuit and output inserters are not wired.
  *
- * Two clocks run on the one blueprint: the owner's, and the generator's selected clock for the config, wired to the same
- * inserters of each copy with the owner's three combinators taken out.
+ * Two clocks run on the one blueprint: the hand-made one, and the generator's selected clock for the config, wired to the same
+ * inserters of each copy with the hand-made clock's three combinators taken out.
  */
 export interface OwnClockCase {
     name: string;
@@ -37,10 +37,10 @@ export function ownClockCases(): OwnClockCase[] {
 
 const SCAFFOLD = path.join(__dirname, "own-clock-three-copies-scaffold.txt");
 
-/** The counter of the owner's clock (entity 36 of the blueprint): 0 to 215 */
+/** The counter of the hand-made clock (entity 36 of the blueprint): 0 to 215 */
 export const OWNER_CLOCK: BuiltClock = {counter: 36, period: 216, first_value: 0};
 
-/** The sha256 of the identity of the owner's clock in the blueprint (`builtClockIdentity`): what its control names it by */
+/** The sha256 of the identity of the hand-made clock in the blueprint (`builtClockIdentity`): what its control names it by */
 export function ownerClockHash(): string {
     return createHash("sha256").update(JSON.stringify(builtClockIdentity(fs.readFileSync(SCAFFOLD, "utf8").trim(), OWNER_CLOCK))).digest("hex");
 }
@@ -52,7 +52,7 @@ export const COPIES = 3;
 export const GENERATED_ALTERNATIVE = "swings-2";
 
 /**
- * The copies are not alike, as the owner built them, and the config is the third (the eastern copy, with no overrides): the
+ * The copies are not alike, as they were built, and the config is the third (the eastern copy, with no overrides): the
  * first two have a gear assembler at 44.921875 where the third has 40.3125, and the first has a fourth furnace at 91.875 in
  * place of the config's machine 5 (86.1655). All three make 80 a second unclocked.
  */
@@ -98,7 +98,7 @@ export async function ownClockScenario(variant: OwnClockCase): Promise<PickupClo
         controls: path.join(__dirname, "own-clock-controls.json"),
         assertHardware: (recording, hardware_config) => {
             assertOwnClockHardware(recording, hardware_config);
-            // the recording is cut by the clock that ran: 216 ticks the owner's, the generated clock's own
+            // the recording is cut by the clock that ran: 216 ticks the hand-made clock's, the generated clock's own
             if (!generated) expect(recordedClockPeriod(recording)).toBe(OWNER_CLOCK.period);
         },
     };

@@ -153,7 +153,7 @@ backed-up supply, moved 352 a period under moving supply, in the model as in the
 39 recordings (#245) remain separate historical evidence (`tests/game/builds/pickup-clock-history-controls.json`). The belt-drop rows also compare finite receiving stock, including the normal-speed second hand.
 
 The front clocks are verified on **48 configurations** (`tests/game/builds/front-clock-controls.json`, #274): the
-front entrance on the owner's compact assembler scaffold (32: both families, mirroring states and supplies) and the
+front entrance on the compact assembler scaffold (32: both families, mirroring states and supplies) and the
 front exit on the electromagnetic plant, backed up (8) and on a moving config (8). All 48 are exact in baseline and
 recovery. All 32 entrance clocks are stable. The backed-up exit's are stable at every tier; at normal, in both
 mirroring states, every clock planned for backed-up supply fails (the fractional clock selected before, holds false,

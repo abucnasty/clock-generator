@@ -123,8 +123,8 @@ const STARTS_RUN: Record<GenerateDecision['kind'] | CheckOnlyDecision['kind'], b
 };
 
 /**
- * Whether a press of Generate or Check only runs something, which ends an Undo offer: running the build accepts it (the
- * owner, 2026-10-14). Going to a problem, or waiting for a run already going, runs nothing.
+ * Whether a press of Generate or Check only runs something, which ends an Undo offer: running the build accepts it (decided
+ * 2026-10-14). Going to a problem, or waiting for a run already going, runs nothing.
  */
 export function startsRun(decision: GenerateDecision | CheckOnlyDecision): boolean {
     return STARTS_RUN[decision.kind];

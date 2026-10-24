@@ -105,7 +105,7 @@ export function containerMechanicCases(): ContainerMechanicCase[] {
                     {id: 2, source: {type: "chest", id: 11}, sink: {type: "chest", id: 1}, stack_size: 16}]},
             probe: {},
         },
-        // a big mining drill drops iron ore into a chest of each kind, as the owner's car build has it (the drill faces
+        // a big mining drill drops iron ore into a chest of each kind, as the car build has it (the drill faces
         // east; the car stands 4.168 east and 0.508 south of the drill's centre, at orientation 0.25). The harness puts
         // the ore under the drill (the config's `mined_item_name`). At the harness's research the drill mines about 617
         // ore a tick, so each container fills within ticks and the drill then waits for room.

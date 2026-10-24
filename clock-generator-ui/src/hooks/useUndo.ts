@@ -167,8 +167,8 @@ export function useUndo(
         };
 
         /**
-         * Ends the offer without a word: for the player's own press of Generate or Check, which accepts the build (the
-         * owner, 2026-10-14), and for opening another build, which replaces the form. The message goes with it, and
+         * Ends the offer without a word: for the player's own press of Generate or Check, which accepts the build (decided
+         * 2026-10-14), and for opening another build, which replaces the form. The message goes with it, and
          * Ctrl/Cmd+Z is the browser's again.
          */
         const withdrawUndo = () => {

@@ -134,7 +134,7 @@ describe('pickup capture warnings', () => {
     });
 });
 
-it('says of a drop that side-loads onto another belt what the owner worded, with the tiles of the mark', () => {
+it('says of a drop that side-loads onto another belt in the approved wording, with the tiles of the mark', () => {
     expect(sideLoadedDropMessage(3)).toBe('drops onto a 3 tile belt buffer that side-loads onto another belt. Imported as an ordinary drop: '
         + 'where the other belt is busy, the game has less room than the clock generator assumes.');
     expect(sideLoadedDropMessage(1)).toContain('a 1 tile belt buffer');

@@ -123,7 +123,7 @@ describe("the belt a clock is made for", () => {
         // then the 2-swing clock was, since the build did not get back to its rate under it once the nutrients had run
         // out. Since the rules of issue 152 (GOALS.md, "When a waiting inserter acts") it gets back from every loss, and
         // is selected again; the game tests recorded it on 2026-10-14, 400 in every period.
-        // KNOWN REGRESSION under the staged start: nutrient-loss recovery dips; owner reviewing the recovery rule (see docs/stability.md)
+        // KNOWN REGRESSION under the staged start: nutrient-loss recovery dips; the recovery rule is being reviewed (see docs/stability.md)
         it.fails("selects it: the build gets back to its rate under it from every loss", () => {
             expect(batched.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
             expect(selected.id).toBe("planned-belt-slack");

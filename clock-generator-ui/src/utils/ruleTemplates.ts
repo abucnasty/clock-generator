@@ -61,7 +61,7 @@ export function templatesFor(sourceType: EndType, sinkType: EndType): RuleTempla
 
 /**
  * The rule a template makes. The latched drain is the repo's own electromagnetic-science sample: on at `amount` of the
- * item in the source, off again once the source holds less than its output block (the owner, 2026-10-14)
+ * item in the source, off again once the source holds less than its output block (decided 2026-10-14)
  */
 export function templateRule(id: RuleTemplateId, { item, amount }: { item: string; amount: number }): { ruleSet: RuleSet; release?: RuleSet } {
     switch (id) {

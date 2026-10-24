@@ -1,4 +1,4 @@
--- Observe a generated clock on the owner's steel build, whose cargo wagon is a hub: a mining drill fills it with ore,
+-- Observe a generated clock on the steel build, whose cargo wagon is a hub: a mining drill fills it with ore,
 -- one furnace makes plates from the ore and puts them back, the other makes steel from the plates and puts it back, and
 -- the steel is taken out of the wagon onto a belt that a loader empties into a disposal chest. Output is counted per clock
 -- period from the drops of the inserters that take from the wagon onto the belt. The interventions: the first and the

@@ -4,7 +4,7 @@
 # Lists the vitest runs and fork workers, harness Factorio games and vite/esbuild servers that have no live parent or
 # whose worktree is gone, anywhere on the machine; then every vitest run, worker and harness Factorio (with --all-kinds
 # also the servers) whose working directory is in <worktree>. Processes are found by working directory and the
-# harness's own arguments, never by name alone; the owner's game never matches (procs.py).
+# harness's own arguments, never by name alone; a game the harness did not start never matches (procs.py).
 #
 # --kill stops only the named worktree's processes of those kinds (TERM, then KILL after 10 s): vitest runs first,
 # then workers, then Factorio (with --all-kinds the servers too). --dry-run prints what --kill would stop. Without

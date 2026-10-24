@@ -6,7 +6,7 @@ import {loadConfigFromFile} from "../config/loader";
 import {ConfigPaths} from "../config/config-paths";
 import {quiet} from "./generate-blueprint-test-helpers";
 
-// A real cell (#189) on the owner's scaffold: no clock holds the target of 80 a second. The result is pinned as it
+// A real cell (#189) on its scaffold: no clock holds the target of 80 a second. The result is pinned as it
 // is, so a change to what the generator makes of it shows
 describe("the real stupidfathobbit cell 02", () => {
     it.each([["as it is", false], ["with backed-up belts", true]])("selects the 3-swing clock, unstable at 65.19 a second, %s", async (_name, backed_up_belts) => {

@@ -1,7 +1,7 @@
 /**
  * The steps that put a generated clock into the game, as the page shows them. Every word is a named constant here, so
- * that a change of wording is one edit; each claim is from the code that builds the blueprint (2.5 spec, "Owner
- * checkpoint: the install and wiring steps").
+ * that a change of wording is one edit; each claim is from the code that builds the blueprint (2.5 spec, its checkpoint
+ * on the install and wiring steps).
  */
 
 interface InstallInput {

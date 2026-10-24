@@ -1,6 +1,6 @@
 /**
  * Why the selected clock does not meet goal 1 (GOALS.md: hold the target rate and get back to it after a loss), in one
- * of four causes, each told from what the alternatives already carry: no search is added and nothing is generated
+ * of five causes, each told from what the alternatives already carry: no search is added and nothing is generated
  * again.
  *
  * - **Moving lane phases:** the clock is made for a moving belt and holds from the modeled start, but falls short from
@@ -8,6 +8,8 @@
  *   (`backpressure_loss.broken_at_other_lane_phases` holds every loss it does not get back from).
  * - **Output chest full:** the build puts its output into a chest nothing takes from, and where the run that failed the
  *   clock ended the chest had no room left for it: the same chest the web form warns can fill up.
+ * - **Export belt short:** the clock moves the target, and a belt with a consumption rate gets less than its consumers
+ *   take; the same words name the belt, the item and both rates.
  * - **No recovery:** it holds the rate, and does not get back to it after the losses it names.
  * - **Nothing holds:** it does not hold the rate; the nearest clock is selected, and the clocks that could not be made
  *   are listed with their reasons.
@@ -16,12 +18,13 @@
  */
 import type { BackpressureLossVerdict } from "./backpressure-loss";
 import type { ClockBelt } from "./clock";
+import type { ExportShortfall } from "./export-delivery";
 import type { FullOutputChest } from "./full-output-chests";
 import type { ClockInsight } from "./insights";
 import type { ClockRanking } from "./rank";
 import type { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict } from "./trial";
 
-export type WhyNotStableCause = "moving lane phases" | "output chest full" | "no recovery" | "nothing holds";
+export type WhyNotStableCause = "moving lane phases" | "output chest full" | "export belt short" | "no recovery" | "nothing holds";
 
 export interface WhyNotStable {
     cause: WhyNotStableCause;
@@ -67,6 +70,8 @@ export interface WhyNotStableClock {
     spare_time: SpareTime | null;
     /** The chests the output goes into that nothing empties and that were full where the run that failed the clock ended */
     full_output_chests: readonly FullOutputChest[];
+    /** The export belts that got less than their consumers take, over the run that failed the clock */
+    export_shortfalls: readonly ExportShortfall[];
 }
 
 /**
@@ -96,6 +101,7 @@ export function whyNotStableClockOf(clock: {
             repeat_output_items: as_built.repeat_output_items } }),
         spare_time: clock.insights.find(it => it.spare_time !== undefined)?.spare_time ?? null,
         full_output_chests: as_built?.full_output_chests ?? [],
+        export_shortfalls: as_built?.export_shortfalls ?? [],
     };
 }
 
@@ -259,6 +265,26 @@ function outputChestFull(clock: WhyNotStableClock, build: WhyNotStableBuild): Wh
     };
 }
 
+/** "Belt 2 gets 73.4 a second of electronic circuit, and 80 a second is taken off it (inserters 16 and 17 fill it)." The game's names of items have no plural. */
+function exportShortfallSentence(short: ExportShortfall): string {
+    return `Belt ${short.belt_id} gets ${figure(short.delivered_per_second)} a second of ${short.item_label}, and ${figure(short.expected_per_second)} a second `
+        + `is taken off it (${insertersNumbered(short.inserter_ids.map(String))} fill${short.inserter_ids.length === 1 ? "s" : ""} it).`;
+}
+
+/**
+ * The failing clock moves the target (`at_target`) and a belt with a consumption rate receives less than that rate: the line that
+ * takes the items off the belt runs dry, whatever the target says
+ */
+function exportBeltShort(clock: WhyNotStableClock, at_target: boolean): WhyNotStable | null {
+    if (clock.export_shortfalls.length === 0 || !at_target) {
+        return null;
+    }
+    return {
+        cause: "export belt short",
+        message: `The selected clock (${clock.label}) moves ${figure(clock.assessment.items_per_second)} a second, but ${clock.export_shortfalls.map(exportShortfallSentence).join(" ")}`,
+    };
+}
+
 /**
  * Why the selected clock does not meet goal 1; null when it does. A stable clock off the target rate (one with a
  * rounded period, or a build the plan cannot run at the target) is told as nothing holding the target.
@@ -271,6 +297,7 @@ export function whyNotStable(clocks: readonly WhyNotStableClock[], selected_inde
     // a clock that does not recover is told so when it holds the target itself, not another rate
     const at_target = Math.abs(clock.assessment.items_per_second - build.target_items_per_second) < MIN_OFF_TARGET;
     return outputChestFull(clock, build)
+        ?? exportBeltShort(clock, at_target)
         ?? movingLanePhases(clock, build)
         ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock) : nothingHolds(clock, build));
 }

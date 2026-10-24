@@ -30,7 +30,7 @@ describe('idsText', () => {
 });
 
 describe('inserterDetailLines', () => {
-    it('groups inserters with the same settings, as the owner approved for the car and the wagon', () => {
+    it('groups inserters with the same settings, as approved for the car and the wagon', () => {
         expect(inserterDetailLines([1, 2, 3, 4].map(id => stack(id)), label))
             .toEqual(['Inserters 1 to 4: Legendary stack inserters, 16 items at a time, no filter.']);
         expect(inserterDetailLines([stack(1, { filters: ['iron-plate'] }), stack(2, { filters: ['steel-plate'] }), stack(3, { filters: ['steel-plate'] }),

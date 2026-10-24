@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The harness-related processes on this machine: vitest runs and their fork workers, harness Factorio games, and
 vite/esbuild servers, each with the worktree it belongs to (by working directory, else by a path on its command line)
-and whether its parent is still alive. Never matches by process name alone, and never the owner's own game.
+and whether its parent is still alive. Never matches by process name alone, and never a game the harness did not start.
 
 usage: procs.py [--worktree <dir>] [--orphans] [--kinds k1,k2] [--json] [--pids]
 
@@ -16,7 +16,7 @@ A process is
   vitest-worker  the node executable running vitest/dist/workers/*.js (a fork or thread worker; it outlives a killed
                  parent)
   factorio       the factorio executable started by the harness: a server with --start-server and --rcon-password, or
-                 the watching client with --mp-connect and --config. The owner's game has neither and never matches.
+                 the watching client with --mp-connect and --config. A game the harness did not start has neither and never matches.
   vite           the node executable running node_modules/.bin/vite or vite/bin/vite.js (a dev server or preview)
   esbuild        node_modules/@esbuild/*/bin/esbuild --service (vite's helper)
 The executable (ps comm) decides first: a shell whose command line only mentions one of these never matches.
@@ -45,7 +45,7 @@ def kind_of(exe, cmd):
     if name == 'factorio':
         if ('--start-server' in cmd and '--rcon-password' in cmd) or ('--mp-connect' in cmd and '--config' in cmd):
             return 'factorio'
-        return None  # the owner's game, or any Factorio the harness did not start
+        return None  # any Factorio the harness did not start
     if name == 'esbuild' and '/node_modules/@esbuild/' in exe and '--service' in cmd:
         return 'esbuild'
     return None

@@ -59,7 +59,7 @@ export interface ClockRanking {
 const TARGET_RATE_TOLERANCE = 1e-6;
 
 /**
- * The share of the target rate a clock rounded down to whole ticks may run above it and still meet goal 1 (the owner,
+ * The share of the target rate a clock rounded down to whole ticks may run above it and still meet goal 1 (decided
  * 2026-10-23: Atlan cell 29's 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in
  * the game, #332)
  */

@@ -4,7 +4,7 @@ import { MachineState } from "../../../state/machine-state";
 
 /**
  * The cryogenic plant that makes plastic (1 s, 2 bars a craft, a stack of 100), at the two crafting speeds either side
- * of a block of a full stack. The owner, in Factorio 2.1.21: at multiplier 50 the block is 100, a full stack, and the
+ * of a block of a full stack. Seen in Factorio 2.1.21: at multiplier 50 the block is 100, a full stack, and the
  * plant takes no coal; at 51 the block is 102 and is never reached: the status says full output, and coal is taken up
  * to its insertion limit.
  */
