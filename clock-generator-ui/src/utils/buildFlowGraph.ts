@@ -6,7 +6,7 @@ import { containerItems, isBufferChest, isInfinityChest } from '../hooks/useConf
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { describeEnableRule } from './enableRuleLabel';
 import { chestLabel, entityLabel, entityLabelIn } from './entityLabel';
-import { drillItemsInto, inferInserterItems } from './inferInserterItems';
+import { drillItemsInto, inferInserterItems, machineItemsInto } from './inferInserterItems';
 import { assignFlowPorts } from './flowRouting';
 
 // The sizes the nodes are drawn at (the components use the widths) and the layout places them by: the layout's must be
@@ -120,14 +120,21 @@ export function flowNodeEntity(node: Node): FlowNodeEntity {
 /**
  * The belts and chests on a loop through the inserters (not counting the inserters of a machine loop), by node id: a
  * belt that feeds a machine and takes its output. A layered layout breaks such a loop by turning an inserter around, so
- * these are drawn as two nodes, one on each side.
+ * these are drawn as two nodes, one on each side. The loop may close with a machine that places its results itself into
+ * the chest, and the inserters that take them back.
  */
-function splitEntityIds(inserters: InserterFormData[], loop_ids: Set<number>): Set<string> {
+function splitEntityIds(inserters: InserterFormData[], loop_ids: Set<number>, machines: MachineFormData[]): Set<string> {
     const next = new Map<string, string[]>();
     for (const it of inserters) {
         if (loop_ids.has(it.id)) continue;
         const from = flowNodeId(it.source.type, it.source.id);
         next.set(from, [...(next.get(from) ?? []), flowNodeId(it.sink.type, it.sink.id)]);
+    }
+    // a machine that places its results itself gives them to its container, with no inserter between
+    for (const machine of machines) {
+        if (machine.result_target === undefined) continue;
+        const from = flowNodeId('machine', machine.id);
+        next.set(from, [...(next.get(from) ?? []), flowNodeId(machine.result_target.type, machine.result_target.id)]);
     }
     const reachesItself = (start: string): boolean => {
         const seen = new Set<string>();
@@ -206,7 +213,7 @@ export function buildFlowGraph(
     const loop_ids = loopInserterIds(inserters);
     const loop_inserters = inserters.filter(it => loop_ids.has(it.id));
     const loop_machine_ids = new Set(loop_inserters.flatMap(it => [it.source.id, it.sink.id]));
-    const split_ids = splitEntityIds(inserters, loop_ids);
+    const split_ids = splitEntityIds(inserters, loop_ids, machines);
 
     /** The node an inserter takes from (the `in` half of a split entity) or gives to (the `out` half) */
     const endNodeId = (end: EntityEnd, half: 'in' | 'out') => {
@@ -246,7 +253,8 @@ export function buildFlowGraph(
             id,
             type: 'entityNode',
             position: { x: 0, y: 0 },
-            ariaLabel: nodeAriaLabel(label, machine.recipe ? `makes ${recipeLabel(machine.recipe)}` : 'no recipe'),
+            ariaLabel: nodeAriaLabel(label, machine.recipe ? `makes ${recipeLabel(machine.recipe)}` : 'no recipe',
+                machine.result_target && machine.result_target.id !== 0 ? `puts its results into ${entityLabelIn(chests, 'chest', machine.result_target.id)}` : undefined),
             data: {
                 entityType: 'machine',
                 entityId: machine.id,
@@ -288,7 +296,7 @@ export function buildFlowGraph(
             filterIcons = items.length > 0 ? items : undefined;
         } else {
             iconName = chest.type;
-            const items = [...new Set([...containerItems(chest), ...drillItemsInto(chest.id, drills)])];
+            const items = [...new Set([...containerItems(chest), ...drillItemsInto(chest.id, drills), ...machineItemsInto(chest.id, machines, getRecipeInfo)])];
             filterIcons = items.length > 0 ? items : undefined;
         }
         pushEntityNode({
@@ -373,6 +381,17 @@ export function buildFlowGraph(
         if (g.hasNode(targetNodeId)) {
             g.setEdge(drillNodeId, targetNodeId);
             edges.push(arrowEdge(drillNodeId, targetNodeId));
+        }
+    });
+
+    // --- Result-target edges: a machine that places its results itself, into its container ---
+    machines.forEach(machine => {
+        if (machine.result_target === undefined) return;
+        const machineNodeId = flowNodeId('machine', machine.id);
+        const targetNodeId = endNodeId(machine.result_target, 'out');
+        if (g.hasNode(targetNodeId)) {
+            g.setEdge(machineNodeId, targetNodeId);
+            edges.push(arrowEdge(machineNodeId, targetNodeId));
         }
     });
 

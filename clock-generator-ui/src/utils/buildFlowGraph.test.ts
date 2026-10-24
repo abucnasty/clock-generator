@@ -125,6 +125,47 @@ describe('buildFlowGraph', () => {
         expect(edges.some(edge => edge.source === 'drill-1' && edge.target.startsWith('machine'))).toBe(false);
     });
 
+    describe('a machine that places its results itself', () => {
+        // a recycler whose car is emptied back into it by an inserter: the car both feeds the machine and takes its results
+        const recycler = (target: { type: 'chest'; id: number } | undefined, inserters = [inserter(1, chest(1), machine(1))]) => {
+            const base = form({ machines: 1, chests: 2 }, inserters);
+            return { ...base, machines: base.machines.map(row => ({ ...row, prototype: 'recycler', ...(target && { result_target: target }) })) };
+        };
+
+        it('draws its results into its result target as an edge to the container, as a drill\'s drop is', () => {
+            const { edges } = graph(recycler({ type: 'chest', id: 2 }));
+            expect(edges.some(edge => edge.source === 'machine-1' && edge.target === 'chest-2')).toBe(true);
+            expect(edges.every(edge => (edge.markerEnd as { type: MarkerType }).type === MarkerType.ArrowClosed)).toBe(true);
+        });
+
+        it('draws no edge for a machine without a result target, or whose container is deleted', () => {
+            expect(graph(recycler(undefined)).edges.some(edge => edge.source === 'machine-1' && edge.target.startsWith('chest'))).toBe(false);
+            expect(graph(recycler({ type: 'chest', id: 0 })).edges.some(edge => edge.source === 'machine-1' && edge.target.startsWith('chest'))).toBe(false);
+        });
+
+        it('draws the container twice, in and out, when inserters take the results back into the machine', () => {
+            const { nodes, edges } = graph(recycler({ type: 'chest', id: 1 }));
+            expect(nodes.map(node => node.id)).toEqual(expect.arrayContaining(['chest-1-in', 'chest-1-out']));
+            expect(edges.some(edge => edge.source === 'machine-1' && edge.target === 'chest-1-out')).toBe(true);
+            expect(edges.some(edge => edge.source === 'chest-1-in' && edge.target === 'inserter-1')).toBe(true);
+            expect(x(nodes, 'chest-1-in')).toBeLessThan(x(nodes, 'inserter-1'));
+            expect(x(nodes, 'inserter-1')).toBeLessThan(x(nodes, 'machine-1'));
+            expect(x(nodes, 'machine-1')).toBeLessThan(x(nodes, 'chest-1-out'));
+        });
+
+        it('draws the container once when nothing takes the results back', () => {
+            const { nodes } = graph(recycler({ type: 'chest', id: 2 }));
+            expect(nodes.some(node => node.id === 'chest-2')).toBe(true);
+            expect(nodes.some(node => node.id.startsWith('chest-2-'))).toBe(false);
+        });
+
+        it('says in the node\'s name where the results go', () => {
+            const config = recycler({ type: 'chest', id: 1 });
+            const { nodes } = buildFlowGraph(config.machines, config.inserters, config.belts, config.chests, [], undefined, false);
+            expect((nodes.find(node => node.id === 'machine-1') as Node & { ariaLabel?: string }).ariaLabel).toContain('puts its results into Chest 1');
+        });
+    });
+
     it('places the sources, then the machine, then the outputs', () => {
         const { nodes } = graph(FIXTURES['belt in and out']());
         expect(x(nodes, 'belt-1-in')).toBeLessThan(x(nodes, 'inserter-1'));
