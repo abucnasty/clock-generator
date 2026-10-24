@@ -128,13 +128,30 @@ export function matchRecordingToConfig(recording: Recording, config: Config): En
         return assigned;
     };
 
+    // Machines of a recipe that stand alike in the structure (the four assemblers of a unit fed by one foundry) match in every
+    // order. Where the build and the config both give the machines' places, the order that keeps the same layout is the one
+    // taken: the places differ by one shift (the build stands somewhere else), and the order with the least left over after it wins.
+    const places = (machines: { id: number; position?: { x: number; y: number } }[] | undefined) =>
+        new Map((machines ?? []).flatMap(machine => machine.position === undefined ? [] : [[machine.id, machine.position] as const]));
+    const recorded_places = places(recording.config.machines as { id: number; position?: { x: number; y: number } }[]), configured_places = places(config.machines);
+    const layoutError = (mapping: Map<number, number>): number => {
+        const pairs = Array.from(mapping, ([recorded, configured]) => [recorded_places.get(recorded), configured_places.get(configured)] as const)
+            .filter((pair): pair is readonly [{ x: number; y: number }, { x: number; y: number }] => pair[0] !== undefined && pair[1] !== undefined);
+        if (pairs.length < 2) return 0;
+        const shift = { x: 0, y: 0 };
+        for (const [recorded, configured] of pairs) { shift.x += (recorded.x - configured.x) / pairs.length; shift.y += (recorded.y - configured.y) / pairs.length; }
+        return pairs.reduce((sum, [recorded, configured]) => sum + (recorded.x - configured.x - shift.x) ** 2 + (recorded.y - configured.y - shift.y) ** 2, 0);
+    };
     let best_mapping = candidate_mappings[0] ?? new Map<number, number>();
     let best_inserters = assignInserters(best_mapping);
+    let best_error = layoutError(best_mapping);
     for (const mapping of candidate_mappings.slice(1)) {
         const inserters = assignInserters(mapping);
-        if (inserters.size > best_inserters.size) {
+        const error = layoutError(mapping);
+        if (inserters.size > best_inserters.size || (inserters.size === best_inserters.size && error < best_error - 1e-9)) {
             best_mapping = mapping;
             best_inserters = inserters;
+            best_error = error;
         }
     }
 
