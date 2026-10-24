@@ -24,6 +24,7 @@ import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider
 import { withChestDrillWindows } from "./chest-drill-windows";
 import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
+import { ResultsTaken, resultsTakenOf } from "./results-taken";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -149,6 +150,12 @@ export interface AsBuiltStabilityCheck {
      * stable. Absent when none fell short.
      */
     export_shortfalls?: ExportShortfall[];
+    /**
+     * For a target that counts an item destroyed: over the judged part of the long run, whether every result its machines
+     * placed went into their containers and their takers kept up (results-taken.ts). Absent for any other target, and
+     * where the check made no long run.
+     */
+    results_taken?: ResultsTaken[];
 }
 
 
@@ -245,6 +252,8 @@ function longRunOfFreeRunningBuild(
     full_output_chests: FullOutputChest[] | undefined;
     /** The export belts that received less than their consumers take over the judged part; undefined when none did */
     export_shortfalls: ExportShortfall[] | undefined;
+    /** For a target that counts an item destroyed: what was taken of the results its machines place, over the judged part */
+    results_taken: ResultsTaken[] | undefined;
 } | null {
     // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
     const registry = createEntityRegistryFromConfig(config);
@@ -289,8 +298,15 @@ function longRunOfFreeRunningBuild(
     }
     const bins = verdict.bin_ticks === null ? "span(s)" : verdict.periods_per_bin === 1 ? "periods" : `repeats of ${verdict.periods_per_bin} periods (${verdict.bin_ticks} ticks)`;
     logger.log(`Free running build over ${verdict.judged.length} ${bins}${proven ? " (repeats forever)" : ""}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
+    // a machine that places its results into a container: every result went in, and its takers kept up with them
+    const results_taken = target.counts === "destroyed" ? resultsTakenOf(stock, registry, verdict.first_judged_tick, period) : undefined;
+    const results_kept_up = results_taken === undefined || results_taken.every(it => it.waiting_ticks === 0 && it.takers.every(taker => !taker.short));
+    if (!results_kept_up) {
+        logger.log(`Free running build: results not taken out as they came: ${JSON.stringify(results_taken)}`);
+    }
     return {
-        keeps_up: verdict.keeps_up && export_shortfalls.length === 0,
+        keeps_up: verdict.keeps_up && export_shortfalls.length === 0 && results_kept_up,
+        results_taken,
         output_items_per_period: verdict.output_items_per_period,
         judged: verdict.judged,
         off_bins: verdict.off_bins.length,
@@ -770,6 +786,9 @@ export function runAsBuiltCheck(
                 check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config),
                     long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
                 check.long_run_proven = long_run.proven;
+                if (long_run.results_taken !== undefined) {
+                    check.results_taken = long_run.results_taken;
+                }
                 if (long_run.cycle_periods !== null) {
                     check.long_run_cycle_periods = long_run.cycle_periods;
                 }
