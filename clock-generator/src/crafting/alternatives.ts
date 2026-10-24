@@ -1,4 +1,5 @@
 import assert from "../common/assert";
+import type { TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
@@ -735,7 +736,7 @@ function runAlternativeOf(
         result = { ...result, chest_drills, always_on_reasons: { ...result.always_on_reasons, ...chestDrillReasons(chest_drills) } };
     }
     const { backpressure_loss } = loss;
-    const label = withOutputSwings(definition, result.used_terminal_swing_count);
+    const label = withOutputSwings(definition, result.used_terminal_swing_count, config.target_output.counts);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
     const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.loop_windows);
@@ -948,14 +949,16 @@ function planPrimaryAndTasks(
 
 /**
  * The label of an alternative with the output swings per cycle it ended up with, e.g. "Batched swings: 6 output swings
- * per cycle". The alternatives named after a swing count already say it.
+ * per cycle", or, for a target that counts an item destroyed, the hands of it brought in a cycle ("Even hands: 5 hands
+ * brought in per cycle"). The alternatives named after a swing count already say it.
  */
-function withOutputSwings(definition: { id: string; label: string }, swings: number): string {
+function withOutputSwings(definition: { id: string; label: string }, swings: number, counts?: TargetCounts): string {
     if (definition.id.startsWith("swings-")) {
         return definition.label;
     }
     const count = Number.isInteger(swings) ? `${swings}` : swings.toFixed(2).replace(/0+$/, "");
-    return `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
+    return counts === "destroyed" ? `${definition.label}: ${count} hand${swings === 1 ? "" : "s"} brought in per cycle`
+        : `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
 }
 
 /** Generates one alternative listed by planClockAlternatives; progress goes to options.on_progress_detail */

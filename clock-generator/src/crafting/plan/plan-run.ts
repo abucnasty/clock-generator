@@ -1079,11 +1079,14 @@ function checkOutput(
         }
     }
     const total_expected_output = Math.round(total_expected_output_float);
-    // The output swings of one output machine a cycle, over all the inserters that take from it
-    const first_output_machine_id = output_inserters[0].inserter.source.entity_id.id;
+    // The output swings of one output machine a cycle, over all the inserters that take from it; for a target that counts
+    // an item destroyed, the hands brought into one machine that destroys it, over all the inserters that bring them
+    const destroyed = crafting_cycle_plan.production_rate.counts === "destroyed";
+    const endOf = (inserter: Inserter) => destroyed ? inserter.sink.entity_id.id : inserter.source.entity_id.id;
+    const first_output_machine_id = endOf(output_inserters[0].inserter);
     let swings_of_first_output_machine = 0;
     for (const [entity_id, etc] of swing_counts.entries()) {
-        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && etc.entity.source.entity_id.id === first_output_machine_id) {
+        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && endOf(etc.entity) === first_output_machine_id) {
             swings_of_first_output_machine += etc.total_transfer_count.toDecimal();
         }
     }
