@@ -340,6 +340,18 @@ describe('makesText and wakeUpsText', () => {
         expect(wakeUpsText(clock('a', { wake_ups_per_minute: 17.6 }))).toEqual({ value: '18 a minute', sub: 'one copy' });
     });
 
+    it('says where the wake-ups are the average of the start points, and the cold start\'s figure where it is far off it', () => {
+        const averaged = (cold: number, figures: number[]): SummaryClock => {
+            const base = clock('a');
+            const mean = [cold, ...figures].reduce((sum, it) => sum + it, 0) / (figures.length + 1);
+            return { ...base, assessment: { ...base.assessment, wake_ups_per_minute: mean,
+                wake_ups_from_starts: { places: [0, ...figures.map((_, index) => 28 * (index + 1))], wake_ups_per_minute: [cold, ...figures], mean } } };
+        };
+        expect(wakeUpsText(averaged(978.6, Array(11).fill(1182.6)))).toEqual({ value: '1166 a minute', sub: 'one copy, average of 12 start points; 979 from a cold start' });
+        expect(wakeUpsText(averaged(1258.3, [1258.3, 1257.9, 1278.2, 1277.5, 1207.7, 1207.7, 1207.5, 1277.5, 1277.5, 1226.3, 1226.5])))
+            .toEqual({ value: '1247 a minute', sub: 'one copy, average of 12 start points' });
+    });
+
     it('says "Not counted" when they were not', () => {
         expect(wakeUpsText(clock('a', { wake_ups_per_minute: null }))).toEqual({ value: 'Not counted', sub: '' });
     });
