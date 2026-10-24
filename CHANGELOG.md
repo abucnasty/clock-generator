@@ -11,8 +11,8 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.22.0] - Unreleased
 
 ### Added
-- A build where several machines draw from one source, such as one foundry feeding four assemblers, now gets a clock that holds where the planned windows did not: each inserter gets one window long enough for all its hands, the machines a source cannot feed at once take turns in as few groups as its stock and output allow, and each output inserter swings once at the start of its group's turn.
-- A direct insertion build now gets a clock that holds and recovers: each inserter moves whole hands every cycle (a machine's input limit takes off any surplus), the inserters open in order from the output back to the raw inputs, and the clock is kept only if it still holds with its windows moved a tick. The slow search the generator used to fall back to is no longer needed.
+- A build where several machines draw from one source, such as one foundry feeding four assemblers, now gets a clock that holds where the planned windows did not: each inserter gets one window long enough for all its hands, the machines a source cannot feed at once take turns in as few groups as its stock and output allow, and each output inserter swings once at the start of its group's turn. Where copies drop onto a shared belt, the machines are grouped so that their drops fit between each other.
+- A direct insertion build now gets a clock that holds and recovers: each inserter moves whole hands every cycle (a machine's input limit takes off any surplus), an inserter busy the whole cycle stays on, the inserters open in order from the output back to the raw inputs, and the clock is kept only if it holds from every start and still holds with its windows moved a tick. The slow search the generator used to fall back to is no longer needed.
 - The result says whether the drops of the copies onto a shared belt fit between each other or land on each other (give how far apart the copies stand), and a note says when the lanes of a belt are exactly full.
 
 ### Changed
