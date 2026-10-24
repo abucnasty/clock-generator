@@ -18,8 +18,9 @@ describe("generateClockForConfig", () => {
     // for 144000 ticks after 4800 to settle: with 1 output swing per cycle one module made 400 packs in each of 300
     // periods, and so it did with 5 output swings per cycle; with 2 it came up a hand short in 3 of 150 periods and
     // with 4 in 12 of 75 (before the idle-window rules of 2026-10-09; recorded again with them, 2 made the same in each of 75 periods). The simulator has the 5-swing clock hold its
-    // rate too. It was the one selected until 2026-10-10: in the simulator it does not get back from a loss of nutrients
-    // (GOALS.md, "Backpressure Loss"), which the 2-swing and the 1-swing clock do, and the 2-swing clock is selected.
+    // rate too. It was the one selected until 2026-10-10, and is again since a trial short only late in its 40 periods runs
+    // on: in the simulator it is back from the second period after a loss of nutrients and one to three hands short once,
+    // 33 to 37 periods after it, which the game shows too (2026-10-24); from 2026-10-10 the 2-swing clock was selected.
     describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         let alternatives: ClockAlternative[];
@@ -63,33 +64,25 @@ describe("generateClockForConfig", () => {
 
         // From 2026-10-10 the build did not get back to its rate under the 5-swing clock once the nutrients had run
         // out, and the 2-swing clock was selected. Since the rules of issue 152 (GOALS.md, "When a waiting inserter
-        // acts") the 5-swing clock leaves the inserters that bring eggs to the science biochamber always enabled, and the
-        // build gets back from every loss under it; recorded in the game tests on 2026-10-14, 400 in every period.
-        // KNOWN REGRESSION under the staged start: nutrient-loss recovery dips; the recovery rule is being reviewed (see docs/stability.md)
-        it.fails("calls the 5-swing clock stable: the build gets back to its rate under it from every loss", () => {
+        // acts") the 5-swing clock leaves the inserters that bring eggs to the science biochamber always enabled; recorded
+        // in the game tests on 2026-10-14, 400 in every period. Its nutrients trials dip a hand late in their 40 periods,
+        // and run on until 40 periods at its rate follow (docs/stability.md).
+        it("calls the 5-swing clock stable: the build gets back to its rate under it from every loss", () => {
             expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
             expect(five_swings.verdict).toBe("stable");
             expect(five_swings.ranking.meets_target_rate).toBe(true);
         });
 
-        // Fractional swings can be planned here since a hand is counted in while the stock before it is under the
-        // insertion limit (2026-10-14): it gets back from every loss too, at the same wake-ups as batched swings, which
-        // comes first
-        // KNOWN REGRESSION under the staged start: nutrient-loss recovery dips; the recovery rule is being reviewed (see docs/stability.md)
-        it.fails("selects the 5-swing clock, the one with the fewest wake-ups of those that get back from every loss", () => {
+        it("selects the 5-swing clock, the one with the fewest wake-ups of those that get back from every loss", () => {
             const stable = alternatives.filter(a => a.verdict === "stable");
-            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle", "Batched swings: 5 output swings per cycle", "Fractional swings: 5 output swings per cycle"]);
+            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle", "Batched swings: 5 output swings per cycle"]);
             expect(alternatives[selected_index].label).toBe("Batched swings: 5 output swings per cycle");
             for (const other of stable.filter(a => a !== five_swings)) {
-                if (other.id === "fractional") {
-                    expect(five_swings.assessment.wake_ups_per_minute).toBeCloseTo(other.assessment.wake_ups_per_minute!, 6);
-                } else {
-                    expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(other.assessment.wake_ups_per_minute!);
-                }
+                expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(other.assessment.wake_ups_per_minute!);
             }
         });
 
-        // The values the scaffold recordings expect of this build (the dips and open issues of its staged start) were seen on
+        // The values the scaffold recordings expect of this build (no dip and no open issue after its staged start) were seen on
         // one clock. The build is generated here, from the same config, and not again for that test
         // (scaffold-recordings-clock.generation.test.ts).
         it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
