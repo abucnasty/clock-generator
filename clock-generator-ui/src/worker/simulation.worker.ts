@@ -381,8 +381,10 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config));
             const laneSharedByCopies = clockGenerator.laneSharedByCopiesWarning(query.config);
             const sideLoadedDrop = clockGenerator.sideLoadedDropWarning(query.config);
+            const lanesExactlyFull = clockGenerator.lanesExactlyFullWarning(query.config);
+            const copyGapNeeded = clockGenerator.copyGapNeededNote(query.config);
             const machinePrototypes = clockGenerator.machinePrototypeIssues(query.config);
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies, sideLoadedDrop, machinePrototypes };
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies, sideLoadedDrop, lanesExactlyFull, copyGapNeeded, machinePrototypes };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);

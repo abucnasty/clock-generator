@@ -108,3 +108,14 @@ it('lists the engine note for a drop that side-loads onto another belt as a know
         blocksGeneration: false, source: 'drop', target: { kind: 'validation-issue', id: 'side-loaded-drop' } }]);
     expect(buildValidationIssues({ ...input, sideLoadedDrop: null })).toEqual([]);
 });
+
+it('lists the notes for lanes the drops fill exactly and for the missing gap between copies as notes that never block generation', () => {
+    const full = 'Both lanes of belt 1 are exactly full at the target: the 7 copies drop 7 × 34.29 = 240 a second onto lanes that carry 240.';
+    const gap = 'The 7 copies may drop onto the same belt 1. Say how far apart they stand to check whether their drops fit between each other.';
+    const input = { fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 3 }], chestIssues: [], coverageText: () => '' };
+    expect(buildValidationIssues({ ...input, lanesExactlyFull: full, copyGapNeeded: gap })).toEqual([
+        { id: 'lanes-exactly-full', text: full, severity: 'info', blocksGeneration: false, source: 'lanes', target: { kind: 'validation-issue', id: 'lanes-exactly-full' } },
+        { id: 'copy-gap-needed', text: gap, severity: 'info', blocksGeneration: false, source: 'drop', target: { kind: 'validation-issue', id: 'copy-gap-needed' } },
+    ]);
+    expect(buildValidationIssues({ ...input, lanesExactlyFull: null, copyGapNeeded: null })).toEqual([]);
+});

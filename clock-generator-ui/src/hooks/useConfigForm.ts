@@ -67,7 +67,7 @@ interface UseConfigFormResult {
     updateInserters: (uuids: readonly string[], updates: Partial<InserterFormData>) => void;
 
     // Target output
-    updateTargetOutput: (field: keyof ConfigFormData['target_output'], value: string | number) => void;
+    updateTargetOutput: (field: keyof ConfigFormData['target_output'], value: string | number | { x: number; y: number } | undefined) => void;
     
     // Machines
     addMachine: () => void;

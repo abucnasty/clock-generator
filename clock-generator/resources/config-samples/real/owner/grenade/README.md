@@ -14,6 +14,8 @@ Given by the owner on 2026-10-23:
   productivity is 80010 where the harness save gives 79990 (its research, 7,999 levels); generation gives the same clocks for
   both. The belt is a `turbo-transport-belt`: the Sidecar names it after the loader at the end of the line, which the paste
   refuses.
+  `target_output.copy_offset` (12 tiles east) and each output inserter's `belt_direction` (west) were added to it afterwards, for the
+  check of the copies' drops onto the belt; the owner's export has neither.
 - `grenade-scaffold.txt`: the blueprint "scaffold" of the owner's book, one copy with its 22 beacons and no clock (86 entities).
   The harness needs `drill_resource: coal`; its export matches `grenade.json` entity by entity.
 - `grenade-wiring-guide.txt`: the blueprint "wiring guide": one copy without beacons and with the owner's clock (77 entities).

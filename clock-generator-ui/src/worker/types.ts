@@ -449,6 +449,10 @@ export interface LiveCoverage {
     laneSharedByCopies: string | null;
     /** The engine's note for drops marked as side-loading onto another belt, a known limit; it does not block */
     sideLoadedDrop: string | null;
+    /** The engine's note for drops that fill the lanes of a belt exactly, which does not block */
+    lanesExactlyFull: string | null;
+    /** The engine's note that the copies' gap is needed to check their drops onto a belt, which does not block */
+    copyGapNeeded: string | null;
     /** The engine's warnings for machines whose prototype disagrees with their type or cannot make their recipe; they do not block */
     machinePrototypes: MachinePrototypeIssue[];
 }
