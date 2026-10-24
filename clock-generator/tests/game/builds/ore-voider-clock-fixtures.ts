@@ -200,12 +200,16 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
         fs.writeFileSync(path.join(capture.directory, "clock.json"), JSON.stringify({...clock, sha256: sha}) + "\n");
         const phases = ORE_VOIDER_PHASES;
         const total_periods = phases.settle_periods + phases.baseline_periods + phases.cut_periods + phases.after_cut_periods + phases.backlog_periods + 10;
-        await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,
+        const {recording} = await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,
             clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule}, blueprint: scaffoldOf(config_path),
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
             ticks: 2 * period, warmup_ticks: 600, settle_ticks: total_periods * period + phases.probe_ticks * 2, seed: [], unclocked: false,
             lua: composeProbeSource(path.join(__dirname, "ore-voider-clock-probe.lua"), {period, ...phases}),
             game_speed: 1000, watch: false, timeout_seconds: 3600, log() {}});
+        // the build as Sidecar exports it: the recycler puts its results into the car
+        const exported_config = recording.config as {machines?: {result_target?: unknown}[]; chests?: {type: string; id: number}[]};
+        const car = exported_config.chests?.find(chest => chest.type === "car");
+        expect(exported_config.machines?.[0]?.result_target, "Sidecar exports the car as the recycler's result target").toEqual({type: "chest", id: car?.id});
         const report = JSON.parse(fs.readFileSync(path.join(capture.directory, "game/script-output/ore-voider.json"), "utf8")) as OreVoiderReport;
         expect(report.error, "the probe ran to its end").toBeUndefined();
         const summary = summarize(report, config, clock, margin.sigma_items, margin.expected_items / margin.crafts);

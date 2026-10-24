@@ -515,6 +515,27 @@ local function extract_crafting_machine_data(entity)
     -- Combine entity productivity (modules/beacons) with research productivity
     local total_productivity = entity_prod_bonus + research_prod
 
+    -- A machine that places its results itself (a recycler: its prototype has a vector_to_place_result) puts them into
+    -- the container at its result spot: the game's drop_target, else the one container at its drop position
+    local result_target_unit_number = nil
+    if entity.prototype.vector_to_place_result then
+        local ok, target = pcall(function() return entity.drop_target end)
+        if not (ok and target and target.valid) then
+            target = nil
+            local has_position, position = pcall(function() return entity.drop_position end)
+            if has_position and position then
+                local found = {}
+                for _, candidate in ipairs(entity.surface.find_entities_filtered({ position = position })) do
+                    if candidate ~= entity and is_chest_entity(candidate) then table.insert(found, candidate) end
+                end
+                target = #found == 1 and found[1] or nil
+            end
+        end
+        if target and target.valid and is_chest_entity(target) then
+            result_target_unit_number = target.unit_number
+        end
+    end
+
     -- Cap productivity at 300% (Factorio maximum)
     if total_productivity > 3.0 then
         total_productivity = 3.0
@@ -530,7 +551,8 @@ local function extract_crafting_machine_data(entity)
         recipe_quality = helpers.get_recipe_quality(entity),
         crafting_speed = entity.crafting_speed,
         productivity = total_productivity * 100,
-        energy_consumption_bonus = energy_consumption_bonus
+        energy_consumption_bonus = energy_consumption_bonus,
+        result_target_unit_number = result_target_unit_number
     }
 
     return data
