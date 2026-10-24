@@ -36,6 +36,7 @@ export const ELEMENT_IDS = {
     targetRecipe: 'target-recipe',
     targetRate: 'target-items-per-second',
     targetCopies: 'target-copies',
+    targetCopyOffset: 'target-copy-offset',
     addMachine: 'add-machine',
     /** The alert at the top of Configure with the reason the last check failed */
     validationError: 'validation-error',

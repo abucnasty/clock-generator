@@ -381,7 +381,7 @@
         "commit": "8ce582fe",
         "frozen_head": "8ce582fe",
         "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23",
+        "clock_sha256": "5e75d3eee533324eb45f2c876b602b78517f896311babfd91d05c222640974e0",
         "clock_basis": "capture"
       },
       "native": {
@@ -571,7 +571,7 @@
           "rate": 240,
           "supply": null
         },
-        "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23"
+        "clock_sha256": "5e75d3eee533324eb45f2c876b602b78517f896311babfd91d05c222640974e0"
       }
     },
     "generated-full-build": {
@@ -580,7 +580,7 @@
         "commit": "8ce582fe",
         "frozen_head": "8ce582fe",
         "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23",
+        "clock_sha256": "5e75d3eee533324eb45f2c876b602b78517f896311babfd91d05c222640974e0",
         "clock_basis": "capture"
       },
       "native": {
@@ -770,7 +770,7 @@
           "rate": 240,
           "supply": null
         },
-        "clock_sha256": "b5c8c03fd143a114f32ab56ee64280810e47ceb23c6ca2a662113dce18143e23"
+        "clock_sha256": "5e75d3eee533324eb45f2c876b602b78517f896311babfd91d05c222640974e0"
       }
     }
   }

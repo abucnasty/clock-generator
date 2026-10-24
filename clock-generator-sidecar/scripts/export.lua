@@ -72,7 +72,8 @@ local function resolve_target_id(target, result, is_sink, options)
         pickup_length = not is_sink and target.pickup_length or nil,
         pickup_layout = not is_sink and target.pickup_layout or nil,
         pickup_capture = pickup_capture,
-        drop_capture = drop_capture
+        drop_capture = drop_capture,
+        belt_direction = is_sink and target.type == "belt" and target.belt_direction or nil
     }
 end
 

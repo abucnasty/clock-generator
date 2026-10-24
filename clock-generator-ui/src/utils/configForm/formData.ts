@@ -63,7 +63,9 @@ export interface InserterFormData {
     sink: { type: 'machine' | 'belt' | 'chest'; id: number;
         drop?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop'];
         /** Sidecar 0.13.0's mark of a drop that side-loads onto another belt: a note, read by nothing that generates */
-        drop_capture?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop_capture'] };
+        drop_capture?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop_capture'];
+        /** Sidecar 0.14.0's way the belt runs at the drop: it orders the drops along the belt in the check of the copies' drops */
+        belt_direction?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['belt_direction'] };
     prototype?: string;
     quality?: Config['inserters'][number]['quality'];
     /** Omitted means the prototype's fully researched capacity (Automatic). */
@@ -276,6 +278,8 @@ export interface ConfigFormData {
         items_per_second: number;
         /** Number of duplicate setups being modeled (multiplier for ratio calculations) */
         copies: number;
+        /** Where the next copy stands from this one, in tiles: the result checks the drops of the copies onto a shared belt with it */
+        copy_offset?: { x: number; y: number };
     };
     machines: MachineFormData[];
     inserters: InserterFormData[];

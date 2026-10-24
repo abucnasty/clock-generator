@@ -50,7 +50,7 @@ export function applyRepeatedUnitConversion(form: ConfigFormData, plan: Repeated
     try {
         const next: ConfigFormData = {
             ...form,
-            target_output: { ...form.target_output, copies: plan.copies },
+            target_output: withCopyOffset({ ...form.target_output, copies: plan.copies }, plan.candidate.target_output.copy_offset),
             machines: plan.retained.machines.map(it => ({ ...form.machines[it.sourceIndex], id: it.resultId })),
             inserters: plan.retained.inserters.map(it => {
                 const row = form.inserters[it.sourceIndex];
@@ -69,4 +69,11 @@ export function applyRepeatedUnitConversion(form: ConfigFormData, plan: Repeated
     } catch {
         return null;
     }
+}
+
+/** The target with the gap between copies the conversion read from their places, or without the one it could not carry over */
+function withCopyOffset(target: ConfigFormData['target_output'], offset: ConfigFormData['target_output']['copy_offset']): ConfigFormData['target_output'] {
+    const next = { ...target };
+    delete next.copy_offset;
+    return offset === undefined ? next : { ...next, copy_offset: offset };
 }

@@ -158,6 +158,43 @@ export function lanesSharedByCopies(config: Config): LaneCapacityIssue[] {
     return overCapacity(loads.filter(load => !touches(load)), copies).map(load => asIssue(load, config.target_output.copies));
 }
 
+/** The drops, within capacity in one unit and over it with no copy, whose copies together fill a set of lanes exactly */
+export function lanesExactlyFull(config: Config): LaneCapacityIssue[] {
+    const copies = fraction(config.target_output.copies);
+    const full = laneLoads(config).filter(load => load.kind === 'drop'
+        && load.items_per_second.multiply(copies).subtract(load.capacity_per_second).getNumerator === 0);
+    // a set of lanes whose subset is already exactly full is not told again
+    const alone = full.filter(load => !full.some(other => other !== load && other.belt_id === load.belt_id
+        && other.lanes.length < load.lanes.length && other.lanes.every(lane => load.lanes.includes(lane))));
+    return alone.map(load => asIssue(load, config.target_output.copies));
+}
+
+/** "Both lanes of belt 1 are exactly full at the target: the 7 copies drop 7 × 34.29 = 240 a second onto lanes that carry 240. ..." */
+export function describeLanesExactlyFull(issue: LaneCapacityIssue): string {
+    const one = issue.lanes.length === 1;
+    const lanes = describeLanes(issue);
+    const drops = issue.copies === 1
+        ? `the build drops ${formatRate(issue.items_per_second)}`
+        : `the ${issue.copies} copies drop ${issue.copies} × ${formatRate(issue.items_per_second)} = ${formatRate(issue.items_per_second * issue.copies, issue.capacity_per_second)}`;
+    return `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${one ? 'is' : 'are'} exactly full at the target: ${drops} a second onto `
+        + `${one ? 'a lane that carries' : 'lanes that carry'} ${formatRate(issue.capacity_per_second)}. Nothing is left over, so every hand has to land `
+        + 'in a gap the others leave, and a wait is not made up later.';
+}
+
+/** The note for drops that fill their lanes exactly, the same in the log, the result and the live editor; null when none do */
+export function lanesExactlyFullNote(issues: readonly LaneCapacityIssue[]): string | null {
+    return issues.length === 0 ? null : issues.map(describeLanesExactlyFull).join(' ');
+}
+
+/** The note for a config's lanes filled exactly by its drops, read from the config alone: null when the plan cannot be made */
+export function lanesExactlyFullWarning(config: Config): string | null {
+    try {
+        return lanesExactlyFullNote(lanesExactlyFull(config));
+    } catch {
+        return null;
+    }
+}
+
 /** "If the 3 copies share lane 1 of belt 1, they take 1.46 times what it carries (3 × 48 = 144 a second, of 99)." */
 export function describeLaneSharedByCopies(issue: LaneCapacityIssue): string {
     const total = issue.items_per_second * issue.copies;

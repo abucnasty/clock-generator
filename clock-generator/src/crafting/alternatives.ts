@@ -10,7 +10,7 @@ import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, sideLoadedDropInsights, startDependenceInsight } from "./insights";
+import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, sideLoadedDropInsights, startDependenceInsight } from "./insights";
 import { chestDrillFallbackConfig, hasPlannedChestDrill } from "./chest-drill-windows";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
@@ -737,6 +737,8 @@ function runAlternative(
             ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
             ...beltPickupNotTestedInsights(config),
             ...sideLoadedDropInsights(config),
+            ...lanesExactlyFullInsights(config),
+            ...dropSpacingInsights(trial.result, config),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
             ...chestDrillInsights(trial.result),
         ];

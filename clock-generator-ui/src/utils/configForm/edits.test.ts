@@ -58,6 +58,14 @@ describe('target output', () => {
         const config = edits.updateTargetOutput(createDefaultConfig(), 'recipe', 'iron-gear-wheel');
         expect(config.target_output).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 });
     });
+
+    it('sets the gap between copies, and leaves the field out when it is cleared', () => {
+        const set = edits.updateTargetOutput(createDefaultConfig(), 'copy_offset', { x: -12, y: 0 });
+        expect(set.target_output).toEqual({ recipe: '', items_per_second: 1, copies: 1, copy_offset: { x: -12, y: 0 } });
+        const cleared = edits.updateTargetOutput(set, 'copy_offset', undefined);
+        expect(cleared.target_output).toEqual({ recipe: '', items_per_second: 1, copies: 1 });
+        expect('copy_offset' in cleared.target_output).toBe(false);
+    });
 });
 
 describe('machines', () => {
