@@ -93,6 +93,47 @@ export const MAX_RECOVERY_PERIODS = 40;
  * build has recovered when this many periods at the end of the recovery are all at the expected output.
  */
 const RECOVERY_HOLD_PERIODS = 8;
+/**
+ * A trial that is short late in its window runs on (see runsOn): until this many periods at the expected output follow
+ * its last short one, or its state repeats, and is judged on them. More than any stretch at the expected output that a
+ * short period followed in the samples' trials (35 periods, agricultural science's batched swings after a loss of
+ * nutrients, run on to 200 periods); as many as the window has.
+ */
+export const RUN_ON_EXACT_PERIODS = MAX_RECOVERY_PERIODS;
+/** A trial that runs on ends at the latest this many periods after the item is back */
+export const MAX_RUN_ON_PERIODS = 200;
+/**
+ * A trial is short late when it was at the expected output in the RECOVERY_HOLD_PERIODS before this mark (as a recovery
+ * without a repeated state has to end) and is short after it only: it would be back in a window this long, and falls
+ * short in the last RECOVERY_HOLD_PERIODS of MAX_RECOVERY_PERIODS.
+ */
+export const LATE_AFTER_PERIODS = MAX_RECOVERY_PERIODS - RECOVERY_HOLD_PERIODS;
+
+/**
+ * Whether a trial that is not back at the end of its window runs on: no state of it repeated (one that did proves what
+ * it does for good), its last short bin comes after `late_after_bins` bins of the window, and the `back_bins` bins
+ * before those were all at the expected output. A bin of many periods (a subtick clock's) leaves no room for that: such
+ * a trial does not run on.
+ */
+export function runsOn(
+    output_per_bin: readonly number[],
+    expected_per_bin: number,
+    repeats_from: number | null,
+    late_after_bins: number,
+    back_bins: number,
+): boolean {
+    if (repeats_from !== null || late_after_bins < back_bins || back_bins < 1) {
+        return false;
+    }
+    let last_off = -1;
+    output_per_bin.forEach((items, index) => {
+        if (items !== expected_per_bin) {
+            last_off = index;
+        }
+    });
+    return last_off >= late_after_bins
+        && output_per_bin.slice(late_after_bins - back_bins, late_after_bins).every(items => items === expected_per_bin);
+}
 
 export interface BackpressureLossOptions {
     loss: BackpressureLoss;
@@ -107,6 +148,12 @@ export interface BackpressureLossOptions {
     max_loss_periods?: number;
     max_recovery_periods?: number;
     recovery_hold_periods?: number;
+    /** In place of RUN_ON_EXACT_PERIODS */
+    run_on_exact_periods?: number;
+    /** In place of MAX_RUN_ON_PERIODS; 0 or less than the window: no trial runs on */
+    max_run_on_periods?: number;
+    /** In place of LATE_AFTER_PERIODS */
+    late_after_periods?: number;
 }
 
 export interface LossTrial {
@@ -132,6 +179,8 @@ export interface LossTrial {
     proven: boolean;
     /** The bins the build ended in: those that repeat when `proven`, or the last ones it was held to */
     ends_in: number[];
+    /** Bins run past the recovery window, as a trial short late in it runs on; absent when it did not */
+    ran_on_bins?: number;
     /**
      * The export belts that received less than their consumers take in those bins; absent when none did. A build that
      * is at its expected output and shortchanges an export has not recovered.
@@ -313,6 +362,9 @@ export function runLossTrials(
     const max_loss_ticks = Math.ceil((options.max_loss_periods ?? MAX_LOSS_PERIODS) * options.period_ticks);
     const max_recovery_bins = Math.max(1, Math.ceil((options.max_recovery_periods ?? MAX_RECOVERY_PERIODS) / bin.periods));
     const hold_bins = Math.max(1, Math.ceil((options.recovery_hold_periods ?? RECOVERY_HOLD_PERIODS) / bin.periods));
+    const max_run_on_bins = Math.floor((options.max_run_on_periods ?? MAX_RUN_ON_PERIODS) / bin.periods);
+    const run_on_bins = Math.max(1, Math.ceil((options.run_on_exact_periods ?? RUN_ON_EXACT_PERIODS) / bin.periods));
+    const late_after_bins = Math.floor((options.late_after_periods ?? LATE_AFTER_PERIODS) / bin.periods);
     const places = options.places ?? LOSS_PLACES;
     const shares = options.shares ?? LOSS_SHARES;
     const plans: LossTrialPlan[] = loss.kind === "none" ? [{ cut_at: 0, loss_ticks: 0 }]
@@ -431,13 +483,17 @@ export function runLossTrials(
         if (proof_stride !== null) {
             bin_by_state.set(simulationStateKey(context), 0);
         }
-        while (output_per_bin.length < max_recovery_bins && repeats_from === null) {
+        // bins at the expected output since the last short one
+        let exact_bins = 0;
+        const runBin = () => {
             const before = dropped();
             const exported_before = watched_exports.map(it => it.fillers.reduce((sum, state) => sum + state.items_dropped, 0));
             for (let tick = 0; tick < bin.ticks; tick++) {
                 step();
             }
-            output_per_bin.push(dropped() - before);
+            const items = dropped() - before;
+            output_per_bin.push(items);
+            exact_bins = items === expected_per_bin ? exact_bins + 1 : 0;
             watched_exports.forEach((it, at) => export_per_bin[at].push(it.fillers.reduce((sum, state) => sum + state.items_dropped, 0) - exported_before[at]));
             // only boundaries a whole stride apart have every clock standing at the same place, so only they compare
             if (proof_stride !== null && output_per_bin.length % proof_stride === 0) {
@@ -445,7 +501,21 @@ export function runLossTrials(
                 repeats_from = bin_by_state.get(key) ?? null;
                 bin_by_state.set(key, output_per_bin.length);
             }
+        };
+        while (output_per_bin.length < max_recovery_bins && repeats_from === null) {
+            runBin();
         }
+        let judged_hold_bins = hold_bins;
+        let judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, hold_bins);
+        const window_bins = output_per_bin.length;
+        if (!judged.recovers && window_bins < max_run_on_bins && runsOn(output_per_bin, expected_per_bin, repeats_from, late_after_bins, hold_bins)) {
+            while (output_per_bin.length < max_run_on_bins && repeats_from === null && exact_bins < run_on_bins) {
+                runBin();
+            }
+            judged_hold_bins = run_on_bins;
+            judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, run_on_bins);
+        }
+        const ran_on_bins = output_per_bin.length - window_bins;
         trials.push({
             cut_at: plan.cut_at,
             restore_at,
@@ -454,7 +524,8 @@ export function runLossTrials(
             output_during_loss,
             stopped_after_ticks,
             output_per_bin,
-            ...judgedWithExports(judgeRecovery(output_per_bin, expected_per_bin, repeats_from, hold_bins), watched_exports, export_per_bin, bin.ticks, repeats_from, hold_bins),
+            ...judgedWithExports(judged, watched_exports, export_per_bin, bin.ticks, repeats_from, judged_hold_bins),
+            ...(ran_on_bins > 0 && { ran_on_bins }),
         });
         if (!part_of_the_way_planned && index === plans.length - 1) {
             part_of_the_way_planned = true;
