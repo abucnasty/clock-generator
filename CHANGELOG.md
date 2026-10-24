@@ -16,6 +16,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ### Changed
 - Clocks need fewer decider combinators: inserters with the same wake windows share one decider whatever they carry, and a clock with shared wake windows is offered next to the separate one; the list of clocks shows each one's decider count.
 - In a clock whose machines take turns in groups, the combinators stand together by group, a gap between the groups, each group in the order of its turn, and the first combinator of each group says its turn.
+- Fewer clocks that cannot hold the rate are listed: the clock with three more output swings per cycle than planned is left out unless that count is a multiple of the planned one.
 
 ## [0.22.0] - 2026-10-24
 
