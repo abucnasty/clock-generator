@@ -17,6 +17,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `own-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock.
 - `grenade-clock.game.test.ts`: the grenade build on one copy and on its full build of seven, each with the hand-made clock and with the generated clock.
 - `thaeln-cell09-clock.game.test.ts`: Thaeln's cell 09 (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
+- `productivity-chain-clock.game.test.ts`: the productivity module chain (nine machines and three chests, 80 a second over 6 copies) with the generated clock.
 
 From `clock-generator/`, select a file or case:
 
@@ -611,4 +612,26 @@ a control of this family.
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/thaeln-cell09-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/thaeln-cell09-clock.game.test.ts
+```
+
+## The productivity module chain
+
+`productivity-chain-clock.game.test.ts` records the generator's selected clock for `REAL_OWNER_PRODUCTIVITY_CHAIN` (80 productivity
+modules a second over 6 copies; the scaffold is one copy, 13.33 a second, 16 modules in a period of 72 ticks) on the sample's scaffold.
+The clock is `planned-belt-slack`: the windows of `src/crafting/candidates/grouped-hands.ts` (hands rounded up where they are fractional,
+the order of the chain of machines), made without a search. The harness wires it to the 14 inserters of the build. The protocol is the
+family's with the losses the build has, each long enough to be felt, since the build holds stock: 63 whole periods, then the coal
+cut for 40 periods (the inserter that puts the coal on the belt is switched off and the belt emptied; the output first falls short
+about 33 periods in), the output loader taken away for 24 (the output belt takes about 11 periods of modules before it is full) and
+rebuilt, and the two foundries casting iron stopped for 26 (the output falls short after about 14). The probe counts the drops of
+the output inserter per period.
+
+[productivity-chain-clock-controls.json](productivity-chain-clock-controls.json) holds the native summary and the pin of the clock
+(`src/crafting/productivity-chain.generation.test.ts` checks the pin): 16 in all 63 baseline periods, and 16 again after each loss.
+Recorded for 36,000 ticks after the warm-up and settle with `scripts/record-clock.js`, the same clock made 16 in all 499 periods,
+with 858.5 wake-ups a minute against the simulator's 843.8, and the simulator laid against the game entity by entity had no issues.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/productivity-chain-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/productivity-chain-clock.game.test.ts
 ```
