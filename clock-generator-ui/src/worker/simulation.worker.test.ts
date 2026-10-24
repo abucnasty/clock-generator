@@ -344,6 +344,7 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
     expect(without.copyGapNeeded).not.toBeNull();
 });
 
+// A real plan of five copies: about 2 s alone, over vitest's 5 s default on a loaded CI runner. Fewer copies make no shared-windows clock.
 it('passes on the clock made with shared windows after the clock it shares, with each clock\'s decider count', async () => {
     vi.resetModules();
     const posted: WorkerResponse[] = [];
@@ -357,4 +358,4 @@ it('passes on the clock made with shared windows after the clock it shares, with
     const primary = completed?.type === 'primary-completed' ? completed.primary : null;
     expect(primary?.alternatives.map(it => [it.id, it.deciders])).toEqual([['planned-belt-slack', 5]]);
     expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['planned-belt-slack-shared', 4, 'stable']]);
-});
+}, 30_000);
