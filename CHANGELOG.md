@@ -21,6 +21,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Fixed
 - The Diagram of a belt with the same item on both lanes no longer logs a duplicate-key error.
+- The Swing Plan of a build whose export belt carries the same item on both lanes no longer logs a duplicate-key error.
 - The clock timeline's header shows the rounded period of a rounded clock.
 
 ## [0.21.1] - 2026-10-23
