@@ -31,6 +31,8 @@ import { serializeConfig } from './hooks/usePersistedConfigForm';
 import { selectBuildEntity } from './utils/buildViewContext';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
+import { countsOf } from './utils/targetCounts';
+import { resultComesBack } from './utils/targetRateLimit';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
 import { BeltsForm } from './components/BeltsForm';
@@ -513,8 +515,11 @@ function App() {
         selectRecommended();
     }, [selectRecommended]);
 
-    // the most the machines making the target recipe can make: a target above it is a problem
-    const machinesMax = useMachinesMax(config.target_output.recipe, config.machines);
+    // the most the machines making the target recipe can make (or destroy, for a target that counts the item destroyed): a target above it is a problem
+    const targetCounts = countsOf(config.target_output);
+    const machinesWithReturn = useMemo(() => config.machines.map(machine => ({ ...machine,
+        comesBack: resultComesBack(machine, config.inserters, config.target_output.recipe) })), [config.machines, config.inserters, config.target_output.recipe]);
+    const machinesMax = useMachinesMax(config.target_output.recipe, machinesWithReturn, targetCounts);
     // what keeps the build from being clocked, and so where Generate goes instead
     const validationIssues = useMemo(() => buildValidationIssues({
         fieldProblems: problemsOf({
@@ -1185,10 +1190,12 @@ function App() {
                                 recipe={config.target_output.recipe}
                                 itemsPerSecond={config.target_output.items_per_second}
                                 copies={config.target_output.copies}
+                                counts={targetCounts}
                                 machinesMax={machinesMax}
                                 recipeNames={recipeNames}
                                 onRecipeChange={(recipe) => updateTargetOutput('recipe', recipe)}
                                 onItemsPerSecondChange={(value) => updateTargetOutput('items_per_second', value)}
+                                onCountsChange={(counts) => updateTargetOutput('counts', counts === 'made' ? undefined : counts)}
                                 onCopiesChange={(value) => updateTargetOutput('copies', value)}
                                 copyOffset={config.target_output.copy_offset}
                                 showCopyOffset={config.target_output.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
@@ -1200,7 +1207,7 @@ function App() {
                                 <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
                                 <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
-                                    onReview={goToTarget} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} />
+                                    onReview={goToTarget} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
                                 {/* in the order a row's sources are made in: an inserter's machines, belts and chests are above it */}
                                 {configView === 'list' ? (
                                     <>
@@ -1496,7 +1503,7 @@ function App() {
                     <Box sx={{ px: 2, pt: 1, flexShrink: 0 }}>
                         <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
                             onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
-                            onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} focusTargets={false} />
+                            onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} focusTargets={false} />
                     </Box>
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                         <ConfigFlowDiagram

@@ -1,7 +1,10 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
 import { ConfigSchema, FactorioDataService, Machine, validateConfig } from 'clock-generator/browser';
-import { isTargetAboveMax, machinesMaxOf, totalMachineCapacity } from './targetRateLimit';
+import oreVoiderExact from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-exact-speed.json';
+import oreVoiderOverbeaconed from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-overbeaconed.json';
+import { configToFormData } from './configForm/configMapping';
+import { isTargetAboveMax, machinesMaxOf, resultComesBack, totalMachineCapacity } from './targetRateLimit';
 
 FactorioDataService.initialize(JSON.parse(factorioData));
 
@@ -91,5 +94,51 @@ describe('target capacity agrees with actual engine validation', () => {
         const legacy = machinesMaxOf('iron-gear-wheel', [{ id: 1, facts }, { id: 2, facts: { output_item: 'iron-gear-wheel', output_rate_per_second: 1 / 3 } }])!;
         expect(legacy.perCopyRatio).toBeUndefined();
         expect(totalMachineCapacity(legacy, 0.5)).toBe(legacy.perCopy * 0.5);
+    });
+});
+
+describe('the most a recycler destroys agrees with the engine\'s check of the ore voider samples', () => {
+    const maxOf = (sample: unknown) => {
+        const config = ConfigSchema.parse(sample);
+        const form = configToFormData(config);
+        const facts = Machine.computeMachineFacts(config.machines[0]);
+        const comesBack = resultComesBack(form.machines[0], form.inserters, 'iron-ore');
+        return { config, max: machinesMaxOf('iron-ore', [{ id: 1, facts, comesBack }], 'destroyed')! };
+    };
+    const withRate = (config: ReturnType<typeof maxOf>['config'], items_per_second: number) =>
+        ConfigSchema.parse({ ...config, target_output: { ...config.target_output, items_per_second } });
+
+    it('is 405 a second for the exact-speed recycler: 400 passes, and the engine refuses just above it', () => {
+        const { config, max } = maxOf(oreVoiderExact);
+        expect(config.target_output.counts).toBe('destroyed');
+        expect(totalMachineCapacity(max, 1)).toBe(405);
+        expect(isTargetAboveMax(400, 1, max)).toBe(false);
+        expect(() => validateConfig(withRate(config, 400))).not.toThrow();
+        expect(isTargetAboveMax(405.01, 1, max)).toBe(true);
+        expect(() => validateConfig(withRate(config, 405.01))).toThrow(/target production rate/);
+    });
+
+    it('is 639.2 a second for the overbeaconed recycler, as the engine counts it', () => {
+        const { config, max } = maxOf(oreVoiderOverbeaconed);
+        expect(totalMachineCapacity(max, 1)).toBeCloseTo(639.225, 2);
+        for (const rate of [400, 639, 639.22]) {
+            expect(isTargetAboveMax(rate, 1, max)).toBe(false);
+            expect(() => validateConfig(withRate(config, rate))).not.toThrow();
+        }
+        expect(isTargetAboveMax(639.3, 1, max)).toBe(true);
+        expect(() => validateConfig(withRate(config, 639.3))).toThrow(/target production rate/);
+    });
+});
+
+describe('what comes back into a recycler', () => {
+    const form = configToFormData(ConfigSchema.parse(oreVoiderExact));
+    it('is what an inserter takes from the result target into the machine, with the item or with no filter', () => {
+        expect(resultComesBack(form.machines[0], form.inserters, 'iron-ore')).toBe(true);
+        expect(resultComesBack(form.machines[0], form.inserters, 'copper-ore')).toBe(false);
+        expect(resultComesBack({ ...form.machines[0], result_target: undefined }, form.inserters, 'iron-ore')).toBe(false);
+        const unfiltered = form.inserters.map(inserter => ({ ...inserter, filters: undefined }));
+        expect(resultComesBack(form.machines[0], unfiltered, 'iron-ore')).toBe(true);
+        // the inserters that bring the ore in from the infinity chest do not count
+        expect(resultComesBack(form.machines[0], form.inserters.filter(inserter => inserter.source.id !== 1), 'iron-ore')).toBe(false);
     });
 });
