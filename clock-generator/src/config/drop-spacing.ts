@@ -19,7 +19,7 @@ import type { Config } from "./schema";
 // replays it); the replay is used for the ticks a colliding hand waits.
 //
 // Taken from the config: the places and facings of the inserters (Sidecar 0.12.0), the way the belt runs at the drop
-// (Sidecar 0.13.1) and `target_output.copy_offset`. Taken from the clock: the ticks at which each inserter starts a hand.
+// (Sidecar 0.14.0) and `target_output.copy_offset`. Taken from the clock: the ticks at which each inserter starts a hand.
 // Nothing here changes a clock or its ranking.
 
 /** The text added to the insight: the check follows no bend of the belt */

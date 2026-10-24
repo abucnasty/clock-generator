@@ -432,7 +432,7 @@ const InserterBeltSinkConfigSchema = z.object({
      */
     drop_capture: SideLoadedDropCaptureSchema.optional(),
     /**
-     * The way the belt runs at the drop tile (DirectionSchema, the cardinal ones), which Sidecar 0.13.1 exports. It
+     * The way the belt runs at the drop tile (DirectionSchema, the cardinal ones), which Sidecar 0.14.0 exports. It
      * orders the drops along the belt in the check of config/drop-spacing.ts and changes nothing in the clock.
      */
     belt_direction: DirectionSchema.optional()

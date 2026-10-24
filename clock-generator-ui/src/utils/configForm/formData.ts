@@ -64,7 +64,7 @@ export interface InserterFormData {
         drop?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop'];
         /** Sidecar 0.13.0's mark of a drop that side-loads onto another belt: a note, read by nothing that generates */
         drop_capture?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop_capture'];
-        /** Sidecar 0.13.1's way the belt runs at the drop: it orders the drops along the belt in the check of the copies' drops */
+        /** Sidecar 0.14.0's way the belt runs at the drop: it orders the drops along the belt in the check of the copies' drops */
         belt_direction?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['belt_direction'] };
     prototype?: string;
     quality?: Config['inserters'][number]['quality'];

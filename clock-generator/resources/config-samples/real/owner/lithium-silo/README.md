@@ -8,7 +8,7 @@ is 80 plates a second from one copy.
 
 - `lithium-silo-scaffold.txt`: the owner's blueprint as given. The infinity chests, infinity pipes, loader and disposal
   chest are part of it.
-- `lithium-silo.sidecar-export.json`: what Sidecar 0.13.1 exports from the blueprint built in the harness game, taken again on
+- `lithium-silo.sidecar-export.json`: what Sidecar 0.14.0 exports from the blueprint built in the harness game, taken again on
   2026-10-23, which also exports each machine's `prototype` and quality and each entity's position (and an inserter's or
   drill's direction), and marks inserters 15 and 16 (`drop_capture` on their sinks) as dropping onto a belt that
   side-loads onto another. The game test `tests/game/mechanics/belt-drop/sideload-drop-capture.game.test.ts` takes it

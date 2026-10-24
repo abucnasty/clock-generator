@@ -262,7 +262,7 @@ other when these stretches overlap. This agrees with replaying `LaneTraffic` on 
 ticks a hand waits. On the grenade build (seven copies 12 tiles apart, a turbo belt that moves 14 tiles in 112 ticks) the 14 hands of a line
 fit when the inserters of a line start together and land on each other when the two inserters of each copy start 56 ticks apart; in the game a
 hand moved one tile off its place waited 6 ticks and the others did not wait. Places come from the exported positions and the side each
-inserter takes from, the way the belt runs from Sidecar 0.13.1 (without it the check is made both ways and told only when they agree), and
+inserter takes from, the way the belt runs from Sidecar 0.14.0 (without it the check is made both ways and told only when they agree), and
 the gap between copies from the repeated-unit conversion or from the player. A drop marked as side-loading onto another belt is left to the
 merge, and the belt is taken to run straight past the inserters.
 

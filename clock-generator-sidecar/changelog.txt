@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------------------------------
-Version: 0.13.1
+Version: 0.14.0
   Features:
     - exports the way the belt runs where an inserter drops onto it, so the Clock Generator can tell which of the drops along it comes first
   Bugfixes:

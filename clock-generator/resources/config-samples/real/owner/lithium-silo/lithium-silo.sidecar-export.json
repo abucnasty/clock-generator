@@ -1,5 +1,5 @@
 {
-  "sidecar_version": "0.13.1",
+  "sidecar_version": "0.14.0",
   "machines": [
     {
       "id": 1,
@@ -153,7 +153,8 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 4
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -207,7 +208,8 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 4
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -297,7 +299,8 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 4
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -315,7 +318,8 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 4
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -373,8 +377,9 @@
         "drop_capture": {
           "status": "side-loaded",
           "tiles": 3,
-          "sidecar_version": "0.13.1"
-        }
+          "sidecar_version": "0.14.0"
+        },
+        "belt_direction": 0
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -396,8 +401,9 @@
         "drop_capture": {
           "status": "side-loaded",
           "tiles": 3,
-          "sidecar_version": "0.13.1"
-        }
+          "sidecar_version": "0.14.0"
+        },
+        "belt_direction": 8
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
