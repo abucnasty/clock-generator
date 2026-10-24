@@ -432,6 +432,65 @@ describe("a build that holds the config more than once", () => {
     });
 });
 
+describe("a build whose drill drops into a chest", () => {
+    // the config: a belt feeds machine 1 through a wagon (chest 2) that a drill fills and an inserter empties; chest 1 is a supply
+    const config = {
+        machines: [{ id: 1, recipe: "iron-plate" }],
+        inserters: [
+            { id: 1, source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 } },
+            { id: 2, source: { type: "chest", id: 2 }, sink: { type: "machine", id: 1 } },
+            { id: 3, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 2 } },
+        ],
+        belts: [],
+        chests: [{ id: 1, type: "infinity-chest" }, { id: 2, type: "cargo-wagon" }],
+        drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: { type: "chest", id: 2 } }] },
+    } as any;
+    // the build numbers its chests the other way round, and holds the config once per entry of `copies`
+    const wagon = (copy: number) => 2 * copy + 1, supply = (copy: number) => 2 * copy + 2;
+    const build = (copies: number) => {
+        const list = Array.from({ length: copies }, (_, copy) => copy);
+        const inserters = list.flatMap(copy => [
+            { source: { type: "chest", id: supply(copy) }, sink: { type: "machine", id: copy + 1 } },
+            { source: { type: "chest", id: wagon(copy) }, sink: { type: "machine", id: copy + 1 } },
+            { source: { type: "machine", id: copy + 1 }, sink: { type: "chest", id: wagon(copy) } },
+        ].map((ends, index) => ({ id: 3 * copy + index + 1, unit_number: 100 + 3 * copy + index, name: "stack-inserter", stack_size: 1, ...ends })));
+        return {
+            config: {
+                inserters: inserters.map(({ source, sink }) => ({ source, sink })),
+                belts: [],
+                chests: list.flatMap(copy => [{ id: wagon(copy), type: "cargo-wagon" }, { id: supply(copy), type: "infinity-chest" }]).sort((a, b) => a.id - b.id),
+            },
+            machines: list.map(copy => ({ id: copy + 1, unit_number: 50 + copy, name: "electric-furnace", recipe: "iron-plate" })),
+            inserters,
+            // listed in the other order than the copies
+            drills: [...list].reverse().map(copy => ({ id: copy + 1, unit_number: 300 + copy, name: "big-mining-drill", mined_item_name: "iron-ore", target: { type: "chest", id: wagon(copy) } })),
+        };
+    };
+
+    it("matches the drill to the config's by the chest it drops into, whatever the build numbers it", () => {
+        expect(matchBuiltDrills(build(1), config)).toEqual([new Map([[1, 300]])]);
+    });
+
+    it("matches the drill of each copy to the config's", () => {
+        expect(matchBuiltDrills(build(2), config, 2)).toEqual([new Map([[1, 300]]), new Map([[1, 301]])]);
+    });
+
+    it("leaves out a drill into a chest of another type than the config's drill feeds, or that no matched inserter moves items of", () => {
+        const into = (id: number) => ({ ...build(1), drills: [{ id: 1, unit_number: 302, name: "big-mining-drill", mined_item_name: "iron-ore", target: { type: "chest", id } }] });
+        expect(matchBuiltDrills(into(supply(0)), config)).toEqual([new Map()]);
+        expect(matchBuiltDrills(into(9), config)).toEqual([new Map()]);
+    });
+
+    it("leaves out a drill when the config has two chests of the type it drops into, which the inserters' match cannot tell apart", () => {
+        const two_wagons = {
+            ...config,
+            chests: [...config.chests, { id: 3, type: "cargo-wagon" }],
+            drills: { configs: [...config.drills.configs, { ...config.drills.configs[0], id: 2, target: { type: "chest", id: 3 } }] },
+        };
+        expect(matchBuiltDrills(build(1), two_wagons)).toEqual([new Map()]);
+    });
+});
+
 describe("a clock the build came with", () => {
     const run = (more: object, blueprint = "0") => recordInFactorio({
         factorio: "/nowhere/factorio", save: "/nowhere/save.zip", blueprint, out: "/nowhere/recording.json",

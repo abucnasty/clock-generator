@@ -81,7 +81,7 @@ The stop into a machine was changed in #310 to the larger of the stack and the i
 ## Known limits
 
 - A chest drill's windows are made from the takes the plan gives its takers: the steel wagon's ore taker takes 320 ore a period in the clock-only run where the plan gives it 160. The clock-only check, the loss trials and the fallback decide goal 1; the windows can be longer than they need where the plan undercounts.
-- The recording harness wires a clocked drill to the built drill that drops into the machine the config's drill does, in each copy of the build (since 0.22.0; before, only in a build with one drill).
+- The recording harness wires a clocked drill to the built drill that drops into the machine the config's drill does, in each copy of the build (since 0.22.0; before, only in a build with one drill). A drill into a chest (a car, a cargo wagon, a rocket silo) is wired to the built drill that drops into the chest the config's does, found through the inserters that move items of it; where the config has two chests of one type the match cannot tell them apart and the harness refuses the clock.
 
 - The first-tick offset above is not modelled.
 - A mining bar that moves a mining time or more in a tick (several items a tick from the mining bar, on scrap a mining speed of 30 a second) is not recorded; the simulator makes one item a tick from it at most.

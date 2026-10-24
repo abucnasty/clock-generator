@@ -489,23 +489,46 @@ export function matchBuiltCopies(described: any, config: Config, named_copies?: 
 }
 
 /**
- * Per copy, the unit number of the built drill behind each config drill id: a config drill is the one whose target machine
- * is the machine of the copy that the built drill drops into.
+ * Per copy, the unit number of the built drill behind each config drill id: a config drill is the one whose target is
+ * what the built drill drops into, a machine matched to the config's or a chest (a car, a cargo wagon, a rocket silo)
+ * that a matched inserter of the copy moves items of.
  */
 export function matchBuiltDrills(described: any, config: Config, named_copies?: number): Map<number, number>[] {
-    const { copies } = matchBuild(described, config, named_copies);
+    const { as_recording, copies } = matchBuild(described, config, named_copies);
     return copies.map(match => {
+        const chests = matchedChests(as_recording, config, match);
         const unit_numbers = new Map<number, number>();
         for (const drill of Object.values<any>(described.drills ?? {})) {
-            if (drill.target?.type !== "machine") continue;
-            const machine_id = match.machines.get(drill.target.id);
-            const configured = (config.drills?.configs ?? []).find(it => it.target.type === "machine" && it.target.id === machine_id);
+            const target = drill.target as { type: string; id: number } | undefined;
+            const target_id = target?.type === "machine" ? match.machines.get(target.id)
+                : target?.type === "chest" ? chests.get(target.id) : undefined;
+            const configured = (config.drills?.configs ?? []).find(it => it.target.type === target?.type && it.target.id === target_id);
             if (configured !== undefined && drill.unit_number !== undefined) {
                 unit_numbers.set(configured.id, drill.unit_number);
             }
         }
         return unit_numbers;
     });
+}
+
+/**
+ * The config chest behind each chest of the build that a matched inserter of the copy takes from or drops into, where
+ * the config has one chest of its type. The inserters' match keys a chest end by "chest" and does not tell chests apart,
+ * so two chests of one type in the config cannot be told apart and are left out (a drill into either is then refused).
+ */
+function matchedChests(recording: Recording, config: Config, match: { inserters: Map<number, number> }): Map<number, number> {
+    const recorded_types = new Map(((recording.config.chests ?? []) as { id: number; type: string }[]).map(chest => [chest.id, chest.type]));
+    const chests = new Map<number, number>();
+    for (const inserter of recording.inserters) {
+        if (!match.inserters.has(inserter.id)) continue;
+        for (const end of [inserter.source, inserter.sink]) {
+            const of_type = (config.chests ?? []).filter(chest => end.type === "chest" && chest.type === recorded_types.get(end.id));
+            if (of_type.length === 1) {
+                chests.set(end.id, of_type[0].id);
+            }
+        }
+    }
+    return chests;
 }
 
 /** What the mod is told of the inserters a clock enables: per config id the unit number of its inserter, a list of them where the build has copies */
