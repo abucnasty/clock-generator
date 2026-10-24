@@ -112,13 +112,16 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // Recorded 2026-10-16 (swings-2 is the selected clock): 800 in every period but two in a row, one hand (16) short each
         // time, in periods 8 and 9 of the settling after the staged start; the same clock in the game a run before gave the
         // same two, and the batched clock holds its 400 in all 119 periods of a run of 57,600 ticks. The simulator has such a
-        // one-hand dip too, in other periods (its 2nd period after the first third), and Inserter 11 moves 371.33 items a
-        // period in the game against 368.00 in the simulator.
+        // one-hand dip too, twice, but since #333 it runs a clock of whole ticks by its own period (960 ticks, where the plan
+        // of this clock has 480): its run is 54,720 ticks and its two dips fall before the first third the comparison leaves
+        // out. Inserter 11 moves 371.33 items a period in the game against 370.16 in the simulator (368.00 before #333): the
+        // game's ticks 12,000 to 36,000 after the staged start are laid against the simulator's 18,240 to 54,720, while the
+        // science biochamber is still filling its stock in the game. Over the same stretch of both recordings the two agree
+        // to 0.64 a period on every inserter, and from the prepared start inserter 11 moves 370.16 against 370.11.
         staged_start: {
             dips: [{ start: 7680, items: 784 }, { start: 8640, items: 784 }],
             open_issues: [
-                "Inserter 11 (belt 1 -> machine 5) moves 371.33 items a period in the game and 368.00 in the simulator.",
-                "The simulator put out something other than the expected 800 items in 1 of 18 clock periods (2: 784).",
+                "Inserter 11 (belt 1 -> machine 5) moves 371.33 items a period in the game and 370.16 in the simulator.",
             ],
         },
     },
@@ -133,11 +136,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 300,
         settle_ticks: 4800,
         backed_up_belts: true,
-        moved_open: {
-            inserter_ids: [3, 4, 6, 7],
-            why: "under the 2-swing clock the inserters that bring nutrients to the egg biochambers move 979.89 nutrients a period in "
-                + "the game and 980.85 in the simulator, of which 800 packs come out in both",
-        },
     },
     "automation science": {
         scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-scaffold.txt"),
