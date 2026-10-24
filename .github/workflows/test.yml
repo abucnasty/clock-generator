@@ -2,8 +2,8 @@ name: Test
 
 # Pull requests run the unit tests, build the UI and generate a clock in it in a browser. Pull requests to master, which
 # are what gets released, run the generation tests as well: they generate the clock alternatives of whole samples and
-# take minutes, most of it one test. "Run workflow" (or `gh workflow run test.yml --ref <branch>`) runs them all on any
-# branch.
+# take minutes, except when the pull request changes documentation only (see the `changes` job). "Run workflow" (or
+# `gh workflow run test.yml --ref <branch>`) runs them all on any branch.
 # release.yml and publish-sidecar.yml call this workflow and do nothing unless it passes; a release runs the generation
 # tests too, publishing the sidecar does not.
 on:
@@ -66,10 +66,65 @@ jobs:
       - name: Unit tests
         run: npm test -- --reporter=default
 
-  generation:
-    name: Generation tests
+  # Whether the generation tests have anything to test: not when a pull request to master changes documentation only.
+  # Decided by the files the pull request changes, never by its branch name. A run asked for the generation tests (by
+  # hand, or a release) runs them whatever it changes. Anything this cannot tell, such as a checkout that is not a merge
+  # commit, runs them.
+  changes:
+    name: Changed files
     # the input rather than the event, since a called run has the event of its caller: a push or a run by hand
     if: inputs.generation || github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      generation: ${{ steps.files.outputs.generation }}
+    steps:
+      # a pull request is checked out as the merge of its head into master: the first parent of that commit is master,
+      # the second the head, and the two together are what the pull request changes
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Files the pull request changes
+        id: files
+        env:
+          REQUESTED: ${{ inputs.generation }}
+        run: |
+          set -eu
+          if [ "$REQUESTED" = "true" ]; then
+            echo "generation=true" >> "$GITHUB_OUTPUT"
+            echo "The generation tests were asked for: they run." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! git rev-parse --verify --quiet HEAD^2 > /dev/null; then
+            echo "generation=true" >> "$GITHUB_OUTPUT"
+            echo "The checkout is not a merge commit, so what the pull request changes is not known: the generation tests run." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # --no-renames lists both paths of a rename, so that moving code to a Markdown file is a change of code
+          git diff --name-only --no-renames HEAD^1 HEAD > changed.txt
+          echo "The pull request changes $(wc -l < changed.txt) file(s)."
+          code=$(mktemp)
+          # documentation: Markdown anywhere, the docs/ folder of the repository and of the generator
+          while IFS= read -r file; do
+            case "$file" in
+              *.md | docs/* | clock-generator/docs/*) ;;
+              *) echo "$file" >> "$code" ;;
+            esac
+          done < changed.txt
+          if [ -s "$code" ]; then
+            echo "generation=true" >> "$GITHUB_OUTPUT"
+            { echo "The generation tests run: the pull request changes files that are not documentation, such as"; head -n 5 "$code" | sed 's/^/- /'; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "generation=false" >> "$GITHUB_OUTPUT"
+            echo "The generation tests are skipped: the pull request changes documentation only ($(wc -l < changed.txt) file(s))." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  generation:
+    name: Generation tests
+    needs: changes
+    # a job that is skipped reports success, as a required check passes when a pull request has nothing to generate
+    if: needs.changes.outputs.generation == 'true'
     runs-on: ubuntu-latest
     # the suite took 1,488 s on an AMD EPYC 7763 runner (4 vCPU) on 2026-10-23, about half that on an EPYC 9V45
     timeout-minutes: 45
