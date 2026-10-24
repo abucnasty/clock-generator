@@ -32,7 +32,6 @@ describe("a clock for Thaeln's cell 09 from the hands and the order of the chain
         expect(selected.assessment.items_per_second).toBeCloseTo(480, 6);
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);
         expect(result.alternatives.map(it => it.id)).not.toContain("derived");
-        expect(result.alternatives.map(it => it.id)).not.toContain("derived-lean-coal");
         expect(result.skipped_searches.length).toBeGreaterThan(0);
         expect(result.why_not_stable).toBeNull();
     });

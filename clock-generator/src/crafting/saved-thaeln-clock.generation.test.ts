@@ -2,17 +2,17 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-import { clockFromWindows, clockVerdictOf, planClockAlternatives, type BlueprintGenerationResult, type SerializableClockWindows } from "./generate-blueprint";
+import { clockFromWindows, clockVerdictOf, type BlueprintGenerationResult, type SerializableClockWindows } from "./generate-blueprint";
 import { backpressureLossOf } from "./trial";
 import { verdictOf } from "./backpressure-loss";
 import { quiet } from "./generate-blueprint-test-helpers";
 
 // Thaeln's cell has a coal inserter that moves 15/8 hands a cycle, which stretches the period of every clock made from
-// the plan to eight cycles (1,344 ticks); no clock for it is stable at 480 a second. Without the coal in the period it
-// is two cycles (336 ticks). The coal inserter stays clocked. The observed-windows search finds a clock for that
-// period in about ten minutes, which a test does not wait for: these are the windows it found on 2026-10-16 (the
-// `derived-lean-coal` clock of the sweep), judged here as the generator judges its own.
-const LEAN_COAL_WINDOWS: Record<string, string> = {
+// the plan to eight cycles (1,344 ticks); no clock for it is stable at 480 a second. Without the coal in the period (the
+// config's `ignored_lcm_ingredients`) it is two cycles (336 ticks), the coal inserter staying clocked. The observed-windows
+// search finds a clock for that period in about ten minutes, which a test does not wait for: these are the windows it
+// found on 2026-10-16, saved, and judged here as the generator judges its own.
+const COAL_OUT_OF_PERIOD_WINDOWS: Record<string, string> = {
     "inserter:3": "1-35,57-91,113-147,169-203,225-259,281-315",
     "inserter:4": "1-35,57-91,113-147,169-203,225-259,281-315",
     "inserter:9": "1-35,57-91,113-147,169-203,225-259,281-315",
@@ -52,24 +52,16 @@ const windowsOf = (text: string) => text.split(",").map(range => {
     return { start, end };
 });
 
-describe("a clock for a shorter period, on the Thaeln sample", () => {
+describe("a saved clock for a shorter period, on the Thaeln sample", () => {
     let config: Config;
     let result: BlueprintGenerationResult;
-    const windows: SerializableClockWindows = Object.fromEntries(Object.entries(LEAN_COAL_WINDOWS).map(([id, text]) => [id, windowsOf(text)]));
+    const windows: SerializableClockWindows = Object.fromEntries(Object.entries(COAL_OUT_OF_PERIOD_WINDOWS).map(([id, text]) => [id, windowsOf(text)]));
 
     beforeAll(async () => {
         const sample = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
-        // the config the lean clock is planned on: the coal is out of the period, and the output swings per cycle are those of the clock
+        // the config the clock was planned on: the coal is out of the period, and the output swings per cycle are those of the clock
         config = { ...sample, overrides: { ...sample.overrides, ignored_lcm_ingredients: ["coal"], terminal_swing_count: 3 } };
         result = clockFromWindows(config, windows, PERIOD, quiet);
-    });
-
-    it("offers the clock for the shorter period of the coal, and the search for it", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
-        const plan = planClockAlternatives(sample, { logger: quiet });
-        expect(plan.context.lean_period_items).toEqual([{ item: "coal", lcm: 8, lcm_without: 2 }]);
-        const lean = plan.tasks.filter(task => task.id.includes("lean")).map(task => [task.id, task.only_when_needed]);
-        expect(lean).toEqual([["planned-lean-coal", false], ["derived-lean-coal", true]]);
     });
 
     it("holds the target, from every start phase and over the long run, in a period of 336 ticks", () => {
