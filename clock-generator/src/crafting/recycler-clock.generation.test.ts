@@ -4,6 +4,7 @@ import { backpressureLossOf } from "./trial";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
+import { clockHash, readControls } from "../../tests/game/builds/clock-controls";
 
 // The exact-speed recycler cell of the ore voider benchmark (save F, the benchmark's waste inserters clocked): a recycler at
 // crafting speed 16.875 (540 crafts a second) destroys 400 iron ore a second, brought in by four stack inserters from the
@@ -95,4 +96,21 @@ describe("a recycler that voids iron ore with crafts to spare", () => {
             expect(report.losses.map(it => [it.loss, it.recovers]), alternative.id).toEqual([[{ kind: "supply", item: "iron-ore" }, true]]);
         }
     });
+});
+
+// the clock each cell's hour in the game was recorded on (tests/game/builds/ore-voider-clock-controls.json)
+describe("the clocks the ore voider's hours in the game ran", () => {
+    const controls = readControls("ore-voider-clock-controls.json");
+    for (const [name, sample] of [["ore-voider-exact-speed", "REAL_OWNER_ORE_VOIDER_EXACT_SPEED"], ["ore-voider-overbeaconed", "REAL_OWNER_ORE_VOIDER_OVERBEACONED"]] as const) {
+        test(`${name} is still selected`, async () => {
+            const pin = controls.cases[name].generation!;
+            const result = generateClockAlternatives(await loadConfigFromFile(ConfigPaths[sample]), { logger: quiet });
+            const selected = result.alternatives[result.selected_index];
+            expect(clockHash(selected.result.subtick ?? selected.result), "the clock recorded in the game").toBe(pin.clock_sha256);
+            expect({ id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null })
+                .toEqual(pin.selection);
+            expect(selected.verdict).toBe(pin.verdict);
+            expect(selected.result.simulation_duration.ticks).toBe(pin.period);
+        });
+    }
 });

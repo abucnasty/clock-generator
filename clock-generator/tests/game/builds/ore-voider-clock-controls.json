@@ -11,6 +11,10 @@
         "clock_basis": "capture"
       },
       "native": {
+        "generationVerdict": "stable",
+        "target": 400,
+        "period": 144,
+        "expected": 960,
         "clock": {
           "id": "even-hands",
           "period": 144,
@@ -139,6 +143,18 @@
           "status": "waiting_for_space_in_destination",
           "result_waiting_end": 50
         }
+      },
+      "generation": {
+        "period": 144,
+        "expected": 960,
+        "verdict": "stable",
+        "selection": {
+          "id": "even-hands",
+          "holds": true,
+          "rate": 400,
+          "supply": null
+        },
+        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61"
       }
     },
     "ore-voider-overbeaconed": {
@@ -151,6 +167,10 @@
         "clock_basis": "capture"
       },
       "native": {
+        "generationVerdict": "stable",
+        "target": 400,
+        "period": 144,
+        "expected": 960,
         "clock": {
           "id": "even-hands",
           "period": 144,
@@ -275,6 +295,18 @@
           "status": "waiting_for_space_in_destination",
           "result_waiting_end": 50
         }
+      },
+      "generation": {
+        "period": 144,
+        "expected": 960,
+        "verdict": "stable",
+        "selection": {
+          "id": "even-hands",
+          "holds": true,
+          "rate": 400,
+          "supply": null
+        },
+        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61"
       }
     }
   }

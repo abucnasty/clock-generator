@@ -81,6 +81,12 @@ interface OreVoiderReport {
 
 /** What a run shows, as the controls keep it */
 export interface OreVoiderSummary {
+    generationVerdict: string;
+    /** Ore destroyed a second, the target */
+    target: number;
+    period: number;
+    /** Ore brought in a period at the target */
+    expected: number;
     clock: {id: string; period: number; expected: number; verdict: string; wake_ups_per_minute: number; taker_wake_ups_per_minute: number};
     baseline: {
         periods: number;
@@ -140,6 +146,7 @@ export function summarize(report: OreVoiderReport, config: Config, clock: OreVoi
     const drain = periods.slice(phases.backlog, phases.probe);
     const drained = drain.findIndex(it => it.car_max <= car_max);
     return {
+        generationVerdict: clock.verdict, target: config.target_output.items_per_second, period: clock.period, expected,
         clock: {...clock, taker_wake_ups_per_minute: clock.taker_wake_ups_per_minute},
         baseline: {
             periods: baseline.length,
