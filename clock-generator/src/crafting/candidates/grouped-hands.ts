@@ -93,22 +93,6 @@ export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swin
     return found ? lcm : null;
 }
 
-/** Whether the build is a chain of machines: a machine or a chest that something takes from to fill a machine is itself filled */
-function isChain(entity_registry: ReadableEntityRegistry): boolean {
-    const entities = entity_registry.getAll();
-    const inserters = entities.filter(Entity.isInserter);
-    const filled = new Set<string>();
-    for (const inserter of inserters) {
-        if (EntityId.isMachine(inserter.sink.entity_id)) filled.add(inserter.sink.entity_id.id);
-    }
-    for (const drill of entities.filter(Entity.isDrill)) filled.add(drill.sink_id.id);
-    const chests_taken_from = new Set(inserters.filter(it => EntityId.isMachine(it.sink.entity_id) && EntityId.isChest(it.source.entity_id)).map(it => it.source.entity_id.id));
-    for (const inserter of inserters) {
-        if (EntityId.isMachine(inserter.source.entity_id) && chests_taken_from.has(inserter.sink.entity_id.id)) filled.add(inserter.sink.entity_id.id);
-    }
-    return inserters.some(it => EntityId.isMachine(it.sink.entity_id) && filled.has(it.source.entity_id.id));
-}
-
 /**
  * Hands in one run, in groups: the windows of a build whose machines get their ingredients from sources that are
  * read (a machine, a chest, a belt, a mining drill into the machine) and hand their products on to a belt or a chest.
@@ -398,13 +382,11 @@ export function groupedHandsClock(
         : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
     const named = { ...exported, belt, belt_pickup_slack_left_out: false,
         applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
-    // in a chain, inserters with the same windows share a decider unless the items they carry differ, and the check builds them in
-    // the order it derives from their filters (deciderBuildOrder): so the filters tell them apart here too, not the planning run's items
+    // inserters with the same windows share a decider unless the items they carry differ, and the check builds them in the order it
+    // derives from their filters (deciderBuildOrder): so the filters tell them apart here too, not the planning run's items
     const item_names = new Map(made.item_names);
-    if (isChain(made.run.simulation_context.entity_registry)) {
-        for (const inserter of made.run.simulation_context.entity_registry.getAll().filter(Entity.isInserter)) {
-            item_names.set(inserter.entity_id.id, Array.from(inserter.filtered_items).sort().join(","));
-        }
+    for (const inserter of made.run.simulation_context.entity_registry.getAll().filter(Entity.isInserter)) {
+        item_names.set(inserter.entity_id.id, Array.from(inserter.filtered_items).sort().join(","));
     }
     const result = checkedClock({ ...made, item_names }, named, found!, { ...options, verify_as_built: true });
     result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
