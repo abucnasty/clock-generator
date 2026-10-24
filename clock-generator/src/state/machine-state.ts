@@ -131,6 +131,8 @@ interface UntilWritten {
 
 interface HotViews {
     output: { quantity: LiveQuantity; blocked_at: number } | null;
+    /** Of a machine that places its results itself: one per result, against its stack (see machineIsOutputBlocked) */
+    results: { quantity: LiveQuantity; blocked_at: number }[] | null;
     fuel: { quantity: LiveQuantity; limit: number } | null;
     /** One per ingredient, in `machine.inputs` order, against its insertion limit (see takesNothing) */
     inputs: { quantity: LiveQuantity; limit: number }[] | null;
@@ -141,7 +143,7 @@ interface HotViews {
 
 function hotViewsOf(machineState: MachineState): HotViews {
     type WithViews = MachineState & { [HOT_VIEWS]?: HotViews };
-    return (machineState as WithViews)[HOT_VIEWS] ??= { output: null, fuel: null, inputs: null, inputs_by_name: null, takes_nothing: null };
+    return (machineState as WithViews)[HOT_VIEWS] ??= { output: null, results: null, fuel: null, inputs: null, inputs_by_name: null, takes_nothing: null };
 }
 
 /** Whether the memo still stands, i.e. none of the machine's inventories was written since it was taken */
@@ -459,8 +461,25 @@ function takesNothing(machineState: MachineState): boolean {
     return answer;
 }
 
+/**
+ * Whether the machine takes no more ingredients for its output: its main product at its output block, or, for a machine
+ * that places its results itself (rule 18), a stack of any one of its results waiting in its output, which also stops its
+ * crafts (recorded on a recycler on scrap: a full stack of the rarest result stopped it as one of the commonest did)
+ */
 function machineIsOutputBlocked(machineState: MachineState): boolean {
     const views = hotViewsOf(machineState);
+    if (machineState.machine.metadata.places_results === true) {
+        const results = views.results ??= machineState.machine.outputs.map(output => ({
+            quantity: new LiveQuantity(machineState.inventoryState, output.item_name),
+            blocked_at: output.outputBlock.max_stack_size,
+        }));
+        for (const result of results) {
+            if (result.quantity.get() >= result.blocked_at) {
+                return true;
+            }
+        }
+        return false;
+    }
     const view = views.output ??= {
         quantity: new LiveQuantity(machineState.inventoryState, machineState.machine.output.outputBlock.item_name),
         blocked_at: machineState.machine.output.outputBlock.ingredients_blocked_at,

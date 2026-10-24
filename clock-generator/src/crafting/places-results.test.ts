@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadConfigFromFile, parseConfig } from '../config/loader';
 import { ConfigSchema, type Config } from '../config/schema';
 import { CompositeControlLogic, TickControlLogic } from '../control-logic';
-import { EntityState, MachineStatus, SlotContainerState } from '../state';
+import { EntityState, MachineState, MachineStatus, SlotContainerState } from '../state';
 import { SimulationContext } from './sequence/simulation-context';
 import { ConfigPaths } from '../config/config-paths';
 
@@ -92,4 +92,45 @@ describe('a result target in the config', () => {
             machines: [], inserters: [], belts: [] }));
         expect(parsed.target_output.counts).toBeUndefined();
     });
+});
+
+/** A recycler at the speed of a normal one with no modules, fed from an infinity chest, its results kept in its output */
+function recyclerWithTakers(recipe: string, ingredient: string, takers: { prototype: string; item: string }[]): Config {
+    return ConfigSchema.parse({
+        target_output: { recipe: takers[0].item, items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe, productivity: 0, crafting_speed: 0.5, prototype: 'recycler' }],
+        inserters: [
+            { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, filters: [ingredient] },
+            ...takers.map((taker, index) => ({ id: index + 2, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: index + 2 },
+                prototype: taker.prototype, filters: [taker.item] })),
+        ],
+        belts: [],
+        chests: [{ type: 'infinity-chest', id: 1, item_filter: [{ item_name: ingredient, request_count: 100 }] },
+            ...takers.map((_, index) => ({ type: 'car', id: index + 2 }))],
+    }) as Config;
+}
+
+describe('a machine that places its results itself, with no result target', () => {
+    it('stops, and takes no ingredients, while a stack of any one of its results waits in its output', async () => {
+        // recycling electronic circuits gives a copper cable at 3/4 and an iron plate at 1/4: nothing takes the plates
+        const context = SimulationContext.fromConfig(recyclerWithTakers('electronic-circuit-recycling', 'electronic-circuit',
+            [{ prototype: 'stack-inserter', item: 'copper-cable' }]));
+        const machine = context.machines[0].machine_state;
+        // 16 crafts a second, an iron plate every 4: 100 plates in 25 s
+        run(context, 30 * 60);
+        expect(machine.inventoryState.getQuantity('iron-plate')).toBe(100);
+        expect(machine.status).toBe(MachineStatus.OUTPUT_FULL);
+        expect(MachineState.machineIsOutputBlocked(machine)).toBe(true);
+        // emptied of circuits, it is given none while the plates wait
+        machine.inventoryState.removeQuantity('electronic-circuit', machine.inventoryState.getQuantity('electronic-circuit'));
+        const crafts = machine.craftCount;
+        run(context, 600);
+        expect(machine.craftCount).toBe(crafts);
+        expect(machine.inventoryState.getQuantity('electronic-circuit')).toBe(0);
+        // room for one plate: circuits come in again and it crafts
+        machine.inventoryState.removeQuantity('iron-plate', 1);
+        run(context, 60);
+        expect(machine.craftCount).toBeGreaterThan(crafts);
+    });
+
 });
