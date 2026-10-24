@@ -46,6 +46,10 @@ test("grenade: every alternative says the lanes of the belt are exactly full, an
     const spacing = selected.insights.find(it => it.id === "drop-spacing")!;
     expect(spacing.title).toBe("Drops onto belt 1 fit between each other");
     expect(spacing.table?.rows).toEqual([["1 and 2", "14", "12", "14", "0", "0"], ["7 and 8", "14", "12", "14", "0", "0"]]);
+    // and which spacings of the copies, and distances between a copy's inserters, would fit as well
+    expect(spacing.explanation).toContain("The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), "
+        + "the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19 or 23 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. "
+        + "Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks).");
 });
 
 test("grenade: copies a tile closer put hands on each other, and the insight says so", async () => {
@@ -53,7 +57,10 @@ test("grenade: copies a tile closer put hands on each other, and the insight say
     const closer = {...config, target_output: {...config.target_output, copy_offset: {x: 11, y: 0}}};
     const made = generateClockAlternatives(closer, {logger: quiet});
     const selected = made.alternatives[made.selected_index];
-    expect(selected.insights.find(it => it.id === "drop-spacing")?.title).toBe("Drops onto belt 1 land on each other");
+    const insight = selected.insights.find(it => it.id === "drop-spacing")!;
+    expect(insight.title).toBe("Drops onto belt 1 land on each other");
+    expect(insight.explanation).toContain("With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20 or 22 tiles apart; "
+        + "11, 13, 15, 17 or 19 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never.");
 });
 
 test("grenade: the hand-made clock, as windows, holds in the simulator and gets back after every loss", async () => {

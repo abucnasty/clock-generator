@@ -266,7 +266,7 @@ inserter takes from, the way the belt runs from Sidecar 0.14.0 (without it the c
 the gap between copies from the repeated-unit conversion or from the player. A drop marked as side-loading onto another belt is left to the
 merge, and the belt is taken to run straight past the inserters.
 
-The idea, the arithmetic of pitches and offsets and the evidence are in [drop spacing](../tests/game/mechanics/drop-spacing/README.md).
+The result also lists the spacings of the copies (from the width of a copy to twice its spacing) and the distances between a copy's two inserters at which the hands fit, and the editor says it before Generate for the period one output hand takes at the target rate (`src/crafting/drop-room-note.ts`). The idea, the arithmetic of pitches and offsets and the evidence are in [drop spacing](../tests/game/mechanics/drop-spacing/README.md).
 
 ### Two inserters that bring the same item
 

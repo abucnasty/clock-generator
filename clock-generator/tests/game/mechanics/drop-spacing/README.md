@@ -69,15 +69,15 @@ rate or stability.
 
 | What | Result | Where |
 | --- | --- | --- |
-| The test of fit against the simulator's lane model | the same answer on 4,000 of 4,000 random layouts (positions on whole and half tiles, ticks anywhere in the period, 2 to 15 hands; 781 fit, 3,219 collide); the unit test replays 300 | `drop-spacing.test.ts` in `src/config/` (300 layouts); the 4,000 in the scripts below |
-| The model against the game's traces | 1,020 of 1,108 hands exact (no tick off) on 41 recordings of the grenade full build (the hand-made clock, 4 generated clocks, 7 window sets, the 28-offset sweep); 298 of 308 on the 11 whose periods are all alike; the hand-made clock 28 of 28, all at +0, 1, 2, 4 | `tests/game/builds/grenade-clock.game.test.ts` and `grenade-clock-controls.json` record the clocks; the traces are the recordings' own per-tick files, read by the scripts below |
-| The sweep of offsets | the model and the game agree on whether any hand waits at 27 of 28 offsets (16 with a collision, 11 without); the exception is 104, where the hands are not full when the inserters start. At 20, 52, 56 and 92 ticks 14 of 28 hands wait for room by the same ticks every period and the build still makes 448 in all 55 periods | the scripts below |
-| A prediction made before the recording | the full build with the first north inserter of copy 0 one tile downstream: predicted 13, 15, 17, 19 where 7, 8, 9, 11, the other 27 hands unchanged; the game recorded exactly that, 448 in all 63 periods | the scripts below |
+| The test of fit against the simulator's lane model | the same answer on 4,000 of 4,000 random layouts (positions on whole and half tiles, ticks anywhere in the period, 2 to 15 hands; 781 fit, 3,219 collide); the unit test replays 300 | `drop-spacing.test.ts` in `src/config/` (300 layouts, and the table above for every pitch 1 to 28 and offset 1 to 13); the 4,000 layouts were checked once, in PR #373 |
+| The model against the game's traces | 1,020 of 1,108 hands exact (no tick off) on 41 recordings of the grenade full build (the hand-made clock, 4 generated clocks, 7 window sets, the 28-offset sweep); 298 of 308 on the 11 whose periods are all alike; the hand-made clock 28 of 28, all at +0, 1, 2, 4 | `tests/game/builds/grenade-clock.game.test.ts` and `grenade-clock-controls.json` record the clocks; the per-tick traces were read once, for PR #373 |
+| The sweep of offsets | the model and the game agree on whether any hand waits at 27 of 28 offsets (16 with a collision, 11 without); the exception is 104, where the hands are not full when the inserters start. At 20, 52, 56 and 92 ticks 14 of 28 hands wait for room by the same ticks every period and the build still makes 448 in all 55 periods | PR #373 |
+| A prediction made before the recording | the full build with the first north inserter of copy 0 one tile downstream: predicted 13, 15, 17, 19 where 7, 8, 9, 11, the other 27 hands unchanged; the game recorded exactly that, 448 in all 63 periods | PR #373 |
 | The pitches and offsets of the table above | a scan of pitches 1 to 28 and offsets 1 to 13 at `L` = 14; repeated by hand for the table | arithmetic on the model |
 
-The scripts (`model.ts`, `val.ts`, `check.ts`, `sweepcmp.ts`, `pred.ts`, `fix.ts`, `sel.ts`) and their printed results are in
-`work/belt-pickup-parity/drop-spacing/evidence/` of the checkout where the check was made, not in the repository. The code is
-`src/config/drop-spacing.ts` (PR #373; the choice among equal groupings by the places on the belt, PR #382).
+The code is `src/config/drop-spacing.ts` (PR #373; the choice among equal groupings by the places on the belt, PR #382). The recordings of the grenade
+build are `tests/game/builds/grenade-clock.game.test.ts` with `grenade-clock-controls.json`, and the sample's scaffolds are in
+`resources/config-samples/real/owner/grenade/`.
 
 ## Limits
 
