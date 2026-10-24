@@ -137,9 +137,9 @@ Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
   of 53 periods. How the build gets there under uneven output swings is not traced, by decision: it is a known risk
   of the build. The recording is `.scratch/recordings/utility-science-backpressure-uneven-output-on.json`.
 - **Agricultural science with "Backed-up belts" on**: the 2-swing clock moves its 800 packs in every period. The
-  four inserters that bring nutrients to the egg biochambers move 979.89 nutrients a period in the game and 980.85 in
-  the simulator. It changes no verdict and no selection, so it is left: the game test of the build names those four
-  inserters as a known difference (`moved_open`) and holds everything else.
+  four inserters that bring nutrients to the egg biochambers moved 979.89 nutrients a period in the game and 980.85
+  in the simulator, a difference the game test of the build left open; the game test of 2026-10-24 finds none in any
+  inserter or machine, and holds them all.
 
 Known gaps of the trials:
 
