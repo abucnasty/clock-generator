@@ -305,6 +305,34 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
     return spacing;
 }
 
+/**
+ * What a rule that chooses which output inserters start together needs of the drop check: where each output inserter that
+ * drops straight onto a belt stands in its line, and how many pairs of hands land on each other for the ticks at which
+ * the inserters start (the colliding pairs of every line, counted as dropSpacing does). Null where no line can be checked,
+ * so there is nothing to choose by.
+ */
+export interface DropTieBreak {
+    /** The line of an output inserter and its place along it, by inserter number */
+    places: ReadonlyMap<number, { line: number; along: number }>;
+    /** Pairs of hands that land on each other when each inserter starts a hand at the ticks given */
+    collisions: (starts: ReadonlyMap<number, readonly number[]>) => number;
+}
+
+export function dropTieBreak(config: Config, period: number): DropTieBreak | null {
+    if (!(period > 0)) return null;
+    const lines = dropLines(config);
+    if (lines.length === 0) return null;
+    const places = new Map<number, { line: number; along: number }>();
+    lines.forEach((line, index) => line.inserters.forEach(inserter => places.set(inserter.id, { line: index, along: inserter.along })));
+    // a check that can be made for no clock (copies whose gap is not given) leaves nothing to choose by
+    const probe = new Map(Array.from(places.keys(), id => [id, [0]] as const));
+    if (dropSpacing(config, probe, period) === null) return null;
+    return {
+        places,
+        collisions: starts => dropSpacing(config, starts, period)?.lines.reduce((sum, line) => sum + line.pairs, 0) ?? 0,
+    };
+}
+
 /** The spacings, a whole number of tiles, nearest to `gap` below and above at which the hands of every line fit */
 function fittingGaps(config: Config, lines: DropLine[], starts: ReadonlyMap<number, readonly number[]>, period: number, gap: number): number[] {
     const offset = config.target_output.copy_offset!;
