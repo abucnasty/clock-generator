@@ -7,7 +7,7 @@ import { Entity, handSizeFor, Machine, ReadableEntityRegistry } from "../../../e
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
 import { returnedTargetRefusal, targetInsertersOf, targetMachinesOf } from "./target-ends";
-import { RESULT_WINDOWS_LONGEST_PERIOD_TICKS, ResultWindowsPlan, resultsFitContainer, resultWindowsPlan } from "../../result-windows";
+import { RESULT_WINDOWS_LONGEST_PERIOD_TICKS, ResultWindowsPlan, resultsFitContainer, resultWindowsPlan, sharedHandRefusal } from "../../result-windows";
 
 export interface CraftingCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
@@ -105,6 +105,13 @@ function createDestroyedPlan(
             ...(result_windows !== undefined && { result_windows }),
         };
     };
+    // an inserter that takes several results out of where a machine places them can stop the build for good
+    for (const machine of machines) {
+        const shared = sharedHandRefusal(machine, entity_registry);
+        if (shared !== null) {
+            throw new Error(shared);
+        }
+    }
     const craftsOf = (machine: Machine, hands: number) => destroyedTargetCrafts(machine, entity_registry, item, fraction(hands * hand)).toDecimal();
     const whole = planOf(forced ?? base_hands);
     if (wholeHandsFit(whole, machines, entity_registry, machine => craftsOf(machine, forced ?? base_hands))) {

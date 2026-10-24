@@ -1,10 +1,10 @@
 import assert from "../common/assert";
-import { Chest, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry, sharesTheRoll, yieldOf } from "../entities";
+import { Chest, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../entities";
 import { FactorioDataService, ItemName } from "../data";
 import type { Ingredient } from "../data";
 import { OpenRange } from "../data-types";
 import { weightUnits, weightUnitsOf } from "../state/slot-inventory";
-import { binomialPmf, countDistribution, RANDOM_MARGIN_LEVEL, rollsPerCraft } from "./random-margins";
+import { countDistribution, RANDOM_MARGIN_LEVEL, rollsPerCraft } from "./random-margins";
 import { rotateRanges } from "./clock";
 
 /**
@@ -28,10 +28,8 @@ import { rotateRanges } from "./clock";
  *   on for the longest window ("shared"), which keeps the other takers waiting at the container while the busiest one
  *   takes its hands.
  *
- * The count of an inserter's results: where they all take a slice of the one roll a craft shares (`shared_probability`)
- * in the same amount, no two come in one roll, and "one of them" is a single binomial of the rolls at the sum of their
- * chances; otherwise each is a binomial of its own and their counts are summed as independent ones (their variances
- * add). What the container holds is measured as the game limits it: a rocket silo's rocket inventory by the weight the
+ * An inserter that takes several of the results is refused (sharedHandRefusal): holding part of a hand of one, it
+ * takes only more of that one while the others fill the container. What the container holds is measured as the game limits it: a rocket silo's rocket inventory by the weight the
  * rocket lifts, a container of slots by its slots (an item's own filtered slots first, the free slots shared). Its share
  * is the quantile of the sum over the results, each counted as independent (results of one roll exclude each other, so
  * their counts are negatively correlated and the sum spreads less than this assumes).
@@ -64,17 +62,12 @@ const WEIGHT_CELLS = 4096;
 
 export type ResultWindowsKind = "staggered" | "shared";
 
-/** How the count of a window's results is worked out (see the top of this file) */
-export type ResultCount = "one roll" | "independent";
-
 /** The window a period of the inserters that take the same results */
 export interface ResultWindow {
     /** The results they take, in the recipe's order */
     items: ItemName[];
     /** The inserters, by entity id: all of them on the same window */
     inserter_ids: string[];
-    /** How the count of the results is worked out */
-    counted: ResultCount;
     /** What a period gives of them on average */
     expected_items: number;
     /** What a period gives of them at most in all but 1 in 740 periods */
@@ -102,11 +95,6 @@ export interface ResultWindow {
     margin_items: number;
     /** Periods the margin takes to drain `backlog_items` */
     drain_periods: number;
-    /**
-     * For an inserter that takes several results: the feed cycles a part hand of the rarest of them may wait to be filled
-     * in all but 1 in 740 cases, while it takes nothing else (see waitCycles); 0 for one result
-     */
-    wait_cycles: number;
 }
 
 /** What the container holds against what it can hold, at the worst moment of the period */
@@ -140,13 +128,12 @@ export interface ResultWindowsPlan {
     container: ContainerMargin;
 }
 
-/** Results of a machine taken out of its result target by the same inserters (or, for a grouping, by one inserter to place) */
+/** Results of a machine taken out of its result target by the same inserters */
 export interface TakerGroup {
     items: ItemName[];
     results: Ingredient[];
-    /** The inserters; empty for a group of a grouping, which has none yet */
     inserters: Inserter[];
-    /** How many take them: the inserters, or one for a group of a grouping */
+    /** How many take them */
     takers: number;
     hand: number;
     swing_ticks: number;
@@ -163,8 +150,6 @@ export interface ResultWindowsInput {
     /** Feed cycles a period where the config sets them (`overrides.terminal_swing_count`); found here otherwise */
     cycles?: number;
     level?: number;
-    /** The groups to plan for in place of the build's inserters (see resultGrouping) */
-    groups?: TakerGroup[];
 }
 
 /** How a container limits what it holds, in whole units of its measure */
@@ -206,39 +191,6 @@ function containerMeasureOf(chest: Chest): ContainerMeasure | null {
     return null;
 }
 
-/** The count distribution of a group's results over `rolls` rolls, and how it is worked out */
-function groupCount(results: readonly Ingredient[], rolls: number): { counts: number[]; probabilities: number[]; counted: ResultCount } {
-    if (results.length === 1) {
-        return { ...countDistribution(results[0], rolls), counted: "one roll" };
-    }
-    const yields = results.map(yieldOf);
-    const amount = yields[0].amount;
-    if (results.every(sharesTheRoll) && yields.every(it => it.amount === amount && it.extra === 0)) {
-        // no two come in one roll: "one of them" is a binomial at the sum of their chances
-        const pmf = binomialPmf(Math.ceil(rolls - 1e-9), Math.min(1, yields.reduce((sum, it) => sum + it.chance, 0)));
-        return { counts: pmf.probabilities.map((_, index) => (pmf.from + index) * amount), probabilities: pmf.probabilities, counted: "one roll" };
-    }
-    // each rolled on its own: the counts add as independent ones
-    let counts = [0];
-    let probabilities = [1];
-    for (const result of results) {
-        const next = new Map<number, number>();
-        const one = countDistribution(result, rolls);
-        for (let a = 0; a < counts.length; a++) {
-            for (let b = 0; b < one.counts.length; b++) {
-                const p = probabilities[a] * one.probabilities[b];
-                if (p > 1e-18) {
-                    next.set(counts[a] + one.counts[b], (next.get(counts[a] + one.counts[b]) ?? 0) + p);
-                }
-            }
-        }
-        const sorted = Array.from(next.entries()).sort((x, y) => x[0] - y[0]);
-        counts = sorted.map(it => it[0]);
-        probabilities = sorted.map(it => it[1]);
-    }
-    return { counts, probabilities, counted: "independent" };
-}
-
 /** The smallest count whose cumulative probability reaches `level` */
 function countAtLevel(distribution: { counts: number[]; probabilities: number[] }, level: number): number {
     let cumulative = 0;
@@ -250,40 +202,6 @@ function countAtLevel(distribution: { counts: number[]; probabilities: number[] 
     }
     return distribution.counts[distribution.counts.length - 1];
 }
-
-/**
- * The feed cycles a part hand of a group's rarest result may wait to be filled, in all but 1 in 740 cases (`level`). An
- * inserter that waits for a full hand and holds part of one takes only more of that item (recorded on a car: a hand of 5
- * iron waited for iron beside a stack of copper), so while it waits the group's other results pile up in the container,
- * and if they fill it, the item it waits for cannot come in at all. The wait is the fewest cycles over which that result
- * gives the hand's missing items (up to a hand less one) in all but 1 in 740 cases. 0 for a group of one result.
- */
-function waitCycles(group: Pick<TakerGroup, "items" | "results" | "hand">, rolls_per_cycle: number, level: number): number {
-    if (group.items.length === 1) {
-        return 0;
-    }
-    const expected = group.results.map(result => { const it = yieldOf(result); return it.chance * (it.amount + it.extra); });
-    const rarest = group.results[expected.indexOf(Math.min(...expected))];
-    const filled = (cycles: number) => countAtLevel(countDistribution(rarest, cycles * rolls_per_cycle), 1 - level) >= group.hand - 1;
-    let high = 1;
-    while (!filled(high)) {
-        high *= 2;
-        assert(high <= MAX_WAIT_CYCLES, `a part hand of ${group.items.join(", ")} would wait more than ${MAX_WAIT_CYCLES} cycles to be filled`);
-    }
-    let low = Math.floor(high / 2);
-    while (high - low > 1) {
-        const middle = Math.floor((low + high) / 2);
-        if (filled(middle)) {
-            high = middle;
-        } else {
-            low = middle;
-        }
-    }
-    return high;
-}
-
-/** The most feed cycles waitCycles looks over */
-const MAX_WAIT_CYCLES = 1 << 20;
 
 /**
  * The quantile at `level` of what the container holds when each result has had its `rolls` since its window opened, in
@@ -328,6 +246,32 @@ function heldAtLevel(measure: ContainerMeasure, results: readonly { item: ItemNa
         }
     }
     return { at_level: Infinity, mean };
+}
+
+/**
+ * The refusal of an inserter that takes several of the results a machine places into a container, or null where none
+ * does. An inserter that waits for a full hand and holds part of one takes only more of that item (recorded on a car,
+ * and on scrap into a rocket silo), so its other results pile up in the container, and once it is full the item it
+ * waits for cannot come in: the build stops for good. Recorded in Factorio 2.1.21 on the scrap silo with the
+ * processing units, low density structure and holmium ore on one filter stack inserter: after 47 minutes it held the
+ * same part hand at 284 openings in a row with the silo full, and no scrap came in again.
+ */
+export function sharedHandRefusal(machine: Machine, registry: Pick<ReadableEntityRegistry, "getAll">): string | null {
+    const target = machine.result_target;
+    if (target === undefined) {
+        return null;
+    }
+    const results = machine.outputs.map(output => output.item_name);
+    for (const inserter of registry.getAll().filter(Entity.isInserter).filter(it => it.source.entity_id.id === target.id)) {
+        const taken = results.filter(item => inserter.filtered_items.has(item));
+        if (taken.length > 1) {
+            return `Inserter ${inserter.entity_id.number} takes ${taken.slice(0, -1).join(", ")} and ${taken[taken.length - 1]} out of ${target}. `
+                + "An inserter that holds part of a hand of one of them takes only more of that one, so the others pile up in "
+                + `${target}, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an `
+                + "inserter of its own. An inserter whose filters the clock sets by signal would not wait; such a clock is not planned yet.";
+        }
+    }
+    return null;
 }
 
 /**
@@ -391,12 +335,10 @@ function worstHeld(input: ResultWindowsInput, measure: ContainerMeasure, groups:
     const openings = openingsOf(input.kind, groups.length, period);
     const befores = input.kind === "shared" ? [0] : groups.map((_, index) => index);
     let worst: { at_level: number; mean: number; before: number } | null = null;
-    // a group whose inserter may wait for a part hand piles its results up for that long more
-    const waits = groups.map(group => waitCycles(group, rolls_per_cycle, level));
     for (const before of befores) {
         const ages = agesBefore(openings, before, period);
         const results = groups.flatMap((group, index) => group.items.map((item, at) =>
-            ({ item, result: group.results[at], rolls: (Math.ceil(ages[index] / input.cycle_ticks - 1e-9) + waits[index]) * rolls_per_cycle })));
+            ({ item, result: group.results[at], rolls: Math.ceil(ages[index] / input.cycle_ticks - 1e-9) * rolls_per_cycle })));
         const held = heldAtLevel(measure, results, level);
         if (worst === null || held.at_level > worst.at_level) {
             worst = { ...held, before };
@@ -417,7 +359,7 @@ function worstHeld(input: ResultWindowsInput, measure: ContainerMeasure, groups:
  */
 export function resultWindowsPlan(input: ResultWindowsInput): ResultWindowsPlan {
     // every run of the build plans its cycle again (each start phase and trial of a clock): the arithmetic is made once
-    const key = input.groups === undefined ? planKeyOf(input) : null;
+    const key = planKeyOf(input);
     const known = key === null ? undefined : planned.get(key);
     if (known !== undefined) {
         return known;
@@ -494,34 +436,29 @@ function planResultWindows(input: ResultWindowsInput): ResultWindowsPlan {
     const level = input.level ?? RANDOM_MARGIN_LEVEL;
     const name = `Machine ${machine.entity_id.number}`;
     const measure = containerOf(machine, registry);
-    const groups = input.groups ?? takerGroupsOf(machine, registry);
+    const groups = takerGroupsOf(machine, registry);
     const cycles = input.cycles ?? longestCycles(input, measure, groups, level);
     const period = cycles * input.cycle_ticks;
     const crafts = cycles * input.crafts_per_cycle;
     const rolls = crafts * rollsPerCraft(machine);
     const openings = openingsOf(input.kind, groups.length, period);
-    const rolls_per_cycle = input.crafts_per_cycle * rollsPerCraft(machine);
     const windows = groups.map((group, index): ResultWindow => {
-        // the window after a part hand's wait takes what the period and the wait gave
-        const wait_cycles = waitCycles(group, rolls_per_cycle, level);
-        const count = groupCount(group.results, rolls + wait_cycles * rolls_per_cycle);
-        const items_at_level = countAtLevel(count, level);
+        const items_at_level = countAtLevel(countDistribution(group.results[0], rolls), level);
         const expected = group.items.reduce((sum, item) => sum + machine.outputs.find(it => it.item_name === item)!.amount_per_craft.toDecimal() * crafts, 0);
         // a lost output leaves the container full of them: drained at the window's room over their expected count
         const backlog_items = Math.max(...group.items.map(item => measure.mostOf(item)))
             + group.items.reduce((sum, item) => sum + FactorioDataService.findItemOrThrow(item).stack_size, 0);
         const taken = Math.max(items_at_level, expected + backlog_items / RESULT_WINDOWS_RECOVERY_PERIODS);
-        // each taker may hold a part hand from the window before, and each result may have a part hand left in the
-        // container, which the window takes first
-        const left_over = (group.takers + group.items.length - 1) * (group.hand - 1);
+        // each taker may hold a part hand from the window before, which the window fills first
+        const left_over = group.takers * (group.hand - 1);
         const hands = Math.max(1, Math.ceil((taken + left_over) / (group.takers * group.hand)));
         const window_ticks = (hands - 1) * group.swing_ticks + 1;
         assert(window_ticks < period, `${name}: ${group.items.join(", ")} need a window of ${window_ticks} ticks a period of ${period}, which is no window`);
         const room_items = hands * group.takers * group.hand - left_over;
         return {
-            items: group.items, inserter_ids: group.inserters.map(it => it.entity_id.id), counted: count.counted,
+            items: group.items, inserter_ids: group.inserters.map(it => it.entity_id.id),
             expected_items: expected, items_at_level, backlog_items, hand: group.hand, hands, window_ticks, opening: openings[index],
-            room_items, margin_items: room_items - expected, drain_periods: backlog_items / (room_items - expected), wait_cycles,
+            room_items, margin_items: room_items - expected, drain_periods: backlog_items / (room_items - expected),
         };
     });
     const shared_ticks = Math.max(...windows.map(it => it.window_ticks));
@@ -553,69 +490,6 @@ export function resultsFitContainer(
     }
     const input: ResultWindowsInput = { machine, registry, cycle_ticks, crafts_per_cycle, kind: "shared", level };
     return worstHeld(input, measure, takerGroupsOf(machine, registry), cycles, level).at_level_units <= measure.capacity;
-}
-
-/** A grouping of a machine's results onto as few inserters as the arithmetic asks for, with the plan of its windows */
-export interface ResultGrouping {
-    /** The results each inserter would take, in the recipe's order */
-    groups: ItemName[][];
-    /** The period of one inserter for each result, which the grouping is made on */
-    single_period: number;
-    /** The plan of the grouping's windows, the part hands' waits included; null where no period holds them */
-    plan: ResultWindowsPlan | null;
-}
-
-/**
- * How few inserters could take a machine's results (whatever the build's inserters are): on the period of one inserter
- * for each result, the rarest results share an inserter until together they give a hand a period (their expected count
- * reaches a hand); a result that gives a hand a period by itself keeps an inserter of its own, and what is left at the
- * end under a hand joins the last group. The grouping's windows are then planned as any (each inserter like the first
- * that takes a result now), the waits of their part hands included: a shared inserter can wait minutes for a hand of its
- * rarest result, and the period comes out shorter.
- */
-export function resultGrouping(input: Omit<ResultWindowsInput, "groups" | "cycles" | "kind">): ResultGrouping {
-    const { machine, registry } = input;
-    const level = input.level ?? RANDOM_MARGIN_LEVEL;
-    const measure = containerOf(machine, registry);
-    const [first] = takerGroupsOf(machine, registry);
-    const single = (items: ItemName[]): TakerGroup => ({
-        items, results: items.map(item => machine.outputs.find(it => it.item_name === item)!.ingredient),
-        inserters: [], takers: 1, hand: first.hand, swing_ticks: first.swing_ticks,
-    });
-    const order = machine.outputs.map(output => output.item_name);
-    const base = { ...input, kind: "staggered" as const, level };
-    const single_cycles = longestCycles(base, measure, order.map(item => single([item])), level);
-    const expectedOf = (item: ItemName) => machine.outputs.find(it => it.item_name === item)!.amount_per_craft.toDecimal() * input.crafts_per_cycle * single_cycles;
-    const rarest_first = [...order].sort((a, b) => expectedOf(a) - expectedOf(b) || order.indexOf(a) - order.indexOf(b));
-    const groups: ItemName[][] = [];
-    let open: ItemName[] = [];
-    let open_count = 0;
-    for (const item of rarest_first) {
-        open.push(item);
-        open_count += expectedOf(item);
-        if (open_count >= first.hand) {
-            groups.push(open);
-            open = [];
-            open_count = 0;
-        }
-    }
-    if (open.length > 0) {
-        if (groups.length > 0) {
-            groups[groups.length - 1].push(...open);
-        } else {
-            groups.push(open);
-        }
-    }
-    const in_order = groups.map(group => [...group].sort((a, b) => order.indexOf(a) - order.indexOf(b)))
-        .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
-    const planned_groups = in_order.map(single);
-    let plan: ResultWindowsPlan | null = null;
-    try {
-        plan = resultWindowsPlan({ ...base, groups: planned_groups, cycles: longestCycles(base, measure, planned_groups, level) });
-    } catch {
-        plan = null;
-    }
-    return { groups: in_order, single_period: single_cycles * input.cycle_ticks, plan };
 }
 
 /** The windows of the inserters that take the results out, by inserter id, a period of `plan.period` */

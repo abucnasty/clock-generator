@@ -11,8 +11,7 @@ import { binomialQuantile } from "./random-margins";
 import { LATE_AFTER_PERIODS } from "./backpressure-loss";
 import { MAX_SIMULATION_TICKS } from "./plan/plan-run";
 import {
-    RESULT_WINDOWS_CHECK_PERIODS, RESULT_WINDOWS_LONGEST_PERIOD_TICKS, RESULT_WINDOWS_RECOVERY_PERIODS, resultGrouping, resultWindowRanges,
-    resultWindowsPlan,
+    RESULT_WINDOWS_CHECK_PERIODS, RESULT_WINDOWS_LONGEST_PERIOD_TICKS, RESULT_WINDOWS_RECOVERY_PERIODS, resultWindowRanges, resultWindowsPlan,
 } from "./result-windows";
 
 // The scrap silo sample: a recycler on scrap at +300% productivity, 2 scrap a second destroyed (one hand of 16 every
@@ -69,7 +68,6 @@ describe("windows for results that come by small chances, by arithmetic", () => 
         expect(gears.expected_items).toBeCloseTo(153.6, 6);
         expect(gears.items_at_level).toBe(binomialQuantile(768, 0.2));
         expect(gears.items_at_level).toBe(188);
-        expect(gears.counted).toBe("one roll");
         expect([gears.hands, gears.window_ticks]).toEqual([13, 12 * 24 + 1]);
         // copper cable: 38 at that share, but a silo full of cable (4,000) and a stack in the recycler are 4,200 to take
         // within 32 periods: 23.04 + 131.25 and 15 held over, 11 hands
@@ -98,35 +96,12 @@ describe("windows for results that come by small chances, by arithmetic", () => 
         expect(ranges.get(gears.inserter_ids[0])!.map(it => [it.start_inclusive, it.end_inclusive])).toEqual([[0, 288]]);
     });
 
-    it("count the results of one inserter with several filters as one roll at the sum of their chances, where no two come in one roll", () => {
+    it("are refused where one inserter takes several results: holding part of a hand of one, it waits while the others fill the silo", () => {
         const grouped = withRareResultsOnOneInserter(config);
-        const { registry, machine } = machineOf(grouped);
-        const plan = resultWindowsPlan({ machine, registry, cycle_ticks: 480, crafts_per_cycle: 16, kind: "staggered" });
-        expect(plan.windows).toHaveLength(10);
-        const rare = plan.windows.find(it => it.items.length > 1)!;
-        expect(rare.items).toEqual(["processing-unit", "low-density-structure", "holmium-ore"]);
-        expect(rare.counted).toBe("one roll");
-        // its window takes what the period and the wait of a part hand of its rarest result give: 64 rolls a feed cycle
-        expect(rare.wait_cycles).toBeGreaterThan(40);
-        expect(rare.items_at_level).toBe(binomialQuantile((plan.cycles + rare.wait_cycles) * 64, 0.04));
-        expect(rare.expected_items).toBeCloseTo(plan.crafts * 4 * 0.04, 6);
-        // and the silo holds what piles up meanwhile on a shorter period than with an inserter for each result
-        expect(plan.period).toBe(2400);
-    });
-
-    it("group the rarest results onto one inserter until together they give a hand a period", () => {
-        const { registry, machine } = machineOf(config);
-        const grouping = resultGrouping({ machine, registry, cycle_ticks: 480, crafts_per_cycle: 16 });
-        // holmium ore and low density structure give 7.68 a period each, processing units 15.36: together 30.72
-        expect(grouping.groups).toHaveLength(10);
-        expect(grouping.groups[grouping.groups.length - 1]).toEqual(["processing-unit", "low-density-structure", "holmium-ore"]);
-        expect(grouping.single_period).toBe(5760);
-        // a part hand of holmium ore or low density structure (0.32% of the rolls each) waits up to 50 feed cycles for
-        // its 15 more, while the processing units pile up in the silo: the period the silo holds that in is 2400 ticks
-        const shared = grouping.plan!.windows.find(it => it.items.length > 1)!;
-        expect(shared.wait_cycles).toBeGreaterThan(40);
-        expect(grouping.plan!.period).toBeLessThan(5760);
-        expect(grouping.plan!.container.at_level).toBeLessThanOrEqual(1_000_000);
+        const { registry } = machineOf(grouped);
+        expect(() => CraftingCyclePlan.create(TargetProductionRate.fromConfig(grouped.target_output), registry, fraction(1), grouped.overrides ?? {}))
+            .toThrow("Inserter 10 takes processing-unit, low-density-structure and holmium-ore out of chest:14. An inserter that holds part of a hand "
+                + "of one of them takes only more of that one");
     });
 
     it("measure a container of slots by its slots", () => {

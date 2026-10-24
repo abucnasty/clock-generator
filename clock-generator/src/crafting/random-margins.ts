@@ -69,7 +69,7 @@ export function binomialQuantile(trials: number, chance: number, level: number =
  * The binomial's probabilities of `trials` rolls at `chance`, from 12 standard deviations under the mean to 12 over it
  * (outside that it has nothing a double holds): `probabilities[index]` is P(X = from + index)
  */
-export function binomialPmf(trials: number, chance: number): { from: number; probabilities: number[] } {
+function binomialPmf(trials: number, chance: number): { from: number; probabilities: number[] } {
     if (trials <= 0 || chance <= 0) {
         return { from: 0, probabilities: [1] };
     }
