@@ -173,12 +173,15 @@ export function combineClockAlternativeRuns<T>(
 ): { alternatives: T[]; selected_index: number } {
     const seen = new Set<string>();
     const alternatives: T[] = [];
-    for (const run of runs) {
+    const list = (run: ClockAlternativeRun<T> | null): void => {
         if (run && !seen.has(run.signature)) {
             seen.add(run.signature);
             alternatives.push(...run.alternatives);
+            // the same clock with shared windows follows it
+            run.also?.forEach(list);
         }
-    }
+    };
+    runs.forEach(list);
     const rank = (alternative: T): number[] => {
         const ranking = rankingOf(alternative);
         return [

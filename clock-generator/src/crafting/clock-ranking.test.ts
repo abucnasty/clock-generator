@@ -25,6 +25,19 @@ const selectedOf = (clocks: Ranked[], signatures: Record<string, string> = {}): 
 };
 
 describe("combineClockAlternativeRuns", () => {
+    it("lists the runs made with shared windows after the run, once, and ranks them with the rest", () => {
+        const shared = (id: string, ranking: Partial<ClockRanking>, signature: string): ClockAlternativeRun<Ranked> => ({ signature, alternatives: [clock(id, ranking)] });
+        const runs: ClockAlternativeRun<Ranked>[] = [
+            { signature: "a", alternatives: [clock("a", { wake_ups_per_minute: 80 })], also: [shared("a-shared", { wake_ups_per_minute: 20 }, "a-shared")] },
+            // the same clock again, with its shared one: listed once
+            { signature: "a", alternatives: [clock("a-again")], also: [shared("a-shared-again", {}, "a-shared")] },
+            { signature: "b", alternatives: [clock("b", { wake_ups_per_minute: 50 })] },
+        ];
+        const { alternatives, selected_index } = combineClockAlternativeRuns(runs, it => it);
+        expect(alternatives.map(it => it.id)).toEqual(["a", "a-shared", "b"]);
+        expect(alternatives[selected_index].id).toBe("a-shared");
+    });
+
     it("selects the clock with the fewest wake-ups among those that meet the target rate", () => {
         expect(selectedOf([
             clock("first", { wake_ups_per_minute: 80 }),

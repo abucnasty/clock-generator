@@ -6,6 +6,7 @@ import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
 import { warnSideLoadedDrops } from "../config/side-loaded-drop";
 import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
+import { FactorioBlueprint } from "../blueprints/blueprint";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
@@ -34,6 +35,8 @@ export interface ClockAlternative {
     description: string;
     /** Total decider windows across inserters, as exported; fewer means more batched swings */
     inserter_window_count: number;
+    /** The decider combinators that switch inserters and drills on and off in the exported blueprint, the clock's own not counted */
+    deciders: number;
     /** The windows the selection compares last: `inserter_window_count` without the windows of the output feeders */
     ranking_window_count: number;
     /** What the trial of the clock on its build found: holds, survives backpressure loss, rate, wake-ups */
@@ -87,6 +90,8 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
     /** Runs with the same clock, physical assumptions and checked behavior are duplicates; only the first is listed */
     signature: string;
     alternatives: T[];
+    /** Runs of the same clock made with shared windows (see `SHARED_WINDOWS_NOTE`), listed after this run when it is */
+    also?: ClockAlternativeRun<T>[];
 }
 
 /** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
@@ -158,6 +163,12 @@ interface AlternativeDefinition {
      * chestDrillFallbackConfig). Absent where the generator makes no such windows.
      */
     chest_drill_fallbacks?: (() => AlternativeDefinition | undefined)[];
+    /**
+     * The same alternative with the windows of the takers that open together shared (`shared_windows` of
+     * GenerateClockOptions), made when this one is a clock of the grouped hands rule. Throws or gives nothing where
+     * it has none.
+     */
+    shared_windows?: () => AlternativeDefinition | undefined;
 }
 
 /** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
@@ -182,6 +193,18 @@ function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (d
 function holds(result: BlueprintGenerationResult): boolean {
     return result.stability_check.as_built?.holds ?? result.stability_check.holds;
 }
+
+/** The decider combinators of a clock's blueprint that switch inserters and drills on and off */
+export function windowDeciderCount(blueprint: FactorioBlueprint): number {
+    return blueprint.entities.filter(entity => entity.name === "decider-combinator"
+        && ((entity.tags as { clock_generator?: { inserters?: unknown; drills?: unknown } } | undefined)?.clock_generator?.inserters !== undefined
+            || (entity.tags as { clock_generator?: { drills?: unknown } } | undefined)?.clock_generator?.drills !== undefined)).length;
+}
+
+/** What a clock with shared windows says about itself, after how its alternative is made */
+const SHARED_WINDOWS_NOTE = "Inserters that take into their machines at the same moment share one wake window, as long as the longest of them needs, "
+    + "so they share one decider combinator. An inserter that needs fewer hands than that window stays enabled longer than it must, "
+    + "so it can wake more often. It is only listed when it keeps the rate and recovers after being starved or jammed.";
 
 /** The alternative every run starts with, and the one the others are described against */
 const BATCHED_SWINGS_LABEL = "Batched swings";
@@ -302,7 +325,12 @@ function alternativeDefinitions(
 ): AlternativeDefinition[] {
     const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
         with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
-    return definitions;
+    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule
+    let shared: AlternativeDefinition[] | undefined;
+    return definitions.map(definition => ({ ...definition, shared_windows: () => {
+        shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
+        return shared.find(it => it.id === definition.id);
+    } }));
 }
 
 function alternativeDefinitionsWithFuelHandRoom(
@@ -602,7 +630,53 @@ function plannedChestDrillWindows(result: BlueprintGenerationResult): boolean {
     return result.chest_drills?.some(drill => drill.planned && drill.enabled_ticks !== null) ?? false;
 }
 
+/**
+ * A run of the alternative and, where its clock is the grouped hands rule's, the run of the same alternative with shared
+ * windows (`also`) when that holds the rate and recovers and is another clock than the separate one.
+ */
 function runAlternative(
+    definition: AlternativeDefinition,
+    config: Config,
+    logger: Logger,
+    report?: (detail: string) => void,
+    assessed?: ReadonlySet<string>,
+    verification_cache?: Map<string, VerificationAssessment>,
+    on_not_made?: (clock: NotMadeClock) => void,
+    settle_unstable?: boolean,
+): ClockAlternativeRun | null {
+    const run = runAlternativeOf(definition, config, logger, report, assessed, verification_cache, on_not_made, settle_unstable);
+    if (run === null || definition.shared_windows === undefined || !run.alternatives.some(it => it.result.grouped_hands !== undefined)) {
+        return run;
+    }
+    let shared_definition: AlternativeDefinition | undefined;
+    try {
+        shared_definition = definition.shared_windows();
+    } catch (error) {
+        logger.log(`Clock alternative "${definition.label}" with shared windows could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+        return run;
+    }
+    if (shared_definition === undefined) {
+        return run;
+    }
+    const shared_run = shared_definition.run;
+    const shared = runAlternativeOf({
+        ...shared_definition,
+        // a clock that is not the grouped hands' with shared windows is not an alternative, and not worth assessing
+        run: () => {
+            const made = shared_run();
+            if (made.grouped_hands?.shared_windows !== true) throw new Error("no shared windows hold");
+            return made;
+        },
+        id: `${definition.id}-shared`,
+        label: `${definition.label}, shared windows`,
+        description: `${definition.description} ${SHARED_WINDOWS_NOTE}`,
+        shared_windows: undefined,
+    }, config, logger, report, new Set([...(assessed ?? []), run.signature]), verification_cache, undefined, settle_unstable);
+    const listed = shared?.alternatives.filter(it => it.verdict === "stable" && it.result.grouped_hands?.shared_windows === true) ?? [];
+    return shared === null || listed.length === 0 ? run : { ...run, also: [...(run.also ?? []), { ...shared, alternatives: listed }] };
+}
+
+function runAlternativeOf(
     definition: AlternativeDefinition,
     config: Config,
     logger: Logger,
@@ -748,7 +822,7 @@ function runAlternative(
             items_per_second: itemsPerSecondOverCopies(achieved_output_items, trial.clock_period, copies),
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null, start_dependence: trial.start_dependence };
         const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
-            inserter_window_count, ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
+            inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         return { ...clock, ranking: rankingOf(clock, config) };
     };
     const exact_trial: Trial = { result, held, loss, start_dependence, clock_period: period };
@@ -851,8 +925,11 @@ export function planClockAlternatives(
     warnLanesSharedByCopies(config, logger);
     warnSideLoadedDrops(config, logger);
     warnMachinePrototypes(config, logger);
-    const primary = withChestDrillFallbacks([definition], config, true,
-        fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0];
+    const primary = {
+        ...withChestDrillFallbacks([definition], config, true,
+            fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0],
+        shared_windows: () => primaryDefinition(config, { ...options, shared_windows: true }, options.on_progress_detail),
+    };
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
         planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,

@@ -5,7 +5,7 @@ import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { ClockBelt, beltPickupSlackTicks } from "../clock";
-import { runClockOnBuild } from "../trial";
+import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
@@ -28,9 +28,11 @@ export interface GroupedHandsOptions {
     surplus_guard: boolean;
     /** Ticks after a taker's window opens that the window of an inserter filling the machine it takes from opens */
     feeder_offset: number;
+    /** The takers whose windows open on the same tick share one window: the longest any of them needs */
+    share_windows: boolean;
 }
 
-const DEFAULT_OPTIONS: GroupedHandsOptions = { surplus_guard: false, feeder_offset: 1 };
+const DEFAULT_OPTIONS: GroupedHandsOptions = { surplus_guard: false, feeder_offset: 1, share_windows: false };
 
 /** Why the grouped hands rule does not apply to a build; the clock then keeps the windows it was planned with */
 export class GroupedHandsNotApplicable extends Error { }
@@ -44,6 +46,26 @@ function windowFrom(start: number, ticks: number, period: number): OpenRange[] {
     const first = ((start % period) + period) % period;
     const last = first + ticks - 1;
     return last < period ? [OpenRange.from(first, last)] : [OpenRange.from(first, period - 1), OpenRange.from(0, last - period)];
+}
+
+/**
+ * The windows of the takers that open on the same tick made one: the earliest start and the latest end any of them needs,
+ * which is the longest window from that tick. The takers that are left open all period have none to share.
+ */
+function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], period: number): void {
+    const open = new Map<string, { ticks: number; ids: string[] }>();
+    for (const taker of takers) {
+        const ranges = windows.get(taker.inserter.entity_id.id);
+        if (ranges === undefined) continue;
+        const key = `${ranges[0].start_inclusive}`;
+        const known = open.get(key) ?? { ticks: 0, ids: [] };
+        known.ticks = Math.max(known.ticks, taker.window_ticks);
+        known.ids.push(taker.inserter.entity_id.id);
+        open.set(key, known);
+    }
+    for (const [key, { ticks, ids }] of open) {
+        for (const id of ids) windows.set(id, windowFrom(Number(key), ticks, period));
+    }
 }
 
 /** The windows moved `ticks` later in the period (earlier when negative) */
@@ -341,6 +363,7 @@ export function groupedHandsWindows(
         for (const taker of top.filter(filled)) feed(taker, 0);
         const unplaced = takers.find(it => !placed(it));
         if (unplaced !== undefined) refuse(`${unplaced.inserter.entity_id.id} fills ${unplaced.sink.id}, which is neither an output machine nor taken from`);
+        if (options.share_windows) sharedWindows(windows, gated, period);
         return leaveOpen(windows);
     }
     const start_of = (machine: string): number => Math.round(group_of.get(machine)! * period / groups);
@@ -350,6 +373,7 @@ export function groupedHandsWindows(
     for (const output of outputs) {
         windows.set(output.entity_id.id, windowFrom(start_of(output.source.entity_id.id), output_ticks(output), period));
     }
+    if (options.share_windows) sharedWindows(windows, gated, period);
     // a drill's window is computed from what its machine takes of it, and the drills of one group have one window: the longest
     const drill_ticks = new Map<number, number>();
     for (const drill of drills) {
@@ -391,8 +415,11 @@ function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>, perio
 }
 
 /** The tries, in order: a window for every start the limit refuses, then for the hands only where a surplus hand would be kept; staged, then compact */
-const TRIES: GroupedHandsOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset =>
-    [false, true].map(surplus_guard => ({ surplus_guard, feeder_offset })));
+const SEPARATE_TRIES: GroupedHandsOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset =>
+    [false, true].map(surplus_guard => ({ surplus_guard, feeder_offset, share_windows: false })));
+
+/** The same tries with the windows of the takers that open together made one */
+const SHARED_TRIES: GroupedHandsOptions[] = SEPARATE_TRIES.map(way => ({ ...way, share_windows: true }));
 
 /**
  * The clock of the windows as the generator exports it, checked as a clock with windows of its own is (the clock-only runs
@@ -408,13 +435,7 @@ function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options
         : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
     const named = { ...exported, belt, belt_pickup_slack_left_out: false,
         applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
-    // inserters with the same windows share a decider unless the items they carry differ, and the check builds them in the order it
-    // derives from their filters (deciderBuildOrder): so the filters tell them apart here too, not the planning run's items
-    const item_names = new Map(made.item_names);
-    for (const inserter of made.run.simulation_context.entity_registry.getAll().filter(Entity.isInserter)) {
-        item_names.set(inserter.entity_id.id, Array.from(inserter.filtered_items).sort().join(","));
-    }
-    const result = checkedClock({ ...made, item_names }, named, windows, { ...options, verify_as_built: true });
+    const result = checkedClock(made, named, windows, { ...options, verify_as_built: true });
     result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
     return result;
 }
@@ -423,7 +444,7 @@ function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options
  * The clock of a plan with the windows of groupedHandsWindows, checked as a clock with windows of its own is: by the
  * clock-only runs from the start phases and the long run, and by the margin of `holdsWithMargin`. The plan is made again
  * for the cycles of `groupedHandsCycles` where those are not its own and the config does not set them. The windows are
- * tried in the ways of TRIES, the first that holds with its margin, and from every start phase, is the clock; those that make the same windows are one.
+ * tried in the ways of SEPARATE_TRIES, or of SHARED_TRIES where `options.shared_windows` asks for the windows to be shared, the first that holds with its margin, and from every start phase, is the clock; those that make the same windows are one.
  * Null where the rule does not apply to the build. It holds when its own windows hold, not when the planning run of the
  * plan does.
  */
@@ -445,7 +466,7 @@ export function groupedHandsClock(
         const { simulation_context, swing_counts, recipe_lcm, duration } = made.run;
         const tried = new Set<string>();
         const drops = dropTieBreak(made.config, duration.ticks);
-        for (const way of TRIES) {
+        for (const way of options.shared_windows === true ? SHARED_TRIES : SEPARATE_TRIES) {
             const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
                 made.config.overrides?.backed_up_belts !== true, way, drops);
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
@@ -455,6 +476,14 @@ export function groupedHandsClock(
             if (unmoved !== null) { reasons.push(unmoved); continue; }
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
             const clock_of_windows = finishedClock(made, windows, options);
+            if (way.share_windows) {
+                // shared windows are kept only if the clock gets back from every loss, as the separate ones are kept when it does
+                if (!clock_of_windows.stability_check.holds) { reasons.push(`the shared windows ${key} do not hold from every start`); continue; }
+                if (backpressureLossVerdictOf(made.config, clock_of_windows, plan.logger).backpressure_loss?.survives === false) {
+                    reasons.push(`the shared windows ${key} do not get back from a loss`);
+                    continue;
+                }
+            }
             finished ??= clock_of_windows;
             if (clock_of_windows.stability_check.holds) { finished = clock_of_windows; break; }
             reasons.push(`the windows ${key} do not hold from every start`);
@@ -467,5 +496,5 @@ export function groupedHandsClock(
         }
         throw error;
     }
-    return finished!;
+    return { ...finished!, grouped_hands: { shared_windows: options.shared_windows === true } };
 }
