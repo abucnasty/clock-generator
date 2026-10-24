@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-    backpressureLossesOf, judgeRecovery, LATE_AFTER_PERIODS, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossTrialsPartOfTheWay,
+    backpressureLossesOf, judgeRecovery, LATE_AFTER_PERIODS, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
     lossTrialsUntilStopped, LossOutcome, MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, MAX_RUN_ON_PERIODS, reportOf, RUN_ON_EXACT_PERIODS, runsOn,
-    verdictOf,
+    SPOIL_LIMIT_SHARE, verdictOf,
 } from "./backpressure-loss";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { loadConfigFromFile } from "../config/loader";
@@ -90,6 +90,25 @@ describe("a trial that is short late in its window", () => {
         const ran_on = [...late, ...Array(RUN_ON_EXACT_PERIODS - 6).fill(400)];
         expect(judgeRecovery(ran_on, 400, null, RUN_ON_EXACT_PERIODS)).toMatchObject({ recovers: true, recovered_after_bins: 34, proven: false });
         expect(judgeRecovery([...ran_on.slice(0, -1), 384], 400, null, RUN_ON_EXACT_PERIODS).recovers).toBe(false);
+    });
+});
+
+describe("the losses a build whose items spoil is tried with", () => {
+    it("are shorter than three quarters of the spoil time of the item of the build that spoils first", async () => {
+        expect(SPOIL_LIMIT_SHARE).toBe(0.75);
+        const registryOf = async (file: string) => createEntityRegistryFromConfig(await loadConfigFromFile(file));
+        // iron bacteria spoil in a minute, the nutrients burned in five
+        expect(lossLimitOf(await registryOf(ConfigPaths.IRON_BACTERIA_CULTIVATION))).toEqual({ ticks: 2700, item: "iron-bacteria" });
+        // nutrients in five minutes, pentapod eggs in fifteen, the packs in an hour, bioflux in two
+        expect(lossLimitOf(await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE))).toEqual({ ticks: 13500, item: "nutrients" });
+        expect(lossLimitOf(await registryOf(ConfigPaths.AUTOMATION_SCIENCE))).toBeNull();
+    });
+
+    it("are named in the verdict, which no other build's has", () => {
+        const none: LossOutcome = { loss: { kind: "none" }, bin_ticks: 100, periods_per_bin: 1, expected_per_bin: 10, trials: [], recovers: true,
+            recovered_after_bins: 0, stopped_after_ticks: 0, ticks: 1000 };
+        expect(verdictOf(reportOf(100, 10, none, [], { ticks: 2700, item: "iron-bacteria" })).loss_limit).toEqual({ ticks: 2700, item: "iron-bacteria" });
+        expect(verdictOf(reportOf(100, 10, none, [])).loss_limit).toBeUndefined();
     });
 });
 

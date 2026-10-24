@@ -42,6 +42,8 @@ export const SUMMARY_COPY = {
     recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
     recoversNotTriedDetail: (reason: string) => `Recovery could not be tried in the simulator: ${reason.replace(/\.$/, '')}.`,
     recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
+    recoversLossLimit: (duration: string, item: string) =>
+        `Checked for losses up to ${duration}. A longer loss spoils the ${item} in the build, and no clock brings it back.`,
     beltMoving: 'Moving',
     beltBackedUp: 'Backed up',
     beltNone: 'None',
@@ -151,6 +153,26 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
     const notTried = clock.assessment.backpressure_loss_not_tried;
     return { kind: 'not-tested', value: clock.assessment.holds ? SUMMARY_COPY.recoversUnavailable : SUMMARY_COPY.recoversNotTested,
         detail: notTried !== undefined ? SUMMARY_COPY.recoversNotTriedDetail(notTried) : SUMMARY_COPY.recoversNotTestedDetail };
+}
+
+/** A stretch of time as the loss limit says it: "3 min 45 s", "3 min", "45 s" */
+export function minutesAndSecondsText(ticks: number): string {
+    const seconds = Math.round(ticks / 6) / 10;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds - minutes * 60;
+    if (minutes === 0) return `${formatNumberText(rest)} s`;
+    return rest === 0 ? `${minutes} min` : `${minutes} min ${formatNumberText(rest)} s`;
+}
+
+/**
+ * For a build whose items spoil, the losses its clocks were checked for, in a sentence ("Checked for losses up to 45 s. A
+ * longer loss spoils the iron bacteria in the build, …"); null for any other build, or a clock whose losses were not tried
+ */
+export function lossLimitText(clock: Pick<SummaryClock, 'assessment'>, itemLabel: (id: string) => string): string | null {
+    const limit = clock.assessment.backpressure_loss?.loss_limit;
+    if (!limit) return null;
+    const name = itemLabel(limit.item);
+    return SUMMARY_COPY.recoversLossLimit(minutesAndSecondsText(limit.ticks), name.charAt(0).toLowerCase() + name.slice(1));
 }
 
 /** What the clock makes, for all the copies, and the line under it: "240/s", "all 11 copies" (nothing for one copy) */

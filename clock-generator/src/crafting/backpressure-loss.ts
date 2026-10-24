@@ -18,7 +18,7 @@
  * One run makes the trials of a loss one after the other.
  */
 import { SimulationTick } from "./runner/simulation-tick";
-import { ItemName } from "../data";
+import { FactorioDataService, ItemName } from "../data";
 import { Chest, Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { EntityState, InserterState } from "../state";
 import { simulationStateKey } from "./runner/steady-state";
@@ -82,6 +82,50 @@ export function lossTrialsPartOfTheWay(
 
 /** A loss ends at the latest after this many periods, whether the build has stopped or not */
 export const MAX_LOSS_PERIODS = 200;
+/**
+ * A build whose items spoil is tried only with losses shorter than this share of the shortest spoil time of its items
+ * (see lossLimitOf).
+ */
+export const SPOIL_LIMIT_SHARE = 3 / 4;
+
+/** The losses a build whose items spoil is tried with: shorter than `ticks`, which `item`, its first to spoil, sets */
+export interface LossLimit {
+    ticks: number;
+    item: ItemName;
+}
+
+/**
+ * The limit of the losses a build is tried with, when an item of it spoils: SPOIL_LIMIT_SHARE of the spoil time of the
+ * item that spoils first, of every item its machines take, make or burn and its inserters are set to move. In the game
+ * a loss longer than that spoils the items the build holds, and no clock brings it back: a loss reaches them later than
+ * it starts (the items in a machine are older than the loss), and an item that comes back takes a while to reach them.
+ * Null for a build none of whose items spoil.
+ */
+export function lossLimitOf(
+    entity_registry: Pick<ReadableEntityRegistry, "getAll">,
+    spoilTicksOf: (item: ItemName) => number | null = item => FactorioDataService.itemSpoilTicks(item),
+): LossLimit | null {
+    const items = new Set<ItemName>();
+    for (const entity of entity_registry.getAll()) {
+        if (Entity.isMachine(entity)) {
+            entity.inputs.forEach((_, item) => items.add(item));
+            entity.outputs.forEach(output => items.add(output.item_name));
+            if (entity.fuel_slot !== undefined) {
+                items.add(entity.fuel_slot.fuel.item_name);
+            }
+        } else if (Entity.isInserter(entity)) {
+            entity.filtered_items.forEach(item => items.add(item));
+        }
+    }
+    let first: { item: ItemName; spoil_ticks: number } | null = null;
+    for (const item of Array.from(items).sort()) {
+        const spoil_ticks = spoilTicksOf(item);
+        if (spoil_ticks !== null && (first === null || spoil_ticks < first.spoil_ticks)) {
+            first = { item, spoil_ticks };
+        }
+    }
+    return first === null ? null : { ticks: first.spoil_ticks * SPOIL_LIMIT_SHARE, item: first.item };
+}
 /**
  * Periods after the item is back in which the build has to be at its expected output again. A run on clock windows
  * alone repeats once its state does, so most trials end long before: with the state of a period boundary seen
@@ -154,6 +198,8 @@ export interface BackpressureLossOptions {
     max_run_on_periods?: number;
     /** In place of LATE_AFTER_PERIODS */
     late_after_periods?: number;
+    /** A loss lasts fewer ticks than this (see lossLimitOf); without it, as long as the build takes to stop */
+    loss_limit_ticks?: number;
 }
 
 export interface LossTrial {
@@ -165,6 +211,8 @@ export interface LossTrial {
     until_stopped: boolean;
     /** Ticks the item was gone */
     loss_ticks: number;
+    /** The loss was to last until the build had stopped, and ended at the loss limit first (loss_limit_ticks) */
+    ended_at_limit?: true;
     /** What the output inserters dropped in those ticks */
     output_during_loss: number;
     /** Ticks from the cut to the last thing the build did; null when it was still doing something as the loss ended */
@@ -359,7 +407,10 @@ export function runLossTrials(
 ): LossOutcome {
     const { loss } = options;
     const expected_per_bin = options.expected_output_items * bin.periods;
-    const max_loss_ticks = Math.ceil((options.max_loss_periods ?? MAX_LOSS_PERIODS) * options.period_ticks);
+    // the most ticks a loss lasts: until the build has stopped, at most the periods of MAX_LOSS_PERIODS, and shorter
+    // than the loss limit of a build whose items spoil
+    const limit_ticks = options.loss_limit_ticks !== undefined ? Math.max(1, Math.ceil(options.loss_limit_ticks) - 1) : Infinity;
+    const max_loss_ticks = Math.min(limit_ticks, Math.ceil((options.max_loss_periods ?? MAX_LOSS_PERIODS) * options.period_ticks));
     const max_recovery_bins = Math.max(1, Math.ceil((options.max_recovery_periods ?? MAX_RECOVERY_PERIODS) / bin.periods));
     const hold_bins = Math.max(1, Math.ceil((options.recovery_hold_periods ?? RECOVERY_HOLD_PERIODS) / bin.periods));
     const max_run_on_bins = Math.floor((options.max_run_on_periods ?? MAX_RUN_ON_PERIODS) / bin.periods);
@@ -444,6 +495,7 @@ export function runLossTrials(
         let loss_ticks = 0;
         let output_during_loss = 0;
         let stopped_after_ticks: number | null = null;
+        let ended_at_limit = false;
         if (loss.kind !== "none") {
             runUntilPhase(plan.cut_at);
             supply.cut();
@@ -466,7 +518,12 @@ export function runLossTrials(
                     }
                 }
                 if (until_stopped) {
-                    runUntilPhase(plan.restore_at);
+                    // back at the place it was cut at, or at the limit where that comes first
+                    const wanted = ((plan.restore_at % bin.ticks) + bin.ticks) % bin.ticks;
+                    while ((now() - start_tick) % bin.ticks !== wanted && now() - cut_tick < limit_ticks) {
+                        step();
+                    }
+                    ended_at_limit = stopped_after_ticks === null && now() - cut_tick >= limit_ticks;
                 }
                 loss_ticks = now() - cut_tick;
                 output_during_loss = dropped() - dropped_at_cut;
@@ -521,6 +578,7 @@ export function runLossTrials(
             restore_at,
             until_stopped,
             loss_ticks,
+            ...(ended_at_limit && { ended_at_limit: true as const }),
             output_during_loss,
             stopped_after_ticks,
             output_per_bin,
@@ -566,9 +624,17 @@ export interface BackpressureLossReport {
     recovered_after_periods: number | null;
     /** Ticks simulated for the trials of all losses, without the warm-up of each run */
     ticks: number;
+    /** The limit of the losses tried, for a build whose items spoil (lossLimitOf); null for any other */
+    loss_limit: LossLimit | null;
 }
 
-export function reportOf(period_ticks: number, expected_output_items: number, undisturbed: LossOutcome, losses: LossOutcome[]): BackpressureLossReport {
+export function reportOf(
+    period_ticks: number,
+    expected_output_items: number,
+    undisturbed: LossOutcome,
+    losses: LossOutcome[],
+    loss_limit: LossLimit | null = null,
+): BackpressureLossReport {
     const broken_by = losses.filter(outcome => !outcome.recovers).map(outcome => lossId(outcome.loss));
     const survives = undisturbed.recovers && broken_by.length === 0;
     return {
@@ -580,6 +646,7 @@ export function reportOf(period_ticks: number, expected_output_items: number, un
         broken_by,
         recovered_after_periods: survives ? Math.max(0, ...losses.map(outcome => (outcome.recovered_after_bins ?? 0) * outcome.periods_per_bin)) : null,
         ticks: undisturbed.ticks + losses.reduce((sum, outcome) => sum + outcome.ticks, 0),
+        loss_limit,
     };
 }
 
@@ -596,6 +663,8 @@ export interface BackpressureLossVerdict {
     broken_at_other_lane_phases?: string[];
     /** The most periods it took to be back at the expected output over all trials; null when it does not survive */
     recovered_after_periods: number | null;
+    /** For a build whose items spoil: the losses were shorter than this (lossLimitOf); absent for any other build */
+    loss_limit?: LossLimit;
 }
 
 export function verdictOf(report: BackpressureLossReport): BackpressureLossVerdict {
@@ -605,5 +674,6 @@ export function verdictOf(report: BackpressureLossReport): BackpressureLossVerdi
         broken_at_other_lane_phases: report.losses.filter(outcome => !outcome.recovers && outcome.failed_pickup_phases !== undefined)
             .map(outcome => lossLabel(outcome.loss)),
         recovered_after_periods: report.recovered_after_periods,
+        ...(report.loss_limit !== null && { loss_limit: report.loss_limit }),
     };
 }

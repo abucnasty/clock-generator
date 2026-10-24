@@ -5,7 +5,7 @@ import type { ClockAlternativeView, GenerationAssumptions } from '../worker/type
 import type { ResultDetail } from '../utils/resultsView';
 import { MODELED_START, START_LIMITS, modeledDetails, phaseChecksText, startCheckSummary } from '../utils/modelAssumptions';
 import { useGameNames } from '../hooks/useGameNames';
-import { recoversOf } from '../utils/clockSummary';
+import { lossLimitText, recoversOf } from '../utils/clockSummary';
 import { formatNumberText } from '../utils/numberText';
 import { FullscreenWorkspace } from './FullscreenWorkspace';
 import { tabProps } from '../utils/tabIds';
@@ -40,7 +40,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
             <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Why this clock</Typography>
             <Typography variant="body2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{selected.description}</Typography>
             <Typography variant="body2">The clock repeats every {formatNumberText(selected.simulationDurationTicks, { maxDecimals: 3 })} ticks ({formatNumberText(selected.simulationDurationTicks / 60, { maxDecimals: 2 })} s). In each repeat, each inserter is switched on in its own wake windows: {selected.inserterWindowCount} in all. A wake window can hold several swings, and a swing can finish in a later window, so the number of wake windows and the number of swings need not match.</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>{recoversOf(selected).detail}</Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>{[recoversOf(selected).detail, lossLimitText(selected, itemLabel)].filter(Boolean).join(' ')}</Typography>
             <Box component="details" open={assumptionsOpen} onToggle={event => { const open = (event.currentTarget as HTMLDetailsElement).open; if (open !== assumptionsOpen) setAssumptionsOpen(open); }} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions>
                 <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Model and tested starts</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START}</Typography>

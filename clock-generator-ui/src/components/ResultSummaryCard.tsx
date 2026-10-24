@@ -9,6 +9,7 @@ import {
     beltValueSub,
     clockTechnicalName,
     differenceFromRecommended,
+    lossLimitText,
     makesText,
     plainClockName,
     recoversOf,
@@ -21,6 +22,7 @@ import type { GenerationAssumptions } from '../worker/types';
 import { REQUIRES_FACTORIO } from '../utils/installSteps';
 import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
+import { useGameNames } from '../hooks/useGameNames';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -96,6 +98,8 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
     const makes = makesText(selected, selected.copies);
     const wakeUps = wakeUpsText(selected);
     const recovers = recoversOf(selected);
+    const { itemLabel } = useGameNames();
+    const lossLimit = lossLimitText(selected, itemLabel);
     return (
         <>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5, mt: 0.5, minHeight: 32 }}>
@@ -141,6 +145,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 <Fact label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={beltValueSub(props.pickRule, selected.beltLabel) ?? (selected.ranking.matches_belt_choice ? undefined : 'Different setting')} />
             </Box>
             {recovers.kind !== 'yes' && !props.rateWarning && <Typography variant="body2" sx={{ mt: 1 }}>{recovers.detail}</Typography>}
+            {lossLimit && <Typography variant="body2" sx={{ mt: 1 }} data-loss-limit>{lossLimit}</Typography>}
         </>
     );
 }
