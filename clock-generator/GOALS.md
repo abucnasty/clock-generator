@@ -23,6 +23,8 @@ The detail is in [docs/stability.md](docs/stability.md).
 
 > The measure for goal 2 is the number of wake-ups per minute, summed over the inserters of one copy of the build. Among the clocks that meet goal 1, the one with the fewest wake-ups is the best. It is defined in `clock-generator/src/crafting/wake-ups.ts`. Since 0.13.0 it follows the mechanic above: the inserters into a machine are woken by its craft starts, which the simulator counts itself, and not by its payouts. Before that both lists were woken by finishes and payouts, which on a machine with productivity counted more wake-ups of the inserters into it than the game makes (the advanced circuit scaffold's inputs: 1,075 a minute against 625). The game's figure in a recording is read by the series' method from status and products_finished ("The rule's count and the clock-or-unwired advice"), whose standing per machine type is named with it; on a biochamber it is a known miss, and on machine types never recorded it is not checked.
 
+On a build with a loop of machines, or a machine that makes its own ingredient, goal 2 is measured on a clock's mean wake-ups over a fixed set of starts: the config's cold start with the clock at twelve evenly spaced places in its period, the loop seeded as the config says (decided 2026-10-24: with windows on its loop the iron bacteria sample's wake-ups move 2 to 5 times with the start). Every other build keeps the one figure of its cold start for now (decided 2026-10-24: in the simulator their wake-ups depend on where the clock stands too, and in the game less so).
+
 The detail is in [docs/wake-ups.md](docs/wake-ups.md).
 
 ## Backpressure Loss
