@@ -793,9 +793,29 @@ interface RunPeriods {
     warmup_period: Duration;
 }
 
+/** The inserter of a plan whose hands a cycle come out whole the least often: the largest denominator, with its item */
+function rarestHands(plan: CraftingCyclePlan): { inserter: number; item: string; hands: string } | null {
+    let rarest: { inserter: number; item: string; hands: string; denominator: number } | null = null;
+    for (const planned of plan.entity_transfer_map.values()) {
+        const denominator = planned.total_transfer_count.getDenominator;
+        if (Entity.isInserter(planned.entity) && (rarest === null || denominator > rarest.denominator)) {
+            rarest = { inserter: planned.entity.entity_id.number, item: planned.item_transfers[0]?.item_name ?? "",
+                // as a short decimal: a count made of floating-point chances is no fraction to read
+                hands: String(Number(planned.total_transfer_count.toDecimal().toPrecision(3))), denominator };
+        }
+    }
+    return rarest === null ? null : { inserter: rarest.inserter, item: rarest.item, hands: rarest.hands };
+}
+
 /** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
 function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
     const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
+    const too_rare = crafting_cycle_plan.production_rate.counts === "destroyed" && !(duration.ticks < MAX_SIMULATION_TICKS) ? rarestHands(crafting_cycle_plan) : null;
+    if (too_rare !== null) {
+        throw new Error(`Inserter ${too_rare.inserter} takes ${too_rare.item} at ${too_rare.hands} of a hand a cycle of ${crafting_cycle_plan.total_duration_ticks.toString()} ticks: `
+            + `its hands come out whole only every ${duration.ticks.toPrecision(3)} ticks, more than the ${MAX_SIMULATION_TICKS} a clock period can be. `
+            + "A clock for results that come this rarely is not planned yet.");
+    }
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     const requested_warmup_periods = options.warmup_periods ?? 10;
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget

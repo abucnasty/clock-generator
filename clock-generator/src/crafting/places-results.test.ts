@@ -189,4 +189,11 @@ describe('a rocket silo as the result target', () => {
         await expect(parseConfig(await scrapIntoSilo('uncommon'))).resolves.toBeDefined();
     });
 
+    it('takes results too rare for their hands to come out whole in a clock period: that is refused, not run', async () => {
+        // at +300% (scrap recycling productivity researched to level 30) the takers' hands come out whole in no period
+        const { generateClockAlternatives } = await import('./generate-blueprint');
+        const config = await parseConfig(await scrapIntoSilo('uncommon', 300));
+        const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
+        expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow('A clock for results that come this rarely is not planned yet');
+    });
 });
