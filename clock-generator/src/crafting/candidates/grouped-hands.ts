@@ -7,6 +7,7 @@ import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
+import { TurnGroup } from "../turn-groups";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -175,6 +176,30 @@ export function groupedHandsWindows(
     /** Where the output inserters stand on a shared belt: among groupings that serve the sources equally, the one whose hands fit on the belt */
     drop_tie_break: DropTieBreak | null = null,
 ): Map<string, OpenRange[]> {
+    return groupedHandsPlan(entity_registry, swing_counts, recipe_lcm, period, with_belt_slack, options, drop_tie_break).windows;
+}
+
+/** The windows of `groupedHandsWindows` and the groups that take turns in them */
+export interface GroupedHandsPlan {
+    windows: Map<string, OpenRange[]>;
+    /**
+     * The groups of machines that take turns, in the order of their turns, with the inserters and drills of each in the order of
+     * the turn: what lays the clock's combinators out by group. Empty where the build is one group (one turn, or a chain of
+     * machines, which one group serves).
+     */
+    turns: TurnGroup[];
+}
+
+/** The windows of `groupedHandsWindows`, with the groups whose turns they are */
+export function groupedHandsPlan(
+    entity_registry: ReadableEntityRegistry,
+    swing_counts: EntityTransferCountMap,
+    recipe_lcm: number,
+    period: number,
+    with_belt_slack: boolean = true,
+    options: GroupedHandsOptions = DEFAULT_OPTIONS,
+    drop_tie_break: DropTieBreak | null = null,
+): GroupedHandsPlan {
     if (!Number.isInteger(period)) refuse(`the period is ${period} ticks, not a whole number`);
     const entities = entity_registry.getAll();
     const inserters = entities.filter(Entity.isInserter);
@@ -364,7 +389,7 @@ export function groupedHandsWindows(
         const unplaced = takers.find(it => !placed(it));
         if (unplaced !== undefined) refuse(`${unplaced.inserter.entity_id.id} fills ${unplaced.sink.id}, which is neither an output machine nor taken from`);
         if (options.share_windows) sharedWindows(windows, gated, period);
-        return leaveOpen(windows);
+        return { windows: leaveOpen(windows), turns: [] };
     }
     const start_of = (machine: string): number => Math.round(group_of.get(machine)! * period / groups);
     for (const taker of takers) {
@@ -387,7 +412,18 @@ export function groupedHandsWindows(
     for (const drill of drills) {
         windows.set(drill.entity_id.id, windowFrom(start_of(drill.sink_id.id) + INPUT_OFFSET_TICKS, drill_ticks.get(group_of.get(drill.sink_id.id)!)!, period));
     }
-    return leaveOpen(windows);
+    // each group's turn begins with its output swings; then its inputs, then its drills, each by entity number. The inserters left
+    // enabled all the time are named as well: a window that one of them is given later stands in its group
+    const byNumber = (a: { entity_id: EntityId }, b: { entity_id: EntityId }) => a.entity_id.number - b.entity_id.number;
+    const turns: TurnGroup[] = groups === 1 ? [] : Array.from({ length: groups }, (_, group) => ({
+        start: Math.round(group * period / groups),
+        entity_ids: [
+            ...outputs.filter(it => group_of.get(it.source.entity_id.id) === group).sort(byNumber),
+            ...takers.map(it => it.inserter).filter(it => group_of.get(it.sink.entity_id.id) === group).sort(byNumber),
+            ...drills.filter(it => group_of.get(it.sink_id.id) === group).sort(byNumber),
+        ].map(it => it.entity_id.id),
+    }));
+    return { windows: leaveOpen(windows), turns };
 }
 
 /**
@@ -425,7 +461,7 @@ const SHARED_TRIES: GroupedHandsOptions[] = SEPARATE_TRIES.map(way => ({ ...way,
  * The clock of the windows as the generator exports it, checked as a clock with windows of its own is (the clock-only runs
  * from the start phases and the long run): it holds when that check does
  */
-function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options: GenerateClockOptions): BlueprintGenerationResult {
+function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, turns: TurnGroup[], options: GenerateClockOptions): BlueprintGenerationResult {
     // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
     const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
     const slack = beltPickupSlackTicks(made.run.simulation_context.entity_registry);
@@ -433,7 +469,7 @@ function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options
     const moving = made.config.overrides?.backed_up_belts !== true;
     const belt: ClockBelt | null = belt_fed.length === 0 ? null
         : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
-    const named = { ...exported, belt, belt_pickup_slack_left_out: false,
+    const named = { ...exported, belt, belt_pickup_slack_left_out: false, turns,
         applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
     const result = checkedClock(made, named, windows, { ...options, verify_as_built: true });
     result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
@@ -467,7 +503,7 @@ export function groupedHandsClock(
         const tried = new Set<string>();
         const drops = dropTieBreak(made.config, duration.ticks);
         for (const way of options.shared_windows === true ? SHARED_TRIES : SEPARATE_TRIES) {
-            const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
+            const { windows, turns } = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
                 made.config.overrides?.backed_up_belts !== true, way, drops);
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
             if (tried.has(key)) continue;
@@ -475,7 +511,7 @@ export function groupedHandsClock(
             const unmoved = holdsWithMargin(made, windows, duration.ticks);
             if (unmoved !== null) { reasons.push(unmoved); continue; }
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
-            const clock_of_windows = finishedClock(made, windows, options);
+            const clock_of_windows = finishedClock(made, windows, turns, options);
             if (way.share_windows) {
                 // shared windows are kept only if the clock gets back from every loss, as the separate ones are kept when it does
                 if (!clock_of_windows.stability_check.holds) { reasons.push(`the shared windows ${key} do not hold from every start`); continue; }
