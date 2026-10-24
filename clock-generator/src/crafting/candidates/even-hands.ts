@@ -2,7 +2,7 @@ import assert from "../../common/assert";
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, ReadableEntityRegistry } from "../../entities";
-import { BlueprintGenerationResult, GenerateClockOptions, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, checkedClock, clockOfPlan, planRun, withRoomForRandomAmounts } from "../plan/plan-run";
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 
@@ -73,8 +73,11 @@ export function evenHandsClock(config: Config, options: GenerateClockOptions = {
     const { simulation_context, swing_counts, recipe_lcm, duration, always_enabled_by_config, inserter_clocks } = plan.run;
     assert(always_enabled_by_config.size === 0 && inserter_clocks.size === 0 && alwaysEnabledInserters(simulation_context.entity_registry).length === 0,
         "even hands are not made for a build with inserters outside the plan");
-    const windows = evenHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks);
-    const clock = clockOfPlan(plan, { ...options, belt_pickup_slack: "never" });
+    // a window that carries a result that comes by chance gets room for its spread, as the plan's do
+    const room = withRoomForRandomAmounts(plan, evenHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks));
+    const windows = room.windows;
+    const planned = clockOfPlan(plan, { ...options, belt_pickup_slack: "never" });
+    const clock = { ...planned, random_margins: room.random_margins };
     const result = checkedClock(plan, clock, windows, { ...options, verify_as_built: true });
     // the planning run's windows are not this clock's: it holds when its own windows hold
     result.stability_check.holds = result.stability_check.as_built?.holds ?? false;

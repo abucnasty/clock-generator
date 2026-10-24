@@ -21,6 +21,7 @@ import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
+import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
@@ -267,6 +268,12 @@ export interface BlueprintGenerationResult {
     always_on_reasons?: AlwaysOnReasons;
     /** The windows are the grouped hands rule's (see groupedHandsClock), and whether its inserters share windows; absent for any other clock */
     grouped_hands?: { shared_windows: boolean };
+    /**
+     * Where results come by chance (a target that counts an item destroyed by a recycler): the room of the windows that
+     * carry each result, and of each machine's crafting, against the spread of the game's amounts (random-margins.ts).
+     * Absent for any other build.
+     */
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
 }
 
 /**
@@ -1255,6 +1262,8 @@ interface PlannedClock {
     as_built_run: AsBuiltRun | null;
     /** The groups that take turns in the windows, which the blueprint lays its combinators out by; absent where the windows are not in groups */
     turns?: TurnGroup[];
+    /** The room of the windows that carry a random amount, where there are any (see randomAmountMargins) */
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
 }
 
 /**
@@ -1294,7 +1303,33 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
     const verified = use_belt_pickup_slack ? slack_trial?.verified ?? null : null;
     const windows = verified !== null ? verified.windows
         : withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
-    return { windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room, as_built_run: verified?.run ?? null };
+    // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
+    const room = withRoomForRandomAmounts(plan, windows);
+    return { windows: room.windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room,
+        as_built_run: room.windows === windows ? verified?.run ?? null : null,
+        ...(room.random_margins !== undefined && { random_margins: room.random_margins }) };
+}
+
+/**
+ * A clock's windows with room for the spread of the results that come by chance (see randomAmountMargins): the windows
+ * of the inserters that take such a result out of where a machine places it are lengthened by whole swings where they
+ * have less than RANDOM_MARGIN_SIGMAS standard deviations of room. The same windows, and no margins, for any other build.
+ */
+export function withRoomForRandomAmounts(plan: PlanRun, windows: Map<string, OpenRange[]>): {
+    windows: Map<string, OpenRange[]>;
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
+} {
+    const { logger, run: { crafting_cycle_plan, simulation_context, duration, recipe_lcm } } = plan;
+    const margins = randomAmountMargins(crafting_cycle_plan, simulation_context.entity_registry, windows, duration.ticks, recipe_lcm);
+    if (margins.margins.length === 0 && margins.crafting.length === 0) {
+        return { windows };
+    }
+    const added = margins.margins.filter(it => it.added_hands > 0);
+    for (const margin of added) {
+        logger.log(`Machine ${margin.machine_id}: the windows of ${margin.inserter_ids.join(", ")} get ${margin.added_hands} hand(s) `
+            + `of room each for ${margin.item}, ${margin.sigmas.toFixed(2)} standard deviations of it`);
+    }
+    return { windows: added.length === 0 ? windows : margins.windows, random_margins: { windows: margins.margins, crafting: margins.crafting } };
 }
 
 /** What a clock's export carries beyond the plan and its windows */
@@ -1421,6 +1456,7 @@ export function exportClock(
         belt_pickup_slack_ticks: clock.applied_belt_pickup_slack,
         belt_pickup_slack_left_out: clock.belt_pickup_slack_left_out,
         fuel_hand_room_ticks: extras.fuel_hand_room_ticks ?? Object.fromEntries(clock.fuel_hand_room),
+        ...(clock.random_margins !== undefined && { random_margins: clock.random_margins }),
         belt: clock.belt,
         crafting_cycle_plan,
         loop_windows: extras.loop_windows,
