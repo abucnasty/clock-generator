@@ -11,7 +11,7 @@ import {ownerClockHash} from "./own-clock-fixtures";
  * fail where a pin was moved to follow a selection and its recording was not made again: the generation tests (pull
  * requests to master) find the selection that moved, this finds the pin that was edited to follow it.
  */
-const FAMILIES = ["blocked-output", "car", "container", "front", "grenade", "lithium-silo", "ore-voider", "over-hood", "own", "pickup", "productivity-chain", "steel-wagon", "stupidfathobbit-cell02", "thaeln-cell09"]
+const FAMILIES = ["blocked-output", "car", "container", "front", "grenade", "lithium-silo", "ore-voider", "over-hood", "own", "pickup", "productivity-chain", "scrap-silo", "steel-wagon", "stupidfathobbit-cell02", "thaeln-cell09"]
     .map(family => `${family}-clock-controls.json`);
 const hash = /^[0-9a-f]{64}$/;
 /** Entries whose native summary has no known clock yet: the list may only shrink */

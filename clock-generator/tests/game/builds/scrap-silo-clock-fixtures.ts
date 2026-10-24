@@ -11,7 +11,7 @@ import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {FactorioDataService} from "../../../src/data";
 import {RecipeMetadata, yieldOf} from "../../../src/entities";
 import {composeProbeSource} from "../helpers/probe-source";
-import {clockHash} from "./clock-controls";
+import {clockHash, readControls} from "./clock-controls";
 
 /**
  * The scrap silo (`recycling/scrap-silo`): a recycler on scrap at +300% productivity destroys 2 scrap a second and places
@@ -82,6 +82,12 @@ interface ScrapSiloReport {
 }
 
 export interface ScrapSiloSummary {
+    generationVerdict: string;
+    /** Scrap destroyed a second, the target */
+    target: number;
+    period: number;
+    /** Scrap brought in a period at the target */
+    expected: number;
     clock: {id: string; label: string; period: number; expected: number; verdict: string; wake_ups_per_minute: number; sha256: string};
     baseline: {
         periods: number; minutes: number;
@@ -156,6 +162,7 @@ export function summarize(report: ScrapSiloReport, config: Config, clock: ScrapS
     });
     const last = report.periods.slice(-4);
     return {
+        generationVerdict: clock.verdict, target: config.target_output.items_per_second, period: clock.period, expected: clock.expected,
         clock,
         baseline: {
             periods: baseline.length, minutes, at_target: baseline.filter(it => it.fresh === clock.expected).length,
@@ -200,6 +207,11 @@ export async function captureScrapSilo(variant: ScrapSiloCase): Promise<ScrapSil
         const exported = selected.result.subtick ?? selected.result;
         const period = selected.result.simulation_duration.ticks;
         const sha256 = clockHash(exported);
+        const controls = readControls<{cases: Record<string, {recorded: {clock_sha256: string}}>}>("scrap-silo-clock-controls.json");
+        const recorded = controls.cases[variant.name]?.recorded.clock_sha256;
+        if (recorded && process.env.SCRAP_SILO_CALIBRATE !== "1") {
+            expect(sha256, `the clock ${variant.name} runs is not the one its summary in scrap-silo-clock-controls.json was recorded on: record it again`).toBe(recorded);
+        }
         const clock = {id: selected.id, label: selected.label, period, expected: config.target_output.items_per_second * period / 60,
             verdict: selected.verdict, wake_ups_per_minute: selected.assessment.wake_ups_per_minute ?? 0, sha256};
         fs.writeFileSync(path.join(capture.directory, "clock.json"), JSON.stringify({...clock, windows: selected.result.clock_windows,

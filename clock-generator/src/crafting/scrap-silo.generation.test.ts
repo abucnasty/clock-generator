@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { ClockAlternativesResult, generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { clockHash, readControls } from "../../tests/game/builds/clock-controls";
 
 // The scrap silo sample: a recycler on scrap at +300% productivity destroys 2 scrap a second and places its twelve
 // results into a rocket silo, one filter stack inserter for each result out of it. The results come too rarely for the
@@ -43,4 +44,18 @@ describe("scrap recycled into a rocket silo", () => {
         const [in_turn, at_once] = generated.alternatives.map(it => it.assessment.wake_ups_per_minute!);
         expect(in_turn).toBeLessThan(at_once / 3);
     });
+});
+
+// the clocks the game's four hours were recorded on (tests/game/builds/scrap-silo-clock-controls.json)
+describe("the clocks the scrap silo's hours in the game ran", () => {
+    const controls = readControls("scrap-silo-clock-controls.json");
+    for (const [name, id] of [["scrap-silo-results-in-turn", "results-in-turn"], ["scrap-silo-all-results-at-once", "all-results-at-once"]] as const) {
+        test(`${name} is still made`, () => {
+            const pin = controls.cases[name].generation!;
+            const alternative = generated.alternatives.find(it => it.id === id)!;
+            expect(clockHash(alternative.result.subtick ?? alternative.result), "the clock recorded in the game").toBe(pin.clock_sha256);
+            expect(alternative.verdict).toBe(pin.verdict);
+            expect(alternative.result.simulation_duration.ticks).toBe(pin.period);
+        });
+    }
 });
