@@ -256,6 +256,8 @@ export interface BlueprintGenerationResult {
      * from the chest (see chestDrillWindows), or why it stays always enabled. Absent when the build has none.
      */
     chest_drills?: ChestDrillClock[];
+    /** The windows are the grouped hands rule's (see groupedHandsClock), and whether its inserters share windows; absent for any other clock */
+    grouped_hands?: { shared_windows: boolean };
 }
 
 /**
@@ -301,6 +303,11 @@ export interface GenerateClockOptions {
     on_progress_detail?: (detail: string) => void;
     /** Called with each clock alternative that could not be made, and the generator's reason */
     on_not_made?: (clock: NotMadeClock) => void;
+    /**
+     * Make the clock with windows shared by the inserters that take into their machines at the same moment (see
+     * groupedHandsClock), or not at all: it needs `verify_as_built`, and throws where no shared windows hold.
+     */
+    shared_windows?: boolean;
 }
 
 /** What a machine holds when a run starts: see GenerateClockOptions.start_stock */
@@ -1161,8 +1168,8 @@ export interface PlanRun {
     /** The windows read off the planning run, before any room is added to them (see `clockOfPlan`) */
     unslacked_windows: Map<string, OpenRange[]>;
     /**
-     * The items each inserter or drill moves, by entity id: they keep inserters with identical windows from being
-     * deduplicated into one combinator. An inserter with a clock of its own names the items it carries itself.
+     * The items each inserter or drill moves, by entity id: they keep the inserters outside the plan (a fuel or by-product
+     * inserter) with identical windows from being deduplicated into one combinator when they carry different items.
      */
     item_names: Map<string, string>;
     /** The EntityId of every entity, the history's own where it has one: the blueprint looks up swing counts by EntityId identity */
@@ -1187,7 +1194,7 @@ export function planRun(config: Config, options: PlanRunOptions = {}): PlanRun {
         // the blueprint looks up swing counts by EntityId identity, so prefer the history's own keys
         entity_ids.set(entity_id.id, entity_id);
     }
-    // item names keep inserters with identical windows from being deduplicated into one combinator
+    // item names keep inserters outside the plan with identical windows from being deduplicated into one combinator
     const item_names = new Map(Array.from(final_history.entries(), ([entity_id, transfers]) =>
         [entity_id.id, Array.from(new Set(transfers.map(t => t.item_name))).sort().join(",")] as const
     ));
@@ -1317,7 +1324,8 @@ export function exportClock(
             InventoryTransferHistory.removeDuplicateEntities(new InventoryTransferHistory(new Map(
                 Array.from(clocked.entries()).map(([key, ranges]) => [
                     entity_ids.get(key)!,
-                    ranges.map(tick_range => ({ item_name: item_names.get(key) ?? key, tick_range, amount: 0 })),
+                    // the entities of the plan share a combinator whatever they carry; one outside it, by the items it carries
+                    ranges.map(tick_range => ({ item_name: inserter_clocks.has(key) ? item_names.get(key) ?? key : "", tick_range, amount: 0 })),
                 ])
             ))),
             simulation_context.entity_registry,

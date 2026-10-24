@@ -15,13 +15,13 @@ export type DeciderOrder = "built" | "reversed";
  * updates the one whose decider was built last first (docs/simulator.md, "When a waiting inserter acts"), so the
  * order decides which of them sees what the other did in that tick.
  *
- * As `createSignalPerInserterBlueprint` builds them: one decider for each set of windows and item names that some
- * entity of `windows` has, standing for the first entity with it, in the order of those entities' ids as strings;
+ * As `createSignalPerInserterBlueprint` builds them: one decider for each set of windows that some entity of the plan
+ * has, and for each set of windows and items of the inserters outside it, standing for the first entity with it, in the
+ * order of those entities' ids as strings;
  * then one for each window of the fuel inserters on clocks of their own, by modulus and window, their inserters taken
  * in the order of their ids. `windows` are those of `withInserterClocks`, in the order the blueprint's history has
- * them. The blueprint tells inserters with the same windows apart by the items their transfers carry, which a check of
- * the windows does not have: an inserter's filtered items stand in for them, which tell them apart the same way on
- * every sample (decider-order.generation.test.ts).
+ * them. The blueprint tells the inserters outside the plan with the same windows apart by the items they carry: an
+ * inserter's filtered items stand in for them (decider-order.generation.test.ts).
  */
 export function deciderBuildOrder(
     windows: ReadonlyMap<string, readonly OpenRange[]>,
@@ -33,7 +33,8 @@ export function deciderBuildOrder(
     const representative_of = new Map<string, string>();
     const by_signature = new Map<string, string>();
     for (const [key, ranges] of windows) {
-        const item_name = filters.get(key) ?? key;
+        // the entities of the plan share a decider whatever they carry; one outside it (a by-product inserter) by its items
+        const item_name = inserter_clocks.has(key) ? filters.get(key) ?? key : "";
         const signature = ranges.map(range => `${item_name}:${range.start_inclusive}-${range.end_inclusive}`).sort().join("|");
         const representative = by_signature.get(signature) ?? key;
         by_signature.set(signature, representative);
