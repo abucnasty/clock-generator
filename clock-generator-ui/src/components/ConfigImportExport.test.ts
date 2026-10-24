@@ -102,7 +102,7 @@ it('says in the paste preview that a side-loaded pickup is out of scope', async 
     expect(lines.some(line => line.includes('has not been calibrated'))).toBe(false);
 });
 
-it('says in the paste preview which drop side-loads onto another belt, in the owner\'s words, only while importing those inserters', async () => {
+it('says in the paste preview which drop side-loads onto another belt, in the approved wording, only while importing those inserters', async () => {
     incoming.inserters = [{ source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop_capture: { status: 'side-loaded', tiles: 3, sidecar_version: '0.13.0' } } }];
     incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
     vi.stubGlobal('navigator', { clipboard: { readText: async () => JSON.stringify({

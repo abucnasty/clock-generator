@@ -115,7 +115,7 @@ export const CHART_NAMES = {
 export const rowActionsName = (label: string) => `More actions for ${label}`;
 export const selectRowName = (label: string) => `Select ${label}`;
 
-/** The name of a recipe field: "Recipe, Machine 2" (the owner is the row's name, or "Target Output") */
+/** The name of a recipe field: "Recipe, Machine 2" (`owner` is the row's name, or "Target Output") */
 export function recipeName(owner: string): string {
     return `Recipe, ${owner}`;
 }

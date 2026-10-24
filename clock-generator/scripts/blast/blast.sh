@@ -20,7 +20,7 @@
 # script are copied into its tests/game/builds/.scratch/ (gitignored) and run there, so a worktree from before these
 # scripts can be measured too. The key's engine half is key.py's; its jobs half the job list's hash.
 #
-# Env: BLAST_GROUPS, BLAST_SKIP (default REAL_THAELN_CELL09: Thaeln's cell 09 is out of scope for 0.19.0, owner
+# Env: BLAST_GROUPS, BLAST_SKIP (default REAL_THAELN_CELL09: Thaeln's cell 09 is out of scope for 0.19.0, decided
 # 2026-10-20; it is in no cache entry), BLAST_ONLY (run only; never cached), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository).

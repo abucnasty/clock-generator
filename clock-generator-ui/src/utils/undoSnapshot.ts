@@ -7,7 +7,7 @@ import type { MessageInput } from './messages';
 import { exampleTitle, type ExampleBuild } from './exampleBuilds';
 
 // Every text of the Undo messages, so that the copy changes in one place. An Undo message has no timer: it stays until
-// the build is edited, another action offers Undo, or it is closed (the owner, 2026-10-14). The notice after it has one.
+// the build is edited, another action offers Undo, or it is closed (decided 2026-10-14). The notice after it has one.
 const UNDO_NOTICE_DURATION_MS = 8_000;
 const UNDO_LABEL = 'Undo';
 export const UNDO_RESET_MESSAGE = 'Build reset.';

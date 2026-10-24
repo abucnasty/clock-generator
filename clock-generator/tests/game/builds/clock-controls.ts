@@ -21,7 +21,7 @@ export interface Recorded {
     clock_sha256?: string;
     /**
      * How the hash is known: a retained capture whose summary equals `native`, the history of the pin, or the clock
-     * regenerated on the engine of the recording's commit; or `built`: the clock is one the owner built (a build's own clock,
+     * regenerated on the engine of the recording's commit; or `built`: the clock is hand-made (a build's own clock,
      * named to the harness), so there is no pin, and the hash is that of `builtClockIdentity`, which the tests recompute
      * from the blueprint
      */
@@ -109,19 +109,19 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
     for (const [name, control] of Object.entries(cases)) {
         const {recorded, generation} = control;
         if (name in built) {
-            // an owner's built clock is no selection and has no pin: the recording names the clock it ran, and it has to be
+            // a hand-made clock is no selection and has no pin: the recording names the clock it ran, and it has to be
             // the clock of the blueprint the test builds
-            if (recorded.clock_basis !== "built") found.push(`${name}: is named as a clock the owner built and its recorded.clock_basis is not "built"`);
-            if (generation) found.push(`${name}: a clock the owner built is no selection and has no generation pin`);
-            if (recorded.carried !== undefined) found.push(`${name}: a clock the owner built has no pin to carry`);
-            if (!recorded.clock_sha256 || !hash.test(recorded.clock_sha256)) found.push(`${name}: recorded.clock_sha256 is missing: it is the identity of the clock the owner built`);
+            if (recorded.clock_basis !== "built") found.push(`${name}: is named as a hand-made clock and its recorded.clock_basis is not "built"`);
+            if (generation) found.push(`${name}: a hand-made clock is no selection and has no generation pin`);
+            if (recorded.carried !== undefined) found.push(`${name}: a hand-made clock has no pin to carry`);
+            if (!recorded.clock_sha256 || !hash.test(recorded.clock_sha256)) found.push(`${name}: recorded.clock_sha256 is missing: it is the identity of the hand-made clock`);
             else if (recorded.clock_sha256 !== built[name]) {
-                found.push(`${name}: the owner's clock in the blueprint is ${built[name].slice(0, 12)} and the native summary was recorded on ${recorded.clock_sha256.slice(0, 12)}: record it again in the game`);
+                found.push(`${name}: the hand-made clock in the blueprint is ${built[name].slice(0, 12)} and the native summary was recorded on ${recorded.clock_sha256.slice(0, 12)}: record it again in the game`);
             }
             continue;
         }
         if (recorded.clock_basis === "built") {
-            found.push(`${name}: recorded.clock_basis is "built" and the entry is not named as a clock the owner built`);
+            found.push(`${name}: recorded.clock_basis is "built" and the entry is not named as a hand-made clock`);
             continue;
         }
         if (untied.includes(name)) {

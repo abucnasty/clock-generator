@@ -53,7 +53,7 @@ describe('GLOSSARY', () => {
         expect(GLOSSARY.filter(entry => entry.expert)).toHaveLength(1);
     });
 
-    it('defines no term with a word the owner replaced', () => {
+    it('defines no term with a replaced word', () => {
         for (const entry of GLOSSARY) {
             expect(entry.definition).not.toMatch(/Assembler|potential clock|transfer|backpressure/i);
             if (entry.id !== 'lcm') {

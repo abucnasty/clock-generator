@@ -16,7 +16,7 @@ const grenade = async (change?: (config: Config) => void): Promise<Config> => {
     return config;
 };
 const starts = (ticks: Record<number, number>) => new Map(Object.entries(ticks).map(([id, tick]) => [Number(id), [tick]]));
-/** the owner's clock: a line's inserters together */
+/** the hand-made clock: a line's inserters together */
 const BY_LINE = starts({ 1: 6, 2: 6, 7: 62, 8: 62 });
 /** the generated clock: the first inserter of each line together, the second together */
 const BY_PLACE = starts({ 1: 6, 7: 6, 2: 62, 8: 62 });

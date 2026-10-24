@@ -238,7 +238,7 @@ helpers.write_file("sideload-drop-cases.txt", table.concat(report, "\\n") .. "\\
             expect(read[name], name).toBeDefined();
             expect(read[name]).toBe(expected);
         }
-        // the owner's lithium build's export in the repository is this one, as the game writes it
+        // the lithium build's export in the repository is this one, as the game writes it
         const sample = path.join(path.dirname(ConfigPaths.REAL_OWNER_LITHIUM_SILO), "lithium-silo.sidecar-export.json");
         const exported = JSON.parse(fs.readFileSync(path.join(scratch, "script-output", "lithium-silo.sidecar-export.json"), "utf8"));
         if (process.env.SIDELOAD_DROP_WRITE_SAMPLE) fs.writeFileSync(sample, JSON.stringify(exported, null, 2) + "\n");

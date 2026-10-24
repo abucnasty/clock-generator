@@ -1,4 +1,4 @@
--- Observe a clock on the owner's grenade build (one copy, or seven on one belt): the build's own clock or a generated one, found by
+-- Observe a clock on the grenade build (one copy, or seven on one belt): the build's own clock or a generated one, found by
 -- its description. Output is counted per clock period from the drops of the output inserters of the assemblers making the
 -- product, and per output; the ticks an output inserter waits for room on the belt are counted too. Interventions
 -- (options.interventions, in periods of the clock): the foundries stopped in the first (the iron plates stop), the output

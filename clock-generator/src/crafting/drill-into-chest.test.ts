@@ -7,7 +7,7 @@ import { generateClockAlternatives } from './alternatives';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
-// a big mining drill on iron ore, as the owner's car build has it: 4 speed modules and 4 beacons (speed bonus 17.5);
+// a big mining drill on iron ore, as the car build has it: 4 speed modules and 4 beacons (speed bonus 17.5);
 // at 8000 levels of research it mines 617 ore a tick (its bar moves 0.77 a tick, its bonus bar 616.7)
 const drill = (target: { type: 'chest' | 'machine'; id: number }, overrides?: object) => ({
     id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 17.5, productivity: 80000, target, ...(overrides ? { overrides } : {}),

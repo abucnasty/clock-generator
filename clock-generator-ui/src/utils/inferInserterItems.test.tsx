@@ -129,7 +129,7 @@ it('explains empty automatic slots without labelling explicit filters as uninfer
 });
 
 describe('a container filled by drills', () => {
-    // the owner's car build: a big mining drill drops iron ore into a car, two inserters take it to two furnaces
+    // the car build: a big mining drill drops iron ore into a car, two inserters take it to two furnaces
     const car = () => configToFormData({
         target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0 }, { id: 2, recipe: 'iron-plate', crafting_speed: 5, productivity: 0 }],

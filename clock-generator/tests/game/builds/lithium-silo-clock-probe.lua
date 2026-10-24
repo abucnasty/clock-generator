@@ -1,4 +1,4 @@
--- Observe a generated clock on the owner's lithium plate build, whose rocket silo is a chest between the cryogenic plants
+-- Observe a generated clock on the lithium plate build, whose rocket silo is a chest between the cryogenic plants
 -- that fill it and the furnaces that empty it. Output is counted per clock period from the drops of the inserters that
 -- take from the furnaces. The interventions: the first and the third cut the holmium plates (both infinity chests are set
 -- to hold none), the second blocks the output (the chest the loader fills keeps what it gets and is filled with wooden

@@ -96,7 +96,7 @@ export function drillBlueprint(variant: DrillCase): string {
         items: {in_inventory: Array.from({length: count}, (_, stack) => ({inventory: 2, stack: first + stack}))}}] : [];
     const drill = {name: "big-mining-drill", position: {x: 0.5, y: 0.5}, direction: 4, items: [...modules("speed-module-3", variant.modules, 0),
         ...modules("productivity-module-3", variant.productivity_modules ?? 0, variant.modules)]};
-    // the owner's car build's geometry (the containers family), 78 of the car's 80 slots filtered to copper plates
+    // the car build's geometry (the containers family), 78 of the car's 80 slots filtered to copper plates
     const sink = variant.sink === "car"
         ? {name: "car", position: {x: 4.668, y: 1.008}, orientation: 0.25,
             trunk_inventory: {filters: Array.from({length: 78}, (_, index) => ({index: index + 1, name: "copper-plate"}))}}

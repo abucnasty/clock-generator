@@ -7,7 +7,7 @@ import { InserterDropMode, InserterPickupMode } from "../../control-logic/insert
 
 /**
  * The fields holding a plain value in what the simulation keeps, by owner (an entity's state by its type, a mode or
- * an evaluator by its class; a mode's status names it). A field added to one of them goes into the owner's state key
+ * an evaluator by its class; a mode's status names it). A field added to one of them goes into its owner's state key
  * when it drives the simulation, and in any case into this list.
  */
 const PLAIN_FIELDS: Record<string, string[]> = {

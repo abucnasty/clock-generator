@@ -75,7 +75,7 @@ describe('installSteps', () => {
         expect(detailOf(installSteps(plain), 'lock')).toContain('It is off');
     });
 
-    it('does not state what the owner has not confirmed: carrying the wire along power poles', () => {
+    it('does not state what is not confirmed: carrying the wire along power poles', () => {
         const steps = installSteps({ book: true, wiring: [[1]], drills: [[1]] });
         expect(steps.map(it => it.detail).join(' ')).not.toMatch(/power pole/i);
     });

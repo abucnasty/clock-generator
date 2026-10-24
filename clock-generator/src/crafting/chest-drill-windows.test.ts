@@ -10,7 +10,7 @@ import { chestDrillFallbackConfig, chestDrillWindows, chestDrillWindowsKeepUp, h
 const stack = (source: object, sink: object) => ({ source, sink, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 });
 
 interface Build {
-    /** The drill's speed bonus and productivity in percent: the owner's car drill by default, 617 ore a tick */
+    /** The drill's speed bonus and productivity in percent: the car build's drill by default, 617 ore a tick */
     speed_bonus?: number;
     productivity?: number;
     chest?: object;
@@ -50,7 +50,7 @@ const windowsOf = (entries: Record<string, [number, number][]>) =>
     new Map(Object.entries(entries).map(([key, ranges]) => [key, ranges.map(([start, end]) => OpenRange.from(start, end))]));
 const pairs = (ranges: OpenRange[] | undefined) => ranges?.map(range => [range.start_inclusive, range.end_inclusive]);
 
-/** The owner's car clock with 3 output swings: the takers in ticks 28-41 of a 72-tick period, 32 ore each */
+/** The car build's clock with 3 output swings: the takers in ticks 28-41 of a 72-tick period, 32 ore each */
 const CAR_WINDOWS = { 'inserter:1': [[28, 41]], 'inserter:2': [[28, 41]], 'inserter:3': [[1, 34]], 'inserter:4': [[1, 34]] } as Record<string, [number, number][]>;
 
 describe('the windows of a drill into a chest', () => {

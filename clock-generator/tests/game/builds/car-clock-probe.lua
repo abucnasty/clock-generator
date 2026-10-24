@@ -1,4 +1,4 @@
--- Observe a generated clock on the owner's iron plate build, whose car is a chest between the mining drill that fills it
+-- Observe a generated clock on the iron plate build, whose car is a chest between the mining drill that fills it
 -- and the two furnaces that empty it. Output is counted per clock period from the drops of the inserters that take from
 -- the furnaces. The interventions: the first and the third stop the drill (it is disabled by script) until the car has run
 -- dry, the second blocks the output (the chest the loader fills keeps what it gets and is filled with wooden chests,

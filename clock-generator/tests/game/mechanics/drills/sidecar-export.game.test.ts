@@ -75,7 +75,7 @@ test("Sidecar exports a drill that has not mined or dropped yet", async context 
         });
         const report = JSON.parse(fs.readFileSync(path.join(scratch, "game/script-output/sidecar-export.json"), "utf8")) as Report;
 
-        // 1. the owner's build: the drill fast-replaced by a legendary one, the wagon's ore slots full
+        // 1. the build as given: the drill fast-replaced by a legendary one, the wagon's ore slots full
         const [before] = list(report.before.export.drills.configs);
         expect(report.before.drill.quality).toBe("normal");
         expect(before.target).toEqual(report.before.targets[0]);
