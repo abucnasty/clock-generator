@@ -14,7 +14,7 @@ const windowsOf = (config: Config, by_drops = false) => {
     const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: 1 } }, { logger: quiet });
     const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
     const drops = by_drops ? dropTieBreak(config, duration.ticks) : null;
-    return () => groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, plan.unslacked_windows, true, undefined, drops);
+    return () => groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true, undefined, drops);
 };
 /** The ticks at which each output inserter of a window set starts its hand */
 const outputStarts = (windows: Map<string, { start_inclusive: number }[]>) =>
@@ -43,6 +43,27 @@ describe("hands in groups", () => {
         // a drill's window opens with its machine's inputs
         expect(ranges(windows, "drill:1")[0][0]).toBe(2);
         expect(ranges(windows, "drill:2")[0][0]).toBe(58);
+    });
+
+    it("gives the drills of one group one window, as long as the ticks the slowest of them needs to mine its machine's coal", () => {
+        // 160 coal a period for a machine against 125 a tick mined (drills 1 and 3, speed bonus 17.725) or 134 (drills 2 and 4, 19.0575):
+        // two ticks, which is also the least a drop needs; the drills of a group have the same window though their speeds differ
+        const windows = windowsOf(config, true)();
+        const [first, second] = [ranges(windows, "drill:1"), ranges(windows, "drill:2")];
+        const [third, fourth] = [ranges(windows, "drill:3"), ranges(windows, "drill:4")];
+        expect(first).toEqual(second);
+        expect(third).toEqual(fourth);
+        expect([first, third]).toEqual([[[2, 3]], [[58, 59]]]);
+    });
+
+    it("lengthens the window of a group to the longest need of its drills", () => {
+        // drill 1 at a speed bonus of 1 mines 13.35 coal a tick, so its machine's 160 take 12 ticks; drill 2 still needs 2, and has the 12 too
+        const slow = { ...config, drills: { ...config.drills!, configs: config.drills!.configs.map(drill => drill.id === 1 ? { ...drill, speed_bonus: 1 } : drill) } };
+        const windows = windowsOf(slow, true)();
+        expect(ranges(windows, "drill:1")).toEqual(ranges(windows, "drill:2"));
+        expect(ranges(windows, "drill:1")).toEqual([[2, 13]]);
+        expect(ranges(windows, "drill:3")).toEqual([[58, 59]]);
+        expect(ranges(windows, "drill:4")).toEqual([[58, 59]]);
     });
 
     it("puts the machines whose hands drop side by side on a shared belt in a group, where the places of the inserters are known", () => {
@@ -109,7 +130,7 @@ describe("hands in a chain of machines", () => {
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         expect(duration.ticks).toBe(168);
         // the way the sample's clock is made: a hand's worth for the plastic, whose foundries would keep a surplus hand, and the compact order
-        const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, plan.unslacked_windows, true,
+        const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
             { surplus_guard: true, feeder_offset: 1 });
         // three hands of 12 ticks onto the belt; then, as the last of them starts, the units and frames (two hands of 11, a third start the
         // limit refuses, and the belt pickup slack of 4); the low density structure behind them (two hands of 8 and a third start); the plastic
@@ -140,7 +161,7 @@ describe("hands that fill the cycle", () => {
         const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         expect(duration.ticks).toBe(24);
-        const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, plan.unslacked_windows, true,
+        const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
             { surplus_guard: false, feeder_offset: 1 });
         // three hands of 8 ticks and a start more are 26 ticks: the circuits into the processing unit machines (3, 4, 7, 8), the iron and
         // the cable into the circuit machines (5, 6, 13, 14, 15, 18, 19, 20) are busy all the time
