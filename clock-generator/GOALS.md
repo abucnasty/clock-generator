@@ -5,6 +5,8 @@
 
 The goals above are listed in priority order.
 
+Both are worked toward arithmetic first (decided 2026-10-23): what plain arithmetic settles of a plan (a source's buffer and rate against its takers' draws, a machine's stock against the gap until its next window, a window's length against its hands) is settled before anything is simulated, so that fewer clocks are tried for a build. A rule that computes a placement is preferred to one that tries placements in turn, and a rule that deletes code to one that adds it: the simulator judges the result, it does not search for it ([working rules](docs/working-rules.md), rule 6).
+
 Goal 2 was first written as "minimize active inserter windows whenever possible to reduce update time in factorio". Its aim is the update time itself (decided 2026-10-15: "The specific goal is to reduce UPS. Goal as stated is outdated."). The selection does not measure update time yet: it ranks clocks by their wake-ups ("Wake-ups, the measure for goal 2"), which stand in for it. The wake-ups stay the measure until a plan to measure update time replaces them.
 
 ### Goal 1: match the target rate exactly
