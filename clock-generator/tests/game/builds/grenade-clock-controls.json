@@ -382,7 +382,8 @@
         "frozen_head": "cef5bacf",
         "note": "recorded before the PR was opened; pr is set when it is",
         "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042",
-        "clock_basis": "capture"
+        "clock_basis": "capture",
+        "carried": "1f33b33f: the combinators stand in a block for each group; only their positions, the order the green wire runs along the row and the text moved, so the entities, conditions, outputs and the order they are built in are the recorded clock's"
       },
       "native": {
         "generationVerdict": "stable",
@@ -571,16 +572,16 @@
           "rate": 240,
           "supply": null
         },
-        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042"
+        "clock_sha256": "a0b0cff946b4d0fa1d461ff113344e42cb58a6d9c15ba37709729bcb147b7a71"
       }
     },
     "generated-full-build": {
       "recorded": {
         "pr": 0,
-        "commit": "cef5bacf",
-        "frozen_head": "cef5bacf",
+        "commit": "1f33b33f",
+        "frozen_head": "1f33b33f",
         "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042",
+        "clock_sha256": "a0b0cff946b4d0fa1d461ff113344e42cb58a6d9c15ba37709729bcb147b7a71",
         "clock_basis": "capture"
       },
       "native": {
@@ -770,7 +771,7 @@
           "rate": 240,
           "supply": null
         },
-        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042"
+        "clock_sha256": "a0b0cff946b4d0fa1d461ff113344e42cb58a6d9c15ba37709729bcb147b7a71"
       }
     }
   }
