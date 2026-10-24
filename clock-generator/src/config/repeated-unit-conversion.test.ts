@@ -122,6 +122,24 @@ describe('complete repeated-unit conversion', () => {
         expect(planRepeatedUnitConversion(subsystem)).toMatchObject({ kind: 'unavailable', reason: { code: 'unassigned-entities' } });
     });
 
+    it('refuses units of a machine that places its results into a container', () => {
+        // two ore voider cells side by side: each recycler places its returns into a car of its own
+        const unit = (n: number) => ({
+            machine: { id: n, recipe: 'iron-ore-recycling', crafting_speed: 16.875, productivity: 0, prototype: 'recycler', result_target: { type: 'chest' as const, id: 2 * n } },
+            inserters: [
+                { id: 2 * n - 1, source: { type: 'chest' as const, id: 2 * n }, sink: { type: 'machine' as const, id: n }, stack_size: 16, filters: ['iron-ore'] },
+                { id: 2 * n, source: { type: 'chest' as const, id: 2 * n - 1 }, sink: { type: 'machine' as const, id: n }, stack_size: 16, filters: ['iron-ore'] },
+            ],
+            chests: [{ type: 'infinity-chest', id: 2 * n - 1, item_filter: [{ item_name: 'iron-ore', request_count: 100 }] }, { type: 'car', id: 2 * n }],
+        });
+        const units = [unit(1), unit(2)];
+        const source = ConfigSchema.parse({
+            target_output: { recipe: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' },
+            machines: units.map(it => it.machine), inserters: units.flatMap(it => it.inserters), belts: [], chests: units.flatMap(it => it.chests),
+        }) as Config;
+        expect(planRepeatedUnitConversion(source)).toMatchObject({ kind: 'unavailable', reason: { code: 'unsupported-boundary' } });
+    });
+
     it('fails closed on unrepresentable exact Copies, unsupported fields and execution order', () => {
         const source = eightUnits();
         source.target_output.copies = Number.MAX_SAFE_INTEGER;
