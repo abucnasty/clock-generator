@@ -11,15 +11,15 @@ import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The owner's grenade build (`REAL_OWNER_GRENADE`, 240 grenades a second over 7 copies): a copy has four assembling machines, a
+ * The grenade build (`REAL_OWNER_GRENADE`, 240 grenades a second over 7 copies): a copy has four assembling machines, a
  * foundry that fills them with iron plates and four drills that drop coal into them; the grenades of a copy go onto one belt
- * line, and the seven copies, 12 tiles apart, put them on one belt whose two lanes are exactly full. The owner's clock is in
+ * line, and the seven copies, 12 tiles apart, put them on one belt whose two lanes are exactly full. The hand-made clock is in
  * the sample's blueprints: a counter of the clock signal that counts 0 to 111 (112 ticks) and six window deciders (see the
  * sample's README).
  *
- * Two clocks run on each of two builds, the sample's one copy and its full build of seven copies: the owner's clock, kept as the
+ * Two clocks run on each of two builds, the sample's one copy and its full build of seven copies: the hand-made clock, kept as the
  * build came, and the generator's selected clock for the config, wired to the inserters and drills of every copy with the
- * owner's deciders taken out.
+ * hand-made clock's deciders taken out.
  */
 export interface GrenadeClockCase {
     name: string;
@@ -47,7 +47,7 @@ export const GENERATED_ALTERNATIVE = "planned-belt-slack";
 
 const scaffoldOf = (build: GrenadeClockCase["build"]) => fs.readFileSync(path.join(FOLDER, BUILDS[build].file), "utf8").trim();
 
-/** The sha256 of the identity of the owner's clock in a blueprint of the sample (`builtClockIdentity`): what its control names it by */
+/** The sha256 of the identity of the hand-made clock in a blueprint of the sample (`builtClockIdentity`): what its control names it by */
 export function ownerClockHash(build: GrenadeClockCase["build"]): string {
     return createHash("sha256").update(JSON.stringify(builtClockIdentity(scaffoldOf(build), BUILDS[build].clock))).digest("hex");
 }

@@ -171,7 +171,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // Two logistic science assemblers (legendary, 4 legendary productivity modules, 10 legendary beacons: 63.0078) fed
     // transport belts by one foundry (8 beacons) between them, whose plates and gears come from two casting foundries (6
     // beacons each) on molten iron from infinity pipes; each assembler takes inserters from a turbo belt of its own and
-    // puts its packs onto another. 6 copies of it make 240 a second. The owner's build of 2026-10-21.
+    // puts its packs onto another. 6 copies of it make 240 a second. The build was given 2026-10-21.
     "logistic science with direct insertion": {
         scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-direct-insert-scaffold.txt"),
         config: ConfigPaths.LOGISTIC_SCIENCE_DI,
@@ -205,7 +205,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         settle_ticks: 4800,
         backed_up_belts: true,
     },
-    // One of the three copies of the owner's inserter build of 2026-10-21, 240 inserters a second over the three: an
+    // One of the three copies of the inserter build given 2026-10-21, 240 inserters a second over the three: an
     // inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear assembler, which two
     // more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line of its own; the ore, so the
     // plates, gears and the circuits from infinity chests, is uncommon. The output inserter runs all the time.
@@ -251,7 +251,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     },
     // One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes of all four
     // engines, all legendary with legendary modules and 40 legendary beacons: 5.5 copies of it make 240 a second. The
-    // owner's build of 2026-10-15. Without a clock it makes 44.0 a second, a hair over the 43.636 the target asks of one
+    // build was given 2026-10-15. Without a clock it makes 44.0 a second, a hair over the 43.636 the target asks of one
     // block; with the selected clock, 256 in each of 102 periods of 352 ticks, recorded 2026-10-15.
     "chemical science with a shared foundry": {
         scaffold: path.join(SAMPLES, "science", "chemical-science", "chemical-science-shared-foundry-scaffold.txt"),
@@ -338,7 +338,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 7200,
     },
-    // The owner's lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
+    // The lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
     // 80 a second from one copy. The warm-up fills the silo, which the config exports empty.
     "lithium plates through a rocket silo": {
         scaffold: path.join(SAMPLES, "real", "owner", "lithium-silo", "lithium-silo-scaffold.txt"),
@@ -349,7 +349,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         wake_ups_open: "a chest end wakes no one in the simulator, so the inserters that fill the silo count 0 where the game's states give "
             + "10 a minute each, as their cryogenic plants wake them (to be measured for every container): ",
     },
-    // The owner's iron plate build: a big mining drill drops ore into a car taken as a chest, and two furnaces empty it; 80 a
+    // The iron plate build: a big mining drill drops ore into a car taken as a chest, and two furnaces empty it; 80 a
     // second from one copy. The harness puts the ore under the drill; at its research the drill keeps the car full.
     "iron plates through a car": {
         scaffold: path.join(SAMPLES, "real", "owner", "car", "car-scaffold.txt"),
@@ -361,7 +361,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
             + "furnaces 100 times a minute each, and 0.0 from other starts; the game's states give 3.8 on 2026-10-22 (1.3 for each "
             + "output inserter, 0.6 for each inserter from the car), for a reason not yet found: ",
     },
-    // The owner's steel build: one cargo wagon is a hub that a big mining drill fills with ore, two furnaces take from and
+    // The steel build: one cargo wagon is a hub that a big mining drill fills with ore, two furnaces take from and
     // put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt; 26 a second
     // from one copy. The harness puts the ore under the drill and builds the wagon after its rails.
     "steel plates around a cargo wagon": {

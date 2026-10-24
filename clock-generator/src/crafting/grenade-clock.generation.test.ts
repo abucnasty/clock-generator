@@ -7,8 +7,8 @@ import {loadConfigFromFile} from "../config/loader";
 import {GENERATED_ALTERNATIVE, grenadeClockCases} from "../../tests/game/builds/grenade-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
-// the owner's grenade build (REAL_OWNER_GRENADE): the generated clock pinned beside the in-game recording of it on one copy
-// and on the full build of seven, and the owner's own clock judged by the simulator
+// the grenade build (REAL_OWNER_GRENADE): the generated clock pinned beside the in-game recording of it on one copy
+// and on the full build of seven, and the hand-made clock judged by the simulator
 const controls = readControls("grenade-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let generated: ClockAlternativesResult;
@@ -30,7 +30,7 @@ test("grenade: the 112-tick clock holds the target and is selected; the longer o
     expect(generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE).every(it => it.verdict === "unstable")).toBe(true);
 });
 
-test("grenade: the owner's clock, as windows, holds in the simulator and gets back after every loss", async () => {
+test("grenade: the hand-made clock, as windows, holds in the simulator and gets back after every loss", async () => {
     const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
     const range = (start: number, end: number) => [{start, end}];
     // counted 0 to 111; a window decider reads the counter, so its first value is the window's first tick

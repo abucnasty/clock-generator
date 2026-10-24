@@ -1,5 +1,5 @@
--- Observe a clock on the owner's inserter build, three copies of it on ore lines that are drained (the lines run on past
--- the last copy into loaders and void chests): the owner's own clock or a generated one, found by its description. Output
+-- Observe a clock on the inserter build, three copies of it on ore lines that are drained (the lines run on past
+-- the last copy into loaders and void chests): the hand-made clock or a generated one, found by its description. Output
 -- is counted per clock period from the drops of the three inserter assemblers' output inserters, per copy; each line's
 -- flows (what its feeders put on, its takers take off) are counted by belt row. The interventions are those of the
 -- family (options.interventions): iron ore removed from every belt in the first, circuits in the third, and the output

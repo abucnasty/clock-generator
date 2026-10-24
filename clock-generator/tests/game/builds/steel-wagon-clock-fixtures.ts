@@ -13,14 +13,14 @@ import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The owner's steel build, 26 a second from one copy (`STEEL_CARGO_WAGON`): one cargo wagon is a hub. A big mining
+ * The steel build, 26 a second from one copy (`STEEL_CARGO_WAGON`): one cargo wagon is a hub. A big mining
  * drill fills it with iron ore, one furnace makes plates from the ore and puts them back, the other makes steel from the
  * plates and puts it back, and one inserter takes the steel out of the wagon onto a belt that a loader empties into a
  * disposal chest. The wagon's slots are filtered: 20 iron ore, 5 iron plate, 5 steel, 10 blocked. The harness puts the
  * ore under the drill.
  *
  * The selected clock is recorded in two build orders. The game serves inserters that act on one entity in the same tick
- * in the order of their unit numbers, the last built first (docs/simulator.md): as the owner's blueprint has them, the
+ * in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint has them, the
  * two inserters that put plates and steel into the wagon are built among the three that take from it; `fill-last`
  * builds them after all of them. The clock planned without iron ore in its period (its subtick clock: the clock rounded to 295 ticks makes 26.03 a second) is a second check.
  */

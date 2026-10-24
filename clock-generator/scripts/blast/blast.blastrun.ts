@@ -29,7 +29,7 @@ const OUT = process.env.BLAST_OUT;
 const CLAIMS = process.env.BLAST_CLAIMS || (OUT && path.join(OUT, '.claims'));
 const MODE = process.env.BLAST_MODE ?? 'generate';
 const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefined;
-// Thaeln's cell 09 is out of scope for 0.19.0 (owner, 2026-10-20) and takes ~1,000 s alone: skipped unless BLAST_SKIP
+// Thaeln's cell 09 is out of scope for 0.19.0 (decided 2026-10-20) and takes ~1,000 s alone: skipped unless BLAST_SKIP
 // is set ("" runs it)
 const SKIP = (process.env.BLAST_SKIP ?? 'REAL_THAELN_CELL09').split(',').filter(Boolean);
 const GROUPS = (process.env.BLAST_GROUPS || 'config,config-backed,pickup,overhood,front,blocked,containers,refusal').split(',');

@@ -12,7 +12,7 @@ silo's rocket inventory and input slots. The probe ([probe.lua](probe.lua)) puts
 | `wagon-sink` | a wagon with five slots filtered to copper filled by two feeders to the last slot |
 | `wagon-blocked-slots` | a wagon with 39 slots blocked by No item or Deconstruction planner fills its one free slot; Sidecar exports both blocking filters as blocked slots and the full wagon empty |
 | `car-source` | a car of mixed items emptied by an unfiltered inserter: the last slot's item first, a hand across stacks |
-| `drill-into-car` | a big mining drill on iron ore fills a car (the owner's car build's geometry) to its 80 stacks and waits for room |
+| `drill-into-car` | a big mining drill on iron ore fills a car (the car build's geometry) to its 80 stacks and waits for room |
 | `drill-into-filtered-car` | the same with five car slots filtered to copper plates: the ore fills the 75 free slots only |
 | `drill-into-chest` | the drill fills a steel chest (the config's buffer chest) to its 48 stacks; recorded from 60 ticks in, as an empty chest is not exported |
 | `drill-into-silo` | the drill fills a rocket silo's rocket inventory by weight (500 ore), nothing into its input slots |

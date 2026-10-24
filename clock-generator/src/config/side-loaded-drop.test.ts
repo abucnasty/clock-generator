@@ -43,7 +43,7 @@ describe("a drop marked as side-loading onto a belt downstream", () => {
         expect(() => gears(mark)).toThrow();
     });
 
-    it("is told in the owner's words: a sentence for each inserter, then the advice", () => {
+    it("is told in the approved wording: a sentence for each inserter, then the advice", () => {
         expect(describeSideLoadedDrop({ inserter_id: 15, tiles: 3 })).toBe("Inserter 15 drops onto a 3 tile belt buffer that side-loads onto another belt.");
         expect(sideLoadedDropNote([{ inserter_id: 15, tiles: 3 }, { inserter_id: 16, tiles: 3 }])).toBe(
             "Inserter 15 drops onto a 3 tile belt buffer that side-loads onto another belt. "

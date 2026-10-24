@@ -7,7 +7,7 @@ import {loadConfigFromFile} from "../config/loader";
 import {GENERATED_ALTERNATIVE, ownClockCases} from "../../tests/game/builds/own-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
-// the generated clock pinned beside the in-game recording of it on the owner's three copies
+// the generated clock pinned beside the in-game recording of it on the build's three copies
 const controls = readControls("own-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let generated: ClockAlternativesResult;
@@ -23,7 +23,7 @@ test("own clock: the selected clock is the one recorded on the three copies", ()
 for (const variant of ownClockCases()) {
     test(`own clock: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];
-        // the owner's clock is not generated: its control is the game's numbers, 80 a second a copy in every period
+        // the hand-made clock is not generated: its control is the game's numbers, 80 a second a copy in every period
         expect(native.baseline).toHaveLength(63);
         expect(native.baseline.every(items => items === native.expected)).toBe(true);
         for (const loss of native.recovery) {

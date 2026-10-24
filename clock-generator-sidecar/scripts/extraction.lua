@@ -159,7 +159,7 @@ end
 ---@return table
 local function extract_vehicle_or_silo_data(entity)
     if entity.type == "rocket-silo" then
-        -- The silo's contents are not exported (owner, 2026-10-21): they are a snapshot of a running build, and a silo that
+        -- The silo's contents are not exported (decided 2026-10-21): they are a snapshot of a running build, and a silo that
         -- starts full makes the inserters filling it take turns instead of inserting together; the build starts empty
         local contents = {}
         local recipe, recipe_quality = entity.get_recipe()
@@ -180,7 +180,7 @@ local function extract_vehicle_or_silo_data(entity)
         }
     end
     local index = entity.type == "car" and defines.inventory.car_trunk or defines.inventory.cargo_wagon
-    -- Its slot filters are part of the build; its contents are not exported (owner, 2026-10-21), as a silo's: they are a
+    -- Its slot filters are part of the build; its contents are not exported (decided 2026-10-21), as a silo's: they are a
     -- snapshot of a running build, so the build starts empty
     local filters = slots_of(entity.get_inventory(index))
     local contents = {}

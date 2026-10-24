@@ -1,12 +1,12 @@
 # Lithium plates through a rocket silo
 
-The owner's build: two legendary cryogenic plants make lithium from holmium plates (infinity chests) and fluids
+The build: two legendary cryogenic plants make lithium from holmium plates (infinity chests) and fluids
 (infinity pipes), and two stack inserters put it into a rocket silo, which is used as a chest. Six stack inserters take
 the lithium out of the silo into six legendary electric furnaces making lithium plates, each furnace with 4 legendary
 beacons. Their output inserters put the plates onto a turbo belt that a loader empties into a disposal chest. The target
 is 80 plates a second from one copy.
 
-- `lithium-silo-scaffold.txt`: the owner's blueprint as given. The infinity chests, infinity pipes, loader and disposal
+- `lithium-silo-scaffold.txt`: the build's blueprint as given. The infinity chests, infinity pipes, loader and disposal
   chest are part of it.
 - `lithium-silo.sidecar-export.json`: what Sidecar 0.13.1 exports from the blueprint built in the harness game, taken again on
   2026-10-23, which also exports each machine's `prototype` and quality and each entity's position (and an inserter's or
