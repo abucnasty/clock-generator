@@ -22,21 +22,33 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * The selected clock is recorded in two build orders. The game serves inserters that act on one entity in the same tick
  * in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint has them, the
  * two inserters that put plates and steel into the wagon are built among the three that take from it; `fill-last`
- * builds them after all of them. The clock planned without iron ore in its period (its subtick clock: the clock rounded to 295 ticks makes 26.03 a second) is a second check.
+ * builds them after all of them. The clock the config makes with iron ore out of its period (`ignored_lcm_ingredients`;
+ * its subtick clock: the clock rounded to 295 ticks makes 26.03 a second) is a second check.
  */
 export interface SteelWagonCase {
     name: string;
     /** The alternative recorded */
-    alternative: "planned-belt-slack-subtick" | "planned-lean-iron-ore-subtick";
+    alternative: "planned-belt-slack-subtick";
+    /** The items the config leaves out of the period (`overrides.ignored_lcm_ingredients`) */
+    ignored_lcm_ingredients?: string[];
     order: "as-built" | "fill-last";
+    /** The capture's period of the alternative recorded, in ticks: its subtick clock's (13 periods of 886.15 ticks; 13 of 295.38) */
+    period_ticks: number;
 }
 
 export function steelWagonCases(): SteelWagonCase[] {
     return [
-        {name: "steel-wagon-belt-slack", alternative: "planned-belt-slack-subtick", order: "as-built"},
-        {name: "steel-wagon-belt-slack-fill-last", alternative: "planned-belt-slack-subtick", order: "fill-last"},
-        {name: "steel-wagon-lean-iron-ore", alternative: "planned-lean-iron-ore-subtick", order: "as-built"},
+        {name: "steel-wagon-belt-slack", alternative: "planned-belt-slack-subtick", order: "as-built", period_ticks: 11520},
+        {name: "steel-wagon-belt-slack-fill-last", alternative: "planned-belt-slack-subtick", order: "fill-last", period_ticks: 11520},
+        {name: "steel-wagon-iron-ore-out-of-period", alternative: "planned-belt-slack-subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", period_ticks: 3840},
     ];
+}
+
+/** The steel build's config, with the items the case leaves out of the period */
+export async function steelWagonConfig(variant: SteelWagonCase): Promise<Config> {
+    const config = await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON);
+    return variant.ignored_lcm_ingredients === undefined ? config
+        : {...config, overrides: {...config.overrides, ignored_lcm_ingredients: variant.ignored_lcm_ingredients}};
 }
 
 const SCAFFOLD = path.join(path.dirname(ConfigPaths.STEEL_CARGO_WAGON), "steel-wagon-scaffold.txt");
@@ -105,17 +117,14 @@ export function assertSteelWagonHardware(recording: Recording, config: Config): 
     expect(drills[0].productivity).toBeCloseTo(config.drills!.configs[0].productivity, 6);
 }
 
-/** The capture's period of each alternative recorded, in ticks: its subtick clock's (13 periods of 886.15 ticks; 13 of 295.38) */
-const PERIOD_TICKS: Record<SteelWagonCase["alternative"], number> = {"planned-belt-slack-subtick": 11520, "planned-lean-iron-ore-subtick": 3840};
-
 export async function steelWagonScenario(variant: SteelWagonCase): Promise<PickupClockScenario> {
-    const config = await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON);
+    const config = await steelWagonConfig(variant);
     return {
         name: variant.name, speed: BELT_SPEEDS[0], backed: false,
         config: () => config,
         scaffold: () => steelWagonScaffold(variant.order),
         alternative: variant.alternative,
-        interventions: steelWagonInterventions(config, PERIOD_TICKS[variant.alternative]),
+        interventions: steelWagonInterventions(config, variant.period_ticks),
         probeFile: path.join(__dirname, "steel-wagon-clock-probe.lua"),
         probe: {family: "steel-wagon"},
         controls: path.join(__dirname, "steel-wagon-clock-controls.json"),

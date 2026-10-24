@@ -5,8 +5,6 @@ import type {Config} from "../config/schema";
 import {generateClockAlternatives, planClockAlternatives, selectableAsStable, type ClockAlternative, type ClockAlternativesResult} from "./generate-blueprint";
 import {alwaysOnReasonProblemsOf, quiet, withSearches, SEARCH_IDS, SEARCH_LABELS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
 
-const SHORTER_PERIOD_SEARCH_ID = "derived-lean-low-density-structure";
-const SHORTER_PERIOD_SEARCH_LABEL = "Observed windows, shorter period (low density structure not in the period)";
 let config: Config;
 let by_default: ClockAlternativesResult;
 let alternatives: ClockAlternative[];
@@ -32,7 +30,7 @@ describe("the searches only run when they are needed", () => {
         });
 
         it("leaves the searches out by default, and says which", () => {
-            expect(by_default.skipped_searches).toEqual([...SEARCH_LABELS, SHORTER_PERIOD_SEARCH_LABEL]);
+            expect(by_default.skipped_searches).toEqual(SEARCH_LABELS);
             expect(idsOf(by_default).filter(id => SEARCH_IDS.includes(id))).toEqual([]);
         });
 
@@ -46,12 +44,12 @@ describe("the searches only run when they are needed", () => {
         });
 
         it("lists the clocks made without a search in the same order either way", () => {
-            expect(idsOf(searched).filter(id => ![...SEARCH_IDS, SHORTER_PERIOD_SEARCH_ID].includes(id))).toEqual(idsOf(by_default));
+            expect(idsOf(searched).filter(id => !SEARCH_IDS.includes(id))).toEqual(idsOf(by_default));
         });
 
         it("plans the searches as tasks that wait for the others, and as tasks like the others when the config asks for them", () => {
             const waiting = (planned: Config) => planClockAlternatives(planned, { logger: quiet }).tasks.filter(task => task.only_when_needed).map(task => task.id);
-            expect(waiting(config)).toEqual([...SEARCH_IDS, SHORTER_PERIOD_SEARCH_ID]);
+            expect(waiting(config)).toEqual(SEARCH_IDS);
             expect(waiting(withSearches(config))).toEqual([]);
         });
     });

@@ -19,6 +19,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Fewer clocks that cannot hold the rate are listed: the clock with three more output swings per cycle than planned is left out unless that count is a multiple of the planned one.
 - A build whose clock period runs to many thousands of ticks generates much faster.
 
+### Removed
+- Clocks for a shorter period, labelled "shorter period (… not in the period)", are no longer offered: where one was selected, batched swings or shifted swings are now (the swing plan's "Exclude from LCM" leaves an ingredient out of the period by hand).
+
 ## [0.22.0] - 2026-10-24
 
 ### Added

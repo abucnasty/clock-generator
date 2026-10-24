@@ -6,7 +6,7 @@ import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
-import {steelWagonCases} from "../../tests/game/builds/steel-wagon-clock-fixtures";
+import {steelWagonCases, steelWagonConfig} from "../../tests/game/builds/steel-wagon-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
 // each clock pinned beside the in-game recording of it
@@ -47,10 +47,12 @@ test("steel wagon: no description shows a float as a fraction (the period is a w
 });
 
 for (const variant of steelWagonCases()) {
-    test(`steel wagon clock: ${variant.name}`, () => {
+    test(`steel wagon clock: ${variant.name}`, async () => {
         const {generation, native} = controls.cases[variant.name];
         const expected = generation!;
-        const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
+        const alternatives = variant.ignored_lcm_ingredients === undefined ? generated
+            : generateClockAlternatives(await steelWagonConfig(variant), {logger: quiet});
+        const chosen = alternatives.alternatives.find(alternative => alternative.id === variant.alternative)!;
         const result = chosen.result;
         const exported = result.subtick ?? result;
         const clock = clockIdentity(exported);

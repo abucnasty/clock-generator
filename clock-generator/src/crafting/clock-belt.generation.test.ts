@@ -81,8 +81,7 @@ describe("the belt a clock is made for", () => {
             expect(batched.verdict).toBe("stable");
             expect(batched.deadlock_risks).toHaveLength(1);
             expect(batched.ranking.meets_target_rate).toBe(true);
-            // the plan with the low density structure out of the period has half the period, 336 ticks, and fewer wake-ups
-            expect(selected.id).toBe("planned-lean-low-density-structure");
+            expect(selected.id).toBe("planned-belt-slack");
             // from the staged start the search for uneven output swings finds no clock for this build, so there is none
             // to compare with (the prepared build gave one that got back from every loss, at more wake-ups)
             expect(alternatives.some(a => a.id === "uneven-output")).toBe(false);
@@ -93,9 +92,8 @@ describe("the belt a clock is made for", () => {
         it("does not search for another clock by default, since batched swings can be selected as it is", () => {
             expect(by_default.skipped_searches).toEqual([
                 "Observed windows", "Uneven output swings", "Shifted swings", "Full-hand output swings",
-                "Observed windows, shorter period (low density structure not in the period)",
             ]);
-            expect(by_default.alternatives[by_default.selected_index].id).toBe("planned-lean-low-density-structure");
+            expect(by_default.alternatives[by_default.selected_index].id).toBe("planned-belt-slack");
             // from the staged start (empty machines) some clock is stable here; with the prepared build none was
             expect(by_default.alternatives.some(a => a.verdict === "stable")).toBe(true);
         });
