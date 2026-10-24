@@ -12,6 +12,7 @@ import {
     differenceFromRecommended,
     lossLimitText,
     makesText,
+    pickNameMeaning,
     plainClockName,
     recoversOf,
     wakeUpsText,
@@ -162,7 +163,7 @@ function ClockExplanation(props: SelectedProps) {
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const reason = selectedIndex === recommendedIndex
         ? recommendationReason(alternatives, recommendedIndex, props.pickRule, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating)
-        : recommended ? differenceFromRecommended(selected, recommended) : '';
+        : recommended ? [pickNameMeaning(alternatives, selectedIndex, props.pickRule), differenceFromRecommended(selected, recommended)].filter(Boolean).join(' ') : '';
     const recovers = recoversOf(selected);
     return <Box sx={{ display: 'grid', gap: 1 }}>
         {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}

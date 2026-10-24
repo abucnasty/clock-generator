@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
 import { rateWarningOf } from './rateWarning';
 import { startCheckSummary } from './modelAssumptions';
+import type { PickRule } from './recommendedClock';
 import {
     SUMMARY_COPY,
     beltCellText,
@@ -16,6 +17,7 @@ import {
     recoversOf,
     lossLimitText,
     minutesAndSecondsText,
+    pickNameMeaning,
     wakeUpsText,
     worksOf,
     type SummaryClock,
@@ -177,6 +179,39 @@ describe('plainClockName', () => {
 
     it('keeps the engine name as it is', () => {
         expect(clockTechnicalName(clock('a'))).toBe('Engine name of a');
+    });
+});
+
+describe('pickNameMeaning', () => {
+    const decidersAndWakeUps = () => [
+        clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }),
+        clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 }),
+    ];
+    const meaning = (clocks: SummaryClock[], id: string, rule: PickRule | null = null) =>
+        pickNameMeaning(clocks, clocks.findIndex(it => it.id === id), rule);
+
+    it('says what Fewest deciders is for, in the words of the pick\'s reason', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 8, deciders: 10, beltLabel: '' }), clock('b', { wake_ups_per_minute: 12, deciders: 6, beltLabel: '' })];
+        expect(meaning(clocks, 'b')).toBe('Fewest deciders of the clocks that keep making 240/s and recover: the least wiring to do by hand.');
+    });
+
+    it('names the belt the clocks are made for, as the reason does', () => {
+        expect(meaning(decidersAndWakeUps(), 'b'))
+            .toBe('Fewest deciders of the clocks that keep making 240/s and recover on a moving belt: the least wiring to do by hand.');
+        expect(meaning(decidersAndWakeUps(), 'b', { backedUpBelts: true, searchedForFewerWakeUps: false }))
+            .toBe('Fewest deciders of the clocks that keep making 240/s and recover with backed-up belts: the least wiring to do by hand.');
+    });
+
+    it('says the clocks that hold the rate on a build with a deadlock risk, as the reason does', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 8, deciders: 10 }), clock('b', { wake_ups_per_minute: 12, deciders: 6 })];
+        clocks.forEach(it => { it.deadlockRisk = 'Deadlock risk: inserters 1 and 2 both bring the same item.'; });
+        expect(meaning(clocks, 'b')).toBe('Fewest deciders of the clocks that hold 240/s on a moving belt: the least wiring to do by hand.');
+    });
+
+    it('has nothing to say of a clock with any other name', () => {
+        const clocks = decidersAndWakeUps();
+        expect(meaning(clocks, 'a')).toBe('');
+        expect(meaning([clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })], 'b')).toBe('');
     });
 });
 

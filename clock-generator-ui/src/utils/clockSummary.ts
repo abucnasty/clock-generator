@@ -1,7 +1,7 @@
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 import { lossesOf, notTriedOf } from './rateWarning';
-import type { PickRule } from './recommendedClock';
+import { fewestDecidersReason, type PickRule } from './recommendedClock';
 import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
@@ -134,6 +134,14 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
         }
     }
     return SUMMARY_COPY.another(rateText(clock.assessment.items_per_second), clock.counts);
+}
+
+/**
+ * What the name of a clock means, for the clocks whose name is not self-evident: a clock named Fewest deciders is the one
+ * with the least wiring to do by hand. Empty for any other clock (the pick's own reason says what Fewest wake-ups means).
+ */
+export function pickNameMeaning(clocks: SummaryClock[], index: number, rule: PickRule | null): string {
+    return plainClockName(clocks, index) === SUMMARY_COPY.fewestDeciders ? fewestDecidersReason(clocks[index], rule) : '';
 }
 
 /** The engine's own name for a clock, which says how it is made; the card and the table say it the same way */
