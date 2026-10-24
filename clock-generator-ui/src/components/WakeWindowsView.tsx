@@ -150,6 +150,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
         inserters: rows.filter(row => row.kind === 'inserter').length,
         drills: rows.filter(row => row.kind === 'drill').length,
         wakeUps: counted ? alternative.asBuilt?.wake_ups?.wake_ups_per_minute ?? sumWakeUps(rows) : null,
+        fromColdStart: alternative.assessment?.wake_ups_from_starts !== undefined,
     });
 
     return (
