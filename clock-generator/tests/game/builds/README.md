@@ -19,6 +19,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `stupidfathobbit-cell02-clock.game.test.ts`: cell 02 (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
 - `thaeln-cell09-clock.game.test.ts`: Thaeln's cell 09 (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
 - `productivity-chain-clock.game.test.ts`: the productivity module chain (nine machines and three chests, 80 a second over 6 copies) with the generated clock.
+- `ore-voider-clock.game.test.ts`: the ore voider's recycler cell, at exact speed and overbeaconed, 400 iron ore a second destroyed, an hour on the generated clock: what comes back is random, so the hour's mean is judged against the binomial's range, with the car never full, the target back after the ore is cut and after a backlog in the car, and the recycler's input watched while a stack of its result waits.
 
 From `clock-generator/`, select a file or case:
 
