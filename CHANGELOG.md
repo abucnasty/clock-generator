@@ -10,6 +10,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ## [0.23.0] - Unreleased
 
+### Added
+- The list of a clock's inserters and drills says why each one the clock leaves always on is: its swings fill the clock period, it is part of a loop of machines, its enable rule is Always on, or nothing can time a drill into a chest.
+
 ### Changed
 - Clocks need fewer decider combinators: inserters with the same wake windows share one decider whatever they carry, and a clock with shared wake windows is offered next to the separate one; the list of clocks shows each one's decider count.
 - In a clock whose machines take turns in groups, the combinators stand together by group, a gap between the groups, each group in the order of its turn, and the first combinator of each group says its turn.
