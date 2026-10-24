@@ -492,6 +492,27 @@ export function resultsFitContainer(
     return worstHeld(input, measure, takerGroupsOf(machine, registry), cycles, level).at_level_units <= measure.capacity;
 }
 
+/**
+ * Whether the windows of a machine's results can be planned: its feed cycle lasts whole ticks, its container's room is
+ * known, and the container holds one cycle's results at the level. Where not, the destroyed target keeps the plan that
+ * simulates its period (crafting-cycle.ts), as it had before these windows.
+ */
+export function resultWindowsFeasible(
+    machine: Machine,
+    registry: Pick<ReadableEntityRegistry, "getAll" | "getEntityById">,
+    cycle_ticks: number,
+    crafts_per_cycle: number,
+    level: number = RANDOM_MARGIN_LEVEL,
+): boolean {
+    const chest = machine.result_target === undefined ? null : registry.getEntityById(machine.result_target);
+    const measure = chest !== null && Entity.isChest(chest) ? containerMeasureOf(chest) : null;
+    if (!Number.isInteger(cycle_ticks) || measure === null) {
+        return false;
+    }
+    const input: ResultWindowsInput = { machine, registry, cycle_ticks, crafts_per_cycle, kind: "staggered", level };
+    return worstHeld(input, measure, takerGroupsOf(machine, registry), 1, level).at_level_units <= measure.capacity;
+}
+
 /** The windows of the inserters that take the results out, by inserter id, a period of `plan.period` */
 export function resultWindowRanges(plan: ResultWindowsPlan): Map<string, OpenRange[]> {
     const windows = new Map<string, OpenRange[]>();

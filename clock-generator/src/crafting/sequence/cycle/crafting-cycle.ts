@@ -7,7 +7,7 @@ import { Entity, handSizeFor, Machine, ReadableEntityRegistry } from "../../../e
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
 import { returnedTargetRefusal, targetInsertersOf, targetMachinesOf } from "./target-ends";
-import { RESULT_WINDOWS_LONGEST_PERIOD_TICKS, ResultWindowsPlan, resultsFitContainer, resultWindowsPlan, sharedHandRefusal } from "../../result-windows";
+import { RESULT_WINDOWS_LONGEST_PERIOD_TICKS, ResultWindowsPlan, resultsFitContainer, resultWindowsFeasible, resultWindowsPlan, sharedHandRefusal } from "../../result-windows";
 
 export interface CraftingCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
@@ -114,12 +114,13 @@ function createDestroyedPlan(
     }
     const craftsOf = (machine: Machine, hands: number) => destroyedTargetCrafts(machine, entity_registry, item, fraction(hands * hand)).toDecimal();
     const whole = planOf(forced ?? base_hands);
-    if (wholeHandsFit(whole, machines, entity_registry, machine => craftsOf(machine, forced ?? base_hands))) {
+    const cycle_ticks = ticks_per_hand.multiply(base_hands).toDecimal();
+    const crafts_per_cycle = (machine: Machine) => craftsOf(machine, base_hands);
+    if (wholeHandsFit(whole, machines, entity_registry, machine => craftsOf(machine, forced ?? base_hands))
+        || !machines.every(machine => resultWindowsFeasible(machine, entity_registry, cycle_ticks, crafts_per_cycle(machine)))) {
         return whole;
     }
     // the results come too rarely: one window a period for each, on the longest period the containers hold
-    const cycle_ticks = ticks_per_hand.multiply(base_hands).toDecimal();
-    const crafts_per_cycle = (machine: Machine) => craftsOf(machine, base_hands);
     assert(forced === undefined || forced % base_hands === 0,
         `${forced} hands of ${item} a cycle do not last whole ticks: the windows of results that come this rarely need a multiple of ${base_hands}`);
     const cycles = forced !== undefined ? forced / base_hands : Math.min(...machines.map(machine =>

@@ -120,6 +120,13 @@ describe("windows for results that come by small chances, by arithmetic", () => 
 });
 
 describe("a destroyed target whose takers' hands come out whole in a period its container holds", () => {
+    it("keeps the plan that simulates its period at a rate whose feed hands last no whole ticks (the overbeaconed ore voider at 639.22)", async () => {
+        const voider = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_OVERBEACONED);
+        const odd: Config = { ...voider, target_output: { ...voider.target_output, items_per_second: 639.22 } };
+        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(odd.target_output), createEntityRegistryFromConfig(odd), fraction(1), {});
+        expect(plan.result_windows).toBeUndefined();
+    });
+
     it("keeps the plan that simulates its period (the ore voider)", async () => {
         const voider = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED);
         const registry = createEntityRegistryFromConfig(voider);
