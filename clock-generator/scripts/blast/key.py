@@ -8,6 +8,8 @@ tests-only commit changes.
   lock      the blob of clock-generator/package-lock.json (the dependencies' exact versions)
   tsconfig  the blob of clock-generator/tsconfig.json (how dist/ is built)
 
+and, beside the key and not in it, resources_data (data_key): the resources without the sample configs and notes.
+
 The other half is the job list's hash (each job's config, canonical JSON; blast.sh `key`), which covers the fixture
 definitions in tests/ by what they produce rather than by their source. The engine reads one environment variable
 that changes generation, CLOCK_PROOF_PHASES; the runner always clears it.
@@ -44,7 +46,23 @@ def engine_key(w, rev='HEAD'):
         'tsconfig': git(w, 'rev-parse', f'{rev}:clock-generator/tsconfig.json').strip(),
     }
     engine = hashlib.sha256(json.dumps({'format': FORMAT, **{k: parts[k] for k in ['src', 'resources', 'lock', 'tsconfig']}}, sort_keys=True).encode()).hexdigest()
-    return {'format': FORMAT, 'rev': git(w, 'rev-parse', rev).strip(), 'engine': engine, **parts}
+    return {'format': FORMAT, 'rev': git(w, 'rev-parse', rev).strip(), 'engine': engine, **parts, 'resources_data': data_key(w, rev)}
+
+
+def data_key(w, rev='HEAD'):
+    """What the engine reads at run time from clock-generator/resources apart from the sample configs (each job's own config
+    hash covers those) and the notes: the game data. blast.sh's selection carries jobs forward only between engines that
+    have the same one. Not part of the cache key."""
+    lines = [l for l in git(w, 'ls-tree', '-r', rev, '--', 'clock-generator/resources').splitlines()
+             if not l.split('\t', 1)[1].startswith('clock-generator/resources/config-samples/') and not l.endswith('.md')]
+    return hashlib.sha256('\n'.join(lines).encode()).hexdigest()
+
+
+def data_key_or_none(w, rev):
+    try:
+        return data_key(w, rev)
+    except subprocess.CalledProcessError:
+        return None
 
 
 def dirty(w):
