@@ -35,6 +35,7 @@ import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
+import { HANDS_TEXT } from '../utils/targetCounts';
 
 interface ResultsWorkspaceProps {
     onEditPickup?: (id: number) => void;
@@ -165,7 +166,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const selectableClocks = props.alternatives.map((clock, index) => ({ clock, index }))
         .filter(({ clock, index }) => clock.verdict === 'stable' || index === props.selectedIndex);
     const clockLabel = (clock: ClockAlternativeView) => [
-        `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
+        clock.counts === 'destroyed' ? HANDS_TEXT.clock(clock.terminalSwingCount)
+            : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
         wakeUpsText(clock).value.replace(' a minute', ' wake-ups/min'),
         clock.beltLabel ? beltValue(props.pickRule, clock.beltLabel) : '',
     ].filter(Boolean).join(' · ');

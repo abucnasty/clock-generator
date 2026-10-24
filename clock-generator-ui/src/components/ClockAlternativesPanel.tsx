@@ -32,6 +32,7 @@ import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
+import { HANDS_TEXT } from '../utils/targetCounts';
 import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
 import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
@@ -381,7 +382,9 @@ export function ClockAlternativesPanel({
                             {allColumns ? (
                                 <>
                                     <TableCell><HelpHeader label="Belt" help={COMPARE_COPY.beltHelp} /></TableCell>
-                                    <TableCell align="right"><HelpHeader label="Output swings" help={COMPARE_COPY.swingsHelp} /></TableCell>
+                                    <TableCell align="right">{alternatives[0]?.counts === 'destroyed'
+                                        ? <HelpHeader label={HANDS_TEXT.column} help={HANDS_TEXT.columnHelp} />
+                                        : <HelpHeader label="Output swings" help={COMPARE_COPY.swingsHelp} />}</TableCell>
                                     <TableCell align="right">Clock period</TableCell>
                                     <TableCell align="right"><HelpHeader label="Wake windows" help={COMPARE_COPY.windowsHelp} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={DECIDERS_HEADER} help={COMPARE_COPY.decidersHelp} /></TableCell>
