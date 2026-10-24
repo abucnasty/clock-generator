@@ -382,7 +382,8 @@
         "frozen_head": "2274f4f1",
         "note": "recorded before the PR was opened; pr is set when it is",
         "clock_sha256": "5f77de8d48dfb7660661e0a6842cf08f89d3ad01739108e5250d6ee08ec173f8",
-        "clock_basis": "capture"
+        "clock_basis": "capture",
+        "carried": "pending: the recording is made again on the clock with the drills in groups"
       },
       "native": {
         "generationVerdict": "stable",
@@ -571,7 +572,7 @@
           "rate": 240,
           "supply": null
         },
-        "clock_sha256": "5f77de8d48dfb7660661e0a6842cf08f89d3ad01739108e5250d6ee08ec173f8"
+        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042"
       }
     },
     "generated-full-build": {
@@ -581,7 +582,8 @@
         "frozen_head": "2274f4f1",
         "note": "recorded before the PR was opened; pr is set when it is",
         "clock_sha256": "5f77de8d48dfb7660661e0a6842cf08f89d3ad01739108e5250d6ee08ec173f8",
-        "clock_basis": "capture"
+        "clock_basis": "capture",
+        "carried": "pending: the recording is made again on the clock with the drills in groups"
       },
       "native": {
         "generationVerdict": "stable",
@@ -770,7 +772,7 @@
           "rate": 240,
           "supply": null
         },
-        "clock_sha256": "5f77de8d48dfb7660661e0a6842cf08f89d3ad01739108e5250d6ee08ec173f8"
+        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042"
       }
     }
   }

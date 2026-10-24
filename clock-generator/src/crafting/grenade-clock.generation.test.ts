@@ -30,6 +30,9 @@ test("grenade: the 112-tick clock holds the target and is selected; the longer o
     expect([windows["inserter:5"], windows["inserter:6"]]).toEqual([[{start: 58, end: 99}], [{start: 58, end: 99}]]);
     expect([windows["inserter:1"], windows["inserter:2"]]).toEqual([[{start: 0, end: 0}], [{start: 0, end: 0}]]);
     expect([windows["inserter:7"], windows["inserter:8"]]).toEqual([[{start: 56, end: 56}], [{start: 56, end: 56}]]);
+    // the drills of a group share one window, two ticks: 160 coal a period against the 125 to 134 a tick the drills mine (two drill deciders, as the hand-made clock has)
+    expect([windows["drill:1"], windows["drill:2"]]).toEqual([[{start: 2, end: 3}], [{start: 2, end: 3}]]);
+    expect([windows["drill:3"], windows["drill:4"]]).toEqual([[{start: 58, end: 59}], [{start: 58, end: 59}]]);
     expect(generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE).every(it => it.verdict === "unstable")).toBe(true);
 });
 
