@@ -9,6 +9,7 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Clock wiring](clock-wiring/README.md): replacing inserter conditions inherited from a real build.
 - [Containers](containers/README.md): cars, wagons and rocket silos as chests, against the simulator inserter by inserter.
 - [Drills](drills/README.md): mining drills at a low research level, their progress bars against the simulator tick by tick.
+- [Drop spacing](drop-spacing/README.md): the hands of several copies on one belt lane, why a pitch and an offset make them fit or collide.
 
 The [screenshot catalog](screenshots.json) references 14 local fixture blueprints and 3 shared sample
 blueprints. Their [generated provenance](screenshots.generated.json) records source hashes, Factorio version,

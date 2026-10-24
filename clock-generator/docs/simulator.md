@@ -266,6 +266,8 @@ inserter takes from, the way the belt runs from Sidecar 0.14.0 (without it the c
 the gap between copies from the repeated-unit conversion or from the player. A drop marked as side-loading onto another belt is left to the
 merge, and the belt is taken to run straight past the inserters.
 
+The idea, the arithmetic of pitches and offsets and the evidence are in [drop spacing](../tests/game/mechanics/drop-spacing/README.md).
+
 ### Two inserters that bring the same item
 
 When two inserters bring the same item to a machine, one of them can be left holding it. If it starts picking the item up after the other has already put it in, the item is at its insertion limit by the time its hand is ready, and it holds the hand until the machine has used enough for it to drop.
