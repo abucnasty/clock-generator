@@ -79,4 +79,14 @@ describe("a result's chance in the 2.1 data", () => {
         expect(FactorioDataService.itemWeightOrThrow("iron-plate")).toBe(1000);
         expect(FactorioDataService.itemWeightOrThrow("rocket-fuel")).toBe(10000);
     });
+
+    it("has the ticks an item takes to spoil, for the items that spoil only", () => {
+        expect(FactorioDataService.itemSpoilTicks("iron-bacteria")).toBe(3600);
+        expect(FactorioDataService.itemSpoilTicks("nutrients")).toBe(18000);
+        expect(FactorioDataService.itemSpoilTicks("pentapod-egg")).toBe(54000);
+        expect(FactorioDataService.itemSpoilTicks("agricultural-science-pack")).toBe(216000);
+        expect(FactorioDataService.itemSpoilTicks("bioflux")).toBe(432000);
+        expect(FactorioDataService.itemSpoilTicks("iron-plate")).toBeNull();
+        expect(FactorioDataService.itemSpoilTicks("spoilage")).toBeNull();
+    });
 });

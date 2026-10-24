@@ -284,11 +284,13 @@ function inserterResearch(technologies) {
     return total;
 }
 
+/** An item: its stack size, and the ticks it takes to spoil where it spoils (the prototype's `spoil_ticks`) */
 function mapAsItem(struct) {
     return {
         name: struct.name,
         type: "item",
-        stack_size: struct.stack_size
+        stack_size: struct.stack_size,
+        ...(struct.spoil_ticks > 0 && { spoil_ticks: struct.spoil_ticks }),
     };
 }
 

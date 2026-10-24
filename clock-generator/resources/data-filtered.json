@@ -61962,7 +61962,8 @@
     "agricultural-science-pack": {
       "name": "agricultural-science-pack",
       "type": "item",
-      "stack_size": 200
+      "stack_size": 200,
+      "spoil_ticks": 216000
     },
     "electromagnetic-science-pack": {
       "name": "electromagnetic-science-pack",
@@ -62102,12 +62103,14 @@
     "copper-bacteria": {
       "name": "copper-bacteria",
       "type": "item",
-      "stack_size": 50
+      "stack_size": 50,
+      "spoil_ticks": 3600
     },
     "iron-bacteria": {
       "name": "iron-bacteria",
       "type": "item",
-      "stack_size": 50
+      "stack_size": 50,
+      "spoil_ticks": 3600
     },
     "yumako-seed": {
       "name": "yumako-seed",
@@ -62122,7 +62125,8 @@
     "nutrients": {
       "name": "nutrients",
       "type": "item",
-      "stack_size": 100
+      "stack_size": 100,
+      "spoil_ticks": 18000
     },
     "artificial-yumako-soil": {
       "name": "artificial-yumako-soil",
@@ -62162,17 +62166,20 @@
     "captive-biter-spawner": {
       "name": "captive-biter-spawner",
       "type": "item",
-      "stack_size": 1
+      "stack_size": 1,
+      "spoil_ticks": 108000
     },
     "biter-egg": {
       "name": "biter-egg",
       "type": "item",
-      "stack_size": 100
+      "stack_size": 100,
+      "spoil_ticks": 108000
     },
     "pentapod-egg": {
       "name": "pentapod-egg",
       "type": "item",
-      "stack_size": 20
+      "stack_size": 20,
+      "spoil_ticks": 54000
     },
     "carbon-fiber": {
       "name": "carbon-fiber",
@@ -62497,7 +62504,8 @@
     "raw-fish": {
       "name": "raw-fish",
       "type": "item",
-      "stack_size": 100
+      "stack_size": 100,
+      "spoil_ticks": 453000
     },
     "grenade": {
       "name": "grenade",
@@ -62552,27 +62560,32 @@
     "yumako": {
       "name": "yumako",
       "type": "item",
-      "stack_size": 50
+      "stack_size": 50,
+      "spoil_ticks": 216000
     },
     "jellynut": {
       "name": "jellynut",
       "type": "item",
-      "stack_size": 50
+      "stack_size": 50,
+      "spoil_ticks": 216000
     },
     "yumako-mash": {
       "name": "yumako-mash",
       "type": "item",
-      "stack_size": 100
+      "stack_size": 100,
+      "spoil_ticks": 10800
     },
     "jelly": {
       "name": "jelly",
       "type": "item",
-      "stack_size": 100
+      "stack_size": 100,
+      "spoil_ticks": 14400
     },
     "bioflux": {
       "name": "bioflux",
       "type": "item",
-      "stack_size": 100
+      "stack_size": 100,
+      "spoil_ticks": 432000
     },
     "rail": {
       "name": "rail",
