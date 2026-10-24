@@ -276,3 +276,27 @@ describe("what the summary reads of a clock", () => {
         expect(whyNotStableClockOf({ ...view, belt: { kind: "backed_up" } }).moving_belt).toBe(false);
     });
 });
+
+describe("results that are not all taken out of the container a machine places them into", () => {
+    const build: WhyNotStableBuild = { target_items_per_second: 2, backed_up_belts: false, not_made: [] };
+    const taken = (overrides: Partial<WhyNotStableClock> = {}) => clock({ label: "Results in turn: 12 hands brought in per cycle", verdict: "unstable",
+        meets_target_rate: false, assessment: { holds: false, items_per_second: 2, backpressure_loss: null },
+        results_taken: [{ machine_id: "machine:1", waiting_ticks: 240, takers: [
+            { items: ["iron-gear-wheel"], inserter_ids: ["inserter:1"], expected_items: 2150.4, taken_items: 2144, short: false },
+            { items: ["processing-unit", "holmium-ore"], inserter_ids: ["inserter:10"], expected_items: 107.5, taken_items: 52, short: true },
+        ] }], ...overrides });
+
+    it("is told as the cause, with the ticks the machine waited and the inserters that fell behind", () => {
+        expect(whyNotStable([taken()], 0, build)).toEqual({
+            cause: "results not taken out",
+            message: "The selected clock (Results in turn: 12 hands brought in per cycle) brings in 2 a second, but its results are not all taken out as "
+                + "they come: Machine 1 waited 240 ticks with a result its container had no room for. Inserter 10 took 52 of the 108 processing-unit "
+                + "and holmium-ore the crafts gave.",
+        });
+    });
+
+    it("is not said of a clock that is off the target, or whose results were all taken", () => {
+        expect(whyNotStable([taken({ assessment: { holds: false, items_per_second: 1.5, backpressure_loss: null } })], 0, build)?.cause).toBe("nothing holds");
+        expect(whyNotStable([taken({ results_taken: [{ machine_id: "machine:1", waiting_ticks: 0, takers: [] }] })], 0, build)?.cause).toBe("nothing holds");
+    });
+});
