@@ -8,18 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
-## [0.24.0] - Unreleased
-
-### Added
-- A build whose recycler puts its results into a container, such as an ore voider, now gets a clock: Target Output's Counts field says whether the rate counts items made or items destroyed, a recycler's row has a Results into field for that container, and the windows that take back what the recycler gives have room for what the game gives over its average in all but 1 period in 740.
-
-### Fixed
-- A recipe whose main product comes only by chance, such as uranium processing or asteroid reprocessing, is planned at what a craft gives on average, not as if every craft gave it.
-
 ## [0.23.0] - Unreleased
 
 ### Added
 - The list of a clock's inserters and drills says why each one the clock leaves always on is: its swings fill the clock period, it is part of a loop of machines, its enable rule is Always on, or nothing can time a drill into a chest.
+- A build whose recycler puts its results into a container, such as an ore voider, now gets a clock: Target Output's Counts field says whether the rate counts items made or items destroyed, and a recycler's row has a Results into field for that container.
 
 ### Changed
 - Clocks need fewer decider combinators: inserters with the same wake windows share one decider whatever they carry, and a clock with shared wake windows is offered next to the separate one; the list of clocks shows each one's decider count.
@@ -34,6 +27,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Removed
 - Clocks for a shorter period, labelled "shorter period (… not in the period)", are no longer offered: where one was selected, batched swings or shifted swings are now (the swing plan's "Exclude from LCM" leaves an ingredient out of the period by hand).
+
+### Fixed
+- A recipe whose main product comes only by chance, such as uranium processing or asteroid reprocessing, is planned at what a craft gives on average, not as if every craft gave it.
 
 ## [0.22.0] - 2026-10-24
 
