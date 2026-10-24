@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import * as path from "path";
 import { loadConfigFromFile } from "../../../config/loader";
 import type { Config } from "../../../config/schema";
 import { createEntityRegistryFromConfig } from "../simulation-context";
@@ -7,10 +6,11 @@ import { TargetProductionRate } from "../../target-production-rate";
 import { CraftingCyclePlan } from "./crafting-cycle";
 import { targetInsertersOf, targetMachinesOf } from "./target-ends";
 import { fraction } from "../../../data-types/fraction";
+import { ConfigPaths } from "../../../config/config-paths";
 
 // the exact-speed recycler cell of the ore voider benchmark (save F): 400 iron ore a second destroyed, brought in by four
 // stack inserters; the recycler (9 crafts a tick) gives a quarter back into its car, which two stack inserters empty into it
-const FIXTURE = path.join(__dirname, "..", "..", "fixtures", "ore-voider-F-recycler.json");
+const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
 
 async function planOf(edit: (config: Config) => Config = config => config): Promise<CraftingCyclePlan> {
     const config = edit(await loadConfigFromFile(FIXTURE));

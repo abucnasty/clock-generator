@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import * as path from 'path';
 import { loadConfigFromFile, parseConfig } from '../config/loader';
 import { ConfigSchema, type Config } from '../config/schema';
 import { CompositeControlLogic, TickControlLogic } from '../control-logic';
 import { EntityState, MachineStatus, SlotContainerState } from '../state';
 import { SimulationContext } from './sequence/simulation-context';
+import { ConfigPaths } from '../config/config-paths';
 
 // The exact-speed recycler cell of the ore voider benchmark (save F): a recycler at crafting speed 16.875 voids iron ore,
 // fed by four stack inserters from the ore supply, and places what it gives back into a car, which two stack inserters
 // empty back into it
-const FIXTURE = path.join(__dirname, 'fixtures', 'ore-voider-F-recycler.json');
+const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
 
 const ORE = 'iron-ore';
 

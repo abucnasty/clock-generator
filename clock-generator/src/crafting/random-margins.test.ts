@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import * as path from "path";
 import { loadConfigFromFile } from "../config/loader";
 import { OpenRange } from "../data-types";
 import { fraction } from "../data-types/fraction";
@@ -7,9 +6,10 @@ import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
 import { randomAmountMargins, RANDOM_MARGIN_SIGMAS } from "./random-margins";
+import { ConfigPaths } from "../config/config-paths";
 
 // the exact-speed recycler cell of the ore voider benchmark (save F), planned at 400 iron ore a second destroyed
-const FIXTURE = path.join(__dirname, "fixtures", "ore-voider-F-recycler.json");
+const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
 
 async function marginsOf(windows: Map<string, OpenRange[]>) {
     const config = await loadConfigFromFile(FIXTURE);

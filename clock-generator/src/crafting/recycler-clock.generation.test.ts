@@ -1,16 +1,16 @@
-import path from "path";
 import { beforeAll, describe, expect, test } from "vitest";
 import { ClockAlternativesResult, generateClockAlternatives } from "./generate-blueprint";
 import { backpressureLossOf } from "./trial";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { RANDOM_MARGIN_SIGMAS } from "./random-margins";
+import { ConfigPaths } from "../config/config-paths";
 
 // The exact-speed recycler cell of the ore voider benchmark (save F, the benchmark's waste inserters clocked): a recycler at
 // crafting speed 16.875 (540 crafts a second) destroys 400 iron ore a second, brought in by four stack inserters from the
 // ore supply; it places what it gives back (a quarter of its crafts, at random) into a car, which two stack inserters
 // empty back into it. Planned by arithmetic on the expected amounts, with room in the windows for the spread.
-const FIXTURE = path.join(__dirname, "fixtures", "ore-voider-F-recycler.json");
+const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
 const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
 let config: Config;
 let generated: ClockAlternativesResult;
