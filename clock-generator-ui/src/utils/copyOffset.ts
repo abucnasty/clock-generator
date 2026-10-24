@@ -5,6 +5,9 @@ export interface CopyOffset { x: number; y: number }
 export const SIDES = ['east', 'west', 'north', 'south'] as const;
 export type Side = typeof SIDES[number];
 
+/** The fewest tiles a gap can be: with none, the next copy stands where this one does, and the offset is left out */
+export const COPY_OFFSET_MIN_TILES = 1;
+
 /** The tiles and side a straight offset shows as; null when the offset runs off the four sides */
 export function copyOffsetShown(offset: CopyOffset | undefined): { tiles: number | null; side: Side } | 'diagonal' {
     if (offset === undefined) return { tiles: null, side: 'east' };

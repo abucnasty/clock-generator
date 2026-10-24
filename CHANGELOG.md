@@ -20,6 +20,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - A clock is stable only if every export belt gets what its consumers take; one that gives a belt less is unstable, and the result card says which belt gets how much.
 
 ### Fixed
+- The up arrow of "Next copy stands" works from an empty field and the down arrow stops at 1 tile, where it used to empty the field.
 - The Diagram of a belt with the same item on both lanes no longer logs a duplicate-key error.
 - The Swing Plan of a build whose export belt carries the same item on both lanes no longer logs a duplicate-key error.
 - The clock timeline's header shows the rounded period of a rounded clock.
