@@ -37,6 +37,11 @@ places, so the hands of one line (the output inserters of one side of the belt, 
   circle. The grenade build makes 240 a second over 7 copies of 4 machines, a hand of 16 every 112 ticks, and so `L` = 14 tiles.
 - **The pitch** (the copies' distance) puts copy `c` at `c * pitch mod L`. With `g` the greatest common divisor of the pitch and `L` the copies can only
   take `L / g` different tiles; with more copies than that, two copies drop on the same tile whatever else is done.
+  Moving the pitch by a whole `L` moves every hand once round the circle, so whether the hands fit depends on the pitch less whole multiples of `L`
+  only: one loop of pitches, from the width of a copy for `L` tiles, holds every answer, and the editor and the result list that loop and say the
+  rest are the same plus `L`. Where `L` is not a whole number there is no such loop and a fixed range from the width of a copy is listed.
+- **Too many hands.** When the hands dropped on one lane in a period take more of it than the `L` tiles the belt moves in the period (9 copies of one
+  inserter on `L` = 4.5), some hands wait whatever the pitch and offset; the editor and the result say so instead of listing spacings.
 - **The offset** between a copy's inserters (the second inserter's place, from the first's) moves the second inserter's hands by `offset` tiles
   against the first's, which is what lets them take the tiles the first ones leave.
 
@@ -91,7 +96,7 @@ build are `tests/game/builds/grenade-clock.game.test.ts` with `grenade-clock-con
 ## Limits
 
 - **A straight belt.** A line is taken to run straight along its row past the inserters; a belt that bends between inserters is not followed, and the result says so.
-- **Side-loading.** An output inserter whose drop is marked as side-loading onto another belt (0.21.0) is left to the merge and not checked here.
+- **Side-loading.** An output inserter whose drop is marked as side-loading onto another belt (0.21.0) is left to the merge and not checked here. The editor and the result name them as not checked. A drop through a splitter carries no mark and cannot be told from a drop onto the belt. The config describes one copy and the check repeats it, which the editor and the result say wherever copies share a belt.
 - **The belt's direction** comes from the Sidecar (0.14.0) in the drop of each output inserter. Without it the check is made both ways and told only when the two agree; hands that start in the same tick need no direction.
 - **The gap between copies** is given by the player or read off the positions when the repeated-unit conversion finds the copies; one export shows the places inside a unit.
 - **Whole tiles.** The pitch and offset tables are for whole tiles; the test itself takes any place.
