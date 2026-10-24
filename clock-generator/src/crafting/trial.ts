@@ -21,6 +21,7 @@ import { canonicalVerificationJson } from "./verification-signature";
 import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider-order";
 import { withChestDrillWindows } from "./chest-drill-windows";
 import type { FullOutputChest } from "./full-output-chests";
+import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -140,6 +141,12 @@ export interface AsBuiltStabilityCheck {
     wake_ups?: WakeUps;
     /** The chests the output goes into that nothing empties and that were full where the failing run ended */
     full_output_chests?: FullOutputChest[];
+    /**
+     * The export belts (belt lanes with a consumption rate) that received less than their consumers take, over the run
+     * that failed the clock: its period, or the judged part of its long run. The clock moves its target and is not
+     * stable. Absent when none fell short.
+     */
+    export_shortfalls?: ExportShortfall[];
 }
 
 
@@ -233,6 +240,8 @@ function longRunOfFreeRunningBuild(
     first_judged_tick: number;
     /** The chests the output goes into that nothing empties and that were full where the run ended */
     full_output_chests: FullOutputChest[] | undefined;
+    /** The export belts that received less than their consumers take over the judged part; undefined when none did */
+    export_shortfalls: ExportShortfall[] | undefined;
 } | null {
     // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
     const registry = createEntityRegistryFromConfig(config);
@@ -264,10 +273,17 @@ function longRunOfFreeRunningBuild(
         ? judgeProvenCycle(held, stock.ticks, run.state_repeat, expected_output_items, hand)
         : judgeLongRun(held, stock.ticks, period, repeat, expected_output_items, hand);
     const proven = run.state_repeat !== undefined;
+    // the exports are judged in the bins of the output: a belt with a consumption rate has to receive it in every bin
+    const exported = exportedItemsOf(registry, output_ids);
+    const export_shortfalls = exportShortfallsOfRun(exported, new Map(stock.inserters.map(it => [it.inserter_id, it.held])),
+        { first_tick: verdict.first_judged_tick, bin_ticks: verdict.bin_ticks, ticks: stock.ticks, count: verdict.judged.length, proven });
+    if (export_shortfalls.length > 0) {
+        logger.log(`Free running build: ${export_shortfalls.map(it => `belt ${it.belt_id} got ${Number(it.delivered_per_second.toFixed(2))} ${it.item} a second, consumers take ${it.expected_per_second}`).join("; ")}`);
+    }
     const bins = verdict.bin_ticks === null ? "span(s)" : verdict.periods_per_bin === 1 ? "periods" : `repeats of ${verdict.periods_per_bin} periods (${verdict.bin_ticks} ticks)`;
     logger.log(`Free running build over ${verdict.judged.length} ${bins}${proven ? " (repeats forever)" : ""}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
     return {
-        keeps_up: verdict.keeps_up,
+        keeps_up: verdict.keeps_up && export_shortfalls.length === 0,
         output_items_per_period: verdict.output_items_per_period,
         judged: verdict.judged,
         off_bins: verdict.off_bins.length,
@@ -277,6 +293,7 @@ function longRunOfFreeRunningBuild(
         cycle_periods: run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.periods_per_bin,
         first_judged_tick: verdict.first_judged_tick,
         full_output_chests: run.stability_check.full_output_chests,
+        export_shortfalls: export_shortfalls.length > 0 ? export_shortfalls : undefined,
     };
 }
 
@@ -500,6 +517,8 @@ export function exhaustiveStartPhases(
     // which rotating the windows changes nothing of; every phase's cold build reuses them
     const base = runBuild(as_built, { logger: quiet, cold_start: true, factorio_states: false });
     const stride_periods = proof_bin.ticks / period;
+    // the belts with a consumption rate are held to what their consumers take, in the bins the output is
+    const exported = exportedItemsOf(base.simulation_context.entity_registry, base.output_inserter_ids);
     // at a crossing of one phase's run a fuel clock of its own modulus stands elsewhere than at another's, so only
     // a build whose clocks all share the period merges phases into one another's orbits
     const can_merge = stride_periods === 1;
@@ -519,6 +538,15 @@ export function exhaustiveStartPhases(
         const output_states = context.inserters.map(it => it.inserter_state)
             .filter(state => base.output_inserter_ids.has(state.entity_id.id));
         const dropped = () => output_states.reduce((sum, state) => sum + state.items_dropped, 0);
+        const filler_states = exported.map(it => context.inserters.map(inserter => inserter.inserter_state).filter(state => it.filler_ids.includes(state.entity_id.id)));
+        const exported_drops = () => filler_states.map(states => states.reduce((sum, state) => sum + state.items_dropped, 0));
+        const exports_at: number[][] = [];
+        // the exports that fell short in the bins `from` on (a cumulative count at each crossing, ending with `last`)
+        const exports_short = (from: number, last: number[], proven: boolean) => exported.some((it, at) => {
+            const counts = exports_at.slice(from).map(counted => counted[at]).concat(last[at]);
+            const delivered = counts.slice(1).map((count, index) => count - counts[index]);
+            return delivered.length > 0 && exportShortfallOfBins(it, delivered, proof_bin.ticks, proven) !== null;
+        });
         const control_logic = new SimulationTick(context);
         const now = () => context.tick_provider.getCurrentTick();
 
@@ -541,7 +569,7 @@ export function exhaustiveStartPhases(
                 // the run's own cycle: the bins from `earlier` repeat forever
                 const cycle = drops_at.slice(earlier + 1).concat(dropped()).map((drops, index, all) =>
                     drops - (index === 0 ? drops_at[earlier] : all[index - 1]));
-                run_holds = cycle.every(items => Math.abs(items - expected_per_bin) <= tolerance);
+                run_holds = cycle.every(items => Math.abs(items - expected_per_bin) <= tolerance) && !exports_short(earlier, exported_drops(), true);
                 run_output = Math.round((dropped() - drops_at[earlier]) / (cycle.length * stride_periods));
                 break;
             }
@@ -554,7 +582,7 @@ export function exhaustiveStartPhases(
             if (crossing >= PHASE_PROOF_CAP_CROSSINGS) {
                 // unresolved: judged on its last bin, a sample as the shifted runs of the sampled check are
                 const last_bin = dropped() - drops_at[drops_at.length - 1];
-                run_holds = Math.abs(last_bin - expected_per_bin) <= tolerance;
+                run_holds = Math.abs(last_bin - expected_per_bin) <= tolerance && !exports_short(exports_at.length - 1, exported_drops(), false);
                 run_output = Math.round(last_bin / stride_periods);
                 run_proven = false;
                 outcome.unresolved_phases++;
@@ -563,6 +591,7 @@ export function exhaustiveStartPhases(
             own_crossing.set(key, crossing);
             keys_of_run.push(key);
             drops_at.push(dropped());
+            exports_at.push(exported_drops());
         }
         if (can_merge && run_proven) {
             const orbit_id = orbit_holds.push(run_holds!) - 1;
@@ -598,12 +627,14 @@ function overItsCycle(run: TrialRun): TrialRun["stability_check"] {
         return run.stability_check;
     }
     const ends = cycle.trials[0]?.ends_in ?? [];
+    const export_shortfalls = cycle.trials[0]?.export_shortfalls;
     return {
         ...run.stability_check,
         holds: false,
         actual_output_items: ends.length > 0 ? Math.min(...ends) : run.stability_check.expected_output_items - 1,
         repeat_periods: ends.length || undefined,
         repeat_output_items: ends.length > 1 ? ends.reduce((sum, items) => sum + items, 0) : undefined,
+        ...(export_shortfalls !== undefined && { export_shortfalls }),
     };
 }
 
@@ -656,6 +687,9 @@ export function runAsBuiltCheck(
     if (!check.holds && result.stability_check.full_output_chests !== undefined) {
         check.full_output_chests = result.stability_check.full_output_chests;
     }
+    if (result.stability_check.export_shortfalls !== undefined) {
+        check.export_shortfalls = result.stability_check.export_shortfalls;
+    }
     let stock: StockRecording | undefined;
     if (check.holds) for (const phases of movingPickupPhaseStarts(config)) {
         if (passed !== undefined) {
@@ -672,8 +706,14 @@ export function runAsBuiltCheck(
             check.holds = false;
             check.actual_output_items = judged.actual_output_items;
             check.failed_pickup_phases = Object.fromEntries(phases);
+            if (judged.export_shortfalls !== undefined) {
+                check.export_shortfalls = judged.export_shortfalls;
+            }
             if (shifted.stability_check.full_output_chests !== undefined) {
                 check.full_output_chests = shifted.stability_check.full_output_chests;
+            }
+            if (shifted.stability_check.export_shortfalls !== undefined) {
+                check.export_shortfalls = shifted.stability_check.export_shortfalls;
             }
             check.repeat_periods = judged.repeat_periods;
             check.repeat_output_items = judged.repeat_output_items;
@@ -707,6 +747,9 @@ export function runAsBuiltCheck(
                 check.actual_output_items = long_run.output_items_per_period;
                 if (long_run.full_output_chests !== undefined) {
                     check.full_output_chests = long_run.full_output_chests;
+                }
+                if (long_run.export_shortfalls !== undefined) {
+                    check.export_shortfalls = long_run.export_shortfalls;
                 }
             }
         }
@@ -746,6 +789,9 @@ export function runAsBuiltCheck(
             check.failed_start_offset = offset;
             if (shifted.stability_check.full_output_chests !== undefined) {
                 check.full_output_chests = shifted.stability_check.full_output_chests;
+            }
+            if (shifted.stability_check.export_shortfalls !== undefined) {
+                check.export_shortfalls = shifted.stability_check.export_shortfalls;
             }
             check.repeat_periods = shifted.stability_check.repeat_periods;
             check.repeat_output_items = shifted.stability_check.repeat_output_items;
