@@ -57,6 +57,7 @@ import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoom
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
+import { RunMemo, currentRunMemo } from "./run-memo";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
 /**
@@ -415,7 +416,7 @@ export interface RunOptions {
 }
 
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
-interface BuildRun extends PlannedCraftingCycle, TransferPlan {
+export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     simulation_context: SimulationContext;
     /** The build as it runs: every inserter and drill on its enable control */
     new_simulation_context: SimulationContext;
@@ -429,6 +430,8 @@ interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     duration: Duration;
     /** What was recorded: `simulate_periods` periods, or less when `detect_repeat` ended the run at a repeat */
     recorded_duration: Duration;
+    /** The ticks the run was given: the warm-up and the recorded periods (a run that ended at a repeat took fewer) */
+    ticks_simulated: number;
     /** The repeat that ended the recorded run early, when `detect_repeat` found one */
     state_repeat?: StateRepeat;
     /** The transfers of the recorded run, as the windows of the plan are read off them */
@@ -452,8 +455,16 @@ interface BuildRun extends PlannedCraftingCycle, TransferPlan {
  * recorded, its output is counted against the plan's, and, when asked, the backpressure losses are tried from where
  * it ended. Every inserter runs as its enable control says: the plan's
  * controls in a planning run, the clock windows alone in a trial (see `runClockOnBuild`).
+ *
+ * A long run that the generation in progress has made before, with this config and these options, is not made again
+ * (see `RunMemo`).
  */
 export function runBuild(config: Config, options: RunOptions): BuildRun {
+    const memo = currentRunMemo();
+    return memo !== undefined && RunMemo.accepts(options) ? memo.run(config, options, () => simulateBuild(config, options)) : simulateBuild(config, options);
+}
+
+function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const debug = options.debug ?? DebugSettingsProvider.mutable();
     const debug_steps = options.debug_steps ?? {};
     const logger = options.logger ?? defaultLogger;
@@ -499,6 +510,7 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
         inserter_clocks: controlled.inserter_clocks,
         duration,
         recorded_duration: simulated.recorded_duration,
+        ticks_simulated: warmup_period.ticks + simulated.recorded_duration.ticks,
         state_repeat: simulated.state_repeat,
         final_history,
         state_transition_history,

@@ -1,8 +1,7 @@
 #!/bin/sh
 # scripts/margin-sweep.sh <out dir> [processes, default 6]
 # Every stable potential clock of every sample, tried with its windows a tick shorter (see margin-sample.js): one JSON
-# a sample. Build first (`npx tsc`), and run `free -g` first. FULL=1 takes
-# PROCESSING_UNITS_BELT_EXPORT in as well (see sweep.sh). Then scripts/margin-table.py <out dir>.
+# a sample. Build first (`npx tsc`), and run `free -g` first. Then scripts/margin-table.py <out dir>.
 here=$(cd "$(dirname "$0")" && pwd)
 out=$(mkdir -p "$1" && cd "$1" && pwd)
 [ -n "$CLOCK_GENERATOR_ROOT" ] && CLOCK_GENERATOR_ROOT=$(cd "$CLOCK_GENERATOR_ROOT" && pwd) && export CLOCK_GENERATOR_ROOT
