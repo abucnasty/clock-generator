@@ -1,5 +1,5 @@
 {
-  "meaning": "Native summaries of the steel wagon clock family (steel-wagon-clock-fixtures.ts) in Factorio 2.1.21: the steel build around one cargo wagon, which a big mining drill fills with iron ore, two furnaces take from and put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt. The selected clock (planned-belt-slack-subtick) is recorded in two build orders, and the clock planned without iron ore in its period (planned-lean-iron-ore-subtick) once; each with the clock steel-wagon-clock.generation.test.ts pins. Each clock enables the drill a window of two positions a period, 1.08 ticks on average, before the inserter that takes the ore (since 0.20.0). The harness puts iron ore under the drill. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are sized to empty it of steel, as in the container family: the drill stopped (disabled by script) until the wagon has run dry, the output blocked for 4 periods, the drill stopped again, each followed for 40 periods, the first 6 after a release not judged. Do not compare these period for period with the 2-period families. The drill is no supply that stops in the generator's checks; here it is stopped as the supply cut.",
+  "meaning": "Native summaries of the steel wagon clock family (steel-wagon-clock-fixtures.ts) in Factorio 2.1.21: the steel build around one cargo wagon, which a big mining drill fills with iron ore, two furnaces take from and put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt. The selected clock (planned-belt-slack-subtick) is recorded in two build orders, and the clock the config makes with iron ore out of its period (ignored_lcm_ingredients; planned-belt-slack-subtick) once; each with the clock steel-wagon-clock.generation.test.ts pins. Each clock enables the drill a window of two positions a period, 1.08 ticks on average, before the inserter that takes the ore (since 0.20.0). The harness puts iron ore under the drill. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are sized to empty it of steel, as in the container family: the drill stopped (disabled by script) until the wagon has run dry, the output blocked for 4 periods, the drill stopped again, each followed for 40 periods, the first 6 after a release not judged. Do not compare these period for period with the 2-period families. The drill is no supply that stops in the generator's checks; here it is stopped as the supply cut.",
   "cases": {
     "steel-wagon-belt-slack": {
       "recorded": {
@@ -515,7 +515,7 @@
         "clock_sha256": "6f6500388f7d40872ec64a5094be2e69cf35d8f07c27a0e7dfbb43e643045a7e"
       }
     },
-    "steel-wagon-lean-iron-ore": {
+    "steel-wagon-iron-ore-out-of-period": {
       "recorded": {
         "pr": 0,
         "commit": "1571a1be",
@@ -766,7 +766,7 @@
         "expected": 1664,
         "verdict": "stable",
         "selection": {
-          "id": "planned-lean-iron-ore-subtick",
+          "id": "planned-belt-slack-subtick",
           "holds": true,
           "rate": 26.000000000000004,
           "supply": null

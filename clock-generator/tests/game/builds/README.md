@@ -505,8 +505,8 @@ mining drill fills with iron ore, a furnace takes the ore from and puts plates b
 and puts steel back into, and one inserter empties of steel onto the output belt, 26 steel a second. The harness puts the
 ore under the drill and builds the wagon after its rails. The selected clock (planned with belt slack, a subtick clock of
 11,520 ticks for 13 periods) is recorded as built and with the two inserters that put into the wagon built after every
-other entity; the clock planned without iron ore in its period is a second check, recorded as its subtick clock (3,840
-ticks for 13 periods): the capture exports an alternative's subtick clock where it has one, so the clock rounded to 295
+other entity; the clock the config makes with iron ore out of its period (`ignored_lcm_ingredients`) is a second check,
+recorded as its subtick clock (3,840 ticks for 13 periods): the capture exports an alternative's subtick clock where it has one, so the clock rounded to 295
 ticks is not recorded. Each clock enables the drill a window of two positions a period, 1.08 ticks on average, before
 the inserter that takes the ore; the harness wires it with its resource reading off. The probe ([steel-wagon-clock-probe.lua](steel-wagon-clock-probe.lua)) counts the drops of the
 inserter from the wagon to the belt per period, and also keeps the wagon's contents at each period's start and each
