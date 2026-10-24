@@ -27,7 +27,7 @@ export class PrepareStep implements RunnerStep {
      */
     private kickStartLoopingRecipes(): void {
         for (const { machine_state } of this.simulation_context.machines) {
-            for (const item_name of machine_state.machine.self_ingredients) {
+            for (const item_name of machine_state.machine.looping_ingredients) {
                 const limit = machine_state.machine.inputs.getOrThrow(item_name).automated_insertion_limit.quantity;
                 if (machine_state.selfIngredients.getQuantity(item_name) < limit) {
                     machine_state.selfIngredients.setQuantity(item_name, limit);

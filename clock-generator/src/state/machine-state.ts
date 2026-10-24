@@ -188,7 +188,7 @@ function forMachine(machine: Machine): MachineState {
     );
     // a recipe that makes its own ingredient cannot start from nothing: the machine begins with as much of it as
     // inserters would fill it up to, like the eggs a player puts in a pentapod egg biochamber by hand
-    machine.self_ingredients.forEach(item_name =>
+    machine.looping_ingredients.forEach(item_name =>
         state.selfIngredients.addQuantity(item_name, machine.inputs.getOrThrow(item_name).automated_insertion_limit.quantity));
     return state;
 }

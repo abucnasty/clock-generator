@@ -166,6 +166,13 @@ function itemsPutInto(config: Config, chest_id: number, entity_registry: EntityR
             else if (chest !== undefined) (chest.contents ?? []).forEach(content => items.add(content.item));
         }
     }
+    // a machine that places its results into the chest puts in every result of its recipe
+    for (const machine of config.machines) {
+        if (machine.result_target?.type === "chest" && machine.result_target.id === chest_id) {
+            const placing = entity_registry.getEntityById(EntityId.forMachine(machine.id));
+            if (placing !== null && Entity.isMachine(placing)) placing.outputs.forEach(output => items.add(output.item_name));
+        }
+    }
     // a drill that drops into the chest puts in what it mines
     for (const drill of config.drills?.configs ?? []) {
         if (drill.target.type === "chest" && drill.target.id === chest_id) {
@@ -199,8 +206,13 @@ function createSimulationContextFromConfig(
             if (possible_state_machine) {
                 return possible_state_machine;
             }
+            const result_target = machine_state.machine.result_target;
+            const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
+            assert(result_target_state === undefined || EntityState.isChest(result_target_state),
+                `${machine_state.machine} places its results into ${result_target}, which is no chest`);
             return MachineStateMachine.create({
                 machine_state: machine_state,
+                ...(result_target_state !== undefined && { result_target_state }),
             });
         })
 

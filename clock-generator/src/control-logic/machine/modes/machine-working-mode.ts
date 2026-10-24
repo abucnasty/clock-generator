@@ -1,5 +1,5 @@
-import { InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
-import { ENERGY_BUFFER_TICKS, MachineOutput, amountIgnoredByProductivity } from "../../../entities";
+import { ChestState, InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
+import { ENERGY_BUFFER_TICKS, MachineOutput, amountIgnoredByProductivity, expectedAmount } from "../../../entities";
 import { MachineMode } from "./machine-mode";
 
 // absorbs floating point drift when summing fractional per-tick progress
@@ -13,6 +13,13 @@ const PROGRESS_EPSILON = 1e-9;
  * Crafting follows Factorio: ingredients are removed when a craft starts and products are added when it finishes.
  * A craft starts whatever the output holds. Products that do not fit under the stack size when they are made are held
  * by the machine, which starts no craft and makes no progress until there is room for them.
+ *
+ * A result that comes by chance is made at its expected amount, the fractions carried until they add up to a whole
+ * item, the main product as the by-products. A machine that places its results itself (a recycler, `places_results`)
+ * puts them in its output whatever it holds, any number of stacks, and starts no craft while a stack of one of them
+ * waits there (recorded on the recycler: it stops with 50 ore waiting, not with its 12 result slots full). With a
+ * result target it first puts what waits into that container each tick, as far as it has room, as a drill drops what
+ * it holds before it mines (the order on the recycler is not recorded).
  */
 export class MachineWorkingMode implements MachineMode {
     public readonly status = MachineStatus.WORKING;
@@ -24,7 +31,12 @@ export class MachineWorkingMode implements MachineMode {
      */
     private readonly hot: {
         crafts_per_tick: number;
+        /** The most of the main product a craft yields: its amount, one more where it has an extra count fraction */
         output_amount: number;
+        /** What a craft yields of the main product on average, where it comes by chance; null where it always comes in its amount */
+        output_by_chance: number | null;
+        /** Whether the machine places its results itself: no stack size caps its output, a stack waiting stops it */
+        places_results: boolean;
         output_stack_size: number;
         amount_per_bonus: number;
         bonus_per_craft: number;
@@ -41,15 +53,22 @@ export class MachineWorkingMode implements MachineMode {
     };
 
     constructor(
-        private readonly state: MachineState
+        private readonly state: MachineState,
+        /** The container the machine puts its results into, where it places them itself and has a result target */
+        private readonly result_target: ChestState | null = null,
     ) {
         const machine = state.machine;
         const output = machine.output.ingredient;
+        const extra_count = (output as { extra_count_fraction?: number }).extra_count_fraction ?? 0;
+        const most_per_craft = output.amount + (extra_count > 0 ? 1 : 0);
+        const expected = expectedAmount(output);
         this.hot = {
             crafts_per_tick: machine.crafting_rate.crafts_per_tick,
-            output_amount: output.amount,
+            output_amount: most_per_craft,
+            output_by_chance: expected === output.amount ? null : expected,
+            places_results: machine.metadata.places_results === true,
             output_stack_size: output.item.stack_size,
-            amount_per_bonus: output.amount - amountIgnoredByProductivity(output),
+            amount_per_bonus: (expected === output.amount ? output.amount : expected) - amountIgnoredByProductivity(output),
             bonus_per_craft: machine.bonus_productivity_rate.bonus_per_craft,
             by_products: machine.outputs.slice(1).map(by_product => ({
                 output: by_product,
@@ -93,7 +112,8 @@ export class MachineWorkingMode implements MachineMode {
             this.advanceBonusProgress(step);
 
             if (progress >= 1 - PROGRESS_EPSILON) {
-                this.state.pendingOutput += this.hot.output_amount;
+                this.state.pendingOutput += this.hot.output_by_chance === null ? this.hot.output_amount
+                    : this.wholeOfMainProduct(this.hot.output_by_chance);
                 this.releaseHeldProducts();
                 this.addByProducts();
                 this.state.craftCount += 1;
@@ -124,6 +144,50 @@ export class MachineWorkingMode implements MachineMode {
         return !this.holdsProducts() && (this.isCraftInProgress() || this.canStartCraft()) && this.hasFuel();
     }
 
+    /**
+     * Whole items of the main product a craft or a full bar yields where it comes by chance: its expected amount added to
+     * what was carried, and the fraction left carried on, as a by-product's
+     */
+    private wholeOfMainProduct(expected: number): number {
+        const item_name = this.state.machine.output.item_name;
+        const total = (this.state.byProductCarry.get(item_name) ?? 0) + expected;
+        const whole = Math.floor(total + PROGRESS_EPSILON);
+        this.state.byProductCarry.set(item_name, Math.max(0, total - whole));
+        return whole;
+    }
+
+    /**
+     * A machine that places its results itself, with a result target: what waits in its output goes into the
+     * container, each result as far as it has room. Done every tick, before anything else of the machine's.
+     */
+    public placeResults(): void {
+        const target = this.result_target;
+        if (target === null) {
+            return;
+        }
+        for (const output of this.state.machine.outputs) {
+            const waiting = this.inventory_state.getQuantity(output.item_name);
+            if (waiting <= 0) {
+                continue;
+            }
+            const amount = Math.min(waiting, Math.max(0, target.getAvailableSpace(output.item_name)));
+            if (amount > 0) {
+                this.inventory_state.removeQuantity(output.item_name, amount);
+                target.inventoryState.addQuantity(output.item_name, amount);
+            }
+        }
+    }
+
+    /** A machine that places its results itself: whether a stack of one of them waits in its output, which stops it */
+    private resultStackWaits(): boolean {
+        for (const output of this.state.machine.outputs) {
+            if (this.inventory_state.getQuantity(output.item_name) >= output.outputBlock.max_stack_size) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Products of a finished craft, or of a paid out productivity bar, that the output has no room for */
     private holdsProducts(): boolean {
         return this.state.pendingOutput > 0 && !this.hasOutputSpaceFor(this.nextHeldAmount());
@@ -141,7 +205,8 @@ export class MachineWorkingMode implements MachineMode {
     private releaseHeldProducts(): void {
         // a full bar pays the amount less what the recipe ignores for productivity: 1 of the 2 pentapod eggs
         while (this.state.bonusProgress.progress >= 1 - PROGRESS_EPSILON) {
-            this.state.pendingOutput += this.hot.amount_per_bonus;
+            this.state.pendingOutput += this.hot.output_by_chance === null ? this.hot.amount_per_bonus
+                : this.wholeOfMainProduct(this.hot.amount_per_bonus);
             this.state.productsFinished += 1;
             this.state.bonusProgress.progress = Math.max(0, this.state.bonusProgress.progress - 1);
         }
@@ -165,6 +230,14 @@ export class MachineWorkingMode implements MachineMode {
     public outputFullReason(): string | null {
         const output_item = this.output_item;
         const amount_per_craft = this.hot.output_amount;
+        if (this.hot.places_results) {
+            const waiting = this.state.machine.outputs.find(output =>
+                this.inventory_state.getQuantity(output.item_name) >= output.outputBlock.max_stack_size);
+            if (waiting !== undefined) {
+                return `a stack of ${waiting.item_name} waits in its output`
+                    + (this.result_target === null ? "" : ` for room in ${this.result_target.entity_id}`);
+            }
+        }
         if (this.holdsProducts()) {
             return `machine holds ${output_item.item_name} of a finished craft that does not fit under max stack size of ${this.state.machine.output.outputBlock.max_stack_size}`;
         }
@@ -287,6 +360,9 @@ export class MachineWorkingMode implements MachineMode {
                 return false;
             }
         }
+        if (this.hot.places_results && this.resultStackWaits()) {
+            return false;
+        }
         return !this.holdsProducts() && this.byProductsHaveSpace();
     }
 
@@ -295,6 +371,10 @@ export class MachineWorkingMode implements MachineMode {
         const by_products = this.hot.by_products;
         if (by_products.length === 0) {
             return true;
+        }
+        if (this.hot.places_results) {
+            // its output takes any number of stacks: a stack waiting stops it (resultStackWaits)
+            return !this.resultStackWaits();
         }
         const quantities = this.hot.by_product_quantities ??= by_products.map(by_product =>
             new LiveQuantity(this.inventory_state, by_product.output.item_name));
@@ -329,6 +409,10 @@ export class MachineWorkingMode implements MachineMode {
     }
 
     private hasOutputSpaceFor(amount: number): boolean {
+        if (this.hot.places_results) {
+            // its output takes any number of stacks; a stack waiting stops the next craft instead (canStartCraft)
+            return true;
+        }
         return this.outputQuantity() + amount <= this.hot.output_stack_size;
     }
 

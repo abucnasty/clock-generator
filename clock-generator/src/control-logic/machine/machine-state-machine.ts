@@ -1,6 +1,6 @@
 import assert from "../../common/assert"
 import { EntityId } from "../../entities";
-import { EntityState, MachineState, MachineStatus, ReadableEntityStateRegistry } from "../../state";
+import { ChestState, EntityState, MachineState, MachineStatus, ReadableEntityStateRegistry } from "../../state";
 import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator, Transition } from "../mode";
 import { MachineIngredientShortageMode, MachineMode, MachineNoFuelMode, MachineOutputFullMode, MachineWorkingMode } from "./modes";
 import { MachineStatusPlugin } from "./plugins";
@@ -24,8 +24,12 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
         super(initialMode, graph, plugins);
     }
 
-    /** Products the machine holds go to its output in the tick there is room for them, whatever mode it is in */
+    /**
+     * Products the machine holds go to its output in the tick there is room for them, whatever mode it is in; a machine
+     * that places its results itself first puts what waits in its output into its result target
+     */
     public override executeForTick(): void {
+        this.working_mode.placeResults();
         this.working_mode.putHeldProductsInOutput();
         // a copy of ModeStateMachine.executeForTick, see there
         const evaluator = this.current_evaluator ?? this.modeEvaluatorForMode(this.current);
@@ -47,12 +51,14 @@ function create(args: {
     machine_state: MachineState,
     initial_mode_status?: MachineStatus
     plugins?: ModePlugin<MachineMode>[],
+    /** The container the machine places its results into, where it has a result target */
+    result_target_state?: ChestState,
 }): MachineStateMachine {
 
 
     const { machine_state, initial_mode_status = MachineStatus.INGREDIENT_SHORTAGE, plugins = [] } = args;
 
-    const working_mode = new MachineWorkingMode(machine_state);
+    const working_mode = new MachineWorkingMode(machine_state, args.result_target_state ?? null);
     const ingredient_shortage_mode = new MachineIngredientShortageMode();
     const output_full_mode = new MachineOutputFullMode();
     const no_fuel_mode = new MachineNoFuelMode();
@@ -102,9 +108,12 @@ function createFromId(machine_entity_id: EntityId, entity_state_registry: Readab
     if(!EntityState.isMachine(machine_state)) {
         throw new Error(`Entity with id ${machine_entity_id} is not a MachineState`);
     }
+    const result_target = machine_state.machine.result_target;
+    const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
     return MachineStateMachine.create({
         machine_state: machine_state,
         initial_mode_status: machine_state.status,
+        ...(result_target_state !== undefined && EntityState.isChest(result_target_state) && { result_target_state }),
     });
 }
 

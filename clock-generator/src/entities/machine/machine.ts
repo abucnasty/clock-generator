@@ -1,6 +1,6 @@
 import { fraction } from "../../data-types/fraction"
 import { MachineConfiguration } from "../../config";
-import { machineRuleOf } from "../../config/machine-prototype";
+import { machinePlacesResults, machineRuleOf } from "../../config/machine-prototype";
 import { AutomatedInsertionLimit, ConsumptionRate } from "./input";
 import { BurnerEnergySource, FuelSlot } from "./fuel";
 import { MachineMetadata } from "./machine-metadata";
@@ -37,12 +37,28 @@ export class Machine implements Entity {
         public readonly insertion_duration: InsertionDuration,
         public readonly fuel_consumption?: FuelConsumption,
         public readonly fuel_slot?: FuelSlot,
+        /**
+         * The container a machine that places its results itself puts them into: the one at its result spot (the
+         * config's `result_target`). Without it such a machine keeps them in its output, as any other machine does.
+         */
+        public readonly result_target?: EntityId,
     ) {
         this.self_ingredients = new Set(outputs.map(it => it.item_name).filter(it => inputs.has(it)));
+        this.looping_ingredients = new Set(outputs
+            .filter(it => this.self_ingredients.has(it.item_name)
+                && it.amount_per_craft.toDecimal() >= inputs.getOrThrow(it.item_name).ingredient.amount)
+            .map(it => it.item_name));
     }
 
     /** Ingredients the recipe also makes, like the pentapod egg: the machine keeps those it is given apart from those it makes */
     public readonly self_ingredients: ReadonlySet<string>;
+
+    /**
+     * The ingredients the recipe makes at least as much of as a craft uses (the pentapod egg): a loop that cannot start
+     * from nothing, so its machines are seeded with them. Recycled ore comes back at a quarter of what a craft uses, from
+     * ore brought in from outside: no loop to seed.
+     */
+    public readonly looping_ingredients: ReadonlySet<string>;
 
     /** The input an inserter fills for an item: the ingredient, or the fuel a burner machine burns */
     public getInsertableInput(item_name: string): MachineInput | undefined {
@@ -110,12 +126,14 @@ function fromConfig(config: MachineConfiguration): Machine {
         energy_consumption_bonus: config.energy_consumption_bonus,
         fuel: config.fuel,
         ...(config.prototype !== undefined ? { prototype: config.prototype } : {}),
-    });
+        ...(machinePlacesResults(config) ? { places_results: true } : {}),
+    }, config.result_target === undefined ? undefined : EntityId.forChest(config.result_target.id));
 }
 
 function createMachine(
     id: number,
-    metadata: MachineMetadata
+    metadata: MachineMetadata,
+    result_target?: EntityId,
 ): Machine {
     const recipe = metadata.recipe;
     const overload_multiplier = OverloadMultiplier.fromCraftingSpeed(metadata.crafting_speed, recipe.energy_required)
@@ -136,15 +154,17 @@ function createMachine(
         })
     );
 
+    // a main product that comes by chance (recycled iron ore comes back at 0.25 a craft) is made at its expected amount
+    const output_per_craft = expectedAmount(recipe.output);
     const craftingRate = CraftingRate.fromCraftingSpeed(
-        fraction(recipe.output.amount),
+        fraction(output_per_craft),
         metadata.crafting_speed,
         recipe.energy_required
     );
 
     // productivity multiplies the amount except for the part the recipe ignores for it: 1 of the 2 pentapod eggs
     const ignored_by_productivity = amountIgnoredByProductivity(recipe.output);
-    const amount_per_craft = fraction(recipe.output.amount - ignored_by_productivity)
+    const amount_per_craft = fraction(output_per_craft - ignored_by_productivity)
         .multiply(fraction(1).add(fraction(metadata.productivity).divide(100)))
         .add(fraction(ignored_by_productivity));
 
@@ -177,8 +197,15 @@ function createMachine(
         craftingRate,
         bonusProductivityRate,
         insertionDurationPeriod,
-        ...createFuel(metadata),
+        ...fuelOf(metadata),
+        result_target,
     );
+}
+
+/** The fuel consumption and fuel slot of a burner, or neither */
+function fuelOf(metadata: MachineMetadata): [FuelConsumption | undefined, FuelSlot | undefined] {
+    const [consumption, slot] = createFuel(metadata);
+    return [consumption, slot];
 }
 
 /**
