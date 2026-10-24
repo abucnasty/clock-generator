@@ -2,7 +2,8 @@
 // Whether each potential clock of one sample that holds its expected output survives backpressure loss (GOALS.md, "Backpressure Loss"), as
 // <out dir>/<KEY>.json: for every loss of the build (each supplied item stops arriving, each output is not taken
 // away) the fixed trials of src/crafting/backpressure-loss.ts, and whether the build is back at its expected output
-// after each. Simulator only: the harness cannot cut a supply. BACKED_UP=1 turns "Backed-up belts" on;
+// after each. A clock is tried no further than the first loss it does not get back from: the losses after it are
+// listed as `not_tried`, and the trials of a loss that fails end at its first failing trial. Simulator only: the harness cannot cut a supply. BACKED_UP=1 turns "Backed-up belts" on;
 // PLACES=0,0.5 cuts at fewer places in the period than the four of LOSS_PLACES, to make the run shorter.
 // For all samples: scripts/backpressure-sweep.sh. The table: scripts/backpressure-table.py.
 const path = require("path"), fs = require("fs");
@@ -35,6 +36,7 @@ const places = process.env.PLACES ? process.env.PLACES.split(",").map(Number) : 
                 clock.holds_undisturbed = report.undisturbed.recovers;
                 clock.survives = report.survives;
                 clock.broken_by = report.broken_by;
+                clock.not_tried = report.not_tried.map(lossId);
                 clock.recovered_after_periods = report.recovered_after_periods;
                 clock.ticks = report.ticks;
                 clock.losses = report.losses.map(outcome => ({
