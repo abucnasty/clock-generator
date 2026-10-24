@@ -23,24 +23,34 @@ test("grenade: the 112-tick clock holds the target and is selected; the longer o
     expect(selected.verdict).toBe("stable");
     expect(selected.assessment.items_per_second).toBe(240);
     expect(selected.result.simulation_duration.ticks).toBe(112);
-    // two groups of two machines, half a period apart: the foundry cannot serve four at once
+    // two groups of two machines, half a period apart: the foundry cannot serve four at once. The machines of one row of the belt
+    // (inserters 1 and 2, and 3 and 4 that fill them) are one group, the machines of the other row (7 and 8; 5 and 6) the other
     const windows = selected.result.clock_windows;
-    expect([windows["inserter:4"], windows["inserter:3"]]).toEqual([[{start: 2, end: 43}], [{start: 58, end: 99}]]);
-    expect([windows["inserter:1"], windows["inserter:2"]]).toEqual([[{start: 0, end: 0}], [{start: 56, end: 56}]]);
+    expect([windows["inserter:3"], windows["inserter:4"]]).toEqual([[{start: 2, end: 43}], [{start: 2, end: 43}]]);
+    expect([windows["inserter:5"], windows["inserter:6"]]).toEqual([[{start: 58, end: 99}], [{start: 58, end: 99}]]);
+    expect([windows["inserter:1"], windows["inserter:2"]]).toEqual([[{start: 0, end: 0}], [{start: 0, end: 0}]]);
+    expect([windows["inserter:7"], windows["inserter:8"]]).toEqual([[{start: 56, end: 56}], [{start: 56, end: 56}]]);
     expect(generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE).every(it => it.verdict === "unstable")).toBe(true);
 });
 
-test("grenade: every alternative says the lanes of the belt are exactly full, and the selected clock's hands land on each other", () => {
+test("grenade: every alternative says the lanes of the belt are exactly full, and the selected clock's hands fit between each other", () => {
     for (const alternative of generated.alternatives) {
         expect(alternative.insights.find(it => it.id === "lanes-exactly-full")?.title).toBe("Both lanes of belt 1 are exactly full");
         expect(alternative.insights.find(it => it.id === "drop-spacing")).toBeDefined();
     }
-    // the first inserter of each line starts at tick 6 and the second 56 ticks later: 7 tiles of belt put each second hand on a first one
+    // the two inserters of a row start in the same tick: the 14 hands of a row land on 14 tiles of the belt's cycle of 14
     const selected = generated.alternatives[generated.selected_index];
     const spacing = selected.insights.find(it => it.id === "drop-spacing")!;
-    expect(spacing.title).toBe("Drops onto belt 1 land on each other");
-    expect(spacing.table?.rows).toEqual([["1 and 2", "14", "12", "14", "7", "8"], ["7 and 8", "14", "12", "14", "7", "8"]]);
-    expect(spacing.explanation).toContain("The hands would fit with inserter 2 starting at tick 54 or 70, or at the same tick as inserter 1.");
+    expect(spacing.title).toBe("Drops onto belt 1 fit between each other");
+    expect(spacing.table?.rows).toEqual([["1 and 2", "14", "12", "14", "0", "0"], ["7 and 8", "14", "12", "14", "0", "0"]]);
+});
+
+test("grenade: copies a tile closer put hands on each other, and the insight says so", async () => {
+    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    const closer = {...config, target_output: {...config.target_output, copy_offset: {x: 11, y: 0}}};
+    const made = generateClockAlternatives(closer, {logger: quiet});
+    const selected = made.alternatives[made.selected_index];
+    expect(selected.insights.find(it => it.id === "drop-spacing")?.title).toBe("Drops onto belt 1 land on each other");
 });
 
 test("grenade: the hand-made clock, as windows, holds in the simulator and gets back after every loss", async () => {

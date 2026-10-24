@@ -6,6 +6,7 @@ import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock,
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { runClockOnBuild } from "../trial";
+import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -116,6 +117,8 @@ export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swin
  * - an output inserter swings once a period, in a window of one tick at the start of its machine's group (an output of
  *   more hands in a window of `h x cycle + 1` ticks), and its machine's input windows open at or after it, never before:
  *   a machine is refilled after its hand has left;
+ * - an inserter whose hands, rounded up, take the period (a window of its hands and the offset reaches it) is busy all the time:
+ *   a window would only make gaps between hands that follow each other, so it has none and stays enabled;
  * - a mining drill drops the whole of what it mined in a tick it is enabled, up to the machine's limit, and the machine
  *   holds the rest for the next window, so it needs a window of the planned length at least two ticks, anywhere in
  *   its machine's group;
@@ -136,6 +139,8 @@ export function groupedHandsWindows(
     /** Whether a window that picks up from a belt has the belt pickup slack (a clock for a moving belt); not on backed-up belts */
     with_belt_slack: boolean = true,
     options: GroupedHandsOptions = DEFAULT_OPTIONS,
+    /** Where the output inserters stand on a shared belt: among groupings that serve the sources equally, the one whose hands fit on the belt */
+    drop_tie_break: DropTieBreak | null = null,
 ): Map<string, OpenRange[]> {
     if (!Number.isInteger(period)) refuse(`the period is ${period} ticks, not a whole number`);
     const entities = entity_registry.getAll();
@@ -228,8 +233,16 @@ export function groupedHandsWindows(
         const hands = outputHands(output);
         return hands === 1 ? 1 : hands * output.animation.total.ticks + 1;
     };
-    const longest = Math.max(...takers.map(it => it.window_ticks));
-    if (longest + INPUT_OFFSET_TICKS >= period) refuse(`a window of ${longest} ticks does not fit a period of ${period}`);
+    // an inserter whose hands (rounded up) take the whole period, or all but the offset of its window, is busy all the time: a window
+    // would only put gaps between hands that follow each other, so it is left enabled
+    const open_all_period = (taker: Taker): boolean => taker.window_ticks + INPUT_OFFSET_TICKS >= period;
+    const gated = takers.filter(it => !open_all_period(it));
+    if (gated.length === 0) refuse(`every taker is busy the whole period of ${period} ticks`);
+    const longest = Math.max(...gated.map(it => it.window_ticks));
+    const leaveOpen = (made: Map<string, OpenRange[]>): Map<string, OpenRange[]> => {
+        for (const taker of takers.filter(open_all_period)) made.delete(taker.inserter.entity_id.id);
+        return made;
+    };
 
     // the machines, in the order of their ids, and the fewest groups every source can serve
     const machines = Array.from(sinks).sort((a, b) => Number(a.split(":")[1]) - Number(b.split(":")[1]));
@@ -240,18 +253,53 @@ export function groupedHandsWindows(
         known.draws.set(taker.sink.id, (known.draws.get(taker.sink.id) ?? 0) + taker.items);
         sources.set(taker.source.id, known);
     }
-    const fits = (groups: number): boolean => Array.from(sources.values()).every(source => {
-        if (source.machine === null) return true;
-        const available = source.machine.output.outputBlock.held_limit + source.machine.output.production_rate.amount_per_tick.toDecimal() * longest;
-        const drawn = new Array<number>(groups).fill(0);
-        machines.forEach((machine, index) => { drawn[index % groups] += source.draws.get(machine) ?? 0; });
-        return drawn.every(it => it <= available);
-    });
+    /** Which group a machine is in, by the order the machines are dealt out in (round robin, or in blocks of neighbours) */
+    const assignment = (order: string[], groups: number, blocks: boolean): Map<string, number> =>
+        new Map(order.map((machine, index) => [machine, blocks ? Math.floor(index * groups / order.length) : index % groups] as const));
+    const fits = (groups: number, group_of: ReadonlyMap<string, number> = assignment(machines, groups, false)): boolean =>
+        Array.from(sources.values()).every(source => {
+            if (source.machine === null) return true;
+            const available = source.machine.output.outputBlock.held_limit + source.machine.output.production_rate.amount_per_tick.toDecimal() * longest;
+            const drawn = new Array<number>(groups).fill(0);
+            machines.forEach(machine => { drawn[group_of.get(machine)!] += source.draws.get(machine) ?? 0; });
+            return drawn.every(it => it <= available);
+        });
     // the draw against what a source holds and makes in a window is the rule for sources that only give; a source that is
     // filled in turn (a chain) is placed in one group, and the clock-only check and the shifted runs judge it
     let groups = 1;
     while (!chained && groups <= machines.length && !fits(groups)) groups++;
     if (groups > machines.length) refuse("a source cannot serve even one machine at a time");
+
+    // Machines dealt out round robin in the order of their ids serve the sources as well as machines dealt out in the order
+    // of the belt they drop on, so where the output inserters stand on a shared belt the grouping is chosen by what lands
+    // on what: the dealings that serve every source are compared by the pairs of hands that land on each other, and the
+    // first with the fewest wins (the round robin by ids on a tie). This is arithmetic on the places, no run of the build.
+    let group_of = assignment(machines, groups, false);
+    if (groups > 1 && !chained && drop_tie_break !== null) {
+        const place_of = (machine: string): { line: number; along: number } => {
+            const places = outputs.filter(it => it.source.entity_id.id === machine).map(it => drop_tie_break.places.get(it.entity_id.number));
+            return places.find(it => it !== undefined) ?? { line: Infinity, along: 0 };
+        };
+        const on_the_belt = [...machines].sort((a, b) => {
+            const [left, right] = [place_of(a), place_of(b)];
+            return left.line - right.line || left.along - right.along || machines.indexOf(a) - machines.indexOf(b);
+        });
+        const collisions = (dealt: ReadonlyMap<string, number>): number => {
+            const starts = new Map<number, number[]>();
+            for (const output of outputs) {
+                const start = Math.round(dealt.get(output.source.entity_id.id)! * period / groups);
+                starts.set(output.entity_id.number, [...(starts.get(output.entity_id.number) ?? []), start]);
+            }
+            return drop_tie_break.collisions(starts);
+        };
+        let fewest = collisions(group_of);
+        for (const blocks of [false, true]) {
+            const dealt = assignment(on_the_belt, groups, blocks);
+            if (fewest === 0 || !fits(groups, dealt)) continue;
+            const pairs = collisions(dealt);
+            if (pairs < fewest) { fewest = pairs; group_of = dealt; }
+        }
+    }
 
     const windows = new Map<string, OpenRange[]>();
     if (chained) {
@@ -282,9 +330,9 @@ export function groupedHandsWindows(
         for (const taker of top.filter(filled)) feed(taker, 0);
         const unplaced = takers.find(it => !placed(it));
         if (unplaced !== undefined) refuse(`${unplaced.inserter.entity_id.id} fills ${unplaced.sink.id}, which is neither an output machine nor taken from`);
-        return windows;
+        return leaveOpen(windows);
     }
-    const start_of = (machine: string): number => Math.round((machines.indexOf(machine) % groups) * period / groups);
+    const start_of = (machine: string): number => Math.round(group_of.get(machine)! * period / groups);
     for (const taker of takers) {
         windows.set(taker.inserter.entity_id.id, windowFrom(start_of(taker.sink.id) + INPUT_OFFSET_TICKS, taker.window_ticks, period));
     }
@@ -296,7 +344,7 @@ export function groupedHandsWindows(
         const ticks = Math.max(MIN_DRILL_WINDOW_TICKS, ...planned.map(range => range.end_inclusive - range.start_inclusive + 1));
         windows.set(drill.entity_id.id, windowFrom(start_of(drill.sink_id.id) + INPUT_OFFSET_TICKS, ticks, period));
     }
-    return windows;
+    return leaveOpen(windows);
 }
 
 /**
@@ -328,10 +376,35 @@ const TRIES: GroupedHandsOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset 
     [false, true].map(surplus_guard => ({ surplus_guard, feeder_offset })));
 
 /**
+ * The clock of the windows as the generator exports it, checked as a clock with windows of its own is (the clock-only runs
+ * from the start phases and the long run): it holds when that check does
+ */
+function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options: GenerateClockOptions): BlueprintGenerationResult {
+    // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
+    const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
+    const slack = beltPickupSlackTicks(made.run.simulation_context.entity_registry);
+    const belt_fed = Array.from(windows.keys()).filter(id => slack.has(id));
+    const moving = made.config.overrides?.backed_up_belts !== true;
+    const belt: ClockBelt | null = belt_fed.length === 0 ? null
+        : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
+    const named = { ...exported, belt, belt_pickup_slack_left_out: false,
+        applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
+    // inserters with the same windows share a decider unless the items they carry differ, and the check builds them in the order it
+    // derives from their filters (deciderBuildOrder): so the filters tell them apart here too, not the planning run's items
+    const item_names = new Map(made.item_names);
+    for (const inserter of made.run.simulation_context.entity_registry.getAll().filter(Entity.isInserter)) {
+        item_names.set(inserter.entity_id.id, Array.from(inserter.filtered_items).sort().join(","));
+    }
+    const result = checkedClock({ ...made, item_names }, named, windows, { ...options, verify_as_built: true });
+    result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
+    return result;
+}
+
+/**
  * The clock of a plan with the windows of groupedHandsWindows, checked as a clock with windows of its own is: by the
  * clock-only runs from the start phases and the long run, and by the margin of `holdsWithMargin`. The plan is made again
  * for the cycles of `groupedHandsCycles` where those are not its own and the config does not set them. The windows are
- * tried in the ways of TRIES, the first that holds with its margin is the clock; those that make the same windows are one.
+ * tried in the ways of TRIES, the first that holds with its margin, and from every start phase, is the clock; those that make the same windows are one.
  * Null where the rule does not apply to the build. It holds when its own windows hold, not when the planning run of the
  * plan does.
  */
@@ -342,7 +415,7 @@ export function groupedHandsClock(
 ): BlueprintGenerationResult | null {
     let made = plan;
     let clock = planned;
-    let found: Map<string, OpenRange[]> | null = null;
+    let finished: BlueprintGenerationResult | null = null;
     const reasons: string[] = [];
     try {
         if (plan.run.always_enabled_by_config.size > 0 || plan.run.inserter_clocks.size > 0 || alwaysEnabledInserters(plan.run.simulation_context.entity_registry).length > 0) {
@@ -355,17 +428,22 @@ export function groupedHandsClock(
         }
         const { simulation_context, swing_counts, recipe_lcm, duration } = made.run;
         const tried = new Set<string>();
+        const drops = dropTieBreak(made.config, duration.ticks);
         for (const way of TRIES) {
             const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, clock.windows,
-                made.config.overrides?.backed_up_belts !== true, way);
+                made.config.overrides?.backed_up_belts !== true, way, drops);
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
             if (tried.has(key)) continue;
             tried.add(key);
             const unmoved = holdsWithMargin(made, windows, duration.ticks);
-            if (unmoved === null) { found = windows; break; }
-            reasons.push(unmoved);
+            if (unmoved !== null) { reasons.push(unmoved); continue; }
+            // the margin runs start from the cold start only: the clock has to hold from the other start phases too
+            const clock_of_windows = finishedClock(made, windows, options);
+            finished ??= clock_of_windows;
+            if (clock_of_windows.stability_check.holds) { finished = clock_of_windows; break; }
+            reasons.push(`the windows ${key} do not hold from every start`);
         }
-        if (found === null) refuse(reasons.join("; "));
+        if (finished === null) refuse(reasons.join("; "));
     } catch (error) {
         if (error instanceof GroupedHandsNotApplicable) {
             plan.logger.log(`Grouped hands do not apply: ${error.message}`);
@@ -373,22 +451,5 @@ export function groupedHandsClock(
         }
         throw error;
     }
-    // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
-    const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
-    const slack = beltPickupSlackTicks(made.run.simulation_context.entity_registry);
-    const belt_fed = Array.from(found!.keys()).filter(id => slack.has(id));
-    const moving = made.config.overrides?.backed_up_belts !== true;
-    const belt: ClockBelt | null = belt_fed.length === 0 ? null
-        : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
-    const named = { ...exported, belt, belt_pickup_slack_left_out: false,
-        applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
-    // inserters with the same windows share a decider unless the items they carry differ, and the check builds them in the order it
-    // derives from their filters (deciderBuildOrder): so the filters tell them apart here too, not the planning run's items
-    const item_names = new Map(made.item_names);
-    for (const inserter of made.run.simulation_context.entity_registry.getAll().filter(Entity.isInserter)) {
-        item_names.set(inserter.entity_id.id, Array.from(inserter.filtered_items).sort().join(","));
-    }
-    const result = checkedClock({ ...made, item_names }, named, found!, { ...options, verify_as_built: true });
-    result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
-    return result;
+    return finished!;
 }
