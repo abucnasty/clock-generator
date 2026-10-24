@@ -144,7 +144,8 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     const counted = wakeUpsCounted(alternative);
     const mostWakeUpsId = mostWokenRowId(rows);
     const summary = summaryText({
-        periodTicks,
+        // a rounded clock's period is the one its blueprint counts, as its label says
+        periodTicks: alternative.roundedPeriodTicks ?? periodTicks,
         inserters: rows.filter(row => row.kind === 'inserter').length,
         drills: rows.filter(row => row.kind === 'drill').length,
         wakeUps: counted ? alternative.asBuilt?.wake_ups?.wake_ups_per_minute ?? sumWakeUps(rows) : null,
