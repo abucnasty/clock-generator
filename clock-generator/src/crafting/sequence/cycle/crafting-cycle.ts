@@ -6,6 +6,7 @@ import { buildOutputInsertersOf, EntityTransferCountMap } from "./swing-counts";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
+import { targetInsertersOf, targetMachinesOf } from "./target-ends";
 
 export interface CraftingCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
@@ -59,12 +60,54 @@ function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cy
     return plan.total_duration_ticks.multiply(cycles).toDecimal();
 }
 
+/** Hands of the target item a target machine is brought in a cycle can be this many at most, for a cycle of whole ticks */
+const MAX_DESTROYED_CYCLE_HANDS = 1000;
+
+/**
+ * The plan of a target that counts an item destroyed, by plain arithmetic (computeDestroyedTargetTransfers): a cycle is
+ * the fewest hands of the item brought into each machine that last a whole number of ticks at the target rate (an
+ * overridden output swing count sets them instead), and the transfers of every inserter follow from them.
+ */
+function createDestroyedPlan(
+    target_production_rate: TargetProductionRate,
+    entity_registry: ReadableEntityRegistry,
+    config_overrides: Partial<ConfigOverrides>,
+): CraftingCyclePlan {
+    const item = target_production_rate.machine_production_rate.item;
+    const target = { item, counts: target_production_rate.counts };
+    const machines = targetMachinesOf(target, entity_registry);
+    assert(machines.length > 0, `No machine takes ${item} in from outside the build to destroy it`);
+    const hand = handSizeFor(targetInsertersOf(machines[0], target, entity_registry)[0], item);
+    const per_machine_rate = target_production_rate.machine_production_rate.amount_per_tick.divide(machines.length);
+    const ticks_per_hand = fraction(hand).divide(per_machine_rate);
+    let hands = config_overrides.terminal_swing_count;
+    if (hands === undefined) {
+        hands = 1;
+        while (hands < MAX_DESTROYED_CYCLE_HANDS && ticks_per_hand.multiply(hands).getDenominator !== 1) {
+            hands++;
+        }
+    }
+    const period_ticks = ticks_per_hand.multiply(hands);
+    const swing_counts = EntityTransferCountMap.createForDestroyedTarget(machines, entity_registry, item, fraction(hands));
+    return {
+        total_duration: Duration.ofTicks(period_ticks.toDecimal()),
+        total_duration_ticks: period_ticks,
+        entity_transfer_map: swing_counts,
+        production_rate: target_production_rate,
+        fractional_swings_enabled: false,
+        terminal_swing_count_overridden: config_overrides.terminal_swing_count !== undefined,
+    };
+}
+
 function createPlan(
     target_production_rate: TargetProductionRate,
     entity_registry: ReadableEntityRegistry,
     max_possible_swings: Fraction,
     config_overrides: Partial<ConfigOverrides> = {}
 ): CraftingCyclePlan {
+    if (target_production_rate.counts === "destroyed") {
+        return createDestroyedPlan(target_production_rate, entity_registry, config_overrides);
+    }
 
     const output_machines = entity_registry
         .getAll()

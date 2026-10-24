@@ -36,7 +36,10 @@ export function validateConfig(config: Config, options: { logger?: Logger } = {}
     validateCopies(config);
 
     const simulation_context = SimulationContext.fromConfig(config);
-    new PrepareStep(simulation_context).execute();
+    // a target that counts an item destroyed is planned by arithmetic: nothing is counted from a run that fills the build
+    if (config.target_output.counts !== "destroyed") {
+        new PrepareStep(simulation_context).execute();
+    }
 
     const { crafting_cycle_plan, output_inserters, all_output_inserters } = planCraftingCycle(config, simulation_context, logger);
     // the planner has accepted the target: now no belt lane may be asked for more than it carries

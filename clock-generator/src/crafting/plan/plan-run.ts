@@ -19,7 +19,8 @@ import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
 import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
-import { buildOutputInsertersOf, EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
+import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
+import { TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
@@ -477,7 +478,11 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
 
     const planned_build = recordedBuildOf(config, options, debug, logger);
     const { simulation_context } = planned_build;
-    prepareBuild(planned_build, debug, debug_steps, logger);
+    // a target that counts an item destroyed is planned by arithmetic, with no crafts counted: such a build starts as
+    // its staged scaffold does, and never fills up (what is brought in is destroyed)
+    if (config.target_output.counts !== "destroyed") {
+        prepareBuild(planned_build, debug, debug_steps, logger);
+    }
 
     const planned_cycle = planCraftingCycle(config, simulation_context, logger);
     const { crafting_cycle_plan, all_output_inserters } = planned_cycle;
@@ -1587,18 +1592,19 @@ interface PlannedCraftingCycle {
 export function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger): PlannedCraftingCycle {
     const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
 
-    // Find all output machines (machines that produce the target output item)
-    const output_machine_state_machines = simulation_context.machines.filter(
-        it => it.machine_state.machine.output.item_name === target_production_rate.machine_production_rate.item
-    );
+    // Find all output machines: the machines that produce the target output item, or that destroy it
+    const target = { item: target_production_rate.machine_production_rate.item, counts: target_production_rate.counts };
+    const target_machine_ids = new Set(targetMachinesOf(target, simulation_context.entity_registry).map(it => it.entity_id.id));
+    const output_machine_state_machines = simulation_context.machines.filter(it => target_machine_ids.has(it.machine_state.entity_id.id));
     assert(
         output_machine_state_machines.length > 0,
-        `No machine with output item ${target_production_rate.machine_production_rate.item} found`
+        target.counts === "made" ? `No machine with output item ${target.item} found`
+            : `No machine takes ${target.item} in from outside the build to destroy it`
     );
 
     // validate target production rate can be met
     const total_output_capacity_per_second = output_machine_state_machines
-        .map(it => it.machine_state.machine.output.production_rate.amount_per_second)
+        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, simulation_context.entity_registry))
         .reduce((a, b) => a.add(b), fraction(0))
         .multiply(fraction(config.target_output.copies));
     assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
@@ -1611,7 +1617,7 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
     // machine can have several
     const inserter_states = simulation_context.state_registry.getAllStates().filter(EntityState.isInserter);
     const output_ids_by_machine = new Map(output_machine_state_machines.map(machine_state_machine => [machine_state_machine.machine_state.entity_id.id,
-        new Set(buildOutputInsertersOf(machine_state_machine.machine_state.machine, simulation_context.entity_registry).map(it => it.entity_id.id))] as const));
+        new Set(targetInsertersOf(machine_state_machine.machine_state.machine, target, simulation_context.entity_registry).map(it => it.entity_id.id))] as const));
     // machines that put the product into one container share its takers: each is counted once
     const all_output_inserters = Array.from(new Set(Array.from(output_ids_by_machine.values()).flatMap(ids => inserter_states.filter(it => ids.has(it.entity_id.id)))));
     // One of them per output machine, which the swings of a cycle are counted by
@@ -2154,6 +2160,10 @@ function computeCraftingCyclePlan(
         output_machine_states.length > 0,
         "At least one output machine is required"
     );
+    if (target_production_rate.counts === "destroyed") {
+        // planned by arithmetic: no prepare run counts its hands (see CraftingCyclePlan.create)
+        return CraftingCyclePlan.create(target_production_rate, entity_registry, fraction(1), config.overrides ?? {});
+    }
     assert(
         output_machine_states.length === output_inserters.length,
         `Mismatch between output machines (${output_machine_states.length}) and output inserters (${output_inserters.length})`
@@ -2192,6 +2202,22 @@ function computeCraftingCyclePlan(
         max_swings_possible!,
         config.overrides ?? {}
     );
+}
+
+/**
+ * The most of the target a machine can make or destroy a second: what it makes of the item, or, for a target that
+ * counts the item destroyed, its crafts a second times what a craft uses of the item less what comes back into it
+ */
+function targetCapacityPerSecond(machine: Machine, target: TargetItem, registry: ReadableEntityRegistry): Fraction {
+    if (target.counts === "made") {
+        return machine.output.production_rate.amount_per_second;
+    }
+    const used = fraction(machine.inputs.getOrThrow(target.item).ingredient.amount);
+    const result_target = machine.result_target;
+    const comes_back = result_target !== undefined && registry.getAll().filter(Entity.isInserter).some(inserter =>
+        inserter.source.entity_id.id === result_target.id && inserter.sink.entity_id.id === machine.entity_id.id && inserter.filtered_items.has(target.item));
+    const returned = comes_back ? machine.outputs.find(output => output.item_name === target.item)?.amount_per_craft ?? fraction(0) : fraction(0);
+    return fraction(machine.crafting_rate.crafts_per_tick).multiply(60).multiply(used.subtract(returned));
 }
 
 /**
