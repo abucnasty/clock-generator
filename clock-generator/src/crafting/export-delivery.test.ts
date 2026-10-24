@@ -2,7 +2,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { parseConfig } from "../config/loader";
 import type { Config } from "../config/schema";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { exportShortfallsOfPeriod, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
+import { exportShortfallOfBins, exportShortfallsOfPeriod, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
+import { judgedWithExports, judgeRecovery, type WatchedExport } from "./backpressure-loss";
 import { clockFromWindows, generateClockForConfig, type SerializableClockWindows } from "./generate-blueprint";
 import { quiet } from "./generate-blueprint-test-helpers";
 
@@ -96,6 +97,36 @@ describe("what a belt with a consumption rate receives", () => {
             const one_hand_short = held(160, 3000, 3100);
             expect(run(one_hand_short, none, false)).toEqual([]);
             expect(run(one_hand_short, none, true)).toHaveLength(1);
+        });
+    });
+
+    describe("in the bins a build ends in after a loss", () => {
+        const exported = () => exportedItemsOf(createEntityRegistryFromConfig(config), new Set())[0];
+        // 160 ticks a bin: the lanes take 16 items a bin; the output is 10 a bin
+        const recovered = (export_per_bin: number[], repeats_from: number | null) => judgedWithExports(
+            judgeRecovery(export_per_bin.map(() => 10), 10, repeats_from, 4), [{ exported: exported(), fillers: [] } as WatchedExport], [export_per_bin], 160, repeats_from, 4);
+
+        it("is recovered when the output is back and the export belt gets its items in the bins it ends in", () => {
+            expect(recovered([0, 0, 16, 16, 16, 16], null)).toMatchObject({ recovers: true });
+            expect(recovered([0, 16, 16], 1)).toMatchObject({ recovers: true });
+        });
+
+        it("is not recovered when the output is back and the belt is short in the bins it repeats", () => {
+            const short = recovered([0, 16, 0, 16, 0, 16, 0, 16], null);
+            expect(short.recovers).toBe(false);
+            expect(short.recovered_after_bins).toBeNull();
+            expect(short.export_shortfalls).toEqual([expect.objectContaining({ belt_id: 2, expected_per_second: 6, delivered_per_second: 3 })]);
+            // a cycle that repeats for ever is a bin short over the cycle
+            expect(recovered([0, 16, 16, 0], 1).recovers).toBe(false);
+        });
+
+        it("does not look at the bins before the ones the build ends in", () => {
+            expect(recovered([0, 0, 0, 0, 16, 16, 16, 16], null).recovers).toBe(true);
+        });
+
+        it("bins of a cycle: a hand short in one bin is a shortfall of the cycle only when it repeats for ever", () => {
+            expect(exportShortfallOfBins(exported(), [16, 16, 0, 16], 160, false)).toBeNull();
+            expect(exportShortfallOfBins(exported(), [16, 16, 0, 16], 160, true)).not.toBeNull();
         });
     });
 

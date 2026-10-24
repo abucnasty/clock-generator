@@ -213,15 +213,15 @@ describe("an export belt that gets less than it is taken off at", () => {
     it("is told as the cause, with the belt, the item and both rates", () => {
         expect(whyNotStable([short([circuits])], 0, build)).toEqual({
             cause: "export belt short",
-            message: "The selected clock (Batched swings: 2 output swings per cycle) moves 80 a second, but Belt 2 gets 73.4 electronic circuits "
-                + "a second, and 80 are taken off it (inserters 16 and 17 fill it).",
+            message: "The selected clock (Batched swings: 2 output swings per cycle) moves 80 a second, but Belt 2 gets 73.4 a second of electronic circuit, "
+                + "and 80 a second is taken off it (inserters 16 and 17 fill it).",
         });
     });
 
     it("names an inserter alone in the singular, and each belt", () => {
         const cable: ExportShortfall = { ...circuits, belt_id: 3, item_label: "copper cable", expected_per_second: 1, delivered_per_second: 0.5, inserter_ids: [4] };
         expect(whyNotStable([short([circuits, cable])], 0, build)?.message).toContain(
-            "and 80 are taken off it (inserters 16 and 17 fill it). Belt 3 gets 0.5 copper cables a second, and 1 is taken off it (inserter 4 fills it).");
+            "and 80 a second is taken off it (inserters 16 and 17 fill it). Belt 3 gets 0.5 a second of copper cable, and 1 a second is taken off it (inserter 4 fills it).");
     });
 
     it("is not said of a clock that is off the target, or that meets it", () => {

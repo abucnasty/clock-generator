@@ -1096,8 +1096,12 @@ function backpressureLossOf(
     // boundaries a whole proven bin apart repeat for good; in bins of the period that is every `stride`-th boundary
     const proven_bin = provenRepeatBin(config, loss_period);
     const proof_stride = proven_bin !== null && Number.isInteger(proven_bin.ticks / bin.ticks) ? proven_bin.ticks / bin.ticks : null;
-    const backpressure_loss = runLossTrials(controlled.new_simulation_context, simulated.output_inserter_states, options.backpressure_loss, bin,
-        Math.max(bin.ticks, ...own_clock_ticks), proof_stride);
+    // the belts with a consumption rate have to keep receiving it, as the output keeps coming
+    const inserter_states = new Map(trial_context.inserters.map(it => [it.inserter_state.entity_id.id, it.inserter_state] as const));
+    const watched_exports = exportedItemsOf(trial_context.entity_registry, new Set(simulated.output_inserter_states.map(state => state.entity_id.id)))
+        .map(exported => ({ exported, fillers: exported.filler_ids.flatMap(id => inserter_states.get(id) ?? []) }));
+    const backpressure_loss = runLossTrials(trial_context, simulated.output_inserter_states, options.backpressure_loss, bin,
+        Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports);
     logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
     return backpressure_loss;
 }

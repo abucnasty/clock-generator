@@ -106,6 +106,23 @@ export function exportShortfallsOfPeriod(
     return short;
 }
 
+/** The tolerance of a proven cycle: the items of rounding, as the outputs' (LCM_STABILITY_TOLERANCE) */
+const PROVEN_CYCLE_TOLERANCE = 1;
+
+/**
+ * Whether an export fell short over bins, given what its fillers delivered in each: short if any bin is more than a hand
+ * (the largest of the fillers) under what the consumers take in a bin, or the bins as a whole are more than a hand under,
+ * or, when they are a cycle proven to repeat for ever (a shortfall there never ends), more than an item under. Only a
+ * shortfall counts. Null when it did not fall short.
+ */
+export function exportShortfallOfBins(exported: ExportedItem, delivered: readonly number[], bin_ticks: number, proven: boolean): ExportShortfall | null {
+    const expected_per_bin = exported.items_per_second * bin_ticks / 60;
+    const total = delivered.reduce((sum, items) => sum + items, 0);
+    const bin_short = delivered.some(items => expected_per_bin - items > exported.hand);
+    const total_short = expected_per_bin * delivered.length - total > (proven ? PROVEN_CYCLE_TOLERANCE : exported.hand);
+    return bin_short || total_short ? shortfallOf(exported, total * 60 / (bin_ticks * delivered.length)) : null;
+}
+
 /** Where the judged part of a long run lies: the bins its drops are counted in */
 export interface JudgedBins {
     /** Tick of the run the first bin starts at */
@@ -123,24 +140,18 @@ export interface JudgedBins {
     proven: boolean;
 }
 
-/** The tolerance of a proven cycle: the items of rounding, as the outputs' (LCM_STABILITY_TOLERANCE) */
-const PROVEN_CYCLE_TOLERANCE = 1;
-
 /**
  * The exports that fell short over the judged part of a long run, from what each inserter held after each tick (a fall
- * from one tick to the next is a drop). Judged as the output is, in the same bins, with these differences: only a
- * shortfall counts, and a bin may be a hand of the inserters short as the output's may be off by one, because a drop on
- * the edge of a bin falls on either side of it from one period to the next. Over the judged part as a whole, a sampled run
- * may be a hand short and a proven cycle (which repeats for ever) at most an item.
+ * from one tick to the next is a drop). Judged as the output is, in the same bins (see exportShortfallOfBins): a drop on
+ * the edge of a bin falls on either side of it from one period to the next, so a bin may be a hand short.
  */
 export function exportShortfallsOfRun(
     exported: readonly ExportedItem[],
     held_by_inserter: ReadonlyMap<string, readonly number[]>,
     bins: JudgedBins,
 ): ExportShortfall[] {
-    const short: ExportShortfall[] = [];
-    for (const it of exported) {
-        const bin_ticks = bins.bin_ticks ?? bins.ticks - bins.first_tick;
+    const bin_ticks = bins.bin_ticks ?? bins.ticks - bins.first_tick;
+    return exported.flatMap(it => {
         const delivered = new Array<number>(bins.count).fill(0);
         for (const id of it.filler_ids) {
             const series = held_by_inserter.get(id);
@@ -156,13 +167,6 @@ export function exportShortfallsOfRun(
                 }
             }
         }
-        const expected_per_bin = it.items_per_second * bin_ticks / 60;
-        const bin_short = delivered.some(items => expected_per_bin - items > it.hand);
-        const total = delivered.reduce((sum, items) => sum + items, 0);
-        const total_short = it.items_per_second * bin_ticks * bins.count / 60 - total > (bins.proven ? PROVEN_CYCLE_TOLERANCE : it.hand);
-        if (bin_short || total_short) {
-            short.push(shortfallOf(it, total * 60 / (bin_ticks * bins.count)));
-        }
-    }
-    return short;
+        return exportShortfallOfBins(it, delivered, bin_ticks, bins.proven) ?? [];
+    });
 }

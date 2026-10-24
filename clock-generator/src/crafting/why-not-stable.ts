@@ -265,10 +265,10 @@ function outputChestFull(clock: WhyNotStableClock, build: WhyNotStableBuild): Wh
     };
 }
 
-/** "Belt 2 gets 73.4 electronic circuits a second, and 80 are taken off it (inserters 16 and 17 fill it)." */
+/** "Belt 2 gets 73.4 a second of electronic circuit, and 80 a second is taken off it (inserters 16 and 17 fill it)." The game's names of items have no plural. */
 function exportShortfallSentence(short: ExportShortfall): string {
-    return `Belt ${short.belt_id} gets ${figure(short.delivered_per_second)} ${short.item_label}s a second, and ${figure(short.expected_per_second)} `
-        + `${short.expected_per_second === 1 ? "is" : "are"} taken off it (${insertersNumbered(short.inserter_ids.map(String))} fill${short.inserter_ids.length === 1 ? "s" : ""} it).`;
+    return `Belt ${short.belt_id} gets ${figure(short.delivered_per_second)} a second of ${short.item_label}, and ${figure(short.expected_per_second)} a second `
+        + `is taken off it (${insertersNumbered(short.inserter_ids.map(String))} fill${short.inserter_ids.length === 1 ? "s" : ""} it).`;
 }
 
 /**
