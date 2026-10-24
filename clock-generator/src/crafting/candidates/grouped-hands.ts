@@ -9,6 +9,8 @@ import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
 import type { AlwaysOnReason } from "../always-on-reasons";
+import { sharedItemDeadlockRisks } from "../deadlock-risk";
+import { rankingWindowCount } from "../rank";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -21,7 +23,7 @@ const FEEDER_OFFSETS_TICKS = [16, 1];
 /** Ticks every group of windows is moved either way to see that the clock does not hold at one placement only */
 const MARGIN_SHIFT_TICKS = 1;
 
-/** How the windows of one try are made: see groupedHandsClock, which tries them in order */
+/** How the windows of one way are made: see groupedHandsClock, which makes them in every way and ranks the clocks */
 export interface GroupedHandsOptions {
     /**
      * An inserter whose machine would take more than one hand over the hands it moves (a surplus hand it keeps) gets a window
@@ -454,12 +456,56 @@ function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>, perio
     return null;
 }
 
-/** The tries, in order: a window for every start the limit refuses, then for the hands only where a surplus hand would be kept; staged, then compact */
+/**
+ * The ways the windows are placed: a window for every start the limit refuses, or for the hands only where a surplus hand
+ * would be kept; each with the feeders of a chain staged or compact. Each is the only one that holds on some build. A tie
+ * in the ranking of their clocks goes to the first in this order.
+ */
 const SEPARATE_TRIES: GroupedHandsOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset =>
     [false, true].map(surplus_guard => ({ surplus_guard, feeder_offset, share_windows: false })));
 
-/** The same tries with the windows of the takers that open together made one */
+/** The same ways with the windows of the takers that open together made one */
 const SHARED_TRIES: GroupedHandsOptions[] = SEPARATE_TRIES.map(way => ({ ...way, share_windows: true }));
+
+/** A way of placing the windows whose clock holds with its margin and from every start phase */
+interface HoldingWay {
+    way: GroupedHandsOptions;
+    clock: BlueprintGenerationResult;
+}
+
+/**
+ * Of the clocks of the ways that hold, the one the selection ranks first (`combineClockAlternativeRuns`): one that gets
+ * back from every backpressure loss, then one whose losses could not be tried, then the others; among those the fewest
+ * wake-ups a minute, then the fewest windows, then the first tried. The losses are tried in that order, and only until
+ * one gets back. On a build with a deadlock risk they do not decide (`rankingOf`) and are not tried. Shared windows are
+ * kept only where they get back or could not be tried: null where none is.
+ */
+function bestHolding(made: PlanRun, holding: HoldingWay[], shared: boolean): HoldingWay | null {
+    const entity_registry = made.run.simulation_context.entity_registry;
+    const inserters = entity_registry.getAll().filter(Entity.isInserter);
+    const rank = ({ clock }: HoldingWay): [number, number] => {
+        const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+        const windows = inserters.reduce((sum, inserter) => sum + (clock.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
+        // to a thousandth, as the selection counts them
+        return [wake_ups === undefined ? Number.MAX_SAFE_INTEGER : Math.round(wake_ups * 1000), rankingWindowCount(windows, clock.clock_windows, clock.output_feeders)];
+    };
+    const ranked = holding.map((held, index) => ({ held, index, rank: rank(held) }))
+        .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.index - b.index)
+        .map(it => it.held);
+    if (!shared && sharedItemDeadlockRisks(entity_registry).length > 0) return ranked[0] ?? null;
+    let untried: HoldingWay | null = null;
+    for (const held of ranked) {
+        const { backpressure_loss } = backpressureLossVerdictOf(made.config, held.clock, made.logger);
+        if (backpressure_loss?.survives === true) return held;
+        if (backpressure_loss === null) untried ??= held;
+    }
+    return untried ?? (shared ? null : ranked[0] ?? null);
+}
+
+/** How a way is named in the planning log */
+function wayName(way: GroupedHandsOptions): string {
+    return `${way.feeder_offset === FEEDER_OFFSETS_TICKS[0] ? "staged" : "compact"}${way.surplus_guard ? " with the surplus guard" : ""}`;
+}
 
 /**
  * The clock of the windows as the generator exports it, checked as a clock with windows of its own is (the clock-only runs
@@ -483,17 +529,20 @@ function finishedClock(
     const named = { ...exported, belt, belt_pickup_slack_left_out: false, turns,
         applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
     const result = checkedClock(made, named, windows, { ...options, verify_as_built: true }, { left_open });
-    result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
-    return result;
+    // the check of the plan's run is the same object for every clock made from the plan, and the next clock's check
+    // overwrites it: this clock keeps a copy of its own
+    return { ...result, stability_check: { ...result.stability_check, holds: result.stability_check.as_built?.holds ?? false } };
 }
 
 /**
  * The clock of a plan with the windows of groupedHandsWindows, checked as a clock with windows of its own is: by the
  * clock-only runs from the start phases and the long run, and by the margin of `holdsWithMargin`. The plan is made again
  * for the cycles of `groupedHandsCycles` where those are not its own and the config does not set them. The windows are
- * tried in the ways of SEPARATE_TRIES, or of SHARED_TRIES where `options.shared_windows` asks for the windows to be shared, the first that holds with its margin, and from every start phase, is the clock; those that make the same windows are one.
- * Null where the rule does not apply to the build. It holds when its own windows hold, not when the planning run of the
- * plan does.
+ * made in every way of SEPARATE_TRIES, or of SHARED_TRIES where `options.shared_windows` asks for the windows to be
+ * shared (those that make the same windows are one), and of those that hold with their margin and from every start
+ * phase the clock is the one `bestHolding` ranks first; where none holds from every start, the first that holds with its
+ * margin. Null where the rule does not apply to the build. It holds when its own windows hold, not when the planning run
+ * of the plan does.
  */
 export function groupedHandsClock(
     plan: PlanRun,
@@ -501,6 +550,7 @@ export function groupedHandsClock(
 ): BlueprintGenerationResult | null {
     let made = plan;
     let finished: BlueprintGenerationResult | null = null;
+    const holding: HoldingWay[] = [];
     const reasons: string[] = [];
     try {
         if (plan.run.always_enabled_by_config.size > 0 || plan.run.inserter_clocks.size > 0 || alwaysEnabledInserters(plan.run.simulation_context.entity_registry).length > 0) {
@@ -524,17 +574,17 @@ export function groupedHandsClock(
             if (unmoved !== null) { reasons.push(unmoved); continue; }
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
             const clock_of_windows = finishedClock(made, windows, turns, options, left_open);
-            if (way.share_windows) {
-                // shared windows are kept only if the clock gets back from every loss, as the separate ones are kept when it does
-                if (!clock_of_windows.stability_check.holds) { reasons.push(`the shared windows ${key} do not hold from every start`); continue; }
-                if (backpressureLossVerdictOf(made.config, clock_of_windows, plan.logger).backpressure_loss?.survives === false) {
-                    reasons.push(`the shared windows ${key} do not get back from a loss`);
-                    continue;
-                }
-            }
-            finished ??= clock_of_windows;
-            if (clock_of_windows.stability_check.holds) { finished = clock_of_windows; break; }
-            reasons.push(`the windows ${key} do not hold from every start`);
+            if (clock_of_windows.stability_check.holds) { holding.push({ way, clock: clock_of_windows }); continue; }
+            reasons.push(`the ${way.share_windows ? "shared " : ""}windows ${key} do not hold from every start`);
+            // shared windows are kept only if they hold
+            if (!way.share_windows) finished ??= clock_of_windows;
+        }
+        if (holding.length > 0) {
+            const best = bestHolding(made, holding, options.shared_windows === true);
+            plan.logger.log(`Grouped hands: ${holding.map(it => `${wayName(it.way)} holds at ${it.clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wake-ups a minute`).join(", ")}; `
+                + (best === null ? "none gets back from every loss" : `kept ${wayName(best.way)}`));
+            finished = best?.clock ?? finished;
+            if (finished === null) reasons.push("no shared windows that hold get back from every loss");
         }
         if (finished === null) refuse(reasons.join("; "));
     } catch (error) {
