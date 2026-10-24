@@ -61070,7 +61070,11 @@
         "recycling"
       ],
       "burner_fuel_categories": [],
-      "crafting_speed": 0.5
+      "crafting_speed": 0.5,
+      "vector_to_place_result": [
+        -0.35,
+        -2.3
+      ]
     }
   },
   "item": {
