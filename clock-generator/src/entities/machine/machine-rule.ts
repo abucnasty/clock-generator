@@ -25,6 +25,15 @@ export function machineRuleOfPrototype(prototype: CraftingMachineRuleFacts): Mac
     return MachineType.MACHINE;
 }
 
+/**
+ * Whether a machine of the prototype places its results itself (the recycler, by its `vector_to_place_result`): into the
+ * container that stands at its result spot, else into its output, any number of stacks, as long as no stack of a result
+ * waits there. A machine that does not keeps its results in its output until an inserter takes them. No name decides it.
+ */
+export function placesResultsItself(prototype: { readonly vector_to_place_result?: readonly [number, number] }): boolean {
+    return prototype.vector_to_place_result !== undefined;
+}
+
 /** Whether a machine of the prototype can make a recipe of these crafting categories, as the game decides it */
 export function machineCanMake(prototype: Pick<CraftingMachineRuleFacts, "crafting_categories">, recipe_categories: readonly string[]): boolean {
     return recipe_categories.some(category => prototype.crafting_categories.includes(category));

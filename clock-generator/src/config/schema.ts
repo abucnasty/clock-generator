@@ -17,6 +17,8 @@ import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
 import { migrateMachineTypeStep } from "./migrate-machine-type";
+import { FactorioDataService } from "../data/factorio-data-service";
+import { machinePlacesResults } from "./machine-prototype";
 
 // ============================================================================
 // Machine Configuration
@@ -65,6 +67,16 @@ export const MachineConfigurationSchema = z.preprocess(migrateMachineTypeStep, z
     recipe_quality: MachineQualitySchema.optional(),
     /** Where the machine stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
     position: MapPositionSchema.optional(),
+    /**
+     * The container a machine that places its results itself (a recycler, by its prototype's game data) puts them
+     * into: the one that stands at its result spot, as a drill's `target`. Each tick the machine puts what waits in its
+     * output into it as far as it has room. Only such a machine takes one; without it the machine keeps its results in
+     * its output for inserters to take.
+     */
+    result_target: z.discriminatedUnion("type", [z.object({
+        type: z.literal(TargetType.CHEST),
+        id: z.number().int().positive(),
+    })]).optional(),
 }));
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -92,6 +104,10 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
  *   A config that itself holds several identical units (copies of one unit side by side, each with its own inserters)
  *   is refused with a CopiesError: describe one unit and set `copies` to the number of units instead.
  */
+/** What a target's rate counts: the item made and taken out, or the item taken in and destroyed */
+export const TARGET_COUNTS = ["made", "destroyed"] as const;
+export type TargetCounts = typeof TARGET_COUNTS[number];
+
 export const TargetProductionRateConfigSchema = z.object({
     recipe: z.string(),
     items_per_second: z.number().positive(),
@@ -103,7 +119,15 @@ export const TargetProductionRateConfigSchema = z.object({
      * result check whether the copies' drops onto a shared belt fit between each other (config/drop-spacing.ts); nothing
      * else reads it. Omitted where it is not known.
      */
-    copy_offset: MapPositionSchema.optional()
+    copy_offset: MapPositionSchema.optional(),
+    /**
+     * What the rate counts. "made" (the default; every config before 0.24.0 has no `counts` and is read so): the item
+     * `recipe` names is made by the build and taken out of it. "destroyed": the item is taken into the build from
+     * outside it and destroyed there, by a machine that places its results itself (a recycler that voids ore); the rate
+     * is what the inserters that bring it in from outside put into those machines, and what the machines give back of
+     * it is not counted.
+     */
+    counts: z.enum(TARGET_COUNTS).optional(),
 });
 
 export type TargetProductionRateConfig = z.infer<typeof TargetProductionRateConfigSchema>;
@@ -842,6 +866,21 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
             && config.inserters.some(inserter => inserter.sink.type === TargetType.CHEST && inserter.sink.id === chest.id)) {
             context.addIssue({ code: "custom", path: ["chests", index, "item_filter"], params: { editable_chest_settings: true },
                 message: `Chest ${chest.id}: enable Remove unfiltered items to use an empty infinity chest as an output, or configure a filter.` });
+        }
+    });
+    config.machines.forEach((machine, index) => {
+        if (machine.result_target === undefined) return;
+        const chest_id = machine.result_target.id;
+        if (!config.chests?.some(chest => chest.id === chest_id)) {
+            context.addIssue({ code: "custom", path: ["machines", index, "result_target", "id"],
+                message: `Machine ${machine.id} places its results into chest ${chest_id}, which is not in the config` });
+        }
+        // the prototype's game data says whether it places its results itself; without the data this is checked when it loads
+        if (FactorioDataService.isAvailable() && !machinePlacesResults(machine)) {
+            context.addIssue({ code: "custom", path: ["machines", index, "result_target"],
+                message: `Machine ${machine.id}${machine.prototype === undefined ? " names no prototype, so it" : ` (${machine.prototype})`} `
+                    + "does not place its results itself: only a machine that does (a recycler) has a `result_target`; "
+                    + "an inserter takes the results out of any other" });
         }
     });
     config.drills?.configs.forEach((drill, index) => {
