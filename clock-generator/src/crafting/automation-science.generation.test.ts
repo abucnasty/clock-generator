@@ -81,6 +81,42 @@ describe("a clock tried for backpressure loss", () => {
     });
 });
 
+describe("a clock that does not get back from a loss", () => {
+    // automation science has clocks that get back from none of its three losses
+    let broken: ClockAlternative;
+    let report: BackpressureLossReport;
+
+    beforeAll(() => {
+        broken = by_default.alternatives.find(a => a.verdict === "no recovery")!;
+        report = backpressureLossOf(config, broken.result.clock_windows, broken.result.simulation_duration.ticks,
+            broken.result.stability_check.expected_output_items, quiet);
+    });
+
+    it("is tried on the first loss that breaks it only, and the others are not tried", () => {
+        expect(broken).toBeDefined();
+        expect(report.losses.map(outcome => lossId(outcome.loss))).toEqual(["supply:copper-plate"]);
+        expect(report.not_tried.map(lossId)).toEqual(["supply:iron-gear-wheel", "output:automation-science-pack"]);
+        expect(verdictOf(report)).toMatchObject({
+            survives: false,
+            broken_by: ["copper-plate stops arriving"],
+            not_tried: ["iron-gear-wheel stops arriving", "automation-science-pack is not taken away"],
+        });
+        expect(broken.assessment.backpressure_loss).toEqual(verdictOf(report));
+    });
+
+    it("runs the trials of that loss up to the first that does not get back, and no further", () => {
+        const trials = report.losses[0].trials;
+        expect(trials.length).toBeLessThanOrEqual(16);
+        expect(trials.slice(0, -1).every(trial => trial.recovers)).toBe(true);
+        expect(trials[trials.length - 1].recovers).toBe(false);
+    });
+
+    it("says in its description which were not tried", () => {
+        expect(broken.description).toContain("after copper-plate stops arriving. Not tried, since one failure is enough: "
+            + "iron-gear-wheel stops arriving, automation-science-pack is not taken away.");
+    });
+});
+
 describe("the searches only run when they are needed", () => {
     describe("automation science, where no clock made without a search is stable", () => {
 

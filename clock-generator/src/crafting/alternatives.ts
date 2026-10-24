@@ -26,7 +26,7 @@ import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCoun
 import { TargetProductionRate } from "./target-production-rate";
 import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, roundedClockTrial, startDependenceVerdictOf, withSettledOutput } from "./trial";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
-import { NotMadeClock, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
+import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 
 
@@ -559,7 +559,7 @@ function backpressureLossNote(verdict: BackpressureLossVerdict | null, not_tried
         return "";
     }
     return verdict.broken_by.length === 0 ? " It was off its expected output in the run the backpressure losses are tried on, so it is not counted as stable."
-        : ` It does not survive backpressure loss: the build does not get back to its expected output under this clock after ${verdict.broken_by.join(", or after ")}.`;
+        : ` It does not survive backpressure loss: the build does not get back to its expected output under this clock after ${verdict.broken_by.join(", or after ")}.${notTriedSentence(verdict.not_tried)}`;
 }
 
 

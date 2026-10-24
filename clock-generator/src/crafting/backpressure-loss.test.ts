@@ -1,9 +1,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
     backpressureLossesOf, judgeRecovery, LATE_AFTER_PERIODS, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
-    lossTrialsUntilStopped, LossOutcome, MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, MAX_RUN_ON_PERIODS, reportOf, RUN_ON_EXACT_PERIODS, runsOn,
-    SPOIL_LIMIT_SHARE, verdictOf,
+    lossTrialsUntilStopped, LossOutcome, MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, MAX_RUN_ON_PERIODS, reportOf, RUN_ON_EXACT_PERIODS,
+    runsOn, SPOIL_LIMIT_SHARE, verdictOf,
 } from "./backpressure-loss";
+import { notTriedSentence } from "./why-not-stable";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
@@ -132,6 +133,27 @@ describe("the verdict of a clock's losses", () => {
             broken_at_other_lane_phases: ["copper-plate stops arriving"],
             recovered_after_periods: null,
         });
+    });
+
+    it("names the losses that were not tried after the first it does not get back from, and has none for a clock that tried them all", () => {
+        const report = reportOf(100, 10, outcome({ kind: "none" }, true), [outcome({ kind: "supply", item: "coal" }, false)], null, [
+            { kind: "supply", item: "iron-plate" }, { kind: "output", item: "iron-gear-wheel" },
+        ]);
+        expect(verdictOf(report)).toEqual({
+            survives: false,
+            broken_by: ["coal stops arriving"],
+            broken_at_other_lane_phases: [],
+            not_tried: ["iron-plate stops arriving", "iron-gear-wheel is not taken away"],
+            recovered_after_periods: null,
+        });
+        expect(verdictOf(reportOf(100, 10, outcome({ kind: "none" }, true), [outcome({ kind: "supply", item: "coal" }, true)]))).not.toHaveProperty("not_tried");
+    });
+
+    it("says in a sentence what was not tried, and nothing where all was", () => {
+        expect(notTriedSentence(["iron-plate stops arriving", "iron-gear-wheel is not taken away"]))
+            .toBe(" Not tried, since one failure is enough: iron-plate stops arriving, iron-gear-wheel is not taken away.");
+        expect(notTriedSentence([])).toBe("");
+        expect(notTriedSentence(undefined)).toBe("");
     });
 
     it("has none apart for a clock that gets back from every loss", () => {
