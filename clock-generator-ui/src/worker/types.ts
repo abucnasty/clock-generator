@@ -116,6 +116,8 @@ export interface ClockAlternativeView {
     label: string;
     description: string;
     inserterWindowCount: number;
+    /** The decider combinators that switch inserters and drills on and off in the clock's blueprint, the clock's own not counted */
+    deciders: number;
     /** The windows the selection compares last: the count without the windows of the output feeders */
     rankingWindowCount: number;
     /** What the trial of the clock found: holds, survives backpressure loss, rate, wake-ups */

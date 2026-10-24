@@ -4,7 +4,7 @@ import { lossesOf } from './rateWarning';
 import type { PickRule } from './recommendedClock';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
-export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment'>;
+export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'deciders'>;
 
 /**
  * The smallest distance from the target rate that names a clock by its rate, as the Copy button's "below target"
@@ -22,6 +22,7 @@ export const SUMMARY_COPY = {
     startDependent: 'Depends on how it is started',
     backedUpBelts: 'For backed-up belts',
     fewestWakeUps: 'Fewest wake-ups',
+    fewestDeciders: 'Fewest deciders',
     fewestWakeWindows: 'Fewest wake windows',
     another: (rate: string) => `Another way to make ${rate}/s`,
     // the card's tiles
@@ -89,7 +90,7 @@ const isContender = (clock: SummaryClock) => clock.ranking.meets_target_rate && 
  * The name of a clock by what it is for, against the other clocks of its generation ("Fewest wake-ups"). The first
  * rule that matches wins: a clock off the target rate is named by its rate; one that does not recover, or does not hold
  * its rate, by that; one for backed-up belts (when the build asked for moving ones) by its belt; among the
- * others, the one with the fewest wake-ups, else the fewest wake windows; any other by the rate it makes. Tied clocks
+ * others, the one with the fewest wake-ups, else the fewest deciders, else the fewest wake windows; any other by the rate it makes. Tied clocks
  * share a name; the engine's name under it tells them apart. The target is each clock's own, so an edit to the build
  * since never renames a clock.
  */
@@ -119,6 +120,11 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
         const counted = contenders.map(it => wakeUpsKey(it.ranking.wake_ups_per_minute)).filter(it => it !== null);
         if (wakeUps !== null && wakeUps === Math.min(...counted)) {
             return SUMMARY_COPY.fewestWakeUps;
+        }
+        // the fewest decider combinators of clocks that do not all have the same number
+        const deciders = contenders.map(it => it.deciders);
+        if (clock.deciders === Math.min(...deciders) && Math.min(...deciders) < Math.max(...deciders)) {
+            return SUMMARY_COPY.fewestDeciders;
         }
         if (clock.ranking.window_count === Math.min(...contenders.map(it => it.ranking.window_count))) {
             return SUMMARY_COPY.fewestWakeWindows;

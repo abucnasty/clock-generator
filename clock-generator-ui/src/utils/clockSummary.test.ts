@@ -26,11 +26,12 @@ interface ClockOptions extends Partial<ClockRanking> {
     beltLabel?: string;
     deadlock?: boolean;
     brokenBy?: string[];
+    deciders?: number;
 }
 
-/** A stable clock at the target rate, made for the belt asked for, with 10 wake-ups and 4 windows, unless told otherwise */
+/** A stable clock at the target rate, made for the belt asked for, with 10 wake-ups, 4 windows and 4 deciders, unless told otherwise */
 function clock(id: string, options: ClockOptions = {}): SummaryClock {
-    const { verdict = 'stable', beltLabel = 'moving (+4 ticks)', deadlock = false, brokenBy, ...ranking } = options;
+    const { verdict = 'stable', beltLabel = 'moving (+4 ticks)', deadlock = false, brokenBy, deciders = 4, ...ranking } = options;
     const full: ClockRanking = {
         meets_target_rate: true,
         rate_off_target: 0,
@@ -45,6 +46,7 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
         label: `Engine name of ${id}`,
         verdict,
         beltLabel,
+        deciders,
         deadlockRisk: deadlock ? 'Deadlock risk: inserters 1 and 2 both bring the same item.' : null,
         ranking: full,
         assessment: {
@@ -105,6 +107,17 @@ describe('plainClockName', () => {
     });
 
     it('names a clock with more wake-ups but the fewest windows "Fewest wake windows"', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })];
+        expect(nameOf(clocks, 'b')).toBe('Fewest wake windows');
+    });
+
+    it('names a clock with more wake-ups but the fewest deciders "Fewest deciders", before the windows', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }), clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 })];
+        expect(nameOf(clocks, 'b')).toBe('Fewest deciders');
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+    });
+
+    it('does not name a clock by its deciders when every clock has as many', () => {
         const clocks = [clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })];
         expect(nameOf(clocks, 'b')).toBe('Fewest wake windows');
     });

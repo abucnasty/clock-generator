@@ -118,6 +118,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         label: alternative.label,
         description: alternative.description,
         inserterWindowCount: alternative.inserter_window_count,
+        deciders: alternative.deciders,
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
         assumptions: {
