@@ -43,12 +43,13 @@ export function lossId(loss: BackpressureLoss): string {
     return loss.kind === "none" ? loss.kind : `${loss.kind}:${loss.item}`;
 }
 
-/** "coal stops arriving", "advanced-circuit is not taken away" */
+/** "coal stops arriving", "advanced circuit is not taken away": the item by its game name, as a sentence has it */
 export function lossLabel(loss: BackpressureLoss): string {
     if (loss.kind === "none") {
         return "nothing is cut";
     }
-    return loss.kind === "output" ? `${loss.item} is not taken away` : `${loss.item} stops arriving`;
+    const item = FactorioDataService.itemNameInSentence(loss.item);
+    return loss.kind === "output" ? `${item} is not taken away` : `${item} stops arriving`;
 }
 
 /** One trial of a loss: where in the clock period it starts, in ticks from the start of a period, and when it ends */

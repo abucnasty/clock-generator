@@ -71,7 +71,7 @@ describe("a clock tried for backpressure loss", () => {
         expect(verdict.survives).toBe(report.survives);
         expect(verdict.recovered_after_periods).toBe(report.recovered_after_periods);
         expect(verdictOf({ ...report, survives: false, losses: report.losses.map(outcome => ({ ...outcome, recovers: outcome.loss.kind !== "supply" })) }).broken_by)
-            .toEqual(["copper-plate stops arriving", "iron-gear-wheel stops arriving"]);
+            .toEqual(["copper plate stops arriving", "iron gear wheel stops arriving"]);
     });
 
     it("cuts at fewer places when asked, to make the run shorter", () => {
@@ -98,8 +98,8 @@ describe("a clock that does not get back from a loss", () => {
         expect(report.not_tried.map(lossId)).toEqual(["supply:iron-gear-wheel", "output:automation-science-pack"]);
         expect(verdictOf(report)).toMatchObject({
             survives: false,
-            broken_by: ["copper-plate stops arriving"],
-            not_tried: ["iron-gear-wheel stops arriving", "automation-science-pack is not taken away"],
+            broken_by: ["copper plate stops arriving"],
+            not_tried: ["iron gear wheel stops arriving", "automation science pack is not taken away"],
         });
         expect(broken.assessment.backpressure_loss).toEqual(verdictOf(report));
     });
@@ -112,8 +112,8 @@ describe("a clock that does not get back from a loss", () => {
     });
 
     it("says in its description which were not tried", () => {
-        expect(broken.description).toContain("after copper-plate stops arriving. Not tried, since one failure is enough: "
-            + "iron-gear-wheel stops arriving, automation-science-pack is not taken away.");
+        expect(broken.description).toContain("after copper plate stops arriving. Not tried, since one failure is enough: "
+            + "iron gear wheel stops arriving, automation science pack is not taken away.");
     });
 });
 

@@ -259,6 +259,15 @@ export class FactorioDataService {
         return Object.prototype.hasOwnProperty.call(names, id) ? names[id] : displayNameOfId(id);
     }
 
+    /**
+     * An item's game name for the middle of a sentence, its first letter lower case: "iron plate" for "iron-plate",
+     * "military science pack" for "military-science-pack", "power armor MK2" for "power-armor-mk2"
+     */
+    public static itemNameInSentence(id: string): string {
+        const name = this.itemDisplayName(id);
+        return name.charAt(0).toLowerCase() + name.slice(1);
+    }
+
     /** The game's English name of a recipe id, else of the item of that id, else as `itemDisplayName` makes it */
     public static recipeDisplayName(id: string): string {
         const names = this.getData().names?.recipe ?? {};

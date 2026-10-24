@@ -66,12 +66,12 @@ describe("why the selected clock does not meet goal 1", () => {
     });
 
     it("is the moving lane phases of a moving-belt clock that gets back from every loss from the modeled start only", () => {
-        const losses = ["accumulator stops arriving", "electromagnetic-science-pack is not taken away"];
+        const losses = ["accumulator stops arriving", "electromagnetic science pack is not taken away"];
         expect(whyNotStable([noRecovery(losses, losses, { moving_belt: true, label: "Observed windows: 3 output swings per cycle" })], 0, moving)).toEqual({
             cause: "moving lane phases",
             message: "The selected clock (Observed windows: 3 output swings per cycle) is made for a moving belt. It holds the target "
                 + "rate from the modeled start and gets back to it from there after every loss, but not when the lanes come back in "
-                + "another phase after accumulator stops arriving, or after electromagnetic-science-pack is not taken away. In the "
+                + "another phase after accumulator stops arriving, or after electromagnetic science pack is not taken away. In the "
                 + `game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short.${BACKED_UP_ADVICE}`,
         });
     });
@@ -83,41 +83,41 @@ describe("why the selected clock does not meet goal 1", () => {
                 + "it by itself after coal stops arriving. A buffer, or a faster machine, lets it catch up.",
         });
         // a moving-belt clock that misses a loss from the modeled start itself is no recovery too
-        expect(whyNotStable([noRecovery(["tungsten-ore stops arriving"], [], { moving_belt: true })], 0, moving)?.cause).toBe("no recovery");
+        expect(whyNotStable([noRecovery(["tungsten ore stops arriving"], [], { moving_belt: true })], 0, moving)?.cause).toBe("no recovery");
     });
 
     it("names the losses that were not tried once one broke the clock", () => {
         const stopped = noRecovery(["coal stops arriving"], [], {
             assessment: { holds: true, items_per_second: 7.5, backpressure_loss: { survives: false, broken_by: ["coal stops arriving"],
-                broken_at_other_lane_phases: [], not_tried: ["iron-plate stops arriving", "iron-gear-wheel is not taken away"] } },
+                broken_at_other_lane_phases: [], not_tried: ["iron plate stops arriving", "iron gear wheel is not taken away"] } },
         });
         expect(whyNotStable([stopped], 0, moving)?.message).toBe("The selected clock (Batched swings: 2 output swings per cycle) holds "
             + "the target rate, but does not get back to it by itself after coal stops arriving. Not tried, since one failure is enough: "
-            + "iron-plate stops arriving, iron-gear-wheel is not taken away. A buffer, or a faster machine, lets it catch up.");
+            + "iron plate stops arriving, iron gear wheel is not taken away. A buffer, or a faster machine, lets it catch up.");
     });
 
     it("names only the losses it does not get back from, of a clock that gets back from some", () => {
         // the verdict lists the losses that break it; the ones it gets back from are not in it (see verdictOf)
-        const message = whyNotStable([noRecovery(["iron-ore stops arriving", "iron-gear-wheel is not taken away"])], 0, moving)!.message;
-        expect(message).toContain("after iron-ore stops arriving, or after iron-gear-wheel is not taken away.");
+        const message = whyNotStable([noRecovery(["iron ore stops arriving", "iron gear wheel is not taken away"])], 0, moving)!.message;
+        expect(message).toContain("after iron ore stops arriving, or after iron gear wheel is not taken away.");
         expect(message).not.toContain("coal");
     });
 
     it("tells both causes of a moving-belt clock that misses one loss from the modeled start and another only from other lane phases", () => {
-        const several = noRecovery(["tungsten-ore stops arriving", "coal stops arriving"], ["coal stops arriving"], { moving_belt: true });
+        const several = noRecovery(["tungsten ore stops arriving", "coal stops arriving"], ["coal stops arriving"], { moving_belt: true });
         expect(whyNotStable([several], 0, moving)).toEqual({
             cause: "no recovery",
             message: "The selected clock (Batched swings: 2 output swings per cycle) holds the target rate, but does not get back to "
-                + "it by itself after tungsten-ore stops arriving. After coal stops arriving it gets back to it from the modeled start, "
+                + "it by itself after tungsten ore stops arriving. After coal stops arriving it gets back to it from the modeled start, "
                 + "but not when a moving belt's lanes come back in another phase. A buffer, or a faster machine, lets it catch up.",
         });
     });
 
     it("adds the spare time of a machine that takes longer to make up a period than a build is given to get back", () => {
         const spare = (spare_ticks: number, working_ticks: number) => whyNotStable(
-            [noRecovery(["tungsten-ore stops arriving"], [], { spare_time: { machine: "Machine 3 (metallurgic-science-pack)", spare_ticks, working_ticks, recovery_periods: 40 } })],
+            [noRecovery(["tungsten ore stops arriving"], [], { spare_time: { machine: "Machine 3 (metallurgic-science-pack)", spare_ticks, working_ticks, recovery_periods: 40 } })],
             0, moving)!.message;
-        expect(spare(1, 319)).toContain("after tungsten-ore stops arriving. Machine 3 (metallurgic-science-pack) crafts 319 ticks of a period "
+        expect(spare(1, 319)).toContain("after tungsten ore stops arriving. Machine 3 (metallurgic-science-pack) crafts 319 ticks of a period "
             + "and has 1 tick to spare: making up one period it lost takes it 319 periods, more than the 40 a build is given to get back. "
             + "That is too little to make up what it lost. A buffer, or a faster machine, lets it catch up.");
         expect(spare(0, 320)).toContain("making up one period it lost takes it forever");
