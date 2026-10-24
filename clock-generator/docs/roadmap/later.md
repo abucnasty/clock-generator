@@ -20,6 +20,10 @@ Packages are named `later/<code>` and come in no fixed order.
 
 **`later/swing-back`** (#276): when another inserter takes a machine's products off its output block in the tick a belt hand comes back from its swing, the simulator has the hand take its first stack in that tick. In the game it comes a tick later when the taker drops onto a belt (56 of 56 hands), and by the decider order when it drops into a chest (79 of 79). The game's rule, tried in the simulator, moves no selected clock. It is recorded as a known limit in [simulator.md](../simulator.md#other-known-limits).
 
+### Copies that differ in a drill's speed bonus
+
+**`later/repeat-drill-bonus`** (#375): the conversion of a repeated build does not find copies that differ only in a drill's speed bonus, as on the grenade full build.
+
 ## Decisions before they start
 
 - Follow-up F7: whether it is taken on, and which inserter kinds and qualities to calibrate.
