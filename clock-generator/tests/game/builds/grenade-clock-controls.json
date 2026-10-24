@@ -1,5 +1,5 @@
 {
-  "meaning": "Native summaries of the grenade build (REAL_OWNER_GRENADE, 240 a second over 7 copies) in Factorio 2.1.21, on one copy and on the full build of seven, once with the hand-made clock, kept as the build came (a counter of 0 to 111, 112 ticks, and six window deciders), and once with the generator's selected clock (the 112-tick clock, windows made from the hands and the sources), wired to the inserters and drills of every copy with the hand-made clock's deciders taken out. The build's machines are matched to the config's by their places, so the clock's windows reach the inserters and drills the config's places name. The family's protocol, except for the output block: 63 whole periods before the first disturbance, which comes at period 66, then the foundries stopped for 2 periods (the iron stops), the output loader taken away for 30 periods and rebuilt (a copy's belt takes 6 periods of grenades before it is full), and the drills stopped for 2 (the coal stops). 'expected' is what the build makes in a period: 64 for one copy, 448 for seven. A period of a copy's recovery after the block is one the belt's unclogging takes: the full build needs 9 periods to be back at 448.",
+  "meaning": "Native summaries of the grenade build (REAL_OWNER_GRENADE, 240 a second over 7 copies) in Factorio 2.1.21, on one copy and on the full build of seven, once with the hand-made clock, kept as the build came (a counter of 0 to 111, 112 ticks, and six window deciders), and once with the generator's selected clock (the 112-tick clock, windows made from the hands and the sources, one window for the drills of a group), wired to the inserters and drills of every copy with the hand-made clock's deciders taken out. The build's machines are matched to the config's by their places, so the clock's windows reach the inserters and drills the config's places name. The family's protocol, except for the output block: 63 whole periods before the first disturbance, which comes at period 66, then the foundries stopped for 2 periods (the iron stops), the output loader taken away for 30 periods and rebuilt (a copy's belt takes 6 periods of grenades before it is full), and the drills stopped for 2 (the coal stops). 'expected' is what the build makes in a period: 64 for one copy, 448 for seven. A period of a copy's recovery after the block is one the belt's unclogging takes: the full build needs 9 periods to be back at 448.",
   "cases": {
     "owner-one-copy": {
       "recorded": {
@@ -378,10 +378,10 @@
     "generated-one-copy": {
       "recorded": {
         "pr": 0,
-        "commit": "2274f4f1",
-        "frozen_head": "2274f4f1",
+        "commit": "cef5bacf",
+        "frozen_head": "cef5bacf",
         "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "5f77de8d48dfb7660661e0a6842cf08f89d3ad01739108e5250d6ee08ec173f8",
+        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042",
         "clock_basis": "capture"
       },
       "native": {
@@ -571,16 +571,16 @@
           "rate": 240,
           "supply": null
         },
-        "clock_sha256": "5f77de8d48dfb7660661e0a6842cf08f89d3ad01739108e5250d6ee08ec173f8"
+        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042"
       }
     },
     "generated-full-build": {
       "recorded": {
         "pr": 0,
-        "commit": "2274f4f1",
-        "frozen_head": "2274f4f1",
+        "commit": "cef5bacf",
+        "frozen_head": "cef5bacf",
         "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "5f77de8d48dfb7660661e0a6842cf08f89d3ad01739108e5250d6ee08ec173f8",
+        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042",
         "clock_basis": "capture"
       },
       "native": {
@@ -770,7 +770,7 @@
           "rate": 240,
           "supply": null
         },
-        "clock_sha256": "5f77de8d48dfb7660661e0a6842cf08f89d3ad01739108e5250d6ee08ec173f8"
+        "clock_sha256": "667721237625102b62a076a6f0c6590aa375ca6d5ded2542f89c86663137c042"
       }
     }
   }

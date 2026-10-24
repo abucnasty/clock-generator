@@ -27,7 +27,7 @@ export function generateClockForConfig(
     if (options.verify_as_built !== true || (planned.stability_check.as_built?.holds ?? planned.stability_check.holds)) {
         return planned;
     }
-    const grouped = groupedHandsClock(plan, clock, options);
+    const grouped = groupedHandsClock(plan, options);
     return grouped !== null && grouped.stability_check.holds ? grouped : planned;
 }
 

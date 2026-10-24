@@ -1,6 +1,6 @@
 import { OpenRange } from "../../data-types";
-import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
-import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
+import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
+import { DRILL_ITEMS_PER_SWING, EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
@@ -50,6 +50,17 @@ function windowFrom(start: number, ticks: number, period: number): OpenRange[] {
 function shiftedWindows(ranges: OpenRange[], ticks: number, period: number): OpenRange[] {
     return OpenRange.reduceRanges(ranges.flatMap(range =>
         windowFrom(range.start_inclusive + ticks, range.end_inclusive - range.start_inclusive + 1, period)));
+}
+
+/**
+ * The ticks a drill is enabled in a period to bring `items` to its machine: the items over what it mines in an enabled tick,
+ * that is at most what the machine takes at once (the drill stops dropping at its limit and keeps the rest), rounded up, and
+ * at least MIN_DRILL_WINDOW_TICKS. The drill's bars keep what a tick mines beyond a whole item, so over the periods it mines
+ * its rate in every tick it is enabled.
+ */
+export function drillWindowTicks(drill: MiningDrill, machine: Machine, items: number): number {
+    const per_tick = Math.min(drill.production_rate.amount_per_tick.toDecimal(), miningDrillMaxInsertion(drill, machine));
+    return Math.max(MIN_DRILL_WINDOW_TICKS, Math.ceil(items / per_tick - 1e-9));
 }
 
 interface Taker {
@@ -120,8 +131,9 @@ export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swin
  * - an inserter whose hands, rounded up, take the period (a window of its hands and the offset reaches it) is busy all the time:
  *   a window would only make gaps between hands that follow each other, so it has none and stays enabled;
  * - a mining drill drops the whole of what it mined in a tick it is enabled, up to the machine's limit, and the machine
- *   holds the rest for the next window, so it needs a window of the planned length at least two ticks, anywhere in
- *   its machine's group;
+ *   holds the rest for the next window, so its window is as many ticks as it takes to mine what its machine takes of it
+ *   in a period (`drillWindowTicks`), at least two; the drills of one group of machines share one window, the longest any of
+ *   them needs, which opens with the group's inputs;
  * - where a source machine is itself filled by other inserters (a chain of machines), the windows go in the order of the
  *   chain, from the output: the output machines' inputs from belts and chests, then those from machines, each stage
  *   when the previous one's window ends, and the inserters that fill a source machine a tick after the one that takes
@@ -135,7 +147,6 @@ export function groupedHandsWindows(
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
     period: number,
-    planned_windows: ReadonlyMap<string, OpenRange[]>,
     /** Whether a window that picks up from a belt has the belt pickup slack (a clock for a moving belt); not on backed-up belts */
     with_belt_slack: boolean = true,
     options: GroupedHandsOptions = DEFAULT_OPTIONS,
@@ -339,10 +350,18 @@ export function groupedHandsWindows(
     for (const output of outputs) {
         windows.set(output.entity_id.id, windowFrom(start_of(output.source.entity_id.id), output_ticks(output), period));
     }
+    // a drill's window is computed from what its machine takes of it, and the drills of one group have one window: the longest
+    const drill_ticks = new Map<number, number>();
     for (const drill of drills) {
-        const planned = planned_windows.get(drill.entity_id.id) ?? [];
-        const ticks = Math.max(MIN_DRILL_WINDOW_TICKS, ...planned.map(range => range.end_inclusive - range.start_inclusive + 1));
-        windows.set(drill.entity_id.id, windowFrom(start_of(drill.sink_id.id) + INPUT_OFFSET_TICKS, ticks, period));
+        const transfer = transfers.get(drill.entity_id.id);
+        if (transfer === undefined) refuse(`${drill.entity_id.id} is not in the plan's hand counts`);
+        const sink = entity_registry.getEntityByIdOrThrow(drill.sink_id) as Machine;
+        const mined = transfer.item_transfers.reduce((sum, item) => sum + item.transfer_count.toDecimal(), 0) * recipe_lcm * DRILL_ITEMS_PER_SWING;
+        const group = group_of.get(drill.sink_id.id)!;
+        drill_ticks.set(group, Math.max(drill_ticks.get(group) ?? 0, drillWindowTicks(drill, sink, mined)));
+    }
+    for (const drill of drills) {
+        windows.set(drill.entity_id.id, windowFrom(start_of(drill.sink_id.id) + INPUT_OFFSET_TICKS, drill_ticks.get(group_of.get(drill.sink_id.id)!)!, period));
     }
     return leaveOpen(windows);
 }
@@ -410,11 +429,9 @@ function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options
  */
 export function groupedHandsClock(
     plan: PlanRun,
-    planned: ReturnType<typeof clockOfPlan>,
     options: GenerateClockOptions = {},
 ): BlueprintGenerationResult | null {
     let made = plan;
-    let clock = planned;
     let finished: BlueprintGenerationResult | null = null;
     const reasons: string[] = [];
     try {
@@ -424,13 +441,12 @@ export function groupedHandsClock(
         const cycles = groupedHandsCycles(plan.run.simulation_context.entity_registry, plan.run.swing_counts);
         if (cycles !== null && plan.config.overrides?.lcm === undefined && cycles !== plan.run.recipe_lcm) {
             made = planRun({ ...plan.config, overrides: { ...plan.config.overrides, lcm: cycles } }, options);
-            clock = clockOfPlan(made, { ...options, belt_pickup_slack: "never" });
         }
         const { simulation_context, swing_counts, recipe_lcm, duration } = made.run;
         const tried = new Set<string>();
         const drops = dropTieBreak(made.config, duration.ticks);
         for (const way of TRIES) {
-            const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, clock.windows,
+            const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
                 made.config.overrides?.backed_up_belts !== true, way, drops);
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
             if (tried.has(key)) continue;
