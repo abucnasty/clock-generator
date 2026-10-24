@@ -61,6 +61,15 @@ export function yieldOf(result: Ingredient): { amount: number; chance: number; e
 }
 
 /**
+ * Whether the result takes a slice of the one roll a craft shares among its results (`shared_probability`): two such
+ * results of a recipe never come in the same roll, so "one of them" comes at the sum of their chances (scrap recycling's
+ * twelve results). A result with a chance of its own (`independent_probability`, `probability`) is rolled apart.
+ */
+export function sharesTheRoll(result: Ingredient): boolean {
+    return (result as Ingredient & ResultExtras).shared_probability !== undefined;
+}
+
+/**
  * The variance of what one craft yields of a result, before productivity: 0 for a result that always comes in the same
  * amount. A craft yields the amount, and one more at `extra_count_fraction`, all with the result's chance, each roll on
  * its own (recorded on the recycler: the returns of a tick follow a binomial of its crafts).

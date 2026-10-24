@@ -66,6 +66,61 @@ export function binomialQuantile(trials: number, chance: number, level: number =
 }
 
 /**
+ * The binomial's probabilities of `trials` rolls at `chance`, from 12 standard deviations under the mean to 12 over it
+ * (outside that it has nothing a double holds): `probabilities[index]` is P(X = from + index)
+ */
+export function binomialPmf(trials: number, chance: number): { from: number; probabilities: number[] } {
+    if (trials <= 0 || chance <= 0) {
+        return { from: 0, probabilities: [1] };
+    }
+    if (chance >= 1) {
+        return { from: trials, probabilities: [1] };
+    }
+    const mean = trials * chance;
+    const sd = Math.sqrt(mean * (1 - chance));
+    const from = Math.max(0, Math.floor(mean - 12 * sd) - 1);
+    const to = Math.min(trials, Math.ceil(mean + 12 * sd) + 1);
+    const log_trials = logGamma(trials + 1);
+    const log_p = Math.log(chance);
+    const log_q = Math.log1p(-chance);
+    const probabilities: number[] = [];
+    for (let count = from; count <= to; count++) {
+        probabilities.push(Math.exp(log_trials - logGamma(count + 1) - logGamma(trials - count + 1) + count * log_p + (trials - count) * log_q));
+    }
+    return { from, probabilities };
+}
+
+/**
+ * The distribution of what `rolls` rolls of a result give, as counts with their probabilities, for the three binomial
+ * shapes of excessAtLevel; for any other shape a normal amount of the same mean and variance, in whole items
+ */
+export function countDistribution(result: Ingredient, rolls: number): { counts: number[]; probabilities: number[] } {
+    const { amount, chance, extra } = yieldOf(result);
+    const trials = Math.ceil(rolls - 1e-9);
+    const scaled = (pmf: { from: number; probabilities: number[] }, times: number, plus: number) =>
+        ({ counts: pmf.probabilities.map((_, index) => (pmf.from + index) * times + plus), probabilities: pmf.probabilities });
+    if (amount === 0) {
+        return scaled(binomialPmf(trials, chance * extra), 1, 0);
+    }
+    if (chance >= 1) {
+        return scaled(binomialPmf(trials, extra), 1, amount * trials);
+    }
+    if (extra === 0) {
+        return scaled(binomialPmf(trials, chance), amount, 0);
+    }
+    const mean = trials * chance * (amount + extra);
+    const sd = Math.sqrt(amountVariance(result) * trials);
+    const counts: number[] = [];
+    const weights: number[] = [];
+    for (let count = Math.max(0, Math.floor(mean - 12 * sd)); count <= Math.ceil(mean + 12 * sd); count++) {
+        counts.push(count);
+        weights.push(Math.exp(-0.5 * ((count - mean) / sd) ** 2));
+    }
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    return { counts, probabilities: weights.map(weight => weight / total) };
+}
+
+/**
  * What `rolls` rolls of a result give over their mean in all but the share 1 - `level` of the periods. Its amount a
  * roll is 0 or its amount with its chance, and one more at its extra count fraction when it comes; that sum is a
  * binomial whenever the amount is 0 (one item at chance x extra), the chance is 1 (the amount every roll, and a binomial
@@ -139,7 +194,7 @@ export interface CraftingMargin {
 const MAX_COVER_TICKS = 216_000;
 
 /** The rolls of results a craft makes: one, and one more for each productivity bar paid out */
-function rollsPerCraft(machine: Machine): number {
+export function rollsPerCraft(machine: Machine): number {
     return 1 + machine.metadata.productivity / 100;
 }
 

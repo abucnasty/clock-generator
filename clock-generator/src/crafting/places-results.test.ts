@@ -4,6 +4,9 @@ import { ConfigSchema, type Config } from '../config/schema';
 import { CompositeControlLogic, TickControlLogic } from '../control-logic';
 import { EntityState, MachineState, MachineStatus, SlotContainerState } from '../state';
 import { SimulationContext, createEntityRegistryFromConfig } from './sequence/simulation-context';
+import { CraftingCyclePlan } from './sequence/cycle/crafting-cycle';
+import { TargetProductionRate } from './target-production-rate';
+import { fraction } from '../data-types/fraction';
 import { ConfigPaths } from '../config/config-paths';
 
 // The exact-speed recycler cell of the ore voider benchmark (save F): a recycler at crafting speed 16.875 voids iron ore,
@@ -189,12 +192,14 @@ describe('a rocket silo as the result target', () => {
         await expect(parseConfig(await scrapIntoSilo('uncommon'))).resolves.toBeDefined();
     });
 
-    it('takes results too rare for their hands to come out whole in a clock period: that is refused, not run', async () => {
+    it('takes results too rare for their hands to come out whole in a clock period: each set of takers gets a window a period', async () => {
         // at +300% (scrap recycling productivity researched to level 30) the takers' hands come out whole in no period
-        const { generateClockAlternatives } = await import('./generate-blueprint');
+        // the silo holds; see result-windows.test.ts
         const config = await parseConfig(await scrapIntoSilo('uncommon', 300));
-        const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
-        expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow('A clock for results that come this rarely is not planned yet');
+        const registry = createEntityRegistryFromConfig(config);
+        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, fraction(1), {});
+        expect(plan.result_windows?.[0].windows).toHaveLength(12);
+        expect(plan.result_windows?.[0].period).toBe(5760);
     });
 });
 

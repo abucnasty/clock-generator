@@ -2,6 +2,7 @@ import assert from "../../../common/assert";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
 import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
+import { resultWindowRanges, takesResultOf } from "../../result-windows";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
 import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { ItemName } from "../../../data";
@@ -72,6 +73,18 @@ export class EnableControlFactory {
 
         const source_state = this.entity_state_registry.getSourceStateOrThrow(entity_id);
         const sink_state = this.entity_state_registry.getSinkStateOrThrow(entity_id);
+
+        // results that come too rarely for whole hands in a period: each taker on its window of the plan (result-windows.ts),
+        // carrying a part hand from one window to the next
+        const result_windows = this.crafting_cycle_plan.result_windows;
+        if (result_windows !== undefined && takesResultOf(result_windows, entity_id)) {
+            const plan = result_windows.find(it => takesResultOf([it], entity_id))!;
+            const ranges = resultWindowRanges(plan).get(entity_id.id)!;
+            return EnableControl.lambda(() => {
+                const tick = this.tick_provider.getCurrentTick() % plan.period;
+                return ranges.some(range => tick >= range.start_inclusive && tick <= range.end_inclusive);
+            });
+        }
 
         // a target that counts an item destroyed: every inserter of the plan into a machine that destroys it, or out of
         // where that machine places its results, moves its planned hands and no more (planned by arithmetic)
