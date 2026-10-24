@@ -3,7 +3,7 @@ import { loadConfigFromFile, parseConfig } from '../config/loader';
 import { ConfigSchema, type Config } from '../config/schema';
 import { CompositeControlLogic, TickControlLogic } from '../control-logic';
 import { EntityState, MachineState, MachineStatus, SlotContainerState } from '../state';
-import { SimulationContext } from './sequence/simulation-context';
+import { SimulationContext, createEntityRegistryFromConfig } from './sequence/simulation-context';
 import { ConfigPaths } from '../config/config-paths';
 
 // The exact-speed recycler cell of the ore voider benchmark (save F): a recycler at crafting speed 16.875 voids iron ore,
@@ -195,5 +195,18 @@ describe('a rocket silo as the result target', () => {
         const config = await parseConfig(await scrapIntoSilo('uncommon', 300));
         const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow('A clock for results that come this rarely is not planned yet');
+    });
+});
+
+describe('a recycler brought an item its recipe does not use', () => {
+    it('is refused: it picks its recipe from its input, as a furnace does, and the switch is not recorded', async () => {
+        const config = await loadConfigFromFile(ConfigPaths.RECYCLING_SCRAP_SILO);
+        const gears: Config = {
+            ...config,
+            inserters: [...config.inserters, { id: 14, source: { type: 'chest', id: 15 }, sink: { type: 'machine', id: 1 }, filters: ['iron-gear-wheel'] } as never],
+            chests: [...config.chests!, { type: 'infinity-chest', id: 15, item_filter: [{ item_name: 'iron-gear-wheel', request_count: 50 }] } as never],
+        };
+        expect(() => createEntityRegistryFromConfig(gears)).toThrow('Inserter 14 brings iron-gear-wheel into Machine 1, which makes scrap-recycling from scrap. '
+            + 'A furnace or a recycler picks its recipe from the items it is brought');
     });
 });
