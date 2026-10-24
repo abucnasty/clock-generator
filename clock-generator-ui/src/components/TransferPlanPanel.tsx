@@ -25,6 +25,7 @@ import { GameName } from './GameName';
 import { ScrollX } from './ScrollX';
 import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { useBuildSection } from '../hooks/useBuildViewContext';
+import { keyedItems } from '../utils/keyedItems';
 
 interface TransferPlanPanelProps {
     transferPlan: SerializableTransferPlan;
@@ -125,13 +126,15 @@ function TransferPlanPanelComponent({
                     </TableHead>
                     <TableBody>
                         {entities.map((entity) =>
-                            entity.item_transfers.map((transfer, transferIdx) => {
+                            // an inserter that fills both lanes of a belt with one item has a transfer per lane, both of that item
+                            keyedItems(entity.item_transfers.map((transfer) => transfer.item_name)).map(({ key }, transferIdx) => {
+                                const transfer = entity.item_transfers[transferIdx];
                                 const isExcluded = excludedIngredients.includes(transfer.item_name);
                                 const isFirstRow = transferIdx === 0;
 
                                 return (
                                     <TableRow
-                                        key={`${entity.entity_id}-${transfer.item_name}`}
+                                        key={`${entity.entity_id}-${key}`}
                                         sx={{
                                             '& td': { borderBottom: isFirstRow || transferIdx > 0 ? undefined : 'none' },
                                         }}
