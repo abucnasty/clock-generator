@@ -16,6 +16,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `steel-wagon-clock.game.test.ts`: the steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
 - `own-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock.
 - `grenade-clock.game.test.ts`: the grenade build on one copy and on its full build of seven, each with the hand-made clock and with the generated clock.
+- `stupidfathobbit-cell02-clock.game.test.ts`: cell 02 (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
 - `thaeln-cell09-clock.game.test.ts`: Thaeln's cell 09 (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
 - `productivity-chain-clock.game.test.ts`: the productivity module chain (nine machines and three chests, 80 a second over 6 copies) with the generated clock.
 
