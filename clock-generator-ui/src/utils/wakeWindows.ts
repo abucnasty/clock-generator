@@ -3,6 +3,7 @@
  * alternative carries. Every number here comes from the engine; the view counts no wake-ups of its own, so a changed
  * engine definition of a wake-up flows through unchanged. The words are in `wakeWindowCopy.ts`.
  */
+import type { AlwaysOnReason } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { entityLabel, type LabelKind } from './entityLabel';
 import { rowRouteText } from './wakeWindowCopy';
@@ -53,6 +54,8 @@ export interface WakeWindowRow {
     sink?: EntityOption;
     windows: WakeWindow[];
     mode: WakeWindowRowMode;
+    /** Why the clock leaves it always on, when the engine says; only on a row in 'always-on' mode */
+    alwaysOnReason?: AlwaysOnReason;
     ownClock?: OwnClock;
     /** Ticks of the period it is on: the windows' lengths, the whole period when always on */
     onTicks: number;
@@ -64,7 +67,7 @@ export interface WakeWindowRow {
 
 export type WakeWindowSource = Pick<
     ClockAlternativeView,
-    'clockWindows' | 'stateTransitionHistory' | 'asBuilt' | 'fuelView' | 'beltPickupSlackTicks' | 'simulationDurationTicks'
+    'clockWindows' | 'stateTransitionHistory' | 'asBuilt' | 'fuelView' | 'beltPickupSlackTicks' | 'simulationDurationTicks' | 'alwaysOnReasons'
 >;
 
 const TICKS_PER_SECOND = 60;
@@ -279,6 +282,7 @@ export function buildWakeWindowRows(alternative: WakeWindowSource, options: read
             sink: endpoint(entity?.sink?.entity_id),
             windows,
             mode,
+            ...(mode === 'always-on' && alternative.alwaysOnReasons?.[id] ? { alwaysOnReason: alternative.alwaysOnReasons[id] } : {}),
             ...(ownClock ? { ownClock } : {}),
             onTicks,
             onShare,

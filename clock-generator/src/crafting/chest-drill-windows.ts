@@ -11,6 +11,39 @@ import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
 
+/** Why nothing times a drill into a chest, so that it stays always enabled */
+export type ChestDrillWhy =
+    | { kind: "config" }
+    | { kind: "other-drill"; drill_number: number; item: string }
+    | { kind: "filler"; inserter_number: number; item: string }
+    | { kind: "no-taker"; item: string }
+    | { kind: "taker-without-window"; inserter_number: number; item: string }
+    | { kind: "no-take"; item: string }
+    | { kind: "no-room"; item: string }
+    | { kind: "needs-whole-period" }
+    | { kind: "would-cover-period" }
+    | { kind: "fallback" }
+    | { kind: "windows-did-not-hold" }
+    | { kind: "no-window" };
+
+/** The reason as the log and the insight say it, after "always enabled" */
+export function chestDrillBecause(why: ChestDrillWhy): string {
+    switch (why.kind) {
+        case "config": return "the config sets it to always enabled";
+        case "other-drill": return `drill ${why.drill_number} fills the same chest with ${why.item} too`;
+        case "filler": return `inserter ${why.inserter_number} fills the same chest with ${why.item} too`;
+        case "no-taker": return `no inserter of the plan takes ${why.item} out of the chest`;
+        case "taker-without-window": return `inserter ${why.inserter_number} takes ${why.item} out of the chest with no window`;
+        case "no-take": return `no window of the clock takes ${why.item} out of the chest`;
+        case "no-room": return `the chest has no room for ${why.item}`;
+        case "needs-whole-period": return "no windows shorter than the whole period keep the chest's takers supplied";
+        case "would-cover-period": return "its windows would cover the whole period";
+        case "fallback": return "the clock does not meet goal 1 with its fewest windows, nor with them a tick longer";
+        case "windows-did-not-hold": return "its windows did not hold the clock";
+        case "no-window": return "it has no window";
+    }
+}
+
 /**
  * What the clock gives a drill that drops into a chest: windows that keep the chest's takers supplied just in time,
  * or none, with the reason it stays always enabled.
@@ -28,7 +61,7 @@ export interface ChestDrillClock {
     /** Its windows in a period; 0 when always enabled */
     window_count: number;
     /** Why it is always enabled; absent when it has windows */
-    always_enabled_because?: string;
+    always_enabled_because?: ChestDrillWhy;
     /** Its windows are the generator's own (enable control AUTO), which a fallback may lengthen or drop */
     planned: boolean;
 }
@@ -63,7 +96,7 @@ interface ChestDrillPlan {
     item: string;
     /** The inserters that take its item out of the chest; empty when a reason keeps the drill always enabled */
     takers: PlannedTaker[];
-    always_enabled_because?: string;
+    always_enabled_because?: ChestDrillWhy;
 }
 
 /** A drill whose windows were given by the config: CLOCKED, or the generator's with a margin */
@@ -95,7 +128,7 @@ function chestDrillsOf(config: Config): ChestDrillConfig[] {
             const mode = control?.mode === EnableControlMode.CLOCKED ? "CLOCKED"
                 : control?.mode === EnableControlMode.ALWAYS ? "ALWAYS" : "AUTO";
             const plan: ChestDrillPlan = { drill, drill_id: drill_config.id, chest, chest_id: drill_config.target.id, item: drill.item.name, takers: [] };
-            const reason = mode === "ALWAYS" ? "the config sets it to always enabled" : alwaysEnabledBecause(plan, registry, rates);
+            const reason: ChestDrillWhy | null = mode === "ALWAYS" ? { kind: "config" } : alwaysEnabledBecause(plan, registry, rates);
             if (reason === null) {
                 plan.takers = registry.getAll().filter(Entity.isInserter).flatMap(inserter => {
                     const rate = rates.get(inserter.entity_id.id)?.get(plan.item);
@@ -138,21 +171,21 @@ function takerRates(config: Config, registry: ReadableEntityRegistry): Map<strin
 }
 
 /** Why nothing can time the drill, so that it stays always enabled; null when windows can be made for it */
-function alwaysEnabledBecause(plan: ChestDrillPlan, registry: ReadableEntityRegistry, rates: Map<string, Map<string, Fraction>>): string | null {
+function alwaysEnabledBecause(plan: ChestDrillPlan, registry: ReadableEntityRegistry, rates: Map<string, Map<string, Fraction>>): ChestDrillWhy | null {
     const chest_key = plan.chest.entity_id.id;
     const other_drill = registry.getAll().filter(Entity.isDrill).find(drill => drill.entity_id.id !== plan.drill.entity_id.id
         && drill.sink_id.id === chest_key && drill.item.name === plan.item);
     if (other_drill !== undefined) {
-        return `drill ${other_drill.entity_id.number} fills the same chest with ${plan.item} too`;
+        return { kind: "other-drill", drill_number: other_drill.entity_id.number, item: plan.item };
     }
     const inserters = registry.getAll().filter(Entity.isInserter);
     const filler = inserters.find(inserter => inserter.sink.entity_id.id === chest_key && rates.get(inserter.entity_id.id)?.has(plan.item));
     if (filler !== undefined) {
-        return `inserter ${filler.entity_id.number} fills the same chest with ${plan.item} too`;
+        return { kind: "filler", inserter_number: filler.entity_id.number, item: plan.item };
     }
     const takers = inserters.filter(inserter => inserter.source.entity_id.id === chest_key && rates.get(inserter.entity_id.id)?.has(plan.item));
     if (takers.length === 0) {
-        return `no inserter of the plan takes ${plan.item} out of the chest`;
+        return { kind: "no-taker", item: plan.item };
     }
     return null;
 }
@@ -289,7 +322,7 @@ function createEntityRegistryForReplay(plan: ChestDrillPlan): ReadableEntityRegi
 interface PlannedDrillWindows {
     ranges: OpenRange[] | null;
     enabled_ticks: number;
-    always_enabled_because?: string;
+    always_enabled_because?: ChestDrillWhy;
 }
 
 /** Periods a period of part ticks is averaged over */
@@ -328,13 +361,13 @@ interface DrillWindowsSetup {
  * The takes of the drill's item out of its chest in the clock's windows, the windows' places and their lengths without
  * a margin, and the replay; or why nothing can time the drill on these windows
  */
-function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenRange[]>, period: number): DrillWindowsSetup | { because: string } {
+function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenRange[]>, period: number): DrillWindowsSetup | { because: ChestDrillWhy } {
     const whole_period = Math.ceil(period - 1e-9);
     const takers: Taker[] = [];
     for (const taker of plan.takers) {
         const ranges = OpenRange.reduceRanges(windows.get(taker.inserter_id) ?? []);
         if (ranges.length === 0) {
-            return { because: `inserter ${taker.inserter_number} takes ${plan.item} out of the chest with no window` };
+            return { because: { kind: "taker-without-window", inserter_number: taker.inserter_number, item: plan.item } };
         }
         const items = taker.rate.toDecimal() * period;
         const per_period = Math.abs(items - Math.round(items)) < 1e-6 ? Math.round(items) : Math.ceil(items);
@@ -343,7 +376,7 @@ function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, Op
     const takes = takers.flatMap(taker => taker.windows).filter(it => it.items > 0)
         .sort((a, b) => a.range.start_inclusive - b.range.start_inclusive);
     if (takes.length === 0) {
-        return { because: `no window of the clock takes ${plan.item} out of the chest` };
+        return { because: { kind: "no-take", item: plan.item } };
     }
     // takes that start in the same tick are one
     const starts: { start: number; items: number }[] = [];
@@ -359,7 +392,7 @@ function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, Op
     const room = new EntityStateFactory(createEntityRegistryForReplay(plan)).createStateForEntity(plan.chest.entity_id) as ChestState;
     const capacity = room.getAvailableSpace(plan.item);
     if (capacity <= 0) {
-        return { because: `the chest has no room for ${plan.item}` };
+        return { because: { kind: "no-room", item: plan.item } };
     }
 
     // the first window ends before the first take after the longest stretch without one
@@ -438,7 +471,7 @@ function plannedWindows(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenR
         extra = extra < 4 ? extra + 1 : extra * 2;
     }
     if (high === null) {
-        return { ranges: null, enabled_ticks: 0, always_enabled_because: "no windows shorter than the whole period keep the chest's takers supplied" };
+        return { ranges: null, enabled_ticks: 0, always_enabled_because: { kind: "needs-whole-period" } };
     }
     while (high - low > 1) {
         const middle = Math.floor((low + high) / 2);
@@ -449,7 +482,7 @@ function plannedWindows(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenR
         }
     }
     if (whole(high + extra_ticks)) {
-        return { ranges: null, enabled_ticks: 0, always_enabled_because: "its windows would cover the whole period" };
+        return { ranges: null, enabled_ticks: 0, always_enabled_because: { kind: "would-cover-period" } };
     }
     const ranges = windowsWith(setup, high + extra_ticks);
     return { ranges, enabled_ticks: enabledTicks(ranges, period) };
@@ -507,7 +540,7 @@ export function chestDrillWindows(config: Config, windows: Map<string, OpenRange
         const given = windows.get(key);
         if (given !== undefined) {
             reports.push(given.length === 0
-                ? { ...report, enabled_ticks: null, window_count: 0, always_enabled_because: plan.always_enabled_because ?? "its windows did not hold the clock" }
+                ? { ...report, enabled_ticks: null, window_count: 0, always_enabled_because: plan.always_enabled_because ?? { kind: "windows-did-not-hold" } }
                 : { ...report, enabled_ticks: enabledTicks(given, period), window_count: given.length });
             continue;
         }
@@ -522,7 +555,7 @@ export function chestDrillWindows(config: Config, windows: Map<string, OpenRange
             because = made.always_enabled_because;
         }
         if (ranges === null || ranges.length === 0) {
-            reports.push({ ...report, enabled_ticks: null, window_count: 0, always_enabled_because: because ?? "it has no window" });
+            reports.push({ ...report, enabled_ticks: null, window_count: 0, always_enabled_because: because ?? { kind: "no-window" } });
             continue;
         }
         if (result === windows) {
@@ -573,7 +606,7 @@ export function chestDrillFallbackConfig(config: Config, fallback: "one tick lon
 export function chestDrillClockLine(drill: ChestDrillClock): string {
     const what = `Drill ${drill.drill_id} into ${chestName(drill.chest_type, drill.chest_id)}`;
     if (drill.enabled_ticks === null) {
-        return `${what}: always enabled, since ${drill.always_enabled_because}`;
+        return `${what}: always enabled, since ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because)}`;
     }
     const ticks = Number(drill.enabled_ticks.toFixed(2));
     return `${what}: enabled ${ticks} tick${ticks === 1 ? "" : "s"} a period, in ${drill.window_count} window${drill.window_count === 1 ? "" : "s"}`;

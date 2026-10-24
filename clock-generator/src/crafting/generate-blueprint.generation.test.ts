@@ -3,7 +3,7 @@ import { generateClockForConfig, generateClockAlternatives, validateConfig, type
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
-import { quiet, withSearches } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, quiet, withSearches } from "./generate-blueprint-test-helpers";
 
 // The samples of generate-blueprint.test.ts whose generation takes longest: the clock alternatives of iron bacteria,
 // and two builds whose single generation runs the long checks.
@@ -18,6 +18,10 @@ describe("generateClockForConfig", () => {
 
         beforeAll(() => {
             result = generateClockForConfig(config);
+        });
+
+        it("names why every inserter and drill the clock leaves always on is", () => {
+            expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
         });
 
         it("fills the lane at its consumption rate", () => {
@@ -56,6 +60,10 @@ describe("generateClockForConfig", () => {
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
             windows = selected.result.clock_windows;
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
         });
 
         it("validates with the hands a machine gives up a cycle, over both of its output inserters", () => {
@@ -133,6 +141,7 @@ describe("generateClockForConfig", () => {
         it("planned windows fail the clock-only check", () => {
             const result = generateClockForConfig(config, { verify_as_built: true });
             expect(result.stability_check.as_built?.holds).toBe(false);
+            expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
         });
 
         // From the staged start (empty machines, the clock at its tick 0) every padding tried passes, so the search
@@ -146,6 +155,7 @@ describe("generateClockForConfig", () => {
             expect(result.derived_clock_windows).toMatchObject({ succeeded: true, kept_planned_windows: false, end_padding_ticks: 1 });
             expect(result.stability_check.holds).toBe(true);
             expect(result.search).toMatchObject({ kind: "padding", picked: { row: 1, setting: 1 } });
+            expect(alwaysOnReasonProblems(config, result, "derived")).toEqual([]);
             expect(result.search!.candidates.find(candidate => candidate.setting === 0)!.holds).toBe(true);
             expect(result.search!.candidates.find(candidate => candidate.setting === 2)!.holds).toBe(true);
         });

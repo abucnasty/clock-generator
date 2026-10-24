@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
 import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
 
 const BACKED_UP_ADVICE = " If the input belts back up at their pickups, answer Backed up for the belts and generate again: a clock may hold then.";
@@ -22,7 +22,9 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
     });
 
     it("is no recovery for a sample that holds its target and is not taken away from for a while", async () => {
-        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL06), { logger: quiet });
+        const config = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL06);
+        const generated = generateClockAlternatives(config, { logger: quiet });
+        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
         expect(generated.why_not_stable).toEqual({
             cause: "no recovery",
             message: "The selected clock (Batched swings: 6 output swings per cycle, subtick clock) holds the target rate, but does not "
@@ -34,6 +36,7 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
         const sample = await loadConfigFromFile(ConfigPaths.SAMPLE_CONFIG);
         const config = { ...sample, inserters: sample.inserters.map(inserter => ({ ...inserter, stack_size: 2 })) };
         const generated = generateClockAlternatives(config, { logger: quiet });
+        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
         expect(generated.not_made.map(it => it.id)).toEqual(["even-hands", "uneven-output", "shifted-swings"]);
         expect(generated.why_not_stable).toEqual({
             cause: "nothing holds",
@@ -65,7 +68,9 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
     });
 
     it("is not said of a sample whose selected clock is stable", async () => {
-        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE), { logger: quiet });
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const generated = generateClockAlternatives(config, { logger: quiet });
+        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
         expect(generated.alternatives[generated.selected_index].verdict).toBe("stable");
         expect(generated.why_not_stable).toBeNull();
     });

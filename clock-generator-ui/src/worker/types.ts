@@ -1,6 +1,7 @@
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
 import type {
+    AlwaysOnReasons,
     AsBuiltStabilityCheck,
     BeltConfigSchema,
     ChestConfigSchema,
@@ -159,6 +160,8 @@ export interface ClockAlternativeView {
     fuelView: FuelViewData | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
+    /** Why the clock leaves an inserter or drill always on, by entity id; missing from clocks kept before it was carried */
+    alwaysOnReasons?: AlwaysOnReasons;
     /** Ticks of belt pickup slack at the end of each window, by inserter id */
     beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */

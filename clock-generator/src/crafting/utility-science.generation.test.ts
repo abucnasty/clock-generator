@@ -3,7 +3,7 @@ import {loadConfigFromFile} from "../config/loader";
 import {ConfigPaths} from "../config/config-paths";
 import type {Config} from "../config/schema";
 import {generateClockAlternatives, planClockAlternatives, selectableAsStable, type ClockAlternative, type ClockAlternativesResult} from "./generate-blueprint";
-import {quiet, withSearches, SEARCH_IDS, SEARCH_LABELS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf, quiet, withSearches, SEARCH_IDS, SEARCH_LABELS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
 
 const SHORTER_PERIOD_SEARCH_ID = "derived-lean-low-density-structure";
 const SHORTER_PERIOD_SEARCH_LABEL = "Observed windows, shorter period (low density structure not in the period)";
@@ -17,6 +17,10 @@ beforeAll(async () => {
     by_default = generateClockAlternatives(config, {logger: quiet});
     alternatives = by_default.alternatives;
     selected = selectedOf(by_default);
+});
+
+it("names why every inserter and drill a clock leaves always on is", () => {
+    expect(alwaysOnReasonProblemsOf(config, by_default)).toEqual([]);
 });
 
 describe("the searches only run when they are needed", () => {

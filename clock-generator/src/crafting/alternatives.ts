@@ -12,7 +12,8 @@ import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
 import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, sideLoadedDropInsights, startDependenceInsight } from "./insights";
-import { chestDrillFallbackConfig, hasPlannedChestDrill } from "./chest-drill-windows";
+import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
+import { chestDrillReasons } from "./always-on-reasons";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
@@ -740,8 +741,9 @@ function runAlternativeOf(
     }
     if (used !== definition && !plannedChestDrillWindows(result) && result.chest_drills !== undefined) {
         // left always enabled by the fallback: say so, not that the config asks for it
-        result = { ...result, chest_drills: result.chest_drills.map(drill => drill.enabled_ticks !== null ? drill
-            : { ...drill, planned: true, always_enabled_because: "the clock does not meet goal 1 with its fewest windows, nor with them a tick longer" }) };
+        const chest_drills = result.chest_drills.map((drill): ChestDrillClock => drill.enabled_ticks !== null ? drill
+            : { ...drill, planned: true, always_enabled_because: { kind: "fallback" } });
+        result = { ...result, chest_drills, always_on_reasons: { ...result.always_on_reasons, ...chestDrillReasons(chest_drills) } };
     }
     const { backpressure_loss } = loss;
     const label = withOutputSwings(definition, result.used_terminal_swing_count);

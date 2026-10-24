@@ -56,6 +56,7 @@ import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
+import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
 /**
@@ -257,6 +258,11 @@ export interface BlueprintGenerationResult {
      * from the chest (see chestDrillWindows), or why it stays always enabled. Absent when the build has none.
      */
     chest_drills?: ChestDrillClock[];
+    /**
+     * Why each inserter and drill the clock leaves always on has no wake window, by entity id; absent when the clock
+     * leaves none on. An entity that is on with no reason here is one the planner does not say why of.
+     */
+    always_on_reasons?: AlwaysOnReasons;
     /** The windows are the grouped hands rule's (see groupedHandsClock), and whether its inserters share windows; absent for any other clock */
     grouped_hands?: { shared_windows: boolean };
 }
@@ -1283,6 +1289,8 @@ interface ClockExportExtras {
     item_names?: ReadonlyMap<string, string>;
     /** In place of the clock's: observed windows are what the inserters did, fuel hands included, so they have none */
     fuel_hand_room_ticks?: Record<string, number>;
+    /** The inserters the strategy that made the windows left without one, with its reason */
+    left_open?: ReadonlyMap<string, AlwaysOnReason>;
 }
 
 /**
@@ -1316,6 +1324,18 @@ export function exportClock(
 
     // before the blueprint, which exports the fuel clocks this settles on
     const { inserter_clocks, fuel_plan, fuel_consumption_view } = settledFuelClocks(plan, windows, options);
+
+    const clock_windows = withInserterClocks(windows, inserter_clocks, duration.ticks);
+    const always_on_reasons = alwaysOnReasons(
+        simulation_context.entity_registry,
+        id => clock_windows.has(id) || inserter_clocks.get(id)?.own_clock === true,
+        {
+            enable_rule: plan.run.always_enabled_by_config,
+            left_open: extras.left_open ?? new Map(),
+            chest_drills: chest_drill_clock.drills,
+            swung: new Set(Array.from(final_history.entries()).filter(([, transfers]) => transfers.length > 0).map(([entity_id]) => entity_id.id)),
+        },
+    );
 
     const blueprintForWindows = (all_windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): SignalPerInserterBlueprint => {
         const clocked = withInserterClocks(all_windows, inserter_clocks, duration.ticks);
@@ -1374,7 +1394,7 @@ export function exportClock(
         modulo_blueprint: modulo?.blueprint,
         modulo_schedule: modulo?.schedule,
         subtick: subtickClockFor(windows),
-        clock_windows: serializeClockWindows(withInserterClocks(windows, inserter_clocks, duration.ticks)),
+        clock_windows: serializeClockWindows(clock_windows),
         belt_pickup_slack_ticks: clock.applied_belt_pickup_slack,
         belt_pickup_slack_left_out: clock.belt_pickup_slack_left_out,
         fuel_hand_room_ticks: extras.fuel_hand_room_ticks ?? Object.fromEntries(clock.fuel_hand_room),
@@ -1393,6 +1413,7 @@ export function exportClock(
         computed_lcm,
         derived_clock_windows: extras.derived_clock_windows,
         ...(chest_drill_clock.drills.length > 0 ? { chest_drills: chest_drill_clock.drills } : {}),
+        ...(Object.keys(always_on_reasons).length > 0 ? { always_on_reasons } : {}),
     };
 }
 
@@ -1488,7 +1509,7 @@ export function checkedClock(
     clock: PlannedClock,
     windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions = {},
-    extras: Pick<ClockExportExtras, "search"> & {
+    extras: Pick<ClockExportExtras, "search" | "left_open"> & {
         /** A search's confirmation that passed on exactly `windows`, whose early stages the check here takes over */
         verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
     } = {},
@@ -1522,7 +1543,7 @@ export function checkedClock(
         stability_check.holds = stability_check.holds && stability_check.as_built.holds;
         logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
     }
-    return exportClock(plan, clock, windows, options, { clock_only_run, output_feeders, item_names, search: extras.search });
+    return exportClock(plan, clock, windows, options, { clock_only_run, output_feeders, item_names, search: extras.search, left_open: extras.left_open });
 }
 
 /** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */

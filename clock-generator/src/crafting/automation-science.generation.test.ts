@@ -5,7 +5,7 @@ import type {Config} from "../config/schema";
 import {backpressureLossOf, generateClockAlternatives, selectableAsStable, type ClockAlternative, type ClockAlternativesResult} from "./generate-blueprint";
 import {lossId, verdictOf, type BackpressureLossReport} from "./backpressure-loss";
 import {START_DEPENDENCE_NOT_CHECKED} from "./start-dependence";
-import {quiet, SEARCH_IDS, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf, quiet, SEARCH_IDS, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
 
 let config: Config;
 let by_default: ClockAlternativesResult;
@@ -16,6 +16,10 @@ beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
     by_default = generateClockAlternatives(config, {logger: quiet});
     selected = selectedOf(by_default);
+});
+
+it("names why every inserter and drill a clock leaves always on is", () => {
+    expect(alwaysOnReasonProblemsOf(config, by_default)).toEqual([]);
 });
 
 describe("a clock tried for backpressure loss", () => {

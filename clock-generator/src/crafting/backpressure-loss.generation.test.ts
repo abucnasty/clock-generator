@@ -4,7 +4,7 @@ import { backpressureLossOf, generateClockAlternatives, type ClockAlternative } 
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
 
 // The clocks of whole samples, generated and tried for backpressure loss, which takes seconds: the trials themselves and
 // the losses a build can have are tested in backpressure-loss.test.ts
@@ -22,6 +22,10 @@ describe("what the generator calls stable", () => {
         const generated = generateClockAlternatives(config, { logger: quiet });
         alternatives = generated.alternatives;
         selected = alternatives[generated.selected_index];
+    });
+
+    it("names why every inserter and drill a clock leaves always on is", () => {
+        expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
     });
 
     it("tries every clock that holds its expected output for backpressure loss, and no other", () => {
@@ -61,14 +65,19 @@ describe("what the generator calls stable", () => {
 // from every loss, and the one selected is stable. This sample stands where military science stood before the staged
 // start: there full-hand swings held and was broken by the loss of coal alone, and a surviving clock was selected.
 describe("what the generator calls stable, on a build where some clocks are broken by one loss", () => {
+    let config: Config;
     let alternatives: ClockAlternative[];
     let selected: ClockAlternative;
 
     beforeAll(async () => {
-        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON);
+        config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON);
         const generated = generateClockAlternatives(config, { logger: quiet });
         alternatives = generated.alternatives;
         selected = alternatives[generated.selected_index];
+    });
+
+    it("names why every inserter and drill a clock leaves always on is", () => {
+        expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
     });
 
     it("selects a clock that survives over one with a better rank that does not", () => {

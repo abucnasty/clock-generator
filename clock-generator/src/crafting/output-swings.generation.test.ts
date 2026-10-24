@@ -4,7 +4,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
-import { withSearches } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, withSearches } from "./generate-blueprint-test-helpers";
 
 describe("generateClockForConfig", () => {
 
@@ -19,6 +19,10 @@ describe("generateClockForConfig", () => {
 
         beforeAll(() => {
             ({ alternatives } = generateClockAlternatives(config));
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
         });
 
         it("uses the terminal_swing_count override as-is instead of backing off, for every clock alternative", () => {
@@ -38,6 +42,10 @@ describe("generateClockForConfig", () => {
 
             beforeAll(() => {
                 result = generateClockForConfig(configWithFractionalSwings);
+            });
+
+            it("names why every inserter and drill the clock leaves always on is", () => {
+                expect(alwaysOnReasonProblems(configWithFractionalSwings, result, "fractional")).toEqual([]);
             });
 
             it("has fractional_swings_enabled set to true", () => {
@@ -101,6 +109,10 @@ describe("generateClockForConfig", () => {
                 result = generateClockForConfig(configWithoutFractionalSwings);
             });
 
+            it("names why every inserter and drill the clock leaves always on is", () => {
+                expect(alwaysOnReasonProblems(configWithoutFractionalSwings, result, "whole swings")).toEqual([]);
+            });
+
             it("has fractional_swings_enabled set to false", () => {
                 expect(result.crafting_cycle_plan.fractional_swings_enabled).toBe(false);
             });
@@ -120,6 +132,10 @@ describe("generateClockForConfig", () => {
 
             beforeAll(() => {
                 result = generateClockForConfig(config);
+            });
+
+            it("names why every inserter and drill the clock leaves always on is", () => {
+                expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
             });
 
             // two other range sets, now in the git history, were also confirmed in the game with this configuration.
