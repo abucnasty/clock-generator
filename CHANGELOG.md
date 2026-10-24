@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.24.0] - Unreleased
+
+### Added
+- A build whose recycler puts its results into a container, such as an ore voider, now gets a clock: Target Output's Counts field says whether the rate counts items made or items destroyed, a recycler's row has a Results into field for that container, and the windows that take back what the recycler gives have room for what the game gives over its average in all but 1 period in 740.
+
+### Fixed
+- A recipe whose main product comes only by chance, such as uranium processing or asteroid reprocessing, is planned at what a craft gives on average, not as if every craft gave it.
+
 ## [0.23.0] - Unreleased
 
 ### Added
