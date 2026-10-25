@@ -47,21 +47,26 @@ export function evenHandsWindows(
         const exact = transfer.total_transfer_count.toDecimal() * recipe_lcm;
         const hands = Math.round(exact);
         assert(hands > 0 && Math.abs(exact - hands) < 1e-9, `${inserter.entity_id.id} moves ${exact} hands a period, not a whole number`);
-        const width = inserter.animation.total.ticks - 1;
-        assert(width >= 1 && hands * inserter.animation.total.ticks <= period, `${hands} hands of ${inserter.entity_id.id} do not fit in ${period} ticks`);
-        const ranges: OpenRange[] = [];
-        for (let k = 0; k < hands; k++) {
-            const start = Math.round(k * period / hands);
-            const end = start + width - 1;
-            if (end < period) {
-                ranges.push(OpenRange.from(start, end));
-            } else {
-                ranges.push(OpenRange.from(start, period - 1), OpenRange.from(0, end - period));
-            }
-        }
-        windows.set(inserter.entity_id.id, ranges.sort((a, b) => a.start_inclusive - b.start_inclusive));
+        assert(inserter.animation.total.ticks >= 2 && hands * inserter.animation.total.ticks <= period, `${hands} hands of ${inserter.entity_id.id} do not fit in ${period} ticks`);
+        windows.set(inserter.entity_id.id, evenWindows(hands, inserter.animation.total.ticks, period));
     }
     return windows;
+}
+
+/** One window for each of `hands` hands in a period, spread evenly over it, each a tick shorter than the hand cycle */
+export function evenWindows(hands: number, cycle_ticks: number, period: number): OpenRange[] {
+    const width = cycle_ticks - 1;
+    const ranges: OpenRange[] = [];
+    for (let k = 0; k < hands; k++) {
+        const start = Math.round(k * period / hands);
+        const end = start + width - 1;
+        if (end < period) {
+            ranges.push(OpenRange.from(start, end));
+        } else {
+            ranges.push(OpenRange.from(start, period - 1), OpenRange.from(0, end - period));
+        }
+    }
+    return ranges.sort((a, b) => a.start_inclusive - b.start_inclusive);
 }
 
 /**

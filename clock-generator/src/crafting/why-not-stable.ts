@@ -19,12 +19,13 @@
 import type { BackpressureLossVerdict } from "./backpressure-loss";
 import type { ClockBelt } from "./clock";
 import type { ExportShortfall } from "./export-delivery";
+import type { ResultsTaken } from "./results-taken";
 import type { FullOutputChest } from "./full-output-chests";
 import type { ClockInsight } from "./insights";
 import type { ClockRanking } from "./rank";
 import type { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict } from "./trial";
 
-export type WhyNotStableCause = "moving lane phases" | "output chest full" | "export belt short" | "no recovery" | "nothing holds";
+export type WhyNotStableCause = "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "no recovery" | "nothing holds";
 
 export interface WhyNotStable {
     cause: WhyNotStableCause;
@@ -72,6 +73,8 @@ export interface WhyNotStableClock {
     full_output_chests: readonly FullOutputChest[];
     /** The export belts that got less than their consumers take, over the run that failed the clock */
     export_shortfalls: readonly ExportShortfall[];
+    /** For a machine that places its results into a container: what was taken of them over the clock's long run */
+    results_taken?: readonly ResultsTaken[];
 }
 
 /**
@@ -102,6 +105,7 @@ export function whyNotStableClockOf(clock: {
         spare_time: clock.insights.find(it => it.spare_time !== undefined)?.spare_time ?? null,
         full_output_chests: as_built?.full_output_chests ?? [],
         export_shortfalls: as_built?.export_shortfalls ?? [],
+        ...(as_built?.results_taken !== undefined && { results_taken: as_built.results_taken }),
     };
 }
 
@@ -294,6 +298,32 @@ function exportBeltShort(clock: WhyNotStableClock, at_target: boolean): WhyNotSt
     };
 }
 
+/** "Machine 1 waited 240 ticks with a result its container had no room for." and "Inserter 10 took 52 of the 107 holmium ore the crafts gave." */
+function resultsTakenSentences(taken: ResultsTaken): string[] {
+    const machine = taken.machine_id.replace(/^machine:/, "Machine ");
+    return [
+        ...(taken.waiting_ticks > 0 ? [`${machine} waited ${count(taken.waiting_ticks)} ticks with a result its container had no room for.`] : []),
+        ...taken.takers.filter(it => it.short).map(it => (`${insertersNumbered(it.inserter_ids.map(id => id.replace(/^inserter:/, "")))} took `
+            + `${count(it.taken_items)} of the ${count(Math.round(it.expected_items))} ${(it.item_labels ?? it.items).join(" and ")} the crafts gave.`).replace(/^i/, "I")),
+    ];
+}
+
+/**
+ * The failing clock brings in the target, and the results of a machine that places them into a container were not all
+ * taken out as they came: the container fills up in the end, whatever the rate says now
+ */
+function resultsNotTaken(clock: WhyNotStableClock, at_target: boolean): WhyNotStable | null {
+    const sentences = (clock.results_taken ?? []).flatMap(resultsTakenSentences);
+    if (sentences.length === 0 || !at_target) {
+        return null;
+    }
+    return {
+        cause: "results not taken out",
+        message: `The selected clock (${clock.label}) brings in ${figure(clock.assessment.items_per_second)} a second, but its results are not all `
+            + `taken out as they come: ${sentences.join(" ")}`,
+    };
+}
+
 /**
  * Why the selected clock does not meet goal 1; null when it does. A stable clock off the target rate (one with a
  * rounded period, or a build the plan cannot run at the target) is told as nothing holding the target.
@@ -307,6 +337,7 @@ export function whyNotStable(clocks: readonly WhyNotStableClock[], selected_inde
     const at_target = Math.abs(clock.assessment.items_per_second - build.target_items_per_second) < MIN_OFF_TARGET;
     return outputChestFull(clock, build)
         ?? exportBeltShort(clock, at_target)
+        ?? resultsNotTaken(clock, at_target)
         ?? movingLanePhases(clock, build)
         ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock) : nothingHolds(clock, build));
 }

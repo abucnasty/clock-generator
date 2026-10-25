@@ -10,7 +10,7 @@ import { Logger, defaultLogger } from "../common/logger";
 import { StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
-import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, lossLimitOf, reportOf, verdictOf } from "./backpressure-loss";
+import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { CIRCUIT_LATENCY_TICKS, SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
@@ -24,6 +24,8 @@ import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider
 import { withChestDrillWindows } from "./chest-drill-windows";
 import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
+import { ResultsTaken, resultsTakenOf } from "./results-taken";
+import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -149,6 +151,12 @@ export interface AsBuiltStabilityCheck {
      * stable. Absent when none fell short.
      */
     export_shortfalls?: ExportShortfall[];
+    /**
+     * For a target that counts an item destroyed: over the judged part of the long run, whether every result its machines
+     * placed went into their containers and their takers kept up (results-taken.ts). Absent for any other target, and
+     * where the check made no long run.
+     */
+    results_taken?: ResultsTaken[];
 }
 
 
@@ -245,6 +253,8 @@ function longRunOfFreeRunningBuild(
     full_output_chests: FullOutputChest[] | undefined;
     /** The export belts that received less than their consumers take over the judged part; undefined when none did */
     export_shortfalls: ExportShortfall[] | undefined;
+    /** For a target that counts an item destroyed: what was taken of the results its machines place, over the judged part */
+    results_taken: ResultsTaken[] | undefined;
 } | null {
     // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
     const registry = createEntityRegistryFromConfig(config);
@@ -289,8 +299,15 @@ function longRunOfFreeRunningBuild(
     }
     const bins = verdict.bin_ticks === null ? "span(s)" : verdict.periods_per_bin === 1 ? "periods" : `repeats of ${verdict.periods_per_bin} periods (${verdict.bin_ticks} ticks)`;
     logger.log(`Free running build over ${verdict.judged.length} ${bins}${proven ? " (repeats forever)" : ""}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
+    // a machine that places its results into a container: every result went in, and its takers kept up with them
+    const results_taken = target.counts === "destroyed" ? resultsTakenOf(stock, registry, verdict.first_judged_tick, period) : undefined;
+    const results_kept_up = results_taken === undefined || results_taken.every(it => it.waiting_ticks === 0 && it.takers.every(taker => !taker.short));
+    if (!results_kept_up) {
+        logger.log(`Free running build: results not taken out as they came: ${JSON.stringify(results_taken)}`);
+    }
     return {
-        keeps_up: verdict.keeps_up && export_shortfalls.length === 0,
+        keeps_up: verdict.keeps_up && export_shortfalls.length === 0 && results_kept_up,
+        results_taken,
         output_items_per_period: verdict.output_items_per_period,
         judged: verdict.judged,
         off_bins: verdict.off_bins.length,
@@ -376,6 +393,8 @@ export function backpressureLossOf(
     options: Omit<BackpressureLossOptions, "loss" | "period_ticks" | "expected_output_items"> = {},
     /** Called before the run of each loss, the one with nothing cut included */
     on_loss?: (loss: BackpressureLoss, index: number, total: number) => void,
+    /** Options of one loss over `options`, where a loss is tried in a way of its own (see resultLossOptionsOf) */
+    options_for?: (loss: BackpressureLoss) => Partial<BackpressureLossOptions>,
 ): BackpressureLossReport {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -384,7 +403,7 @@ export function backpressureLossOf(
     const outcomeOf = (loss: BackpressureLossOptions["loss"], phases?: MovingPickupPhases): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
         factorio_states: false,
         moving_pickup_phases: phases,
-        backpressure_loss: { loss_limit_ticks: loss_limit?.ticks, ...options, loss, period_ticks, expected_output_items },
+        backpressure_loss: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, period_ticks, expected_output_items },
     }).backpressure_loss!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
@@ -770,6 +789,9 @@ export function runAsBuiltCheck(
                 check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config),
                     long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
                 check.long_run_proven = long_run.proven;
+                if (long_run.results_taken !== undefined) {
+                    check.results_taken = long_run.results_taken;
+                }
                 if (long_run.cycle_periods !== null) {
                     check.long_run_cycle_periods = long_run.cycle_periods;
                 }
@@ -1069,12 +1091,30 @@ function triedBackpressureLoss(
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     try {
         return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
-            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`))) };
+            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
+            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans))) };
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Backpressure loss could not be tried: ${reason}`);
         return { backpressure_loss: null, backpressure_loss_not_tried: reason };
     }
+}
+
+/**
+ * How the losses of a clock of windows for results that come by small chances are tried: a result's output is not taken
+ * away for a few periods, not until the build stops, and the trial runs on for twice the periods the window's margin
+ * drains what that left (resultLossTrialOf), where the build has to be back at its output and the backlog gone. The
+ * recovery from the worst backlog is the arithmetic's (`drain_periods` of each window, within the periods a trial gives).
+ * Every other loss as for any clock.
+ */
+function resultLossOptionsOf(plans: readonly ResultWindowsPlan[]): (loss: BackpressureLoss) => Partial<BackpressureLossOptions> {
+    return loss => {
+        const trial = loss.kind === "output" ? resultLossTrialOf(plans, loss.item, MAX_RECOVERY_PERIODS - LATE_AFTER_PERIODS) : null;
+        return trial === null ? {} : {
+            fixed_loss_ticks: trial.loss_ticks, max_recovery_periods: trial.recovery_periods,
+            watched_backlog: { container_id: trial.container_id, items: trial.items, limit: trial.backlog_limit },
+        };
+    };
 }
 
 /**

@@ -22,6 +22,7 @@ import { MachineStateMachine } from "../../control-logic/machine/machine-state-m
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
+import { carriedItemsOf, RESULT_WINDOWS_CHECK_PERIODS, ResultWindowsPlan } from "../result-windows";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
@@ -274,6 +275,12 @@ export interface BlueprintGenerationResult {
      * Absent for any other build.
      */
     random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
+    /**
+     * Where results come too rarely for whole hands in a period: the windows of their takers, worked out by arithmetic,
+     * one plan a machine (result-windows.ts), and whether the arithmetic holds (every container holds its results at the
+     * worst moment of the period in all but 1 in 740 periods). Absent for any other clock.
+     */
+    result_windows?: { plans: ResultWindowsPlan[]; holds: boolean };
 }
 
 /**
@@ -793,29 +800,9 @@ interface RunPeriods {
     warmup_period: Duration;
 }
 
-/** The inserter of a plan whose hands a cycle come out whole the least often: the largest denominator, with its item */
-function rarestHands(plan: CraftingCyclePlan): { inserter: number; item: string; hands: string } | null {
-    let rarest: { inserter: number; item: string; hands: string; denominator: number } | null = null;
-    for (const planned of plan.entity_transfer_map.values()) {
-        const denominator = planned.total_transfer_count.getDenominator;
-        if (Entity.isInserter(planned.entity) && (rarest === null || denominator > rarest.denominator)) {
-            rarest = { inserter: planned.entity.entity_id.number, item: planned.item_transfers[0]?.item_name ?? "",
-                // as a short decimal: a count made of floating-point chances is no fraction to read
-                hands: String(Number(planned.total_transfer_count.toDecimal().toPrecision(3))), denominator };
-        }
-    }
-    return rarest === null ? null : { inserter: rarest.inserter, item: rarest.item, hands: rarest.hands };
-}
-
 /** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
 function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
     const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
-    const too_rare = crafting_cycle_plan.production_rate.counts === "destroyed" && !(duration.ticks < MAX_SIMULATION_TICKS) ? rarestHands(crafting_cycle_plan) : null;
-    if (too_rare !== null) {
-        throw new Error(`Inserter ${too_rare.inserter} takes ${too_rare.item} at ${too_rare.hands} of a hand a cycle of ${crafting_cycle_plan.total_duration_ticks.toString()} ticks: `
-            + `its hands come out whole only every ${duration.ticks.toPrecision(3)} ticks, more than the ${MAX_SIMULATION_TICKS} a clock period can be. `
-            + "A clock for results that come this rarely is not planned yet.");
-    }
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     const requested_warmup_periods = options.warmup_periods ?? 10;
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
@@ -1603,7 +1590,11 @@ export function checkedClock(
         verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
     } = {},
 ): BlueprintGenerationResult {
-    const { config, logger, run: { stability_check, total_expected_output, duration } } = plan;
+    const { config, logger, run: { stability_check, total_expected_output, duration, crafting_cycle_plan } } = plan;
+    // windows that carry part hands from one period to the next are run for several periods, to see every result taken
+    // out as it comes (result-windows.ts)
+    const long_run_ticks = crafting_cycle_plan.result_windows === undefined ? FREE_RUNNING_CHECK_TICKS
+        : Math.max(FREE_RUNNING_CHECK_TICKS, RESULT_WINDOWS_CHECK_PERIODS * duration.ticks);
     let clock_only_run: ClockOnlyRun | undefined;
     let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
@@ -1612,7 +1603,7 @@ export function checkedClock(
         const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
             : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
                 (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`),
-                FREE_RUNNING_CHECK_TICKS,
+                long_run_ticks,
                 // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
                 extras.verified !== undefined && extras.verified.windows === windows
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);
@@ -1722,7 +1713,10 @@ export function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCycl
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
 
-    const ignored_ingredients = config.overrides?.ignored_lcm_ingredients;
+    // the results whose hands their windows carry from one period to the next are whole in no period (result-windows.ts)
+    const carried = crafting_cycle_plan.result_windows === undefined ? [] : carriedItemsOf(crafting_cycle_plan.result_windows);
+    const ignored = [...(config.overrides?.ignored_lcm_ingredients ?? []), ...carried];
+    const ignored_ingredients = ignored.length > 0 ? ignored : undefined;
     const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
     return {
         computed_lcm,

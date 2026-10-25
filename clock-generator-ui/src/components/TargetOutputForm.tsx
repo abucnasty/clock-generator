@@ -21,6 +21,8 @@ interface TargetOutputFormProps {
     /** The most the machines making (or destroying) the recipe's item can make, for the problem line under Items per Second; null while unknown */
     machinesMax: MachinesMax | null;
     recipeNames: string[];
+    /** The items the build's machines take in, which a target that counts an item destroyed is chosen from */
+    destroyedItemNames?: string[];
     onRecipeChange: (recipe: string) => void;
     onItemsPerSecondChange: (value: number) => void;
     onCountsChange: (counts: TargetCounts) => void;
@@ -41,6 +43,7 @@ export function TargetOutputForm({
     counts,
     machinesMax,
     recipeNames,
+    destroyedItemNames = [],
     onRecipeChange,
     onItemsPerSecondChange,
     onCountsChange,
@@ -60,13 +63,14 @@ export function TargetOutputForm({
                 <Typography component="h2" variant="subtitle1" id={TARGET_OUTPUT_HEADING_ID} tabIndex={-1}
                     sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container target-output (min-width: 820px)': { gridColumn: 'auto' } }}>Target Output</Typography>
                 <ItemSelector
-                    kind="recipe"
+                    // an item destroyed is no recipe's product (scrap is mined): it is chosen from what the machines take in
+                    kind={counts === 'destroyed' ? 'item' : 'recipe'}
                     inputId={ELEMENT_IDS.targetRecipe}
                     sx={{ minWidth: 0, gridColumn: '1 / -1', '@container target-output (min-width: 820px)': { gridColumn: 'auto' } }}
                     minWidth={0}
                     dropdownMinWidth={300}
                     size="small"
-                    options={recipeNames}
+                    options={counts === 'destroyed' ? destroyedItemNames : recipeNames}
                     value={recipe || null}
                     onChange={(newValue) => onRecipeChange(newValue || '')}
                     label="Recipe"
