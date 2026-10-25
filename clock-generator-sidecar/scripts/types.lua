@@ -7,7 +7,7 @@
 ---@field crafting_speed number Effective crafting speed with bonuses (for machines/furnaces)
 ---@field productivity number Productivity bonus as percentage (0-100+)
 ---@field energy_consumption_bonus number|nil Energy consumption effect as a percentage (machines burning nutrients only)
----@field result_target_unit_number number|nil The unit_number of the container a machine that places its results itself (a recycler) puts them into
+---@field result_target_unit_number number|nil The unit_number of the selected machine or container a machine that places its results itself puts them into
 
 ---@class DrillData
 ---@field entity LuaEntity The drill itself

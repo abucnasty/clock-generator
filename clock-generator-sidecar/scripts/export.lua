@@ -142,8 +142,8 @@ function export.drill_target(drill, result)
     return nil
 end
 
----The machine or container a machine that places its results itself puts them into, as the config's result_target: an exported
----chest, car, tank, cargo wagon or rocket silo; nil when it has none or the export does not have it
+---The machine or container a machine that places its results itself puts them into, as the config's result_target;
+---nil when the receiver is not part of the export
 ---@param machine MachineData
 ---@param result ExtractionResult
 ---@return {type: "machine"|"chest", id: number}|nil

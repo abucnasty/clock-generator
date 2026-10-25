@@ -51,9 +51,9 @@ end
 ---(Factorio 2.1.21)
 local DROP_TILE_REACH = 12 / 256
 
----The machines and chests a drill drops into by the game's rule, when the game has not told (`drop_target` is nil until
----the drill first drops): the entities whose collision box reaches DROP_TILE_REACH into the tile under its drop position.
----Measured for a chest, a car and a tank at three orientations, a cargo wagon, a rocket silo and a furnace
+---The machines and chests a drill or result-placing machine drops into by the game's rule when it has not told
+---(`drop_target` is nil until its first placement): the entities whose collision box reaches DROP_TILE_REACH into the
+---tile under its drop position. Measured for a chest, a car and a tank at three orientations, a cargo wagon, a rocket silo and a furnace
 ---@param entity LuaEntity
 ---@return LuaEntity[]
 local function drop_candidates(entity)
@@ -478,10 +478,19 @@ local function burns_nutrients(entity)
     return burner ~= nil and burner.fuel_categories["nutrients"] == true
 end
 
+---Whether an entity can be an exported receiver for a machine that places results itself
+---@param entity LuaEntity
+---@return boolean
+local function can_receive_placed_results(entity)
+    local target_type = helpers.get_target_type(entity)
+    return target_type == "machine" or target_type == "chest"
+end
+
 ---Extract crafting data from a single crafting machine entity
 ---@param entity LuaEntity
+---@param selected_unit_numbers table<number, true>
 ---@return MachineData|nil
-local function extract_crafting_machine_data(entity)
+local function extract_crafting_machine_data(entity, selected_unit_numbers)
     if not entity or not entity.valid then
         return nil
     end
@@ -516,23 +525,25 @@ local function extract_crafting_machine_data(entity)
     local total_productivity = entity_prod_bonus + research_prod
 
     -- A machine that places its results itself (a recycler: its prototype has a vector_to_place_result) puts them into
-    -- the machine or container at its result spot: the game's drop_target, else the one target at its drop position
+    -- the machine or container at its result spot. Its drop_position is a scatter point inside the destination tile,
+    -- not the receiver's center, so use the bounded drop footprint when the game has not set drop_target yet.
     local result_target_unit_number = nil
     if entity.prototype.vector_to_place_result then
         local ok, target = pcall(function() return entity.drop_target end)
-        if not (ok and target and target.valid) then
-            target = nil
-            local has_position, position = pcall(function() return entity.drop_position end)
-            if has_position and position then
-                local found = {}
-                for _, candidate in ipairs(entity.surface.find_entities_filtered({ position = position })) do
-                    if candidate ~= entity and (is_chest_entity(candidate) or candidate.type == "assembling-machine" or candidate.type == "furnace") then table.insert(found, candidate) end
-                end
-                target = #found == 1 and found[1] or nil
+        if ok and target and target.valid then
+            if target.unit_number and selected_unit_numbers[target.unit_number] and can_receive_placed_results(target) then
+                result_target_unit_number = target.unit_number
             end
-        end
-        if target and target.valid and (is_chest_entity(target) or target.type == "assembling-machine" or target.type == "furnace") then
-            result_target_unit_number = target.unit_number
+        else
+            target = nil
+            local found = {}
+            for _, candidate in ipairs(drop_candidates(entity)) do
+                if candidate.valid and candidate.unit_number and selected_unit_numbers[candidate.unit_number]
+                    and can_receive_placed_results(candidate) then
+                    table.insert(found, candidate)
+                end
+            end
+            if #found == 1 then result_target_unit_number = found[1].unit_number end
         end
     end
 
@@ -561,7 +572,7 @@ end
 ---Extract crafting data from a single entity (dispatches to appropriate handler)
 ---@param entity LuaEntity
 ---@return MachineData|nil, string|nil category The extracted data and category ("machine" or "drill")
-local function extract_machine_data(entity)
+local function extract_machine_data(entity, selected_unit_numbers)
     if not entity or not entity.valid then
         return nil, nil
     end
@@ -600,7 +611,7 @@ local function extract_machine_data(entity)
     end
 
     -- Handle crafting machines (assemblers, furnaces, etc.)
-    return extract_crafting_machine_data(entity), "machine"
+    return extract_crafting_machine_data(entity, selected_unit_numbers), "machine"
 end
 
 -- Main Extraction Orchestrator
@@ -620,11 +631,16 @@ function extraction.extract_all_entities(entities, force)
         chest_unit_number_to_id = {}
     }
 
+    local selected_unit_numbers = {}
+    for _, entity in pairs(entities) do
+        if entity.valid and entity.unit_number then selected_unit_numbers[entity.unit_number] = true end
+    end
+
     -- First pass: extract machines and build unit_number -> id mapping
     local machine_id = 0
     for _, entity in pairs(entities) do
         if entity.type ~= "mining-drill" and entity.type ~= "inserter" and entity.type ~= "transport-belt" then
-            local data, entity_category = extract_machine_data(entity)
+            local data, entity_category = extract_machine_data(entity, selected_unit_numbers)
             if data and entity_category == "machine" then
                 machine_id = machine_id + 1
                 table.insert(result.machines, data)
@@ -736,6 +752,40 @@ function extraction.extract_all_entities(entities, force)
         table.insert(belts_pieces[root], pieces[unit_number])
     end
 
+    -- An empty output-only belt has no contents to identify. A single active whitelist filter can identify its item
+    -- when the selected source machine produces it and the inserter drops onto a selected straight belt. Retain only
+    -- the sole item when no selected inserter picks from this belt; no physical pickup lane is inferred.
+    local inferred_belt_items = {} -- root unit number -> item-name set
+    local belt_has_pickups = {} -- root unit number -> true
+    for _, inserter in pairs(entities) do
+        local source = inserter.valid and inserter.type == "inserter" and inserter.pickup_target
+        if source and source.valid and source.unit_number and pieces[source.unit_number] then
+            belt_has_pickups[find(source.unit_number)] = true
+        end
+    end
+    for _, inserter in pairs(entities) do
+        if inserter.valid and inserter.type == "inserter" and inserter.use_filters
+            and inserter.inserter_filter_mode == "whitelist" then
+            local filter, filter_count = nil, 0
+            for index = 1, inserter.filter_slot_count or 0 do
+                local candidate = inserter.get_filter(index)
+                if candidate and candidate.name then filter, filter_count = candidate, filter_count + 1 end
+            end
+            local source, sink = inserter.pickup_target, inserter.drop_target
+            if filter_count == 1 and filter and source and source.valid and source.unit_number
+                and sink and sink.valid and sink.type == "transport-belt" and sink.belt_shape == "straight"
+                and sink.unit_number and selected_unit_numbers[sink.unit_number] and pieces[sink.unit_number] then
+                local machine = result.machines[result.unit_number_to_id[source.unit_number] or 0]
+                local products = machine and recipe_items(machine.recipe, "products")
+                if products and products[filter.name] then
+                    local root = find(sink.unit_number)
+                    inferred_belt_items[root] = inferred_belt_items[root] or {}
+                    inferred_belt_items[root][filter.name] = true
+                end
+            end
+        end
+    end
+
     for _, root in ipairs(roots) do
         local belt_pieces = belts_pieces[root]
         local default_belt_stack_size = helpers.get_default_belt_stack_size(belt_pieces[1].force)
@@ -757,6 +807,15 @@ function extraction.extract_all_entities(entities, force)
                         lane_stack_size[lane] = math.max(lane_stack_size[lane], stack_size)
                     end
                 end
+            end
+        end
+
+        local inference = inferred_belt_items[root]
+        if inference and next(ingredient_set) == nil and not lane_ingredient[1] and not lane_ingredient[2] and not belt_has_pickups[root] then
+            local item, count = nil, 0
+            for name in pairs(inference) do item, count = name, count + 1 end
+            if count == 1 then
+                ingredient_set[item] = true
             end
         end
 
