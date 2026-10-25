@@ -158,8 +158,29 @@ async function repairOutputFocusAt(browser, url) {
             await editor.getByRole('button', { name: 'Fix output route' }).click();
             await page.getByRole('dialog', { name: "Discard changes to Machine 1?" }).getByRole('button', { name: 'Discard', exact: true }).click();
 
-            await page.waitForFunction(() => [...document.querySelectorAll('[role="dialog"]')]
-                .every(dialog => dialog.getAttribute('aria-hidden') === 'true'));
+            await page.waitForFunction(() => document.querySelectorAll('[role="dialog"]').length === 0);
+            try {
+                await page.waitForFunction(expectedId => document.activeElement instanceof HTMLElement
+                    && document.activeElement.id === expectedId,
+                'validation-issue-chest:1:removal-disabled', { timeout: TIMEOUT_MS });
+            } catch (error) {
+                const state = await page.evaluate(expectedId => {
+                    const active = document.activeElement;
+                    const dialogs = [...document.querySelectorAll('[role="dialog"]')];
+                    return {
+                        activeTag: active instanceof HTMLElement ? active.tagName : '',
+                        activeId: active instanceof HTMLElement ? active.id : '',
+                        dialogCount: dialogs.length,
+                        dialogLabels: dialogs.map(dialog => ({
+                            ariaLabel: dialog.getAttribute('aria-label'),
+                            labelledBy: dialog.getAttribute('aria-labelledby'),
+                            text: dialog.textContent?.trim().slice(0, 120),
+                        })),
+                        expectedTargetExists: !!document.getElementById(expectedId),
+                    };
+                }, 'validation-issue-chest:1:removal-disabled');
+                throw new Error(`timed out waiting for the chest issue to receive focus: ${error instanceof Error ? error.message : String(error)}; state=${JSON.stringify(state)}`);
+            }
             await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
             const focus = await page.evaluate(() => {
                 const target = document.activeElement;
@@ -168,13 +189,9 @@ async function repairOutputFocusAt(browser, url) {
                 return {
                     id: target instanceof HTMLElement ? target.id : '',
                     visible: !!rect && rect.width > 0 && rect.height > 0 && style?.display !== 'none' && style?.visibility !== 'hidden',
-                    focusable: target instanceof HTMLElement && !target.matches(':disabled') && (() => {
-                        target.focus({ preventScroll: true });
-                        return document.activeElement === target;
-                    })(),
                 };
             });
-            if (focus.id !== 'validation-issue-chest:1:removal-disabled' || !focus.visible || !focus.focusable) {
+            if (focus.id !== 'validation-issue-chest:1:removal-disabled' || !focus.visible) {
                 throw new Error(`after discarding the ${fullscreenMode ? 'fullscreen' : 'inline'} machine draft, focus was ${JSON.stringify(focus)}`);
             }
 
