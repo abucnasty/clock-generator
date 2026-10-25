@@ -520,6 +520,9 @@ function App() {
     const machinesWithReturn = useMemo(() => config.machines.map(machine => ({ ...machine,
         comesBack: resultComesBack(machine, config.inserters, config.target_output.recipe) })), [config.machines, config.inserters, config.target_output.recipe]);
     const machinesMax = useMachinesMax(config.target_output.recipe, machinesWithReturn, targetCounts);
+    // what a target that counts an item destroyed is chosen from: the items the build's machines take in
+    const destroyedItemNames = useMemo(() => Array.from(new Set(config.machines.flatMap(machine =>
+        machine.recipe ? getRecipeInfo(machine.recipe)?.ingredients ?? [] : []))).sort(), [config.machines, getRecipeInfo]);
     // what keeps the build from being clocked, and so where Generate goes instead
     const validationIssues = useMemo(() => buildValidationIssues({
         fieldProblems: problemsOf({
@@ -1193,6 +1196,7 @@ function App() {
                                 counts={targetCounts}
                                 machinesMax={machinesMax}
                                 recipeNames={recipeNames}
+                                destroyedItemNames={destroyedItemNames}
                                 onRecipeChange={(recipe) => updateTargetOutput('recipe', recipe)}
                                 onItemsPerSecondChange={(value) => updateTargetOutput('items_per_second', value)}
                                 onCountsChange={(counts) => updateTargetOutput('counts', counts === 'made' ? undefined : counts)}

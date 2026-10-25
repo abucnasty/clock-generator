@@ -28,6 +28,14 @@ describe('what the rate counts', () => {
         expect(text(html)).toContain('Items destroyed');
     });
 
+    it('chooses the item destroyed from what the machines take in, not from the recipes (scrap is no recipe\'s product)', () => {
+        const props = { recipe: 'scrap', itemsPerSecond: 2, copies: 1, machinesMax: null, recipeNames: ['scrap-recycling', 'iron-gear-wheel'],
+            destroyedItemNames: ['scrap'], onRecipeChange: () => {}, onItemsPerSecondChange: () => {}, onCountsChange: () => {}, onCopiesChange: () => {} };
+        const picker = (counts: 'made' | 'destroyed') => findElement(TargetOutputForm({ ...props, counts }), (it) => it.inputId === ELEMENT_IDS.targetRecipe);
+        expect([picker('destroyed').kind, picker('destroyed').options]).toEqual(['item', ['scrap']]);
+        expect([picker('made').kind, picker('made').options]).toEqual(['recipe', ['scrap-recycling', 'iron-gear-wheel']]);
+    });
+
     it('offers Items made, the default, then Items destroyed, and reports the one picked', () => {
         expect(COUNTS_CHOICES.map(choice => [choice.value, choice.label])).toEqual([['made', 'Items made'], ['destroyed', 'Items destroyed']]);
         let picked: string | undefined;
