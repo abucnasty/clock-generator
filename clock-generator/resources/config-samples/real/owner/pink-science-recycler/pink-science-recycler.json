@@ -1,0 +1,514 @@
+{
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 398.5,
+        "y": 3.5
+      },
+      "direction": 8,
+      "id": 1,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 2,
+        "pickup_length": 0.5,
+        "pickup_layout": "front-entrance",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "underground-belt",
+          "entity_name": "turbo-underground-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "filters": [
+        "processing-unit"
+      ],
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 398.5,
+        "y": 8.5
+      },
+      "direction": 12,
+      "id": 2,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "filters": [
+        "advanced-circuit"
+      ],
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 398.5,
+        "y": 9.5
+      },
+      "direction": 4,
+      "id": 3,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "chest",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": -3.5
+      },
+      "direction": 8,
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": -1.5
+      },
+      "direction": 8,
+      "id": 5,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": 3.5
+      },
+      "direction": 8,
+      "id": 6,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 5
+      },
+      "sink": {
+        "type": "chest",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 402.5,
+        "y": -3.5
+      },
+      "direction": 8,
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "chest",
+        "id": 5
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 402.5,
+        "y": -1.5
+      },
+      "direction": 8,
+      "id": 8,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 402.5,
+        "y": 3.5
+      },
+      "direction": 8,
+      "id": 9,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 6
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 402.5,
+        "y": 8.5
+      },
+      "direction": 8,
+      "id": 10,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3,
+        "near_lane": 1,
+        "pickup_length": 0.5,
+        "pickup_layout": "side-exit",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "underground-belt",
+          "entity_name": "turbo-underground-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 403.5,
+        "y": 8.5
+      },
+      "direction": 8,
+      "id": 11,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 405.5,
+        "y": 3.5
+      },
+      "direction": 8,
+      "id": 12,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "lanes": [
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
+    },
+    {
+      "id": 2,
+      "lanes": [
+        {
+          "ingredient": "processing-unit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
+    },
+    {
+      "id": 3,
+      "lanes": [
+        {
+          "ingredient": "battery",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
+    }
+  ],
+  "sidecar_version": "0.15.0",
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "electromagnetic-science-pack",
+      "crafting_speed": 89.625,
+      "productivity": 175,
+      "position": {
+        "x": 400,
+        "y": 1
+      },
+      "prototype": "electromagnetic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 2,
+      "recipe": "processing-unit-recycling",
+      "crafting_speed": 14.7805,
+      "productivity": 0,
+      "position": {
+        "x": 400,
+        "y": 10
+      },
+      "prototype": "recycler",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "result_target": {
+        "type": "machine",
+        "id": 3
+      }
+    },
+    {
+      "id": 3,
+      "recipe": "supercapacitor",
+      "crafting_speed": 63.75,
+      "productivity": 175,
+      "position": {
+        "x": 402,
+        "y": 6
+      },
+      "prototype": "electromagnetic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    },
+    {
+      "id": 4,
+      "recipe": "electromagnetic-science-pack",
+      "crafting_speed": 89.625,
+      "productivity": 175,
+      "position": {
+        "x": 404,
+        "y": 1
+      },
+      "prototype": "electromagnetic-plant",
+      "quality": "legendary",
+      "recipe_quality": "normal"
+    }
+  ],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "remove_unfiltered_items": true,
+      "position": {
+        "x": 397.5,
+        "y": 9.5
+      }
+    },
+    {
+      "type": "infinity-chest",
+      "id": 2,
+      "remove_unfiltered_items": true,
+      "position": {
+        "x": 401.5,
+        "y": -4.5
+      }
+    },
+    {
+      "type": "buffer-chest",
+      "id": 3,
+      "storage_size": 48,
+      "item_filter": "electromagnetic-science-pack",
+      "prototype": "steel-chest",
+      "position": {
+        "x": 401.5,
+        "y": -2.5
+      }
+    },
+    {
+      "type": "infinity-chest",
+      "id": 4,
+      "remove_unfiltered_items": true,
+      "position": {
+        "x": 402.5,
+        "y": -4.5
+      }
+    },
+    {
+      "type": "buffer-chest",
+      "id": 5,
+      "storage_size": 48,
+      "item_filter": "electromagnetic-science-pack",
+      "prototype": "steel-chest",
+      "position": {
+        "x": 402.5,
+        "y": -2.5
+      }
+    },
+    {
+      "type": "infinity-chest",
+      "id": 6,
+      "item_filter": [
+        {
+          "item_name": "holmium-plate",
+          "request_count": 100
+        },
+        {
+          "item_name": "superconductor",
+          "request_count": 200
+        }
+      ],
+      "remove_unfiltered_items": false,
+      "position": {
+        "x": 402.5,
+        "y": 9.5
+      }
+    }
+  ],
+  "target_output": {
+    "recipe": "electromagnetic-science-pack",
+    "items_per_second": 240,
+    "copies": 5
+  },
+  "overrides": {
+    "terminal_swing_count": 1,
+    "lcm": 1
+  }
+}
