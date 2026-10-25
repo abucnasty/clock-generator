@@ -1,3 +1,4 @@
+import { assertMachineResultTargetsSupported } from "../../../config/output-transfer-generation";
 import Fraction, { fraction } from "../../../data-types/fraction";
 import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
@@ -105,6 +106,7 @@ function computeInserterSwingCountsForMultipleMachines(
     output_stack_size: number,
     cycle_ticks?: number
 ): EntityTransferCountMap {
+    assertMachineResultTargetsSupported(entity_registry);
     const result = new EntityTransferCountMap();
     const asked_directly: MachineDemand = new Map();
     planOutputInserters(output_machines, entity_registry, output_swing_count_per_machine, output_stack_size, result, asked_directly);
@@ -302,6 +304,7 @@ function computeInserterSwingCounts(
     existing_results: EntityTransferCountMap = new EntityTransferCountMap(),
     known_output_inserter?: Inserter
 ): EntityTransferCountMap {
+    assertMachineResultTargetsSupported(entity_registry);
     const result: EntityTransferCountMap = existing_results;
 
     // Use the known output inserter if provided, otherwise find the first one
@@ -614,6 +617,7 @@ export function computeDestroyedTargetTransfers(
     item: string,
     hands_per_machine: Fraction,
 ): EntityTransferCountMap {
+    assertMachineResultTargetsSupported(entity_registry);
     const result = new EntityTransferCountMap();
     for (const machine of machines) {
         const name = `Machine ${machine.entity_id.number}`;

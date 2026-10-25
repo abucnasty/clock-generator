@@ -1,3 +1,14 @@
+export interface SerializableMachineOutput {
+    item_name: string;
+    /** Expected effective yield, including productivity. */
+    amount_per_craft: number;
+    rate_per_second: number;
+    rate_ratio: { numerator: number; denominator: number };
+    output_block_size: number;
+    /** The recipe has a probabilistic yield; simulation still uses expected yield with carry. */
+    stochastic: boolean;
+}
+
 export interface SerializableMachineInput {
     item_name: string;
     consumption_rate_per_second: number;
@@ -13,6 +24,8 @@ export interface SerializableFuelConsumption {
 }
 
 export interface SerializableMachineFacts {
+    /** Every item result, main product first. Older serialized facts may omit this vector. */
+    outputs?: SerializableMachineOutput[];
     recipe: string;
     crafting_speed: number;
     productivity: number;
