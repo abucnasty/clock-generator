@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.25.0] - Unreleased
+
+### Changed
+- The inserters that pass items between the machines of a loop, such as the egg inserters between the egg biochambers of agricultural science and the bacteria inserters of iron bacteria cultivation, get wake windows where the clock still holds and recovers with them, so these builds need fewer wake-ups.
+
 ## [0.24.0] - 2026-10-27
 
 ### Changed
