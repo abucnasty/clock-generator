@@ -1,9 +1,9 @@
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
-import { DRILL_ITEMS_PER_SWING, EntityTransferCountMap } from "../sequence/cycle/swing-counts";
+import { DRILL_ITEMS_PER_SWING, EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
-import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
+import { alwaysEnabledInserters, isByProductOnlyInserter, unplannedInserterClocks, type InserterClock } from "../sequence/unplanned-inserter-clock";
 import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
@@ -35,6 +35,15 @@ export interface GroupedHandsOptions {
     feeder_offset: number;
     /** The takers whose windows open on the same tick share one window: the longest any of them needs */
     share_windows: boolean;
+}
+
+/** Opt-in route facts for pure construction; existing generated clocks retain their original construction path. */
+export interface GroupedHandsComposition {
+    /** Real computed controls remain outside planned transfer accounting, not outside the physical build. */
+    readonly retained_clocks: ReadonlyMap<string, InserterClock>;
+    readonly output_paths: readonly OutputPath[];
+    /** Accepted direct placement has no hand, window or invented delivery latency. */
+    readonly direct_sources: ReadonlyMap<string, readonly string[]>;
 }
 
 const DEFAULT_OPTIONS: GroupedHandsOptions = { surplus_guard: false, feeder_offset: 1, share_windows: false };
@@ -163,13 +172,15 @@ const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
  * whole hands. The hands of the inserters that fill a machine, or a chest a machine is filled from, are made whole by
  * rounding them up (rule F, below), so they set nothing. Null where the plan has no such inserter.
  */
-export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap): number | null {
+export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap, composition?: GroupedHandsComposition): number | null {
     let lcm = 1;
     let found = false;
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
     const chests_taken_from = new Set(inserters.filter(it => EntityId.isMachine(it.sink.entity_id) && EntityId.isChest(it.source.entity_id)).map(it => it.source.entity_id.id));
+    for (const path of composition?.output_paths ?? []) if (path.container !== null) chests_taken_from.add(path.container.entity_id.id);
     for (const inserter of inserters) {
+        if (composition?.retained_clocks.has(inserter.entity_id.id)) continue;
         // an inserter that fills a machine, or a chest that machines are filled from, has its hands rounded up
         if (EntityId.isMachine(inserter.sink.entity_id) || chests_taken_from.has(inserter.sink.entity_id.id)) continue;
         const transfer = transfers.get(inserter.entity_id.id);
@@ -255,11 +266,23 @@ export function groupedHandsPlan(
     with_belt_slack: boolean = true,
     options: GroupedHandsOptions = DEFAULT_OPTIONS,
     drop_tie_break: DropTieBreak | null = null,
+    composition?: GroupedHandsComposition,
 ): GroupedHandsPlan {
     if (!Number.isInteger(period)) refuse(`the period is ${period} ticks, not a whole number`);
     const entities = entity_registry.getAll();
-    const inserters = entities.filter(Entity.isInserter);
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
+    const computed_clocks = composition?.retained_clocks.size ? unplannedInserterClocks(entity_registry, period) : new Map<string, InserterClock>();
+    for (const [id, clock] of composition?.retained_clocks ?? []) {
+        const inserter = entities.filter(Entity.isInserter).find(it => it.entity_id.id === id);
+        const computed = computed_clocks.get(id);
+        if (inserter === undefined || clock.kind !== "by-product" || !isByProductOnlyInserter(entity_registry, inserter)
+            || transfers.has(id) || clock.inserter_id.id !== id || clock.own_clock || period % clock.modulus !== 0
+            || computed === undefined || computed.modulus !== clock.modulus
+            || computed.window.start_inclusive !== clock.window.start_inclusive || computed.window.end_inclusive !== clock.window.end_inclusive) {
+            refuse(`${id} is not a retained unplanned by-product clock`);
+        }
+    }
+    const inserters = entities.filter(Entity.isInserter).filter(it => !composition?.retained_clocks.has(it.entity_id.id));
     const belt_slack = with_belt_slack ? beltPickupSlackTicks(entity_registry) : new Map<string, number>();
 
     const outputHands = (inserter: Inserter): number => {
@@ -287,11 +310,13 @@ export function groupedHandsPlan(
     const outputs: Inserter[] = [];
     // the chests something takes from to fill a machine: an inserter that fills one from a machine is a taker of that machine
     const chests_taken_from = new Set(inserters.filter(it => EntityId.isMachine(it.sink.entity_id) && EntityId.isChest(it.source.entity_id)).map(it => it.source.entity_id.id));
+    for (const path of composition?.output_paths ?? []) if (path.container !== null) chests_taken_from.add(path.container.entity_id.id);
     for (const inserter of inserters) {
         if (EntityId.isMachine(inserter.source.entity_id) && chests_taken_from.has(inserter.sink.entity_id.id)) sinks.add(inserter.sink.entity_id.id);
     }
     // a chain: a machine or a chest that something takes from is itself filled
-    const chained = inserters.some(it => EntityId.isMachine(it.sink.entity_id) && sinks.has(it.source.entity_id.id));
+    const chained = inserters.some(it => EntityId.isMachine(it.sink.entity_id) && sinks.has(it.source.entity_id.id))
+        || (composition?.direct_sources.size ?? 0) > 0;
     for (const inserter of inserters) {
         const { source, sink } = inserter;
         if (EntityId.isMachine(sink.entity_id)) {
@@ -442,7 +467,21 @@ export function groupedHandsPlan(
                 feed(feeder, depth + 1);
             }
         };
-        for (const taker of top.filter(filled)) feed(taker, 0);
+        if (composition === undefined) {
+            for (const taker of top.filter(filled)) feed(taker, 0);
+        } else {
+            const feedSite = (site: string, start: number, path: ReadonlySet<string> = new Set()): void => {
+                if (path.has(site)) refuse("the chain of machines loops");
+                const next = new Set(path).add(site);
+                for (const feeder of takers.filter(it => it.sink.id === site)) {
+                    const at = start + options.feeder_offset;
+                    windows.set(feeder.inserter.entity_id.id, windowFrom(at, feeder.window_ticks, period));
+                    feedSite(feeder.source.id, at, next);
+                }
+                for (const source of composition.direct_sources.get(site) ?? []) feedSite(source, start, next);
+            };
+            for (const taker of top.filter(filled)) feedSite(taker.source.id, startOf(taker));
+        }
         const unplaced = takers.find(it => !placed(it));
         if (unplaced !== undefined) refuse(`${unplaced.inserter.entity_id.id} fills ${unplaced.sink.id}, which is neither an output machine nor taken from`);
         takeTurns(entity_registry, windows, takers, period);
