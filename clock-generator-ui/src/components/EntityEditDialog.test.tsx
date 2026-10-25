@@ -123,6 +123,27 @@ describe('EntityEditDialog route actions', () => {
         }
     });
 
+    it.each([
+        ['Edit Inserter 7', (view: ElementView[]) => view.find(element => element.type === Button && element.props['aria-label'] === 'Edit Inserter 7')!.props.onClick as () => void],
+        ['Fix output route', (view: ElementView[]) => view.find(element => element.type === Button && element.props.children === 'Fix output route')!.props.onClick as () => void],
+    ] as const)('ignores %s after the parent has started closing the editor', (_name, getAction) => {
+        dirtyMachineDraft();
+        props = { ...props, open: false };
+        getAction(panelView())();
+
+        expect(Render().find(element => element.type === DiscardChangesDialog)!.props.open).toBe(false);
+        expect(props.onClose).not.toHaveBeenCalled();
+        expect(props.onEditInserter).not.toHaveBeenCalled();
+        expect(props.onFixOutput).not.toHaveBeenCalled();
+
+        const transition = dialogProps().slotProps as { transition: { onExited: () => void } };
+        transition.transition.onExited();
+        expect(frames.size).toBe(0);
+        flushFrames();
+        expect(props.onEditInserter).not.toHaveBeenCalled();
+        expect(props.onFixOutput).not.toHaveBeenCalled();
+    });
+
     it('cancels a pending route action when the dialog starts opening again', () => {
         (panelElement().props.onFix as (item: string) => void)('missing-product');
         const transition = dialogProps().slotProps as { transition: { onEnter: () => void; onExited: () => void } };

@@ -290,6 +290,7 @@ export function EntityEditDialog({
     }, [draft, entity, entityType]);
     const dirty = entityType === 'inserter' ? inserterDirty : Object.keys(edits).length > 0;
     const requestRouteAction = (action: () => void) => {
+        if (!open) return;
         pendingRouteAction.current = action;
         if (dirty) setConfirmOpen(true);
         else onClose();

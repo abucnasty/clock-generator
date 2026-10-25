@@ -151,7 +151,7 @@ async function repairOutputFocusAt(browser, url) {
                 name: 'Machine 1, makes Processing unit recycling, puts its results into Machine 2', exact: true,
             });
             await sourceNode.waitFor();
-            await sourceNode.dblclick();
+            await sourceNode.click();
 
             const editor = page.getByRole('dialog', { name: 'Machine 1' });
             await editor.getByRole('textbox', { name: 'Crafting Speed', exact: true }).fill('2');
@@ -181,9 +181,7 @@ async function repairOutputFocusAt(browser, url) {
                             label: button.getAttribute('aria-label'),
                             pressed: button.getAttribute('aria-pressed'),
                         })),
-                        inserterPresent: !!document.getElementById('entity-inserter-1'),
                         expectedTargetText: document.getElementById(expectedId)?.textContent?.trim(),
-                        bodyText: document.body.textContent?.trim().slice(-1800),
                     };
                 }, 'validation-issue-chest:1:removal-disabled');
                 throw new Error(`timed out waiting for the chest issue to receive focus after ${fullscreenMode ? 'fullscreen' : 'inline'} repair: ${error instanceof Error ? error.message : String(error)}; state=${JSON.stringify(state)}`);
