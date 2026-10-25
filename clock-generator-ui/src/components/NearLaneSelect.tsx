@@ -8,6 +8,7 @@ import { FactorioIcon } from './FactorioIcon';
 const LABEL = 'Nearest lane of the belt';
 const HELP = 'An inserter takes from the lane nearest to it first when its machine takes both items. The sidecar mod exports it; not set, the order of the filters is used.';
 const NOT_SET = 'Not set';
+const BEND_HELP = 'This bend pickup takes from lane 1 first. Its supported layout fixes the lane.';
 
 interface NearLaneSelectProps {
     source: InserterFormData['source'];
@@ -44,6 +45,8 @@ export function NearLaneSelect({ source, belts, onChange, entityLabel, compact }
     const [menuOpen, setMenuOpen] = useState(false);
     const lanes = nearLaneItems(source, belts);
     if (!lanes) return null;
+    const fixedLane = source.pickup_layout === 'bend-right-upstream';
+    const help = fixedLane ? BEND_HELP : HELP;
 
     const field = (
         <TextField
@@ -51,7 +54,7 @@ export function NearLaneSelect({ source, belts, onChange, entityLabel, compact }
             size="small"
             fullWidth={!compact}
             label={LABEL}
-            helperText={compact ? undefined : HELP}
+            helperText={compact ? undefined : help}
             value={source.near_lane ?? 0}
             onChange={(e) => {
                 const lane = Number(e.target.value);
@@ -73,9 +76,9 @@ export function NearLaneSelect({ source, belts, onChange, entityLabel, compact }
                 },
             }}
         >
-            <MenuItem value={0}>{NOT_SET}</MenuItem>
+            <MenuItem value={0} disabled={fixedLane}>{NOT_SET}</MenuItem>
             {lanes.map((item, i) => (
-                <MenuItem key={i} value={i + 1}>
+                <MenuItem key={i} value={i + 1} disabled={fixedLane && i !== 0}>
                     <LaneText lane={i + 1} item={item} />
                 </MenuItem>
             ))}
@@ -86,7 +89,7 @@ export function NearLaneSelect({ source, belts, onChange, entityLabel, compact }
     return (
         <>
             <Tooltip
-                title={HELP}
+                title={help}
                 describeChild
                 open={tipOpen && !menuOpen}
                 onOpen={() => setTipOpen(true)}
@@ -95,7 +98,7 @@ export function NearLaneSelect({ source, belts, onChange, entityLabel, compact }
                 {field}
             </Tooltip>
             {/* hidden, but aria-describedby still reads it */}
-            <span id={helpId} hidden>{HELP}</span>
+            <span id={helpId} hidden>{help}</span>
         </>
     );
 }

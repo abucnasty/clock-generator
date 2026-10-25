@@ -17,7 +17,7 @@ export function PickupTypeSelect({ source, onChange, entityLabel, compact = fals
         helperText={outOfScope ? `This imported pickup is not supported. ${OUT_OF_SCOPE_PICKUPS[outOfScope].detail} ${OUT_OF_SCOPE_PICKUP_SCOPE}`
             : pickupTypeOf(source) === 'unverified' ? 'This imported pickup is unverified. A supported Sidecar capture is required; choosing a default cannot classify it.'
             : compact ? undefined
-            : 'Straight belt is the default. Choose the underground endpoint and pickup approach. Sidecar captures supported pickups automatically.'}
+            : 'Straight belt is the default. Choose the belt shape and pickup approach. Sidecar captures supported pickups automatically.'}
         slotProps={{ select: { SelectDisplayProps: { 'aria-label': `Picks up from, ${entityLabel}`, 'aria-labelledby': undefined } } }}
         onChange={event => onChange(withPickupType(source, event.target.value as PickupType))}>
         {pickupTypeOf(source) === 'unverified' && <MenuItem value="unverified">{outOfScope ? `Not supported: ${OUT_OF_SCOPE_PICKUPS[outOfScope].label}` : 'Unverified capture'}</MenuItem>}
