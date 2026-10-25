@@ -254,7 +254,7 @@ export function buildFlowGraph(
             type: 'entityNode',
             position: { x: 0, y: 0 },
             ariaLabel: nodeAriaLabel(label, machine.recipe ? `makes ${recipeLabel(machine.recipe)}` : 'no recipe',
-                machine.result_target && machine.result_target.id !== 0 ? `puts its results into ${entityLabelIn(chests, 'chest', machine.result_target.id)}` : undefined),
+                machine.result_target && machine.result_target.id !== 0 ? `puts its results into ${entityLabelIn(chests, machine.result_target.type, machine.result_target.id)}` : undefined),
             data: {
                 entityType: 'machine',
                 entityId: machine.id,

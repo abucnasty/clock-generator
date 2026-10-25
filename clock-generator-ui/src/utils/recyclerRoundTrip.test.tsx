@@ -5,7 +5,7 @@ import exact from '../../../clock-generator/resources/config-samples/real/owner/
 import overbeaconed from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-overbeaconed.json';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
-import { removeChest, removeMachine, reorderChests, updateMachine, updateTargetOutput, patchMachine } from './configForm/edits';
+import { removeChest, removeMachine, reorderChests, reorderMachines, updateMachine, updateTargetOutput, patchMachine } from './configForm/edits';
 import { describeConfigEdit, removalMessage } from './undoSnapshot';
 import { buildChangesOf } from './buildChanges';
 
@@ -93,5 +93,21 @@ describe('Counts in the messages of an edit and of the changes since the clocks 
     it('lists a result target that changed as the machine', () => {
         const other = formDataToConfig(patchMachine(form, 0, { result_target: { type: 'chest', id: 2 } }));
         expect(buildChangesOf(config, other)).toEqual(['Machine 1']);
+    });
+});
+
+describe('a recycler putting its results into another machine', () => {
+    const direct = ConfigSchema.parse({...exact, machines: [
+        {...exact.machines[0], recipe: 'processing-unit-recycling', result_target: {type: 'machine', id: 2}},
+        {id: 2, recipe: 'supercapacitor', crafting_speed: 1, productivity: 50, prototype: 'electromagnetic-plant'},
+    ]});
+    it('round trips through editing, save, reload and export with the endpoint type intact', () => {
+        const form = configToFormData(direct);
+        expect(formDataToConfig(form)).toEqual(direct);
+        expect(formDataToConfig(readSavedConfig(serializeConfig(form))!)).toEqual(direct);
+        expect(ConfigSchema.parse(formDataToConfig(form))).toEqual(direct);
+        expect(removeChest(form, 0).machines[0].result_target).toEqual({type: 'machine', id: 2});
+        expect(reorderMachines(form, 0, 1).machines[1].result_target).toEqual({type: 'machine', id: 1});
+        expect(removeMachine(form, 1).machines[0].result_target).toEqual({type: 'machine', id: 0});
     });
 });

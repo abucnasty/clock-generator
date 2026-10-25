@@ -55,19 +55,19 @@ describe('the Results into picker', () => {
     const form = configToFormData(config);
     const build = { machines: form.machines, belts: form.belts, chests: form.chests, inserters: form.inserters, drills: [] };
 
-    it('offers the build\'s containers with what they hold, and no machine or belt', () => {
+    it('offers the build\'s machines and containers with what they hold', () => {
         const options = resultTargetOptions(build, labels);
-        expect(options.map(option => [option.type, option.id, option.icon])).toEqual([['chest', 1, 'car'], ['chest', 2, 'infinity-chest']]);
-        expect(options[1]).toMatchObject({ label: 'Chest 2', sublabel: '<iron-ore>' });
+        expect(options.map(option => [option.type, option.id, option.icon])).toEqual([['machine', 1, 'recycler'], ['chest', 1, 'car'], ['chest', 2, 'infinity-chest']]);
+        expect(options[2]).toMatchObject({ label: 'Chest 2', sublabel: '<iron-ore>' });
     });
 
     it('names the car by what the recycler puts into it, as the engine counts the container\'s items', () => {
         const getRecipeInfo = (name: string) => name === config.machines[0].recipe ? { ingredients: ['iron-ore'], results: ['iron-ore'] } : null;
         const options = resultTargetOptions(build, labels, getRecipeInfo);
-        expect(options[0]).toMatchObject({ label: 'Car 1', sublabel: '<iron-ore>', ingredientIcons: ['iron-ore'] });
+        expect(options[1]).toMatchObject({ label: 'Car 1', sublabel: '<iron-ore>', ingredientIcons: ['iron-ore'] });
         // a machine that puts its results elsewhere does not name this one
         const elsewhere = { ...build, machines: build.machines.map(machine => ({ ...machine, result_target: { type: 'chest' as const, id: 2 } })) };
-        expect(resultTargetOptions(elsewhere, labels, getRecipeInfo)[0].sublabel).toBe('No items inferred');
+        expect(resultTargetOptions(elsewhere, labels, getRecipeInfo)[1].sublabel).toBe('No items inferred');
     });
 
     it('is a select of its own, with the empty choice named Its own output', () => {
@@ -94,8 +94,9 @@ describe('the Results into picker', () => {
         expect(RESULT_TARGET_TEXT.label).toBe('Results into');
         expect(RESULT_TARGET_TEXT.none).toBe('Its own output');
         expect(RESULT_TARGET_TEXT.helpLabel).toBe('About results into');
-        expect(RESULT_TARGET_TEXT.help).toBe('A recycler puts its results straight into the container in front of its output side, if one stands there. '
-            + 'Pick that container. With nothing there, the results stay in the recycler for inserters to take.');
+        expect(RESULT_TARGET_TEXT.help).toBe('A recycler puts its results straight into the machine or container in front of its output side. '
+            + 'Pick that machine or container. It fills a machine as a mining drill does, past the insertion limit. '
+            + 'Results the machine does not use stay in the recycler for inserters to take.');
         expect(resultTargetName('Machine 3')).toBe('Results into, Machine 3');
     });
 });
