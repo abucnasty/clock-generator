@@ -34,7 +34,7 @@ export function chestValidationIssue(chest: OutputChestIssue): BuildValidationIs
 }
 
 /** Find the visible validation destination that subsumes a missing output route, if any. */
-export function outputRouteRepairTarget(issue: InserterCoverageIssue, visibleIssues: BuildValidationIssue[], chestIssues: OutputChestIssue[], inserters: InserterFormData[]): FocusTarget | null {
+export function outputRouteRepairTarget(issue: Pick<InserterCoverageIssue, 'kind' | 'machine_id' | 'item_name'>, visibleIssues: BuildValidationIssue[], chestIssues: OutputChestIssue[], inserters: InserterFormData[]): FocusTarget | null {
     if (issue.kind !== 'missing_output_inserter') return null;
     const visibleCoverage = visibleIssues.find(candidate => candidate.coverage?.kind === issue.kind
         && candidate.coverage.machine_id === issue.machine_id && candidate.coverage.item_name === issue.item_name);
@@ -47,7 +47,7 @@ export function outputRouteRepairTarget(issue: InserterCoverageIssue, visibleIss
 }
 
 /** Exit diagram fullscreen before focusing the existing rendered repair issue. */
-export function navigateToOutputRouteRepair(issue: InserterCoverageIssue, visibleIssues: BuildValidationIssue[], chestIssues: OutputChestIssue[],
+export function navigateToOutputRouteRepair(issue: Pick<InserterCoverageIssue, 'kind' | 'machine_id' | 'item_name'>, visibleIssues: BuildValidationIssue[], chestIssues: OutputChestIssue[],
     inserters: InserterFormData[], exitFullscreen: (fullscreen: boolean) => void, navigate: (target: FocusTarget) => void): boolean {
     const target = outputRouteRepairTarget(issue, visibleIssues, chestIssues, inserters);
     if (!target) return false;

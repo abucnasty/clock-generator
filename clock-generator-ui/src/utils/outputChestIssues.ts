@@ -23,7 +23,7 @@ export function outputChestIssues(chests: ChestFormData[], inserters: InserterFo
 }
 
 /** The route exists: enabling removal fixes its destination without adding another inserter. */
-export function coverageHandledByChestIssue(issue: InserterCoverageIssue, warnings: OutputChestIssue[], inserters: InserterFormData[]): boolean {
+export function coverageHandledByChestIssue(issue: Pick<InserterCoverageIssue, 'kind' | 'machine_id' | 'item_name'>, warnings: OutputChestIssue[], inserters: InserterFormData[]): boolean {
     return issue.kind === 'missing_output_inserter' && warnings.some(warning => warning.kind === 'removal-disabled'
         && inserters.some(inserter => inserter.source.type === 'machine' && inserter.source.id === issue.machine_id
             && inserter.sink.type === 'chest' && inserter.sink.id === warning.chest.id

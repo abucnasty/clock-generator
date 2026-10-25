@@ -606,10 +606,11 @@ function App() {
         focusTargetOnPage(target);
     }, [cancelRestore, diagramFullscreen, focusTargetOnPage]);
     const fixOutputRoute = useCallback((machineId: number, item: string) => {
-        const issue = checkedCoverage?.issues.find(candidate => candidate.kind === 'missing_output_inserter'
-            && candidate.machine_id === machineId && candidate.item_name === item);
-        if (!checkedCoverage?.refusal && issue) {
-            if (navigateToOutputRouteRepair(issue, validationIssues, chestIssues, config.inserters, setDiagramFullscreen, goToTarget)) return;
+        if (!checkedCoverage?.refusal) {
+            // The panel's output facts may settle before coverage. Resolve the
+            // requested item against diagnostics already rendered on the page.
+            if (navigateToOutputRouteRepair({ kind: 'missing_output_inserter', machine_id: machineId, item_name: item },
+                validationIssues, chestIssues, config.inserters, setDiagramFullscreen, goToTarget)) return;
         }
         const connected = config.inserters.find(inserter => inserter.source.type === 'machine' && inserter.source.id === machineId);
         if (connected) {

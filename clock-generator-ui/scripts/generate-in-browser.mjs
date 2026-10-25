@@ -177,9 +177,16 @@ async function repairOutputFocusAt(browser, url) {
                             text: dialog.textContent?.trim().slice(0, 120),
                         })),
                         expectedTargetExists: !!document.getElementById(expectedId),
+                        buildViews: [...document.querySelectorAll('[aria-label="How the build is shown"] button')].map(button => ({
+                            label: button.getAttribute('aria-label'),
+                            pressed: button.getAttribute('aria-pressed'),
+                        })),
+                        inserterPresent: !!document.getElementById('entity-inserter-1'),
+                        expectedTargetText: document.getElementById(expectedId)?.textContent?.trim(),
+                        bodyText: document.body.textContent?.trim().slice(-1800),
                     };
                 }, 'validation-issue-chest:1:removal-disabled');
-                throw new Error(`timed out waiting for the chest issue to receive focus: ${error instanceof Error ? error.message : String(error)}; state=${JSON.stringify(state)}`);
+                throw new Error(`timed out waiting for the chest issue to receive focus after ${fullscreenMode ? 'fullscreen' : 'inline'} repair: ${error instanceof Error ? error.message : String(error)}; state=${JSON.stringify(state)}`);
             }
             await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
             const focus = await page.evaluate(() => {
