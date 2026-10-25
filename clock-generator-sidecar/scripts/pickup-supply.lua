@@ -4,8 +4,8 @@
 local supply = {}
 
 ---Why the supply of a pickup tile is out of scope: "side-loaded" when another belt side-loads onto it, else nil.
----Extraction calls it only for a pickup without a pickup_problem, so the tile is a straight belt or an underground
----endpoint: bends and splitters are refused before it by helpers.get_pickup_problem.
+---Extraction calls it only for a classified pickup. The calibrated right bend takes its ordinary input from
+---the incoming direction of its turn; an additional input is still side-loading. Splitters remain refused earlier.
 ---@param belt LuaEntity The belt piece an inserter picks up from
 ---@return "side-loaded"|nil
 function supply.problem(belt)
@@ -16,9 +16,14 @@ function supply.problem(belt)
     if not ok or type(neighbours) ~= "table" then
         return nil
     end
-    -- A belt that runs straight onto the tile faces the way the tile does. One that side-loads onto it does not.
+    -- A bend's normal input turns into its outgoing direction. Comparing only to its outgoing direction would
+    -- incorrectly mark that ordinary input as side-loading as soon as bend pickup geometry becomes supported.
+    local incoming_direction = belt.direction
+    if belt.type == "transport-belt" and belt.belt_shape == "right" then
+        incoming_direction = (belt.direction + 12) % 16
+    end
     for _, input in pairs(neighbours.inputs or {}) do
-        if input.valid and input.direction ~= belt.direction then
+        if input.valid and input.direction ~= incoming_direction then
             return "side-loaded"
         end
     end

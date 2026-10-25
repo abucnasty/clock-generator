@@ -54,7 +54,7 @@ local function resolve_target_id(target, result, is_sink, options)
             entity_type = target.entity_type, entity_name = target.name,
             sidecar_version = script.active_mods["clock-generator-sidecar"], reason = problem,
             model = not problem and "belt" or nil,
-            model_version = not problem and 2 or nil,
+            model_version = not problem and (target.pickup_layout == "bend-right-upstream" and 3 or 2) or nil,
         }
     end
     local drop_capture

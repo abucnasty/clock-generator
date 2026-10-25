@@ -14,12 +14,14 @@ export class BackedUpPickupLane implements BeltPickupStock {
     private tick = 0;
     private last_take_tick = Number.NEGATIVE_INFINITY;
 
-    constructor(belt_speed: BeltSpeed, length_tiles: number, private readonly stack_size: number) {
+    /** head_offset is transient stock phase in 1/256-tile units, used when starting from observed full stock. */
+    constructor(belt_speed: BeltSpeed, length_tiles: number, private readonly stack_size: number, private readonly head_offset = 0) {
+        if (!Number.isFinite(head_offset) || head_offset < 0 || head_offset >= 64) throw new Error("Backed-up head offset must be within one stack spacing");
         this.speed = belt_speed / BeltSpeed.TRANSPORT_BELT * 8;
         this.length = length_tiles * 256;
         // Only visible slots plus one upstream stack are needed. Beyond the tail, the full supply is spaced
         // uniformly; replacing a consumed stack at tail + 64 preserves that boundary without a growing queue.
-        this.stock = Array.from({length: Math.ceil(this.length / 64) + 1}, (_, index) => ({position: index * 64, count: stack_size}));
+        this.stock = Array.from({length: Math.ceil(this.length / 64) + 1}, (_, index) => ({position: head_offset + index * 64, count: stack_size}));
     }
 
     public peek(tick: number): {position: number; count: number} | undefined {
@@ -55,7 +57,7 @@ export class BackedUpPickupLane implements BeltPickupStock {
 
     public stateKey(tick: number): string {
         this.advanceTo(tick);
-        return `${this.last_take_tick === tick};${this.stock.map(stack => `${stack.position}:${stack.count}`).join(",")}`;
+        return `${this.head_offset === 0 ? "" : `${this.head_offset};`}${this.last_take_tick === tick};${this.stock.map(stack => `${stack.position}:${stack.count}`).join(",")}`;
     }
 
     /** Visible stock for native comparisons; callers cannot mutate the lane through this snapshot. */
@@ -68,11 +70,11 @@ export class BackedUpPickupLane implements BeltPickupStock {
         if (tick < this.tick) throw new Error("Backed-up pickup stock cannot move backwards in time");
         const travel = (tick - this.tick) * this.speed;
         if (travel === 0) return;
-        // Between withdrawals, the head clamps at zero and each follower clamps behind its predecessor. Since
+        // Between withdrawals, the head clamps at its downstream offset and each follower clamps behind its predecessor. Since
         // spacing is already >= 64, this closed form is equivalent to advancing every intervening tick.
         for (let index = 0; index < this.stock.length; index++) {
             const stack = this.stock[index];
-            stack.position = Math.max(stack.position - travel, index * 64);
+            stack.position = Math.max(stack.position - travel, this.head_offset + index * 64);
         }
         this.tick = tick;
     }

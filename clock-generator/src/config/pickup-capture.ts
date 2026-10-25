@@ -7,7 +7,7 @@ export const BeltPickupCaptureSchema = z.discriminatedUnion("status", [
     z.object({
         status: z.literal("supported"),
         model: z.literal("belt"),
-        model_version: z.union([z.literal(1), z.literal(2)]),
+        model_version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
         entity_type: z.enum(["transport-belt", "underground-belt"]),
         entity_name: z.string().optional(),
         sidecar_version: z.string().optional(),
@@ -104,13 +104,19 @@ export function pickupCaptureProblem(source: PickupSource): string | null {
     }
     // a two-stream capture of a development Sidecar: the merge it modelled is out of scope, not awaiting an update
     if ((capture.model as string) === "turbo-two-stream") return sideLoadedPickupRefusal("pickup_capture.model");
-    if (![1, 2].includes(capture.model_version) || capture.model !== "belt") {
+    if (![1, 2, 3].includes(capture.model_version) || capture.model !== "belt") {
         return "This pickup capture model is not supported by this engine. Update the generator before importing it.";
     }
     if (capture.model_version === 1 && capture.entity_type === "underground-belt") {
         return "Pickup layout was not captured. Update Sidecar and recapture this underground input before generation.";
     }
-    if (capture.model_version === 2 && !source.pickup_layout) return "Supported pickup capture needs an explicit layout. Recapture this input.";
+    if (source.pickup_layout === "bend-right-upstream" && capture.model_version !== 3) {
+        return "Bend pickup geometry needs a new Sidecar capture.";
+    }
+    if (capture.model_version === 3 && (source.pickup_layout !== "bend-right-upstream" || capture.entity_type !== "transport-belt")) {
+        return "Bend pickup capture needs a right bend with an upstream pickup.";
+    }
+    if (capture.model_version >= 2 && !source.pickup_layout) return "Supported pickup capture needs an explicit layout. Recapture this input.";
     const layoutProblem = pickupLayoutProblem(source);
     if (layoutProblem) return layoutProblem;
     const length = source.pickup_length ?? (source.pickup_layout ? pickupLengthForLayout(source.pickup_layout) : 1);

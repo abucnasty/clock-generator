@@ -18,6 +18,7 @@ cannot supply facts that the old capture omitted.
 | `front-entrance` | 0.5 tile | Downstream, facing back into an entrance |
 | `front-exit` | 0.5 tile | Downstream, facing back into an exit |
 | `over-hood-exit` | 0.5 tile | Upstream, reaching across an exit's hood |
+| `bend-right-upstream` | Lane 1: 295/256 tile; lane 2: 106/256 tile | Unmirrored pickup one tile upstream of a right-turn turbo belt's outgoing direction; lane 1 first |
 
 Layout supplies `pickup_length` when length is omitted; an explicit conflicting length is rejected. Manual
 half-tile configs without a layout must choose one. The UI offers these choices for each belt-fed inserter.
@@ -27,6 +28,11 @@ mirroring for lane preference. Other unsupported inline approaches stay unclassi
 The [glossary](glossary.md) illustrates each approach. This field records geometry; the calibrated
 [arm-reach model](../simulator.md#picking-up-from-moving-belts-and-underground-endpoints) also uses it to place
 each stack relative to the inserter.
+
+For the bend layout, `pickup_length: 1` is the physical tile/layout marker. The model uses the two
+curved lane lengths above; it does not simulate two straight one-tile paths. Only this approach is supported,
+with a legendary stack inserter and turbo belt. Other bend approaches remain unsupported. The ordinary input
+turning onto this bend is through supply; an additional input from another direction remains side-loading.
 
 ## Belt stack size
 
@@ -46,9 +52,11 @@ A drop has a mark of its own: Sidecar 0.13.0 exports `sink.drop_capture` (`statu
 inserter whose drop onto a belt side-loads onto a belt that is fed from behind, and no top-level list. It is a note for the
 result: the drop stays a drop onto that belt.
 
-- `supported`: a positive model declaration, currently `model: "belt"`, with `model_version: 2`, native
-  `entity_type`, and the matching layout, reach and preferred lane.
+- `supported`: a positive model declaration, `model: "belt"`, native `entity_type`, and the matching layout,
+  reach and preferred lane. Version 2 identifies the ordinary straight/underground layouts. Version 3 identifies
+  the calibrated `bend-right-upstream` layout; it requires a transport belt and preferred lane 1.
   Version 1 straight-belt captures remain valid; version 1 underground captures require recapture.
+  Saved unsupported bend captures remain unsupported until the build is captured again.
 - `unsupported`: Sidecar identified a geometry or supply outside the engine's calibrated models. Its reason,
   native entity type/name and exporting Sidecar version remain attached. This includes the out-of-scope
   pickups: reason `splitter` for a splitter and `side-loaded` for a belt tile that another belt side-loads onto,
