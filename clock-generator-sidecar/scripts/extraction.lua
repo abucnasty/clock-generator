@@ -516,7 +516,7 @@ local function extract_crafting_machine_data(entity)
     local total_productivity = entity_prod_bonus + research_prod
 
     -- A machine that places its results itself (a recycler: its prototype has a vector_to_place_result) puts them into
-    -- the container at its result spot: the game's drop_target, else the one container at its drop position
+    -- the machine or container at its result spot: the game's drop_target, else the one target at its drop position
     local result_target_unit_number = nil
     if entity.prototype.vector_to_place_result then
         local ok, target = pcall(function() return entity.drop_target end)
@@ -526,12 +526,12 @@ local function extract_crafting_machine_data(entity)
             if has_position and position then
                 local found = {}
                 for _, candidate in ipairs(entity.surface.find_entities_filtered({ position = position })) do
-                    if candidate ~= entity and is_chest_entity(candidate) then table.insert(found, candidate) end
+                    if candidate ~= entity and (is_chest_entity(candidate) or candidate.type == "assembling-machine" or candidate.type == "furnace") then table.insert(found, candidate) end
                 end
                 target = #found == 1 and found[1] or nil
             end
         end
-        if target and target.valid and is_chest_entity(target) then
+        if target and target.valid and (is_chest_entity(target) or target.type == "assembling-machine" or target.type == "furnace") then
             result_target_unit_number = target.unit_number
         end
     end

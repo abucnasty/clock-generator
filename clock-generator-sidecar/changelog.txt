@@ -2,6 +2,7 @@
 Version: 0.15.0
   Features:
     - exports the container a recycler puts its results into
+    - exports the machine a recycler puts its results into
 ---------------------------------------------------------------------------------------------------
 Version: 0.14.0
   Features:
