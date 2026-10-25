@@ -40,7 +40,7 @@ export function resultsTakenOf(
     period: number,
 ): ResultsTaken[] {
     const machines = registry.getAll().filter(Entity.isMachine).filter((machine): machine is Machine & { result_target: NonNullable<Machine["result_target"]> } =>
-        machine.result_target !== undefined && machine.metadata.places_results === true);
+        machine.result_target?.type === "chest" && machine.metadata.places_results === true);
     const inserters = registry.getAll().filter(Entity.isInserter);
     const held = new Map(stock.inserters.map(series => [series.inserter_id, series.held]));
     const dropped = (inserter_id: string) => {

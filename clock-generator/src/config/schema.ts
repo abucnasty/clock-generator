@@ -90,13 +90,16 @@ export const MachineConfigurationSchema = z.preprocess(migrateMachineTypeStep, z
     /** Where the machine stands (MapPositionSchema). Sidecar 0.12.0 exports it. */
     position: MapPositionSchema.optional(),
     /**
-     * The container a machine that places its results itself (a recycler, by its prototype's game data) puts them
+     * The machine or container a machine that places its results itself (a recycler, by its prototype's game data) puts them
      * into: the one that stands at its result spot, as a drill's `target`. Each tick the machine puts what waits in its
      * output into it as far as it has room. Only such a machine takes one; without it the machine keeps its results in
      * its output for inserters to take.
      */
     result_target: z.discriminatedUnion("type", [z.object({
         type: z.literal(TargetType.CHEST),
+        id: z.number().int().positive(),
+    }), z.object({
+        type: z.literal(TargetType.MACHINE),
         id: z.number().int().positive(),
     })]).optional(),
 }));
@@ -893,7 +896,24 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
     config.machines.forEach((machine, index) => {
         if (machine.result_target === undefined) return;
         const chest_id = machine.result_target.id;
-        if (!config.chests?.some(chest => chest.id === chest_id)) {
+        if (machine.result_target.type === "machine") {
+            const target = config.machines.find(target => target.id === machine.result_target!.id);
+            const path = ["machines", index, "result_target"];
+            if (!target) {
+                context.addIssue({ code: "custom", path: [...path, "id"], message: `Machine ${machine.id} places its results into machine ${chest_id}, which is not in the config` });
+            } else if (target.id === machine.id) {
+                context.addIssue({ code: "custom", path, message: `Machine ${machine.id} cannot place its results into itself. Pick the machine at its output side.` });
+            } else if (FactorioDataService.isAvailable()) {
+                const sourceRecipe = FactorioDataService.findRecipeOrThrow(machine.recipe);
+                const targetRecipe = FactorioDataService.findRecipeOrThrow(target.recipe);
+                const accepted = sourceRecipe.results.filter(result => targetRecipe.ingredients.some(input => input.name === result.name));
+                if (accepted.length === 0) {
+                    context.addIssue({ code: "custom", path, message: `Machine ${target.id} makes ${target.recipe}, which takes none of Machine ${machine.id}'s results. Pick a machine whose recipe uses a result.` });
+                } else if (accepted.length > 1) {
+                    context.addIssue({ code: "custom", path, message: `Machine ${machine.id} places several results into Machine ${target.id}. A clock for a machine that takes more than one of those results is not planned yet.` });
+                }
+            }
+        } else if (!config.chests?.some(chest => chest.id === chest_id)) {
             context.addIssue({ code: "custom", path: ["machines", index, "result_target", "id"],
                 message: `Machine ${machine.id} places its results into chest ${chest_id}, which is not in the config` });
         }
@@ -904,7 +924,7 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
                     + "does not place its results itself: only a machine that does (a recycler) has a `result_target`; "
                     + "an inserter takes the results out of any other" });
         }
-        const trapped = FactorioDataService.isAvailable() ? resultsTrappedInSilo(machine.recipe, config.chests?.find(chest => chest.id === chest_id)) : [];
+        const trapped = machine.result_target.type === "chest" && FactorioDataService.isAvailable() ? resultsTrappedInSilo(machine.recipe, config.chests?.find(chest => chest.id === chest_id)) : [];
         if (trapped.length > 0) {
             context.addIssue({ code: "custom", path: ["chests", config.chests!.findIndex(chest => chest.id === chest_id), "recipe_quality"],
                 message: `Machine ${machine.id} places ${trapped.join(" and ")} into rocket silo ${chest_id}, whose rocket part recipe takes `

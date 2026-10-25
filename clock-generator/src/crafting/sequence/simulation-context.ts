@@ -137,6 +137,19 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
         })
     }
 
+    for (const source of entity_registry.getAll().filter(Entity.isMachine)) {
+        const target = source.result_target === undefined ? null : entity_registry.getEntityById(source.result_target);
+        if (target === null || !Entity.isMachine(target)) continue;
+        for (const output of source.outputs.filter(output => target.inputs.has(output.item_name))) {
+            const another = entity_registry.getAll().some(entity =>
+                Entity.isInserter(entity) ? entity.sink.entity_id.id === target.entity_id.id && entity.filtered_items.has(output.item_name)
+                    : Entity.isDrill(entity) ? entity.sink_id.id === target.entity_id.id && entity.item.name === output.item_name
+                        : Entity.isMachine(entity) && entity !== source && entity.result_target?.id === target.entity_id.id
+                            && entity.outputs.some(result => result.item_name === output.item_name));
+            assert(!another, `Machine ${target.entity_id.number} gets ${output.item_name} from Machine ${source.entity_id.number} and another source. `
+                + "A clock for several sources of an item placed directly into a machine is not planned yet.");
+        }
+    }
     return entity_registry;
 }
 
@@ -208,8 +221,8 @@ function createSimulationContextFromConfig(
             }
             const result_target = machine_state.machine.result_target;
             const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
-            assert(result_target_state === undefined || EntityState.isChest(result_target_state),
-                `${machine_state.machine} places its results into ${result_target}, which is no chest`);
+            assert(result_target_state === undefined || EntityState.isChest(result_target_state) || EntityState.isMachine(result_target_state),
+                `${machine_state.machine} places its results into ${result_target}, which is neither a machine nor a chest`);
             return MachineStateMachine.create({
                 machine_state: machine_state,
                 ...(result_target_state !== undefined && { result_target_state }),

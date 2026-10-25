@@ -46,7 +46,21 @@ export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
             .divide(seconds).toDecimal();
         taken.set(source.entity_id.id, (taken.get(source.entity_id.id) ?? 0) + rate);
     }
-    return registry.getAll().filter(Entity.isMachine).map(machine => {
+    const machines = registry.getAll().filter(Entity.isMachine);
+    const counted = new Set<string>();
+    const countPlaced = (machine: typeof machines[number]): void => {
+        if (counted.has(machine.entity_id.id)) return;
+        counted.add(machine.entity_id.id);
+        const sink = machines.find(target => target.entity_id.id === machine.result_target?.id);
+        if (!sink) return;
+        countPlaced(sink);
+        const output = machine.outputs.find(result => sink.inputs.has(result.item_name))!;
+        const needed = sink.inputs.getOrThrow(output.item_name).ingredient.amount;
+        const crafts = (taken.get(sink.entity_id.id) ?? 0) / sink.output.amount_per_craft.toDecimal();
+        taken.set(machine.entity_id.id, crafts * needed / output.amount_per_craft.toDecimal() * machine.output.amount_per_craft.toDecimal());
+    };
+    machines.forEach(countPlaced);
+    return machines.map(machine => {
         const rate = taken.get(machine.entity_id.id) ?? 0;
         const capacity = machine.output.production_rate.amount_per_second.toDecimal();
         assert(Number.isFinite(rate) && rate >= 0 && capacity > 0,
