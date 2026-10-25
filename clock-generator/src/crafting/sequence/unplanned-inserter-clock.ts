@@ -35,8 +35,9 @@ export function fuelOnlyInserters(entity_registry: ReadableEntityRegistry): Inse
 /**
  * Inserters between machines that feed each other in a loop, like two pentapod egg biochambers that give each other
  * eggs. A hand of such an inserter fills as slowly as the loop makes its item, and the loop stops for good if it ever
- * runs dry, so the plan leaves these inserters always enabled: they take what there is whenever their machine has room
- * (see `alwaysEnabledInserters` for the windows of the inserters that take from the loop).
+ * runs dry, so the plan leaves these inserters always enabled: they take what there is whenever their machine has room.
+ * A clock gives them windows placed by arithmetic where it holds and gets back from every loss with them
+ * (`inLoopInserterWindows`; see `alwaysEnabledInserters` for the windows of the inserters that take from the loop).
  */
 export function loopInserters(entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
@@ -77,7 +78,7 @@ export function loopInserters(entity_registry: Pick<ReadableEntityRegistry, "get
  * "Always enabled" is where the plan leaves them. A clock gives an inserter that takes from the loop to a machine
  * outside it windows (`loopInserterWindows`) where that machine takes nothing for a stretch of every cycle, its output
  * being at its block, when the clock holds and gets back from every loss with them; the inserters of the loop itself
- * stay always enabled.
+ * get windows of their own after those (`inLoopInserterWindows`), on the same condition.
  */
 export function alwaysEnabledInserters(entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
     const in_a_loop = loopInserters(entity_registry);

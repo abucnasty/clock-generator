@@ -170,11 +170,17 @@ interface AlternativeDefinition {
      */
     shared_windows?: () => AlternativeDefinition | undefined;
     /**
-     * The same alternative with the inserters that take out of a loop always enabled (`loop_windows` of
+     * The same alternative with the inserters of a loop and those that take out of it always enabled (`loop_windows` of
      * GenerateClockOptions false): made when its clock has windows for them (`loop_windows` of the result) and does not
-     * hold, or does not get back from a loss, with them.
+     * hold, or does not get back from a loss, with them, or with only those out of the loop.
      */
     without_loop_windows?: () => AlternativeDefinition | undefined;
+    /**
+     * The same alternative with the loop's own inserters always enabled and windows only for those that take out of it
+     * (`loop_windows` "out-of-loop"): made first when its clock has windows for the loop's own inserters
+     * (`loop_windows.in_loop_ids` of the result) and does not hold, or does not get back from a loss, with them.
+     */
+    without_in_loop_windows?: () => AlternativeDefinition | undefined;
 }
 
 /** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
@@ -335,12 +341,16 @@ function alternativeDefinitions(
     // with the inserters that take out of a loop always enabled, made when a clock with windows for them does not meet goal 1
     let shared: AlternativeDefinition[] | undefined;
     let without_loop: AlternativeDefinition[] | undefined;
+    let without_in_loop: AlternativeDefinition[] | undefined;
     return definitions.map(definition => ({ ...definition, shared_windows: () => {
         shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
         return shared.find(it => it.id === definition.id);
     }, without_loop_windows: () => {
         without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false }, known_stable);
         return without_loop.find(it => it.id === definition.id);
+    }, without_in_loop_windows: () => {
+        without_in_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: "out-of-loop" }, known_stable);
+        return without_in_loop.find(it => it.id === definition.id);
     } }));
 }
 
@@ -692,20 +702,30 @@ function runAlternativeOf(
         ? { backpressure_loss: cached.backpressure_loss, backpressure_loss_not_tried: cached.backpressure_loss_not_tried }
         : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
     let used = definition;
-    // the inserters that take out of a loop on windows: a clock that does not meet goal 1 with them is made again with
-    // them always enabled, as every clock was before they had windows (see trialWithLoopWindows)
-    if (cached === undefined && result.loop_windows !== undefined && !(held && loss.backpressure_loss?.survives !== false)) {
-        const without = definition.without_loop_windows?.();
+    // the inserters of a loop on windows: a clock that does not meet goal 1 with them is made again with the loop's own
+    // inserters always enabled, then with those out of the loop always enabled too, as every clock was before they had
+    // windows (see trialWithLoopWindows), until one does
+    const remakes = [
+        { made: definition.without_in_loop_windows, applies: (it: BlueprintGenerationResult) => (it.loop_windows?.in_loop_ids?.length ?? 0) > 0,
+            what: "the windows of its loop's own inserters", left: "the loop's own inserters always enabled" },
+        { made: definition.without_loop_windows, applies: (it: BlueprintGenerationResult) => it.loop_windows !== undefined,
+            what: "the windows out of its loop", left: "always enabled" },
+    ];
+    for (const remake of remakes) {
+        if (cached !== undefined || !remake.applies(result) || (held && loss.backpressure_loss?.survives !== false)) {
+            continue;
+        }
+        const without = remake.made?.();
         try {
             if (without !== undefined) {
                 result = without.run();
                 used = without;
                 held = holds(result);
                 loss = held ? backpressureLossVerdictOf(without.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
-                logger.log(`Clock alternative "${definition.label}": the windows out of its loop did not meet goal 1; always enabled: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
+                logger.log(`Clock alternative "${definition.label}": ${remake.what} did not meet goal 1; ${remake.left}: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
             }
         } catch (error) {
-            logger.log(`Clock alternative "${definition.label}" with the inserters out of its loop always enabled could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+            logger.log(`Clock alternative "${definition.label}" with ${remake.left === "always enabled" ? "the inserters out of its loop always enabled" : remake.left} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     // the drills into chests on their fewest windows: a clock that does not meet goal 1 with them is made again with
@@ -930,6 +950,7 @@ function planPrimaryAndTasks(
             fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0],
         shared_windows: () => primaryDefinition(config, { ...options, shared_windows: true }, options.on_progress_detail),
         without_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: false }, options.on_progress_detail),
+        without_in_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: "out-of-loop" }, options.on_progress_detail),
     };
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
