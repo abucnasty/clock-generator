@@ -54,7 +54,7 @@ local function resolve_target_id(target, result, is_sink, options)
             entity_type = target.entity_type, entity_name = target.name,
             sidecar_version = script.active_mods["clock-generator-sidecar"], reason = problem,
             model = not problem and "belt" or nil,
-            model_version = not problem and 2 or nil,
+            model_version = not problem and (target.pickup_layout == "bend-right-upstream" and 3 or 2) or nil,
         }
     end
     local drop_capture
@@ -142,8 +142,8 @@ function export.drill_target(drill, result)
     return nil
 end
 
----The machine or container a machine that places its results itself puts them into, as the config's result_target: an exported
----chest, car, tank, cargo wagon or rocket silo; nil when it has none or the export does not have it
+---The machine or container a machine that places its results itself puts them into, as the config's result_target;
+---nil when the receiver is not part of the export
 ---@param machine MachineData
 ---@param result ExtractionResult
 ---@return {type: "machine"|"chest", id: number}|nil

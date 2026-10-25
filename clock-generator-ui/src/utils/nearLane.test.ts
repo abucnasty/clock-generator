@@ -62,3 +62,11 @@ describe('withNearLane', () => {
         expect(JSON.stringify(cleared.inserters[0])).not.toContain('near_lane');
     });
 });
+
+
+it('keeps the measured bend lane fixed while allowing an imported mismatch to be corrected', () => {
+    const source: InserterFormData['source'] = {type: 'belt', id: 1, pickup_layout: 'bend-right-upstream', pickup_length: 1, near_lane: 1};
+    expect(withNearLane(source, 0)).toBe(source);
+    expect(withNearLane(source, 2)).toBe(source);
+    expect(withNearLane({...source, near_lane: 2}, 1)).toEqual(source);
+});

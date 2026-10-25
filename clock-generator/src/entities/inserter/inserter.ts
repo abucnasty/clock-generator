@@ -3,7 +3,7 @@ import { assertPickupCaptureSupported } from "../../config/pickup-capture";
 import { assertInserterInScope } from "../../config/inserter-scope";
 import { InserterConfig } from "../../config";
 import { FactorioDataService, ItemName } from "../../data";
-import { BeltStackSize, Lane } from "../belt";
+import { BeltSpeed, BeltStackSize, Lane } from "../belt";
 import { EntityType } from "../entity-type";
 import { InserterMetadata } from "./metadata/inserter-metadata";
 import { InserterAnimation } from "./inserter-animation";
@@ -118,6 +118,8 @@ export class InserterFactory {
         if (source.type === EntityType.BELT) {
             const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(source.id));
             assertIsBelt(belt)
+            assert(source.pickup_layout !== "bend-right-upstream" || belt.belt_speed === BeltSpeed.TURBO_TRANSPORT_BELT,
+                "Right-bend upstream pickup timing is calibrated for turbo belts only.");
             belt.lanes.forEach(lane => {
                 source_provided_items.add(lane.ingredient_name)
             })

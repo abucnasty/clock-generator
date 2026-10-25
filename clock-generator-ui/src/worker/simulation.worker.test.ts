@@ -47,6 +47,46 @@ it.each(['blocked', 'markers'] as const)('keeps blocked container slots through 
     expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
 });
 
+it('keeps an out-of-order recycler machine target, byproduct belt, and bend capture through Sidecar paste and saved-config mapping', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    const capture = { status: 'supported' as const, model: 'belt' as const, model_version: 3, entity_type: 'transport-belt',
+        entity_name: 'turbo-transport-belt', sidecar_version: '0.15.0' };
+    const result = await send({ type: 'query', requestId: 210, query: {
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [], chests: [],
+        // IDs are deliberately sparse and the target machine precedes the recycler in raw Sidecar export order.
+        machines: [
+            { id: 44, recipe: 'supercapacitor', crafting_speed: 63.75, productivity: 175, prototype: 'electromagnetic-plant' },
+            { id: 8, recipe: 'processing-unit-recycling', crafting_speed: 14.7805, productivity: 0, prototype: 'recycler',
+                result_target: { type: 'machine', id: 44 } },
+        ],
+        belts: [
+            { id: 90, type: 'turbo-transport-belt', lanes: [{ ingredient: 'advanced-circuit', stack_size: 4 }] },
+            { id: 22, type: 'turbo-transport-belt', lanes: [{ ingredient: 'processing-unit', stack_size: 4 }] },
+        ],
+        inserters: [
+            { id: 31, source: { type: 'machine', id: 8 }, sink: { type: 'belt', id: 90 }, filters: ['advanced-circuit'], prototype: 'stack-inserter', quality: 'legendary' },
+            { id: 32, source: { type: 'belt', id: 22, near_lane: 1, pickup_length: 1, pickup_layout: 'bend-right-upstream', pickup_capture: capture },
+                sink: { type: 'machine', id: 8 }, filters: ['processing-unit'], prototype: 'stack-inserter', quality: 'legendary' },
+        ],
+    } });
+    expect(result.type).toBe('answer');
+    const pasted = (result as { answer: PastedEntities }).answer;
+    const form = applyPaste(createDefaultConfig(), pasted, { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
+    const saved = readSavedConfig(serializeConfig(form))!;
+    const roundTripped = formDataToConfig(configToFormData(formDataToConfig(saved)));
+    expect(roundTripped.machines.find(machine => machine.id === 8)?.result_target).toEqual({ type: 'machine', id: 44 });
+    expect(roundTripped.inserters.find(inserter => inserter.id === 31)).toMatchObject({ source: { type: 'machine', id: 8 },
+        sink: { type: 'belt', id: 90 }, filters: ['advanced-circuit'] });
+    expect(roundTripped.inserters.find(inserter => inserter.id === 32)?.source).toMatchObject({ id: 22,
+        pickup_layout: 'bend-right-upstream', pickup_capture: capture });
+});
+
 it('uses the real engine for typed Check/generation recovery and recomputed conversion, separating planning refusal from query failure', async () => {
     vi.resetModules();
     const posted: WorkerResponse[] = [];

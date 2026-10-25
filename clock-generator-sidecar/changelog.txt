@@ -1,8 +1,11 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.15.0
   Features:
+    - captures supported belt bends with their pickup geometry
     - exports the container a recycler puts its results into
-    - exports the machine a recycler puts its results into
+    - exports the machine a recycler puts its results into, even before its first output
+  Bugfixes:
+    - keeps filtered inserters into empty output belts when their item is known
 ---------------------------------------------------------------------------------------------------
 Version: 0.14.0
   Features:

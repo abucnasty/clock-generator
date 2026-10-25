@@ -16,6 +16,7 @@ import { InserterInterceptor } from "./interceptors/inserter-interceptor";
 import { InserterTrace, InserterTraceOptions } from "../../state/inserter-trace";
 import assert from "../../common/assert";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
+import { pickupLaneLength } from "../../common/belt-pickup-layout";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
@@ -63,7 +64,7 @@ export class SimulationContext {
             assert(lanes !== undefined, `Pickup lanes have not been initialized for ${id}`);
             // Transfer logic already holds this array. Keep its identity when seeding the trial.
             lanes.splice(0, lanes.length, ...source.belt.lanes.map((lane, index) => new BeltPickupLane(
-                source.belt.belt_speed, length, lane.stack_size, lane_phases[index])));
+                source.belt.belt_speed, pickupLaneLength(inserter.pickup_layout ?? "side-straight", index + 1, length), lane.stack_size, lane_phases[index])));
         }
     }
 

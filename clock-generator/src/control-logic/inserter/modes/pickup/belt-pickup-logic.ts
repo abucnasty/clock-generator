@@ -1,4 +1,4 @@
-import { pickupTargetRadius } from "../../../../common/belt-pickup-layout";
+import { pickupLaneLength, pickupTargetRadius } from "../../../../common/belt-pickup-layout";
 import { BeltPickupArm } from "../../../../state/belt-pickup-arm";
 import { handSizeFor } from "../../../../entities";
 import assert from "../../../../common/assert";
@@ -31,9 +31,12 @@ export class BeltPickupLogic implements InserterTransferLogic {
         let pickup_lanes = sourceEntityState.pickup_lanes.get(inserter_id);
         if (pickup_lanes === undefined) {
             const belt = sourceEntityState.belt;
-            pickup_lanes = belt.lanes.map(lane => inserterState.inserter.belt_supply === "backed_up"
-                ? new BackedUpPickupLane(belt.belt_speed, pickup_length, lane.stack_size)
-                : new BeltPickupLane(belt.belt_speed, pickup_length, lane.stack_size, 0));
+            pickup_lanes = belt.lanes.map((lane, index) => {
+                const length = pickupLaneLength(inserterState.inserter.pickup_layout ?? "side-straight", index + 1, pickup_length);
+                return inserterState.inserter.belt_supply === "backed_up"
+                    ? new BackedUpPickupLane(belt.belt_speed, length, lane.stack_size)
+                    : new BeltPickupLane(belt.belt_speed, length, lane.stack_size, 0);
+            });
             sourceEntityState.pickup_lanes.set(inserter_id, pickup_lanes);
         }
         this.pickup_lanes = pickup_lanes;

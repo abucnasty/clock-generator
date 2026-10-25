@@ -145,7 +145,7 @@ Scope remains one controlled through supply. Pickups from a side-loaded tile, wi
 merging onto the pickup lane, are out of scope and refused, as are pickups from a splitter; see the
 [experiment history](belt-pickup/experiments.md#side-loaded-pickups-and-merges). A belt fed through a splitter further
 upstream is modelled as a plain belt, which is wrong when the splitter's other output takes items: moving supply arrives slower and backed-up refill can lag. Sparse supply, shared upstream
-withdrawals, bends, other orientations and arbitrary relative lane phases remain unverified.
+withdrawals, other bend approaches, other orientations and arbitrary relative lane phases remain unverified.
 A moving front exit cannot be built: the inserter on the exit's output tile blocks the belt. A config that says
 moving supply gets a clock for moving belts there anyway; on the backed-up exit the game holds and recovers it
 at every tier ([generated clocks](belt-pickup/experiments.md#generated-clocks-and-drops)). The reverse also holds
@@ -370,3 +370,37 @@ A drill mines by two progress bars, as the game's does (since 0.20.0): each tick
 - **A window that opens on a machine at its output block** follows hold-up rules with unexplained exceptions (see "When a waiting inserter acts"). One of them (#276): when another inserter takes a machine's products off its output block in the tick a belt hand comes back from its swing, the simulator has the hand take its first stack in that tick. In the game it comes a tick later when the taker drops onto a belt (56 of 56 hands), and by the decider order when it drops into a chest (79 of 79). The game's rule, tried in the simulator, moves no selected clock. Whether the model takes it on is decided before `later/swing-back` ([later.md](roadmap/later.md)).
 - **A fuel inserter's own clock** runs with no circuit latency in the simulator, while its blueprint encodes the usual two ticks (#276). Neither has been checked in the game. Adding the two ticks changes no clock, verdict or selection, only the wake-up figures of four fuel samples, none of which has a build.
 - **The burner energy model** is checked on outcomes only (total burn against the configured rate), never tick by tick against the game.
+
+
+## Right bend with an upstream pickup
+
+`bend-right-upstream` models the unmirrored legendary stack inserter one tile opposite a right-turn turbo
+belt's outgoing direction. In the recorded orientation the belt exits south and the inserter stands north.
+The two lanes follow quarter circles of radii 188/256 and 68/256 tile, with exposed lengths 295/256 and
+106/256 tile. Collection reach is computed from each stack's position on its arc relative to the inserter
+pivot, rather than from a straight-belt radius. Preferred lane 1 is fixed for this approach.
+
+The supplied electromagnetic science build provided 170 measured full hands from backed-up/full-lane
+starts on four-item belt stacks: 85 outer-lane hands fill in four consecutive grabs, and 85 inner-lane hands
+fill in five ticks for four grabs.
+The native-derived fixture in `tests/game/mechanics/belt-bend/right-upstream-hands.json` records the
+initial stock and hand positions. Replay begins at the first already-arrived grab; it measures collection,
+not absolute arm arrival from placement. A second control on the same physical cell explicitly supplements
+four-item stacks upstream and drains downstream to isolate full moving supply. Its 1,039 hands give four-tick
+outer-lane fills and seven-tick inner-lane fills; the production pickup model reproduces every hand from the
+observed phase and first arm arrival (`right-upstream-moving-hands.json`). The native/model radial difference
+stays within 2/256 tile. This controlled supply is calibration only: it is not used in original-scaffold throughput
+or recovery runs. With only the original feeders and forced continuous draw, supply is sparse and those separate
+captures do not establish full moving supply. Startup, generated-clock throughput and recovery need native
+build controls as well. Other bend approaches and belt speeds are not inferred from this measurement.
+
+Sidecar captures this physical layout with model version 3. Old captures marked unsupported are not
+promoted by updating the generator; they must be captured again. See [capture and configuration](belt-pickup/capture.md).
+
+## Counting outputs through a buffer
+
+When machines put their target product into a finite container and other inserters take it out of the build,
+planning and verification count the drops of those final takers. Transfers from machines into the buffer are
+internal movement: uneven batches there do not establish uneven final delivery. If several machines share
+the container, each final taker is counted once. The longer-run check uses the same target-path rule as the
+planner, including targets that count incoming items destroyed by a recycler.

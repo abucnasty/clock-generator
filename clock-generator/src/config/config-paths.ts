@@ -69,6 +69,8 @@ export const ConfigPaths = {
     REAL_ATLAN_CELL29: path.join(CONFIG_SAMPLES_DIR, 'real', 'atlan', 'cell29', 'atlan-cell29.json'),
     /** The lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */
     REAL_OWNER_PINK_SCIENCE_RECYCLER: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-recycler', 'pink-science-recycler.json'),
+    /** The original duplicated electromagnetic science scaffold, described as one cell: five cells make 240/s */
+    REAL_OWNER_PINK_SCIENCE_ORIGINAL: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-original', 'pink-science-original.json'),
     REAL_OWNER_LITHIUM_SILO: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'lithium-silo', 'lithium-silo.json'),
     /** The iron plate build, 80 a second: a big mining drill drops ore into a car, which two furnaces empty */
     REAL_OWNER_CAR: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'car', 'car.json'),

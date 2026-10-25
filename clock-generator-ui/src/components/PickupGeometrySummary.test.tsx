@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
 import { PickupTypeSelect } from './PickupTypeSelect';
+import { NearLaneSelect } from './NearLaneSelect';
+import type { BeltFormData } from '../utils/configForm/formData';
 
 const build = { inserters: [{ id: 8, source: { type: 'belt', pickup_length: 1 } }, { id: 3, source: { type: 'belt' } }] };
 const text = (html: string) => html.replace(/<style[^>]*>[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, '');
@@ -10,7 +12,7 @@ describe('pickup assumption presentation', () => {
     it('explains the default and underground opt-in for current and prospective builds', () => {
         const html = text(renderToStaticMarkup(<PickupGeometrySummary build={build} onEdit={() => {}} />));
         expect(html).toContain('Straight belt is the default');
-        expect(html).toContain('Choose the underground endpoint and pickup approach');
+        expect(html).toContain('Choose the belt shape and pickup approach');
         expect(html).not.toContain('missing');
         expect(html).not.toContain('Saved results retain their original timing assumptions');
     });
@@ -96,4 +98,24 @@ it('requires a manual underground layout for moving and backed-up inputs', () =>
         expect(html).toContain('Choose a pickup layout before generating again');
         expect(html).toContain('Set pickup for Inserter 4');
     }
+});
+
+
+it('names the measured right-bend layout and explains its fixed lane in either editor', () => {
+    const source = {type: 'belt' as const, id: 1, pickup_layout: 'bend-right-upstream' as const, pickup_length: 1 as const,
+        near_lane: 1 as const, pickup_capture: {status: 'supported' as const, model: 'belt' as const, model_version: 3 as const,
+            entity_type: 'transport-belt' as const, sidecar_version: '0.15.0'}};
+    const belts: BeltFormData[] = [{id: 1, _uuid: 'bend', type: 'turbo-transport-belt', lanes: [
+        {ingredient: 'superconductor', stack_size: 4}, {ingredient: 'holmium-plate', stack_size: 4}]}];
+    for (const compact of [false, true]) {
+        const html = renderToStaticMarkup(<PickupTypeSelect source={source} compact={compact} entityLabel="Inserter 4" onChange={() => {}} />);
+        expect(text(html)).toContain('Right bend — upstream pickup');
+        expect(html).toContain('value="bend-right-upstream"');
+        expect(text(html)).not.toContain('Unverified capture');
+        const lane = text(renderToStaticMarkup(<NearLaneSelect source={source} belts={belts} compact={compact} entityLabel="Inserter 4" onChange={() => {}} />));
+        expect(lane).toContain('This bend pickup takes from lane 1 first. Its supported layout fixes the lane.');
+    }
+    const summary = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 4, source}]}} savedRun />));
+    expect(summary).toContain('Pickup type known for all 1');
+    expect(summary).not.toContain('missing');
 });

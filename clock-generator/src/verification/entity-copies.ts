@@ -4,12 +4,12 @@ import { Recording } from "./recording";
 
 /**
  * A build can hold a config more than once: copies of a unit that share belts (an ore line past all of them, a circuit
- * line) but not machines. A copy is found from the build's machines and inserters alone: machines that an inserter
- * moves items between directly, or through a chest, are one group, and belts do not join groups, since a belt is what
- * copies share. No name of an item, recipe or entity takes part.
+ * line) but not machines. A copy is found from the build's machine and inserter links: machines that an inserter
+ * moves items between directly, or through a chest, are one group, as are machines that place their results there
+ * themselves. Belts do not join groups, since a belt is what copies share. No item, recipe or entity name takes part.
  */
 
-/** The build cut into groups of machines linked by inserters, each with its machines, the inserters on them and their chests; by the lowest machine id */
+/** The build cut into groups linked by inserters or direct result targets, ordered by the lowest machine id */
 export function machineGroups(recording: Recording): Recording[] {
     const parent = new Map<string, string>();
     const find = (node: string): string => {
@@ -32,6 +32,16 @@ export function machineGroups(recording: Recording): Recording[] {
 
     for (const machine of recording.machines) {
         find(`machine:${machine.id}`);
+    }
+    const recorded_machine_ids = new Set(recording.machines.map(machine => machine.id));
+    const metadata = recording.config.machines;
+    const configured_machines = Array.isArray(metadata) ? metadata as Pick<Config["machines"][number], "id" | "result_target">[] : [];
+    const result_targets = new Map(configured_machines.map(machine => [machine.id, machine.result_target]));
+    for (const machine of recording.machines) {
+        const target = result_targets.get(machine.id);
+        if (target === undefined || (target.type === "machine" && !recorded_machine_ids.has(target.id))) continue;
+        const node = nodeOf(target);
+        if (node !== null) join(`machine:${machine.id}`, node);
     }
     for (const inserter of recording.inserters) {
         const nodes = [nodeOf(inserter.source), nodeOf(inserter.sink)].filter((node): node is string => node !== null);

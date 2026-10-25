@@ -914,7 +914,15 @@ local function place_staged(state, options)
             ghost_at[key(ghost.position.x - staged.origin.x, ghost.position.y - staged.origin.y)] = ghost
         end
     end
-    local placed, by_config = {}, {}
+    -- Container-to-container takers are already built while the cell's machine inserters remain ghosts. They
+    -- have no source items yet, but a generated output clock still needs their real unit numbers when it is wired.
+    local existing_at = {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid and entity.type == "inserter" then
+            existing_at[key(entity.position.x - staged.origin.x, entity.position.y - staged.origin.y)] = entity
+        end
+    end
+    local placed, by_config, preexisting = {}, {}, {}
     local function place(ghost, config_id)
         local x, y = ghost.position.x - staged.origin.x, ghost.position.y - staged.origin.y
         local _, entity, proxy = ghost.revive({ raise_revive = true })
@@ -936,6 +944,10 @@ local function place_staged(state, options)
         if ghost and ghost.valid then
             ghost_at[at] = nil
             place(ghost, item.config_id)
+        elseif item.config_id and existing_at[at] then
+            local entity = existing_at[at]
+            by_config[tostring(item.config_id)] = entity.unit_number
+            table.insert(preexisting, {config_id = item.config_id, unit_number = entity.unit_number, x = item.x, y = item.y})
         end
     end
     -- an inserter of the cell the order does not name follows, in the order of the blueprint
@@ -949,7 +961,7 @@ local function place_staged(state, options)
         end
     end
     staged.phase = "placed"
-    return { placed = placed, by_config = by_config, tick = game.tick }
+    return { placed = placed, preexisting = preexisting, by_config = by_config, tick = game.tick }
 end
 
 ---Put the same amount of an item a recipe makes and takes into every machine that makes and takes it: a loop of a machine on its own

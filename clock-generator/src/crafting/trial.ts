@@ -274,13 +274,11 @@ function longRunOfFreeRunningBuild(
     // is built, which for a fractional period is the subtick clock and its repeat (see long-run.ts)
     // (or, for a target that counts an item destroyed, what the inserters that bring it in from outside drop)
     const target = targetItemOf(config.target_output);
-    const makers = new Set(registry.getAll().filter(Entity.isMachine)
-        .filter(machine => machine.output.item_name === config.target_output.recipe).map(machine => machine.entity_id.id));
-    const output_inserters = target.counts === "destroyed"
-        ? targetMachinesOf(target, registry).flatMap(machine => targetInsertersOf(machine, target, registry))
-        : registry.getAll().filter(Entity.isInserter)
-            .filter(it => makers.has(it.source.entity_id.id) && !EntityId.isMachine(it.sink.entity_id));
-    const output_ids = new Set(output_inserters.map(it => it.entity_id.id));
+    // Count at the same boundary as the plan: after an output buffer, not where machines fill it. Machines sharing
+    // a buffer share its takers too, so each taker contributes only once.
+    const output_ids = new Set(targetMachinesOf(target, registry)
+        .flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
+    const output_inserters = registry.getAll().filter(Entity.isInserter).filter(inserter => output_ids.has(inserter.entity_id.id));
     const hand = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size));
     const held = stock.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held);
     // the first third of the run carries its start-up, which a loop can take a dozen periods to work out of, as a

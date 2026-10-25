@@ -14,6 +14,7 @@ export function nearLaneItems(source: Source, belts: BeltFormData[]): string[] |
 
 /** The source with its nearest lane set to 1 or 2, or without one for 0 (the key is removed, not set to undefined) */
 export function withNearLane(source: Source, lane: 0 | 1 | 2): Source {
+    if (source.type === 'belt' && source.pickup_layout === 'bend-right-upstream' && lane !== 1) return source;
     const rest = { ...source };
     delete rest.near_lane;
     return lane === 0 ? rest : { ...rest, near_lane: lane };
