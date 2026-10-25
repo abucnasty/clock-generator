@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isValidElement, type ReactNode } from 'react';
 import { Button, Dialog } from '@mui/material';
 import { createDefaultConfig } from '../utils/configForm/formData';
@@ -8,11 +8,12 @@ import { MachineSettingsFields } from './EntityFields';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 
 const hooks = vi.hoisted(() => {
-    let states: unknown[] = [], refs: { current: unknown }[] = [], stateIndex = 0, refIndex = 0, idIndex = 0;
+    let states: unknown[] = [], refs: { current: unknown }[] = [], cleanups: ((() => void) | void)[] = [], stateIndex = 0, refIndex = 0, idIndex = 0, effectIndex = 0;
     return {
         facts: { facts: { outputs: [{ item_name: 'stale-fact', amount_per_craft: 1, rate_per_second: 1 }] }, error: null, updating: true },
-        reset() { states = []; refs = []; },
-        begin() { stateIndex = refIndex = idIndex = 0; },
+        reset() { states = []; refs = []; cleanups = []; },
+        begin() { stateIndex = refIndex = idIndex = effectIndex = 0; },
+        unmount() { cleanups.forEach(cleanup => cleanup?.()); cleanups = []; },
         react: {
             useState(initial: unknown) {
                 const index = stateIndex++;
@@ -20,6 +21,10 @@ const hooks = vi.hoisted(() => {
                 return [states[index], (value: unknown) => { states[index] = typeof value === 'function' ? (value as (old: unknown) => unknown)(states[index]) : value; }];
             },
             useRef(value: unknown) { return refs[refIndex++] ??= { current: value }; },
+            useEffect(effect: () => (() => void) | void) {
+                const index = effectIndex++;
+                if (!(index in cleanups)) cleanups[index] = effect();
+            },
             useMemo<T>(factory: () => T) { return factory(); },
             useId() { return `test-id-${idIndex++}`; },
         },
@@ -55,9 +60,23 @@ const dirtyMachineDraft = () => {
     const onChange = settings.props.onChange as Parameters<typeof MachineSettingsFields>[0]['onChange'];
     onChange('crafting_speed', 2);
 };
+const frames = new Map<number, FrameRequestCallback>();
+let nextFrame = 0;
+const flushFrames = () => {
+    const pending = [...frames.values()];
+    frames.clear();
+    pending.forEach(callback => callback(0));
+};
 
 beforeEach(() => {
     hooks.reset();
+    frames.clear();
+    nextFrame = 0;
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+        frames.set(++nextFrame, callback);
+        return nextFrame;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn((frame: number) => { frames.delete(frame); }));
     hooks.facts = { facts: { outputs: [{ item_name: 'stale-fact', amount_per_craft: 1, rate_per_second: 1 }] }, error: null, updating: true };
     const config = createDefaultConfig();
     const machine = { ...config.machines[0], recipe: 'iron-gear-wheel', prototype: 'assembling-machine-1' };
@@ -73,12 +92,13 @@ beforeEach(() => {
         onFixOutput: vi.fn(), onEditInserter: vi.fn(),
     } as Props;
 });
+afterEach(() => { hooks.unmount(); vi.unstubAllGlobals(); });
 
 describe('EntityEditDialog route actions', () => {
     it.each([
         ['Edit Inserter 7', (view: ElementView[]) => view.find(element => element.type === Button && element.props['aria-label'] === 'Edit Inserter 7')!.props.onClick as () => void, 'edit'],
         ['Fix output route', (view: ElementView[]) => view.find(element => element.type === Button && element.props.children === 'Fix output route')!.props.onClick as () => void, 'fix'],
-    ] as const)('runs a clean %s action only after the dialog exits', (_name, getAction, kind) => {
+    ] as const)('runs a clean %s action after the exit commit completes', (_name, getAction, kind) => {
         getAction(panelView())();
         expect(props.onClose).toHaveBeenCalledOnce();
         expect(props.onEditInserter).not.toHaveBeenCalled();
@@ -89,6 +109,9 @@ describe('EntityEditDialog route actions', () => {
         Render();
         transition.transition.onExited();
         transition.transition.onExited();
+        expect(props.onEditInserter).not.toHaveBeenCalled();
+        expect(props.onFixOutput).not.toHaveBeenCalled();
+        flushFrames();
         if (kind === 'edit') {
             expect(props.onEditInserter).toHaveBeenCalledOnce();
             expect(props.onEditInserter).toHaveBeenCalledWith(7);
@@ -105,7 +128,20 @@ describe('EntityEditDialog route actions', () => {
         const transition = dialogProps().slotProps as { transition: { onEnter: () => void; onExited: () => void } };
         transition.transition.onEnter();
         transition.transition.onExited();
+        flushFrames();
         expect(props.onClose).toHaveBeenCalledOnce();
+        expect(props.onFixOutput).not.toHaveBeenCalled();
+    });
+
+    it.each(['reopen', 'unmount'])('cancels a route already scheduled by the exit callback on %s', reason => {
+        (panelElement().props.onFix as (item: string) => void)('missing-product');
+        const transition = dialogProps().slotProps as { transition: { onEnter: () => void; onExited: () => void } };
+        transition.transition.onExited();
+        expect(frames.size).toBe(1);
+        if (reason === 'reopen') transition.transition.onEnter();
+        else hooks.unmount();
+        expect(frames.size).toBe(0);
+        flushFrames();
         expect(props.onFixOutput).not.toHaveBeenCalled();
     });
 
@@ -129,6 +165,7 @@ describe('EntityEditDialog route actions', () => {
         props = { ...props, open: false };
         Render();
         transition.transition.onExited();
+        flushFrames();
         expect(props.onEditInserter).not.toHaveBeenCalled();
     });
 
@@ -145,6 +182,8 @@ describe('EntityEditDialog route actions', () => {
         Render();
         transition.transition.onExited();
         transition.transition.onExited();
+        expect(props.onFixOutput).not.toHaveBeenCalled();
+        flushFrames();
         expect(props.onFixOutput).toHaveBeenCalledExactlyOnceWith(1, 'missing-product');
     });
 

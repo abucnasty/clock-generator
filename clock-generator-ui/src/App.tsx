@@ -293,6 +293,11 @@ function App() {
     const setAdvancedOpen = useCallback((open: boolean) => patchContext({ sections: { ...buildContext.sections, advanced: open } }), [patchContext, buildContext.sections]);
     const sectionContext = useMemo(() => ({ sections: buildContext.sections, onSectionChange: (key: string, open: boolean) => patchContext({ sections: { ...buildContext.sections, [key]: open } }) }), [buildContext.sections, patchContext]);
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
+    const pendingDiagramTarget = useRef<FocusTarget | null>(null);
+    const diagramTargetFrame = useRef<number | null>(null);
+    useEffect(() => () => {
+        if (diagramTargetFrame.current !== null) cancelAnimationFrame(diagramTargetFrame.current);
+    }, []);
     const [inserterFocusRequest, setInserterFocusRequest] = useState<{ id: number; filters: boolean; pickup?: boolean } | null>(null);
     const [beltFocusRequest, setBeltFocusRequest] = useState<{ id: number } | null>(null);
     useEffect(() => {
@@ -579,8 +584,7 @@ function App() {
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
 
     // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
-    const goToTarget = useCallback((target: FocusTarget) => {
-        cancelRestore();
+    const focusTargetOnPage = useCallback((target: FocusTarget) => {
         // shown before the focus moves: a hidden element takes no focus
         flushSync(() => {
             if (needsListView(target)) {
@@ -589,7 +593,18 @@ function App() {
             setView('configure');
         });
         focusProblemTarget(target);
-    }, [cancelRestore, setConfigView, setView]);
+    }, [setConfigView, setView]);
+    const goToTarget = useCallback((target: FocusTarget) => {
+        cancelRestore();
+        // The entity editor may have exited, while its enclosing fullscreen dialog
+        // still owns focus. Wait for that modal to release the page as well.
+        if (diagramFullscreen) {
+            pendingDiagramTarget.current = target;
+            setDiagramFullscreen(false);
+            return;
+        }
+        focusTargetOnPage(target);
+    }, [cancelRestore, diagramFullscreen, focusTargetOnPage]);
     const fixOutputRoute = useCallback((machineId: number, item: string) => {
         const issue = checkedCoverage?.issues.find(candidate => candidate.kind === 'missing_output_inserter'
             && candidate.machine_id === machineId && candidate.item_name === item);
@@ -1523,6 +1538,23 @@ function App() {
                 aria-labelledby="diagram-fullscreen-title"
                 open={diagramFullscreen}
                 onClose={() => setDiagramFullscreen(false)}
+                slotProps={{ transition: {
+                    onEnter: () => {
+                        pendingDiagramTarget.current = null;
+                        if (diagramTargetFrame.current !== null) cancelAnimationFrame(diagramTargetFrame.current);
+                        diagramTargetFrame.current = null;
+                    },
+                    onExited: () => {
+                        const target = pendingDiagramTarget.current;
+                        pendingDiagramTarget.current = null;
+                        // Transition callbacks run inside React's commit; navigation
+                        // must wait until that commit and modal cleanup have finished.
+                        if (target) diagramTargetFrame.current = requestAnimationFrame(() => {
+                            diagramTargetFrame.current = null;
+                            focusTargetOnPage(target);
+                        });
+                    },
+                } }}
                 PaperProps={{ sx: { bgcolor: 'background.default' } }}
                 // a view of the build, not an edit of one entity: Ctrl/Cmd+Z undoes in it as on the page
                 data-fullscreen-diagram=""

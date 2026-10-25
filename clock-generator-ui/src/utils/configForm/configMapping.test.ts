@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { Config } from 'clock-generator/browser';
+import { ConfigSchema, type Config } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { configToFormData, formDataToConfig } from './configMapping';
 import { planRepeatedUnitConversion } from 'clock-generator/browser';
 import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
 import { machineIconName } from './formData';
+import { parseFormConfig } from '../../worker/formConfig';
 
 const imported = {
     target_output: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
@@ -111,6 +112,28 @@ describe('configToFormData', () => {
         const config = { ...imported, chests: [{ id: 1, item_filter: 'copper-plate' }] } as unknown as Config;
         expect(configToFormData(config).chests).toEqual([
             { type: ChestType.BUFFER_CHEST, id: 1, _uuid: expect.any(String), storage_size: 1, item_filter: 'copper-plate' },
+        ]);
+    });
+
+    it('imports an infinity chest without item_filter as empty while preserving removal disabled through a round trip', () => {
+        const raw = {
+            target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
+            inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 1, filters: ['iron-gear-wheel'] }],
+            chests: [{ id: 1, type: ChestType.INFINITY_CHEST, remove_unfiltered_items: false }],
+            belts: [],
+        } as unknown as Config;
+        const strict = ConfigSchema.safeParse(raw);
+        expect(strict.success).toBe(false);
+        expect(!strict.success && strict.error.issues.some(issue => issue.code === 'custom' && issue.params?.editable_chest_settings === true)).toBe(true);
+        const parsed = parseFormConfig(ConfigSchema, raw);
+        expect(parsed.success).toBe(true);
+        if (!parsed.success) return;
+        expect(parsed.data.chests?.[0]).not.toHaveProperty('item_filter');
+        const form = configToFormData(parsed.data);
+        expect(form.chests[0]).toMatchObject({ item_filter: [], remove_unfiltered_items: false });
+        expect(formDataToConfig(form).chests).toMatchObject([
+            { id: 1, type: ChestType.INFINITY_CHEST, item_filter: [], remove_unfiltered_items: false },
         ]);
     });
 });

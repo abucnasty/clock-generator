@@ -8,7 +8,7 @@ import {
     IconButton,
     Typography,
 } from '@mui/material';
-import { useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useGameNames } from '../hooks/useGameNames';
 import { useMachineFacts } from '../hooks/useMachineFacts';
@@ -240,6 +240,10 @@ export function EntityEditDialog({
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [saveProblem, setSaveProblem] = useState<string | null>(null);
     const pendingRouteAction = useRef<(() => void) | null>(null);
+    const routeActionFrame = useRef<number | null>(null);
+    useEffect(() => () => {
+        if (routeActionFrame.current !== null) cancelAnimationFrame(routeActionFrame.current);
+    }, []);
     // each opening gets a fresh panel: one reopened while the last closing fades out must not keep that draft
     const [openCount, setOpenCount] = useState(0);
     const [wasOpen, setWasOpen] = useState(open);
@@ -338,11 +342,19 @@ export function EntityEditDialog({
             <Dialog
                 open={open}
                 onClose={requestClose}
-                // Let the modal release focus before navigating to another editor or an item repair.
-                slotProps={{ transition: { onEnter: () => { pendingRouteAction.current = null; }, onExited: () => {
+                // Let the modal release focus and finish its React commit before
+                // navigating to another editor or an item repair.
+                slotProps={{ transition: { onEnter: () => {
+                    pendingRouteAction.current = null;
+                    if (routeActionFrame.current !== null) cancelAnimationFrame(routeActionFrame.current);
+                    routeActionFrame.current = null;
+                }, onExited: () => {
                     const action = pendingRouteAction.current;
                     pendingRouteAction.current = null;
-                    action?.();
+                    if (action) routeActionFrame.current = requestAnimationFrame(() => {
+                        routeActionFrame.current = null;
+                        action();
+                    });
                 } } }}
                 // it edits an entity by its place in the list, which an Undo could move: it withdraws the offer
                 data-edits-build=""
