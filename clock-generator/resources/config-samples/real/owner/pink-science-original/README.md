@@ -18,6 +18,15 @@ The 40-tick clock controls the two final output takers of a unit; other inserter
 input has the measured `bend-right-upstream` layout with version 3 capture. Existing files marked unsupported
 bend must be captured again; changing a saved warning is not a capture.
 
+## Automatic input clocking remains unresolved
+
+This is a mechanics and recovery baseline, not proof of automatic input clocking. Ten of its twelve inserters
+explicitly use Always enabled; only the two final science-output takers are automatically clocked. The config
+also fixes the LCM and terminal swing count to 1. Generating a working clock for the remaining inserters from a
+fresh capture with default automatic settings remains unresolved. That work is required before 0.23.0 is
+released; it must preserve the original scaffold and pass the same rate, startup and recovery checks without
+these manual overrides.
+
 `tests/game/builds/recycler-original-clock.game.test.ts` checks final deliveries and recovery after each solid
 supply stops, science is not removed, and the original advanced-circuit disposal route blocks. Its baseline is
 3,600 periods at 96/s; all seven interruptions recover under the same clock, with partially filled hands at
