@@ -150,7 +150,8 @@ export { MiningProgress } from "./control-logic/drill/modes/mining-progress";
  * 18. A machine that places its results itself (the recycler, by its prototype's `vector_to_place_result`; docs/simulator.md
  * "A machine that places its results itself"): its results go into its output whatever it holds, any number of stacks, and
  * while a stack of any one of them waits there it starts no craft and takes no ingredients; with a result target (the
- * container at its result spot) it puts what waits into that container each tick, as far as it has room, what the
+ * machine or container at its result spot) it puts what waits into that target each tick: into a machine by the
+ * mining drill's stop (3, shared `placeIntoMachine`), into a container as far as it has room, what the
  * tick's crafts gave included. At its
  * output a bulk inserter waits for a full hand, and any other swings what it holds. A result that comes by chance is made
  * at its expected amount, the fraction carried to the next craft (`expectedAmount`: the chance times the amount and its

@@ -142,12 +142,14 @@ function export.drill_target(drill, result)
     return nil
 end
 
----The container a machine that places its results itself puts them into, as the config's result_target: an exported
+---The machine or container a machine that places its results itself puts them into, as the config's result_target: an exported
 ---chest, car, tank, cargo wagon or rocket silo; nil when it has none or the export does not have it
 ---@param machine MachineData
 ---@param result ExtractionResult
----@return {type: "chest", id: number}|nil
+---@return {type: "machine"|"chest", id: number}|nil
 function export.result_target(machine, result)
+    local machine_id = machine.result_target_unit_number and result.unit_number_to_id[machine.result_target_unit_number]
+    if machine_id then return { type = "machine", id = machine_id } end
     local chest_id = machine.result_target_unit_number and result.chest_unit_number_to_id[machine.result_target_unit_number]
     if chest_id then
         return { type = "chest", id = chest_id }

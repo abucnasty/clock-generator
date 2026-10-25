@@ -38,15 +38,19 @@ export function ResultTargetField({ machine, machineLabel, build, getRecipeInfo,
     sx?: SxProps<Theme>;
 }) {
     const { itemLabel, recipeLabel } = useGameNames();
-    const options = useMemo(() => resultTargetOptions(build, { item: itemLabel, recipe: recipeLabel }, getRecipeInfo),
-        [build, itemLabel, recipeLabel, getRecipeInfo]);
+    const options = useMemo(() => resultTargetOptions(build, { item: itemLabel, recipe: recipeLabel }, getRecipeInfo)
+        .filter(option => option.type !== 'machine' || option.id !== machine.id),
+        [build, itemLabel, recipeLabel, getRecipeInfo, machine.id]);
     const named = machine.result_target;
-    const chosen = named === undefined ? undefined : options.find(option => option.id === named.id);
+    const chosen = named === undefined ? undefined : options.find(option => option.type === named.type && option.id === named.id);
     // a container that is not there is not a choice: the field is empty, and marked
-    const value = named === undefined ? OWN_OUTPUT : chosen ? String(chosen.id) : '';
+    const value = named === undefined ? OWN_OUTPUT : chosen ? `${chosen.type}:${chosen.id}` : '';
     return <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ...sx as object }}>
         <TextField select size="small" fullWidth label={RESULT_TARGET_TEXT.label} value={value} error={value === ''}
-            onChange={event => onChange(event.target.value === OWN_OUTPUT ? undefined : { type: 'chest', id: Number(event.target.value) })}
+            onChange={event => {
+                const [type, id] = event.target.value.split(':');
+                onChange(event.target.value === OWN_OUTPUT ? undefined : { type: type as 'chest' | 'machine', id: Number(id) });
+            }}
             slotProps={{ select: {
                 SelectDisplayProps: { 'aria-label': resultTargetName(machineLabel), 'aria-labelledby': undefined },
                 renderValue: shown => shown === OWN_OUTPUT ? RESULT_TARGET_TEXT.none
@@ -56,7 +60,7 @@ export function ResultTargetField({ machine, machineLabel, build, getRecipeInfo,
                     </Box> : '',
             } }}>
             <MenuItem value={OWN_OUTPUT}>{RESULT_TARGET_TEXT.none}</MenuItem>
-            {options.map(option => <MenuItem key={option.id} value={String(option.id)}><Choice option={option} /></MenuItem>)}
+            {options.map(option => <MenuItem key={`${option.type}:${option.id}`} value={`${option.type}:${option.id}`}><Choice option={option} /></MenuItem>)}
         </TextField>
         <HelpButton label={RESULT_TARGET_TEXT.helpLabel}>
             <Typography variant="body2">{RESULT_TARGET_TEXT.help}</Typography>

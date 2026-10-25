@@ -54,7 +54,7 @@ function create(args: {
     initial_mode_status?: MachineStatus
     plugins?: ModePlugin<MachineMode>[],
     /** The container the machine places its results into, where it has a result target */
-    result_target_state?: ChestState,
+    result_target_state?: ChestState | MachineState,
 }): MachineStateMachine {
 
 
@@ -115,7 +115,7 @@ function createFromId(machine_entity_id: EntityId, entity_state_registry: Readab
     return MachineStateMachine.create({
         machine_state: machine_state,
         initial_mode_status: machine_state.status,
-        ...(result_target_state !== undefined && EntityState.isChest(result_target_state) && { result_target_state }),
+        ...(result_target_state !== undefined && (EntityState.isChest(result_target_state) || EntityState.isMachine(result_target_state)) && { result_target_state }),
     });
 }
 

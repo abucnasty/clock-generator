@@ -32,7 +32,7 @@ function create(args: {
 }): DrillStateMachine {
     const { drill_state, initial_mode_status = DrillStatus.WORKING, sink_state, enable_control = AlwaysEnabledControl, plugins } = args;
 
-    // a drill into a chest drops by the chest's rules; into a machine, by the machine's insertion limit
+    // a drill into a chest drops by the chest's rules; into a machine, up to the drill's stop
     const working_mode = EntityState.isChest(sink_state)
         ? new DrillChestWorkingMode(drill_state, sink_state)
         : new DrillWorkingMode(drill_state, sink_state);

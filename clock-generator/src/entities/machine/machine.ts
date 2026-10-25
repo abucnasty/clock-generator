@@ -38,7 +38,7 @@ export class Machine implements Entity {
         public readonly fuel_consumption?: FuelConsumption,
         public readonly fuel_slot?: FuelSlot,
         /**
-         * The container a machine that places its results itself puts them into: the one at its result spot (the
+         * The machine or container a machine that places its results itself puts them into: the one at its result spot (the
          * config's `result_target`). Without it such a machine keeps them in its output, as any other machine does.
          */
         public readonly result_target?: EntityId,
@@ -127,7 +127,7 @@ function fromConfig(config: MachineConfiguration): Machine {
         fuel: config.fuel,
         ...(config.prototype !== undefined ? { prototype: config.prototype } : {}),
         ...(machinePlacesResults(config) ? { places_results: true } : {}),
-    }, config.result_target === undefined ? undefined : EntityId.forChest(config.result_target.id));
+    }, config.result_target === undefined ? undefined : config.result_target.type === "machine" ? EntityId.forMachine(config.result_target.id) : EntityId.forChest(config.result_target.id));
 }
 
 function createMachine(

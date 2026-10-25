@@ -1,5 +1,6 @@
-import { ChestState, InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
+import { ChestState, EntityState, InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
 import { ENERGY_BUFFER_TICKS, MachineOutput, amountIgnoredByProductivity, expectedAmount } from "../../../entities";
+import { placeIntoMachine } from "../../place-into-machine";
 import { MachineMode } from "./machine-mode";
 
 // absorbs floating point drift when summing fractional per-tick progress
@@ -56,7 +57,7 @@ export class MachineWorkingMode implements MachineMode {
     constructor(
         private readonly state: MachineState,
         /** The container the machine puts its results into, where it places them itself and has a result target */
-        private readonly result_target: ChestState | null = null,
+        private readonly result_target: ChestState | MachineState | null = null,
     ) {
         const machine = state.machine;
         const output = machine.output.ingredient;
@@ -169,6 +170,10 @@ export class MachineWorkingMode implements MachineMode {
         for (const output of this.state.machine.outputs) {
             const waiting = this.inventory_state.getQuantity(output.item_name);
             if (waiting <= 0) {
+                continue;
+            }
+            if (EntityState.isMachine(target)) {
+                this.state.resultsPlaced += placeIntoMachine(this.inventory_state, target, output.ingredient.item);
                 continue;
             }
             const amount = Math.min(waiting, Math.max(0, target.getAvailableSpace(output.item_name)));
@@ -438,7 +443,7 @@ export class MachineWorkingMode implements MachineMode {
 
     /** Results a machine that places its results itself puts in its own output, where it has no result target to place them into */
     private countPlacedInOutput(amount: number): void {
-        if (this.hot.places_results && this.result_target === null) {
+        if (this.hot.places_results && (this.result_target === null || EntityState.isMachine(this.result_target))) {
             this.state.resultsPlaced += amount;
         }
     }

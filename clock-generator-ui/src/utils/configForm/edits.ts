@@ -89,7 +89,7 @@ function followRenumber(prev: ConfigFormData, kind: EntityKind, idMap: Map<numbe
             drills: { ...prev.drills, configs: prev.drills.configs.map((d) => ({ ...d, target: follow(d.target) })) },
         }),
         // a machine that places its results itself names the container they go into
-        ...(type === 'chest' && {
+        ...((type === 'chest' || type === 'machine') && {
             machines: prev.machines.map((m) => m.result_target === undefined ? m : { ...m, result_target: follow(m.result_target) }),
         }),
     };

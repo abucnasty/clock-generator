@@ -482,6 +482,19 @@ function planMachineLoaders(
         ratios.set(fuel_item, (ratios.get(fuel_item) ?? fraction(0)).add(fuel_per_craft.divide(machine.output.amount_per_craft)));
     }
 
+    // A result placed directly is supplied by its producing machine, with no inserter or synthetic hand.
+    const placers = entity_registry.getAll().filter(Entity.isMachine)
+        .filter(source => source.result_target?.id === machine.entity_id.id);
+    for (const source of placers) {
+        for (const output of source.outputs) {
+            const ratio = ratios.get(output.item_name);
+            if (ratio === undefined) continue;
+            addDemand(demand, source, output_items.multiply(ratio)
+                .multiply(source.output.amount_per_craft).divide(output.amount_per_craft));
+            ratios.delete(output.item_name);
+        }
+    }
+
     // Find all inserters that feed into this machine
     const loader_entities = entity_registry.getAll()
         .filter(e => Entity.isInserter(e) || Entity.isDrill(e))
