@@ -21,7 +21,7 @@ import { sharedResultWindowClock } from "./candidates/result-windows-clock";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
-import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock } from "./generate-clock";
+import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock, terminalCountForAlternativePlanning } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
 import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
@@ -957,8 +957,9 @@ function planPrimaryAndTasks(
         without_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: false }, options.on_progress_detail),
     };
     const context: ClockAlternativeContext = {
-        swings: result.used_terminal_swing_count,
-        planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
+        swings: terminalCountForAlternativePlanning(result),
+        planned_swings: result.swing_backoff_report?.period_limit_pruning?.requested_terminal_swing_count
+            ?? result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,
         ...(result.result_windows !== undefined && { result_windows: true }),

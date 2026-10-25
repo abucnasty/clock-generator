@@ -1,3 +1,4 @@
+import { ClockPeriodLimitError, type SwingPeriodPruning } from "./clock-period-limit";
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
@@ -30,7 +31,7 @@ import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plu
 import { DrillInventoryTransferPlugin } from "../../control-logic/drill/plugins/drill-inventory-transfer-plugin";
 import { EnableControlFactory } from "../sequence/interceptors/inserter-enable-control-factory";
 import { ConfigurableEnableControlFactory, EntityEnableControlOverrideMap } from "../sequence/interceptors/configurable-enable-control-factory";
-import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
+import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../control-logic/inserter/competing-takers";
@@ -166,6 +167,8 @@ export interface SwingAttemptResult {
 
 
 export interface SwingBackoffReport {
+    /** Counts refused by period arithmetic, never simulated output/hold attempts. */
+    period_limit_pruning?: SwingPeriodPruning;
     /** Whether the backoff loop was triggered (false when first attempt was stable or backoff is disabled) */
     triggered: boolean;
     /** The terminal_swing_count used in the first attempt */
@@ -509,7 +512,20 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
     const { state_transition_history } = build;
     const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger);
-    const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger);
+    const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger, period => {
+        // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
+        const terminal_swing_count = config.target_output.counts === "destroyed"
+            ? plannedOutputSwingCount(crafting_cycle_plan, planned_cycle.output_inserters,
+                new Set(all_output_inserters.map(state => state.inserter.entity_id.id)))
+            : plannedTerminalSwingCount(crafting_cycle_plan);
+        assert(terminal_swing_count !== undefined, "The crafting plan has no terminal-count arithmetic provenance.");
+        const whole_made = config.target_output.counts !== "destroyed" && config.overrides?.use_fractional_swings !== true
+            && options.period_ticks === undefined && options.timeline_recording?.period_ticks === undefined;
+        return new ClockPeriodLimitError({ terminal_swing_count, base_cycle_ticks: crafting_cycle_plan.total_duration_ticks.toDecimal(),
+            computed_lcm: transfer_plan.computed_lcm, effective_lcm: transfer_plan.recipe_lcm,
+            period_ticks: period, limit_ticks: MAX_SIMULATION_TICKS }, whole_made
+            ? { config_json: JSON.stringify(config), terminal_swing_count } : undefined);
+    });
 
     const repeat_periods = warmUp(config, controlled, duration, warmup_period, debug, debug_steps, logger);
     const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
@@ -805,8 +821,10 @@ interface RunPeriods {
 }
 
 /** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
-function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
+function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
+    overLimit: (period_ticks: number) => ClockPeriodLimitError): RunPeriods {
     const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
+    if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= MAX_SIMULATION_TICKS) throw overLimit(duration.ticks);
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     // a recording of a settled period runs the build that long from its cold start, as the long run of the clock does
     const requested_warmup_periods = Math.max(options.warmup_periods ?? 10, options.timeline_recording?.settle_periods ?? 0);
@@ -1032,6 +1050,25 @@ function finalHistoryOf(
     return final_history;
 }
 
+/** The same planned count used in a result and in a pre-simulation period refusal, including final container takers. */
+function plannedOutputSwingCount(crafting_cycle_plan: CraftingCyclePlan, output_inserters: readonly InserterState[],
+    output_inserter_ids: ReadonlySet<string>): number {
+    const swing_counts = crafting_cycle_plan.entity_transfer_map;
+    // The output swings of one output machine a cycle, over all the inserters that take from it; for a target that counts
+    // an item destroyed, the hands brought into one machine that destroys it, over all the inserters that bring them
+    const destroyed = crafting_cycle_plan.production_rate.counts === "destroyed";
+    const endOf = (inserter: Inserter) => destroyed ? inserter.sink.entity_id.id : inserter.source.entity_id.id;
+    const first_output_machine_id = endOf(output_inserters[0].inserter);
+    let swings_of_first_output_machine = 0;
+    for (const [entity_id, etc] of swing_counts.entries()) {
+        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && endOf(etc.entity) === first_output_machine_id) {
+            swings_of_first_output_machine += etc.total_transfer_count.toDecimal();
+        }
+    }
+    return Math.max(1, Math.round(swings_of_first_output_machine));
+
+}
+
 /** What the recorded run made, against what the plan expects */
 interface OutputCheck {
     output_inserter_ids: Set<string>;
@@ -1071,18 +1108,7 @@ function checkOutput(
         }
     }
     const total_expected_output = Math.round(total_expected_output_float);
-    // The output swings of one output machine a cycle, over all the inserters that take from it; for a target that counts
-    // an item destroyed, the hands brought into one machine that destroys it, over all the inserters that bring them
-    const destroyed = crafting_cycle_plan.production_rate.counts === "destroyed";
-    const endOf = (inserter: Inserter) => destroyed ? inserter.sink.entity_id.id : inserter.source.entity_id.id;
-    const first_output_machine_id = endOf(output_inserters[0].inserter);
-    let swings_of_first_output_machine = 0;
-    for (const [entity_id, etc] of swing_counts.entries()) {
-        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && endOf(etc.entity) === first_output_machine_id) {
-            swings_of_first_output_machine += etc.total_transfer_count.toDecimal();
-        }
-    }
-    const used_terminal_swing_count = Math.max(1, Math.round(swings_of_first_output_machine));
+    const used_terminal_swing_count = plannedOutputSwingCount(crafting_cycle_plan, output_inserters, output_inserter_ids);
 
     const export_shortfalls = exportedLanesShortOfConsumption(simulation_context.entity_registry, final_history, output_inserter_ids, duration.ticks);
     for (const lane of export_shortfalls) {
