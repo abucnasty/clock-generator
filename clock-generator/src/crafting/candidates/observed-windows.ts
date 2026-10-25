@@ -200,9 +200,10 @@ export function observedWindowsClock(
     logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
     // the windows of the inserters of a loop are part of the planned windows, kept or dropped here as without derivation
     const feedPlanned = () => {
-        const fed = planned_stable && planned_check.holds
+        const fed = planned_stable && planned_check.holds && options.loop_windows !== false
             ? trialWithLoopWindows(non_deriving_config, planned_windows, duration.ticks, { check: planned_check, stock: planned_run.stock },
-                planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES, logger, options.on_progress_detail, true)
+                planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES, logger, options.on_progress_detail, true,
+                options.loop_windows !== "out-of-loop")
             : null;
         if (fed !== null) {
             planned_check = fed.check;
