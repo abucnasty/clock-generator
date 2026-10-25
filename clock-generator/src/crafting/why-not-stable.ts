@@ -298,13 +298,13 @@ function exportBeltShort(clock: WhyNotStableClock, at_target: boolean): WhyNotSt
     };
 }
 
-/** "Machine 1 waited 240 ticks with a result its container had no room for." and "Inserter 10 took 52 of the 107 holmium-ore the crafts gave." */
+/** "Machine 1 waited 240 ticks with a result its container had no room for." and "Inserter 10 took 52 of the 107 holmium ore the crafts gave." */
 function resultsTakenSentences(taken: ResultsTaken): string[] {
     const machine = taken.machine_id.replace(/^machine:/, "Machine ");
     return [
         ...(taken.waiting_ticks > 0 ? [`${machine} waited ${count(taken.waiting_ticks)} ticks with a result its container had no room for.`] : []),
         ...taken.takers.filter(it => it.short).map(it => (`${insertersNumbered(it.inserter_ids.map(id => id.replace(/^inserter:/, "")))} took `
-            + `${count(it.taken_items)} of the ${count(Math.round(it.expected_items))} ${it.items.join(" and ")} the crafts gave.`).replace(/^i/, "I")),
+            + `${count(it.taken_items)} of the ${count(Math.round(it.expected_items))} ${(it.item_labels ?? it.items).join(" and ")} the crafts gave.`).replace(/^i/, "I")),
     ];
 }
 

@@ -283,15 +283,16 @@ describe("results that are not all taken out of the container a machine places t
         meets_target_rate: false, assessment: { holds: false, items_per_second: 2, backpressure_loss: null },
         results_taken: [{ machine_id: "machine:1", waiting_ticks: 240, takers: [
             { items: ["iron-gear-wheel"], inserter_ids: ["inserter:1"], expected_items: 2150.4, taken_items: 2144, short: false },
-            { items: ["processing-unit", "holmium-ore"], inserter_ids: ["inserter:10"], expected_items: 107.5, taken_items: 52, short: true },
+            { items: ["processing-unit", "holmium-ore"], item_labels: ["processing unit", "holmium ore"], inserter_ids: ["inserter:10"], expected_items: 107.5,
+                taken_items: 52, short: true },
         ] }], ...overrides });
 
     it("is told as the cause, with the ticks the machine waited and the inserters that fell behind", () => {
         expect(whyNotStable([taken()], 0, build)).toEqual({
             cause: "results not taken out",
             message: "The selected clock (Results in turn: 12 hands brought in per cycle) brings in 2 a second, but its results are not all taken out as "
-                + "they come: Machine 1 waited 240 ticks with a result its container had no room for. Inserter 10 took 52 of the 108 processing-unit "
-                + "and holmium-ore the crafts gave.",
+                + "they come: Machine 1 waited 240 ticks with a result its container had no room for. Inserter 10 took 52 of the 108 processing unit "
+                + "and holmium ore the crafts gave.",
         });
     });
 

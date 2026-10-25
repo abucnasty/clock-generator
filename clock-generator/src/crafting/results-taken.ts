@@ -1,9 +1,12 @@
 import { Entity, Machine, ReadableEntityRegistry } from "../entities";
+import { FactorioDataService } from "../data";
 import { StockRecording } from "./machine-stock";
 
 /** What the inserters that take the same results out of a machine's result target took over a span of a run */
 export interface ResultTakersOutcome {
     items: string[];
+    /** The items by their game names, as a sentence has them ("holmium ore"); absent from results made before they were kept */
+    item_labels?: string[];
     inserter_ids: string[];
     /** What the machine's crafts in the span gave of the items, on average */
     expected_items: number;
@@ -79,7 +82,8 @@ export function resultsTakenOf(
             const taken_items = group.inserter_ids.reduce((sum, id) => sum + dropped(id), 0);
             const per_period = ticks > 0 ? expected_items * period / ticks : 0;
             return {
-                items: group.items, inserter_ids: group.inserter_ids, expected_items, taken_items,
+                items: group.items, item_labels: group.items.map(item => FactorioDataService.itemNameInSentence(item)),
+                inserter_ids: group.inserter_ids, expected_items, taken_items,
                 short: taken_items < expected_items - per_period - group.inserter_ids.length * group.hand,
             };
         });
