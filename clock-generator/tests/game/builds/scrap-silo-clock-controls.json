@@ -4,9 +4,9 @@
     "scrap-silo-results-in-turn": {
       "recorded": {
         "pr": 0,
-        "commit": "a6e7152a",
-        "frozen_head": "a6e7152a",
-        "note": "recorded on the engine of a6e7152a with this probe before it was committed; pr is set when the PR is opened",
+        "commit": "6756723d",
+        "frozen_head": "6756723d",
+        "note": "recorded on the engine of 6756723d with this probe before it was committed; the same figures, tick for tick, on 7f10b391 as committed; pr is set when the PR is opened",
         "clock_sha256": "3359a812be64c44b98008a94a2ecab3bd6c9db2579ee60a98322fad06dbbae67",
         "clock_basis": "capture"
       },
@@ -770,9 +770,9 @@
     "scrap-silo-all-results-at-once": {
       "recorded": {
         "pr": 0,
-        "commit": "a6e7152a",
-        "frozen_head": "a6e7152a",
-        "note": "recorded on the engine of a6e7152a with this probe before it was committed; pr is set when the PR is opened",
+        "commit": "6756723d",
+        "frozen_head": "6756723d",
+        "note": "recorded on the engine of 6756723d with this probe before it was committed; the same figures, tick for tick, on 7f10b391 as committed; pr is set when the PR is opened",
         "clock_sha256": "e670e34c046147898fcd96f1413b24a2fbbb65377aa65fe2d8fd2356d850b521",
         "clock_basis": "capture"
       },
