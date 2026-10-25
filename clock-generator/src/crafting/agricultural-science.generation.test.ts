@@ -109,15 +109,16 @@ describe("generateClockForConfig", () => {
         });
 
         // The inserters that take out of the egg loop get windows where the science biochamber was under its output block
-        // in the clock's long run (agricultural-science-loop-windows.generation.test.ts); those of the loop stay always on.
-        // The clock holds from every start and gets back from every loss with them, at 1,258 wake-ups a minute against 2,674
-        // with them always enabled.
-        it("clocks the inserters that take eggs into the science biochamber on the 5-swing clock, and leaves those of the loop always on", () => {
+        // in the clock's long run, and those of the loop take turns after them (agricultural-science-loop-windows.generation.test.ts).
+        // The clock holds from every start and gets back from every loss with them, at 881 wake-ups a minute against 1,258
+        // with the loop's own inserters always enabled and 2,674 with those out of it always enabled too.
+        it("clocks the inserters that take eggs into the science biochamber on the 5-swing clock, and those of the loop", () => {
             const clocked = Object.keys(five_swing_windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
-            expect(five_swings.result.loop_windows?.inserter_ids.slice().sort()).toEqual(["inserter:10", "inserter:9"]);
+            expect(clocked).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+            expect(five_swings.result.loop_windows?.inserter_ids.slice().sort()).toEqual(["inserter:10", "inserter:5", "inserter:8", "inserter:9"]);
+            expect(five_swings.result.loop_windows?.in_loop_ids?.slice().sort()).toEqual(["inserter:5", "inserter:8"]);
             expect(five_swing_windows["inserter:12"].slice(0, 2)).toEqual([{ start: 0, end: 36 }, { start: 96, end: 132 }]);
-            expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(1300);
+            expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(900);
         });
 
         it("gives the inserters bringing nutrients to the egg biochambers windows of two hands, 44 hands for the 35 planned a period", () => {
