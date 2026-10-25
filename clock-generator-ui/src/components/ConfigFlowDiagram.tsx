@@ -37,6 +37,7 @@ import { FlowTileBackground } from './FlowTileBackground';
 import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
 import { useFlowPortUpdates } from '../hooks/useFlowPortUpdates';
+import type { OutputTransferSummary } from 'clock-generator/browser';
 
 /**
  * A node draws only its data, so it renders again only when that changes: React Flow passes a new width and height when
@@ -124,6 +125,7 @@ interface FlowContentProps {
     belts: BeltFormData[];
     chests: ChestFormData[];
     drills: DrillFormData[];
+    outputTransfers?: readonly OutputTransferSummary[] | null;
     getRecipeInfo?: (name: string) => import('../hooks/useSimulationWorker').RecipeInfo | null;
     onNodeSelect: (type: EntityClickType, id: number) => void;
     onUpdateInserter?: (index: number, updates: Partial<InserterFormData>) => void;
@@ -144,6 +146,7 @@ function FlowContent({
     belts,
     chests,
     drills,
+    outputTransfers,
     getRecipeInfo,
     onNodeSelect,
     onUpdateInserter,
@@ -196,8 +199,8 @@ function FlowContent({
 
     const { itemLabel, recipeLabel } = useGameNames();
     const { nodes: graphNodes, edges } = useMemo(
-        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, { itemLabel, recipeLabel }),
-        [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, itemLabel, recipeLabel],
+        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, { itemLabel, recipeLabel }, 0, outputTransfers),
+        [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, itemLabel, recipeLabel, outputTransfers],
     );
     const activeNode = graphNodes.find(node => node.id === (hoveredNodeId ?? focusedNodeId));
     const focusKey = activeNode ? flowEntityKey(activeNode) : selection ? `${selection.kind}:${selection.id}` : null;
@@ -556,6 +559,7 @@ function ConfigFlowDiagramComponent({
                         belts={dialogProps.belts}
                         chests={dialogProps.chests}
                         drills={dialogProps.drills ?? []}
+                        outputTransfers={dialogProps.outputTransfers}
                         getRecipeInfo={dialogProps.getRecipeInfo}
                         onNodeSelect={handleNodeSelect}
                         onUpdateInserter={dialogProps.onUpdateInserter}

@@ -71,7 +71,7 @@ describe('the container a machine puts its results into', () => {
 
     it('is named in the message that says what deleting its container did', () => {
         const form = configToFormData(config);
-        expect(removalMessage(form, 'chests', 0)).toBe('Deleted Car 1. Chest 2 is now 1. Inserters 1–2 have no Source now. Machine 1 has no Results into now.');
+        expect(removalMessage(form, 'chests', 0)).toBe('Deleted Car 1. Chest 2 is now 1. Inserters 1–2 have no Source now. Machine 1 has no Direct output target now.');
         expect(removalMessage(form, 'chests', 1)).toBe('Deleted Chest 2. Inserters 3–6 have no Source now.');
     });
 });

@@ -1,9 +1,12 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BuildValidationPanel } from './BuildValidationPanel';
-import { buildValidationIssues } from '../utils/buildValidation';
+import { buildValidationIssues, navigateToOutputRouteRepair, outputRouteRepairTarget, validationIssueElementId } from '../utils/buildValidation';
 import { outputChestIssues } from '../utils/outputChestIssues';
 import type { ChestFormData, InserterFormData } from '../hooks/useConfigForm';
+import { focusIdOf } from '../utils/firstProblem';
+import type { InserterCoverageIssue } from 'clock-generator/browser';
+import type { FocusTarget } from '../utils/firstProblem';
 
 it('renders one named validation panel with one chest error, preserving the repair without nested alerts', () => {
     const chests: ChestFormData[] = [{ id: 7, _uuid: 'chest-7', type: 'infinity-chest', item_filter: [] }];
@@ -17,4 +20,47 @@ it('renders one named validation panel with one chest error, preserving the repa
     expect(html).not.toContain('role="alert"');
     expect(html).not.toContain('Advisory');
     expect(html).toContain('id="validation-issue-chest:7:removal-disabled"');
+});
+
+it('routes a rejected recycler output to the rendered empty-infinity-chest repair that subsumes it', () => {
+    const chests: ChestFormData[] = [{ id: 7, _uuid: 'chest-7', type: 'infinity-chest', item_filter: [], remove_unfiltered_items: false }];
+    const inserters: InserterFormData[] = [{ id: 3, _uuid: 'inserter-3', stack_size: 1, source: { type: 'machine', id: 7 }, sink: { type: 'chest', id: 7 } }];
+    const coverage: InserterCoverageIssue = { kind: 'missing_output_inserter', machine_id: 7, recipe: 'processing-unit-recycling',
+        item_name: 'advanced-circuit', fix_options: [] };
+    const chestsIssues = outputChestIssues(chests, inserters);
+    const issues = buildValidationIssues({ fieldProblems: [], coverage: [coverage], chests, inserters, machines: [{ id: 7 }], chestIssues: chestsIssues,
+        coverageText: () => 'Missing output route' });
+    const html = renderToStaticMarkup(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={chests} inserters={inserters}
+        onApplyFix={() => {}} onSwitchType={() => {}} onEnableRemoval={() => {}} onReview={() => {}} />);
+    expect(issues.map(issue => issue.id)).toEqual(['chest:7:removal-disabled']);
+    const calls: string[] = [];
+    const exitFullscreen = vi.fn((fullscreen: boolean) => { calls.push(`fullscreen:${fullscreen}`); });
+    const navigate = vi.fn((target: FocusTarget) => { calls.push(`navigate:${JSON.stringify(target)}`); });
+    expect(navigateToOutputRouteRepair(coverage, issues, chestsIssues, inserters, exitFullscreen, navigate)).toBe(true);
+    expect(exitFullscreen).toHaveBeenCalledExactlyOnceWith(false);
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({ kind: 'validation-issue', id: 'chest:7:removal-disabled' });
+    expect(calls).toEqual(['fullscreen:false', 'navigate:{"kind":"validation-issue","id":"chest:7:removal-disabled"}']);
+    const target = navigate.mock.calls[0][0];
+    if (target.kind !== 'validation-issue') throw new Error('Expected a visible validation issue target');
+    expect(target.id).toBe('chest:7:removal-disabled');
+    expect(focusIdOf(target)).toBe('validation-issue-chest:7:removal-disabled');
+    expect(html).toContain('Enable Remove unfiltered items for Chest 7');
+    expect(html).toContain('id="validation-issue-chest:7:removal-disabled"');
+});
+
+it('routes an ordinary missing output to its own rendered validation row', () => {
+    const chests: ChestFormData[] = [];
+    const inserters: InserterFormData[] = [];
+    const coverage: InserterCoverageIssue = { kind: 'missing_output_inserter', machine_id: 7, recipe: 'processing-unit-recycling',
+        item_name: 'advanced-circuit', fix_options: [] };
+    const chestsIssues = outputChestIssues(chests, inserters);
+    const issues = buildValidationIssues({ fieldProblems: [], coverage: [coverage], chests, inserters, machines: [{ id: 7 }], chestIssues: chestsIssues,
+        coverageText: () => 'Missing output route' });
+    const html = renderToStaticMarkup(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={chests} inserters={inserters}
+        onApplyFix={() => {}} onSwitchType={() => {}} onEnableRemoval={() => {}} onReview={() => {}} />);
+    const target = outputRouteRepairTarget(coverage, issues, chestsIssues, inserters);
+    if (!target || target.kind !== 'validation-issue') throw new Error('Expected a validation issue target');
+    const actualFocusId = validationIssueElementId(target.id);
+    expect(focusIdOf(target)).toBe('validation-issue-coverage-issue-missing_output_inserter-7-advanced-circuit');
+    expect(html).toContain(`id="${actualFocusId}"`);
 });

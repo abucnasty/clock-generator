@@ -46,7 +46,7 @@ export function ResultTargetField({ machine, machineLabel, build, getRecipeInfo,
     // a container that is not there is not a choice: the field is empty, and marked
     const value = named === undefined ? OWN_OUTPUT : chosen ? `${chosen.type}:${chosen.id}` : '';
     return <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ...sx as object }}>
-        <TextField select size="small" fullWidth label={RESULT_TARGET_TEXT.label} value={value} error={value === ''}
+        <TextField id={`machine-result-target-${machine.id}`} select size="small" fullWidth label={RESULT_TARGET_TEXT.label} value={value} error={value === ''}
             onChange={event => {
                 const [type, id] = event.target.value.split(':');
                 onChange(event.target.value === OWN_OUTPUT ? undefined : { type: type as 'chest' | 'machine', id: Number(id) });

@@ -4,6 +4,7 @@ import { MarkerType, type Node, type Edge } from '@xyflow/react';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { containerItems, isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import type { OutputTransferSummary } from 'clock-generator/browser';
 import { describeEnableRule } from './enableRuleLabel';
 import { chestLabel, entityLabel, entityLabelIn } from './entityLabel';
 import { drillItemsInto, inferInserterItems, machineItemsInto } from './inferInserterItems';
@@ -200,6 +201,7 @@ export function buildFlowGraph(
     detailMode?: boolean,
     { itemLabel, recipeLabel }: FlowLabels = ID_LABELS,
     nodeHeight = 0,
+    outputTransfers?: readonly OutputTransferSummary[] | null,
 ): { nodes: Node[], edges: Edge[] } {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
@@ -212,6 +214,7 @@ export function buildFlowGraph(
     const drawn = new Map<string, { w: number; h: number }>();
     const loop_ids = loopInserterIds(inserters);
     const loop_inserters = inserters.filter(it => loop_ids.has(it.id));
+    const transferBySource = new Map((outputTransfers ?? []).map(summary => [`${summary.source.type}:${summary.source.id}`, summary]));
     const loop_machine_ids = new Set(loop_inserters.flatMap(it => [it.source.id, it.sink.id]));
     const split_ids = splitEntityIds(inserters, loop_ids, machines);
 
@@ -315,11 +318,17 @@ export function buildFlowGraph(
         const sourceNodeId = endNodeId(inserter.source, 'in');
         const sinkNodeId = endNodeId(inserter.sink, 'out');
         const in_loop = loop_ids.has(inserter.id);
-        // Derive displayed items: explicit filters first, then auto-infer from source/sink
-        const inferred = inserter.filters && inserter.filters.length > 0
-            ? inserter.filters
-            : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo, inserters, undefined, drills);
-        const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
+        // Machine output-route labels come from the engine's shared facts, not a second UI acceptance calculation.
+        // Other sources retain the existing graph inference because they are outside this output-transfer slice.
+        const machineOutput = inserter.source.type === 'machine' ? transferBySource.get(`machine:${inserter.source.id}`) : undefined;
+        const inferred = machineOutput
+            ? machineOutput.results.filter(result => result.inserters.some(route => route.inserter_id === inserter.id)).map(result => result.item_name)
+            : inserter.source.type === 'machine'
+                ? []
+                : inserter.filters && inserter.filters.length > 0
+                    ? inserter.filters
+                    : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo, inserters, undefined, drills);
+        const filterIcons = inferred.length > 0 ? (machineOutput ? inferred : inferred.slice(0, 3)) : undefined;
         const rule = describeEnableRule(inserter.overrides?.enable_control, { forcedAlways: inserter._forced_always });
         const height = Math.max(nodeHeight, INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT));
         const width = rule.quiet ? INSERTER_NODE_WIDTH : INSERTER_NODE_CHIP_WIDTH;
@@ -380,18 +389,45 @@ export function buildFlowGraph(
 
         if (g.hasNode(targetNodeId)) {
             g.setEdge(drillNodeId, targetNodeId);
-            edges.push(arrowEdge(drillNodeId, targetNodeId));
+            const transfer = transferBySource.get(`drill:${drill.id}`);
+            const edge = arrowEdge(drillNodeId, targetNodeId);
+            const result = transfer?.results[0];
+            if (result?.direct === 'accepted') {
+                const item = result.item_name;
+                edges.push({ ...edge, id: `output-transfer-drill-${drill.id}-${drill.target.type}-${drill.target.id}-${item}`, type: 'transfer',
+                    data: { outputItems: [{ name: item, label: itemLabel(item) }], description: `Drop: ${itemLabel(item)}` } });
+            } else {
+                const labelText = transfer?.status === 'known' && result?.direct === 'rejected' ? 'No direct transfer' : 'Output routes unavailable';
+                edges.push({ ...edge, id: `output-transfer-drill-${labelText === 'No direct transfer' ? 'none' : 'unknown'}-${drill.id}-${drill.target.type}-${drill.target.id}`, type: 'transfer',
+                    markerEnd: undefined, style: { stroke: 'var(--xy-edge-stroke)', strokeDasharray: '5 4' }, data: { labelText, description: labelText } });
+            }
         }
     });
 
-    // --- Result-target edges: a machine that places its results itself, into its container ---
+    // --- Result-placement edges from the engine-derived per-item transfer summary ---
     machines.forEach(machine => {
         if (machine.result_target === undefined) return;
         const machineNodeId = flowNodeId('machine', machine.id);
         const targetNodeId = endNodeId(machine.result_target, 'out');
         if (g.hasNode(targetNodeId)) {
             g.setEdge(machineNodeId, targetNodeId);
-            edges.push(arrowEdge(machineNodeId, targetNodeId));
+            const transfer = transferBySource.get(`machine:${machine.id}`);
+            const directItems = transfer?.results.filter(result => result.direct === 'accepted').map(result => result.item_name) ?? [];
+            const edge = arrowEdge(machineNodeId, targetNodeId);
+            if (!transfer) {
+                edges.push({ ...edge, id: `output-transfer-unknown-${machine.id}-${machine.result_target.type}-${machine.result_target.id}`, type: 'transfer',
+                    markerEnd: undefined, style: { stroke: 'var(--xy-edge-stroke)', strokeDasharray: '5 4' }, data: { labelText: 'Output routes unavailable', description: 'Output routes unavailable' } });
+            } else if (directItems.length > 0) {
+                const items = [...new Set(directItems)].sort();
+                edges.push({ ...edge, id: `output-transfer-machine-${machine.id}-${machine.result_target.type}-${machine.result_target.id}-${items.join('-')}`, type: 'transfer',
+                    data: { outputItems: items.map(name => ({ name, label: itemLabel(name) })), description: `Direct: ${items.map(itemLabel).join(', ')}` } });
+            } else if (transfer.mechanism === 'result-placement') {
+                const establishedZero = transfer.status === 'known' && transfer.results.length > 0
+                    && transfer.results.every(result => result.direct === 'rejected');
+                const labelText = establishedZero ? 'No direct transfer' : 'Output routes unavailable';
+                edges.push({ ...edge, id: `output-transfer-none-${machine.id}-${machine.result_target.type}-${machine.result_target.id}`, type: 'transfer',
+                    markerEnd: undefined, style: { stroke: 'var(--xy-edge-stroke)', strokeDasharray: '5 4' }, data: { labelText, description: labelText } });
+            }
         }
     });
 

@@ -20,6 +20,7 @@ import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
 import type { InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
+import { useOutputTransfers } from './hooks/useOutputTransfers';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
 import { useSharedBuildLink } from './hooks/useSharedBuildLink';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
@@ -47,7 +48,7 @@ import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
-import { buildValidationIssues } from './utils/buildValidation';
+import { buildValidationIssues, navigateToOutputRouteRepair } from './utils/buildValidation';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -333,6 +334,7 @@ function App() {
 
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
+    const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
@@ -529,7 +531,8 @@ function App() {
             targetOutput: config.target_output,
             machines: config.machines,
             machinesMax,
-        }),
+        }).concat(outputGenerationIssues.map(issue => ({ text: issue.message,
+                    target: { kind: 'machine-result-target', machineId: issue.machine_id } as FocusTarget }))),
         coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
         sideLoadedDrop: checkedCoverage?.sideLoadedDrop, lanesExactlyFull: checkedCoverage?.lanesExactlyFull, copyGapNeeded: checkedCoverage?.copyGapNeeded,
         machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
@@ -538,7 +541,7 @@ function App() {
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
             ? { message: validation.message, diagnostics: validation.diagnostics }
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
-    }), [config.target_output, config.machines, config.chests, config.inserters, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey]);
+    }), [config.target_output, config.machines, config.chests, config.inserters, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
 
     // set while a check Generate started runs, which goes on to generate
@@ -586,6 +589,30 @@ function App() {
             setView('configure');
         });
         focusProblemTarget(target);
+    }, [cancelRestore, setConfigView, setView]);
+    const fixOutputRoute = useCallback((machineId: number, item: string) => {
+        const issue = checkedCoverage?.issues.find(candidate => candidate.kind === 'missing_output_inserter'
+            && candidate.machine_id === machineId && candidate.item_name === item);
+        if (!checkedCoverage?.refusal && issue) {
+            if (navigateToOutputRouteRepair(issue, validationIssues, chestIssues, config.inserters, setDiagramFullscreen, goToTarget)) return;
+        }
+        const connected = config.inserters.find(inserter => inserter.source.type === 'machine' && inserter.source.id === machineId);
+        if (connected) {
+            cancelRestore();
+            setDiagramFullscreen(false);
+            setConfigView('list');
+            setView('configure');
+            setInserterFocusRequest({ id: connected.id, filters: false });
+            return;
+        }
+        goToTarget({ kind: 'add-inserter' });
+    }, [checkedCoverage, validationIssues, chestIssues, config.inserters, cancelRestore, setConfigView, setDiagramFullscreen, setView, goToTarget]);
+    const editOutputInserter = useCallback((id: number) => {
+        cancelRestore();
+        setDiagramFullscreen(false);
+        setConfigView('list');
+        setView('configure');
+        setInserterFocusRequest({ id, filters: false });
     }, [cancelRestore, setConfigView, setView]);
     const handleGoToProblem = useCallback((problem: Problem) => {
         if (problem.target) {
@@ -799,6 +826,11 @@ function App() {
         belts: config.belts,
         chests: config.chests,
         drills: drillConfigs,
+        outputTransfers,
+        outputGenerationIssues,
+        outputTransfersLoading,
+        onFixOutput: fixOutputRoute,
+        onEditInserter: editOutputInserter,
         recipeNames,
         itemNames: itemNamesComposite,
         getRecipeInfo,
@@ -1223,6 +1255,11 @@ function App() {
                                             inserters={config.inserters}
                                             drills={drillConfigs}
                                             getRecipeInfo={getRecipeInfo}
+                                            outputTransfers={outputTransfers}
+                                            outputGenerationIssues={outputGenerationIssues}
+                                            outputTransfersLoading={outputTransfersLoading}
+                                            onFixOutput={fixOutputRoute}
+                                            onEditInserter={editOutputInserter}
                                             recipeNames={recipeNames}
                                             onAdd={addMachine}
                                             onUpdate={updateMachine}
@@ -1301,6 +1338,8 @@ function App() {
                                     chests={config.chests}
                                     inserters={config.inserters}
                                     getRecipeInfo={getRecipeInfo}
+                                    outputTransfers={outputTransfers}
+                                    outputTransfersLoading={outputTransfersLoading}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={undoable.removeDrill}

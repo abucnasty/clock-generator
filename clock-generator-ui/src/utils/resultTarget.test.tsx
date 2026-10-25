@@ -51,7 +51,7 @@ describe('the machine a row is, and the container it puts its results into', () 
 });
 
 
-describe('the Results into picker', () => {
+describe('the direct output target picker', () => {
     const form = configToFormData(config);
     const build = { machines: form.machines, belts: form.belts, chests: form.chests, inserters: form.inserters, drills: [] };
 
@@ -70,15 +70,15 @@ describe('the Results into picker', () => {
         expect(resultTargetOptions(elsewhere, labels, getRecipeInfo)[1].sublabel).toBe('No items inferred');
     });
 
-    it('is a select of its own, with the empty choice named Its own output', () => {
+    it('is a select of its own, with the empty choice keeping results in machine output', () => {
         const html = renderToStaticMarkup(<ResultTargetField machine={form.machines[0]} machineLabel="Machine 1" build={build} onChange={() => { }} />);
-        expect(html).toContain('Results into');
-        expect(html).toContain('aria-label="Results into, Machine 1"');
+        expect(html).toContain('Direct output target');
+        expect(html).toContain('aria-label="Direct output target, Machine 1"');
         expect(html).toContain('/icons/car.png');
         expect(html).not.toContain('aria-invalid="true"');
-        expect(html).toContain('aria-label="About results into"');
+        expect(html).toContain('aria-label="About direct output targets"');
         const none = renderToStaticMarkup(<ResultTargetField machine={{ id: 1 }} machineLabel="Machine 1" build={build} onChange={() => { }} />);
-        expect(none).toContain('Its own output');
+        expect(none).toContain('Keep results in machine output');
         expect(none).not.toContain('aria-invalid="true"');
     });
 
@@ -87,16 +87,14 @@ describe('the Results into picker', () => {
         const html = renderToStaticMarkup(<ResultTargetField machine={unset.machines[0]} machineLabel="Machine 1"
             build={{ machines: unset.machines, belts: unset.belts, chests: unset.chests, inserters: unset.inserters, drills: [] }} onChange={() => { }} />);
         expect(html).toMatch(/aria-invalid="true"/);
-        expect(html).not.toContain('Its own output');
+        expect(html).not.toContain('Keep results in machine output');
     });
 
     it('says in the words it was given', () => {
-        expect(RESULT_TARGET_TEXT.label).toBe('Results into');
-        expect(RESULT_TARGET_TEXT.none).toBe('Its own output');
-        expect(RESULT_TARGET_TEXT.helpLabel).toBe('About results into');
-        expect(RESULT_TARGET_TEXT.help).toBe('A recycler puts its results straight into the machine or container in front of its output side. '
-            + 'Pick that machine or container. It fills a machine as a mining drill does, past the insertion limit. '
-            + 'Results the machine does not use stay in the recycler for inserters to take.');
-        expect(resultTargetName('Machine 3')).toBe('Results into, Machine 3');
+        expect(RESULT_TARGET_TEXT.label).toBe('Direct output target');
+        expect(RESULT_TARGET_TEXT.none).toBe('Keep results in machine output');
+        expect(RESULT_TARGET_TEXT.helpLabel).toBe('About direct output targets');
+        expect(RESULT_TARGET_TEXT.help).toBe('A recycler places results into one machine or container at its output side. A machine takes the results its recipe uses. Other results stay in the recycler output for inserters to take. With no target, all results stay available to inserters.');
+        expect(resultTargetName('Machine 3')).toBe('Direct output target, Machine 3');
     });
 });

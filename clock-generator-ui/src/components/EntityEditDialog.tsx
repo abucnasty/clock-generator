@@ -47,6 +47,8 @@ import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { BELT_TYPES, DRILL_TYPES, entityTypeLabel } from './entityTypes';
 import { DROP_BELT_READ_ONLY, beltGeometryEditProblem, hasImportedBeltDrops } from '../utils/inserterMetadata';
 import { speedBonusOfPercent, speedBonusPercent } from '../utils/drillsSection';
+import type { OutputTransferGenerationIssue, OutputTransferSummary } from 'clock-generator/browser';
+import { OutputTransferPanel } from './OutputTransferPanel';
 
 // ---- Props ----
 
@@ -60,6 +62,11 @@ export interface EntityEditDialogProps {
     belts: BeltFormData[];
     chests: ChestFormData[];
     drills?: DrillFormData[];
+    outputTransfers?: readonly OutputTransferSummary[] | null;
+    outputGenerationIssues?: OutputTransferGenerationIssue[];
+    outputTransfersLoading?: boolean;
+    onFixOutput?: (machineId: number, item: string) => void;
+    onEditInserter?: (id: number) => void;
     recipeNames: string[];
     itemNames: string[];
     getRecipeInfo: (name: string) => RecipeInfo | null;
@@ -85,6 +92,9 @@ function DrillEditSection({
     build,
     getRecipeInfo,
     itemNames,
+    outputTransfer,
+    outputTransferLoading,
+    onEditInserter,
     onUpdate,
 }: {
     drill: DrillFormData;
@@ -92,6 +102,9 @@ function DrillEditSection({
     build: DrillTargetBuild;
     getRecipeInfo: (name: string) => RecipeInfo | null;
     itemNames: string[];
+    outputTransfer: OutputTransferSummary | null;
+    outputTransferLoading: boolean;
+    onEditInserter?: (id: number) => void;
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
 }) {
     const { itemLabel } = useGameNames();
@@ -119,8 +132,9 @@ function DrillEditSection({
                 size="small"
             />
 
-            <DrillTargetField drill={drill} build={build} getRecipeInfo={getRecipeInfo} sx={{ width: '100%' }}
-                onChange={target => onUpdate(entityIndex, { target })} />
+            <OutputTransferPanel summary={outputTransfer} chests={build.chests} fallbackItems={drill.mined_item_name ? [drill.mined_item_name] : []} loading={outputTransferLoading} onEditInserter={onEditInserter}
+                control={<DrillTargetField drill={drill} build={build} getRecipeInfo={getRecipeInfo} sx={{ width: '100%', mb: 1 }}
+                    onChange={target => onUpdate(entityIndex, { target })} />} />
         </Box>
     );
 }
@@ -151,6 +165,11 @@ export function EntityEditDialog({
     onDeleteBelt,
     onDeleteChest,
     onDeleteDrill,
+    outputTransfers,
+    outputGenerationIssues = [],
+    outputTransfersLoading = false,
+    onFixOutput,
+    onEditInserter,
 }: EntityEditDialogProps) {
     const { itemLabel } = useGameNames();
     const geometryHelpId = useId();
@@ -344,9 +363,23 @@ export function EntityEditDialog({
                                     onChange={value => updateDraft(entityIndex, recipePatch(draft as MachineFormData, value || '', craftingMachines))}
                                     label="Recipe" placeholder="Search recipes..." freeSolo />
                                 <RecipeNotMadeNote machine={draft as MachineFormData} sx={{ mt: -1 }} />
-                                {placesResults(draft as MachineFormData, craftingMachines) && <ResultTargetField machine={draft as MachineFormData} machineLabel={title}
-                                    build={drillTargetBuild} getRecipeInfo={getRecipeInfo} sx={{ width: '100%' }}
-                                    onChange={result_target => updateDraft(entityIndex, { result_target })} />}
+                                <OutputTransferPanel
+                                    summary={entity && JSON.stringify((draft as MachineFormData).result_target) === JSON.stringify((entity as MachineFormData).result_target)
+                                        && (draft as MachineFormData).recipe === (entity as MachineFormData).recipe
+                                        ? outputTransfers?.find(transfer => transfer.source.type === 'machine' && transfer.source.id === entityId) ?? null : null}
+                                    chests={chests} facts={machineFacts} fallbackItems={getRecipeInfo((draft as MachineFormData).recipe)?.results ?? []} loading={outputTransfersLoading}
+                                    generationIssues={outputGenerationIssues.filter(issue => issue.machine_id === entityId)}
+                                    onFix={onFixOutput ? item => {
+                                        if (dirty) { requestClose(); return; }
+                                        onClose(); onFixOutput(entityId ?? 0, item);
+                                    } : undefined}
+                                    onEditInserter={onEditInserter ? id => {
+                                        if (dirty) { requestClose(); return; }
+                                        onClose(); onEditInserter(id);
+                                    } : undefined}
+                                    control={placesResults(draft as MachineFormData, craftingMachines) ? <ResultTargetField machine={draft as MachineFormData} machineLabel={title}
+                                        build={drillTargetBuild} getRecipeInfo={getRecipeInfo} sx={{ width: '100%', mb: 1 }}
+                                        onChange={result_target => updateDraft(entityIndex, { result_target })} /> : undefined} />
                                 <MachineSettingsFields machine={draft as MachineFormData} dialog
                                     onChange={(field, value) => updateDraft(entityIndex, { [field]: value })}
                                     onPatch={patch => updateDraft(entityIndex, patch)} />
@@ -405,6 +438,14 @@ export function EntityEditDialog({
                             build={drillTargetBuild}
                             getRecipeInfo={getRecipeInfo}
                             itemNames={itemNames}
+                            outputTransfer={entity && JSON.stringify((draft as DrillFormData).target) === JSON.stringify((entity as DrillFormData).target)
+                                && (draft as DrillFormData).mined_item_name === (entity as DrillFormData).mined_item_name
+                                ? outputTransfers?.find(transfer => transfer.source.type === 'drill' && transfer.source.id === entityId) ?? null : null}
+                            outputTransferLoading={outputTransfersLoading}
+                            onEditInserter={onEditInserter ? id => {
+                                if (dirty) { requestClose(); return; }
+                                onClose(); onEditInserter(id);
+                            } : undefined}
                             onUpdate={updateDraft}
                         /></Box>
                     )}

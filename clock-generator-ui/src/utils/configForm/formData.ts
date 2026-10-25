@@ -31,7 +31,7 @@ export interface MachineFormData {
     /** Where it stands in the game; Sidecar exports it, nothing reads it */
     position?: Config['machines'][number]['position'];
     /**
-     * The container a machine that places its results itself (a recycler) puts them into, picked in one Results into
+     * The container a machine that places its results itself (a recycler) puts them into, picked as its direct output
      * field, as a drill's `target`. Unset (id 0) once the container is deleted; none, the results stay in the machine.
      */
     result_target?: Config['machines'][number]['result_target'];

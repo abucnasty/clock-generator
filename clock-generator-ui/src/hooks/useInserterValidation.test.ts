@@ -88,6 +88,35 @@ describe('the live connection check', () => {
     });
 
     it.each([
+        { change: 'a direct target being selected', from: blacklisting(), target: { type: 'machine', id: 8 } as const },
+        { change: 'a direct target being cleared', from: { ...blacklisting(), machines: [{ ...blacklisting().machines[0], result_target: { type: 'machine', id: 8 } as const }] } as Config, target: undefined },
+        { change: 'the direct target kind and ID', from: { ...blacklisting(), machines: [{ ...blacklisting().machines[0], result_target: { type: 'machine', id: 8 } as const }] } as Config, target: { type: 'chest', id: 9 } as const },
+    ])('rechecks coverage when $change changes', async ({ from, target }) => {
+        stub.askEngine.mockResolvedValue(refused);
+        render(from);
+        await vi.runAllTimersAsync();
+        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
+        stub.setState.mockClear();
+
+        const edited = { ...from, machines: [{ ...from.machines[0], result_target: target }] } as Config;
+        expect(render(edited)).toBeNull();
+        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: edited });
+    });
+
+    it('rechecks coverage when a cargo wagon quality changes', async () => {
+        const from = { ...blacklisting(), chests: [{ id: 1, type: 'cargo-wagon', quality: 'normal' }] } as unknown as Config;
+        stub.askEngine.mockResolvedValue(refused);
+        render(from);
+        await vi.runAllTimersAsync();
+        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
+        stub.setState.mockClear();
+
+        const edited = { ...from, chests: [{ ...from.chests![0], quality: 'legendary' }] } as Config;
+        expect(render(edited)).toBeNull();
+        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: edited });
+    });
+
+    it.each([
         { change: 'the belt type', edit: (config: Config) => ({ ...config, belts: [{ ...config.belts[0], type: 'transport-belt' }] }) },
         { change: 'the target rate', edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, items_per_second: 2 } }) },
         { change: 'the copies', edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, copies: 3 } }) },

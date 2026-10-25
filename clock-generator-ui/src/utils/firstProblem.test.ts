@@ -188,7 +188,9 @@ describe('focus targets', () => {
         { kind: 'target-rate' },
         { kind: 'target-copies' },
         { kind: 'add-machine' },
+        { kind: 'add-inserter' },
         { kind: 'machine-recipe', machineId: 3 },
+        { kind: 'machine-result-target', machineId: 3 },
         { kind: 'coverage-issue', issue: coverageKey },
         { kind: 'validation-error' },
     ];
@@ -203,8 +205,10 @@ describe('focus targets', () => {
         expect(focusIdOf({ kind: 'target-rate' })).toBe(ELEMENT_IDS.targetRate);
         expect(focusIdOf({ kind: 'target-copies' })).toBe(ELEMENT_IDS.targetCopies);
         expect(focusIdOf({ kind: 'add-machine' })).toBe(ELEMENT_IDS.addMachine);
+        expect(focusIdOf({ kind: 'add-inserter' })).toBe('add-inserter');
         expect(focusIdOf({ kind: 'validation-error' })).toBe(ELEMENT_IDS.validationError);
         expect(focusIdOf({ kind: 'machine-recipe', machineId: 3 })).toBe(machineRecipeElementId(3));
+        expect(focusIdOf({ kind: 'machine-result-target', machineId: 3 })).toBe('machine-result-target-3');
         expect(machineRecipeElementId(3)).toBe('machine-recipe-3');
         // the contract with MissingInserterAlert, which sets the row's id from the whole issue
         expect(focusIdOf({ kind: 'coverage-issue', issue: coverageKey }))
@@ -212,8 +216,8 @@ describe('focus targets', () => {
         expect(coverageIssueElementId(coverageKey)).toBe('coverage-issue-missing_output_inserter-4-logistic-science-pack');
     });
 
-    it('needs the List for the machine fields only', () => {
-        expect(targets.filter(needsListView).map((t) => t.kind)).toEqual(['add-machine', 'machine-recipe']);
+    it('needs the List for machine fields and the Add Inserter action', () => {
+        expect(targets.filter(needsListView).map((t) => t.kind)).toEqual(['add-machine', 'add-inserter', 'machine-recipe', 'machine-result-target']);
     });
 });
 
