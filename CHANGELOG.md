@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.23.0] - Unreleased
 
 ### Added
+- A recycler can put its results straight into another machine, which it fills as a mining drill does, past the machine's insertion limit.
 - The list of a clock's inserters and drills says why each one the clock leaves always on is: its swings fill the clock period, it is part of a loop of machines, its enable rule is Always on, or nothing can time a drill into a chest.
 - A build whose recycler puts its results into a container, such as an ore voider, now gets a clock: Target Output's Counts field says whether the rate counts items made or items destroyed, and a recycler's row has a Results into field for that container.
 - A recycler whose results come by small chances, such as scrap into a rocket silo, now gets a clock: each inserter that takes a result out opens once a period, in turn, for what that result gives; an inserter that takes several of its results is refused, since it can stop the build for good.
