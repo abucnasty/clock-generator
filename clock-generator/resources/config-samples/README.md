@@ -145,7 +145,13 @@ Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
   inserters that take eggs out of the loop on windows (later that day) it finds the same, 400 in every one of 74
   periods with and without the switch, and the game test leaves the wake-ups open: the game counts 134.3 a minute for
   each inserter that brings nutrients to an egg biochamber, the simulator 36.6 (a wake in the tick after the window
-  opens, where the nutrient biochamber puts out the products it holds), 1,791.4 a minute in all against 1,257.8.
+  opens, where the nutrient biochamber puts out the products it holds), 1,791.4 a minute in all against 1,257.8. With
+  the two inserters between the egg biochambers on windows too (the same day), 400 in every one of 74 periods both ways
+  and no difference, 1,361.9 a minute in the game against 880.8 (1,383.2 backed up); with the family's cuts, back at 400
+  from the first or second period after each. Iron bacteria with windows on its two loop inserters: 10,944 in every
+  repeat and no difference in what any inserter or machine moved, back from the first repeat after each cut; the game
+  counts 1,499.8 wake-ups a minute against the simulator's 516.4, every inserter about three times, and the game test
+  leaves them open.
 
 Known gaps of the trials:
 
