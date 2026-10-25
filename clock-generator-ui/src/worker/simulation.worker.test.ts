@@ -58,7 +58,7 @@ it('keeps an out-of-order recycler machine target, byproduct belt, and bend capt
     const capture = { status: 'supported' as const, model: 'belt' as const, model_version: 3, entity_type: 'transport-belt',
         entity_name: 'turbo-transport-belt', sidecar_version: '0.15.0' };
     const result = await send({ type: 'query', requestId: 210, query: {
-        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [],
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [], chests: [],
         // IDs are deliberately sparse and the target machine precedes the recycler in raw Sidecar export order.
         machines: [
             { id: 44, recipe: 'supercapacitor', crafting_speed: 63.75, productivity: 175, prototype: 'electromagnetic-plant' },
