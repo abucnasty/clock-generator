@@ -208,11 +208,13 @@ async function repairOutputFocusAt(browser, url) {
             });
         }
 
-        // Twelve direct outputs exercise the scrollable, keyboard-focusable edge label in the fullscreen graph.
+        // Twelve direct outputs exercise the fully visible result card and per-machine output details.
         await importBuild('scrap-direct-outputs.json', scrapConfig);
         await page.getByRole('button', { name: 'Diagram beta view' }).click();
         await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
         const fullscreen = page.getByRole('dialog', { name: 'Flow Diagram' });
+        const showRates = fullscreen.getByRole('button', { name: 'Show rates' });
+        if (await showRates.getAttribute('aria-pressed') !== 'true') await showRates.click();
         await fullscreen.getByRole('button', { name: 'Fit View' }).click();
         const directNote = fullscreen.getByRole('note', { name: /^Direct:/ });
         await directNote.waitFor();
@@ -220,37 +222,46 @@ async function repairOutputFocusAt(browser, url) {
             'Advanced circuit', 'Battery', 'Concrete', 'Copper cable', 'Holmium ore', 'Ice', 'Iron gear wheel',
             'Low density structure', 'Processing unit', 'Solid fuel', 'Steel plate', 'Stone',
         ];
+        const expectedRates = new Map([
+            ['Advanced circuit', '0.3/s out'], ['Battery', '0.4/s out'], ['Concrete', '0.6/s out'], ['Copper cable', '0.3/s out'],
+            ['Holmium ore', '0.1/s out'], ['Ice', '0.5/s out'], ['Iron gear wheel', '2/s out'],
+            ['Low density structure', '0.1/s out'], ['Processing unit', '0.2/s out'], ['Solid fuel', '0.7/s out'],
+            ['Steel plate', '0.4/s out'], ['Stone', '0.4/s out'],
+        ]);
         const noteName = await directNote.getAttribute('aria-label') ?? '';
         const missingItems = expectedItems.filter(item => !noteName.includes(item));
         if (missingItems.length > 0) throw new Error(`Direct output label omits ${missingItems.join(', ')}: ${noteName}`);
-        const dimensions = await directNote.evaluate(element => ({ clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop }));
-        if (dimensions.clientHeight > 112 || dimensions.scrollHeight <= dimensions.clientHeight || dimensions.scrollTop !== 0) {
-            throw new Error(`Direct output label is not scrollable within 112px: ${JSON.stringify(dimensions)}`);
-        }
-
-        await directNote.focus();
-        await directNote.press('End');
-        const directNoteHandle = await directNote.elementHandle();
-        await page.waitForFunction(element => {
-            if (!(element instanceof HTMLElement)) return false;
+        const card = await directNote.evaluate(element => {
             const rect = element.getBoundingClientRect();
-            const last = [...element.children].find(child => child.textContent?.trim() === 'Stone');
-            const lastRect = last?.getBoundingClientRect();
-            return element.scrollTop > 0 && !!lastRect && lastRect.top >= rect.top && lastRect.bottom <= rect.bottom;
-        }, directNoteHandle, { timeout: TIMEOUT_MS });
-        const scrolled = await directNote.evaluate(element => {
-            const rect = element.getBoundingClientRect();
-            const last = [...element.children].find(child => child.textContent?.trim() === 'Stone');
-            const lastRect = last?.getBoundingClientRect();
-            return {
-                scrollTop: element.scrollTop,
-                ariaLabel: element.getAttribute('aria-label') ?? '',
-                lastItem: element.lastElementChild?.textContent?.trim() ?? '',
-                stoneVisible: !!lastRect && lastRect.top >= rect.top && lastRect.bottom <= rect.bottom,
-            };
+            const children = [...element.children].map(child => {
+                const row = child.getBoundingClientRect();
+                return { text: child.textContent?.trim() ?? '', fits: row.top >= rect.top && row.bottom <= rect.bottom && row.left >= rect.left && row.right <= rect.right };
+            });
+            const style = getComputedStyle(element);
+            return { width: rect.width, height: rect.height, clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+                overflowY: style.overflowY, children };
         });
-        if (scrolled.scrollTop <= 0 || scrolled.lastItem !== 'Stone' || !scrolled.stoneVisible || expectedItems.some(item => !scrolled.ariaLabel.includes(item))) {
-            throw new Error(`End did not expose the last direct output while retaining all 12: ${JSON.stringify(scrolled)}`);
+        if (card.scrollHeight > card.clientHeight + 1 || ['auto', 'scroll'].includes(card.overflowY)
+            || expectedItems.some(item => !card.children.some(child => child.text.includes(item) && child.fits))) {
+            throw new Error(`Direct output card does not show every result without internal scrolling: ${JSON.stringify(card)}`);
+        }
+        const outputGroup = fullscreen.getByRole('group', { name: 'Output capacities per machine' });
+        await outputGroup.waitFor();
+        await page.waitForFunction(() => {
+            const dialog = [...document.querySelectorAll('[role="dialog"]')].find(element => element.getAttribute('aria-labelledby') === 'diagram-fullscreen-title');
+            return !!dialog?.querySelector('[aria-label="Output capacities per machine"] [role="group"]');
+        }, undefined, { timeout: TIMEOUT_MS });
+        const machineRows = await outputGroup.getByRole('group').allInnerTexts();
+        if (machineRows.length !== 12) throw new Error(`Expected 12 detailed machine result rows, got ${machineRows.length}: ${machineRows.join(' | ')}`);
+        const missingRows = expectedItems.flatMap(item => {
+            const row = machineRows.find(text => text.toLowerCase().includes(item.toLowerCase()));
+            const rate = expectedRates.get(item);
+            return !row || !row.split('\n').map(line => line.trim()).includes(rate) ? [`${item} (${rate})`] : [];
+        });
+        if (missingRows.length) throw new Error(`Machine output details omit result rates: ${missingRows.join(', ')}; rows=${machineRows.join(' | ')}`);
+        const expectedRows = machineRows.filter(row => row.includes('Expected'));
+        if (!expectedRows.length) {
+            throw new Error(`Machine output details omit stochastic expectation markers: ${machineRows.join(' | ')}`);
         }
         await fullscreen.getByRole('button', { name: 'Exit fullscreen' }).click();
 

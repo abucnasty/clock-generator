@@ -1,8 +1,9 @@
 import { Position, type Edge, type Node } from '@xyflow/react';
+import { outputLabelLayout, type FlowOutputItem } from './flowLabelLayout';
 
 export interface FlowPoint { x: number; y: number }
 export interface FlowPort { id: string; type: 'source' | 'target'; position: Position; fraction: number }
-export interface FlowRoute { points: FlowPoint[]; label: FlowPoint; labelAnchor?: FlowPoint }
+export interface FlowRoute { points: FlowPoint[]; label: FlowPoint; labelAnchor?: FlowPoint; labelBounds?: FlowRect }
 export interface FlowRect extends FlowPoint { width: number; height: number }
 export type FlowMeasurements = Record<string, { width: number; height: number }>;
 const CLEARANCE = 12, STUB = 18, LANE = 10;
@@ -194,27 +195,41 @@ export function routeFlowEdges(nodes: Node[], edges: Edge[], measurements: FlowM
         const edge = edges.find(edge => edge.id === id)!;
         const inserter = [byId.get(edge.source), byId.get(edge.target)].find(node => node?.type === 'inserterNode');
         const items = inserter?.data.filterIcons as string[] | undefined;
-        const height = 24 * Math.max(1, Math.min(3, items?.length ?? 1));
+        const outputItems = edge.data?.outputItems as FlowOutputItem[] | undefined;
+        const card = outputItems?.length ? outputLabelLayout(outputItems) : null;
+        const height = card?.height ?? 24 * Math.max(1, Math.min(3, items?.length ?? 1));
+        const labelWidth = card?.width ?? 86;
         let placed = false;
         placement: for (const distance of [0, 28, 56, 84, 112, 168, 224]) {
             for (const anchor of candidates) for (const [dx, dy] of distance ? [[distance, 0], [-distance, 0], [0, distance], [0, -distance]] : [[0, 0]]) {
                 const label = { x: anchor.x + dx, y: anchor.y + dy };
-                const box = { x: label.x - 43, y: label.y - height / 2, width: 86, height };
+                const box = { x: label.x - labelWidth / 2, y: label.y - height / 2, width: labelWidth, height };
                 if ([...rects.values(), ...labels].some(rect => overlaps(box, rect)) || allSegments.some(segment => segment.id !== id && segmentRect(segment.a, segment.b, box))) continue;
                 route.label = label; if (distance) route.labelAnchor = anchor;
+                if (card || edge.data?.labelText) route.labelBounds = box;
                 labels.push(box); placed = true; break placement;
             }
         }
         if (!placed) {
             const anchor = route.points[Math.floor(route.points.length / 2)];
-            const x = Math.min(...obstacles.map(rect => rect.x)) - 120;
+            const x = Math.min(...obstacles.map(rect => rect.x)) - (card ? labelWidth / 2 + 24 : 120);
             let y = anchor.y;
-            while (labels.some(rect => overlaps({ x: x - 43, y: y - height / 2, width: 86, height }, rect))) y += height + 12;
+            while (labels.some(rect => overlaps({ x: x - labelWidth / 2, y: y - height / 2, width: labelWidth, height }, rect))) y += height + 12;
             route.label = { x, y }; route.labelAnchor = anchor;
-            labels.push({ x: x - 43, y: y - height / 2, width: 86, height });
+            const box = { x: x - labelWidth / 2, y: y - height / 2, width: labelWidth, height };
+            if (card || edge.data?.labelText) route.labelBounds = box;
+            labels.push(box);
         }
     }
     return result;
+}
+
+/** Fit visible result cards along with the nodes, including labels routed outside the node envelope. */
+export function flowGraphBounds(nodes: Node[], routes: ReadonlyMap<string, FlowRoute>, measurements: FlowMeasurements = {}): FlowRect | null {
+    const rects = [...nodes.map(node => flowNodeRect(node, measurements)), ...[...routes.values()].flatMap(route => route.labelBounds ? [route.labelBounds] : [])];
+    if (!rects.length) return null;
+    const x = Math.min(...rects.map(rect => rect.x)), y = Math.min(...rects.map(rect => rect.y));
+    return { x, y, width: Math.max(...rects.map(rect => rect.x + rect.width)) - x, height: Math.max(...rects.map(rect => rect.y + rect.height)) - y };
 }
 
 /** Match measured handle centres without introducing diagonal endpoint segments. */

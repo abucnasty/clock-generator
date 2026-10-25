@@ -23,7 +23,7 @@ export const PROBLEM_TEXT = {
         `Items per Second is more than the machines can ${counts === 'destroyed' ? 'destroy' : 'make'} (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
-        `${entityLabel('machine', machineId)} has no inserter bringing in ${itemLabel(item)}`,
+        `${entityLabel('machine', machineId)} has no source of ${itemLabel(item)}`,
     missingOutput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
         `${entityLabel('machine', machineId)} has no inserter taking ${itemLabel(item)} out`,
     validationFailed: 'The last check failed. Show why',

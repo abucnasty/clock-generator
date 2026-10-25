@@ -8,7 +8,7 @@ export function retainFlowMeasurements<T extends Node>(nodes: T[], measurements:
 /** React Flow 12 resets measurements when controlled node objects are replaced without `measured`.
  * Keep reported dimensions across hover/frame updates so nodes and handles never disappear to remeasure.
  * Only dimensions are retained: selection, layout and replay data remain controlled by the caller. */
-export function useMeasuredFlowNodes<T extends Node>(nodes: T[]) {
+export function useFlowMeasurements<T extends Node = Node>() {
     const [measurements, setMeasurements] = useState<Record<string, { width: number; height: number }>>({});
     const onNodesChange = useCallback((changes: NodeChange<T>[]) => {
         const dimensions = changes.filter(change => change.type === 'dimensions' && change.dimensions);
@@ -25,6 +25,11 @@ export function useMeasuredFlowNodes<T extends Node>(nodes: T[]) {
             return next;
         });
     }, []);
+    return { onNodesChange, measurements };
+}
+
+export function useMeasuredFlowNodes<T extends Node>(nodes: T[]) {
+    const { measurements, onNodesChange } = useFlowMeasurements<T>();
     const measuredNodes = useMemo(() => retainFlowMeasurements(nodes, measurements), [nodes, measurements]);
     return { nodes: measuredNodes, onNodesChange, measurements };
 }
