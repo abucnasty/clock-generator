@@ -181,6 +181,11 @@ export interface AsBuiltStabilityCheck {
 /** A trial logs nothing but errors: it is one of many runs the generator makes of a clock */
 const quietLogger = (logger: Logger): Logger => ({ log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } });
 
+export interface ClockTrialOptions extends RunOptions {
+    /** Translate all predicates on the shared main counter; independent own clocks keep their phase. */
+    main_clock_shift?: number;
+}
+
 /**
  * Runs a build on clock windows alone, as its blueprint runs it in the game: what has windows is enabled by them, a
  * tick of the circuit network later, a fuel inserter by its fuel clock, and everything else is always enabled (see
@@ -193,14 +198,15 @@ export function runClockOnBuild(
     windows: Map<string, OpenRange[]>,
     period: number,
     logger: Logger,
-    options: RunOptions = {},
+    options: ClockTrialOptions = {},
     /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): TrialRun {
-    const named_start = options.keep_output_buffers === true || options.start_stock !== undefined;
+    const { main_clock_shift = 0, ...run_options } = options;
+    const named_start = run_options.keep_output_buffers === true || run_options.start_stock !== undefined;
     // a clock of whole ticks is counted by its own period, also where the plan's is not whole (a clock rounded down)
-    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, options.decider_order),
-        { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(period) && { period_ticks: period }), ...options }));
+    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, run_options.decider_order, main_clock_shift),
+        { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(period) && { period_ticks: period }), ...run_options }));
 }
 
 /**
@@ -340,7 +346,7 @@ function longRunOfFreeRunningBuild(
     logger: Logger,
     check_ticks: number = FREE_RUNNING_CHECK_TICKS,
     /** How the run starts; the cold start of the staged scaffold with the default orders by default */
-    start: Pick<RunOptions, "competing_takers_order" | "decider_order"> = {},
+    start: Pick<ClockTrialOptions, "competing_takers_order" | "decider_order" | "main_clock_shift"> = {},
 ): {
     keeps_up: boolean;
     output_items_per_period: number;
@@ -612,13 +618,13 @@ export function startDependenceOf(
     // a clock stands at another place of a period of a whole number of ticks only; a fractional one is tried unshifted
     const tried = starts.filter(start => start.clock_shift === 0 || Number.isInteger(period));
     const runs = tried.map(start => {
-        const standing = new Map(Array.from(windows, ([key, ranges]) =>
-            [key, start.clock_shift === 0 ? ranges : rotateRanges(ranges, period - start.clock_shift % period, period)] as const));
-        const order = { competing_takers_order: start.competing_takers_order, decider_order: start.decider_order };
-        const long_run = longRunOfFreeRunningBuild(check_config, standing, period, expected_output_items, logger, FREE_RUNNING_CHECK_TICKS, order);
+        // A start changes the shared counter's position, including computed by-product predicates on that counter.
+        const order = { competing_takers_order: start.competing_takers_order, decider_order: start.decider_order,
+            main_clock_shift: start.clock_shift === 0 ? 0 : period - start.clock_shift % period };
+        const long_run = longRunOfFreeRunningBuild(check_config, windows, period, expected_output_items, logger, FREE_RUNNING_CHECK_TICKS, order);
         const keeps_up = long_run !== null
             ? long_run.keeps_up
-            : runClockOnBuild(check_config, standing, period, logger, { factorio_states: false, ...order }).stability_check.holds;
+            : runClockOnBuild(check_config, windows, period, logger, { factorio_states: false, ...order }).stability_check.holds;
         return { long_run, keeps_up };
     });
     // the first start is the one the clock is judged on: all its checks decide, not the long run alone; a clock that
@@ -642,6 +648,14 @@ export function startDependenceOf(
 
 /** Crossings a phase run of the exhaustive check may take to resolve before it is judged on its last bin instead */
 const PHASE_PROOF_CAP_CROSSINGS = 48;
+
+/**
+ * Internal proof key: fixed main controls remain dark for the initial circuit latency, which the physical state
+ * key does not encode. Equal periodic phases before/after that blackout do not yet have equal futures.
+ */
+export function exhaustiveCrossingKey(physical_key: string, tick: number): string {
+    return `${Math.max(0, CIRCUIT_LATENCY_TICKS - tick)}:${physical_key}`;
+}
 
 /** What checking every start phase of the period found (see exhaustiveStartPhases) */
 export interface ExhaustiveStartPhasesOutcome {
@@ -702,7 +716,7 @@ export function exhaustiveStartPhases(
     const exported = exportedItemsOf(base.simulation_context.entity_registry, base.output_inserter_ids);
     // at a crossing of one phase's run a fuel clock of its own modulus stands elsewhere than at another's, so only
     // a build whose clocks all share the period merges phases into one another's orbits
-    const can_merge = stride_periods === 1;
+    const can_merge = stride_periods === 1 && !Array.from(base.inserter_clocks.values()).some(clock => clock.own_clock);
     const expected_per_bin = base.total_expected_output * stride_periods;
     const tolerance = LCM_STABILITY_TOLERANCE * stride_periods;
 
@@ -713,8 +727,7 @@ export function exhaustiveStartPhases(
     };
 
     for (let offset = 0; offset < period && outcome.holds; offset++) {
-        const rotated_config = offset === 0 ? as_built : buildAsBuiltConfig(config,
-            new Map(Array.from(decider_windows, ([key, ranges]) => [key, rotateRanges(ranges, offset, period)] as const)), period);
+        const rotated_config = offset === 0 ? as_built : buildAsBuiltConfig(config, decider_windows, period, undefined, "built", offset);
         const context = coldControlledTrialBuild(rotated_config, base.crafting_cycle_plan, base.recipe_lcm, {}, quiet);
         const output_states = context.inserters.map(it => it.inserter_state)
             .filter(state => base.output_inserter_ids.has(state.entity_id.id));
@@ -744,7 +757,7 @@ export function exhaustiveStartPhases(
             while (now() < until) {
                 control_logic.executeForTick();
             }
-            const key = simulationStateKey(context);
+            const key = exhaustiveCrossingKey(simulationStateKey(context), now());
             const earlier = own_crossing.get(key);
             if (earlier !== undefined) {
                 // the run's own cycle: the bins from `earlier` repeat forever
@@ -968,9 +981,8 @@ export function runAsBuiltCheck(
         }
     }
     for (let offset = step; offset < period && check.start_phases_checked < start_phases; offset += step) {
-        const rotated = new Map(Array.from(decider_windows, ([key, ranges]) => [key, rotateRanges(ranges, offset, period)] as const));
         // only its output count is read
-        const shifted = runClockOnBuild(config, rotated, period, logger, { factorio_states: false });
+        const shifted = runClockOnBuild(config, decider_windows, period, logger, { factorio_states: false, main_clock_shift: offset });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
         if (!shifted.stability_check.holds) {
@@ -1155,8 +1167,9 @@ export function beltPickupSlackTrial(
  * Rewrites the config so every inserter and drill is controlled the way the generated blueprint
  * controls it in game: entities with a decider window get a CLOCKED window shifted by the circuit latency,
  * everything else is left unwired (ALWAYS), except explicit NEVER overrides.
+ * Internal pure composition seam; not part of the package/browser exports.
  */
-function buildAsBuiltConfig(
+export function buildAsBuiltConfig(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
     period: number,
@@ -1164,14 +1177,19 @@ function buildAsBuiltConfig(
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
     /** In what order the clock's window deciders are built: as the blueprint has them by default */
     decider_order: DeciderOrder = "built",
+    /** Applied after composing non-own predicates, before circuit latency; installation order stays canonical. */
+    main_clock_shift: number = 0,
 ): Config {
     const windows = new Map<string, EnableControlRange[]>();
     const entity_registry = createEntityRegistryFromConfig(config);
     // inserters outside the plan swing on clocks that do not come from the windows of the plan
     const inserter_clocks = unplannedInserterClocks(entity_registry, period, undefined, undefined, alwaysEnabledByConfig(config));
     const clocked = withInserterClocks(decider_windows, inserter_clocks, period);
+    assert(Number.isFinite(main_clock_shift), "The main clock shift must be finite");
+    const shift = ((main_clock_shift % period) + period) % period;
     for (const [key, ranges] of clocked) {
-        windows.set(key, shiftRangesForCircuitLatency(ranges, period));
+        const shifted = shift === 0 ? ranges : rotateRanges(ranges, shift, period);
+        windows.set(key, shiftRangesForCircuitLatency(shifted, period));
     }
     // the order the blueprint builds the deciders in, which decides which of two windows that open together goes first
     const settled = new Map(Array.from(inserter_clocks, ([key, clock]) => [key, (clock.own_clock ? fuel_clocks?.get(key) : undefined) ?? clock] as const));
