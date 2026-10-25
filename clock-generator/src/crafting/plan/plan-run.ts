@@ -1728,7 +1728,8 @@ export function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCycl
 /**
  * An inserter clocked onto a belt has to stay enabled until its hand is full and dropped, but not until it is back:
  * a window still on when it returns lets it swing again onto the endless belt. An output taker from a container
- * also has a whole hand available on its return, so its window must end before that next pickup too.
+ * dropping into another container also has a whole hand available on its return, so its window must end before
+ * that next pickup too. Takers onto belts keep the belt drop timing.
  */
 function clipBeltFillerWindows(
     history: InventoryTransferHistory,
@@ -1740,7 +1741,8 @@ function clipBeltFillerWindows(
         if (!Entity.isInserter(entity)) return [entity_id, transfers] as const;
         const belt_filler = !output_inserter_ids.has(entity_id.id)
             && EntityId.isMachine(entity.source.entity_id) && EntityId.isBelt(entity.sink.entity_id);
-        const container_output = output_inserter_ids.has(entity_id.id) && EntityId.isChest(entity.source.entity_id);
+        const container_output = output_inserter_ids.has(entity_id.id)
+            && EntityId.isChest(entity.source.entity_id) && EntityId.isChest(entity.sink.entity_id);
         if (!belt_filler && !container_output) return [entity_id, transfers] as const;
         const return_swing_ticks = entity.animation.rotation.ticks + 1;
         const min_window_ticks = entity.animation.pickup.ticks + 2;
