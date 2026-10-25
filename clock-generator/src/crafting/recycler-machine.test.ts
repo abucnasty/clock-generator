@@ -75,6 +75,11 @@ describe('a recycler placing results into a machine', () => {
         expect(() => ConfigSchema.parse(withTarget(1))).toThrow('cannot place its results into itself');
         expect(() => ConfigSchema.parse({...config, machines: config.machines.map(machine => machine.id === 2 ? {...machine, recipe: 'iron-plate'} : machine)})).toThrow('takes none');
     });
+    it('refuses a target that needs several of the results until their demands can be planned together', () => {
+        const config = cell();
+        config.machines[1] = {...config.machines[1], recipe: 'processing-unit'};
+        expect(() => ConfigSchema.parse(config)).toThrow('takes more than one of those results');
+    });
     it('refuses competing input sources rather than counting their supplies twice', () => {
         const config = cell();
         config.inserters.push({id: 5, source: {type: 'chest', id: 1}, sink: {type: 'machine', id: 2}, filters: ['electronic-circuit']});
