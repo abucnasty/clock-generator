@@ -6,7 +6,6 @@ import {
     Panel,
     useReactFlow,
     useStore,
-    type EdgeMarker,
     type NodeTypes,
     type NodeProps,
     type NodeMouseHandler,
@@ -17,7 +16,7 @@ import {
 import { Alert, Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typography } from '@mui/material';
 import { Add, Fullscreen } from '@mui/icons-material';
 import { themeTokens } from '../theme/runtimeTokens';
-import { flowRouteStyle } from '../theme/flowDiagram';
+import { decorateFlowEdge } from '../utils/decorateFlowEdge';
 import { useTheme, type Theme } from '@mui/material/styles';
 import { useMeasuredFlowNodes } from '../hooks/useMeasuredFlowNodes';
 import { useGameNames } from '../hooks/useGameNames';
@@ -219,8 +218,7 @@ function FlowContent({
     const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
     const edgesWithSelection = useMemo(() => edges.map(edge => {
         const highlighted = focus.routes.has(edge.id) || selectedEdgeIds.has(edge.id);
-        const style = flowRouteStyle(tokens, highlighted ? 'selected' : 'neutral');
-        return { ...edge, type: 'transfer', data: { flowRoute: routes.get(edge.id) }, selected: selectedEdgeIds.has(edge.id), markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
+        return decorateFlowEdge(edge, tokens, highlighted, selectedEdgeIds.has(edge.id), routes.get(edge.id));
     }), [edges, focus, selectedEdgeIds, tokens, routes]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {

@@ -305,7 +305,7 @@ function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarge
                 </Box>
             </Box>
             <RecipeNotMadeNote machine={machine} sx={{ mb: 1 }} />
-            <OutputTransferPanel summary={outputTransfer} chests={build.chests} facts={facts} fallbackItems={machine.recipe ? getRecipeInfo?.(machine.recipe)?.results ?? [] : []} targetRate={atTarget ? targetRate : undefined} atTarget={atTarget}
+            <OutputTransferPanel summary={outputTransfer} chests={build.chests} facts={updating ? null : facts} fallbackItems={machine.recipe ? getRecipeInfo?.(machine.recipe)?.results ?? [] : []} targetRate={atTarget ? targetRate : undefined} atTarget={atTarget}
                 generationIssues={outputGenerationIssues} loading={outputTransfersLoading}
                 onFix={item => onFixOutput?.(machine.id, item)} onEditInserter={onEditInserter}
                 control={placesResults(machine, craftingMachines) ? <ResultTargetField machine={machine} machineLabel={entityLabel('machine', machine.id)} build={build}

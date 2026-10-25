@@ -8,7 +8,7 @@ import {
     IconButton,
     Typography,
 } from '@mui/material';
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useGameNames } from '../hooks/useGameNames';
 import { useMachineFacts } from '../hooks/useMachineFacts';
@@ -239,6 +239,7 @@ export function EntityEditDialog({
     const machineRecipes = useMachineRecipeOptions(entityType === 'machine' ? (draft as MachineFormData | null)?.prototype : undefined, recipeNames);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [saveProblem, setSaveProblem] = useState<string | null>(null);
+    const pendingRouteAction = useRef<(() => void) | null>(null);
     // each opening gets a fresh panel: one reopened while the last closing fades out must not keep that draft
     const [openCount, setOpenCount] = useState(0);
     const [wasOpen, setWasOpen] = useState(open);
@@ -255,6 +256,7 @@ export function EntityEditDialog({
     const requestClose = () => {
         // a closing dialog (its fade-out) has nothing left to ask about
         if (!open) return;
+        pendingRouteAction.current = null;
         if (dirty) {
             setConfirmOpen(true);
         } else {
@@ -283,6 +285,11 @@ export function EntityEditDialog({
         }
     }, [draft, entity, entityType]);
     const dirty = entityType === 'inserter' ? inserterDirty : Object.keys(edits).length > 0;
+    const requestRouteAction = (action: () => void) => {
+        pendingRouteAction.current = action;
+        if (dirty) setConfirmOpen(true);
+        else onClose();
+    };
     const updateDraft = (_index: number, updates: object) => {
         setSaveProblem(null);
         setDraft(d => d ? { ...d, ...updates } : d);
@@ -319,7 +326,7 @@ export function EntityEditDialog({
     };
 
     const machineEntity = draft && entityType === 'machine' ? draft as MachineFormData : null;
-    const { facts: machineFacts, error: machineFactsError } = useMachineFacts({
+    const { facts: machineFacts, error: machineFactsError, updating: machineFactsUpdating } = useMachineFacts({
         recipe: machineEntity?.recipe ?? '',
         productivity: machineEntity?.productivity ?? 0,
         crafting_speed: machineEntity?.crafting_speed ?? 1,
@@ -331,6 +338,12 @@ export function EntityEditDialog({
             <Dialog
                 open={open}
                 onClose={requestClose}
+                // Let the modal release focus before navigating to another editor or an item repair.
+                slotProps={{ transition: { onEnter: () => { pendingRouteAction.current = null; }, onExited: () => {
+                    const action = pendingRouteAction.current;
+                    pendingRouteAction.current = null;
+                    action?.();
+                } } }}
                 // it edits an entity by its place in the list, which an Undo could move: it withdraws the offer
                 data-edits-build=""
                 maxWidth={entityType === 'inserter' ? 'md' : 'sm'}
@@ -367,16 +380,10 @@ export function EntityEditDialog({
                                     summary={entity && JSON.stringify((draft as MachineFormData).result_target) === JSON.stringify((entity as MachineFormData).result_target)
                                         && (draft as MachineFormData).recipe === (entity as MachineFormData).recipe
                                         ? outputTransfers?.find(transfer => transfer.source.type === 'machine' && transfer.source.id === entityId) ?? null : null}
-                                    chests={chests} facts={machineFacts} fallbackItems={getRecipeInfo((draft as MachineFormData).recipe)?.results ?? []} loading={outputTransfersLoading}
+                                    chests={chests} facts={machineFactsUpdating ? null : machineFacts} fallbackItems={getRecipeInfo((draft as MachineFormData).recipe)?.results ?? []} loading={outputTransfersLoading}
                                     generationIssues={outputGenerationIssues.filter(issue => issue.machine_id === entityId)}
-                                    onFix={onFixOutput ? item => {
-                                        if (dirty) { requestClose(); return; }
-                                        onClose(); onFixOutput(entityId ?? 0, item);
-                                    } : undefined}
-                                    onEditInserter={onEditInserter ? id => {
-                                        if (dirty) { requestClose(); return; }
-                                        onClose(); onEditInserter(id);
-                                    } : undefined}
+                                    onFix={onFixOutput ? item => requestRouteAction(() => onFixOutput(entityId ?? 0, item)) : undefined}
+                                    onEditInserter={onEditInserter ? id => requestRouteAction(() => onEditInserter(id)) : undefined}
                                     control={placesResults(draft as MachineFormData, craftingMachines) ? <ResultTargetField machine={draft as MachineFormData} machineLabel={title}
                                         build={drillTargetBuild} getRecipeInfo={getRecipeInfo} sx={{ width: '100%', mb: 1 }}
                                         onChange={result_target => updateDraft(entityIndex, { result_target })} /> : undefined} />
@@ -442,10 +449,7 @@ export function EntityEditDialog({
                                 && (draft as DrillFormData).mined_item_name === (entity as DrillFormData).mined_item_name
                                 ? outputTransfers?.find(transfer => transfer.source.type === 'drill' && transfer.source.id === entityId) ?? null : null}
                             outputTransferLoading={outputTransfersLoading}
-                            onEditInserter={onEditInserter ? id => {
-                                if (dirty) { requestClose(); return; }
-                                onClose(); onEditInserter(id);
-                            } : undefined}
+                            onEditInserter={onEditInserter ? id => requestRouteAction(() => onEditInserter(id)) : undefined}
                             onUpdate={updateDraft}
                         /></Box>
                     )}
@@ -459,7 +463,7 @@ export function EntityEditDialog({
             <DiscardChangesDialog
                 open={confirmOpen}
                 title={`Discard changes to ${title}?`}
-                onKeepEditing={() => setConfirmOpen(false)}
+                onKeepEditing={() => { pendingRouteAction.current = null; setConfirmOpen(false); }}
                 onDiscard={() => {
                     // Restore the nested prompt into the still-open editor before its own trap returns to the node.
                     flushSync(() => setConfirmOpen(false));
