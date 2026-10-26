@@ -75,7 +75,7 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     };
     const picker = (side: 'source' | 'sink', name: string) => (
         <EntitySelector label={name} ariaLabel={`${name}, ${label}`} options={ownOptions}
-            showContentIcons={!workbench}
+            compactValue={workbench}
             sx={row ? { flex: '1 1 160px', minWidth: 0 } : { width: '100%' }}
             readOnly={value.sink.drop !== undefined} value={routeOption(side)}
             error={!findOption(ownOptions, value[side].type, value[side].id)}
