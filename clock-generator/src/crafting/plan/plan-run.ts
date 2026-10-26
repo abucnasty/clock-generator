@@ -167,6 +167,8 @@ export interface SwingAttemptResult {
 
 
 export interface SwingBackoffReport {
+    /** An early derived strategy's real checks, separate from ordinary swing simulations. */
+    primitive_grouped_attempt?: import("../primitive-grouped-policy").PrimitiveGroupedAttemptReport;
     /** Counts refused by period arithmetic, never simulated output/hold attempts. */
     period_limit_pruning?: SwingPeriodPruning;
     /** Whether the backoff loop was triggered (false when first attempt was stable or backoff is disabled) */
@@ -183,6 +185,8 @@ export interface SwingBackoffReport {
 
 
 export interface BlueprintGenerationResult {
+    /** Internal AUTO scheduling provenance; never an imported or saved user override. */
+    primitive_grouped?: import("../primitive-grouped-policy").PrimitiveGroupedPolicy;
     blueprint: FactorioBlueprint;
     /** What the combinators of the blueprint do, as data: what the recording harness wires and cuts a recording by */
     schedule: ClockSchedule;

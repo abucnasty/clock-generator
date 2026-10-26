@@ -528,7 +528,7 @@ export function groupedHandsPlan(
  * windows) is moved a tick either way with the others where they are: one run of the build on each, from the cold start.
  * A clock that holds at one placement and not next to it is not offered (working rule 3). The reason it is not, or null.
  */
-function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>, period: number): string | null {
+export function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>, period: number): string | null {
     if (!runClockOnBuild(plan.config, windows, period, plan.logger).stability_check.holds) return "the windows do not hold";
     const groups = new Map<string, string[]>();
     for (const [id, ranges] of windows) {
@@ -571,16 +571,17 @@ interface HoldingWay {
  * one gets back. On a build with a deadlock risk they do not decide (`rankingOf`) and are not tried. Shared windows are
  * kept only where they get back or could not be tried: null where none is.
  */
+export function groupedClockRank(entity_registry: Pick<ReadableEntityRegistry, "getAll">, clock: BlueprintGenerationResult): [number, number] {
+    const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+    const windows = entity_registry.getAll().filter(Entity.isInserter)
+        .reduce((sum, inserter) => sum + (clock.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
+    // to a thousandth, as the selection counts them
+    return [wake_ups === undefined ? Number.MAX_SAFE_INTEGER : Math.round(wake_ups * 1000), rankingWindowCount(windows, clock.clock_windows, clock.loop_windows)];
+}
+
 function bestHolding(made: PlanRun, holding: HoldingWay[], shared: boolean): HoldingWay | null {
     const entity_registry = made.run.simulation_context.entity_registry;
-    const inserters = entity_registry.getAll().filter(Entity.isInserter);
-    const rank = ({ clock }: HoldingWay): [number, number] => {
-        const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
-        const windows = inserters.reduce((sum, inserter) => sum + (clock.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
-        // to a thousandth, as the selection counts them
-        return [wake_ups === undefined ? Number.MAX_SAFE_INTEGER : Math.round(wake_ups * 1000), rankingWindowCount(windows, clock.clock_windows, clock.loop_windows)];
-    };
-    const ranked = holding.map((held, index) => ({ held, index, rank: rank(held) }))
+    const ranked = holding.map((held, index) => ({ held, index, rank: groupedClockRank(entity_registry, held.clock) }))
         .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.index - b.index)
         .map(it => it.held);
     if (!shared && sharedItemDeadlockRisks(entity_registry).length > 0) return ranked[0] ?? null;
@@ -602,13 +603,15 @@ function wayName(way: GroupedHandsOptions): string {
  * The clock of the windows as the generator exports it, checked as a clock with windows of its own is (the clock-only runs
  * from the start phases and the long run): it holds when that check does
  */
-function finishedClock(
+export function finishedClock(
     made: PlanRun,
     windows: Map<string, OpenRange[]>,
     turns: TurnGroup[],
     options: GenerateClockOptions,
     /** The takers busy the whole period, which the windows leave out */
     left_open: ReadonlyMap<string, AlwaysOnReason>,
+    /** A constructed schedule's margins belong to its windows, never to the planning history's windows. */
+    constructed?: Pick<BlueprintGenerationResult, "random_margins">,
 ): BlueprintGenerationResult {
     // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
     const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
@@ -617,7 +620,8 @@ function finishedClock(
     const moving = made.config.overrides?.backed_up_belts !== true;
     const belt: ClockBelt | null = belt_fed.length === 0 ? null
         : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
-    const named = { ...exported, belt, belt_pickup_slack_left_out: false, turns,
+    const named = { ...exported, ...(constructed === undefined ? {} : { random_margins: constructed.random_margins }),
+        belt, belt_pickup_slack_left_out: false, turns,
         applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
     const result = checkedClock(made, named, windows, { ...options, verify_as_built: true }, { left_open });
     // the check of the plan's run is the same object for every clock made from the plan, and the next clock's check

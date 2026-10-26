@@ -276,6 +276,11 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
     if (result.result_windows !== undefined) {
         return { id: RESULTS_IN_TURN_ID, label: RESULTS_IN_TURN_LABEL, description: RESULTS_IN_TURN_DESCRIPTION, run: () => result };
     }
+    if (result.primitive_grouped !== undefined) {
+        return { id: "primitive-grouped", label: "Primitive grouped hands",
+            description: "A short grouped opportunity clock derived automatically after the initial batch exceeded the simulation period limit. Separate windows only; assessed with the ordinary margins, starts and recovery checks.",
+            run: () => result };
+    }
     return {
         id: "planned-belt-slack",
         label: BATCHED_SWINGS_LABEL,
@@ -645,7 +650,8 @@ function runAlternative(
     settle_unstable?: boolean,
 ): ClockAlternativeRun | null {
     const run = runAlternativeOf(definition, config, logger, report, assessed, verification_cache, on_not_made, settle_unstable);
-    if (run === null || definition.shared_windows === undefined || !run.alternatives.some(it => it.result.grouped_hands !== undefined)) {
+    if (run === null || definition.shared_windows === undefined || !run.alternatives.some(it => it.result.grouped_hands !== undefined
+        && it.result.primitive_grouped === undefined)) {
         return run;
     }
     let shared_definition: AlternativeDefinition | undefined;
@@ -712,7 +718,9 @@ function runAlternativeOf(
     // the planning simulation drives inserters from inventory levels and can over- or undershoot
     // where the exported clock does not; in game, recordings matched the clock-only check
     let held = holds(result);
-    const cached = verification_cache?.get(signature);
+    const completed = result.primitive_grouped?.verification;
+    const cached = completed?.signature === signature ? { backpressure_loss: completed.backpressure_loss,
+        backpressure_loss_not_tried: undefined, start_dependence: completed.start_dependence } : verification_cache?.get(signature);
     let loss: BackpressureLossAssessment = cached
         ? { backpressure_loss: cached.backpressure_loss, backpressure_loss_not_tried: cached.backpressure_loss_not_tried }
         : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
@@ -958,7 +966,7 @@ function planPrimaryAndTasks(
     };
     const context: ClockAlternativeContext = {
         swings: terminalCountForAlternativePlanning(result),
-        planned_swings: result.swing_backoff_report?.period_limit_pruning?.requested_terminal_swing_count
+        planned_swings: result.primitive_grouped?.terminal_swing_count ?? result.swing_backoff_report?.period_limit_pruning?.requested_terminal_swing_count
             ?? result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,

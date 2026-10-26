@@ -27,6 +27,7 @@ import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exported
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
 import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
 import { TakerOrder, takerOrderName, takerOrdersToCheck } from "../control-logic/inserter/competing-takers";
+import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./primitive-grouped-policy";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -1249,13 +1250,15 @@ export function startDependenceVerdictOf(
     cold_holds: boolean,
     logger: Logger,
     report?: (detail: string) => void,
+    errors: "report" | "throw" = "report",
 ): StartDependence | null {
-    const config = { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: result.used_terminal_swing_count } };
+    const config = verificationPlanningConfigOf(planned_on, result);
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     try {
         report?.("Trying other starts");
         return startDependenceOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items, cold_holds, quiet);
     } catch (error) {
+        if (errors === "throw") throw error;
         logger.log(`Start dependence could not be tried: ${error instanceof Error ? error.message : error}`);
         return null;
     }
@@ -1273,6 +1276,7 @@ export function backpressureLossVerdictOf(
     result: BlueprintGenerationResult,
     logger: Logger,
     report?: (detail: string) => void,
+    errors: "report" | "throw" = "report",
 ): BackpressureLossAssessment {
     // a clock is tried once in a generation, whichever alternative asks: the trials take seconds, and the one that picks the
     // windows of a clock and the one that assesses it are of the same clock
@@ -1280,11 +1284,14 @@ export function backpressureLossVerdictOf(
     let key: string | undefined;
     try {
         key = memo === undefined ? undefined : backpressureLossKey(planned_on, result);
-    } catch {
+    } catch (error) {
+        if (errors === "throw") throw error;
         // a clock whose key cannot be made is tried as before, and fails in the trial if it cannot be tried
     }
-    return memo === undefined || key === undefined ? triedBackpressureLoss(planned_on, result, logger, report)
-        : memo.backpressureLoss(key, () => triedBackpressureLoss(planned_on, result, logger, report));
+    // A previously unavailable legacy trial is not a completed strict assessment.
+    const assess = () => triedBackpressureLoss(planned_on, result, logger, report, errors);
+    const assessed = memo === undefined || key === undefined ? assess() : memo.backpressureLoss(key, assess);
+    return errors === "throw" && assessed.backpressure_loss === null ? assess() : assessed;
 }
 
 function triedBackpressureLoss(
@@ -1292,15 +1299,17 @@ function triedBackpressureLoss(
     result: BlueprintGenerationResult,
     logger: Logger,
     report?: (detail: string) => void,
+    errors: "report" | "throw" = "report",
 ): BackpressureLossAssessment {
     // the config the clock was planned on has its output swings per cycle
-    const config = { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: result.used_terminal_swing_count } };
+    const config = verificationPlanningConfigOf(planned_on, result);
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     try {
         return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
             result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
             result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans))) };
     } catch (error) {
+        if (errors === "throw") throw error;
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Backpressure loss could not be tried: ${reason}`);
         return { backpressure_loss: null, backpressure_loss_not_tried: reason };
@@ -1360,7 +1369,8 @@ export function roundedClockTrial(
 ): RoundedClockTrial {
     assert(Number.isInteger(period_ticks), `A rounded clock has a whole number of ticks, not ${period_ticks}`);
     const clock_windows = windowsRoundedTo(result.clock_windows, period_ticks);
-    const config = { ...planned_on, overrides: { ...planned_on.overrides, derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } };
+    const planning = verificationPlanningConfigOf(planned_on, result);
+    const config = { ...planning, overrides: { ...planning.overrides, derive_clock_windows: false } };
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const as_built = runAsBuiltCheck(config, windows, period_ticks, quietLogger(logger), AS_BUILT_START_PHASES,
@@ -1402,7 +1412,8 @@ export function withSettledOutput(
     const reported = (check: AsBuiltStabilityCheck): BlueprintGenerationResult =>
         ({ ...result, stability_check: { ...result.stability_check, as_built: check } });
     try {
-        const config = { ...planned_on, overrides: { ...planned_on.overrides, derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } };
+        const planning = verificationPlanningConfigOf(planned_on, result);
+        const config = { ...planning, overrides: { ...planning.overrides, derive_clock_windows: false } };
         const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
             [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), period);
         const long_run = longRunOfFreeRunningBuild(config, windows, period, result.stability_check.expected_output_items, quietLogger(logger));
@@ -1420,15 +1431,16 @@ export function withSettledOutput(
  * order and overrides, stays in it.
  */
 function verificationConfigOf(config: Config, result: BlueprintGenerationResult): Config {
+    config = verificationPlanningConfigOf(config, result);
     const windows = new Map(Object.entries(result.clock_windows).map(([id, ranges]) =>
         [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const verification_config = buildAsBuiltConfig({ ...config, overrides: { ...config.overrides,
-        derive_clock_windows: false, terminal_swing_count: result.used_terminal_swing_count } }, windows, result.simulation_duration.ticks);
+        derive_clock_windows: false, terminal_swing_count: verificationTerminalCountOf(result) } }, windows, result.simulation_duration.ticks);
     const fully_controlled = verification_config.inserters.every(inserter => inserter.overrides?.enable_control?.mode !== "AUTO")
         && (verification_config.drills?.configs.every(drill => drill.overrides?.enable_control?.mode !== "AUTO") ?? true);
     // At a forced whole swing count, fractional mode changes only the AUTO swing distribution. Clocked/always/never
     // controls do not use that distribution. Keep the flag when any own-clock fuel inserter still needs AUTO.
-    verification_config.overrides!.use_fractional_swings = fully_controlled && Number.isInteger(result.used_terminal_swing_count)
+    verification_config.overrides!.use_fractional_swings = fully_controlled && Number.isInteger(verificationTerminalCountOf(result))
         ? false : config.overrides?.use_fractional_swings === true;
     return verification_config;
 }
