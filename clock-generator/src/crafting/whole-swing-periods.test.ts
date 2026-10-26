@@ -57,10 +57,10 @@ describe('automatic whole-swing period eligibility', () => {
     it('keeps shared-buffer reporting at 594 while bounding planner retries below the actual 297 count', () => {
         // Supported synthetic regression topology; the acceptance scaffold is not changed. Its prepared count is 297
         // since the takers of one machine are served in one fixed order (it was 302 under the turn rule).
-        const shared: Config = { ...config, chests: config.chests!.filter(chest => chest.id !== 10),
+        const shared: Config = { ...config, chests: config.chests!.filter(chest => chest.id !== 3),
             inserters: config.inserters.map(inserter => ({ ...inserter,
-                source: inserter.source.type === 'chest' && inserter.source.id === 10 ? { type: 'chest', id: 8 } : inserter.source,
-                sink: inserter.sink.type === 'chest' && inserter.sink.id === 10 ? { type: 'chest', id: 8 } : inserter.sink,
+                source: inserter.source.type === 'chest' && inserter.source.id === 3 ? { type: 'chest', id: 4 } : inserter.source,
+                sink: inserter.sink.type === 'chest' && inserter.sink.id === 3 ? { type: 'chest', id: 4 } : inserter.sink,
             })) };
         const failure = refusalOf(shared);
         expect(failure.rejection).toMatchObject({ terminal_swing_count: 297, base_cycle_ticks: 11880,

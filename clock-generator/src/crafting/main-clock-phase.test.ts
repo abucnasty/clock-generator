@@ -51,16 +51,16 @@ describe("shared main-clock phase composition", () => {
     it.each([3, 38, -3, 83])("shifts computed red and every other main predicate together by%s, with one latency and fixed installation order", offset => {
         const canonical = buildAsBuiltConfig(auto, windows, 40);
         const shifted = buildAsBuiltConfig(auto, windows, 40, undefined, "built", offset);
-        expect(clocked(canonical, 3).ranges).toEqual([{ start: 2, end: 6 }]);
-        if (offset === 3) expect(clocked(shifted, 3).ranges).toEqual([{ start: 5, end: 9 }]);
-        expect(clocked(shifted, 3).latency_ticks).toBe(2);
+        expect(clocked(canonical, 9).ranges).toEqual([{ start: 2, end: 6 }]);
+        if (offset === 3) expect(clocked(shifted, 9).ranges).toEqual([{ start: 5, end: 9 }]);
+        expect(clocked(shifted, 9).latency_ticks).toBe(2);
         assertTranslated(canonical, shifted, 40, offset);
     });
 
     it("moves every repeated byproduct opening when its modulus strictly divides the main period", () => {
         const period = 1200;
         const clocks = unplannedInserterClocks(createEntityRegistryFromConfig(auto), period);
-        const red = clocks.get("inserter:3")!;
+        const red = clocks.get("inserter:9")!;
         expect(red.own_clock).toBe(false);
         expect(red.modulus).toBeLessThan(period);
         expect(period % red.modulus).toBe(0);
@@ -72,8 +72,8 @@ describe("shared main-clock phase composition", () => {
     it("aligns future shared predicates at phase crossings rather than merging equal enabled bits at different phases", () => {
         const canonical = buildAsBuiltConfig(auto, windows, 40);
         const plus3 = buildAsBuiltConfig(auto, windows, 40, undefined, "built", 3);
-        expect(mask(canonical, 3, 0, 40)).toBe(mask(plus3, 3, 0, 40));
-        expect(mask(canonical, 3, 2, 40)).not.toBe(mask(plus3, 3, 2, 40));
+        expect(mask(canonical, 9, 0, 40)).toBe(mask(plus3, 9, 0, 40));
+        expect(mask(canonical, 9, 2, 40)).not.toBe(mask(plus3, 9, 2, 40));
         // At offset+kP crossings every translated main control has the same entire future mask.
         for (let offset = 0; offset < 40; offset++) {
             const shifted = buildAsBuiltConfig(auto, windows, 40, undefined, "built", offset);
@@ -86,19 +86,19 @@ describe("shared main-clock phase composition", () => {
     it("keeps a relative single-group margin shift local and leaves canonical red unchanged", () => {
         const moved = new Map(windows);
         const key = (ranges: OpenRange[]) => JSON.stringify(ranges.map(range => [range.start_inclusive, range.end_inclusive]));
-        const group = [...windows].filter(([, ranges]) => key(ranges) === key(windows.get("inserter:2")!)).map(([id]) => id);
+        const group = [...windows].filter(([, ranges]) => key(ranges) === key(windows.get("inserter:10")!)).map(([id]) => id);
         for (const id of group) moved.set(id, [OpenRange.from(5, 21)]);
         const canonical = buildAsBuiltConfig(auto, windows, 40), margin = buildAsBuiltConfig(auto, moved, 40);
-        expect(clocked(margin, 3)).toEqual(clocked(canonical, 3));
-        expect(clocked(margin, 2).ranges).not.toEqual(clocked(canonical, 2).ranges);
+        expect(clocked(margin, 9)).toEqual(clocked(canonical, 9));
+        expect(clocked(margin, 10).ranges).not.toEqual(clocked(canonical, 10).ranges);
         for (const { id } of controlsOf(canonical).filter(row => !group.includes(`inserter:${row.id}`))) {
             for (let tick = 0; tick < 40; tick++) expect(mask(margin, id, tick, 40)).toBe(mask(canonical, id, tick, 40));
         }
     });
 
     it("partitions startup-blackout crossings from equal periodic states without changing recorded bins", () => {
-        const wrap = new Map(windows).set("inserter:2", [OpenRange.from(38, 39)]);
-        const control = clocked(buildAsBuiltConfig(auto, wrap, 40), 2);
+        const wrap = new Map(windows).set("inserter:10", [OpenRange.from(38, 39)]);
+        const control = clocked(buildAsBuiltConfig(auto, wrap, 40), 10);
         expect(control.ranges).toEqual([{ start: 0, end: 1 }]);
         const tick = TickProvider.mutable(0);
         const clock = EnableControl.clocked({ periodDuration: Duration.ofTicks(40),

@@ -37,10 +37,10 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
         vi.spyOn(planning, "withRoomForRandomAmounts").mockImplementation((_made, windows) => ({ windows }));
         const finish = vi.spyOn(grouped, "finishedClock").mockImplementation((_made, windows, _turns, _options, left_open, room) => {
             const clocks = Object.fromEntries([...windows].map(([id, ranges]) => [id, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
-            clocks["inserter:3"] = [{ start: 0, end: 4 }];
+            clocks["inserter:9"] = [{ start: 0, end: 4 }];
             return { used_terminal_swing_count: 2, used_lcm: 1, simulation_duration: Duration.ofTicks(40),
                 crafting_cycle_plan: cycle, serializable_transfer_plan: {}, clock_windows: clocks,
-                unplanned_inserter_clocks: { "inserter:3": { kind: "by-product", modulus: 40, own_clock: false, window: { start: 0, end: 4 } } },
+                unplanned_inserter_clocks: { "inserter:9": { kind: "by-product", modulus: 40, own_clock: false, window: { start: 0, end: 4 } } },
                 stability_check: { holds: true, actual_output_items: 32, expected_output_items: 32,
                     as_built: { holds: true, start_phases_checked: 12, long_run_proven: false, wake_ups: { wake_ups_per_minute: 10 } } },
                 always_on_reasons: Object.fromEntries(left_open), random_margins: room?.random_margins,
@@ -66,11 +66,11 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
         expect(spies.plan.mock.calls[0][0].overrides).toEqual({ terminal_swing_count: 1, lcm: 1 });
         expect(JSON.stringify(config)).toBe(before);
         for (const call of spies.margins.mock.calls) {
-            expect(call[1].has("inserter:3")).toBe(false); // computed overlay is composed by runClockOnBuild
-            expect(call[1].has("inserter:10")).toBe(true); // mixed ingredients share one real arm
-            expect(call[1].get("inserter:10")!.reduce((n, range) => n + range.end_inclusive - range.start_inclusive + 1, 0)).toBe(28);
+            expect(call[1].has("inserter:9")).toBe(false); // computed overlay is composed by runClockOnBuild
+            expect(call[1].has("inserter:11")).toBe(true); // mixed ingredients share one real arm
+            expect(call[1].get("inserter:11")!.reduce((n, range) => n + range.end_inclusive - range.start_inclusive + 1, 0)).toBe(28);
         }
-        expect(result.clock?.clock_windows["inserter:3"]).toEqual([{ start: 0, end: 4 }]);
+        expect(result.clock?.clock_windows["inserter:9"]).toEqual([{ start: 0, end: 4 }]);
         expect(Object.keys(result.clock!.clock_windows)).toHaveLength(12);
         expect(spies.recovery.mock.calls.every(call => call[4] === "throw")).toBe(true);
         expect(spies.starts).not.toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
     it("rejects changed exported controls instead of blessing planning-history windows", () => {
         const spies = arrange();
         const normal = spies.finish.getMockImplementation()!;
-        spies.finish.mockImplementation((...args) => { const result = normal(...args); delete result.clock_windows["inserter:3"]; return result; });
+        spies.finish.mockImplementation((...args) => { const result = normal(...args); delete result.clock_windows["inserter:9"]; return result; });
         expect(() => verifiedPrimitiveGroupedClock(config, { verify_as_built: true, logger: quiet }, 602)).toThrow("primitive exported controls changed");
     });
 });

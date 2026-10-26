@@ -20,19 +20,15 @@
     },
     {
       "id": 2,
-      "recipe": "processing-unit-recycling",
-      "productivity": 0,
-      "crafting_speed": 14.7805,
-      "prototype": "recycler",
+      "recipe": "electromagnetic-science-pack",
+      "productivity": 175,
+      "crafting_speed": 89.625,
+      "prototype": "electromagnetic-plant",
       "quality": "legendary",
       "recipe_quality": "normal",
       "position": {
-        "x": 399,
-        "y": 10
-      },
-      "result_target": {
-        "type": "machine",
-        "id": 3
+        "x": 403,
+        "y": 1
       }
     },
     {
@@ -50,21 +46,101 @@
     },
     {
       "id": 4,
-      "recipe": "electromagnetic-science-pack",
-      "productivity": 175,
-      "crafting_speed": 89.625,
-      "prototype": "electromagnetic-plant",
+      "recipe": "processing-unit-recycling",
+      "productivity": 0,
+      "crafting_speed": 14.7805,
+      "prototype": "recycler",
       "quality": "legendary",
       "recipe_quality": "normal",
       "position": {
-        "x": 403,
-        "y": 1
+        "x": 399,
+        "y": 10
+      },
+      "result_target": {
+        "type": "machine",
+        "id": 3
       }
     }
   ],
   "inserters": [
     {
       "id": 1,
+      "source": {
+        "type": "chest",
+        "id": 3
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": -3.5
+      },
+      "direction": 8
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "chest",
+        "id": 4
+      },
+      "sink": {
+        "type": "chest",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 400.5,
+        "y": -3.5
+      },
+      "direction": 8
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": -1.5
+      },
+      "direction": 8
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 400.5,
+        "y": -1.5
+      },
+      "direction": 8
+    },
+    {
+      "id": 5,
       "source": {
         "type": "belt",
         "id": 1,
@@ -87,11 +163,6 @@
       "prototype": "stack-inserter",
       "quality": "legendary",
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
       "position": {
         "x": 397.5,
         "y": 3.5
@@ -99,10 +170,101 @@
       "direction": 8
     },
     {
-      "id": 2,
+      "id": 6,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 401.5,
+        "y": 3.5
+      },
+      "direction": 8
+    },
+    {
+      "id": 7,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 400.5,
+        "y": 3.5
+      },
+      "direction": 8
+    },
+    {
+      "id": 8,
       "source": {
         "type": "belt",
-        "id": 4,
+        "id": 1,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 404.5,
+        "y": 3.5
+      },
+      "direction": 8
+    },
+    {
+      "id": 9,
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3,
+        "belt_direction": 12
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "advanced-circuit"
+      ],
+      "position": {
+        "x": 397.5,
+        "y": 9.5
+      },
+      "direction": 4
+    },
+    {
+      "id": 10,
+      "source": {
+        "type": "belt",
+        "id": 2,
         "near_lane": 2,
         "pickup_length": 0.5,
         "pickup_layout": "front-entrance",
@@ -117,7 +279,7 @@
       },
       "sink": {
         "type": "machine",
-        "id": 2
+        "id": 4
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -125,11 +287,6 @@
       "filters": [
         "processing-unit"
       ],
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
       "position": {
         "x": 397.5,
         "y": 8.5
@@ -137,171 +294,10 @@
       "direction": 12
     },
     {
-      "id": 3,
-      "source": {
-        "type": "machine",
-        "id": 2
-      },
-      "sink": {
-        "type": "belt",
-        "id": 3
-      },
-      "prototype": "stack-inserter",
-      "quality": "legendary",
-      "stack_size": 16,
-      "filters": [
-        "advanced-circuit"
-      ],
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
-      "position": {
-        "x": 397.5,
-        "y": 9.5
-      },
-      "direction": 4
-    },
-    {
-      "id": 4,
-      "source": {
-        "type": "chest",
-        "id": 8
-      },
-      "sink": {
-        "type": "chest",
-        "id": 7
-      },
-      "prototype": "stack-inserter",
-      "quality": "legendary",
-      "stack_size": 16,
-      "position": {
-        "x": 400.5,
-        "y": -3.5
-      },
-      "direction": 8
-    },
-    {
-      "id": 5,
-      "source": {
-        "type": "machine",
-        "id": 1
-      },
-      "sink": {
-        "type": "chest",
-        "id": 8
-      },
-      "prototype": "stack-inserter",
-      "quality": "legendary",
-      "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
-      "position": {
-        "x": 400.5,
-        "y": -1.5
-      },
-      "direction": 8
-    },
-    {
-      "id": 6,
-      "source": {
-        "type": "machine",
-        "id": 3
-      },
-      "sink": {
-        "type": "machine",
-        "id": 1
-      },
-      "prototype": "stack-inserter",
-      "quality": "legendary",
-      "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
-      "position": {
-        "x": 400.5,
-        "y": 3.5
-      },
-      "direction": 8
-    },
-    {
-      "id": 7,
-      "source": {
-        "type": "chest",
-        "id": 10
-      },
-      "sink": {
-        "type": "chest",
-        "id": 9
-      },
-      "prototype": "stack-inserter",
-      "quality": "legendary",
-      "stack_size": 16,
-      "position": {
-        "x": 401.5,
-        "y": -3.5
-      },
-      "direction": 8
-    },
-    {
-      "id": 8,
-      "source": {
-        "type": "machine",
-        "id": 4
-      },
-      "sink": {
-        "type": "chest",
-        "id": 10
-      },
-      "prototype": "stack-inserter",
-      "quality": "legendary",
-      "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
-      "position": {
-        "x": 401.5,
-        "y": -1.5
-      },
-      "direction": 8
-    },
-    {
-      "id": 9,
-      "source": {
-        "type": "machine",
-        "id": 3
-      },
-      "sink": {
-        "type": "machine",
-        "id": 4
-      },
-      "prototype": "stack-inserter",
-      "quality": "legendary",
-      "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
-      "position": {
-        "x": 401.5,
-        "y": 3.5
-      },
-      "direction": 8
-    },
-    {
-      "id": 10,
+      "id": 11,
       "source": {
         "type": "belt",
-        "id": 2,
+        "id": 4,
         "near_lane": 1,
         "pickup_length": 1,
         "pickup_layout": "bend-right-upstream",
@@ -321,11 +317,6 @@
       "prototype": "stack-inserter",
       "quality": "legendary",
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
       "position": {
         "x": 401.5,
         "y": 8.5
@@ -333,7 +324,7 @@
       "direction": 8
     },
     {
-      "id": 11,
+      "id": 12,
       "source": {
         "type": "belt",
         "id": 5,
@@ -356,49 +347,9 @@
       "prototype": "stack-inserter",
       "quality": "legendary",
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
       "position": {
         "x": 402.5,
         "y": 8.5
-      },
-      "direction": 8
-    },
-    {
-      "id": 12,
-      "source": {
-        "type": "belt",
-        "id": 1,
-        "near_lane": 1,
-        "pickup_length": 1,
-        "pickup_layout": "side-straight",
-        "pickup_capture": {
-          "status": "supported",
-          "model": "belt",
-          "model_version": 2,
-          "entity_type": "transport-belt",
-          "entity_name": "turbo-transport-belt",
-          "sidecar_version": "0.15.0"
-        }
-      },
-      "sink": {
-        "type": "machine",
-        "id": 4
-      },
-      "prototype": "stack-inserter",
-      "quality": "legendary",
-      "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      },
-      "position": {
-        "x": 404.5,
-        "y": 3.5
       },
       "direction": 8
     }
@@ -423,11 +374,11 @@
       "type": "turbo-transport-belt",
       "lanes": [
         {
-          "ingredient": "superconductor",
+          "ingredient": "processing-unit",
           "stack_size": 4
         },
         {
-          "ingredient": "holmium-plate",
+          "ingredient": "",
           "stack_size": 4
         }
       ]
@@ -447,11 +398,11 @@
       "type": "turbo-transport-belt",
       "lanes": [
         {
-          "ingredient": "processing-unit",
+          "ingredient": "superconductor",
           "stack_size": 4
         },
         {
-          "ingredient": "",
+          "ingredient": "holmium-plate",
           "stack_size": 4
         }
       ]
@@ -474,38 +425,27 @@
   "chests": [
     {
       "type": "infinity-chest",
-      "id": 7,
-      "item_filter": [],
+      "id": 1,
       "remove_unfiltered_items": true,
       "position": {
-        "x": 400.5,
+        "x": 401.5,
         "y": -4.5
-      }
-    },
-    {
-      "type": "buffer-chest",
-      "id": 8,
-      "storage_size": 48,
-      "item_filter": "electromagnetic-science-pack",
-      "prototype": "steel-chest",
-      "position": {
-        "x": 400.5,
-        "y": -2.5
-      }
+      },
+      "item_filter": []
     },
     {
       "type": "infinity-chest",
-      "id": 9,
-      "item_filter": [],
+      "id": 2,
       "remove_unfiltered_items": true,
       "position": {
-        "x": 401.5,
+        "x": 400.5,
         "y": -4.5
-      }
+      },
+      "item_filter": []
     },
     {
       "type": "buffer-chest",
-      "id": 10,
+      "id": 3,
       "storage_size": 48,
       "item_filter": "electromagnetic-science-pack",
       "prototype": "steel-chest",
@@ -513,10 +453,17 @@
         "x": 401.5,
         "y": -2.5
       }
+    },
+    {
+      "type": "buffer-chest",
+      "id": 4,
+      "storage_size": 48,
+      "item_filter": "electromagnetic-science-pack",
+      "prototype": "steel-chest",
+      "position": {
+        "x": 400.5,
+        "y": -2.5
+      }
     }
-  ],
-  "overrides": {
-    "lcm": 1,
-    "terminal_swing_count": 1
-  }
+  ]
 }

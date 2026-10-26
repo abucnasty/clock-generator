@@ -47,16 +47,16 @@ describe("pure primitive grouped construction", () => {
 
     it("counts final buffered takers once while preserving the internal drain and direct dependency", () => {
         const artifact = constructPrimitiveGroupedHands(config);
-        expect(artifact.final_output_inserter_ids).toEqual(["inserter:4", "inserter:7"]);
-        expect(artifact.inserters.find(inserter => inserter.id === "inserter:5")!.role).toBe("internal-buffer-drain");
-        expect(artifact.inserters.find(inserter => inserter.id === "inserter:4")!.role).toBe("terminal-output");
-        expect(artifact.direct_dependencies).toEqual([{ source: "machine:2", target: "machine:3" }]);
+        expect(artifact.final_output_inserter_ids).toEqual(["inserter:2", "inserter:1"]);
+        expect(artifact.inserters.find(inserter => inserter.id === "inserter:4")!.role).toBe("internal-buffer-drain");
+        expect(artifact.inserters.find(inserter => inserter.id === "inserter:2")!.role).toBe("terminal-output");
+        expect(artifact.direct_dependencies).toEqual([{ source: "machine:4", target: "machine:3" }]);
         expect(artifact.transfer_plan.entities).toHaveLength(11); // twelve real arms, red only is outside demand accounting
         const count = (id: number) => artifact.transfer_plan.entities.find(entity => entity.entity_number === id)!.item_transfers[0];
-        for (const id of [4, 5, 7, 8]) expect(count(id)).toMatchObject({ numerator: 1, denominator: 1 });
+        for (const id of [1, 2, 3, 4]) expect(count(id)).toMatchObject({ numerator: 1, denominator: 1 });
         expect(artifact.transfer_plan.entities.some(entity => entity.entity_id.includes("direct"))).toBe(false);
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {
-            for (const id of [2, 4, 5, 7, 8]) expect(attempt.result.planned_windows[`inserter:${id}`]).toBeDefined();
+            for (const id of [1, 2, 3, 4, 10]) expect(attempt.result.planned_windows[`inserter:${id}`]).toBeDefined();
         }
     });
 
@@ -106,9 +106,9 @@ describe("pure primitive grouped construction", () => {
             }
         }
         expect(checked).toBe(16);
-        // before the drains moved (ede1733f): machine 4's turn (9) at 38, its drain (8) left at 2 with machine 1's (5): 36 ticks
-        // of 0.41 packs, 14.79, over its block of 12 less one; machine 1's turn (6) at 18 came 16 ticks after its drain, 6.57 packs
-        const second = registry.getEntityByIdOrThrow(EntityId.forMachine(4)) as Machine;
+        // before the drains moved: machine 2's turn (6) at 38, its drain (3) left at 2 with machine 1's (4): 36 ticks
+        // of 0.41 packs, 14.79, over its block of 12 less one; machine 1's turn (7) at 18 came 16 ticks after its drain, 6.57 packs
+        const second = registry.getEntityByIdOrThrow(EntityId.forMachine(2)) as Machine;
         expect(heldAtTurn(second, 38, [2], 40)).toBeCloseTo(14.788, 3);
         expect(roomAtTurn(second, heldAtTurn(second, 38, [2], 40))).toBe(false);
         expect(heldAtTurn(second, 18, [2], 40)).toBeCloseTo(6.5725, 3);
@@ -118,30 +118,30 @@ describe("pure primitive grouped construction", () => {
     it("retains the computed rejected-result control in composed windows and control keys without a planned red hand", () => {
         const artifact = constructPrimitiveGroupedHands(config);
         const registry = createEntityRegistryFromConfig(config);
-        const red = unplannedInserterClocks(registry, artifact.period_ticks).get("inserter:3")!;
-        expect(artifact.retained_clocks["inserter:3"]).toEqual({ kind: red.kind, modulus: red.modulus, own_clock: false,
+        const red = unplannedInserterClocks(registry, artifact.period_ticks).get("inserter:9")!;
+        expect(artifact.retained_clocks["inserter:9"]).toEqual({ kind: red.kind, modulus: red.modulus, own_clock: false,
             window: { start: red.window.start_inclusive, end: red.window.end_inclusive } });
-        expect(artifact.transfer_plan.entities.some(entity => entity.entity_number === 3)).toBe(false);
+        expect(artifact.transfer_plan.entities.some(entity => entity.entity_number === 9)).toBe(false);
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {
-            expect(attempt.result.planned_windows["inserter:3"]).toBeUndefined();
-            expect(attempt.result.control_windows["inserter:3"]).toBeDefined();
-            expect(attempt.result.dispositions.find(row => row.inserter_id === "inserter:3")).toMatchObject({ control: "clocked", basis: "computed-by-product" });
-            expect(JSON.parse(attempt.result.control_key).retained_clocks["inserter:3"]).toEqual(artifact.retained_clocks["inserter:3"]);
+            expect(attempt.result.planned_windows["inserter:9"]).toBeUndefined();
+            expect(attempt.result.control_windows["inserter:9"]).toBeDefined();
+            expect(attempt.result.dispositions.find(row => row.inserter_id === "inserter:9")).toMatchObject({ control: "clocked", basis: "computed-by-product" });
+            expect(JSON.parse(attempt.result.control_key).retained_clocks["inserter:9"]).toEqual(artifact.retained_clocks["inserter:9"]);
         }
     });
 
     it("keeps both mixed items on one arm and budgets their combined occupancy with the actual stacked-belt slack", () => {
         const artifact = constructPrimitiveGroupedHands(config);
-        const mixed = artifact.transfer_plan.entities.find(entity => entity.entity_number === 10)!;
+        const mixed = artifact.transfer_plan.entities.find(entity => entity.entity_number === 11)!;
         expect(mixed.item_transfers.map(item => [item.item_name, item.numerator, item.denominator]).sort()).toEqual([
             ["holmium-plate", 64, 121], ["superconductor", 64, 121],
         ]);
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {
-            expect(attempt.result.busy).not.toContain("inserter:10");
-            const ranges = attempt.result.planned_windows["inserter:10"];
+            expect(attempt.result.busy).not.toContain("inserter:11");
+            const ranges = attempt.result.planned_windows["inserter:11"];
             // Two different item hands share one11-tick arm. Stack4 supply adds4 slack ticks, not16.
             expect(ranges.reduce((ticks, range) => ticks + range.end - range.start + 1, 0)).toBeGreaterThan(2 * 11);
-            expect(Object.keys(attempt.result.planned_windows).filter(id => id === "inserter:10")).toHaveLength(1);
+            expect(Object.keys(attempt.result.planned_windows).filter(id => id === "inserter:11")).toHaveLength(1);
         }
     });
 
@@ -151,7 +151,7 @@ describe("pure primitive grouped construction", () => {
         expect(compact.result.kind).toBe("constructed");
         if (compact.result.kind !== "constructed") throw new Error(compact.result.reason);
         // Blue and battery both supply the capacitor chain; direct green placement adds no synthetic transfer stage.
-        expect(compact.result.planned_windows["inserter:2"][0].start).toBe(compact.result.planned_windows["inserter:11"][0].start);
+        expect(compact.result.planned_windows["inserter:10"][0].start).toBe(compact.result.planned_windows["inserter:12"][0].start);
     });
 
     it.each(["iron-plate", "processing-unit"])("preserves zero/multiple accepted-result refusal for target recipe %s", recipe => {
@@ -164,10 +164,10 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("keeps explicit Always and missing physical outlet coverage as refusals", () => {
-        const forced = { ...config, inserters: config.inserters.map(inserter => inserter.id === 2 ? { ...inserter,
+        const forced = { ...config, inserters: config.inserters.map(inserter => inserter.id === 10 ? { ...inserter,
             overrides: { enable_control: { mode: "ALWAYS" as const } } } : inserter) };
         expect(() => constructPrimitiveGroupedHands(forced)).toThrow(/requires automatic/);
-        expect(() => constructPrimitiveGroupedHands({ ...config, inserters: config.inserters.filter(inserter => inserter.id !== 3) })).toThrow();
+        expect(() => constructPrimitiveGroupedHands({ ...config, inserters: config.inserters.filter(inserter => inserter.id !== 9) })).toThrow();
     });
 
     it.each([500000, 600000])("rejects primitive period %s before computing/unrolling by-product clocks", period => {
@@ -204,11 +204,11 @@ describe("pure primitive grouped construction", () => {
         const cycle = CraftingCyclePlan.create(target, registry, fraction(1));
         const paths = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === target.machine_production_rate.item).map(machine => outputPathOf(machine, registry));
         const clocks = unplannedInserterClocks(registry, 40);
-        const composition: GroupedHandsComposition = { retained_clocks: clocks, output_paths: paths, direct_sources: new Map([["machine:3", ["machine:2"]]]) };
+        const composition: GroupedHandsComposition = { retained_clocks: clocks, output_paths: paths, direct_sources: new Map([["machine:3", ["machine:4"]]]) };
         const overloaded = EntityTransferCountMap.fromEntries([...cycle.entity_transfer_map].map(([id, transfer]): [typeof id, typeof transfer] => [id,
-            id.number === 10 && EntityId.isInserter(id) ? { ...transfer, item_transfers: transfer.item_transfers.map(item => ({ ...item, transfer_count: fraction(100) })) } : transfer]));
+            id.number === 11 && EntityId.isInserter(id) ? { ...transfer, item_transfers: transfer.item_transfers.map(item => ({ ...item, transfer_count: fraction(100) })) } : transfer]));
         expect(() => groupedHandsPlan(registry, overloaded, 1, 40, true, undefined, null, composition)).toThrow(/do not follow each other under the limit/);
-        const forged = new Map([["inserter:2", { ...clocks.get("inserter:3")!, inserter_id: EntityId.forInserter(2) }]]);
+        const forged = new Map([["inserter:10", { ...clocks.get("inserter:9")!, inserter_id: EntityId.forInserter(10) }]]);
         expect(() => groupedHandsPlan(registry, cycle.entity_transfer_map, 1, 40, true, undefined, null,
             { ...composition, retained_clocks: forged })).toThrow(/not a retained/);
     });
