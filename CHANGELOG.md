@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.23.0] - Unreleased
 
 ### Added
+- A build whose planned clock period is too long to check, such as one with large buffer chests between machines, now gets a clock: Small batches moves a few hands at a time and is checked for its margin, its starts and recovery after a loss, as every clock is.
 - Machine summaries show every recipe result, its production rate, and its direct or inserter output routes.
 - Clock inputs that pick up from supported belt bends.
 - A recycler can put its results straight into another machine, which it fills as a mining drill does, past the machine's insertion limit.

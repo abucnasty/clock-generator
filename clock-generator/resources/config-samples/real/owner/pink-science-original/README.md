@@ -20,8 +20,8 @@ files marked unsupported bend must be captured again, since changing a saved war
 `pink-science-original.json` is what the clock generator's own import makes of a fresh Sidecar export of the left cell
 of this blueprint, with only Target Output's rate and copies set: no inserter is set to Always enabled, and no
 swing count or LCM is fixed. Generate picks the clock for all twelve inserters. It is a 40-tick clock with the two
-arms that take supercapacitors from each plant taking turns (the science plants' drains and the output inserters move
-with their plant's turn), 1,040.6 wake-ups a minute, no inserter left always on, and every loss the check tries is
+arms that take supercapacitors from each plant taking turns (each science plant's drain into its steel buffer moves
+with that plant's turn), 1,040.6 wake-ups a minute, no inserter left always on, and every loss the check tries is
 survived.
 
 The supercapacitor plants run at 99.56% of their capacity at this rate, so the margin is thin: the clock keeps both
