@@ -160,7 +160,7 @@ describe("why the selected clock does not meet goal 1", () => {
 
     it("is nothing holds where no clock holds the target, with the closest rate and the clocks that could not be made", () => {
         const not_made: NotMadeClock[] = [
-            { id: "even-hands", label: "Even hands", reason: "even hands are only made where every inserter takes from a machine or a chest; inserter:6 does not" },
+            { id: "even-hands", label: "Even hands", reason: "only made where every inserter takes from a machine or a chest; inserter 6 takes from a belt" },
             { id: "shifted-swings", label: "Shifted swings", reason: "no shifted round of swings passes the clock-only check" },
         ];
         const short = clock({ label: "1 output swing per cycle", verdict: "unstable", meets_target_rate: false,
@@ -169,8 +169,8 @@ describe("why the selected clock does not meet goal 1", () => {
             1, { target_items_per_second: 40, backed_up_belts: true, not_made })).toEqual({
             cause: "nothing holds",
             message: "No clock holds the target rate of 40 a second. The closest, 1 output swing per cycle, moves 30.36 a second, 9.64 "
-                + "under the target. Not made: Even hands (even hands are only made where every inserter takes from a machine or a chest; "
-                + "inserter:6 does not); Shifted swings (no shifted round of swings passes the clock-only check).",
+                + "under the target. Not made: Even hands (only made where every inserter takes from a machine or a chest; "
+                + "inserter 6 takes from a belt); Shifted swings (no shifted round of swings passes the clock-only check).",
         });
         const over = { ...short, assessment: { ...short.assessment, items_per_second: 126.09375 } };
         expect(whyNotStable([over], 0, { target_items_per_second: 120, backed_up_belts: false, not_made: [] })?.message)

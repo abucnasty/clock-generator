@@ -13,8 +13,11 @@ function assertNoDrills(registry: ReadableEntityRegistry): void {
 }
 
 function assertEvenHandsSource(inserter: Inserter): void {
+    // the reason names the inserter as the app does ("inserter 5") and what it takes from instead ("a belt")
+    const [kind, number] = inserter.entity_id.id.split(":");
+    const source = inserter.source.entity_id.id.split(":")[0].replace(/-/g, " ");
     assert(EntityId.isMachine(inserter.source.entity_id) || EntityId.isChest(inserter.source.entity_id),
-        `even hands are only made where every inserter takes from a machine or a chest; ${inserter.entity_id.id} does not`);
+        `only made where every inserter takes from a machine or a chest; ${kind} ${number} takes from a ${source}`);
 }
 
 /**

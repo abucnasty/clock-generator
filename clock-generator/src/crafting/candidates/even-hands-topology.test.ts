@@ -19,7 +19,7 @@ describe("even-hands hard topology preflight", () => {
         const plan = vi.spyOn(planning, "planRun").mockImplementation(() => { throw new Error("planning must not run"); });
         const before = JSON.stringify(belt);
         expect(belt.inserters.some(inserter => inserter.source.type === "belt")).toBe(true);
-        expect(() => evenHandsClock(belt)).toThrow("even hands are only made where every inserter takes from a machine or a chest");
+        expect(() => evenHandsClock(belt)).toThrow("only made where every inserter takes from a machine or a chest");
         expect(plan).not.toHaveBeenCalled();
         expect(JSON.stringify(belt)).toBe(before);
     });
