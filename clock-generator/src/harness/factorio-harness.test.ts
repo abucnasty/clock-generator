@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
+    assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, stagedBuildOrder, clockOfBlueprintString, clockPeriodTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
@@ -510,8 +510,9 @@ describe("a clock the build came with", () => {
         const swapped = { blueprint: "0", schedule: { counted_ticks: 100, inserter_combinators: [] } };
         await expect(run({ copies: 3 })).rejects.toThrow("it needs a clock");
         await expect(run({ copies: 0, clock: swapped, config: {} })).rejects.toThrow("whole number of copies");
-        await expect(run({ copies: 2, clock: swapped, config: {}, staged_start: { build_order: "ascending" } })).rejects.toThrow("staged start places one cell");
         await expect(run({ copies: 3, clock: swapped, config: {} })).rejects.toThrow("Factorio not found");
+        // a staged start builds the inserters of every copy
+        await expect(run({ copies: 2, clock: swapped, config: {}, staged_start: { build_order: "ascending" } })).rejects.toThrow("Factorio not found");
     });
 
     it("is refused with an unclocked run, a staged start, or a blueprint it does not fit", async () => {
@@ -519,5 +520,93 @@ describe("a clock the build came with", () => {
         await expect(run({ built_clock, unclocked: true }, counter(215))).rejects.toThrow("kept or replaced");
         await expect(run({ built_clock, staged_start: { build_order: "ascending" } }, counter(215))).rejects.toThrow("kept or replaced");
         await expect(run({ built_clock }, counter(100))).rejects.toThrow("not the 216 asked for");
+    });
+});
+
+describe("the order a staged start builds the inserters of the cell in", () => {
+    const one = [new Map([[2, { x: 1, y: 0 }], [1, { x: 0, y: 0 }], [3, { x: 2, y: 0 }]])];
+    const two = [one[0], new Map([[1, { x: 13, y: 0 }], [3, { x: 15, y: 0 }], [2, { x: 14, y: 0 }]])];
+    const ids = (order: { config_id: number; copy: number }[]) => order.map(it => `${it.config_id}.${it.copy}`);
+
+    it("is the config ids up or down, or the ones named first, in a build of one copy", () => {
+        expect(stagedBuildOrder(one, "ascending")).toEqual([
+            { config_id: 1, copy: 0, x: 0, y: 0 }, { config_id: 2, copy: 0, x: 1, y: 0 }, { config_id: 3, copy: 0, x: 2, y: 0 }]);
+        expect(ids(stagedBuildOrder(one, undefined))).toEqual(["1.0", "2.0", "3.0"]);
+        expect(ids(stagedBuildOrder(one, "descending"))).toEqual(["3.0", "2.0", "1.0"]);
+        expect(ids(stagedBuildOrder(one, [3]))).toEqual(["3.0", "1.0", "2.0"]);
+    });
+
+    it("builds each config id in every copy, the copies in their order, and reverses exactly that for descending", () => {
+        const ascending = stagedBuildOrder(two, "ascending");
+        expect(ids(ascending)).toEqual(["1.0", "1.1", "2.0", "2.1", "3.0", "3.1"]);
+        expect(ascending[1]).toEqual({ config_id: 1, copy: 1, x: 13, y: 0 });
+        expect(stagedBuildOrder(two, "descending")).toEqual([...ascending].reverse());
+        expect(ids(stagedBuildOrder(two, [2, 3]))).toEqual(["2.0", "2.1", "3.0", "3.1", "1.0", "1.1"]);
+    });
+
+    it("refuses a named config id that matches no inserter of a copy", () => {
+        expect(() => stagedBuildOrder(one, [4])).toThrow("names config inserter 4, which matches no inserter of the build (matched: 1, 2, 3)");
+        const short = [two[0], new Map([[1, { x: 13, y: 0 }]])];
+        expect(() => stagedBuildOrder(short, [2])).toThrow("matches no inserter of the build in copy 2 of 2 (matched: 1)");
+    });
+});
+
+describe("a clock placed first in a staged start", () => {
+    const readings = (from: number, counters: number[]) => counters.map((counter, index) => ({ tick: from + index, counter }));
+    const to13 = readings(500, [0, ...Array.from({ length: 13 }, (_, index) => index + 1)]);
+
+    it("is read after every tick from its placement until its counter first reads the phase", () => {
+        expect(() => assertClockPriming(to13, 13, 40)).not.toThrow();
+        // phase 0: the inserters are wired in the tick it is placed in, before it has counted
+        expect(() => assertClockPriming(readings(500, [0]), 0, 40)).not.toThrow();
+        // a counter that wraps reads the phase in its second period
+        expect(() => assertClockPriming(readings(500, [0, 38, 39, 40, 1, 2]), 2, 40)).not.toThrow();
+    });
+
+    it("is refused when a tick was not read, the phase was read before, never read, or read too late", () => {
+        expect(() => assertClockPriming([], 0, 40)).toThrow("never read");
+        expect(() => assertClockPriming([{ tick: 500, counter: 0 }, { tick: 502, counter: 2 }], 2, 40)).toThrow("read at tick 500 and next at tick 502");
+        expect(() => assertClockPriming(readings(500, [0, 1, 2, 3]), 2, 40)).toThrow("read 2 at tick 502, before its last reading");
+        expect(() => assertClockPriming(readings(500, [0, 1, 1, 1]), 7, 40)).toThrow("never read 7: it read 0, 1, 1, 1");
+        const slow = readings(500, [...Array.from({ length: 83 }, () => 1), 5]);
+        expect(() => assertClockPriming(slow, 5, 40)).toThrow("took 83 ticks to read 5, over two periods of 40 ticks and two");
+    });
+
+    const placed = { tick: 500, counter: 0, main_unit: 900, combinators: [900, 901, 902], cell_ghosts: 20,
+        stock: [{ type: "assembling-machine", name: "electromagnetic-plant", unit_number: 7, input: 0, output: 0 }] };
+    const attach = { ...placed, tick: 513, counter: 13, placed_tick: 500,
+        stock: [{ type: "assembling-machine", name: "electromagnetic-plant", unit_number: 7, input: 0, output: 0 }, { type: "container", name: "steel-chest", unit_number: 8 }] };
+    const priming = { target: 13, placed, trace: to13 };
+
+    it("has its inserters wired to the same clock, in the tick of its last reading, with the counter at the phase and the machines empty", () => {
+        expect(() => assertClockAttached(priming, attach)).not.toThrow();
+        // the game writes a list of one as an object of its keys
+        expect(() => assertClockAttached(priming, { ...attach, combinators: { 1: 900, 2: 901, 3: 902 } })).not.toThrow();
+    });
+
+    it("is refused when the inserters were wired in another tick, at another counter, to another clock, or after some were built", () => {
+        expect(() => assertClockAttached(priming, undefined)).toThrow("did not report");
+        expect(() => assertClockAttached(priming, { ...attach, tick: 514 })).toThrow("wired at tick 514 to a clock placed at tick 500, not at tick 513");
+        expect(() => assertClockAttached(priming, { ...attach, counter: 14 })).toThrow("read 14 when the inserters were wired, not 13");
+        expect(() => assertClockAttached(priming, { ...attach, combinators: [900, 901, 903] })).toThrow("not the one placed first");
+        expect(() => assertClockAttached(priming, { ...attach, main_unit: 901 })).toThrow("not the one placed first");
+        expect(() => assertClockAttached(priming, { ...attach, cell_ghosts: 18 })).toThrow("2 inserters of the cell were built while the clock ran alone");
+        const filled = { ...attach, stock: [{ type: "furnace", name: "recycler", unit_number: 9, input: 3, output: 0 }] };
+        expect(() => assertClockAttached(priming, filled)).toThrow("recycler (unit 9): 3 in, 0 out");
+    });
+
+    it("is asked for with a generated clock and a phase its counter reads", async () => {
+        const run = (more: object) => recordInFactorio({
+            factorio: "/nowhere/factorio", save: "/nowhere/save.zip", blueprint: "0", out: "/nowhere/recording.json",
+            ticks: 600, warmup_ticks: 300, seed: [], unclocked: false, game_speed: 1000, timeout_seconds: 1, log: () => { }, ...more,
+        });
+        const swapped = { blueprint: "0", schedule: { counted_ticks: 40, inserter_combinators: [] } };
+        await expect(run({ config: {}, staged_start: { build_order: "descending", clock_phase: 13 } })).rejects.toThrow("only with a generated clock");
+        await expect(run({ clock: swapped, config: {}, unclocked: true, staged_start: { clock_phase: 13 } })).rejects.toThrow("only with a generated clock");
+        for (const phase of [-1, 41, 1.5]) {
+            await expect(run({ clock: swapped, config: {}, staged_start: { clock_phase: phase } })).rejects.toThrow(`from 0 to its period of 40 ticks, not ${phase}`);
+        }
+        await expect(run({ clock: swapped, config: {}, copies: 2, staged_start: { build_order: "descending", clock_phase: 13 } })).rejects.toThrow("Factorio not found");
+        await expect(run({ clock: swapped, config: {}, staged_start: { clock_phase: 0 } })).rejects.toThrow("Factorio not found");
     });
 });
