@@ -78,6 +78,9 @@ describe("generateClockForConfig", () => {
         // inserters that take from one machine"), and a clock is checked under each order of them: the 1-swing clock no
         // longer gets back after the bioflux stops (no recovery, below) and the 2-swing clock makes nothing in the as-built
         // check (0 of 800), so the 5-swing clock is the only one that gets back from every loss (blast of 2026-10-26).
+        // The 2-swing clock's 0 is the simulator's, not the game's: on the scaffold the game moved 800 in every period from
+        // the 11th to the 37th (2026-10-26), where the takers that both held part of a hand were not served in one order
+        // (docs/simulator.md, "Two inserters that take from one machine", open).
         it("selects the 5-swing clock, the only one that gets back from every loss", () => {
             const stable = alternatives.filter(a => a.verdict === "stable");
             expect(stable.map(a => a.label).sort()).toEqual(["Batched swings: 5 output swings per cycle"]);
