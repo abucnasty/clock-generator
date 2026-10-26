@@ -182,12 +182,14 @@ describe('automatic whole-swing period eligibility', () => {
         expect(generate).toHaveBeenCalledTimes(1);
     });
 
-    it.each(['Missing inserter coverage', 'Insufficient capacity', 'Invalid filter', 'Clock period of 14568400 ticks exceeds maximum allowed 500000 ticks'])
-        ('propagates unrelated errors without interpreting their text: %s', message => {
-            const failure = new Error(message), generate = vi.fn(() => { throw failure; });
-            expect(() => generateClockWithSwingBackoff(config, { logger: quiet }, generate)).toThrow(failure);
-            expect(generate).toHaveBeenCalledTimes(1);
-        });
+    it.each([
+        'Missing inserter coverage', 'Insufficient capacity', 'Invalid filter',
+        'Clock period of 14568400 ticks exceeds maximum allowed 500000 ticks',
+    ])('propagates unrelated errors without interpreting their text: %s', message => {
+        const failure = new Error(message), generate = vi.fn(() => { throw failure; });
+        expect(() => generateClockWithSwingBackoff(config, { logger: quiet }, generate)).toThrow(failure);
+        expect(generate).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('strict period limits and existing arithmetic policies', () => {
