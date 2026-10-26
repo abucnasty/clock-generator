@@ -542,7 +542,9 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         state_transition_history,
         fuel_levels: simulated.fuel_levels,
         machine_stock: simulated.machine_stock,
-        timeline_recording: simulated.timeline_recording,
+        // the warm-up counts in full where it stopped at a repeating state: the recording is of the period after it
+        timeline_recording: options.timeline_recording?.settle_periods !== undefined && simulated.timeline_recording
+            ? { ...simulated.timeline_recording, ticks_before_recording: warmup_period.ticks } : simulated.timeline_recording,
         stability_check: output.stability_check,
         total_expected_output: output.total_expected_output,
         used_terminal_swing_count: output.used_terminal_swing_count,
@@ -806,7 +808,8 @@ interface RunPeriods {
 function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
     const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
-    const requested_warmup_periods = options.warmup_periods ?? 10;
+    // a recording of a settled period runs the build that long from its cold start, as the long run of the clock does
+    const requested_warmup_periods = Math.max(options.warmup_periods ?? 10, options.timeline_recording?.settle_periods ?? 0);
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
     const warmup_periods = Math.min(requested_warmup_periods, Math.floor((MAX_SIMULATION_TICKS - 1) / duration.ticks));
     if (warmup_periods < requested_warmup_periods) {

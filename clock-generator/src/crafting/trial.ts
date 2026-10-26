@@ -140,6 +140,11 @@ export interface AsBuiltStabilityCheck {
      * made no long run; false when the long run ran its full length without a state coming up again.
      */
     long_run_proven?: boolean;
+    /**
+     * Tick of the long run the judged part starts at (a build that needs time to settle is judged from a later one);
+     * set with `wake_ups`, where the check made a long run.
+     */
+    first_judged_tick?: number;
     /** Clock periods in the repeating cycle the proven long run was judged on */
     long_run_cycle_periods?: number;
     /**
@@ -903,6 +908,7 @@ export function runAsBuiltCheck(
             if (stock) {
                 check.wake_ups = passed.run.check.wake_ups;
                 check.long_run_proven = passed.run.check.long_run_proven;
+                check.first_judged_tick = passed.run.check.first_judged_tick;
                 check.long_run_cycle_periods = passed.run.check.long_run_cycle_periods;
             }
         } else {
@@ -914,6 +920,7 @@ export function runAsBuiltCheck(
                 check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config),
                     long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
                 check.long_run_proven = long_run.proven;
+                check.first_judged_tick = long_run.first_judged_tick;
                 if (long_run.results_taken !== undefined) {
                     check.results_taken = long_run.results_taken;
                 }
