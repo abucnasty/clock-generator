@@ -12,6 +12,36 @@ import { buildValidationIssues } from '../utils/buildValidation';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
+it('answers output-transfer queries from the engine for both recycler products and their actual separate routes', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    const config: Config = {
+        target_output: { recipe: 'supercapacitor', items_per_second: 1, copies: 1 },
+        machines: [
+            { id: 1, recipe: 'processing-unit-recycling', crafting_speed: 1, productivity: 0, prototype: 'recycler', result_target: { type: 'machine', id: 2 } },
+            { id: 2, recipe: 'supercapacitor', crafting_speed: 1, productivity: 0, prototype: 'electromagnetic-plant' },
+        ],
+        inserters: [{ id: 7, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 3 }, filters: ['advanced-circuit'], stack_size: 1 }],
+        belts: [{ id: 3, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
+        chests: [],
+    } as Config;
+    const answer = await send({ type: 'query', requestId: 701, query: { kind: 'output-transfers', config } });
+    expect(answer).toMatchObject({ type: 'answer', requestId: 701, answer: {
+        generation_issues: [],
+        transfers: expect.arrayContaining([
+            { source: { type: 'machine', id: 1 }, physical_target: { type: 'machine', id: 2 }, mechanism: 'result-placement', status: 'known', results: [
+                { item_name: 'electronic-circuit', direct: 'accepted', inserters: [], coverage: 'covered' },
+                { item_name: 'advanced-circuit', direct: 'rejected', inserters: [{ inserter_id: 7, target: { type: 'belt', id: 3 } }], coverage: 'covered' },
+            ] },
+        ]),
+    } });
+});
+
 it.each(['blocked', 'markers'] as const)('keeps blocked container slots through Sidecar paste (%s), save/reload and engine validation', async spelling => {
     vi.resetModules();
     const posted: WorkerResponse[] = [];

@@ -22,8 +22,10 @@ import { ChartSwatch } from './BeltChart';
 import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { FlowNodeHandles } from './FlowNodeHandles';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
+import { useFlowFitBounds } from '../hooks/useFlowFitBounds';
 import { useFlowPortUpdates } from '../hooks/useFlowPortUpdates';
 import { FlowTileBackground } from './FlowTileBackground';
+import { FlowFitButton } from './FlowFitButton';
 
 const NODE_HEIGHT = 168;
 const number = (value: number) => formatNumberText(value, { maxDecimals: 2 });
@@ -156,6 +158,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
     }), [graph, index, tick, effects, focus]);
     const measured = useMeasuredFlowNodes(nodes);
     const routes = useFlowRoutes(graph.nodes, graph.edges, measured.measurements);
+    const fitGraph = useFlowFitBounds(graph.nodes, routes, measured.measurements, !inspection.replayViewport);
     useFlowPortUpdates(graph.nodes);
     const edges = useMemo(() => graph.edges.map(edge => {
         const from = nodeKeys.get(edge.source)!;
@@ -232,14 +235,14 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
             '& .react-flow__controls-button': { bgcolor: tokens.surface.panel, color: tokens.text.primary, borderColor: tokens.control.border, '& svg': { fill: 'currentColor' } },
         }}>
             <ReactFlow nodes={measured.nodes} onNodesChange={measured.onNodesChange} edges={edges} nodeTypes={nodeTypes} edgeTypes={FLOW_EDGE_TYPES} nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
-                minZoom={0.1} maxZoom={2} fitView={!inspection.replayViewport} fitViewOptions={{ padding: 0.1 }} defaultViewport={inspection.replayViewport}
+                minZoom={0.1} maxZoom={2} defaultViewport={inspection.replayViewport}
                 onMoveEnd={(_, viewport: Viewport) => onChange({ replayViewport: viewport })}
                 onNodeClick={(_, node) => chooseNode(node)} onNodeMouseEnter={(_, node) => setHovered(flowEntityKey(node))} onNodeMouseLeave={() => setHovered(null)}
                 onPaneClick={showAllRoutes}
                 onKeyDown={event => { const target = event.target as HTMLElement; if (event.key === 'Enter' && target.classList.contains('react-flow__node')) { const node = graph.nodes.find(node => node.id === target.dataset.id); if (node) { event.preventDefault(); chooseNode(node); } } }}
                 ariaLabelConfig={{ 'node.a11yDescription.default': 'Press Enter to select and show tick details.', 'node.a11yDescription.keyboardDisabled': 'Press Enter to select and show tick details.' }}
                 proOptions={{ hideAttribution: true }}>
-                <FlowTileBackground /><Controls showInteractive={false} />
+                <FlowTileBackground /><Controls showInteractive={false} showFitView={false}><FlowFitButton onFit={fitGraph} /></Controls>
             </ReactFlow>
         </Box>
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>Node values describe one modelled copy at the selected tick. Production totals start at tick 0. Transfers are schematic, without simulated arm or belt positions. Playback stops at the recorded endpoint.</Typography>

@@ -14,17 +14,27 @@ export function useFocusAfterRemove(count: number, onRemove: (index: number) => 
     const cardRef = useRef<HTMLElement>(null);
     const pending = useRef<{ index: number; count: number } | null>(null);
     const countBeforeAdd = useRef<number | null>(null);
+    const addFrame = useRef<number | null>(null);
+
+    useEffect(() => () => {
+        if (addFrame.current !== null) cancelAnimationFrame(addFrame.current);
+    }, []);
 
     useEffect(() => {
         const before = countBeforeAdd.current;
         countBeforeAdd.current = null;
         if (before !== null && count > before) {
-            const firsts = cardRef.current?.querySelectorAll<HTMLElement>('[data-row-first]');
-            const first = firsts?.[firsts.length - 1];
-            const control = first?.matches('input, button, summary, [role="combobox"]') ? first : first?.querySelector<HTMLElement>('input, button, [role="combobox"]');
-            control?.focus();
-            // Bring the new row's beginning below the header, with the first field fully in view.
-            (control?.closest('[role="group"]') ?? control)?.scrollIntoView({ block: 'start' });
+            if (addFrame.current !== null) cancelAnimationFrame(addFrame.current);
+            // Details buttons mount through a Portal. Resolve after that commit and menu focus restoration.
+            addFrame.current = requestAnimationFrame(() => {
+                addFrame.current = null;
+                const firsts = cardRef.current?.querySelectorAll<HTMLElement>('[data-row-first]');
+                const first = firsts?.[firsts.length - 1];
+                const control = first?.matches('input, button, summary, [role="combobox"]') ? first : first?.querySelector<HTMLElement>('input, button, [role="combobox"]');
+                control?.focus();
+                // Bring the new row's beginning below the header, with the first field fully in view.
+                (control?.closest('[role="group"]') ?? control)?.scrollIntoView({ block: 'start' });
+            });
         }
         const removed = pending.current;
         pending.current = null;
@@ -39,6 +49,10 @@ export function useFocusAfterRemove(count: number, onRemove: (index: number) => 
     });
 
     const remove = useCallback((index: number) => {
+        if (addFrame.current !== null) {
+            cancelAnimationFrame(addFrame.current);
+            addFrame.current = null;
+        }
         pending.current = { index, count };
         onRemove(index);
     }, [count, onRemove]);

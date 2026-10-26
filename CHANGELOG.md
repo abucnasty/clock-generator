@@ -11,6 +11,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.23.0] - Unreleased
 
 ### Added
+- Machine summaries show every recipe result, its production rate, and its direct or inserter output routes.
 - Clock inputs that pick up from supported belt bends.
 - A recycler can put its results straight into another machine, which it fills as a mining drill does, past the machine's insertion limit.
 - The list of a clock's inserters and drills says why each one the clock leaves always on is: its swings fill the clock period, it is part of a loop of machines, its enable rule is Always on, or nothing can time a drill into a chest.

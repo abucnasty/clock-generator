@@ -903,15 +903,6 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
                 context.addIssue({ code: "custom", path: [...path, "id"], message: `Machine ${machine.id} places its results into machine ${chest_id}, which is not in the config` });
             } else if (target.id === machine.id) {
                 context.addIssue({ code: "custom", path, message: `Machine ${machine.id} cannot place its results into itself. Pick the machine at its output side.` });
-            } else if (FactorioDataService.isAvailable()) {
-                const sourceRecipe = FactorioDataService.findRecipeOrThrow(machine.recipe);
-                const targetRecipe = FactorioDataService.findRecipeOrThrow(target.recipe);
-                const accepted = sourceRecipe.results.filter(result => targetRecipe.ingredients.some(input => input.name === result.name));
-                if (accepted.length === 0) {
-                    context.addIssue({ code: "custom", path, message: `Machine ${target.id} makes ${target.recipe}, which takes none of Machine ${machine.id}'s results. Pick a machine whose recipe uses a result.` });
-                } else if (accepted.length > 1) {
-                    context.addIssue({ code: "custom", path, message: `Machine ${machine.id} places several results into Machine ${target.id}. A clock for a machine that takes more than one of those results is not planned yet.` });
-                }
             }
         } else if (!config.chests?.some(chest => chest.id === chest_id)) {
             context.addIssue({ code: "custom", path: ["machines", index, "result_target", "id"],

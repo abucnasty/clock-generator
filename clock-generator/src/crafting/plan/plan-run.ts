@@ -1,3 +1,4 @@
+import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
 import { Config } from "../../config";
@@ -572,6 +573,7 @@ function pluginsOf(context: SimulationContext): ModePlugin<any>[] {
 function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
     // Validate inserter coverage before building the entity graph.
     // Throws InserterCoverageError if any machine ingredient or output lacks an inserter.
+    assertOutputTransferGenerationSupported(config);
     assertInserterCoverage(config);
     // Throws CopiesError if the config holds several identical units where it should describe one and set copies.
     validateCopies(config);
@@ -1642,6 +1644,7 @@ interface PlannedCraftingCycle {
  * Throws when the build cannot reach the target rate or an output machine has no inserter taking from it.
  */
 export function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger): PlannedCraftingCycle {
+    assertOutputTransferGenerationSupported(config);
     const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
 
     // Find all output machines: the machines that produce the target output item, or that destroy it

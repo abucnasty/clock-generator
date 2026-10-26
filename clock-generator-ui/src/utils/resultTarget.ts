@@ -2,21 +2,19 @@ import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, Mach
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { entityOptionsOf, type EntityOption } from './inserterOptions';
 
-/** The Results into field of a machine that places its results itself: every text of it, in one place */
+/** The direct output target field of a machine that places its results itself: every text in one place */
 export const RESULT_TARGET_TEXT = {
-    label: 'Results into',
-    /** The empty choice: no container, the results stay in the machine for inserters to take */
-    none: 'Its own output',
-    helpLabel: 'About results into',
-    help: 'A recycler puts its results straight into the machine or container in front of its output side. '
-        + 'Pick that machine or container. It fills a machine as a mining drill does, past the insertion limit. '
-        + 'Results the machine does not use stay in the recycler for inserters to take.',
+    label: 'Direct output target',
+    /** The empty choice describes the physical receiver, without promising to disable ejection. */
+    none: 'No direct receiver (ground)',
+    helpLabel: 'About direct output targets',
+    help: 'Select the machine or container that aligns with the output arrow of the recycler. When selecting another machine, it will receive the results its recipe uses. Other results remain inside the recycler’s inventory and must be removed by inserters. Choose "No direct receiver (ground)" when no machine or container is at the output arrow.',
 } as const;
 
-/** The accessible name of the field of one machine: "Results into, Machine 1" */
+/** The accessible name of the field of one machine: "Direct output target, Machine 1" */
 export const resultTargetName = (machineLabel: string) => `${RESULT_TARGET_TEXT.label}, ${machineLabel}`;
 
-/** The parts of the build the Results into picker names and infers a container's items from */
+/** The parts of the build the direct output target picker names and infers a container's items from */
 export interface ResultTargetBuild {
     machines: MachineFormData[];
     belts: BeltFormData[];
@@ -25,7 +23,7 @@ export interface ResultTargetBuild {
     drills: readonly DrillFormData[];
 }
 
-/** A choice of the Results into picker: a container of the build */
+/** A choice of the direct output target picker: a container of the build */
 export interface ResultTargetOption extends EntityOption {
     type: 'chest' | 'machine';
 }

@@ -1,3 +1,4 @@
+import { assertOutputTransferGenerationSupported } from "../config/output-transfer-generation";
 import assert from "../common/assert";
 import { Config } from "../config";
 import { assertInserterCoverage } from "../config/inserter-coverage-validator";
@@ -10,6 +11,8 @@ import { TargetProductionRate } from "./target-production-rate";
 
 export interface MachineTargetRate {
     machine_id: number;
+    /** Expected rates of every correlated result at the same planned crafting share. */
+    outputs: { item_name: string; rate_per_second: number }[];
     /** Planned main-product rate for one machine in one copy of the build. */
     output_rate_per_second: number;
     /** Demand / capacity; may exceed 1 when the requested target is too high. */
@@ -23,6 +26,7 @@ export interface MachineTargetRate {
  * converted to items/second. No prepare simulation or clock search is needed for this preview.
  */
 export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
+    assertOutputTransferGenerationSupported(config);
     validateCopies(config);
     assert(Number.isFinite(config.target_output.items_per_second) && config.target_output.items_per_second > 0,
         "Set a positive target output rate to see at-target rates.");
@@ -65,6 +69,8 @@ export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
         const capacity = machine.output.production_rate.amount_per_second.toDecimal();
         assert(Number.isFinite(rate) && rate >= 0 && capacity > 0,
             `Cannot calculate at-target rates for Machine ${machine.entity_id.number}.`);
-        return { machine_id: machine.entity_id.number, output_rate_per_second: rate, crafting_share: rate / capacity };
+        return { machine_id: machine.entity_id.number, output_rate_per_second: rate, crafting_share: rate / capacity,
+            outputs: machine.outputs.map(output => ({ item_name: output.item_name,
+                rate_per_second: output.production_rate.amount_per_second.toDecimal() * rate / capacity })) };
     });
 }

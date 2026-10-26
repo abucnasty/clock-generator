@@ -107,7 +107,7 @@ export function configToFormData(imported: Config, prototypeSource?: MachineForm
                     _uuid: crypto.randomUUID(),
                     ...(c.remove_unfiltered_items !== undefined && { remove_unfiltered_items: c.remove_unfiltered_items }),
                     ...(c.position !== undefined && { position: c.position }),
-                    item_filter: (c.item_filter as { item_name: string; request_count: number }[]).map(f => ({
+                    item_filter: ((c.item_filter ?? []) as { item_name: string; request_count: number }[]).map(f => ({
                         item_name: f.item_name,
                         request_count: f.request_count,
                     })),

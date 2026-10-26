@@ -72,7 +72,7 @@ it('collects field problems before coverage, retaining engine order, game names 
     expect(issues.map(issue => issue.text)).toEqual([
         'Set the recipe in Target Output', 'Set the recipe of Machine 1',
         'Machine 3 has no inserter taking Iron gear wheel out',
-        'Machine 4 has no inserter bringing in Iron plate',
+        'Machine 4 has no source of Iron plate',
     ]);
     expect(issues.slice(2).map(issue => focusIdOf(issue.target!))).toEqual([
         'validation-issue-coverage-issue-missing_output_inserter-3-iron-gear-wheel',

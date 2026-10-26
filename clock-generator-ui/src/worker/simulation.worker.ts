@@ -394,6 +394,11 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);
+        case 'output-transfers':
+            return {
+                transfers: clockGenerator.deriveOutputTransfers(query.config),
+                generation_issues: clockGenerator.outputTransferGenerationIssues(query.config),
+            };
         case 'repeated-unit-conversion':
             return checkRepeatedUnitConversion(query.config);
         case 'saved-config':

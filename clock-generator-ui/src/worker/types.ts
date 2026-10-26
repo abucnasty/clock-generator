@@ -29,6 +29,8 @@ import type {
     SerializableClockWindows,
     SerializableMachineFacts,
     MachineTargetRate,
+    OutputTransferSummary,
+    OutputTransferGenerationIssue,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
     SuggestedTarget,
@@ -429,6 +431,7 @@ export type EngineQuery =
     | { kind: 'lookups' }
     | { kind: 'machine-facts'; params: ComputeMachineFactsParams }
     | { kind: 'machine-target-rates'; config: Config }
+    | { kind: 'output-transfers'; config: Config }
     | { kind: 'inserter-coverage'; config: Config }
     | { kind: 'repeated-unit-conversion'; config: Config }
     /** The form state saved in localStorage, migrated but not yet checked against the config schema */
@@ -475,6 +478,7 @@ export interface EngineAnswers {
     /** Null when they cannot be worked out, e.g. for an unknown recipe */
     'machine-facts': SerializableMachineFacts | null;
     'machine-target-rates': MachineTargetRate[];
+    'output-transfers': { transfers: OutputTransferSummary[]; generation_issues: OutputTransferGenerationIssue[] };
     /**
      * The coverage of each machine, or the refusal of the first inserter that is out of scope (a belt pickup by another
      * inserter than the legendary stack inserter, a blacklist, a side-loaded pickup) with no coverage, as Check does; and

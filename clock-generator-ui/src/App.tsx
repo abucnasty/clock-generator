@@ -20,6 +20,7 @@ import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
 import type { InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
+import { useOutputTransfers } from './hooks/useOutputTransfers';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
 import { useSharedBuildLink } from './hooks/useSharedBuildLink';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
@@ -47,7 +48,7 @@ import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
-import { buildValidationIssues } from './utils/buildValidation';
+import { buildValidationIssues, navigateToOutputRouteRepair } from './utils/buildValidation';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -292,6 +293,11 @@ function App() {
     const setAdvancedOpen = useCallback((open: boolean) => patchContext({ sections: { ...buildContext.sections, advanced: open } }), [patchContext, buildContext.sections]);
     const sectionContext = useMemo(() => ({ sections: buildContext.sections, onSectionChange: (key: string, open: boolean) => patchContext({ sections: { ...buildContext.sections, [key]: open } }) }), [buildContext.sections, patchContext]);
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
+    const pendingDiagramTarget = useRef<FocusTarget | null>(null);
+    const diagramTargetFrame = useRef<number | null>(null);
+    useEffect(() => () => {
+        if (diagramTargetFrame.current !== null) cancelAnimationFrame(diagramTargetFrame.current);
+    }, []);
     const [inserterFocusRequest, setInserterFocusRequest] = useState<{ id: number; filters: boolean; pickup?: boolean } | null>(null);
     const [beltFocusRequest, setBeltFocusRequest] = useState<{ id: number } | null>(null);
     useEffect(() => {
@@ -333,6 +339,7 @@ function App() {
 
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
+    const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
@@ -529,7 +536,8 @@ function App() {
             targetOutput: config.target_output,
             machines: config.machines,
             machinesMax,
-        }),
+        }).concat(outputGenerationIssues.map(issue => ({ text: issue.message,
+                    target: { kind: 'machine-result-target', machineId: issue.machine_id } as FocusTarget }))),
         coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
         sideLoadedDrop: checkedCoverage?.sideLoadedDrop, lanesExactlyFull: checkedCoverage?.lanesExactlyFull, copyGapNeeded: checkedCoverage?.copyGapNeeded,
         machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
@@ -538,7 +546,7 @@ function App() {
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
             ? { message: validation.message, diagnostics: validation.diagnostics }
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
-    }), [config.target_output, config.machines, config.chests, config.inserters, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey]);
+    }), [config.target_output, config.machines, config.chests, config.inserters, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
 
     // set while a check Generate started runs, which goes on to generate
@@ -576,8 +584,7 @@ function App() {
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
 
     // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
-    const goToTarget = useCallback((target: FocusTarget) => {
-        cancelRestore();
+    const focusTargetOnPage = useCallback((target: FocusTarget) => {
         // shown before the focus moves: a hidden element takes no focus
         flushSync(() => {
             if (needsListView(target)) {
@@ -586,6 +593,42 @@ function App() {
             setView('configure');
         });
         focusProblemTarget(target);
+    }, [setConfigView, setView]);
+    const goToTarget = useCallback((target: FocusTarget) => {
+        cancelRestore();
+        // The entity editor may have exited, while its enclosing fullscreen dialog
+        // still owns focus. Wait for that modal to release the page as well.
+        if (diagramFullscreen) {
+            pendingDiagramTarget.current = target;
+            setDiagramFullscreen(false);
+            return;
+        }
+        focusTargetOnPage(target);
+    }, [cancelRestore, diagramFullscreen, focusTargetOnPage]);
+    const fixOutputRoute = useCallback((machineId: number, item: string) => {
+        if (!checkedCoverage?.refusal) {
+            // The panel's output facts may settle before coverage. Resolve the
+            // requested item against diagnostics already rendered on the page.
+            if (navigateToOutputRouteRepair({ kind: 'missing_output_inserter', machine_id: machineId, item_name: item },
+                validationIssues, chestIssues, config.inserters, setDiagramFullscreen, goToTarget)) return;
+        }
+        const connected = config.inserters.find(inserter => inserter.source.type === 'machine' && inserter.source.id === machineId);
+        if (connected) {
+            cancelRestore();
+            setDiagramFullscreen(false);
+            setConfigView('list');
+            setView('configure');
+            setInserterFocusRequest({ id: connected.id, filters: false });
+            return;
+        }
+        goToTarget({ kind: 'add-inserter' });
+    }, [checkedCoverage, validationIssues, chestIssues, config.inserters, cancelRestore, setConfigView, setDiagramFullscreen, setView, goToTarget]);
+    const editOutputInserter = useCallback((id: number) => {
+        cancelRestore();
+        setDiagramFullscreen(false);
+        setConfigView('list');
+        setView('configure');
+        setInserterFocusRequest({ id, filters: false });
     }, [cancelRestore, setConfigView, setView]);
     const handleGoToProblem = useCallback((problem: Problem) => {
         if (problem.target) {
@@ -799,6 +842,11 @@ function App() {
         belts: config.belts,
         chests: config.chests,
         drills: drillConfigs,
+        outputTransfers,
+        outputGenerationIssues,
+        outputTransfersLoading,
+        onFixOutput: fixOutputRoute,
+        onEditInserter: editOutputInserter,
         recipeNames,
         itemNames: itemNamesComposite,
         getRecipeInfo,
@@ -1209,7 +1257,7 @@ function App() {
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
                                 <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
-                                <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
+                                <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
                                     onReview={goToTarget} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
                                 {/* in the order a row's sources are made in: an inserter's machines, belts and chests are above it */}
@@ -1223,6 +1271,11 @@ function App() {
                                             inserters={config.inserters}
                                             drills={drillConfigs}
                                             getRecipeInfo={getRecipeInfo}
+                                            outputTransfers={outputTransfers}
+                                            outputGenerationIssues={outputGenerationIssues}
+                                            outputTransfersLoading={outputTransfersLoading}
+                                            onFixOutput={fixOutputRoute}
+                                            onEditInserter={editOutputInserter}
                                             recipeNames={recipeNames}
                                             onAdd={addMachine}
                                             onUpdate={updateMachine}
@@ -1301,6 +1354,8 @@ function App() {
                                     chests={config.chests}
                                     inserters={config.inserters}
                                     getRecipeInfo={getRecipeInfo}
+                                    outputTransfers={outputTransfers}
+                                    outputTransfersLoading={outputTransfersLoading}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={undoable.removeDrill}
@@ -1484,6 +1539,23 @@ function App() {
                 aria-labelledby="diagram-fullscreen-title"
                 open={diagramFullscreen}
                 onClose={() => setDiagramFullscreen(false)}
+                slotProps={{ transition: {
+                    onEnter: () => {
+                        pendingDiagramTarget.current = null;
+                        if (diagramTargetFrame.current !== null) cancelAnimationFrame(diagramTargetFrame.current);
+                        diagramTargetFrame.current = null;
+                    },
+                    onExited: () => {
+                        const target = pendingDiagramTarget.current;
+                        pendingDiagramTarget.current = null;
+                        // Transition callbacks run inside React's commit; navigation
+                        // must wait until that commit and modal cleanup have finished.
+                        if (target) diagramTargetFrame.current = requestAnimationFrame(() => {
+                            diagramTargetFrame.current = null;
+                            focusTargetOnPage(target);
+                        });
+                    },
+                } }}
                 PaperProps={{ sx: { bgcolor: 'background.default' } }}
                 // a view of the build, not an edit of one entity: Ctrl/Cmd+Z undoes in it as on the page
                 data-fullscreen-diagram=""
@@ -1511,7 +1583,7 @@ function App() {
                         </IconButton>
                     </Box>
                     <Box sx={{ px: 2, pt: 1, flexShrink: 0 }}>
-                        <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
+                        <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                             onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
                             onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} focusTargets={false} />
                     </Box>

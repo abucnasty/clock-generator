@@ -1,3 +1,4 @@
+import { assertMachineResultTargetsSupported } from "../../../config/output-transfer-generation";
 import assert from "../../../common/assert";
 import Fraction, { fraction } from "../../../data-types/fraction";
 import { Duration } from "../../../data-types/duration";
@@ -162,6 +163,7 @@ function createPlan(
     max_possible_swings: Fraction,
     config_overrides: Partial<ConfigOverrides> = {}
 ): CraftingCyclePlan {
+    assertMachineResultTargetsSupported(entity_registry);
     if (target_production_rate.counts === "destroyed") {
         return createDestroyedPlan(target_production_rate, entity_registry, config_overrides);
     }

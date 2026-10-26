@@ -6,7 +6,8 @@ import bacteria from '../../../clock-generator/resources/config-samples/gleba/ir
 import circuit from '../../../clock-generator/resources/config-samples/intermediates/advanced-circuit/advanced-circuit.json?raw';
 import { configToFormData } from './configForm/configMapping';
 import { buildFlowGraph } from './buildFlowGraph';
-import { assignFlowPorts, attachFlowRoute, flowNodeRect, flowRoutePath, routeFlowEdges, type FlowPort, type FlowRect } from './flowRouting';
+import { assignFlowPorts, attachFlowRoute, flowGraphBounds, flowNodeRect, flowRoutePath, routeFlowEdges, type FlowPort, type FlowRect } from './flowRouting';
+import { outputLabelLayout } from './flowLabelLayout';
 
 const node = (id: string, x: number, y: number): Node => ({ id, position: { x, y }, initialWidth: 100, initialHeight: 80, data: {} });
 const edge = (id: string, source: string, target: string): Edge => ({ id, source, target });
@@ -41,6 +42,23 @@ it('routes around an intervening node and keeps parallel routes distinct', () =>
         }
     }
     expect(routeFlowEdges(graph.nodes, graph.edges)).toEqual(routes);
+});
+
+it('places a full multi-output card clear of nodes and includes it in graph fit bounds', () => {
+    const items = ['Advanced circuit', 'Battery', 'Concrete', 'Copper cable', 'Holmium ore', 'Ice', 'Iron gear wheel',
+        'Low density structure', 'Processing unit', 'Solid fuel', 'Steel plate', 'Stone'].map(name => ({ name, label: name }));
+    const nodes = [node('source', 0, 100), node('target', 700, 100)];
+    const edges: Edge[] = [{ ...edge('direct', 'source', 'target'), data: { outputItems: items } }];
+    const routes = routeFlowEdges(nodes, edges);
+    const route = routes.get('direct')!;
+    const expected = outputLabelLayout(items);
+    expect(route.labelBounds).toMatchObject({ width: expected.width, height: expected.height });
+    expect(nodes.some(item => overlap(route.labelBounds!, flowNodeRect(item)))).toBe(false);
+    const bounds = flowGraphBounds(nodes, routes)!;
+    expect(bounds.x).toBeLessThanOrEqual(route.labelBounds!.x);
+    expect(bounds.y).toBeLessThanOrEqual(route.labelBounds!.y);
+    expect(bounds.x + bounds.width).toBeGreaterThanOrEqual(route.labelBounds!.x + expected.width);
+    expect(bounds.y + bounds.height).toBeGreaterThanOrEqual(route.labelBounds!.y + expected.height);
 });
 
 it.each([false, true])('attaches measured handles orthogonally for horizontal=%s', horizontal => {

@@ -6,12 +6,22 @@ import { formatNumberText } from '../utils/numberText';
 import { FactorioIcon } from './FactorioIcon';
 
 /** Capacity or steady-state demand, always per machine in one copy of the build. */
-export function MachineProductionSummary({ facts, targetRate }: { facts: SerializableMachineFacts; targetRate?: MachineTargetRate }) {
+export function MachineProductionSummary({ facts, targetRate, atTarget = false }: { facts: SerializableMachineFacts; targetRate?: MachineTargetRate; atTarget?: boolean }) {
     const { itemLabel } = useGameNames();
     const share = targetRate?.crafting_share ?? 1;
-    const outputRate = targetRate?.output_rate_per_second ?? facts.output_rate_per_second;
-    const mode = targetRate ? 'planned at target' : 'maximum';
-    const fuelTiming = targetRate ? 'averaged at target' : 'while crafting';
+    const inputAtTarget = atTarget && targetRate !== undefined;
+    const mode = inputAtTarget ? 'planned at target' : 'maximum';
+    const fuelTiming = inputAtTarget ? 'averaged at target' : 'while crafting';
+    // Older saved facts have no output vector. Their scalar fields remain the main-product alias.
+    const outputs = facts.outputs?.length ? facts.outputs : [{
+        item_name: facts.output_item,
+        amount_per_craft: facts.output_per_craft,
+        rate_per_second: facts.output_rate_per_second,
+        rate_ratio: facts.output_rate_ratio ?? { numerator: facts.output_rate_per_second, denominator: 1 },
+        output_block_size: facts.output_block_size,
+        stochastic: false,
+    }];
+    const targetRatesUnavailable = atTarget && outputs.some(output => !targetRate?.outputs?.some(candidate => candidate.item_name === output.item_name));
     return <Box role="group" aria-label={`${targetRate ? 'At-target' : 'Maximum'} production per machine`} sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75 }}>
         {facts.inputs.length > 0 && <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, maxWidth: '100%' }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
@@ -28,12 +38,27 @@ export function MachineProductionSummary({ facts, targetRate }: { facts: Seriali
         </Box>}
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
             {facts.inputs.length > 0 && <ArrowForward aria-hidden sx={{ fontSize: 14, color: 'text.secondary' }} />}
-            <Tooltip title={`${itemLabel(facts.output_item)}: ${formatNumberText(facts.output_per_craft)} per craft including productivity. ${targetRate ? 'Planned steady-state output at the requested target' : 'Maximum output before clocking'}, per machine in one copy of the build.`} arrow>
-                <Box component="span" tabIndex={0} role="img" aria-label={`${itemLabel(facts.output_item)}: ${mode} ${formatNumberText(outputRate)} per second per machine`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, borderRadius: 0.5 }}>
-                    <CountedIcon name={facts.output_item} quantity={`${formatNumberText(outputRate)}/s`} />
-                </Box>
-            </Tooltip>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
+                {outputs.map(output => {
+                    const plannedRate = atTarget
+                        ? targetRate?.outputs?.find(candidate => candidate.item_name === output.item_name)?.rate_per_second
+                        : undefined;
+                    const showingCapacity = !atTarget || plannedRate === undefined;
+                    const outputRate = showingCapacity ? output.rate_per_second : plannedRate;
+                    const quantity = outputRate === undefined ? '—' : `${formatNumberText(outputRate)}/s`;
+                    const rateLabel = showingCapacity ? `${output.stochastic ? 'expected capacity' : 'capacity'} ${formatNumberText(outputRate)} per second` : `at target ${formatNumberText(outputRate)} per second`;
+                    const label = `${itemLabel(output.item_name)}: ${rateLabel} per machine. ${formatNumberText(output.amount_per_craft)} per craft${output.stochastic ? ', expected' : ''}.`;
+                    return <Tooltip key={output.item_name} title={label} arrow>
+                        <Box component="span" tabIndex={0} role="img" aria-label={`${itemLabel(output.item_name)}: ${quantity} ${output.stochastic ? 'expected' : ''}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, borderRadius: 0.5 }}>
+                            <CountedIcon name={output.item_name} quantity={quantity} />
+                            {output.stochastic && <Typography component="span" variant="caption" color="text.secondary">Expected</Typography>}
+                            {atTarget && showingCapacity && <Typography component="span" variant="caption" color="text.secondary">Capacity</Typography>}
+                        </Box>
+                    </Tooltip>;
+                })}
+            </Box>
         </Box>
+        {targetRatesUnavailable && <Typography component="span" variant="caption" color="text.secondary">At-target rate unavailable</Typography>}
         {facts.fuel && <Tooltip title={`Consumes ${itemLabel(facts.fuel.item_name)} as fuel: ${formatNumberText(facts.fuel.consumption_rate_per_second * share)}/s ${fuelTiming} (${formatNumberText(facts.fuel.amount_per_craft)} per craft).`} arrow>
             <Box component="span" tabIndex={0} role="img" aria-label={`Fuel: ${itemLabel(facts.fuel.item_name)}, ${formatNumberText(facts.fuel.consumption_rate_per_second * share)} per second ${fuelTiming}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, borderLeft: 1, borderColor: 'divider', pl: 0.75, borderRadius: 0.5 }}>
                 <LocalFireDepartmentOutlined aria-hidden sx={{ fontSize: 14 }} />

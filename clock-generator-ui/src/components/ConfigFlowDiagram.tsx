@@ -4,9 +4,7 @@ import {
     ReactFlowProvider,
     Controls,
     Panel,
-    useReactFlow,
     useStore,
-    type EdgeMarker,
     type NodeTypes,
     type NodeProps,
     type NodeMouseHandler,
@@ -17,9 +15,10 @@ import {
 import { Alert, Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typography } from '@mui/material';
 import { Add, Fullscreen } from '@mui/icons-material';
 import { themeTokens } from '../theme/runtimeTokens';
-import { flowRouteStyle } from '../theme/flowDiagram';
+import { decorateFlowEdge } from '../utils/decorateFlowEdge';
 import { useTheme, type Theme } from '@mui/material/styles';
-import { useMeasuredFlowNodes } from '../hooks/useMeasuredFlowNodes';
+import { retainFlowMeasurements, useFlowMeasurements } from '../hooks/useMeasuredFlowNodes';
+import { useFlowFitBounds } from '../hooks/useFlowFitBounds';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { buildFlowGraph, flowNodeEntity } from '../utils/buildFlowGraph';
@@ -34,9 +33,11 @@ import { endpointEditProblem, endpointUpdate } from '../utils/inserterMetadata';
 import { entityLabel, entityLabelIn } from '../utils/entityLabel';
 import { flowFocus, flowEntityKey } from '../utils/flowFocus';
 import { FlowTileBackground } from './FlowTileBackground';
+import { FlowFitButton } from './FlowFitButton';
 import { FLOW_EDGE_TYPES } from '../utils/flowEdgeTypes';
 import { useFlowRoutes } from '../hooks/useFlowRoutes';
 import { useFlowPortUpdates } from '../hooks/useFlowPortUpdates';
+import type { OutputTransferSummary } from 'clock-generator/browser';
 
 /**
  * A node draws only its data, so it renders again only when that changes: React Flow passes a new width and height when
@@ -124,6 +125,7 @@ interface FlowContentProps {
     belts: BeltFormData[];
     chests: ChestFormData[];
     drills: DrillFormData[];
+    outputTransfers?: readonly OutputTransferSummary[] | null;
     getRecipeInfo?: (name: string) => import('../hooks/useSimulationWorker').RecipeInfo | null;
     onNodeSelect: (type: EntityClickType, id: number) => void;
     onUpdateInserter?: (index: number, updates: Partial<InserterFormData>) => void;
@@ -144,6 +146,7 @@ function FlowContent({
     belts,
     chests,
     drills,
+    outputTransfers,
     getRecipeInfo,
     onNodeSelect,
     onUpdateInserter,
@@ -160,7 +163,25 @@ function FlowContent({
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
     const [connectionProblem, setConnectionProblem] = useState<string | null>(null);
-    const { fitView } = useReactFlow();
+    const measured = useFlowMeasurements();
+    const { itemLabel, recipeLabel } = useGameNames();
+    const { nodes: graphNodes, edges } = useMemo(
+        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, { itemLabel, recipeLabel }, 0, outputTransfers, measured.measurements),
+        [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, itemLabel, recipeLabel, outputTransfers, measured.measurements],
+    );
+    const activeNode = graphNodes.find(node => node.id === (hoveredNodeId ?? focusedNodeId));
+    const focusKey = activeNode ? flowEntityKey(activeNode) : selection ? `${selection.kind}:${selection.id}` : null;
+    const focus = useMemo(() => flowFocus(graphNodes, edges, focusKey), [graphNodes, edges, focusKey]);
+    // Route emphasis must leave node text opaque; dimming the wrapper breaks its theme contrast.
+    const activeNodeId = activeNode?.id;
+    const nodes = useMemo(() => graphNodes.map(node => ({
+        ...node,
+        selected: flowEntityKey(node) === (selection ? `${selection.kind}:${selection.id}` : null),
+        className: activeNodeId && focus.same.has(node.id) && node.id !== activeNodeId ? TWIN_CLASS : undefined,
+    })), [graphNodes, focus, selection, activeNodeId]);
+    const measuredNodes = useMemo(() => retainFlowMeasurements(nodes, measured.measurements), [nodes, measured.measurements]);
+    const routes = useFlowRoutes(graphNodes, edges, measured.measurements);
+    const fitGraph = useFlowFitBounds(graphNodes, routes, measured.measurements);
     const fitViewOptions = FIT_VIEW_OPTIONS;
 
     // Fit the graph again when the canvas changes size (the fullscreen dialog opening, a window resize), since the first
@@ -172,9 +193,9 @@ function FlowContent({
         const previous = fittedSize.current;
         fittedSize.current = canvasSize;
         if (previous !== null && previous !== canvasSize && !canvasSize.startsWith('0x') && !canvasSize.endsWith('x0')) {
-            void fitView(fitViewOptions);
+            void fitGraph();
         }
-    }, [canvasSize, fitView, fitViewOptions]);
+    }, [canvasSize, fitGraph, fitViewOptions]);
 
     // Fit again when the nodes change size soon after the diagram opens (the machine facts load after the first fit) or
     // after the facts are shown or hidden; an edit later on leaves the view where it is.
@@ -190,34 +211,16 @@ function FlowContent({
     }, []);
     useEffect(() => {
         if (nodeSizes > 0 && Date.now() < refitUntil.current) {
-            void fitView(fitViewOptions);
+            void fitGraph();
         }
-    }, [nodeSizes, fitView, fitViewOptions]);
+    }, [nodeSizes, fitGraph, fitViewOptions]);
 
-    const { itemLabel, recipeLabel } = useGameNames();
-    const { nodes: graphNodes, edges } = useMemo(
-        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, { itemLabel, recipeLabel }),
-        [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, itemLabel, recipeLabel],
-    );
-    const activeNode = graphNodes.find(node => node.id === (hoveredNodeId ?? focusedNodeId));
-    const focusKey = activeNode ? flowEntityKey(activeNode) : selection ? `${selection.kind}:${selection.id}` : null;
-    const focus = useMemo(() => flowFocus(graphNodes, edges, focusKey), [graphNodes, edges, focusKey]);
-    // Route emphasis must leave node text opaque; dimming the wrapper breaks its theme contrast.
-    const activeNodeId = activeNode?.id;
-    const nodes = useMemo(() => graphNodes.map(node => ({
-        ...node,
-        selected: flowEntityKey(node) === (selection ? `${selection.kind}:${selection.id}` : null),
-        className: activeNodeId && focus.same.has(node.id) && node.id !== activeNodeId ? TWIN_CLASS : undefined,
-    })), [graphNodes, focus, selection, activeNodeId]);
-    const measured = useMeasuredFlowNodes(nodes);
-    const routes = useFlowRoutes(graphNodes, edges, measured.measurements);
     useFlowPortUpdates(graphNodes);
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
     const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
     const edgesWithSelection = useMemo(() => edges.map(edge => {
         const highlighted = focus.routes.has(edge.id) || selectedEdgeIds.has(edge.id);
-        const style = flowRouteStyle(tokens, highlighted ? 'selected' : 'neutral');
-        return { ...edge, type: 'transfer', data: { flowRoute: routes.get(edge.id) }, selected: selectedEdgeIds.has(edge.id), markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
+        return decorateFlowEdge(edge, tokens, highlighted, selectedEdgeIds.has(edge.id), routes.get(edge.id));
     }), [edges, focus, selectedEdgeIds, tokens, routes]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
@@ -345,7 +348,7 @@ function FlowContent({
     return (
         <ReactFlow
             className={compact ? 'flow-compact' : undefined}
-            nodes={measured.nodes}
+            nodes={measuredNodes}
             onNodesChange={measured.onNodesChange}
             edges={edgesWithSelection}
             nodeTypes={nodeTypes}
@@ -368,12 +371,13 @@ function FlowContent({
             // no key deletes anything: an edge stands for an inserter, which Backspace used to remove without a word
             deleteKeyCode={null}
             isValidConnection={isValidConnection}
-            fitView
             fitViewOptions={fitViewOptions}
             proOptions={{ hideAttribution: true }}
         >
             <FlowTileBackground />
-            <Controls showInteractive={false} fitViewOptions={fitViewOptions} />
+            <Controls showInteractive={false} showFitView={false}>
+                <FlowFitButton onFit={fitGraph} />
+            </Controls>
             {connectionProblem && <Panel position="bottom-center" style={{ width: 'max-content', maxWidth: 'calc(100% - 24px)' }}>
                 <Alert role="alert" severity="warning" sx={{ overflowWrap: 'anywhere' }} data-geometry-connection-problem>{connectionProblem}</Alert>
             </Panel>}
@@ -556,6 +560,7 @@ function ConfigFlowDiagramComponent({
                         belts={dialogProps.belts}
                         chests={dialogProps.chests}
                         drills={dialogProps.drills ?? []}
+                        outputTransfers={dialogProps.outputTransfers}
                         getRecipeInfo={dialogProps.getRecipeInfo}
                         onNodeSelect={handleNodeSelect}
                         onUpdateInserter={dialogProps.onUpdateInserter}

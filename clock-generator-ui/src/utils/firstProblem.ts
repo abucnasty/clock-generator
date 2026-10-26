@@ -23,7 +23,7 @@ export const PROBLEM_TEXT = {
         `Items per Second is more than the machines can ${counts === 'destroyed' ? 'destroy' : 'make'} (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
-        `${entityLabel('machine', machineId)} has no inserter bringing in ${itemLabel(item)}`,
+        `${entityLabel('machine', machineId)} has no source of ${itemLabel(item)}`,
     missingOutput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
         `${entityLabel('machine', machineId)} has no inserter taking ${itemLabel(item)} out`,
     validationFailed: 'The last check failed. Show why',
@@ -64,7 +64,9 @@ export type FocusTarget =
     | { kind: 'target-rate' }
     | { kind: 'target-copies' }
     | { kind: 'add-machine' }
+    | { kind: 'add-inserter' }
     | { kind: 'machine-recipe'; machineId: number }
+    | { kind: 'machine-result-target'; machineId: number }
     | { kind: 'coverage-issue'; issue: CoverageIssueKey }
     | { kind: 'output-chest'; chestId: number }
     | { kind: 'validation-panel' }
@@ -169,8 +171,12 @@ export function focusIdOf(target: FocusTarget): string {
             return ELEMENT_IDS.targetCopies;
         case 'add-machine':
             return ELEMENT_IDS.addMachine;
+        case 'add-inserter':
+            return 'add-inserter';
         case 'machine-recipe':
             return machineRecipeElementId(target.machineId);
+        case 'machine-result-target':
+            return `machine-result-target-${target.machineId}`;
         case 'coverage-issue':
             return coverageIssueElementId(target.issue);
         case 'output-chest':
@@ -186,7 +192,7 @@ export function focusIdOf(target: FocusTarget): string {
 
 /** The machines' fields are edited in the List only; the diagram edits them in a dialog */
 export function needsListView(target: FocusTarget): boolean {
-    return target.kind === 'add-machine' || target.kind === 'machine-recipe';
+    return target.kind === 'add-machine' || target.kind === 'add-inserter' || target.kind === 'machine-recipe' || target.kind === 'machine-result-target';
 }
 
 /**

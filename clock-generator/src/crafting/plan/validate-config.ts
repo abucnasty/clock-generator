@@ -1,3 +1,4 @@
+import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import { Config } from "../../config";
 import type { TargetCounts } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
@@ -39,6 +40,7 @@ export interface ConfigValidation {
  */
 export function validateConfig(config: Config, options: { logger?: Logger } = {}): ConfigValidation {
     const logger = options.logger ?? { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
+    assertOutputTransferGenerationSupported(config);
     assertInserterCoverage(config);
     validateCopies(config);
 

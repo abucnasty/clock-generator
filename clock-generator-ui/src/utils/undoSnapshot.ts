@@ -190,7 +190,7 @@ export function describeRemoval(before: ConfigFormData, after: ConfigFormData, k
         return was?.result_target !== undefined && was.result_target.id !== 0 && machine.result_target?.id === 0;
     }).map((machine) => machine.id));
     if (unsetResults.length > 0) {
-        sentences.push(`${named('machines', unsetResults)} ${hasOrHave(unsetResults)} no Results into now.`);
+        sentences.push(`${named('machines', unsetResults)} ${hasOrHave(unsetResults)} no Direct output target now.`);
     }
     return sentences.join(' ');
 }

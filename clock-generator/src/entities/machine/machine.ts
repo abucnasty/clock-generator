@@ -5,7 +5,7 @@ import { AutomatedInsertionLimit, ConsumptionRate } from "./input";
 import { BurnerEnergySource, FuelSlot } from "./fuel";
 import { MachineMetadata } from "./machine-metadata";
 import { MachineOutput, OutputBlock, OverloadMultiplier, ProductionRate } from "./output";
-import { RecipeMetadata, expectedAmount, amountIgnoredByProductivity } from "./recipe";
+import { RecipeMetadata, expectedAmount, amountIgnoredByProductivity, yieldOf } from "./recipe";
 import { EnrichedIngredient } from "../../data";
 import { BonusProductivityRate, CraftingRate, InsertionDuration, FuelConsumption } from "./traits";
 import { Entity } from "../entity";
@@ -292,6 +292,16 @@ function getMachineFacts(machine: Machine): SerializableMachineFacts {
         crafting_speed: machine.metadata.crafting_speed,
         productivity: machine.metadata.productivity,
         type: machine.metadata.type,
+        outputs: machine.outputs.map(output => {
+            const yield_ = yieldOf(output.ingredient);
+            const rate = output.production_rate.amount_per_second;
+            return {
+                item_name: output.item_name, amount_per_craft: output.amount_per_craft.toDecimal(),
+                rate_per_second: rate.toDecimal(), rate_ratio: { numerator: rate.getNumerator, denominator: rate.getDenominator },
+                output_block_size: output.outputBlock.ingredients_blocked_at,
+                stochastic: yield_.chance < 1 || yield_.extra > 0,
+            };
+        }),
         output_item: machine.output.item_name,
         output_per_craft: machine.output.amount_per_craft.toDecimal(),
         output_rate_per_second: machine.output.production_rate.amount_per_second.toDecimal(),
