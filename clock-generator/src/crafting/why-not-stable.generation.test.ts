@@ -62,8 +62,8 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
                 + "so it holds 9,600 of 9,600 and inserters 1 and 2 have nowhere to drop. The closest, Batched swings: 2 output swings per "
                 + "cycle, moves 0 a second, 48 under the target. Use an infinity chest, or add an inserter that takes the items out, and "
                 + "generate again. Not made: Fractional swings (Cannot satisfy fractional swing constraint: sub-cycle 1 requires 3 swings, but "
-                + "maximum allowed is 2 due to insertion limits. Total swings: 3200, cycle multiplier: 1100); Even hands (even hands are not "
-                + "made for a build with inserters outside the plan); Shifted swings (no shifted round of swings passes the clock-only check).",
+                + "maximum allowed is 2 due to insertion limits. Total swings: 3200, cycle multiplier: 1100); Even hands (even hands are only "
+                + "made where every inserter takes from a machine or a chest; inserter:5 does not); Shifted swings (no shifted round of swings passes the clock-only check).",
         });
     });
 
