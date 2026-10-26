@@ -18,8 +18,6 @@ export class MachineState implements EntityState {
     public static insertableQuantity = insertableQuantity
     public static ingredientInventory = ingredientInventory
     public static ingredientQuantity = ingredientQuantity
-    public static takesTurnForOutput = takesTurnForOutput
-    public static waitsForOutput = waitsForOutput
     public static print = printMachineState
     public static stateKey = stateKey
 
@@ -97,21 +95,6 @@ export class MachineState implements EntityState {
      * it is given apart from what it makes, and never crafts from its own products.
      */
     public selfIngredients: WritableInventoryState = InventoryState.empty();
-
-    /**
-     * Inserters waiting to take a product from this machine, by item and inserter id, with the tick they last asked.
-     * Several inserters waiting for the same product take turns: what the machine makes goes to the one that did not
-     * take last, so two inserters on a machine that makes less than a hand at a time both fill their hands.
-     */
-    public readonly outputWaiters: Map<string, Map<string, number>> = new Map();
-    /** The inserter that last took each product, by item */
-    public readonly lastOutputTaker: Map<string, string> = new Map();
-    /**
-     * The tick that inserter was last granted its turn, with something to take, for each product in. Only read within
-     * that tick, where the idle mode and the pickup of one inserter both ask for the one pickup: so left out of the
-     * state key.
-     */
-    public readonly lastOutputTurnTick: Map<string, number> = new Map();
 
     public toString(): string {
         return `MachineState(${this.entity_id},recipe=${this.machine.metadata.recipe.name},status=${this.status})`;
@@ -225,9 +208,6 @@ function clone(machineState: MachineState): MachineState {
     cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.startedCraftInLastTick = machineState.startedCraftInLastTick;
     cloned.selfIngredients = machineState.selfIngredients.clone();
-    machineState.outputWaiters.forEach((waiters, item_name) => cloned.outputWaiters.set(item_name, new Map(waiters)));
-    machineState.lastOutputTaker.forEach((inserter_id, item_name) => cloned.lastOutputTaker.set(item_name, inserter_id));
-    machineState.lastOutputTurnTick.forEach((tick, item_name) => cloned.lastOutputTurnTick.set(item_name, tick));
     return cloned;
 }
 
@@ -235,7 +215,7 @@ function clone(machineState: MachineState): MachineState {
  * What drives the machine's next ticks besides its inventory (see simulationStateKey). The running totals only grow,
  * so they never repeat.
  */
-function stateKey(machineState: MachineState, tick: number): string {
+function stateKey(machineState: MachineState): string {
     return [
         machineState.status,
         machineState.pendingOutput,
@@ -243,7 +223,6 @@ function stateKey(machineState: MachineState, tick: number): string {
         machineState.finishedCraftInLastTick,
         machineState.startedCraftInLastTick,
         JSON.stringify(machineState.selfIngredients.export()),
-        JSON.stringify(Array.from(machineState.lastOutputTaker)),
         machineState.craftingProgress.progress,
         machineState.bonusProgress.progress,
         // a burner's future hangs on what is burning and what the fuel slot holds, which no other key carries
@@ -252,21 +231,7 @@ function stateKey(machineState: MachineState, tick: number): string {
         JSON.stringify(Object.entries(machineState.fuelInventory.export()).sort(([a], [b]) => a.localeCompare(b))),
         // fractions of a by-product carried toward the next whole item
         JSON.stringify(Array.from(machineState.byProductCarry).sort(([a], [b]) => a.localeCompare(b))),
-        // the asks of the tick the key is of: the pass-over rule of takesTurnForOutput reads them one tick longer
-        askedThisTick(machineState.outputWaiters, tick),
     ].join(";");
-}
-
-/** The inserters that asked for a product in this tick, by item: the only outputWaiters stamps the next tick reads */
-function askedThisTick(outputWaiters: ReadonlyMap<string, ReadonlyMap<string, number>>, tick: number): string {
-    const parts: string[] = [];
-    for (const [item_name, waiters] of outputWaiters) {
-        const asked = Array.from(waiters).filter(([, asked_tick]) => asked_tick === tick).map(([inserter_id]) => inserter_id);
-        if (asked.length > 0) {
-            parts.push(`${item_name}:${asked.sort().join(",")}`);
-        }
-    }
-    return parts.sort().join("|");
 }
 
 /** Where a machine keeps an ingredient: with its output, or apart from it when the recipe also makes that item */
@@ -277,44 +242,6 @@ function ingredientInventory(machineState: MachineState, itemName: string): Writ
 /** How many of an ingredient the machine holds to craft with */
 function ingredientQuantity(machineState: MachineState, itemName: string): number {
     return ingredientInventory(machineState, itemName).getQuantity(itemName);
-}
-
-/**
- * An inserter with room for `room_in_hand` more asks to take a product from the machine this tick. When the machine
- * has less than that, inserters waiting for the same product take turns at what it makes: the one that took last is
- * passed over while another one asked this tick or the tick before. Returns whether it is this inserter's turn, and
- * counts it as the taker when it is, if there is anything to take: with nothing in the machine the ask leaves the
- * taker as it was. A turn granted in a tick holds for the rest of it, as the idle mode and the pickup of an inserter
- * both ask for the one pickup.
- */
-function takesTurnForOutput(machineState: MachineState, itemName: string, inserter_id: string, tick: number, room_in_hand: number): boolean {
-    waitsForOutput(machineState, itemName, inserter_id, tick);
-    const quantity = machineState.inventoryState.getQuantity(itemName);
-    if (machineState.lastOutputTaker.get(itemName) === inserter_id && machineState.lastOutputTurnTick.get(itemName) === tick) {
-        return true;
-    }
-    // with enough for this hand, what is left over is there for the next inserter in the same tick
-    const takes_it_all = quantity < room_in_hand;
-    if (takes_it_all && machineState.lastOutputTaker.get(itemName) === inserter_id) {
-        for (const [id, asked] of machineState.outputWaiters.get(itemName)!) {
-            if (id !== inserter_id && asked >= tick - 1) {
-                // another inserter waits for it
-                return false;
-            }
-        }
-    }
-    if (quantity > 0) {
-        machineState.lastOutputTaker.set(itemName, inserter_id);
-        machineState.lastOutputTurnTick.set(itemName, tick);
-    }
-    return true;
-}
-
-/** An inserter waits for a product of the machine, which the other inserters waiting for it take into account */
-function waitsForOutput(machineState: MachineState, itemName: string, inserter_id: string, tick: number): void {
-    const waiters = machineState.outputWaiters.get(itemName) ?? new Map<string, number>();
-    machineState.outputWaiters.set(itemName, waiters);
-    waiters.set(inserter_id, tick);
 }
 
 function fuelIsBelowLimit(machineState: MachineState): boolean {

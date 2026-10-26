@@ -6,6 +6,9 @@
  * - **Moving lane phases:** the clock is made for a moving belt and holds from the modeled start, but falls short from
  *   another lane phase of the belt: at the start (`as_built.failed_pickup_phases`), or only after a loss
  *   (`backpressure_loss.broken_at_other_lane_phases` holds every loss it does not get back from).
+ * - **Taker order:** two or more inserters take one product from one machine, and the clock holds the target rate with them
+ *   served in one order and not in another (`as_built.failed_taker_order`), or gets back after a loss in one order only
+ *   (`backpressure_loss.broken_under_other_taker_orders`, told with the losses that it does not get back from).
  * - **Output chest full:** the build puts its output into a chest nothing takes from, and where the run that failed the
  *   clock ended the chest had no room left for it: the same chest the web form warns can fill up.
  * - **Export belt short:** the clock moves the target, and a belt with a consumption rate gets less than its consumers
@@ -25,7 +28,7 @@ import type { ClockInsight } from "./insights";
 import type { ClockRanking } from "./rank";
 import type { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict } from "./trial";
 
-export type WhyNotStableCause = "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "no recovery" | "nothing holds";
+export type WhyNotStableCause = "taker order" | "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "no recovery" | "nothing holds";
 
 export interface WhyNotStable {
     cause: WhyNotStableCause;
@@ -58,12 +61,16 @@ export interface WhyNotStableClock {
     /** Goal 1, as the selection reads it (`ClockRanking.meets_target_rate`) */
     meets_target_rate: boolean;
     assessment: Pick<ClockAssessment, "holds" | "items_per_second"> & {
-        backpressure_loss: Pick<BackpressureLossVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "not_tried"> | null;
+        backpressure_loss: Pick<BackpressureLossVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "broken_under_other_taker_orders" | "not_tried"> | null;
     };
     /** Whether the clock is made for a moving belt (its belt pickups have belt pickup slack) */
     moving_belt: boolean;
     /** The lane phases, by inserter, of the first lane-phase start that fell short after the modeled start held */
     failed_pickup_phases?: Record<string, readonly [number, number]>;
+    /** The order of the inserters that take one product from one machine under which the clock fell short, after it held under the default */
+    failed_taker_order?: string;
+    /** Those inserters, by machine and product: [["inserter:6", "inserter:7"]] */
+    competing_takers?: string[][];
     /** Items the output inserters move in a period of the clock when it holds */
     expected_output_items: number;
     /** What the clock-only check moved from the start it reports: a period, or over `repeat_periods` */
@@ -99,6 +106,8 @@ export function whyNotStableClockOf(clock: {
         assessment: clock.assessment,
         moving_belt: clock.belt?.kind === "moving",
         ...(as_built?.failed_pickup_phases !== undefined && { failed_pickup_phases: as_built.failed_pickup_phases }),
+        ...(as_built?.failed_taker_order !== undefined && { failed_taker_order: as_built.failed_taker_order }),
+        ...(as_built?.competing_takers !== undefined && { competing_takers: as_built.competing_takers }),
         expected_output_items: clock.expected_output_items,
         ...(as_built && { as_built_output: { items: as_built.actual_output_items, repeat_periods: as_built.repeat_periods,
             repeat_output_items: as_built.repeat_output_items } }),
@@ -189,6 +198,28 @@ function movingLanePhases(clock: WhyNotStableClock, build: WhyNotStableBuild): W
     return null;
 }
 
+/** Said of a clock that holds with the inserters of one machine served in one order and not in another */
+const ORDER_IN_THE_GAME = "The game serves inserters that take from one machine in a fixed order, which the config does not tell, "
+    + "so the build can fall short.";
+
+/** "inserters 6 and 7", or "inserters 6, 7, 22 and 25" for several machines; "the inserters that take from one machine" when not known */
+function competingTakersNamed(clock: WhyNotStableClock): string {
+    const ids = (clock.competing_takers ?? []).flat().map(id => id.replace(/^inserter:/, ""));
+    return ids.length > 1 ? insertersNumbered(Array.from(new Set(ids))) : "the inserters that take from one machine";
+}
+
+function takerOrder(clock: WhyNotStableClock): WhyNotStable | null {
+    if (clock.verdict !== "unstable" || clock.failed_taker_order === undefined) {
+        return null;
+    }
+    const shortfall = shortfallOf(clock);
+    return {
+        cause: "taker order",
+        message: `The selected clock (${clock.label}) holds the target rate when ${competingTakersNamed(clock)} are served in one order, `
+            + `but not in another${shortfall ? `: then it moves ${shortfall}` : ""}. ${ORDER_IN_THE_GAME}`,
+    };
+}
+
 /**
  * The spare-time sentence, when making up one period of crafting at the machine's spare ticks a period takes it more
  * periods than a build is given to get back after a loss
@@ -211,12 +242,17 @@ function spareTimeSentence(spare: SpareTime | null): string {
 function noRecovery(clock: WhyNotStableClock): WhyNotStable {
     const broken_by = clock.assessment.backpressure_loss?.broken_by ?? [];
     const other_phases = clock.assessment.backpressure_loss?.broken_at_other_lane_phases ?? [];
-    const at_the_start = broken_by.filter(it => !other_phases.includes(it));
+    const other_orders = clock.assessment.backpressure_loss?.broken_under_other_taker_orders ?? [];
+    const at_the_start = broken_by.filter(it => !other_phases.includes(it) && !other_orders.includes(it));
     const elsewhere = broken_by.filter(it => other_phases.includes(it));
+    const in_another_order = broken_by.filter(it => other_orders.includes(it));
+    const after = (first: boolean) => first ? "after" : "After";
     const sentences = [
         ...(at_the_start.length > 0 ? [`does not get back to it by itself after ${lossList(at_the_start)}.`] : []),
-        ...(elsewhere.length > 0 ? [`${at_the_start.length > 0 ? "After" : "after"} ${lossList(elsewhere)} it gets back to it from the `
+        ...(elsewhere.length > 0 ? [`${after(at_the_start.length === 0)} ${lossList(elsewhere)} it gets back to it from the `
             + "modeled start, but not when a moving belt's lanes come back in another phase."] : []),
+        ...(in_another_order.length > 0 ? [`${after(at_the_start.length === 0 && elsewhere.length === 0)} ${lossList(in_another_order)} it gets back to it when `
+            + `${competingTakersNamed(clock)} are served in one order, but not in another. ${ORDER_IN_THE_GAME}`] : []),
     ];
     const losses = sentences.length > 0 ? sentences.join(" ")
         : "was off its expected output in the run the losses are tried on, so whether it gets back after one is not known.";
@@ -338,6 +374,7 @@ export function whyNotStable(clocks: readonly WhyNotStableClock[], selected_inde
     return outputChestFull(clock, build)
         ?? exportBeltShort(clock, at_target)
         ?? resultsNotTaken(clock, at_target)
+        ?? takerOrder(clock)
         ?? movingLanePhases(clock, build)
         ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock) : nothingHolds(clock, build));
 }

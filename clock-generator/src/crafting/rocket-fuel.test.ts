@@ -24,12 +24,16 @@ describe("generateClockForConfig", () => {
     });
 
     describe("a machine with a by-product", () => {
-        it("is stable as built when an inserter takes the by-product off for good", () => {
+        it("holds as built when an inserter takes the by-product off for good, with the jelly takers served in the default order", () => {
             // jellynut-processing makes jelly for two machines and the seed at 2%; the seeds fill their stack of 10 and
-            // block the machine unless the inserter taking them off picks them up although they are not its main product
-            expect(by_product.stability_check.holds).toBe(true);
+            // block the machine unless the inserter taking them off picks them up although they are not its main product.
+            // The planned clock holds with the four jelly inserters served in the default order, and so does its long run;
+            // with them served the other way round (rotated by 2) one of the rocket fuel machines falls a hand short, so the
+            // clock does not hold as built (the fractional clock does under every order: rocket-fuel.generation.test.ts)
             expect(by_product.stability_check.actual_output_items).toBeGreaterThan(0);
-            expect(by_product.stability_check.as_built?.holds).toBe(true);
+            expect(by_product.stability_check.as_built?.taker_orders_checked).toBe(3);
+            expect(by_product.stability_check.as_built?.failed_taker_order).toBe("rotated by 2");
+            expect(by_product.stability_check.as_built?.holds).toBe(false);
         });
 
         it("clocks the inserter taking the by-product off, so it only looks at the machine now and then", () => {

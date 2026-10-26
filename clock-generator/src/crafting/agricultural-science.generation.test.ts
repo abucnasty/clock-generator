@@ -73,13 +73,18 @@ describe("generateClockForConfig", () => {
             expect(five_swings.ranking.meets_target_rate).toBe(true);
         });
 
-        it("selects the 5-swing clock, the one with the fewest wake-ups of those that get back from every loss", () => {
+        // Until 0.23.0 the 1- and 2-swing clocks were stable too, and the 5-swing clock had the fewest wake-ups of the three.
+        // The inserters that take from one egg biochamber are served in one fixed order now (docs/simulator.md, "Two
+        // inserters that take from one machine"), and a clock is checked under each order of them: the 1-swing clock no
+        // longer gets back after the bioflux stops (no recovery, below) and the 2-swing clock makes nothing in the as-built
+        // check (0 of 800), so the 5-swing clock is the only one that gets back from every loss (blast of 2026-10-26).
+        // The 2-swing clock's 0 is the simulator's, not the game's: on the scaffold the game moved 800 in every period from
+        // the 11th to the 37th (2026-10-26), where the takers that both held part of a hand were not served in one order
+        // (docs/simulator.md, "Two inserters that take from one machine", open).
+        it("selects the 5-swing clock, the only one that gets back from every loss", () => {
             const stable = alternatives.filter(a => a.verdict === "stable");
-            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle", "Batched swings: 5 output swings per cycle"]);
+            expect(stable.map(a => a.label).sort()).toEqual(["Batched swings: 5 output swings per cycle"]);
             expect(alternatives[selected_index].label).toBe("Batched swings: 5 output swings per cycle");
-            for (const other of stable.filter(a => a !== five_swings)) {
-                expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(other.assessment.wake_ups_per_minute!);
-            }
         });
 
         // The values the scaffold recordings expect of this build (no dip and no open issue after its staged start) were seen on
@@ -89,17 +94,24 @@ describe("generateClockForConfig", () => {
             expectPinnedScaffoldClock("agricultural science", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: false }, alternatives[selected_index]);
         });
 
-        it("also holds it with one output swing per cycle", () => {
-            expect(one_swing.verdict).toBe("stable");
+        // Recorded in the game with 400 in every period; in the simulator the 1-swing clock holds the rate under both orders of
+        // the egg takers, but with the takers served in one fixed order it does not get back after the bioflux stops, so it
+        // is no longer stable.
+        it("still holds the rate with one output swing per cycle, but no longer gets back after the bioflux stops", () => {
+            expect(one_swing.verdict).toBe("no recovery");
+            expect(one_swing.assessment.holds).toBe(true);
             expect(one_swing.assessment.items_per_second).toBeCloseTo(250, 6);
+            expect(one_swing.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["bioflux stops arriving"] });
         });
 
-        // one output window a period: the science biochamber is under its block for 400 ticks of it, and the windows of 9
-        // and 10 take all but 72 of them (160 eggs a period, 27 under its insertion limit, a third of an egg a tick)
-        it("gives the inserters that take eggs into the science biochamber long windows on the 1-swing clock, and leaves those of the loop always on", () => {
+        // The windows of 9 and 10 on the 1-swing clock (all but 72 of the 480 ticks, 160 eggs a period, 27 under the science
+        // biochamber's insertion limit) are kept only when the clock passes the as-built check with them as it did without.
+        // It no longer does: with them the nutrients loss runs dry under the fixed taker order. That verdict rests on the
+        // order of takers that both hold part of a hand, which the game serves in a varying order the simulator does not
+        // model yet (0.24.0), so they stay always on.
+        it("leaves the inserters that take eggs into the science biochamber always on, as well as those of the loop, on the 1-swing clock", () => {
             const clocked = Object.keys(windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
-            expect(windows["inserter:9"].reduce((sum, it) => sum + it.end - it.start + 1, 0)).toBe(480 - 72);
+            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
         });
 
         it("leaves inserters 9 and 10 always enabled on the 2-swing clock too, where the science biochamber is at its block at the end of most output windows", () => {

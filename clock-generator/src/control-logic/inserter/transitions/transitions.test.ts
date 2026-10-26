@@ -116,7 +116,6 @@ describe("transitions (belt to machine)", () => {
                 sink_state: testContext.sinkState,
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
-                tick_provider: mock(),
                 enable_control: AlwaysEnabledControl,
             });
 
@@ -136,7 +135,6 @@ describe("transitions (belt to machine)", () => {
                 sink_state: testContext.sinkState,
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
-                tick_provider: mock(),
                 enable_control: AlwaysEnabledControl,
             });
 
@@ -159,7 +157,6 @@ describe("transitions (belt to machine)", () => {
                 sink_state: testContext.sinkState,
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
-                tick_provider: mock(),
                 enable_control: AlwaysEnabledControl
             });
 
@@ -203,7 +200,6 @@ describe("transitions (belt to machine)", () => {
             const evaluator = IdleModeTransitionEvaluator.create({
                 inserter_state, source_state, sink_state: sink, pickup_mode,
                 disabled_mode,
-                tick_provider: { getCurrentTick: () => tick },
                 enable_control: window_control,
             });
             const block = sink.machine.output.outputBlock;

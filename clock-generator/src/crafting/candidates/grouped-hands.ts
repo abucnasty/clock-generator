@@ -11,6 +11,7 @@ import { TurnGroup } from "../turn-groups";
 import type { AlwaysOnReason } from "../always-on-reasons";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
+import { outputAtWindow } from "./taker-turns";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -69,6 +70,56 @@ function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], perio
     }
     for (const [key, { ticks, ids }] of open) {
         for (const id of ids) windows.set(id, windowFrom(Number(key), ticks, period));
+    }
+}
+
+/**
+ * The takers of one machine's product that fill machines of one recipe and are enabled in the same ticks take turns where
+ * the machine cannot give all their hands in one window (`outputAtWindow`: what it made since their window a period
+ * before, up to its output block, and what it makes in the window, against one hand of each): then the game serves the
+ * first in its order with what the machine holds and the next with the rest, so one machine would be fed before the other
+ * by an order a config does not tell. In the order of their sinks, the windows of the second open a share of the period
+ * after the first's, and so on, each the length it was given. Turns that would meet one another leave the windows as they
+ * are; the clock-only check judges both.
+ */
+function takeTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], period: number): void {
+    const contested = new Map<string, { machine: Machine; item: string; takers: Taker[] }>();
+    for (const taker of takers) {
+        if (taker.drain === true || !EntityId.isMachine(taker.source) || !EntityId.isMachine(taker.sink) || !windows.has(taker.inserter.entity_id.id)) continue;
+        const machine = entity_registry.getEntityByIdOrThrow(taker.source) as Machine;
+        const recipe = (entity_registry.getEntityByIdOrThrow(taker.sink) as Machine).metadata.recipe.name;
+        for (const item of taker.inserter.filtered_items) {
+            if (!machine.outputs.some(output => output.item_name === item)) continue;
+            const key = `${taker.source.id}|${item}|${recipe}`;
+            const known = contested.get(key) ?? { machine, item, takers: [] };
+            known.takers.push(taker);
+            contested.set(key, known);
+        }
+    }
+    const byNumber = (a: EntityId, b: EntityId) => a.number - b.number;
+    for (const { machine, item, takers: group } of contested.values()) {
+        if (group.length < 2) continue;
+        const ranges = group.map(taker => windows.get(taker.inserter.entity_id.id)!);
+        const enabled = new Uint8Array(period);
+        let together = false;
+        for (const taker_ranges of ranges) {
+            const own = new Uint8Array(period);
+            for (const range of taker_ranges) for (let tick = range.start_inclusive; tick <= range.end_inclusive; tick++) own[tick] = 1;
+            for (let tick = 0; tick < period; tick++) {
+                if (own[tick] === 1 && enabled[tick] === 1) together = true;
+                enabled[tick] |= own[tick];
+            }
+        }
+        if (!together) continue;
+        const width = Math.max(...group.map(taker => taker.window_ticks));
+        if (period / group.length < width) continue;
+        const draw = group.reduce((sum, taker) => sum + handSizeFor(taker.inserter, item), 0);
+        if (draw <= outputAtWindow(machine, item, period - width, width)) continue;
+        const ordered = [...group].sort((a, b) => byNumber(a.sink, b.sink) || byNumber(a.inserter.entity_id, b.inserter.entity_id));
+        const first = windows.get(ordered[0].inserter.entity_id.id)![0].start_inclusive;
+        ordered.forEach((taker, turn) => {
+            if (turn > 0) windows.set(taker.inserter.entity_id.id, windowFrom(first + Math.round(turn * period / ordered.length), taker.window_ticks, period));
+        });
     }
 }
 
@@ -394,6 +445,7 @@ export function groupedHandsPlan(
         for (const taker of top.filter(filled)) feed(taker, 0);
         const unplaced = takers.find(it => !placed(it));
         if (unplaced !== undefined) refuse(`${unplaced.inserter.entity_id.id} fills ${unplaced.sink.id}, which is neither an output machine nor taken from`);
+        takeTurns(entity_registry, windows, takers, period);
         if (options.share_windows) sharedWindows(windows, gated, period);
         return { ...leaveOpen(windows), turns: [] };
     }

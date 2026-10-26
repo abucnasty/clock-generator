@@ -6,6 +6,8 @@ import { quiet } from "../generate-blueprint-test-helpers";
 import { planRun } from "../plan/plan-run";
 import { dropSpacing, dropTieBreak } from "../../config/drop-spacing";
 import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsPlan, groupedHandsWindows } from "./grouped-hands";
+import { outputAtWindow } from "./taker-turns";
+import { EntityId, Machine } from "../../entities";
 
 // The grenade build (REAL_OWNER_GRENADE), one copy: a foundry (3) fills four assembling machines (1, 2, 4, 5) with iron
 // plates through inserters 4, 3, 6 and 5, five hands of 16 a period each; a drill into each machine brings the coal; inserters 1,
@@ -212,5 +214,45 @@ describe("hands that fill the cycle", () => {
         for (const id of [16, 17, 23, 24]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 0]]);
         // those left enabled all the time stay so
         for (const id of [3, 4, 5, 6, 7, 8, 13, 14, 15, 18, 19, 20]) expect(windows.has(`inserter:${id}`)).toBe(false);
+    });
+});
+
+// One supercapacitor plant (3) fills two electromagnetic science plants (1, 4) through inserters 6 and 9, each a hand of 16 a
+// period: the pink science recycler sample (REAL_OWNER_PINK_SCIENCE_RECYCLER) as a chain of its own, without the recycler (2,
+// with inserters 2 and 3) and the buffer chests (3 and 5, with inserters 4 and 7): the science goes straight into the infinity
+// chests, the plant's circuits come from chest 6, and every inserter is clocked. The period is 40 ticks.
+describe("takers of one machine that it cannot serve together", () => {
+    let config: Config;
+    beforeAll(async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_RECYCLER);
+        config = {
+            ...sample,
+            machines: sample.machines.filter(it => it.id !== 2),
+            chests: sample.chests!.filter(it => ![1, 3, 5].includes(it.id))
+                .map(it => it.id === 6 && it.type === "infinity-chest" ? { ...it, item_filter: [...it.item_filter!, { item_name: "electronic-circuit", request_count: 100 }] } : it),
+            belts: sample.belts!.filter(it => it.id !== 2),
+            inserters: sample.inserters.filter(it => ![2, 3, 4, 7].includes(it.id!)).map(({ overrides: _, ...it }) =>
+                it.id === 5 ? { ...it, sink: { type: "chest", id: 2 } } : it.id === 8 ? { ...it, sink: { type: "chest", id: 4 } } : it),
+        } as Config;
+    });
+
+    it("gives them turns half a period apart, in the order of the machines they fill", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        expect(duration.ticks).toBe(40);
+        const plant = simulation_context.entity_registry.getEntityByIdOrThrow(EntityId.forMachine(3)) as Machine;
+        // at a window of 10 ticks the plant holds what it made in the 30 before (8.77, under its block of 9) and makes 2.92 more:
+        // 11.69, against two hands of 16
+        expect(outputAtWindow(plant, "supercapacitor", 30, 10)).toBeCloseTo(11.6875, 3);
+        for (const feeder_offset of [16, 1]) {
+            const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+                { surplus_guard: false, feeder_offset, share_windows: false });
+            // both fill a science plant whose output (5, 8) swings at 0, so the chain would open them in the same ticks; the one into machine 1 keeps
+            // its place and the one into machine 4 opens 20 ticks after it
+            expect(ranges(windows, "inserter:6")).toEqual([[19, 28]]);
+            expect(ranges(windows, "inserter:9")).toEqual([[39, 39], [0, 8]]);
+            for (const id of [5, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 0]]);
+            for (const id of [1, 12]) expect(ranges(windows, `inserter:${id}`)).toEqual([[2, 18]]);
+        }
     });
 });

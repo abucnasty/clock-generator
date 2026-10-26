@@ -8,6 +8,13 @@ import type { BackpressureLossAssessment } from "../trial";
  */
 export const RUN_MEMO_MIN_TICKS = 100_000;
 
+/**
+ * The most ticks of runs the memo keeps at once; the run used longest ago goes first. A kept run holds its histories,
+ * and on the processing-unit export sample (periods of 116,160 ticks) a memo without a limit took the generation past a
+ * heap of 3,000 MB, where it ran 77 s without one.
+ */
+export const RUN_MEMO_MAX_TICKS = 4_000_000;
+
 /** How deep a value may nest to be written: a config is a few levels deep, so more is a value that refers to itself */
 const MAX_DEPTH = 64;
 
@@ -97,8 +104,9 @@ export class RunMemo {
     /** Runs handed out again, to count what the memo saved */
     hits = 0;
     private readonly kept = new Map<string, BuildRun>();
+    private kept_ticks = 0;
 
-    constructor(readonly min_ticks: number = RUN_MEMO_MIN_TICKS) { }
+    constructor(readonly min_ticks: number = RUN_MEMO_MIN_TICKS, readonly max_ticks: number = RUN_MEMO_MAX_TICKS) { }
 
     /** Runs kept so far */
     get size(): number {
@@ -144,11 +152,20 @@ export class RunMemo {
         const kept = key === null ? undefined : this.kept.get(key);
         if (kept !== undefined) {
             this.hits++;
+            // the last used at the end: the first is the one used longest ago
+            this.kept.delete(key!);
+            this.kept.set(key!, kept);
             return handedOut(kept);
         }
         const run = simulate();
-        if (key !== null && run.ticks_simulated >= this.min_ticks) {
+        if (key !== null && run.ticks_simulated >= this.min_ticks && run.ticks_simulated <= this.max_ticks) {
             this.kept.set(key, handedOut(run));
+            this.kept_ticks += run.ticks_simulated;
+            for (const [oldest, dropped] of this.kept) {
+                if (this.kept_ticks <= this.max_ticks) break;
+                this.kept.delete(oldest);
+                this.kept_ticks -= dropped.ticks_simulated;
+            }
         }
         return run;
     }
@@ -173,11 +190,11 @@ export function currentRunMemo(): RunMemo | undefined {
  * Runs a generation with a memo of its runs, which is gone when it ends, however it ends. A generation inside one that
  * is already running shares its memo. The generation has to be synchronous: the memo is closed when `generate` returns.
  */
-export function withRunMemo<T>(generate: () => T, min_ticks?: number): T {
+export function withRunMemo<T>(generate: () => T, min_ticks?: number, max_ticks?: number): T {
     if (open !== undefined) {
         return generate();
     }
-    open = new RunMemo(min_ticks);
+    open = new RunMemo(min_ticks, max_ticks);
     try {
         return generate();
     } finally {

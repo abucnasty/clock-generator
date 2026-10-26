@@ -65,6 +65,32 @@ describe("why the selected clock does not meet goal 1", () => {
             .toContain("reach inserters 2 and 4 in another phase: from such a start it moves 160 of 176 items a period.");
     });
 
+    it("is the taker order of a clock that holds with the takers of one machine served in one order and not in another", () => {
+        const unstable = clock({
+            label: "Batched swings: 1 output swing per cycle", verdict: "unstable", meets_target_rate: false,
+            assessment: { holds: false, items_per_second: 7.5, backpressure_loss: null },
+            failed_taker_order: "ascending", competing_takers: [["inserter:6", "inserter:7"]],
+            as_built_output: { items: 160 },
+        });
+        expect(whyNotStable([unstable], 0, moving)).toEqual({
+            cause: "taker order",
+            message: "The selected clock (Batched swings: 1 output swing per cycle) holds the target rate when inserters 6 and 7 are "
+                + "served in one order, but not in another: then it moves 160 of 176 items a period. The game serves inserters that "
+                + "take from one machine in a fixed order, which the config does not tell, so the build can fall short.",
+        });
+        // the takers of several machines are named together
+        expect(whyNotStable([{ ...unstable, competing_takers: [["inserter:5", "inserter:7"], ["inserter:22", "inserter:25"]] }], 0, moving)?.message)
+            .toContain("when inserters 5, 7, 22 and 25 are served in one order");
+    });
+
+    it("is no recovery for a clock that gets back after a loss with the takers of one machine served in one order only", () => {
+        const clock_of = noRecovery(["coal stops arriving"], [], { competing_takers: [["inserter:6", "inserter:7"]] });
+        clock_of.assessment.backpressure_loss!.broken_under_other_taker_orders = ["coal stops arriving"];
+        expect(whyNotStable([clock_of], 0, moving)?.message).toContain("holds the target rate, but after coal stops arriving it gets back "
+            + "to it when inserters 6 and 7 are served in one order, but not in another. The game serves inserters that take from one "
+            + "machine in a fixed order, which the config does not tell, so the build can fall short.");
+    });
+
     it("is the moving lane phases of a moving-belt clock that gets back from every loss from the modeled start only", () => {
         const losses = ["accumulator stops arriving", "electromagnetic science pack is not taken away"];
         expect(whyNotStable([noRecovery(losses, losses, { moving_belt: true, label: "Observed windows: 3 output swings per cycle" })], 0, moving)).toEqual({

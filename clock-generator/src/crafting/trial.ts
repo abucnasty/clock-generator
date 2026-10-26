@@ -5,7 +5,7 @@ import { EnableControlOverrideConfig, EnableControlRange } from "../config/schem
 import { InserterClock, unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig, MovingPickupPhases } from "./sequence/simulation-context";
 import { Duration, OpenRange } from "../data-types";
-import { Entity, EntityId } from "../entities";
+import { Entity, EntityId, Inserter, Machine } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
 import { StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
@@ -26,6 +26,7 @@ import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
 import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
+import { TakerOrder, takerOrderName, takerOrdersToCheck } from "../control-logic/inserter/competing-takers";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -117,6 +118,18 @@ export interface AsBuiltStabilityCheck {
     pickup_phase_starts_checked?: number;
     /** Lane phases of the first failing stock start, by inserter id, in 1/32-tile units. */
     failed_pickup_phases?: Record<string, readonly [number, number]>;
+    /**
+     * Orders of the inserters that take one product from one machine the clock was checked under, the default one
+     * included (see `otherTakerOrdersOf`); absent where no machine has two such takers
+     */
+    taker_orders_checked?: number;
+    /**
+     * The order of those inserters under which the unshifted clock or its long run fell short ("ascending",
+     * "rotated by 1"), after it held under the default order; `competing_takers` names the inserters
+     */
+    failed_taker_order?: string;
+    /** The inserters that take one product from one machine, by machine and product, where the clock was checked under their orders: [["inserter:6", "inserter:7"]] */
+    competing_takers?: string[][];
     /** Periods after which the reported run repeats, when the simulation found the repeat; see SimulationStabilityCheck */
     repeat_periods?: number;
     /** Output items of the reported run over its repeat_periods periods; set when repeat_periods is more than 1 */
@@ -183,6 +196,93 @@ export function runClockOnBuild(
     // a clock of whole ticks is counted by its own period, also where the plan's is not whole (a clock rounded down)
     return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, options.decider_order),
         { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(period) && { period_ticks: period }), ...options }));
+}
+
+/**
+ * The orders of the inserters that take one product from one machine that a clock is checked under besides the default
+ * one (`takerOrdersToCheck`): the game serves them in one fixed order that a config does not tell (see TakerOrder), so a
+ * clock holds and recovers only where it does under each. Settled by arithmetic on the windows: only takers enabled in
+ * the same tick can be served one before the other, so the orders are those of the most takers of one product enabled
+ * together (an inserter on no window is enabled all the time). Empty where no two are, as for a build without competing
+ * takers, which is checked as before; takers that take turns in windows apart need no other order.
+ */
+export function otherTakerOrdersOf(config: Config, windows: Map<string, OpenRange[]>, period: number): readonly TakerOrder[] {
+    const as_built = buildAsBuiltConfig(config, windows, period);
+    const registry = createEntityRegistryFromConfig(as_built);
+    const ticks = Math.ceil(period);
+    const enabled_at = new Map<string, Uint8Array | null>();
+    as_built.inserters.forEach((inserter, index) => {
+        const id = EntityId.forInserter(inserter.id ?? index + 1).id;
+        const control = inserter.overrides?.enable_control;
+        if (control?.mode === "NEVER") { enabled_at.set(id, new Uint8Array(ticks)); return; }
+        if (control?.mode !== "CLOCKED" || (control.period_duration_ticks !== undefined && control.period_duration_ticks !== period)) {
+            // always enabled, or on a clock of its own modulus: it can meet the others at any tick
+            enabled_at.set(id, null);
+            return;
+        }
+        const on = new Uint8Array(ticks);
+        for (const range of control.ranges) {
+            for (let tick = Math.floor(range.start); tick <= Math.min(ticks - 1, Math.floor(range.end)); tick++) on[tick] = 1;
+        }
+        enabled_at.set(id, on);
+    });
+    let together = 0;
+    let group_size = 0;
+    for (const group of competingTakerGroups(registry)) {
+        const most = mostContested(group, enabled_at, ticks);
+        together = Math.max(together, most);
+        if (most >= 3) group_size = Math.max(group_size, group.inserters.length);
+    }
+    // more than two enabled together: each taker of such a group has to come first once, whichever of them meet
+    return takerOrdersToCheck(together >= 3 ? group_size : together).slice(1);
+}
+
+/** The takers of one product of one machine */
+interface CompetingTakerGroup {
+    machine: Machine;
+    item: string;
+    inserters: Inserter[];
+}
+
+/**
+ * The most takers of a group enabled in one tick: 0 or 1 where they take turns. Whether the machine holds enough for every
+ * hand they can start in the ticks they share does not tell whether the order matters, and is not asked: on the jellynut
+ * processing sample four takers share 118 ticks in which the machine holds and makes 1,197 jelly against the 960 their
+ * 60 hands can take, and with them served in one order of the four the planned clock moves 96 of 128 a period.
+ */
+function mostContested(group: CompetingTakerGroup, enabled_at: ReadonlyMap<string, Uint8Array | null>, ticks: number): number {
+    const on = group.inserters.map(it => enabled_at.get(it.entity_id.id) ?? null);
+    let most = 0;
+    for (let tick = 0; tick < ticks && most < on.length; tick++) {
+        most = Math.max(most, on.reduce((sum, it) => sum + (it === null || it[tick] === 1 ? 1 : 0), 0));
+    }
+    return most;
+}
+
+/** The takers of one product of one machine, two or more of them, by machine and product */
+function competingTakerGroups(registry: ReturnType<typeof createEntityRegistryFromConfig>): CompetingTakerGroup[] {
+    const groups = new Map<string, CompetingTakerGroup>();
+    for (const inserter of registry.getAll().filter(Entity.isInserter)) {
+        if (!EntityId.isMachine(inserter.source.entity_id)) continue;
+        const machine = registry.getEntityByIdOrThrow(inserter.source.entity_id) as Machine;
+        for (const item of inserter.filtered_items) {
+            const key = `${inserter.source.entity_id.id}|${item}`;
+            const group = groups.get(key) ?? { machine, item, inserters: [] };
+            group.inserters.push(inserter);
+            groups.set(key, group);
+        }
+    }
+    return Array.from(groups.values()).filter(group => group.inserters.length > 1);
+}
+
+/** The inserters that take one product from one machine, as lists of their ids by machine and product */
+export function competingTakersOf(config: Config): string[][] {
+    return competingTakersOfRegistry(createEntityRegistryFromConfig(config));
+}
+
+function competingTakersOfRegistry(registry: ReturnType<typeof createEntityRegistryFromConfig>): string[][] {
+    const groups = competingTakerGroups(registry).map(group => group.inserters.map(it => it.entity_id.id).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })));
+    return Array.from(new Map(groups.map(ids => [ids.join(","), ids] as const)).values());
 }
 
 /** Ticks a clock is run on its own to see that the build keeps up: ten minutes of game time */
@@ -398,9 +498,10 @@ export function backpressureLossOf(
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
-    const outcomeOf = (loss: BackpressureLossOptions["loss"], phases?: MovingPickupPhases): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
+    const outcomeOf = (loss: BackpressureLossOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
         factorio_states: false,
         moving_pickup_phases: phases,
+        ...(order !== undefined && { competing_takers_order: order }),
         backpressure_loss: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, period_ticks, expected_output_items },
     }).backpressure_loss!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
@@ -439,7 +540,33 @@ export function backpressureLossOf(
             break;
         }
     }
-    return reportOf(period_ticks, expected_output_items, undisturbed, outcomes, loss_limit, losses.slice(outcomes.length));
+    // The inserters that take one product from one machine, where they contest it, are served in each other order a clock
+    // is checked under (`otherTakerOrdersOf`), the lane phases under the default order alone. Only a clock that gets back
+    // from everything under the default order is tried so, a loss at a time and no further than its first failure: one
+    // that does not already fails its verdict.
+    const other_orders = undisturbed.recovers && outcomes.length === losses.length && outcomes.every(it => it.recovers)
+        ? otherTakerOrdersOf(check_config, windows, period_ticks) : [];
+    let judged = undisturbed;
+    if (other_orders.length > 0) {
+        const all: LossOutcome[] = [undisturbed, ...outcomes];
+        const runs: BackpressureLossOptions["loss"][] = [{ kind: "none" }, ...losses];
+        orders: for (const order of other_orders) {
+            for (let at = 0; at < all.length; at++) {
+                const outcome = outcomeOf(runs[at], undefined, order);
+                const before = all[at];
+                if (!outcome.recovers) {
+                    all[at] = { ...outcome, ticks: before.ticks + outcome.ticks, failed_taker_order: takerOrderName(order) };
+                    break orders;
+                }
+                all[at] = { ...before, ticks: before.ticks + outcome.ticks, recovered_after_bins: Math.max(before.recovered_after_bins ?? 0, outcome.recovered_after_bins ?? 0),
+                    stopped_after_ticks: before.stopped_after_ticks === null || outcome.stopped_after_ticks === null ? null : Math.max(before.stopped_after_ticks, outcome.stopped_after_ticks),
+                    taker_orders_checked: (before.taker_orders_checked ?? 1) + 1 };
+            }
+        }
+        judged = all[0];
+        outcomes.splice(0, outcomes.length, ...all.slice(1));
+    }
+    return reportOf(period_ticks, expected_output_items, judged, outcomes, loss_limit, losses.slice(outcomes.length));
 }
 
 /** The machines at the ends of every inserter of the config */
@@ -806,6 +933,10 @@ export function runAsBuiltCheck(
             }
         }
     }
+    if (check.holds) {
+        heldUnderOtherTakerOrders(config, decider_windows, period, logger, check, result.stability_check.expected_output_items, long_run_ticks,
+            passed?.long_run_ticks === long_run_ticks ? passed.run.check : undefined);
+    }
     if (!check.holds) {
         check.failed_start_offset = 0;
         return { result, check, stock };
@@ -851,6 +982,59 @@ export function runAsBuiltCheck(
         }
     }
     return { result, check, stock };
+}
+
+/**
+ * The unshifted clock and its long run (where the check makes one) under each order of the inserters that take one
+ * product from one machine besides the default one (`otherTakerOrdersOf`), after the check held under the default: the
+ * check holds only where they all do too. The other sampled starts (clock offsets, lane phases) are run under the default
+ * order alone, as each kind of start is varied on its own. A check handed over (`passed`, with a long run as long as this
+ * one's) made these runs already. A quick trial of a search (no long run) runs none: it only picks the candidates whose
+ * confirmation, with its long run, judges them under every order.
+ */
+function heldUnderOtherTakerOrders(
+    config: Config,
+    decider_windows: Map<string, OpenRange[]>,
+    period: number,
+    logger: Logger,
+    check: AsBuiltStabilityCheck,
+    expected_output_items: number,
+    long_run_ticks: number,
+    passed: AsBuiltStabilityCheck | undefined,
+): void {
+    if (long_run_ticks === 0) return;
+    const orders = otherTakerOrdersOf(config, decider_windows, period);
+    if (orders.length === 0) return;
+    if (passed !== undefined) {
+        check.taker_orders_checked = passed.taker_orders_checked;
+        check.competing_takers = passed.competing_takers;
+        return;
+    }
+    check.taker_orders_checked = 1;
+    check.competing_takers = competingTakersOf(config);
+    for (const order of orders) {
+        check.taker_orders_checked++;
+        const run = runClockOnBuild(config, decider_windows, period, logger, { factorio_states: false, competing_takers_order: order });
+        let failed: { actual_output_items: number; full_output_chests?: FullOutputChest[]; export_shortfalls?: ExportShortfall[];
+            repeat_periods?: number; repeat_output_items?: number } | null = run.stability_check.holds ? null : run.stability_check;
+        if (failed === null && long_run_ticks > 0) {
+            const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, expected_output_items, logger, long_run_ticks, { competing_takers_order: order });
+            if (long_run !== null && !long_run.keeps_up) {
+                failed = { actual_output_items: long_run.output_items_per_period, full_output_chests: long_run.full_output_chests, export_shortfalls: long_run.export_shortfalls };
+            }
+        }
+        if (failed !== null) {
+            logger.log(`Competing takers served ${takerOrderName(order)}: the clock moves ${failed.actual_output_items} of ${expected_output_items}`);
+            check.holds = false;
+            check.failed_taker_order = takerOrderName(order);
+            check.actual_output_items = failed.actual_output_items;
+            check.repeat_periods = failed.repeat_periods;
+            check.repeat_output_items = failed.repeat_output_items;
+            if (failed.full_output_chests !== undefined) check.full_output_chests = failed.full_output_chests;
+            if (failed.export_shortfalls !== undefined) check.export_shortfalls = failed.export_shortfalls;
+            return;
+        }
+    }
 }
 
 /**
