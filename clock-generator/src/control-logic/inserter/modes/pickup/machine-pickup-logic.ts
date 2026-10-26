@@ -1,7 +1,6 @@
 import { handSizeFor } from "../../../../entities";
 import { ItemName } from "../../../../data";
 import { EntityState, InserterState, InserterStatus, MachineState } from "../../../../state";
-import { TickProvider } from "../../../current-tick-provider";
 import { InserterTransferLogic } from "../transfer-logic";
 import { canPickupItem, canPickupItemForSink, recordPickup } from "../transfer-helpers";
 
@@ -16,7 +15,6 @@ export class MachinePickupLogic implements InserterTransferLogic {
         private readonly inserterState: InserterState,
         private readonly sourceEntityState: MachineState,
         private readonly sinkEntityState: EntityState,
-        private readonly tick_provider?: TickProvider,
         /** Where the decider of the inserter's clock of the game stands in the order they are built, when known */
         private readonly decider_build_order?: number,
     ) {}
@@ -34,7 +32,6 @@ export class MachinePickupLogic implements InserterTransferLogic {
     public executeForTick(): void {
         this.ticks_in_pickup += 1;
         if (!this.canPickupFromMachine()) {
-            this.waitForMachineOutput();
             this.inserterState.status = InserterStatus.IDLE;
             return;
         }
@@ -52,32 +49,14 @@ export class MachinePickupLogic implements InserterTransferLogic {
         );
     }
 
-    /** Waiting on a machine with nothing to take yet: the other inserters waiting on it take turns with this one */
-    private waitForMachineOutput(): void {
-        const source = this.sourceEntityState;
-        if (!this.tick_provider) {
-            return;
-        }
-        const held_item_name = this.inserterState.held_item?.item_name;
-        const items = held_item_name !== undefined ? [held_item_name] : Array.from(this.inserterState.inserter.filtered_items);
-        for (const item_name of items) {
-            if (canPickupItemForSink(this.sinkEntityState, item_name)) {
-                MachineState.waitsForOutput(source, item_name, this.inserterState.inserter.entity_id.id, this.tick_provider.getCurrentTick());
-            }
-        }
-    }
-
     private pickupFromMachine(state: InserterState, source: MachineState): void {
         const output_item_name = this.itemToPickupFromMachine(state, source);
         if (output_item_name === null) {
             return;
         }
+        // the takers of one machine are updated in one fixed order (InserterUpdates): the first takes up to its hand,
+        // and what is left is there for the next in the same tick
         const output_quantity = source.inventoryState.getQuantity(output_item_name);
-        const room_in_hand = handSizeFor(state.inserter, output_item_name) - (state.held_item?.quantity ?? 0);
-        if (this.tick_provider && !MachineState.takesTurnForOutput(
-            source, output_item_name, state.inserter.entity_id.id, this.tick_provider.getCurrentTick(), room_in_hand)) {
-            return;
-        }
 
         const held_item = state.held_item ?? { item_name: output_item_name, quantity: 0 }
 

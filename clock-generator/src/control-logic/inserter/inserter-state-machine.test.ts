@@ -76,18 +76,26 @@ describe("an inserter on a clock", () => {
     });
 });
 
-describe("an inserter taking the output of a machine that another inserter waits on", () => {
-    test("takes it in the tick its turn comes: the turn it was granted in idle holds for the pickup of that tick", () => {
-        const machine = Machine.createMachine(1, {
-            crafting_speed: 1,
-            productivity: 0,
-            recipe: RecipeMetadata.fromRecipeName("iron-gear-wheel"),
-            type: MachineType.MACHINE,
-        });
-        const belt = Belt.fromConfig({ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 4 }, { ingredient: "iron-gear-wheel", stack_size: 4 }] });
+/**
+ * Two stack inserters (hand 16) waiting at a gear assembler that holds `held` gears, each dropping onto a belt of its own,
+ * with `in_hand` gears already in the hand of the first. Updated in the order of the list, first then second, as the
+ * game serves the takers of one machine in one fixed order (InserterUpdates).
+ */
+function twoTakers(held: number, in_hand: number = 0) {
+    const machine = Machine.createMachine(1, {
+        crafting_speed: 1,
+        productivity: 0,
+        recipe: RecipeMetadata.fromRecipeName("iron-gear-wheel"),
+        type: MachineType.MACHINE,
+    });
+    const source_state = MachineState.forMachine(machine);
+    source_state.inventoryState.setQuantity("iron-gear-wheel", held);
+    const tick_provider = MutableTickProvider.create(5);
+    const taker = (id: number) => {
+        const belt = Belt.fromConfig({ id, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 4 }, { ingredient: "iron-gear-wheel", stack_size: 4 }] });
         const metadata = InserterMetadata.create("machine", "belt", InserterStackSize.SIZE_16, ["iron-gear-wheel"], {});
         const inserter: Inserter = {
-            entity_id: EntityId.forInserter(1),
+            entity_id: EntityId.forInserter(id),
             metadata,
             animation: InserterAnimation.fromMetadata(metadata.animation),
             source: { entity_id: machine.entity_id, item_names: new Set(["iron-gear-wheel"]) },
@@ -95,16 +103,43 @@ describe("an inserter taking the output of a machine that another inserter waits
             filtered_items: new Set(["iron-gear-wheel"]),
         };
         const inserter_state = InserterState.createIdle(inserter);
-        const source_state = MachineState.forMachine(machine);
-        // less than a hand, and inserter 2 asked for it the tick before
-        source_state.inventoryState.setQuantity("iron-gear-wheel", 3);
-        MachineState.waitsForOutput(source_state, "iron-gear-wheel", EntityId.forInserter(2).id, 4);
-        const tick_provider = MutableTickProvider.create(5);
         const state_machine = InserterStateMachine.create({
             inserter_state, source_state, sink_state: BeltState.create(belt), tick_provider, enable_control: AlwaysEnabledControl,
         });
-        state_machine.executeForTick();
-        expect(inserter_state.held_item).toEqual({ item_name: "iron-gear-wheel", quantity: 3 });
+        return { inserter_state, state_machine };
+    };
+    const takers = [taker(1), taker(2)];
+    if (in_hand > 0) {
+        takers[0].inserter_state.held_item = { item_name: "iron-gear-wheel", quantity: in_hand };
+    }
+    const tick = () => {
+        takers.forEach(it => it.state_machine.executeForTick());
+        tick_provider.setCurrentTick(tick_provider.getCurrentTick() + 1);
+    };
+    const hands = () => takers.map(it => it.inserter_state.held_item?.quantity ?? 0);
+    return { source_state, tick, hands };
+}
+
+// Recorded in Factorio 2.1.21 on the supercapacitor plant of the scaffold of #100, two stack inserters taking from it:
+// on 59 of the 62 ticks that show who was served first, the same one was; the plant held 20, both hands were empty and
+// waiting, and in the next tick one hand held 16, the other 4 and the plant 0 (ticks 101 and 421 of the recording)
+describe("inserters that take the product of one machine", () => {
+    test("the first takes up to its hand and the next what is left, in the same tick", () => {
+        const { source_state, tick, hands } = twoTakers(20);
+        tick();
+        expect(hands()).toEqual([16, 4]);
+        expect(source_state.inventoryState.getQuantity("iron-gear-wheel")).toBe(0);
+    });
+
+    // Recorded on the pentapod egg biochambers of agricultural science (#90): on every tick with two takers waiting and
+    // one served, it was the same one, whoever took last; in 10 of them it had taken the tick before as well
+    test("the one that took last is served again while it has room, the next waits for what it leaves", () => {
+        const { source_state, tick, hands } = twoTakers(3, 5);
+        tick();
+        expect(hands()).toEqual([8, 0]);
+        source_state.inventoryState.setQuantity("iron-gear-wheel", 3);
+        tick();
+        expect(hands()).toEqual([11, 0]);
         expect(source_state.inventoryState.getQuantity("iron-gear-wheel")).toBe(0);
     });
 });
