@@ -132,6 +132,29 @@ describe("the memo of the runs of a generation", () => {
         }
     });
 
+    it("keeps at most the ticks it is given, letting the run used longest ago go first", () => {
+        const others = [2, 3].map(warmup_periods => ({ ...options, warmup_periods }));
+        const [ticks, second, third] = [options, ...others].map(it => runBuild(config, it).ticks_simulated);
+        withRunMemo(() => {
+            const memo = currentRunMemo()!;
+            runBuild(config, options);
+            runBuild(config, others[0]);
+            runBuild(config, options); // used again: now the last used
+            expect([memo.size, memo.hits]).toEqual([2, 1]);
+            runBuild(config, others[1]); // over the limit: the run with 2 warm-up periods goes
+            expect(memo.size).toBe(2);
+            runBuild(config, options);
+            expect(memo.hits).toBe(2);
+            runBuild(config, others[0]);
+            expect(memo.hits).toBe(2);
+        }, 0, Math.max(ticks + second, ticks + third));
+        // a run longer than the limit is not kept
+        withRunMemo(() => {
+            runBuild(config, options);
+            expect(currentRunMemo()!.size).toBe(0);
+        }, 0, ticks - 1);
+    });
+
     it("ends with the generation, however it ends, and a generation inside one shares its memo", () => {
         let outer: RunMemo | undefined;
         withRunMemo(() => {
