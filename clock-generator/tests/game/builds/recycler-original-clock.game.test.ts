@@ -187,9 +187,11 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         expect(bends).toHaveLength(2);
         expect(bends.every((row: any) => row.source.pickup_capture?.status === 'supported' && row.source.pickup_capture.model_version === 3)).toBe(true);
         expect(new Set(bends.map((row: any) => wired.find(w => w.unit_number === row.unit_number)?.inserter)).size, 'both curved pickups are one id, one in each copy').toBe(1);
-        const direct = recording.config.machines.filter((row: any) => row.result_target);
-        expect(direct).toHaveLength(2);
-        expect(report.topology.recycler_targets).toHaveLength(2);
+        // (a cold recording starts before the recyclers have chosen a recipe, so it cannot name their targets)
+        if (!run.cold) {
+            expect(recording.config.machines.filter((row: any) => row.result_target)).toHaveLength(2);
+            expect(report.topology.recycler_targets).toHaveLength(2);
+        }
 
         // The science of each branch (a plant, its steel buffer and the arms between) closes at every period boundary
         const ledger = nativeScienceLedger(recording, report);
