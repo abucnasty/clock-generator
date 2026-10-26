@@ -32,6 +32,7 @@ import { ItemSelector } from './ItemSelector';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { MachineProductionSummary } from './MachineProductionSummary';
 import { OutputTransferPanel } from './OutputTransferPanel';
+import { InputRoutesPanel } from './InputRoutesPanel';
 import { SidecarModLink } from './IntroCard';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
@@ -123,7 +124,7 @@ function MachinesFormComponent({
                     <>
                         <Typography variant="body2" sx={{ mb: 1 }}>
                             Rates are per machine, per copy. Max shows the machine's capacity; At target shows its share
-                            of the requested output. Open a machine's settings to edit its speed and productivity.
+                            of the requested output. Open Entity details to edit a machine's speed and productivity or inspect its routes.
                         </Typography>
                         {common.length > 0 && <Typography variant="body2" sx={{ mb: 1 }}>
                             All {machines.length} machines: {common.join(' · ')}. Each machine's values remain editable.
@@ -180,6 +181,7 @@ function MachinesFormComponent({
                                 outputTransfer={outputTransfers?.find(transfer => transfer.source.type === 'machine' && transfer.source.id === machine.id) ?? null}
                                 outputGenerationIssues={outputGenerationIssues.filter(issue => issue.machine_id === machine.id)}
                                 outputTransfersLoading={outputTransfersLoading}
+                                allOutputTransfers={outputTransfers}
                                 onFixOutput={onFixOutput}
                                 onEditInserter={onEditInserter}
                                 canDelete={machines.length > 1}
@@ -206,6 +208,7 @@ interface MachineRowProps {
     outputTransfer: OutputTransferSummary | null;
     outputGenerationIssues: OutputTransferGenerationIssue[];
     outputTransfersLoading: boolean;
+    allOutputTransfers: readonly OutputTransferSummary[] | null;
     onFixOutput?: (machineId: number, item: string) => void;
     onEditInserter?: (id: number) => void;
     machine: MachineFormData;
@@ -223,7 +226,7 @@ interface MachineRowProps {
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarget, targetRate, targetUpdating, outputTransfer, outputGenerationIssues, outputTransfersLoading, onFixOutput, onEditInserter, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
+function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarget, targetRate, targetUpdating, outputTransfer, outputGenerationIssues, outputTransfersLoading, allOutputTransfers, onFixOutput, onEditInserter, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
     const { itemLabel, recipeLabel } = useGameNames();
     const craftingMachines = useCraftingMachines();
     const recipes = useMachineRecipeOptions(machine.prototype, recipeNames);
@@ -235,6 +238,9 @@ function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarge
         energy_consumption_bonus: machine.energy_consumption_bonus,
         fuel: machine.fuel,
     });
+    const inputs = [...new Set(!updating && facts ? facts.inputs.map(input => input.item_name)
+        : [...(getRecipeInfo?.(machine.recipe)?.ingredients ?? []), ...(machine.fuel ? [machine.fuel] : [])])];
+    const missingOutputs = outputTransfer?.results.filter(result => result.coverage === 'missing').length ?? 0;
 
     return (
         <Box
@@ -305,18 +311,21 @@ function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarge
                 </Box>
             </Box>
             <RecipeNotMadeNote machine={machine} sx={{ mb: 1 }} />
-            <OutputTransferPanel collapsible summary={outputTransfer} chests={build.chests} facts={updating ? null : facts} fallbackItems={machine.recipe ? getRecipeInfo?.(machine.recipe)?.results ?? [] : []} targetRate={atTarget ? targetRate : undefined} atTarget={atTarget}
-                generationIssues={outputGenerationIssues} loading={outputTransfersLoading}
-                onFix={item => onFixOutput?.(machine.id, item)} onEditInserter={onEditInserter}
-                control={placesResults(machine, craftingMachines) ? <ResultTargetField machine={machine} machineLabel={entityLabel('machine', machine.id)} build={build}
-                    getRecipeInfo={getRecipeInfo} sx={{ mb: 1.5 }} onChange={result_target => onPatch(index, { result_target })} /> : undefined} />
-            <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[{ label: 'Machine facts', content: !machine.recipe
+            {placesResults(machine, craftingMachines) && <ResultTargetField machine={machine} machineLabel={entityLabel('machine', machine.id)} build={build}
+                getRecipeInfo={getRecipeInfo} sx={{ mt: 1, mb: 1.5 }} onChange={result_target => onPatch(index, { result_target })} />}
+            <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[
+                { label: 'Input Routes', content: <InputRoutesPanel machineId={machine.id} build={build} getRecipeInfo={getRecipeInfo} inputs={inputs}
+                    transfers={allOutputTransfers} loading={outputTransfersLoading || updating} onEditInserter={onEditInserter} /> },
+                { label: 'Output Routes', content: <OutputTransferPanel summary={outputTransfer} chests={build.chests} facts={updating ? null : facts}
+                    fallbackItems={machine.recipe ? getRecipeInfo?.(machine.recipe)?.results ?? [] : []} targetRate={atTarget ? targetRate : undefined} atTarget={atTarget}
+                    generationIssues={outputGenerationIssues} loading={outputTransfersLoading} onFix={item => onFixOutput?.(machine.id, item)} onEditInserter={onEditInserter} /> },
+                { label: 'Machine Facts', content: !machine.recipe
                 ? <Typography variant="body2">Choose a recipe to see machine facts.</Typography>
                 : updating || (atTarget && targetUpdating)
                     ? <Typography variant="body2">Updating production…</Typography>
                     : atTarget && !targetRate
                         ? <Typography variant="body2">At-target rates unavailable for this build.</Typography>
-                        : <MachineFactsAccordion inline machineId={machine.id} facts={facts} error={error} targetRate={atTarget ? targetRate : undefined} /> }]} summary={
+                : <MachineFactsAccordion inline machineId={machine.id} facts={facts} error={error} targetRate={atTarget ? targetRate : undefined} /> }]} summary={openTab =>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 0.75, justifyContent: 'space-between' }}>
                     {updating
                         ? <Typography variant="caption">Updating production…</Typography>
@@ -325,6 +334,10 @@ function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarge
                         Speed {Number(machine.crafting_speed.toFixed(3))}× · Productivity {machine.productivity}%
                         {burnsNutrients(machine, craftingMachines) && ` · Energy ${Number((machine.energy_consumption_bonus ?? 0).toFixed(2))}%`}
                     </Typography>
+                    {missingOutputs > 0 && <Button size="small" color="warning" onClick={() => openTab('Output Routes')}>
+                        {missingOutputs} {missingOutputs === 1 ? 'output needs' : 'outputs need'} a route</Button>}
+                    {outputGenerationIssues.length > 0 && <Button size="small" color="warning" onClick={() => openTab('Output Routes')}>Output target cannot be clocked</Button>}
+                    {!outputTransfersLoading && (!outputTransfer || outputTransfer.status === 'unavailable') && <Button size="small" color="inherit" onClick={() => openTab('Output Routes')}>Output routes unavailable</Button>}
                 </Box>
             }>
             <MachineSettingsFields machine={machine} onChange={(field, value) => onUpdate(index, field, value)} onPatch={patch => onPatch(index, patch)}

@@ -284,7 +284,7 @@ function InsertersFormComponent({
                 <Typography variant="body2" sx={{ mb: 1 }}>
                     Routes choose each inserter's source and destination. Filters edit the items it carries.
                     Automatic filters follow the source and destination; clearing the last explicit filter returns to Automatic.
-                    Open an inserter's settings to edit its stack size and enable rule, or use Bulk edit for several inserters.
+                    Open Entity details to edit an inserter's stack size and enable rule, or use Bulk edit for several inserters.
                 </Typography>
                 {commonMetadata.length > 0 && <Typography variant="body2" sx={{ mb: 1 }}>All {inserters.length} inserters: {commonMetadata.join(' · ')}.</Typography>}
                 {(missingTypes > 0 || missingQualities > 0) && <Typography variant="body2" sx={{ mb: 1 }}>
