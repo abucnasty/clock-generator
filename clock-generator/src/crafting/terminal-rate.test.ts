@@ -43,7 +43,7 @@ describe("a branch at its rate over the cycle", () => {
     const branch = (bins: number[], hand = 16, takes_surplus = true): BranchBins => ({ bins, share_per_bin: 16, hand, takes_surplus });
 
     it("may run a hand behind: none and then 32 is the share of 16 a period, two hands behind is not", () => {
-        expect(atRateFrom([branch([16, 32, 0, 16, 0, 32, 16])], 0)).toBe(true);
+        expect(atRateFrom([branch([16, 0, 32, 16, 0, 32])], 0)).toBe(true);
         expect(atRateFrom([branch([16, 0, 0, 48])], 0)).toBe(false);
     });
 
@@ -56,6 +56,13 @@ describe("a branch at its rate over the cycle", () => {
         expect(atRateFrom([branch([16, 32, 0, 16], 0, false)], 0)).toBe(false);
         expect(atRateFrom([branch([16, 32, 16], 0, false)], 0)).toBe(false);
         expect(firstBinAtRate([branch([0, 16, 32, 0, 16, 16], 0, false)])).toBe(4);
+    });
+
+    it("does not let a surplus make up for a later shortfall: a hand ahead and then two short is two hands behind", () => {
+        expect(atRateFrom([branch([16, 32, 0, 0, 16, 32])], 0)).toBe(false);
+        // the output a science plant had stocked before the loss, handed on when it is restored, and then the bins the
+        // loss left empty: back from the last of those, not from the first bin
+        expect(firstBinAtRate([branch([32, 32, 16, 0, 0, 0, 16, 16, 16, 16])])).toBe(5);
     });
 
     it("starts after what a loss left behind", () => {

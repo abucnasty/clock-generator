@@ -9,10 +9,11 @@ import type { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 // Where every terminal output drops into an infinity chest, the target is judged as a rate: each branch (the terminal
 // outputs that take from one machine or one container) has to carry its share of the target over the cycle in whole
 // hands, not an exact count in every period. A branch may run a hand behind (none in one period, 32 in the next): it
-// carries its share from a bin on where its running total from there never falls further behind its share than its
+// carries its share from a bin on where no stretch of bins from there carries less than its share by more than its
 // hands, and, where the run repeats forever, the repeating cycle carries its share to less than an item, so that it never
 // falls further behind. What it carries over its share is a surplus the sink takes, as a buffer with room takes it, and
-// is not held against it. Anything else (a belt, a machine's insertion limit, a chest that can fill) cannot take lumps
+// is not held against it; nor does it count towards a later stretch: a hand made ahead (the output a machine had stocked
+// before a loss, handed on when it is restored) does not hide a shortfall after it. Anything else (a belt, a machine's insertion limit, a chest that can fill) cannot take lumps
 // or a surplus, and its output stays judged exactly in every period: a branch with no hand and no surplus.
 
 /** Room for the rounding of shares that are not whole */
@@ -96,12 +97,18 @@ export function branchesScaledTo(branches: readonly TerminalBranch[], expected_p
 /** How far a branch may run ahead of its share */
 const aheadLimit = (branch: BranchBins): number => branch.takes_surplus ? Infinity : branch.hand;
 
-/** Whether a branch carries its share from bin `from` to its last bin: its running total from there stays within its limits */
+/**
+ * Whether a branch carries its share from bin `from` to its last bin: its running total from there stays within its
+ * limits; where its sink takes the surplus, behind is counted from the highest the running total has been, so that a
+ * surplus does not make up for a later shortfall
+ */
 function branchAtRateFrom(branch: BranchBins, from: number): boolean {
     let ahead = 0;
+    let best = 0;
     for (let index = from; index < branch.bins.length; index++) {
         ahead += branch.bins[index] - branch.share_per_bin;
-        if (ahead < -branch.hand - EPSILON || ahead > aheadLimit(branch) + EPSILON) return false;
+        if (branch.takes_surplus) best = Math.max(best, ahead);
+        if (ahead < best - branch.hand - EPSILON || ahead > aheadLimit(branch) + EPSILON) return false;
     }
     return true;
 }
@@ -118,17 +125,22 @@ export function atRateFrom(branches: readonly BranchBins[], from: number): boole
 export function firstBinAtRate(branches: readonly BranchBins[]): number {
     const bins = Math.max(0, ...branches.map(branch => branch.bins.length));
     // from bin r a branch is at the rate where its running total P (P[0] = 0, P[k + 1] = P[k] + bin k - share) after r
-    // stays within its limits of P[r]: max(P[k], k > r) - ahead limit <= P[r] <= min(P[k], k > r) + hand
+    // stays within its limits of P[r]: max(P[k], k > r) - ahead limit <= P[r] <= min(P[k], k > r) + hand; where its sink
+    // takes the surplus, no P[i], i >= r, is more than a hand over a P[j] after it
     const valid = new Uint8Array(bins).fill(1);
     for (const branch of branches) {
         const prefix = new Float64Array(bins + 1);
         for (let index = 0; index < bins; index++) prefix[index + 1] = prefix[index] + (branch.bins[index] ?? 0) - branch.share_per_bin;
         let lowest_after = Infinity;
         let highest_after = -Infinity;
+        let deepest_fall = 0;
         for (let from = bins - 1; from >= 0; from--) {
             lowest_after = Math.min(lowest_after, prefix[from + 1]);
             highest_after = Math.max(highest_after, prefix[from + 1]);
-            if (prefix[from] > lowest_after + branch.hand + EPSILON || prefix[from] < highest_after - aheadLimit(branch) - EPSILON) valid[from] = 0;
+            deepest_fall = Math.max(deepest_fall, prefix[from] - lowest_after);
+            const off = branch.takes_surplus ? deepest_fall > branch.hand + EPSILON
+                : prefix[from] > lowest_after + branch.hand + EPSILON || prefix[from] < highest_after - aheadLimit(branch) - EPSILON;
+            if (off) valid[from] = 0;
         }
     }
     const first = valid.indexOf(1);
@@ -144,6 +156,8 @@ export function firstBinAtRate(branches: readonly BranchBins[]): number {
 export function cycleAtRate(branches: readonly BranchBins[]): boolean {
     return branches.every(branch => {
         const over = branch.bins.reduce((sum, items) => sum + items, 0) - branch.share_per_bin * branch.bins.length;
-        return branchAtRateFrom(branch, 0) && over > -1 && (branch.takes_surplus || over < 1);
+        // twice over, where a surplus is taken: a fall that runs on into the next cycle counts from the best before it
+        const judged = branch.takes_surplus ? { ...branch, bins: [...branch.bins, ...branch.bins] } : branch;
+        return branchAtRateFrom(judged, 0) && over > -1 && (branch.takes_surplus || over < 1);
     });
 }
