@@ -397,14 +397,14 @@ local function run_without_circuit(inserter)
     end
 end
 
----Wire the schedule combinators of a generated clock to the inserters their tags name
+---Build the combinators of a generated clock below the build; they join the build's entities, so they are removed with it
 ---@param state table storage.harness
----@param clock {blueprint: string, inserters: table<string, uint|uint[]>, drills: table<string, uint|uint[]>|nil} blueprint: each schedule combinator tagged with the config ids of its inserters; inserters: config inserter id -> unit number, or a list of them where the build holds the config more than once
----@return table report
-local function wire_clock(state, clock)
+---@param blueprint string each schedule combinator tagged with the config ids of its inserters
+---@return LuaEntity[] combinators, table<uint, Tags> tags of the combinators by unit number
+local function build_clock(state, blueprint)
     local surface = game.surfaces[state.surface_index]
     local area = state.area
-    local combinators, failed, tags = build_blueprint(surface, game.forces[state.force_name], clock.blueprint, function(_, half_height)
+    local combinators, failed, tags = build_blueprint(surface, game.forces[state.force_name], blueprint, function(_, half_height)
         return {
             x = math.floor((area.left_top.x + area.right_bottom.x) / 2),
             y = math.ceil(area.right_bottom.y) + 2 + half_height,
@@ -413,7 +413,53 @@ local function wire_clock(state, clock)
     if #failed > 0 then
         error("could not build the clock: " .. table.concat(failed, ", "))
     end
+    for _, combinator in pairs(combinators) do
+        table.insert(state.entities, combinator)
+    end
+    return combinators, tags
+end
 
+---The main counter of a generated clock (the decider described as "Clock for ...") and the value of the signal it counts on its own
+---network now, as a probe reads it (capture.clock_value)
+---@param combinators LuaEntity[]
+---@return number counter, LuaEntity main, SignalID signal
+local function clock_counter(combinators)
+    local main
+    for _, combinator in pairs(combinators) do
+        if combinator.valid and combinator.type == "decider-combinator"
+            and string.sub(description_of(combinator), 1, #CLOCK_DESCRIPTION_PREFIX) == CLOCK_DESCRIPTION_PREFIX then
+            if main then
+                error("the clock has more than one decider described as \"" .. CLOCK_DESCRIPTION_PREFIX .. " ...\"")
+            end
+            main = combinator
+        end
+    end
+    if not main then
+        error("the clock has no decider described as \"" .. CLOCK_DESCRIPTION_PREFIX .. " ...\"")
+    end
+    local conditions = main.get_control_behavior().parameters.conditions or {}
+    local signal = conditions[1] and conditions[1].first_signal
+    if not signal then
+        error("the main counter of the clock counts no signal")
+    end
+    for _, connector in ipairs({ defines.wire_connector_id.combinator_output_green, defines.wire_connector_id.combinator_output_red,
+        defines.wire_connector_id.combinator_input_green, defines.wire_connector_id.combinator_input_red }) do
+        local network = main.get_circuit_network(connector)
+        if network then
+            return network.get_signal(signal), main, signal
+        end
+    end
+    error("the main counter of the clock has no circuit network to read")
+end
+
+---Wire the schedule combinators of a clock already built (build_clock) to the inserters their tags name; nothing of the clock is
+---built again or changed
+---@param state table storage.harness
+---@param combinators LuaEntity[]
+---@param tags table<uint, Tags> tags of the combinators by unit number
+---@param clock {inserters: table<string, uint|uint[]>, drills: table<string, uint|uint[]>|nil} inserters: config inserter id -> unit number, or a list of them where the build holds the config more than once
+---@return table report
+local function attach_clock(state, combinators, tags, clock)
     local by_unit_number = {}
     for _, entity in pairs(state.entities) do
         if entity.valid and entity.unit_number then
@@ -432,7 +478,6 @@ local function wire_clock(state, clock)
     local report = { wired = {}, wired_drills = {}, not_wired = {}, running_free = {} }
     local wired_units = {}
     for _, combinator in pairs(combinators) do
-        table.insert(state.entities, combinator)
         local ids = tags[combinator.unit_number] and tags[combinator.unit_number][INSERTERS_TAG]
         local drill_ids = tags[combinator.unit_number] and tags[combinator.unit_number][DRILLS_TAG]
         if drill_ids then
@@ -510,6 +555,15 @@ local function wire_clock(state, clock)
         end
     end
     return report
+end
+
+---Build a generated clock and wire its schedule combinators to the inserters their tags name
+---@param state table storage.harness
+---@param clock {blueprint: string, inserters: table<string, uint|uint[]>, drills: table<string, uint|uint[]>|nil} blueprint: each schedule combinator tagged with the config ids of its inserters; inserters: config inserter id -> unit number, or a list of them where the build holds the config more than once
+---@return table report
+local function wire_clock(state, clock)
+    local combinators, tags = build_clock(state, clock.blueprint)
+    return attach_clock(state, combinators, tags, clock)
 end
 
 ---@param entity LuaEntity
@@ -898,8 +952,8 @@ end
 ---The staged start's second stage, in the one tick the game is paused in: builds the inserters of the cell one after the other in the
 ---order asked for, so the unit numbers (the order the game serves inserters that ask at the same time in) come out in that order
 ---@param state table storage.harness
----@param options {order: {x: number, y: number, config_id: number?}[]?}
----@return table report placed: every inserter built with its unit number; by_config: unit number by config id
+---@param options {order: {x: number, y: number, config_id: number?, copy: number?}[]?, copies: number?} copies: the build holds the config this many times, so a config id names one inserter of each copy
+---@return table report placed: every inserter built with its unit number; by_config: unit number by config id, a list of them in the order built when the build holds copies
 local function place_staged(state, options)
     local staged = state.staged
     if staged.phase ~= "saturated" then
@@ -923,7 +977,15 @@ local function place_staged(state, options)
         end
     end
     local placed, by_config, preexisting = {}, {}, {}
-    local function place(ghost, config_id)
+    local function name_unit(config_id, unit_number)
+        if options.copies then
+            by_config[tostring(config_id)] = by_config[tostring(config_id)] or {}
+            table.insert(by_config[tostring(config_id)], unit_number)
+        else
+            by_config[tostring(config_id)] = unit_number
+        end
+    end
+    local function place(ghost, config_id, copy)
         local x, y = ghost.position.x - staged.origin.x, ghost.position.y - staged.origin.y
         local _, entity, proxy = ghost.revive({ raise_revive = true })
         if not entity then
@@ -933,9 +995,9 @@ local function place_staged(state, options)
             fulfil_item_requests(entity, proxy)
         end
         table.insert(state.entities, entity)
-        table.insert(placed, { unit_number = entity.unit_number, name = entity.name, config_id = config_id, x = x, y = y, tick = game.tick })
+        table.insert(placed, { unit_number = entity.unit_number, name = entity.name, config_id = config_id, copy = copy, x = x, y = y, tick = game.tick })
         if config_id then
-            by_config[tostring(config_id)] = entity.unit_number
+            name_unit(config_id, entity.unit_number)
         end
     end
     for _, item in ipairs(options.order or {}) do
@@ -943,11 +1005,14 @@ local function place_staged(state, options)
         local ghost = ghost_at[at]
         if ghost and ghost.valid then
             ghost_at[at] = nil
-            place(ghost, item.config_id)
+            place(ghost, item.config_id, item.copy)
         elseif item.config_id and existing_at[at] then
             local entity = existing_at[at]
-            by_config[tostring(item.config_id)] = entity.unit_number
-            table.insert(preexisting, {config_id = item.config_id, unit_number = entity.unit_number, x = item.x, y = item.y})
+            name_unit(item.config_id, entity.unit_number)
+            table.insert(preexisting, {config_id = item.config_id, copy = item.copy, unit_number = entity.unit_number, x = item.x, y = item.y})
+        elseif options.copies then
+            -- a build of copies is wired by these lists: an inserter of the order that is neither a ghost nor built would leave a copy unclocked
+            error("no inserter staged or built at " .. at .. " for config id " .. tostring(item.config_id) .. " of copy " .. tostring(item.copy))
         end
     end
     -- an inserter of the cell the order does not name follows, in the order of the blueprint
@@ -993,6 +1058,78 @@ local function seed_self_ingredient_loops(entities, amount)
     return report
 end
 
+---What the crafting machines and chests of the build hold: in a staged start nothing of the cell has run, so its machines are empty
+---@param state table storage.harness
+---@return table[] stock
+local function build_stock(state)
+    local stock = {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid and (CRAFTING_MACHINE_TYPES[entity.type] or entity.type == "container") then
+            local row = { unit_number = entity.unit_number, name = entity.name, type = entity.type }
+            if entity.type == "container" then
+                row.chest = entity.get_inventory(defines.inventory.chest).get_item_count()
+            else
+                row.input = entity.get_inventory(defines.inventory.crafter_input).get_item_count()
+                row.output = entity.get_inventory(defines.inventory.crafter_output).get_item_count()
+            end
+            table.insert(stock, row)
+        end
+    end
+    return stock
+end
+
+---@param combinators LuaEntity[]
+---@return uint[]
+local function unit_numbers_of(combinators)
+    local units = {}
+    for _, combinator in pairs(combinators) do
+        table.insert(units, combinator.valid and combinator.unit_number or -1)
+    end
+    return units
+end
+
+---A staged start that places its clock first: once the belts are saturated, the clock is built while the inserters of the cell are
+---still ghosts, and the game stays paused. harness_advance then runs it alone, a tick at a time, and harness_start builds the
+---inserters and wires them to this same clock.
+---@param job {clock: {blueprint: string}}
+---@return table report
+function harness.place_clock(job)
+    local state = storage.harness
+    if not state or not state.staged or state.staged.phase ~= "saturated" or not state.ready then
+        error("a clock is placed first only in a staged start whose belts are saturated, before its inserters are built")
+    end
+    if state.primed_clock then
+        error("the clock of this build is placed already")
+    end
+    local combinators, tags = build_clock(state, job.clock.blueprint)
+    local counter, main, signal = clock_counter(combinators)
+    state.primed_clock = { combinators = combinators, tags = tags, main = main, signal = signal, placed_tick = game.tick }
+    local ghosts = 0
+    for _, ghost in ipairs(state.staged.ghosts) do
+        if ghost.valid then ghosts = ghosts + 1 end
+    end
+    return { tick = game.tick, counter = counter, signal = signal, main_unit = main.unit_number,
+        combinators = unit_numbers_of(combinators), cell_ghosts = ghosts, stock = build_stock(state) }
+end
+
+---Run the game for some ticks and pause it again, in a staged start whose clock was placed first and whose inserters are not built
+---@param job {ticks: number?}
+---@return table report
+function harness.advance(job)
+    local state = storage.harness
+    if not state or not state.primed_clock or not state.ready or state.staged.phase ~= "saturated" then
+        error("the game is advanced only in a staged start whose clock was placed first, before its inserters are built")
+    end
+    local ticks = job.ticks or 1
+    if ticks < 1 or ticks % 1 ~= 0 then
+        error("advance by a whole number of ticks above 0, not " .. tostring(ticks))
+    end
+    state.ready = false
+    state.pause_tick = game.tick + ticks
+    game.tick_paused = false
+    return { tick = game.tick, pause_tick = state.pause_tick }
+end
+
 ---Wire a clock, seed the build, start recording and let the game run
 ---@param job {clock: table?, unclocked: boolean?, seed: table[]?, lua: string?, settle_ticks: number?, record: {ticks: number?, periods: number?}?}
 ---@return table report
@@ -1003,15 +1140,40 @@ function harness.start(job)
     end
     local report = { seeds = {} }
 
+    local primed = state.primed_clock
+    if primed and not (job.clock and job.clock.primed) then
+        error("the clock of this build is placed already: start it with clock.primed")
+    end
+    if job.clock and job.clock.primed and not primed then
+        error("clock.primed needs a clock placed first (harness_place_clock)")
+    end
+    local attach
+    if primed then
+        -- read in the tick the inserters are built in and wired, before anything of the cell exists
+        local counter = clock_counter(primed.combinators)
+        local ghosts = 0
+        for _, ghost in ipairs(state.staged.ghosts) do
+            if ghost.valid then ghosts = ghosts + 1 end
+        end
+        attach = { tick = game.tick, placed_tick = primed.placed_tick, counter = counter, signal = primed.signal,
+            main_unit = primed.main.valid and primed.main.unit_number or nil, combinators = unit_numbers_of(primed.combinators),
+            cell_ghosts = ghosts, stock = build_stock(state) }
+    end
+
     if state.staged then
         local staged_options = job.staged or {}
         report.staged = place_staged(state, staged_options)
         if job.clock then
             job.clock.inserters = report.staged.by_config
         end
+        if attach then
+            report.staged.clock_attach = attach
+        end
     end
 
-    if job.clock then
+    if primed then
+        report.clock = attach_clock(state, primed.combinators, primed.tags, job.clock)
+    elseif job.clock then
         report.clock = wire_clock(state, job.clock)
     elseif job.unclocked then
         for _, inserter in pairs(state.clocked_inserters or {}) do
@@ -1071,6 +1233,9 @@ function harness.status()
     if state ~= nil and state.staged ~= nil then
         local staged = state.staged
         status.staged = { phase = staged.phase, started_tick = staged.started_tick, saturated_tick = staged.saturated_tick, failed = staged.failed, lanes = staged.lane_log, run = staged.run }
+    end
+    if state ~= nil and state.primed_clock ~= nil then
+        status.clock = { placed_tick = state.primed_clock.placed_tick, counter = clock_counter(state.primed_clock.combinators) }
     end
     return status
 end
