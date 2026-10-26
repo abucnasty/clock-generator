@@ -280,6 +280,10 @@ export interface LossOutcome {
     pickup_phase_starts_checked?: number;
     /** First failing lane-phase start; values are public 1/32-tile units, keyed by inserter ID. */
     failed_pickup_phases?: Record<string, readonly [number, number]>;
+    /** Orders of the inserters that take one product from one machine the loss was tried under, the default included; absent where there are none */
+    taker_orders_checked?: number;
+    /** The order of those inserters under which the build did not get back, after it did under the default ("ascending") */
+    failed_taker_order?: string;
     /** Ticks simulated across all checked starts. */
     ticks: number;
 }
@@ -712,6 +716,11 @@ export interface BackpressureLossVerdict {
      * comes back in another phase (the loss's `failed_pickup_phases`). Absent from results made before it was kept.
      */
     broken_at_other_lane_phases?: string[];
+    /**
+     * The losses of `broken_by` it gets back from with the inserters that take one product from one machine served in the
+     * default order, and not in another (the loss's `failed_taker_order`). Absent where there are none.
+     */
+    broken_under_other_taker_orders?: string[];
     /** The most periods it took to be back at the expected output over all trials; null when it does not survive */
     recovered_after_periods: number | null;
     /** For a build whose items spoil: the losses were shorter than this (lossLimitOf); absent for any other build */
@@ -724,6 +733,10 @@ export function verdictOf(report: BackpressureLossReport): BackpressureLossVerdi
         broken_by: report.losses.filter(outcome => !outcome.recovers).map(outcome => lossLabel(outcome.loss)),
         broken_at_other_lane_phases: report.losses.filter(outcome => !outcome.recovers && outcome.failed_pickup_phases !== undefined)
             .map(outcome => lossLabel(outcome.loss)),
+        ...(report.losses.some(outcome => !outcome.recovers && outcome.failed_taker_order !== undefined) && {
+            broken_under_other_taker_orders: report.losses.filter(outcome => !outcome.recovers && outcome.failed_taker_order !== undefined)
+                .map(outcome => lossLabel(outcome.loss)),
+        }),
         ...(report.not_tried.length > 0 && { not_tried: report.not_tried.map(lossLabel) }),
         recovered_after_periods: report.recovered_after_periods,
         ...(report.loss_limit !== null && { loss_limit: report.loss_limit }),
