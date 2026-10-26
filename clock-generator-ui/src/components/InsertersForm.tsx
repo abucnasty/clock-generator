@@ -27,6 +27,7 @@ import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { inferInserterItems, itemsAround } from '../utils/inferInserterItems';
 import { InserterEditor, type InserterEditorProps } from './InserterEditor';
+import { InserterRoutePreview } from './InserterRoutePreview';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { entityOptionsOf, findOption } from '../utils/inserterOptions';
 import { RowActionsMenu } from './RowActionsMenu';
@@ -73,8 +74,9 @@ interface InsertersFormProps {
 
 type RuleCopySource = CopyFromOption & { uuid: string };
 
-const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value, index, onUpdate, onRemove, ruleCopySources, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
+const InserterRow = memo(function InserterRow({ filterView, fullMetadata, focusRequest, value, index, onUpdate, onRemove, ruleCopySources, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
     filterView: boolean;
+    focusRequest?: InsertersFormProps['focusRequest'];
     metadata: string;
     fullMetadata: string;
     index: number;
@@ -92,8 +94,8 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
     const [ruleRevision, setRuleRevision] = useState(0);
     const ruleCopyOptions = useMemo(() => ruleCopySources.filter(source => source.uuid !== value._uuid), [ruleCopySources, value._uuid]);
     const label = entityLabel('inserter', value.id);
-    const { itemLabel } = useGameNames();
     const craftingMachines = useCraftingMachines();
+    const detailsRequest = useMemo(() => focusRequest ? { tab: 'General' } : undefined, [focusRequest]);
     const selectedRow = selecting && checked;
     const selectionStyle = {
         bgcolor: (theme: Theme) => selectedRow ? themeTokens(theme).hover.row : themeTokens(theme).surface.row,
@@ -130,44 +132,41 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, value,
         {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label} data-selected={selectedRow ? 'true' : undefined} sx={{
             ...ROW_GRID_SX, p: 1.5, pt: 1.5, ...selectionStyle,
         }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto', gap: 1, alignItems: 'center',
-                '@container inserter-row (max-width: 650px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', gridColumn: 1, gridRow: 1, '& .MuiChip-root': { height: 40, bgcolor: 'transparent', '& .MuiChip-label': { px: 0 } } }}>
-                    {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)}
-                        slotProps={{ input: { 'aria-label': selectRowName(label) } }} sx={{ p: 0.5 }} />}
-                    {dragHandle}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)}
+                    slotProps={{ input: { 'aria-label': selectRowName(label) } }} sx={{ p: 0.5 }} />}
+                <Box role="group" aria-label={`${label} route`} sx={{ flex: 1, minWidth: 0 }}>
+                    <InserterRoutePreview value={value} options={editor.options ?? []} filterItems={filterItems} identity={dragHandle} />
                 </Box>
-            <Box sx={{ display: 'contents', '@container inserter-row (max-width: 650px)': { '& > div:nth-of-type(-n+2)': { gridColumn: '1 / -1' } } }}>
-                <InserterEditor {...editor} value={value} label={label} layout="row" onChange={onChange}
-                    routeActions={<Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gridColumn: 4, gridRow: 1, '@container inserter-row (max-width: 650px)': { gridColumn: 2 } }}>
-                        <Box id={`settings-actions-inserter-${value.id}`} sx={{ display: 'flex' }} />
-                        <RowActionsMenu label={label} onDuplicate={() => onDuplicate(index, label)}
-                            onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
-                            onMoveDown={canMoveDown ? () => onReorder(index, index + 1) : undefined} />
-                        <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('inserter', value.id)} data-row-delete=""><Delete /></IconButton>
-                    </Box>}
-                    rowSettings={fields => <EntitySettings actionContainerId={`settings-actions-inserter-${value.id}`} label={label} tabs={[{ label: 'Enable control', content:
-                        <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
-                            currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
-                            availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills)}
-                            movedItems={filterItems} stackSize={effectiveInserterStackSize(value)} copyFromOptions={ruleCopyOptions}
-                            onCancel={() => setRuleRevision(previous => previous + 1)}
-                            onSave={override => {
-                                if (enableControlOverrideChanged(override, value.overrides?.enable_control)) onChange({ overrides: { ...value.overrides, enable_control: override } });
-                                setRuleRevision(previous => previous + 1);
-                            }} />
-                    }]} summary={<Typography variant="body2">
-                        Stack {effectiveInserterStackSize(value)}{value.stack_size === undefined ? ' (automatic)' : ' (explicit)'} · Filters: {filtersLabel(value, 'Auto', 'Explicit')}{filterItems.length ? ` (${filterItems.map(itemLabel).join(', ')})` : usesAutomaticFilters(value.filters) ? ' (no items inferred)' : ' (none)'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
-                        {value.source.type === 'belt' && value.source.near_lane !== undefined && ` · Nearest lane ${value.source.near_lane}`}
-                        {value.prototype !== undefined && ` · ${inserterTimingLabels(value).type}`}
-                        {value.quality !== undefined && ` · ${inserterTimingLabels(value).quality}`}
-                    </Typography>}>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, overflowWrap: 'anywhere' }}>{fullMetadata}</Typography>
-                        {fields}
-                    </EntitySettings>}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, alignSelf: 'flex-start' }}>
+                    <Box id={`settings-actions-inserter-${value.id}`} sx={{ display: 'flex' }} />
+                    <RowActionsMenu label={label} onDuplicate={() => onDuplicate(index, label)}
+                        onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
+                        onMoveDown={canMoveDown ? () => onReorder(index, index + 1) : undefined} />
+                    <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('inserter', value.id)} data-row-delete=""><Delete /></IconButton>
+                </Box>
             </Box>
-            </Box>
+            <EntitySettings first actionContainerId={`settings-actions-inserter-${value.id}`} label={label} request={detailsRequest}
+                tabs={[{ label: 'Enable control', content:
+                    <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
+                        currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
+                        availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills)}
+                        movedItems={filterItems} stackSize={effectiveInserterStackSize(value)} copyFromOptions={ruleCopyOptions}
+                        onCancel={() => setRuleRevision(previous => previous + 1)}
+                        onSave={override => {
+                            if (enableControlOverrideChanged(override, value.overrides?.enable_control)) onChange({ overrides: { ...value.overrides, enable_control: override } });
+                            setRuleRevision(previous => previous + 1);
+                        }} />
+                }]}
+                summary={<Typography variant="caption">
+                    Stack {effectiveInserterStackSize(value)}{value.stack_size === undefined ? ' (automatic)' : ' (explicit)'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
+                </Typography>}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, overflowWrap: 'anywhere' }}>{fullMetadata}</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5, minWidth: 0,
+                    '@container inserter-row (max-width: 650px)': { gridTemplateColumns: 'minmax(0, 1fr)' } }}>
+                    <InserterEditor {...editor} value={value} label={label} layout="row" onChange={onChange} />
+                </Box>
+            </EntitySettings>
         </Box>}
     </SortableItem>;
 });
@@ -282,7 +281,7 @@ function InsertersFormComponent({
             title={`Inserters (${inserters.length})`}
             help={{ label: 'About inserters', content: <>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                    Routes choose each inserter's source and destination. Filters edit the items it carries.
+                    Routes preview each inserter's source, items and destination. Open Entity details → General to change its source or destination. Filters edit the items it carries.
                     Automatic filters follow the source and destination; clearing the last explicit filter returns to Automatic.
                     Open Entity details to edit an inserter's stack size and enable rule, or use Bulk edit for several inserters.
                 </Typography>
@@ -315,7 +314,7 @@ function InsertersFormComponent({
             <Box sx={{ ...LIST_GRID_SX, rowGap: 1 }}>
             <SortableList itemKeys={itemKeys} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} filterView={filterView} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
+                <InserterRow key={inserter._uuid} filterView={filterView} focusRequest={focusRequest?.id === inserter.id && !focusRequest.filters ? focusRequest : null} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
                     onDuplicate={duplicate} onReorder={onReorder} canMoveDown={index < inserters.length - 1}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}

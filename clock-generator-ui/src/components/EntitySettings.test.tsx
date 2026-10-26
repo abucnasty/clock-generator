@@ -40,7 +40,7 @@ const props = {
     summary: (openTab: (label: string) => void) => { summaryOpenTab = openTab; return content('machine-summary'); },
     tabs: [{ label: 'Input Routes', content: content('input-content') }, { label: 'Output Routes', content: content('output-content') }, { label: 'Machine Facts', content: content('facts-content') }],
 };
-const Render = () => { hooks.begin(); return elements(EntitySettings(props)); };
+const Render = (overrides: Partial<Parameters<typeof EntitySettings>[0]> = {}) => { hooks.begin(); return elements(EntitySettings({ ...props, ...overrides })); };
 const detailsButton = () => Render().find(element => element.type === IconButton && element.props['aria-label'] === 'Entity details for Machine 1')!;
 const panels = () => Render().filter(element => element.props.role === 'tabpanel');
 
@@ -63,6 +63,15 @@ it('labels the details toggle accessibly and starts closed with route tabs lazy 
     expect(open.some(element => element.props.children === 'input-content')).toBe(false);
     expect(open.some(element => element.props.children === 'output-content')).toBe(false);
     expect(open.some(element => element.props.children === 'facts-content')).toBe(false);
+});
+
+it('provides a visible focus target for Add and Duplicate when marked first', () => {
+    const view = Render({ first: true });
+    const first = view.filter(element => element.props['data-row-first'] !== undefined);
+    expect(first).toHaveLength(1);
+    expect(first[0].type).toBe(IconButton);
+    expect(first[0].props['aria-label']).toBe('Entity details for Machine 1');
+    expect(first[0].props['aria-expanded']).toBe(false);
 });
 
 it('keeps the panel mounted but hidden when toggled closed and visits input and output tabs on selection', () => {
@@ -101,4 +110,17 @@ it('opens the requested summary tab and requests focus for that tab', () => {
     hooks.effects.forEach(effect => effect());
     expect(getElementById).toHaveBeenCalledWith('settings-test-0-tab-2');
     expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+});
+
+it('reveals General for a new field navigation request, including after another tab was visited', () => {
+    (detailsButton().props.onClick as () => void)();
+    const tabs = Render().find(element => element.type === Tabs)!;
+    (tabs.props.onChange as (_event: unknown, value: number) => void)({}, 2);
+    const general = { tab: 'General' };
+    // A render-time request adjustment is committed by React's immediate retry.
+    Render({ request: general });
+    const view = Render({ request: general });
+    expect(view.filter(element => element.props.role === 'tabpanel').map(panel => panel.props.hidden)).toEqual([false, true, true, true]);
+    expect(view.some(element => element.props.children === 'general-content')).toBe(true);
+    expect(view.find(element => element.type === IconButton)?.props['aria-expanded']).toBe(true);
 });

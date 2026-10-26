@@ -2,21 +2,25 @@ import { Tune } from '@mui/icons-material';
 import { Box, IconButton, Portal, Tab, Tabs, Tooltip } from '@mui/material';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 
-export function EntitySettings({ label, summary, children, actionContainerId, first = false, tabs = [] }: {
+export function EntitySettings({ label, summary, children, actionContainerId, first = false, tabs = [], request }: {
     label: string;
     actionContainerId: string;
     summary: ReactNode | ((openTab: (label: string) => void) => ReactNode);
     children: ReactNode;
     first?: boolean;
     tabs?: { label: string; content: ReactNode }[];
+    /** A new request reveals a tab before an external navigation moves focus into its fields. */
+    request?: { tab: string };
 }) {
-    const [open, setOpen] = useState(false);
-    const [opened, setOpened] = useState(false);
-    const [active, setActive] = useState(0);
-    const [visited, setVisited] = useState<Set<number>>(() => new Set([0]));
+    const panels = [{ label: 'General', content: children }, ...tabs];
+    const requestedIndex = Math.max(0, panels.findIndex(panel => panel.label === request?.tab));
+    const [open, setOpen] = useState(!!request);
+    const [opened, setOpened] = useState(!!request);
+    const [active, setActive] = useState(request ? requestedIndex : 0);
+    const [visited, setVisited] = useState<Set<number>>(() => new Set([0, ...(request ? [requestedIndex] : [])]));
+    const [lastRequest, setLastRequest] = useState(request);
     const [focusRevision, setFocusRevision] = useState(0);
     const id = useId();
-    const panels = [{ label: 'General', content: children }, ...tabs];
     const openTab = (label: string) => {
         const index = panels.findIndex(panel => panel.label === label);
         if (index < 0) return;
@@ -32,6 +36,15 @@ export function EntitySettings({ label, summary, children, actionContainerId, fi
         tab?.focus({ preventScroll: true });
         tab?.scrollIntoView({ block: 'center' });
     }, [focusRevision, id, active]);
+    if (lastRequest !== request) {
+        setLastRequest(request);
+        if (request) {
+            setOpened(true);
+            setOpen(true);
+            setActive(requestedIndex);
+            setVisited(previous => new Set([...previous, requestedIndex]));
+        }
+    }
     return <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
         <Box sx={{ color: 'text.secondary', overflowWrap: 'anywhere' }}>{typeof summary === 'function' ? summary(openTab) : summary}</Box>
         <Portal container={() => document.getElementById(actionContainerId)}>
