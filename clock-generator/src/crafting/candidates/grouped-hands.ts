@@ -90,8 +90,15 @@ function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], perio
  * by an order a config does not tell. In the order of their sinks, the windows of the second open a share of the period
  * after the first's, and so on, each the length it was given. Turns that would meet one another leave the windows as they
  * are; the clock-only check judges both.
+ *
+ * The inserters that hand a turned machine's product on (`hands_out`: into a chest or onto a belt) move with its turn, so
+ * every machine filled in turn is emptied at the same point of its own turn. Left where they were, one turn would fall
+ * while its machine holds its output block, when the machine takes nothing and its taker picks nothing up, and the other
+ * turns would not: what the one taker leaves goes to the next, and one machine would get less than the others in every
+ * period (Factorio 2.1.21, the original #100 scaffold: 93 against 94 supercapacitors in 16 periods).
  */
-function takeTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], period: number): void {
+function takeTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], period: number,
+    hands_out: readonly Inserter[] = []): void {
     const contested = new Map<string, { machine: Machine; item: string; takers: Taker[] }>();
     for (const taker of takers) {
         if (taker.drain === true || !EntityId.isMachine(taker.source) || !EntityId.isMachine(taker.sink) || !windows.has(taker.inserter.entity_id.id)) continue;
@@ -126,8 +133,18 @@ function takeTurns(entity_registry: ReadableEntityRegistry, windows: Map<string,
         if (draw <= outputAtWindow(machine, item, period - width, width)) continue;
         const ordered = [...group].sort((a, b) => byNumber(a.sink, b.sink) || byNumber(a.inserter.entity_id, b.inserter.entity_id));
         const first = windows.get(ordered[0].inserter.entity_id.id)![0].start_inclusive;
+        const moved = new Set<string>();
         ordered.forEach((taker, turn) => {
-            if (turn > 0) windows.set(taker.inserter.entity_id.id, windowFrom(first + Math.round(turn * period / ordered.length), taker.window_ticks, period));
+            if (turn === 0) return;
+            const id = taker.inserter.entity_id.id;
+            const shift = first + Math.round(turn * period / ordered.length) - windows.get(id)![0].start_inclusive;
+            windows.set(id, windowFrom(first + Math.round(turn * period / ordered.length), taker.window_ticks, period));
+            if (moved.has(taker.sink.id)) return;
+            moved.add(taker.sink.id);
+            for (const out of hands_out) {
+                const ranges = windows.get(out.entity_id.id);
+                if (out.source.entity_id.id === taker.sink.id && ranges !== undefined) windows.set(out.entity_id.id, shiftedWindows(ranges, shift, period));
+            }
         });
     }
 }
@@ -484,7 +501,8 @@ export function groupedHandsPlan(
         }
         const unplaced = takers.find(it => !placed(it));
         if (unplaced !== undefined) refuse(`${unplaced.inserter.entity_id.id} fills ${unplaced.sink.id}, which is neither an output machine nor taken from`);
-        takeTurns(entity_registry, windows, takers, period);
+        const hands_out = [...outputs, ...takers.filter(it => it.drain === true).map(it => it.inserter)];
+        takeTurns(entity_registry, windows, takers, period, hands_out);
         if (options.share_windows) sharedWindows(windows, gated, period);
         return { ...leaveOpen(windows), turns: [] };
     }

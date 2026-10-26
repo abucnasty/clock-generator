@@ -251,7 +251,9 @@ describe("takers of one machine that it cannot serve together", () => {
             // its place and the one into machine 4 opens 20 ticks after it
             expect(ranges(windows, "inserter:6")).toEqual([[19, 28]]);
             expect(ranges(windows, "inserter:9")).toEqual([[39, 39], [0, 8]]);
-            for (const id of [5, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 0]]);
+            // the hand out of each science plant keeps its place in its plant's turn: machine 4's (8) swings 20 ticks after machine 1's (5)
+            expect(ranges(windows, "inserter:5")).toEqual([[0, 0]]);
+            expect(ranges(windows, "inserter:8")).toEqual([[20, 20]]);
             for (const id of [1, 12]) expect(ranges(windows, `inserter:${id}`)).toEqual([[2, 18]]);
         }
     });
