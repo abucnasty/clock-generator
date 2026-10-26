@@ -37,6 +37,7 @@ export function primitiveGroupedOptionsSupported(config: Config, options: Genera
  */
 export function verifiedPrimitiveGroupedClock(
     config: Config, options: GenerateClockOptions, requested_terminal_swing_count: number,
+    trigger: PrimitiveGroupedPolicy["trigger"] = "initial-period-limit",
 ): VerifiedPrimitiveGroupedResult {
     const report: PrimitiveGroupedAttemptReport = { strategy: "primitive-grouped", eligibility: "separate-windows-only",
         outcome: "inapplicable", attempts: [] };
@@ -77,8 +78,14 @@ export function verifiedPrimitiveGroupedClock(
     const seen = new Set<string>();
     const holding: BlueprintGenerationResult[] = [];
     report.outcome = "failed";
+    let held_without_room: number | undefined;
     for (const attempt of ways) {
         if (attempt.result.kind !== "constructed") continue;
+        // the ways with room for one more output swing only where no other way holds
+        if (attempt.options.output_room === true) {
+            held_without_room ??= holding.length;
+            if (held_without_room > 0) break;
+        }
         const built = attempt.result;
         const grouped = groupedHandsPlan(registry, run.swing_counts, run.recipe_lcm, run.duration.ticks,
             config.overrides?.backed_up_belts !== true, attempt.options, null, { output_paths, direct_sources, retained_clocks: clocks });
@@ -99,7 +106,7 @@ export function verifiedPrimitiveGroupedClock(
         event.stage = "as-built";
         const left_open = new Map<string, AlwaysOnReason>(built.busy.map(id => [id, { kind: "busy", period_ticks: construction.period_ticks }]));
         let result = finishedClock(made, windows, grouped.turns, { ...options, loop_windows: false }, left_open, room);
-        const policy: PrimitiveGroupedPolicy = { strategy: "primitive-grouped", trigger: "initial-period-limit",
+        const policy: PrimitiveGroupedPolicy = { strategy: "primitive-grouped", trigger,
             requested_terminal_swing_count, terminal_swing_count: construction.terminal_swing_count, grouped_cycles: construction.grouped_cycles,
             construction_key: key, options: { ...attempt.options, share_windows: false }, loop_refinement: false };
         result = { ...result, grouped_hands: { shared_windows: false }, primitive_grouped: policy };

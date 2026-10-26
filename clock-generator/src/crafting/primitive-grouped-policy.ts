@@ -42,12 +42,13 @@ export function withSecondaryPlanningProvenance<T extends BlueprintGenerationRes
 /** Derived scheduling policy, distinct from user overrides and legacy final-taker aggregate counts. */
 export interface PrimitiveGroupedPolicy {
     strategy: "primitive-grouped";
-    trigger: "initial-period-limit";
+    /** Tried because the first plan's period is too long, or because no planned count held */
+    trigger: "initial-period-limit" | "no-count-holds";
     requested_terminal_swing_count: number;
     terminal_swing_count: number;
     grouped_cycles: number;
     construction_key: string;
-    options: { share_windows: false; feeder_offset: number; surplus_guard: boolean };
+    options: { share_windows: false; feeder_offset: number; surplus_guard: boolean; output_room?: boolean };
     /** Optional loop refinement cannot change a composition after its margin gate. */
     loop_refinement: false;
     /** Only the exact assessed composition may reuse these completed checks. */
