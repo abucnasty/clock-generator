@@ -86,9 +86,6 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     );
     const filterFields = (
             <Box ref={filtersRef} sx={row ? { alignSelf: 'start', minWidth: 0, flex: '1 1 180px' } : { mt: 2 }}>
-                {workbench && <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">Filters · {filtersLabel(value, 'Automatic', 'Explicit')}</Typography>
-                </Box>}
                 <FilterSlotSelector compact={row} label={row ? `Filters · ${filtersLabel(value, 'Automatic', 'Explicit')}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
@@ -127,7 +124,7 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
             <Box data-workbench-identity="" sx={{ display: 'flex', alignItems: 'center', minHeight: 40 }}>{identity}</Box>
             <Box data-workbench-source="" sx={{ minWidth: 0, pt: 1 }}>{picker('source', 'Source')}</Box>
             <Typography data-workbench-arrow="" aria-hidden sx={{ pt: 2 }}>→</Typography>
-            <Box data-workbench-filters="" sx={{ minWidth: 0 }}>{filterFields}</Box>
+            <Box data-workbench-filters="" sx={{ minWidth: 0, pt: 0.625 }}>{filterFields}</Box>
             <Typography data-workbench-arrow="" aria-hidden sx={{ pt: 2 }}>→</Typography>
             <Box data-workbench-sink="" sx={{ minWidth: 0, pt: 1 }}>{picker('sink', 'Destination')}</Box>
             <Box data-workbench-actions="" sx={{ display: 'flex', alignItems: 'center', pt: 1 }}>{routeActions}</Box>

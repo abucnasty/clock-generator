@@ -29,16 +29,18 @@ it('shows the editable source → five filter slots → destination workbench wi
 
 it('shows automatic filter mode and retains explicit item icons for multiple filters', () => {
     const html = render({ ...base, filters: undefined });
-    expect(html).toContain('Filters · Automatic');
+    expect(html).toContain('No items inferred. Choose an item to set an explicit filter.');
+    expect(html).not.toContain('Use automatic filters');
     expect(html).toContain('aria-label="Add filter 5"');
     const explicit = render();
     expect(explicit.match(/\/icons\/iron-plate\.png/g)?.length).toBeGreaterThan(0);
     expect(explicit.match(/\/icons\/copper-plate\.png/g)?.length).toBeGreaterThan(0);
-    expect(explicit).toContain('Filters · Explicit');
+    expect(explicit).toContain('Use automatic filters');
+    expect(explicit).not.toContain('Filters · Explicit');
 });
 
 it('explains that captured blacklists are unsupported', () => {
-    expect(render({ ...base, filter_mode: 'blacklist' })).toContain('Blacklist, not supported');
+    expect(render({ ...base, filter_mode: 'blacklist' })).toContain('Blacklist · Not supported');
 });
 
 it('keeps an imported drop destination read-only', () => {
