@@ -1,9 +1,22 @@
+import { ClockPeriodLimitError, type SwingPeriodRejection } from "./plan/clock-period-limit";
+import { wholeSwingPeriodsBelow } from "./whole-swing-periods";
 import { Config } from "../config";
 import { defaultLogger } from "../common/logger";
 import { groupedHandsClock } from "./candidates/grouped-hands";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
 import { BlueprintGenerationResult, GenerateClockOptions, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, planRun } from "./plan/plan-run";
+import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
+import type { PrimitiveGroupedAttemptReport } from "./primitive-grouped-policy";
+
+/** New budget-pruned results retain planner-unit requests separately from legacy final-taker aggregate reporting. */
+export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenerationResult, 'used_terminal_swing_count' | 'swing_backoff_report' | 'primitive_grouped' | 'secondary_planning'>): number {
+    if (result.primitive_grouped !== undefined) return result.primitive_grouped.terminal_swing_count;
+    if (result.secondary_planning !== undefined) return result.secondary_planning.terminal_swing_count;
+    const report = result.swing_backoff_report;
+    return report?.period_limit_pruning === undefined ? result.used_terminal_swing_count
+        : report.stable_terminal_swing_count ?? report.initial_terminal_swing_count;
+}
 
 /**
  * Generates a clock from a configuration: the planning run (`planRun`), the clock of the plan with its room
@@ -93,21 +106,75 @@ export function generateClockWithSwingBackoff(
 ): BlueprintGenerationResult {
     const logger = options.logger ?? defaultLogger;
 
-    const initial_result = generate(config, options);
-    const initial_swing_count = initial_result.used_terminal_swing_count;
-
     const swing_count_forced = config.overrides?.terminal_swing_count !== undefined;
+    const can_prune_periods = !swing_count_forced && config.overrides?.use_fractional_swings !== true
+        && config.target_output.counts !== "destroyed";
+    const period_rejections: SwingPeriodRejection[] = [];
+    let requested_initial_count: number | undefined;
+    let first_period_refusal: ClockPeriodLimitError | undefined;
+    let period_frontier: Generator<SwingPeriodRejection> | undefined;
+    let generated_count: number | undefined;
+    let primitive_attempt: PrimitiveGroupedAttemptReport | undefined;
+    const withCount = (count: number): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: count } });
+    const generateWithinBudget = (candidate: Config): BlueprintGenerationResult | null => {
+        let attempted = candidate;
+        if (period_frontier !== undefined) {
+            const ceiling = candidate.overrides?.terminal_swing_count ?? Infinity;
+            let eligible: number | undefined;
+            for (let next = period_frontier.next(); !next.done; next = period_frontier.next()) {
+                const period = next.value;
+                if (period.terminal_swing_count > ceiling) continue;
+                if (period.period_ticks >= period.limit_ticks) period_rejections.push(period);
+                else { eligible = period.terminal_swing_count; break; }
+            }
+            if (eligible === undefined) return null;
+            attempted = withCount(eligible);
+        }
+        try {
+            const generated = generate(attempted, options);
+            generated_count = attempted.overrides?.terminal_swing_count;
+            return generated;
+        } catch (error) {
+            if (!can_prune_periods || !(error instanceof ClockPeriodLimitError) || error.arithmetic === undefined) throw error;
+            const initial_refusal = first_period_refusal === undefined && attempted === config;
+            first_period_refusal ??= error;
+            requested_initial_count ??= error.rejection.terminal_swing_count;
+            period_rejections.push({ ...error.rejection });
+            const below = Math.min(error.arithmetic.terminal_swing_count, attempted.overrides?.terminal_swing_count ?? Infinity);
+            period_frontier = wholeSwingPeriodsBelow({ ...error.arithmetic, terminal_swing_count: below }, error.rejection.limit_ticks);
+            if (initial_refusal && generate === generateClockForConfig && primitiveGroupedOptionsSupported(config, options)) {
+                const primitive = verifiedPrimitiveGroupedClock(config, options, error.rejection.terminal_swing_count);
+                primitive_attempt = primitive.report;
+                if (primitive.clock !== null) {
+                    generated_count = primitive.clock.primitive_grouped!.terminal_swing_count;
+                    return primitive.clock;
+                }
+            }
+            return generateWithinBudget(withCount(below - 1));
+        }
+    };
+    const pruningReport = () => ({ ...(primitive_attempt === undefined ? {} : { primitive_grouped_attempt: primitive_attempt }),
+        ...(period_rejections.length === 0 ? {} : { period_limit_pruning: {
+        requested_terminal_swing_count: requested_initial_count!, rejections: period_rejections,
+    } }) });
+    const initial_result = generateWithinBudget(config);
+    if (initial_result === null) throw first_period_refusal!;
+    const initial_swing_count = period_frontier !== undefined && generated_count !== undefined
+        ? generated_count : initial_result.used_terminal_swing_count;
+    requested_initial_count ??= initial_swing_count;
 
     if (initial_result.stability_check.holds || swing_count_forced || initial_swing_count <= 1) {
         return {
             ...initial_result,
             swing_backoff_report: {
                 triggered: false,
+                ...pruningReport(),
                 initial_terminal_swing_count: initial_swing_count,
                 initial_attempt: {
                     terminal_swing_count: initial_swing_count,
                     holds: initial_result.stability_check.holds,
-                    actual_output_items: initial_result.stability_check.actual_output_items,
+                    actual_output_items: initial_result.primitive_grouped === undefined ? initial_result.stability_check.actual_output_items
+                        : initial_result.stability_check.as_built!.actual_output_items,
                     expected_output_items: initial_result.stability_check.expected_output_items,
                 },
                 stable_terminal_swing_count: initial_result.stability_check.holds ? initial_swing_count : null,
@@ -137,15 +204,9 @@ export function generateClockWithSwingBackoff(
 
     for (let swings = initial_swing_count - 1; swings >= 1; swings--) {
         logger.log(`Attempting terminal_swing_count=${swings}...`);
-        const attempt_config: Config = {
-            ...config,
-            overrides: {
-                ...config.overrides,
-                terminal_swing_count: swings,
-            },
-        };
-
-        const attempt_result = generate(attempt_config, options);
+        const attempt_result = generateWithinBudget(withCount(swings));
+        if (attempt_result === null) break;
+        if (period_frontier !== undefined && generated_count !== undefined) swings = generated_count;
 
         attempts.push({
             terminal_swing_count: swings,
@@ -169,6 +230,7 @@ export function generateClockWithSwingBackoff(
 
     const swing_backoff_report: SwingBackoffReport = {
         triggered: true,
+        ...pruningReport(),
         initial_terminal_swing_count: initial_swing_count,
         initial_attempt,
         stable_terminal_swing_count: stable_swing_count,

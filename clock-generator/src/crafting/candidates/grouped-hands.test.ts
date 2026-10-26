@@ -5,7 +5,7 @@ import type { Config } from "../../config/schema";
 import { quiet } from "../generate-blueprint-test-helpers";
 import { planRun } from "../plan/plan-run";
 import { dropSpacing, dropTieBreak } from "../../config/drop-spacing";
-import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsPlan, groupedHandsWindows } from "./grouped-hands";
+import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsPlan, groupedHandsWindows, heldAtTurn, roomAtTurn, TurnWithoutRoom } from "./grouped-hands";
 import { outputAtWindow } from "./taker-turns";
 import { EntityId, Machine } from "../../entities";
 
@@ -251,8 +251,40 @@ describe("takers of one machine that it cannot serve together", () => {
             // its place and the one into machine 4 opens 20 ticks after it
             expect(ranges(windows, "inserter:6")).toEqual([[19, 28]]);
             expect(ranges(windows, "inserter:9")).toEqual([[39, 39], [0, 8]]);
-            for (const id of [5, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 0]]);
+            // the hand out of each science plant keeps its place in its plant's turn: machine 4's (8) swings 20 ticks after machine 1's (5)
+            expect(ranges(windows, "inserter:5")).toEqual([[0, 0]]);
+            expect(ranges(windows, "inserter:8")).toEqual([[20, 20]]);
             for (const id of [1, 12]) expect(ranges(windows, `inserter:${id}`)).toEqual([[2, 18]]);
+        }
+    });
+
+    it("gives each science plant room when its turn opens: what it made since its hand out started is under its block less one pack", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
+        const registry = plan.run.simulation_context.entity_registry;
+        const science = registry.getEntityByIdOrThrow(EntityId.forMachine(4)) as Machine;
+        // 0.41 packs a tick (89.625 / 600 x 2.75); it takes no ingredients from 12 packs, so a turn needs it under 11
+        expect(science.output.outputBlock.ingredients_blocked_at).toBe(12);
+        // machine 4's turn opens at 39, its hand out (8) started at 20: 19 ticks, 7.80 packs
+        expect(heldAtTurn(science, 39, [20], 40)).toBeCloseTo(7.8048, 3);
+        expect(roomAtTurn(science, heldAtTurn(science, 39, [20], 40))).toBe(true);
+        // left at 0 with machine 1's, the hand out would have started 39 ticks before the turn: 16.02 packs, the plant at its block
+        expect(heldAtTurn(science, 39, [0], 40)).toBeCloseTo(16.0205, 3);
+        expect(roomAtTurn(science, heldAtTurn(science, 39, [0], 40))).toBe(false);
+        // the margin of one pack: 11 is not under the block less one pack, 10.99 is
+        expect(roomAtTurn(science, 11)).toBe(false);
+        expect(roomAtTurn(science, 10.99)).toBe(true);
+    });
+
+    it("does not offer a way whose turns open while their plants hold their block: at 300% productivity 19 ticks make 11.35 packs", () => {
+        const faster = { ...config, machines: config.machines.map(it => it.recipe === "electromagnetic-science-pack" ? { ...it, productivity: 300 } : it) };
+        const plan = planRun({ ...faster, overrides: { ...faster.overrides, derive_clock_windows: false } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        for (const feeder_offset of [16, 1]) {
+            const made = () => groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+                { surplus_guard: false, feeder_offset, share_windows: false });
+            expect(made).toThrow(TurnWithoutRoom);
+            expect(made).toThrow("machine:4 would still hold about 11.4 electromagnetic-science-pack when its turn to take supercapacitor "
+                + "from machine:3 begins, and it takes no ingredients from 12 electromagnetic-science-pack: that turn would bring it nothing");
         }
     });
 });

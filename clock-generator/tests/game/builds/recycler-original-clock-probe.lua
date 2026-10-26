@@ -1,4 +1,7 @@
 -- Observe the unchanged original scaffold under the same clock throughout every intervention.
+-- It also keeps, for the per-branch accounting of the test: a branch map (terminal, buffer, drain and science machine per sorted
+-- terminal) and every inserter's native position; per branch the science it holds and its machine's products_finished in every
+-- stock reading; and one row per period boundary from the baseline start in report.series.
 local all_entities = ...
 local function run_probe(entities)
 options.trials = options.trials or {}
@@ -8,6 +11,16 @@ local feeds, feed_units, output_units, bend_units, red_units = {}, {}, {}, {}, {
 local science_units, capacitor_units, recycler_units, buffers = {}, {}, {}, {}
 local report = {period = options.period, baseline = {}, trials = {}, events = {}, topology = {}, finished = false,
     maximum_hold_stock_drain = 64}
+-- one row per period boundary from the baseline start (columns; pf, reserve, delivered hold 4 values a row, branch
+-- order). stage and trial are those of the bin that closes at the boundary.
+report.series = {tick = {}, stage = {}, trial = {}, total = {}, pf = {}, reserve = {}, delivered = {}}
+local function keep_boundary(tick, bin_stage, bin_trial, stock, delivered)
+    local s = report.series
+    table.insert(s.tick, tick); table.insert(s.stage, bin_stage); table.insert(s.trial, bin_trial); table.insert(s.total, stock.total)
+    for i = 1, 4 do
+        table.insert(s.pf, stock.pf_by_branch[i]); table.insert(s.reserve, stock.reserve_by_branch[i]); table.insert(s.delivered, delivered[i])
+    end
+end
 local function write() helpers.write_file("recycler-original.json", helpers.table_to_json(report), false) end
 local function check(condition, message)
     if not condition then report.error = message; write(); error(message) end
@@ -55,6 +68,30 @@ for _, e in ipairs(outputs) do
     check(not buffer_units[buffer.unit_number], "one original steel buffer per terminal taker")
     buffer_units[buffer.unit_number] = true; table.insert(buffers, buffer)
 end
+-- branch i follows sorted terminal i: its buffer, the one arm dropping into that buffer from a science machine, and
+-- that machine. The four branch machines are exactly the four science machines.
+local branches, branch_machines = {}, {}
+report.topology.branches = {}
+local function at(e) return {unit = e.unit_number, position = e.position} end
+for i, terminal in ipairs(outputs) do
+    local buffer, drain = buffers[i], nil
+    for _, e in ipairs(inserters) do
+        if e.drop_target and e.drop_target.unit_number == buffer.unit_number and e.pickup_target
+            and science_units[e.pickup_target.unit_number] then
+            check(drain == nil, "exactly one science arm drops into each steel buffer"); drain = e
+        end
+    end
+    check(drain ~= nil, "a science arm drops into each steel buffer")
+    local machine = drain.pickup_target
+    check(not branch_machines[machine.unit_number], "one steel buffer per science machine")
+    branch_machines[machine.unit_number] = true
+    branches[i] = {terminal = terminal, buffer = buffer, drain = drain, machine = machine}
+    report.topology.branches[i] = {terminal = at(terminal), buffer = at(buffer), drain = at(drain), machine = at(machine)}
+end
+for unit in pairs(science_units) do check(branch_machines[unit], "every science machine is a branch machine") end
+-- (record only) every inserter of the build with its native position, for the cold-start wiring audit
+report.topology.arms = {}
+for _, e in ipairs(inserters) do table.insert(report.topology.arms, at(e)) end
 for _, recycler in ipairs(recyclers) do
     local ok, target = pcall(function() return recycler.drop_target end)
     if not (ok and target and target.valid) then
@@ -148,6 +185,16 @@ local function science_stock()
             stock.total = stock.total + count; table.insert(stock.held, {unit = e.unit_number, count = count})
         end
     end
+    -- per branch, the science it holds (buffer, machine output, drain and terminal hands) and its machine's counter
+    stock.reserve_by_branch, stock.pf_by_branch = {}, {}
+    for i, b in ipairs(branches) do
+        local reserve = b.buffer.get_inventory(defines.inventory.chest).get_item_count(ITEM)
+            + b.machine.get_inventory(defines.inventory.crafter_output).get_item_count(ITEM)
+        for _, e in ipairs({b.drain, b.terminal}) do
+            if e.held_stack.valid_for_read and e.held_stack.name == ITEM then reserve = reserve + held(e) end
+        end
+        stock.reserve_by_branch[i], stock.pf_by_branch[i] = reserve, b.machine.products_finished
+    end
     return stock
 end
 local function red_stock()
@@ -185,6 +232,7 @@ for i, e in ipairs(outputs) do previous[i] = held(e) end
 local stage, trial_index, stage_at = "settle", 0, 0
 local quiet_ticks, craft_quiet_ticks, output_quiet_ticks, last_crafts = 0, 0, 0, crafts()
 local consecutive, max_consecutive, hold = 0, 0, {}
+local boundary_kept = nil
 local last_boundary_stock = science_stock()
 local function event(action, tick)
     table.insert(report.events, {tick = tick, phase = tick % options.period, action = action, trial = trial_index})
@@ -275,6 +323,7 @@ script.on_nth_tick(1, function()
         end
         if tick % options.period == 0 then
             local stock, exact = science_stock(), true
+            local bin_stage, bin_trial, bin_delivered = stage, trial_index, current
             for _, count in ipairs(current) do if count ~= 16 then exact = false end end
             if stage == "settle" and tick >= options.settle_ticks then
                 stage, stage_at = "baseline", tick; report.baseline_stock_start = stock
@@ -289,7 +338,7 @@ script.on_nth_tick(1, function()
                 else
                     local red = red_stock()
                     table.insert(trial.recovery_samples, {tick = tick, output = current, science_stock = stock.total,
-                        products_finished = stock.products_finished, red = red})
+                        products_finished = stock.products_finished, red = red, reserve_by_branch = stock.reserve_by_branch})
                     if advanced_loss(trial) and red_cleared(trial, red) then
                         trial.advanced_disposal_cleared = true
                         trial.first_red_cleared_tick = trial.first_red_cleared_tick or tick
@@ -314,11 +363,15 @@ script.on_nth_tick(1, function()
                             trial.hold_stock_start, trial.hold_stock_end, trial.hold_stock_drift = first_stock, stock, drift
                             trial.hold_products_finished = production
                             trial.red_at_recovery, trial.recycler_crafts_at_recovery = red, recycler_crafts()
-                            stage, stage_at = "between", tick; write()
+                            trial.recovered_at = tick
+                            stage, stage_at = "between", tick
+                            keep_boundary(tick, bin_stage, bin_trial, stock, bin_delivered); boundary_kept = tick
+                            write()
                         end
                     end
                 end
             end
+            if stage ~= "settle" and boundary_kept ~= tick then keep_boundary(tick, bin_stage, bin_trial, stock, bin_delivered) end
             last_boundary_stock, current = stock, {0, 0, 0, 0}
         end
         -- Count a successful last allowed bin before applying the recovery timeout.

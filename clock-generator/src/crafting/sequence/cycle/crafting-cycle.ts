@@ -60,6 +60,18 @@ export const CraftingCyclePlan = {
     ticksOfCycles: ticksOfCycles,
 }
 
+// Internal arithmetic provenance, separate from final-taker aggregate reporting. It adds no serialized plan/API field.
+const planned_terminal_counts = new WeakMap<CraftingCyclePlan, number>();
+
+export function plannedTerminalSwingCount(plan: CraftingCyclePlan): number | undefined {
+    return planned_terminal_counts.get(plan);
+}
+
+function withPlannedTerminalCount(plan: CraftingCyclePlan, count: Fraction): CraftingCyclePlan {
+    planned_terminal_counts.set(plan, count.toDecimal());
+    return plan;
+}
+
 /**
  * Ticks that a whole number of base cycles last, which is how a clock period is made (the cycles of the ingredient
  * LCM). Multiplied as a fraction: 25 cycles of 115.2 ticks are 2880 ticks, where 19.2 * 6 * 25 in floating point is
@@ -274,7 +286,7 @@ function createPlan(
                 cycle_multiplier
             );
 
-            return {
+            return withPlannedTerminalCount({
                 total_duration: final_period_duration,
                 total_duration_ticks: final_period_ticks,
                 entity_transfer_map: swing_counts.clone(),
@@ -283,18 +295,18 @@ function createPlan(
                 swing_distribution,
                 cycle_multiplier,
                 terminal_swing_count_overridden: config_overrides.terminal_swing_count !== undefined
-            }
+            }, swings_per_cycle);
         }
     }
 
-    return {
+    return withPlannedTerminalCount({
         total_duration: final_period_duration,
         total_duration_ticks: final_period_ticks,
         entity_transfer_map: swing_counts.clone(),
         production_rate: target_production_rate,
         fractional_swings_enabled: false,
         terminal_swing_count_overridden: config_overrides.terminal_swing_count !== undefined
-    }
+    }, swings_per_cycle);
 }
 
 function print(plan: CraftingCyclePlan): void {
