@@ -17,6 +17,8 @@ Goal 2 was first written as "minimize active inserter windows whenever possible 
 
 "Exactly" allows one thing: a clock whose period is not a whole number of ticks and whose blueprint counts it rounded down to whole ticks (where no subtick clock gives the exact period, or as the rounded alternative of one) meets goal 1 when it runs at most 0.1% faster than the target and within what the machines can make, tried on its own whole-tick period like any other clock. It is labelled with how much it runs fast, and a clock at exactly the target rate comes first (decided 2026-10-23: Atlan cell 29's 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game, #332).
 
+Inserters that take one product from one machine are served by the game in one fixed order, which a config does not tell (decided 2026-10-25: "Hold under every order"). A clock meets goal 1 only if it holds and recovers whichever of them is served first. Where one machine feeds two or more machines of one recipe, the plan asks by arithmetic first whether the machine can give all their takers' hands in one window together; where it can, they may share the window, and where it cannot, they take turns, so that the order cannot tell ([docs/stability.md](docs/stability.md), "How a clock is started").
+
 The detail is in [docs/stability.md](docs/stability.md).
 
 ### Goal 2: reduce the update time the build costs the game
