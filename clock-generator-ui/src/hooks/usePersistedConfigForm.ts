@@ -54,7 +54,8 @@ function migrateInserters(inserters: unknown[]): InserterFormData[] {
 /** Migrate legacy chest data to include type field */
 function migrateChests(chests: unknown[]): ChestFormData[] {
     return chests.map((chest: unknown) => {
-        const c = chest as { type?: string; id: number; _uuid?: string; storage_size?: number; item_filter?: string | InfinityFilterFormData[] };
+        const c = chest as { type?: string; id: number; _uuid?: string; storage_size?: number; item_filter?: string | InfinityFilterFormData[];
+            prototype?: string; position?: { x: number; y: number } };
         const uuid = c._uuid ?? crypto.randomUUID();
         // If already has a valid type, return as-is (with uuid)
         if (c.type === ChestType.INFINITY_CHEST) {
@@ -73,6 +74,8 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
             _uuid: uuid,
             storage_size: c.storage_size ?? 1,
             item_filter: (typeof c.item_filter === 'string' ? c.item_filter : '') as string,
+            ...(c.prototype !== undefined && { prototype: c.prototype }),
+            ...(c.position !== undefined && { position: c.position }),
         };
     });
 }
