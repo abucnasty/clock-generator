@@ -58,6 +58,8 @@ it('distinguishes known missing output from unavailable route data and links to 
     expect(html).toContain('Fix output route');
     const unknown = render({ ...missing, status: 'unavailable', results: [{ ...missing.results[0], direct: 'unknown', coverage: 'unknown' }] });
     expect(unknown).toContain('Output routes unavailable');
+    // One overall notice and one item status, without repeating the item's unknown direct/coverage facts.
+    expect(unknown.match(/Output routes unavailable/g)).toHaveLength(2);
     expect(unknown).not.toContain('Fix output route');
 });
 

@@ -115,7 +115,7 @@ export function OutputTransferPanel({ summary, chests, facts, targetRate, atTarg
                         : <Typography key={inserter.inserter_id} variant="body2" color="text.secondary">Inserter {inserter.inserter_id} → {labelOf(inserter.target)}</Typography>)}
                     {result.coverage === 'missing' && <Box><Typography variant="body2" color="warning.main">No route for this item</Typography>
                         {onFix && <Button size="small" onClick={() => onFix(result.item_name)}>Fix output route</Button>}</Box>}
-                    {result.coverage === 'unknown' && <Typography variant="body2" color="text.secondary">Output routes unavailable</Typography>}
+                    {result.coverage === 'unknown' && direct !== 'Output routes unavailable' && <Typography variant="body2" color="text.secondary">Output routes unavailable</Typography>}
                 </Box>
             </Box>;
         })}
