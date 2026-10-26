@@ -37,6 +37,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ### Fixed
 - Buffered outputs are checked where their items leave the build, so transfers into a buffer no longer make a working clock appear unstable.
 - A recipe whose main product comes only by chance, such as uranium processing or asteroid reprocessing, is planned at what a craft gives on average, not as if every craft gave it.
+- The timeline of a clock shows a period after the build has settled, the one its long run is judged on, and says which; a build that takes a while to start no longer looks stalled the whole period.
 
 ## [0.22.0] - 2026-10-24
 
