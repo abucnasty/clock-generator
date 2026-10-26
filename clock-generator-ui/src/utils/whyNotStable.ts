@@ -4,6 +4,7 @@ import type { ClockAlternativeView } from '../worker/types';
 
 /** The heading of the card's note on why no clock is stable, by its cause */
 export const WHY_NOT_STABLE_TITLE: Record<WhyNotStableCause, string> = {
+    'taker order': 'Why no clock is stable: the order inserters take from one machine',
     'moving lane phases': 'Why no clock is stable: moving lane phases',
     'output chest full': 'Why no clock is stable: an output chest fills up',
     'export belt short': 'Why no clock is stable: an export belt gets too little',
