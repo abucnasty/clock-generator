@@ -51,7 +51,7 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 2
       },
       "stack_size": 16
     },
@@ -75,7 +75,7 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 2
       },
       "stack_size": 16
     },
