@@ -33,7 +33,7 @@ describe("primitive primary integration and legacy sibling compatibility", () =>
         expect(generate).toHaveBeenCalledOnce();
         expect(recovery).not.toHaveBeenCalled();
         expect(plan.context).toMatchObject({ swings: 1, planned_swings: 1 });
-        expect(plan.primary?.alternatives[0].label).toContain("Primitive grouped hands");
+        expect(plan.primary?.alternatives[0].label).toContain("Small batches");
         expect(plan.primary?.alternatives[0].result.grouped_hands).toEqual({ shared_windows: false });
         expect(plan.primary?.alternatives[0].assessment.backpressure_loss?.survives).toBe(true);
     });

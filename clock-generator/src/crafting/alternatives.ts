@@ -277,8 +277,8 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
         return { id: RESULTS_IN_TURN_ID, label: RESULTS_IN_TURN_LABEL, description: RESULTS_IN_TURN_DESCRIPTION, run: () => result };
     }
     if (result.primitive_grouped !== undefined) {
-        return { id: "primitive-grouped", label: "Primitive grouped hands",
-            description: "A short grouped opportunity clock derived automatically after the initial batch exceeded the simulation period limit. Separate windows only; assessed with the ordinary margins, starts and recovery checks.",
+        return { id: "primitive-grouped", label: "Small batches",
+            description: "Uses small output batches when the initial clock would be too long. Checked for timing margin, clock starts and recovery after interruptions.",
             run: () => result };
     }
     return {
