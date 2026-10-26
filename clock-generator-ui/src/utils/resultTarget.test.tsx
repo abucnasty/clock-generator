@@ -94,7 +94,7 @@ describe('the direct output target picker', () => {
         expect(RESULT_TARGET_TEXT.label).toBe('Direct output target');
         expect(RESULT_TARGET_TEXT.none).toBe('No direct receiver (ground)');
         expect(RESULT_TARGET_TEXT.helpLabel).toBe('About direct output targets');
-        expect(RESULT_TARGET_TEXT.help).toBe('Select the machine or container at the recycler’s output. A machine receives the results its recipe uses. Other results remain available to inserters. Choose “No direct receiver (ground)” when no machine or container is at the output.');
+        expect(RESULT_TARGET_TEXT.help).toBe('Select the machine or container that aligns with the output arrow of the recycler. When selecting another machine, it will receive the results its recipe uses. Other results remain inside the recycler’s inventory and must be removed by inserters. Choose "No direct receiver (ground)" when no machine or container is at the output arrow.');
         expect(resultTargetName('Machine 3')).toBe('Direct output target, Machine 3');
     });
 });

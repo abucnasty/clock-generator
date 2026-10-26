@@ -8,7 +8,7 @@ export const RESULT_TARGET_TEXT = {
     /** The empty choice describes the physical receiver, without promising to disable ejection. */
     none: 'No direct receiver (ground)',
     helpLabel: 'About direct output targets',
-    help: 'Select the machine or container at the recycler’s output. A machine receives the results its recipe uses. Other results remain available to inserters. Choose “No direct receiver (ground)” when no machine or container is at the output.',
+    help: 'Select the machine or container that aligns with the output arrow of the recycler. When selecting another machine, it will receive the results its recipe uses. Other results remain inside the recycler’s inventory and must be removed by inserters. Choose "No direct receiver (ground)" when no machine or container is at the output arrow.',
 } as const;
 
 /** The accessible name of the field of one machine: "Direct output target, Machine 1" */
