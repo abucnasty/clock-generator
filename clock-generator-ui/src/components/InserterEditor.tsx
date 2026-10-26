@@ -15,13 +15,16 @@ import { PickupTypeSelect } from './PickupTypeSelect';
 import { NumberField } from './NumberField';
 import { EntitySelector } from './EntitySelector';
 import { isContainerChest } from '../utils/configForm/formData';
+import { entityLabel } from '../utils/entityLabel';
 
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start' };
 
 export interface InserterEditorProps {
     value: InserterFormData;
     label: string;
-    layout: 'row' | 'stacked';
+    layout: 'row' | 'stacked' | 'workbench';
+    /** Inserter identity and reorder controls in the unified List workbench. */
+    identity?: ReactNode;
     machines: MachineFormData[];
     inserters: InserterFormData[];
     belts: BeltFormData[];
@@ -43,8 +46,9 @@ export interface InserterEditorProps {
 const NO_DRILLS: readonly DrillFormData[] = [];
 
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
-export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, drills = NO_DRILLS, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options }: InserterEditorProps) {
-    const row = layout === 'row';
+export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, drills = NO_DRILLS, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options, identity }: InserterEditorProps) {
+    const row = layout !== 'stacked';
+    const workbench = layout === 'workbench';
     const capacity = effectiveInserterStackSize(value);
     const timing = inserterTimingLabels(value);
     const stackHelp = value.stack_size !== undefined ? `Explicit: ${value.stack_size} items.`
@@ -71,37 +75,65 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     };
     const picker = (side: 'source' | 'sink', name: string) => (
         <EntitySelector label={name} ariaLabel={`${name}, ${label}`} options={ownOptions}
+            showContentIcons={!workbench}
             sx={row ? { flex: '1 1 160px', minWidth: 0 } : { width: '100%' }}
             readOnly={value.sink.drop !== undefined} value={routeOption(side)}
             error={!findOption(ownOptions, value[side].type, value[side].id)}
-            helperText={value.sink.drop && side === 'sink' ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}` : undefined}
+            helperText={value.sink.drop && side === 'sink' ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}`
+                : !findOption(ownOptions, value[side].type, value[side].id) ? `${entityLabel(value[side].type, value[side].id)} is unavailable.` : undefined}
             onChange={option => onChange(endpointUpdate(value, side, { type: option.type, id: option.id }))}
             rowFirst={side === 'source'} />
     );
-    const advancedFields = (
-        <Box sx={row ? { display: 'flex', gridColumn: '1 / -1', flexWrap: 'wrap', alignItems: 'start', gap: 1.5, minWidth: 0 } : { display: 'contents' }}>
-            {row && <NearLaneSelect compact source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />}
-            <NumberField id={`${row ? '' : 'diagram-'}inserter-stack-size-${value.id}`} label="Stack size" value={value.stack_size ?? null}
-                placeholder="Automatic" helperText={stackHelp} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
-                min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
+    const filterFields = (
             <Box ref={filtersRef} sx={row ? { alignSelf: 'start', minWidth: 0, flex: '1 1 180px' } : { mt: 2 }}>
+                {workbench && <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">Filters · {filtersLabel(value, 'Automatic', 'Explicit')}</Typography>
+                </Box>}
                 <FilterSlotSelector compact={row} label={row ? `Filters · ${filtersLabel(value, 'Automatic', 'Explicit')}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
                 {!row && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? inferred.length ? 'Automatic filters · From source and destination' : 'Automatic · No items inferred' : usesBlacklist(value) ? BLACKLIST_NOTE : 'Explicit · Set by hand'}</Typography>}
                 {row && usesBlacklist(value) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{BLACKLIST_NOTE}</Typography>}
-                {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: row ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
+                {!usesAutomaticFilters(value.filters) && <Box sx={{ mt: row ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                     <Button size="small" color="inherit" onClick={() => {
                         // The return action disappears; slot zero survives the switch back to Automatic.
-                        filtersRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
+                        filtersRef.current?.querySelector<HTMLElement>('button[aria-haspopup="dialog"]')?.focus();
                         onChange({ filters: undefined });
                         announce(`${label}'s filters follow its source and destination again.`);
                     }}>Use automatic filters</Button>
                 </Box>}
             </Box>
+    );
+    const advancedFields = (
+        <Box sx={row ? { display: 'flex', gridColumn: '1 / -1', flexWrap: 'wrap', alignItems: 'start', gap: 1.5, minWidth: 0 } : { display: 'contents' }}>
+            {workbench && <PickupTypeSelect source={value.source} entityLabel={label} onChange={source => onChange({ source })} />}
+            {row && <NearLaneSelect compact source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />}
+            <NumberField id={`${row ? '' : 'diagram-'}inserter-stack-size-${value.id}`} label="Stack size" value={value.stack_size ?? null}
+                placeholder="Automatic" helperText={stackHelp} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
+                min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
+            {!workbench && filterFields}
             {row && rowActions}
         </Box>
     );
+    if (workbench) return <>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) 16px minmax(204px, 240px) 16px minmax(0, 1fr) auto', gap: 1, alignItems: 'start', minWidth: 0,
+            '@container inserter-row (max-width: 900px)': { gridTemplateColumns: 'minmax(0, 1fr) auto',
+                '& > [data-workbench-identity]': { gridColumn: 1, gridRow: 1 },
+                '& > [data-workbench-source]': { gridColumn: '1 / -1', gridRow: 2 },
+                '& > [data-workbench-filters]': { gridColumn: '1 / -1', gridRow: 3 },
+                '& > [data-workbench-sink]': { gridColumn: '1 / -1', gridRow: 4 },
+                '& > [data-workbench-actions]': { gridColumn: 2, gridRow: 1 },
+                '& > [data-workbench-arrow]': { display: 'none' } } }}>
+            <Box data-workbench-identity="" sx={{ display: 'flex', alignItems: 'center', minHeight: 40 }}>{identity}</Box>
+            <Box data-workbench-source="" sx={{ minWidth: 0, pt: 1 }}>{picker('source', 'Source')}</Box>
+            <Typography data-workbench-arrow="" aria-hidden sx={{ pt: 2 }}>→</Typography>
+            <Box data-workbench-filters="" sx={{ minWidth: 0 }}>{filterFields}</Box>
+            <Typography data-workbench-arrow="" aria-hidden sx={{ pt: 2 }}>→</Typography>
+            <Box data-workbench-sink="" sx={{ minWidth: 0, pt: 1 }}>{picker('sink', 'Destination')}</Box>
+            <Box data-workbench-actions="" sx={{ display: 'flex', alignItems: 'center', pt: 1 }}>{routeActions}</Box>
+        </Box>
+        {rowSettings ? rowSettings(advancedFields) : advancedFields}
+    </>;
     const fields = <>
         {!row && <>
             <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>Type: {value.prototype === undefined ? 'Automatic' : 'Explicit'} {timing.type} · Quality: {value.quality === undefined ? 'Automatic' : 'Explicit'} {timing.quality}</Typography>

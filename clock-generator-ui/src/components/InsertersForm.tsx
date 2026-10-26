@@ -3,14 +3,13 @@ import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { InserterIcon } from './InserterIcon';
 import { EntitySettings } from './EntitySettings';
 import { effectiveInserterStackSize, inserterTimingLabels } from '../utils/inserterMetadata';
-import { Add, Delete } from '@mui/icons-material';
+import { Add, ArrowDownward, ArrowUpward, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
     Checkbox,
     IconButton,
-    ToggleButton,
-    ToggleButtonGroup,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef, memo, type MouseEvent } from 'react';
@@ -27,9 +26,7 @@ import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { inferInserterItems, itemsAround } from '../utils/inferInserterItems';
 import { InserterEditor, type InserterEditorProps } from './InserterEditor';
-import { InserterRoutePreview } from './InserterRoutePreview';
-import { FilterSlotSelector } from './FilterSlotSelector';
-import { entityOptionsOf, findOption } from '../utils/inserterOptions';
+import { entityOptionsOf } from '../utils/inserterOptions';
 import { RowActionsMenu } from './RowActionsMenu';
 import { BulkEditBar } from './BulkEditBar';
 import { useAnnounce } from '../hooks/useMessages';
@@ -37,7 +34,7 @@ import { itemsUnion, pruneSelection, rangeSelect } from '../utils/bulkEdit';
 import { sourceItemsOf } from '../utils/inferInserterItems';
 import { selectRowName } from '../utils/a11yLabels';
 import { describeBulkEdit, type BulkEditKind } from '../utils/undoSnapshot';
-import { BLACKLIST_NOTE, filtersLabel, removeFilterSlot, setFilterSlot, usesAutomaticFilters, usesBlacklist } from '../utils/inserterFilters';
+import { usesAutomaticFilters } from '../utils/inserterFilters';
 import { describeEnableRule } from '../utils/enableRuleLabel';
 
 const LIST_GRID_SX = {
@@ -74,10 +71,8 @@ interface InsertersFormProps {
 
 type RuleCopySource = CopyFromOption & { uuid: string };
 
-const InserterRow = memo(function InserterRow({ filterView, fullMetadata, focusRequest, value, index, onUpdate, onRemove, ruleCopySources, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
-    filterView: boolean;
+const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, value, index, onUpdate, onRemove, ruleCopySources, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
     focusRequest?: InsertersFormProps['focusRequest'];
-    metadata: string;
     fullMetadata: string;
     index: number;
     onDuplicate: (index: number, label: string) => void;
@@ -95,58 +90,33 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, focusR
     const ruleCopyOptions = useMemo(() => ruleCopySources.filter(source => source.uuid !== value._uuid), [ruleCopySources, value._uuid]);
     const label = entityLabel('inserter', value.id);
     const craftingMachines = useCraftingMachines();
-    const detailsRequest = useMemo(() => focusRequest ? { tab: 'General' } : undefined, [focusRequest]);
+    const detailsRequest = useMemo(() => focusRequest?.pickup ? { tab: 'General' } : undefined, [focusRequest]);
     const selectedRow = selecting && checked;
     const selectionStyle = {
         bgcolor: (theme: Theme) => selectedRow ? themeTokens(theme).hover.row : themeTokens(theme).surface.row,
         boxShadow: (theme: Theme) => selectedRow ? `inset 0 0 0 1px ${themeTokens(theme).control.border}, inset 4px 0 0 ${themeTokens(theme).text.secondary}` : undefined,
     };
     const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills) : value.filters?.filter(Boolean) ?? [];
-    if (filterView) return <SortableItem stableKey={value._uuid} label={label} displayLabel={<EntityBadge id={value.id}><InserterIcon value={value} size={28} /></EntityBadge>}>
-        {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label}
-            data-selected={selectedRow ? 'true' : undefined}
-            sx={{ p: 1.5, minWidth: 0, ...selectionStyle, containerType: 'inline-size', containerName: 'filter-row' }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container filter-row (max-width: 500px)': { gridTemplateColumns: 'auto minmax(0, 1fr)' } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)} slotProps={{ input: { 'aria-label': selectRowName(label) } }} sx={{ p: 0.5 }} />}
-                    {dragHandle}
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-                        {findOption(editor.options ?? [], value.source.type, value.source.id)?.label ?? entityLabel(value.source.type, value.source.id)} → {findOption(editor.options ?? [], value.sink.type, value.sink.id)?.label ?? entityLabel(value.sink.type, value.sink.id)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">{filtersLabel(value, filterItems.length ? 'Automatic · From source and destination' : 'Automatic · No items inferred', 'Explicit filters')}</Typography>
-                    {!usesAutomaticFilters(value.filters) && <Button size="small" color="inherit" sx={{ ml: 0.5, py: 0, minWidth: 0 }} onClick={() => onChange({ filters: undefined })}>Use auto</Button>}
-                    {usesBlacklist(value) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{BLACKLIST_NOTE}</Typography>}
-                </Box>
-                <Box data-row-first="" sx={{ minWidth: 0, '@container filter-row (max-width: 500px)': { gridColumn: 2 } }}>
-                    <FilterSlotSelector filters={value.filters} inferredFilters={filterItems} itemNames={editor.itemNames}
-                        priority={{ label: 'From source', ids: sourceItemsOf(value.source, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, editor.drills) }}
-                        onFilterChange={(slot, item) => onChange({ filters: setFilterSlot(value.filters, filterItems.slice(0, 5), slot, item).filters })}
-                        onRemoveFilter={slot => onChange({ filters: removeFilterSlot(value.filters, filterItems.slice(0, 5), slot).filters })} />
-                </Box>
-            </Box>
-        </Box>}
-    </SortableItem>;
     return <SortableItem stableKey={value._uuid} label={label} displayLabel={<EntityBadge id={value.id}><InserterIcon value={value} size={28} /></EntityBadge>}>
         {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label} data-selected={selectedRow ? 'true' : undefined} sx={{
             ...ROW_GRID_SX, p: 1.5, pt: 1.5, ...selectionStyle,
         }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)}
-                    slotProps={{ input: { 'aria-label': selectRowName(label) } }} sx={{ p: 0.5 }} />}
-                <Box role="group" aria-label={`${label} route`} sx={{ flex: 1, minWidth: 0 }}>
-                    <InserterRoutePreview value={value} options={editor.options ?? []} filterItems={filterItems} identity={dragHandle} />
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, alignSelf: 'flex-start' }}>
+            <InserterEditor {...editor} value={value} label={label} layout="workbench" onChange={onChange}
+                identity={<>
+                    {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)}
+                        slotProps={{ input: { 'aria-label': selectRowName(label) } }} sx={{ p: 0.5 }} />}
+                    {dragHandle}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', ml: 0.25 }}>
+                        <Tooltip title="Move up"><span><IconButton size="small" disabled={index === 0} aria-label={`Move ${label} up`} onClick={() => onReorder(index, index - 1)} sx={{ p: 0.375 }}><ArrowUpward sx={{ fontSize: 18 }} /></IconButton></span></Tooltip>
+                        <Tooltip title="Move down"><span><IconButton size="small" disabled={!canMoveDown} aria-label={`Move ${label} down`} onClick={() => onReorder(index, index + 1)} sx={{ p: 0.375 }}><ArrowDownward sx={{ fontSize: 18 }} /></IconButton></span></Tooltip>
+                    </Box>
+                </>}
+                routeActions={<>
                     <Box id={`settings-actions-inserter-${value.id}`} sx={{ display: 'flex' }} />
-                    <RowActionsMenu label={label} onDuplicate={() => onDuplicate(index, label)}
-                        onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
-                        onMoveDown={canMoveDown ? () => onReorder(index, index + 1) : undefined} />
+                    <RowActionsMenu label={label} onDuplicate={() => onDuplicate(index, label)} showReorder={false} />
                     <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('inserter', value.id)} data-row-delete=""><Delete /></IconButton>
-                </Box>
-            </Box>
-            <EntitySettings first actionContainerId={`settings-actions-inserter-${value.id}`} label={label} request={detailsRequest}
+                </>}
+                rowSettings={fields => <EntitySettings actionContainerId={`settings-actions-inserter-${value.id}`} label={label} request={detailsRequest}
                 tabs={[{ label: 'Enable control', content:
                     <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
                         currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
@@ -162,11 +132,8 @@ const InserterRow = memo(function InserterRow({ filterView, fullMetadata, focusR
                     Stack {effectiveInserterStackSize(value)}{value.stack_size === undefined ? ' (automatic)' : ' (explicit)'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
                 </Typography>}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, overflowWrap: 'anywhere' }}>{fullMetadata}</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5, minWidth: 0,
-                    '@container inserter-row (max-width: 650px)': { gridTemplateColumns: 'minmax(0, 1fr)' } }}>
-                    <InserterEditor {...editor} value={value} label={label} layout="row" onChange={onChange} />
-                </Box>
-            </EntitySettings>
+                {fields}
+            </EntitySettings>} />
         </Box>}
     </SortableItem>;
 });
@@ -206,12 +173,6 @@ function InsertersFormComponent({
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(inserters.length, onRemove);
     const announce = useAnnounce();
     const [selecting, setSelecting] = useState(false);
-    const [filterView, setFilterView] = useState(focusRequest?.filters ?? false);
-    const [lastFocusRequest, setLastFocusRequest] = useState(focusRequest);
-    if (lastFocusRequest !== focusRequest) {
-        setLastFocusRequest(focusRequest);
-        if (focusRequest) setFilterView(focusRequest.filters);
-    }
     const [selection, setSelection] = useState<ReadonlySet<string>>(new Set());
     const selected = pruneSelection(selection, inserters.map(row => row._uuid));
     if (selected !== selection) setSelection(selected);
@@ -281,7 +242,7 @@ function InsertersFormComponent({
             title={`Inserters (${inserters.length})`}
             help={{ label: 'About inserters', content: <>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                    Routes preview each inserter's source, items and destination. Open Entity details → General to change its source or destination. Filters edit the items it carries.
+                    Edit each inserter's source, item filters and destination in one row. Drag the handle or use Move up and Move down to rearrange inserters.
                     Automatic filters follow the source and destination; clearing the last explicit filter returns to Automatic.
                     Open Entity details to edit an inserter's stack size and enable rule, or use Bulk edit for several inserters.
                 </Typography>
@@ -297,11 +258,6 @@ function InsertersFormComponent({
             </> }}
             actions={(
                 <>
-                    <ToggleButtonGroup value={filterView ? 'filters' : 'routes'} exclusive size="small" color="standard" aria-label="Inserter view"
-                        onChange={(_, view: string | null) => { if (view) setFilterView(view === 'filters'); }}>
-                        <ToggleButton value="routes" sx={{ px: 1, py: 0.5 }}>Routes</ToggleButton>
-                        <ToggleButton value="filters" sx={{ px: 1, py: 0.5 }}>Filters</ToggleButton>
-                    </ToggleButtonGroup>
                     <Button ref={selectRef} aria-pressed={selecting} color="inherit" variant={selecting ? 'outlined' : 'text'} size="small" sx={{ bgcolor: selecting ? 'action.selected' : undefined }}
                         onClick={() => { if (selecting) finishBulkEdit(); else setSelecting(true); }}>Bulk edit</Button>
                     <Button id="add-inserter" startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">Add Inserter</Button>
@@ -309,17 +265,19 @@ function InsertersFormComponent({
             )}
         >
 
-            {selecting && <BulkEditBar filtersOnly={filterView} selected={selectedRows} total={inserters.length} priorityIds={priorityIds} availableItems={bulkItems} itemNames={itemNames}
+            {selecting && <BulkEditBar selected={selectedRows} total={inserters.length} priorityIds={priorityIds} availableItems={bulkItems} itemNames={itemNames}
                 onSelectAll={() => setSelection(new Set(inserters.map(row => row._uuid)))} onClear={clearSelection} onDone={finishBulkEdit} onReturnFocus={returnSelectionFocus} onApply={apply} />}
             <Box sx={{ ...LIST_GRID_SX, rowGap: 1 }}>
             <SortableList itemKeys={itemKeys} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} filterView={filterView} focusRequest={focusRequest?.id === inserter.id && !focusRequest.filters ? focusRequest : null} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} metadata={[!commonType ? typeText(inserter) : null, !commonQuality ? qualityText(inserter) : null].filter(Boolean).join(' · ')} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
+                <InserterRow key={inserter._uuid} focusRequest={focusRequest?.id === inserter.id ? focusRequest : null} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
                     onDuplicate={duplicate} onReorder={onReorder} canMoveDown={index < inserters.length - 1}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}
             </SortableList>
             </Box>
+
+            {inserters.length > 0 && <Button startIcon={<Add />} fullWidth color="inherit" onClick={add} size="small" sx={{ mt: 1 }} data-row-add="">Add Inserter</Button>}
 
             {inserters.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>

@@ -8,10 +8,11 @@ interface RowActionsMenuProps {
     onDuplicate: () => void;
     onMoveUp?: () => void;
     onMoveDown?: () => void;
+    showReorder?: boolean;
 }
 
 /** The keyboard and single-pointer alternative to dragging a row. */
-export function RowActionsMenu({ label, onDuplicate, onMoveUp, onMoveDown }: RowActionsMenuProps) {
+export function RowActionsMenu({ label, onDuplicate, onMoveUp, onMoveDown, showReorder = true }: RowActionsMenuProps) {
     const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
     const menuId = useId();
     const open = anchor !== null;
@@ -28,8 +29,8 @@ export function RowActionsMenu({ label, onDuplicate, onMoveUp, onMoveDown }: Row
         <Menu id={menuId} anchorEl={anchor} open={open} onClose={close}
             slotProps={{ paper: { role: 'region', 'aria-label': rowActionsName(label) }, list: { 'aria-label': rowActionsName(label) } }}>
             <MenuItem onClick={() => choose(onDuplicate)}>Duplicate</MenuItem>
-            <MenuItem disabled={!onMoveUp} onClick={() => { if (onMoveUp) choose(onMoveUp); }}>Move up</MenuItem>
-            <MenuItem disabled={!onMoveDown} onClick={() => { if (onMoveDown) choose(onMoveDown); }}>Move down</MenuItem>
+            {showReorder && <MenuItem disabled={!onMoveUp} onClick={() => { if (onMoveUp) choose(onMoveUp); }}>Move up</MenuItem>}
+            {showReorder && <MenuItem disabled={!onMoveDown} onClick={() => { if (onMoveDown) choose(onMoveDown); }}>Move down</MenuItem>}
         </Menu>
     </>;
 }

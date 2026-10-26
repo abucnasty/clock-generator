@@ -6,9 +6,11 @@ import { ENTITY_TYPE_LABELS, entitySelectorKey, entitySelectorLabel, searchEntit
 import { ContentIcons, RouteBadge } from './RouteIdentity';
 
 /** One searchable picker and identity for route endpoints and timeline inspection. */
-export function EntitySelector<T extends EntitySelectorOption>({ options, value, onChange, label, ariaLabel = label, helperText, error = false, readOnly = false, rowFirst = false, disabledReason, sx }: {
+export function EntitySelector<T extends EntitySelectorOption>({ options, value, onChange, label, ariaLabel = label, helperText, error = false, readOnly = false, rowFirst = false, showContentIcons = true, disabledReason, sx }: {
     options: readonly T[]; value: T | null | undefined; onChange(option: T): void;
     label: string; ariaLabel?: string; helperText?: ReactNode; error?: boolean; readOnly?: boolean; rowFirst?: boolean;
+    /** Dense route rows already show their item filters alongside the endpoints. */
+    showContentIcons?: boolean;
     /** Why an option cannot be picked now, shown in its place of the item list; none when it can */
     disabledReason?: (option: T) => string | undefined;
     sx?: SxProps<Theme>;
@@ -31,7 +33,7 @@ export function EntitySelector<T extends EntitySelectorOption>({ options, value,
         slotProps={{ popper: { role: 'region', 'aria-label': `${label} options` } }}
         renderInput={params => <TextField {...params} label={label} title={title} error={error} helperText={helperText}
             slotProps={{ htmlInput: { ...params.inputProps, 'aria-label': ariaLabel }, input: { ...params.InputProps,
-                startAdornment: value ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}><RouteBadge option={value} /><ContentIcons option={value} /></Box> : undefined,
+                startAdornment: value ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}><RouteBadge option={value} />{showContentIcons && <ContentIcons option={value} />}</Box> : undefined,
             } }} />}
         renderOption={(props, option, { selected }) => {
             const { key, ...rest } = props;
