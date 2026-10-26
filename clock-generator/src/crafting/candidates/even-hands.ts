@@ -5,6 +5,7 @@ import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistr
 import { BlueprintGenerationResult, GenerateClockOptions, checkedClock, clockOfPlan, planRun, withRoomForRandomAmounts } from "../plan/plan-run";
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
+import { outputAtWindow } from "./taker-turns";
 
 /**
  * Even hands: every inserter gets one window for each hand the plan has it move in the period, the windows spread
@@ -84,10 +85,7 @@ function turnOffset(
     const width = inserter.animation.total.ticks - 1;
     // turns that would meet one another leave the windows as they are
     if (spacing / sinks.length < width) return 0;
-    const output = source.outputs.find(it => it.item_name === item)!;
-    const held_limit = output.item_name === source.output.item_name ? output.outputBlock.held_limit : output.outputBlock.max_stack_size;
-    const rate = output.production_rate.amount_per_tick.toDecimal();
-    const available = Math.min(held_limit, rate * (spacing - width)) + rate * width;
+    const available = outputAtWindow(source, item, spacing - width, width);
     const draw = takers.reduce((sum, it) => sum + handSizeFor(it, item), 0);
     if (draw <= available) return 0;
     return Math.round(sinks.indexOf(inserter.sink.entity_id.id) * spacing / sinks.length);
