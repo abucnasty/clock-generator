@@ -163,24 +163,7 @@ export function generateClockWithSwingBackoff(
         ? generated_count : initial_result.used_terminal_swing_count;
     requested_initial_count ??= initial_swing_count;
 
-    // Small batches is also tried where no planned count holds (after the counts below the first, where there are any):
-    // its windows are made from the hands, and its terminal outputs may get room for one more swing
-    const primitiveWhereNoCountHolds = (): BlueprintGenerationResult | null => {
-        if (primitive_attempt !== undefined || swing_count_forced || generate !== generateClockForConfig || !primitiveGroupedOptionsSupported(config, options)) return null;
-        const primitive = verifiedPrimitiveGroupedClock(config, options, requested_initial_count!, "no-count-holds");
-        primitive_attempt = primitive.report;
-        return primitive.clock;
-    };
-
     if (initial_result.stability_check.holds || swing_count_forced || initial_swing_count <= 1) {
-        const primitive = initial_result.stability_check.holds ? null : primitiveWhereNoCountHolds();
-        if (primitive !== null) {
-            const count = primitive.primitive_grouped!.terminal_swing_count;
-            return { ...primitive, swing_backoff_report: { triggered: false, ...pruningReport(), initial_terminal_swing_count: initial_swing_count,
-                initial_attempt: { terminal_swing_count: initial_swing_count, holds: false, actual_output_items: initial_result.stability_check.actual_output_items,
-                    expected_output_items: initial_result.stability_check.expected_output_items },
-                stable_terminal_swing_count: count, attempts: [] } };
-        }
         return {
             ...initial_result,
             swing_backoff_report: {
@@ -259,13 +242,8 @@ export function generateClockWithSwingBackoff(
         return { ...stable_result, swing_backoff_report };
     }
 
-    const primitive = primitiveWhereNoCountHolds();
-    if (primitive !== null) {
-        logger.log(`Backoff exhausted: no stable swing count found; Small batches holds.`);
-        return { ...primitive, swing_backoff_report: { ...swing_backoff_report, ...pruningReport(), stable_terminal_swing_count: primitive.primitive_grouped!.terminal_swing_count } };
-    }
     logger.log(`Backoff exhausted: no stable swing count found. Returning initial result.`);
-    return { ...initial_result, swing_backoff_report: { ...swing_backoff_report, ...pruningReport() } };
+    return { ...initial_result, swing_backoff_report };
 }
 
 
