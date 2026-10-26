@@ -54,24 +54,25 @@ describe('automatic whole-swing period eligibility', () => {
         expect(eligible.at(-1)).toMatchObject({ terminal_swing_count: 1, period_ticks: 24200 });
     });
 
-    it('keeps shared-buffer reporting at 604 while bounding planner retries below the actual 302 count', () => {
-        // Supported synthetic regression topology; the acceptance scaffold is not changed.
+    it('keeps shared-buffer reporting at 594 while bounding planner retries below the actual 297 count', () => {
+        // Supported synthetic regression topology; the acceptance scaffold is not changed. Its prepared count is 297
+        // since the takers of one machine are served in one fixed order (it was 302 under the turn rule).
         const shared: Config = { ...config, chests: config.chests!.filter(chest => chest.id !== 10),
             inserters: config.inserters.map(inserter => ({ ...inserter,
                 source: inserter.source.type === 'chest' && inserter.source.id === 10 ? { type: 'chest', id: 8 } : inserter.source,
                 sink: inserter.sink.type === 'chest' && inserter.sink.id === 10 ? { type: 'chest', id: 8 } : inserter.sink,
             })) };
         const failure = refusalOf(shared);
-        expect(failure.rejection).toMatchObject({ terminal_swing_count: 302, base_cycle_ticks: 12080,
-            computed_lcm: 605, effective_lcm: 605, period_ticks: 7308400 });
-        expect(failure.arithmetic!.terminal_swing_count).toBe(302);
+        expect(failure.rejection).toMatchObject({ terminal_swing_count: 297, base_cycle_ticks: 11880,
+            computed_lcm: 55, effective_lcm: 55, period_ticks: 653400 });
+        expect(failure.arithmetic!.terminal_swing_count).toBe(297);
         const eligible = [...wholeSwingPeriodsBelow(failure.arithmetic!, 500000)].filter(row => row.period_ticks < row.limit_ticks);
         expect(eligible[0]).toMatchObject({ terminal_swing_count: 275, period_ticks: 121000, effective_lcm: 11 });
-        expect(eligible.every(row => row.terminal_swing_count < 302)).toBe(true);
+        expect(eligible.every(row => row.terminal_swing_count < 297)).toBe(true);
         // A short bounded run tests the existing result alias without accepting or verifying these large windows.
         const legacy = runBuild(shared, { logger: quiet, period_ticks: 40, warmup_periods: 0 });
-        expect(legacy.used_terminal_swing_count).toBe(604);
-        expect(plannedTerminalSwingCount(legacy.crafting_cycle_plan)).toBe(302);
+        expect(legacy.used_terminal_swing_count).toBe(594);
+        expect(plannedTerminalSwingCount(legacy.crafting_cycle_plan)).toBe(297);
         expect(legacy.crafting_cycle_plan).not.toHaveProperty('planned_terminal_swing_count');
         const generate = vi.fn((candidate: Config) => {
             const count = candidate.overrides?.terminal_swing_count;
@@ -83,10 +84,10 @@ describe('automatic whole-swing period eligibility', () => {
         expect(generate.mock.calls.map(([candidate]) => candidate.overrides?.terminal_swing_count)).toEqual([undefined, 275, 242]);
         expect(generated.used_terminal_swing_count).toBe(484);
         expect(terminalCountForAlternativePlanning(generated)).toBe(242);
-        expect(terminalCountForAlternativePlanning(result(604, false))).toBe(604);
+        expect(terminalCountForAlternativePlanning(result(594, false))).toBe(594);
         expect(generated.swing_backoff_report).toMatchObject({ initial_terminal_swing_count: 275,
             initial_attempt: { terminal_swing_count: 275, holds: false }, attempts: [{ terminal_swing_count: 242, holds: true }],
-            period_limit_pruning: { requested_terminal_swing_count: 302 } });
+            period_limit_pruning: { requested_terminal_swing_count: 297 } });
     });
 
     it('continues the lazy cursor after 550 fails, calls only eligible generators and preserves options/config', () => {
