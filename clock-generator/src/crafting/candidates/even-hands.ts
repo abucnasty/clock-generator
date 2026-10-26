@@ -6,6 +6,16 @@ import { BlueprintGenerationResult, GenerateClockOptions, checkedClock, clockOfP
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { outputAtWindow } from "./taker-turns";
+import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
+
+function assertNoDrills(registry: ReadableEntityRegistry): void {
+    assert(registry.getAll().every(entity => !Entity.isDrill(entity)), "even hands are not made for a build with mining drills");
+}
+
+function assertEvenHandsSource(inserter: Inserter): void {
+    assert(EntityId.isMachine(inserter.source.entity_id) || EntityId.isChest(inserter.source.entity_id),
+        `even hands are only made where every inserter takes from a machine or a chest; ${inserter.entity_id.id} does not`);
+}
 
 /**
  * Even hands: every inserter gets one window for each hand the plan has it move in the period, the windows spread
@@ -38,12 +48,11 @@ export function evenHandsWindows(
 ): Map<string, OpenRange[]> {
     assert(Number.isInteger(period), `even hands need a period of whole ticks, not ${period}`);
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
-    assert(entity_registry.getAll().every(entity => !Entity.isDrill(entity)), "even hands are not made for a build with mining drills");
+    assertNoDrills(entity_registry);
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
     const windows = new Map<string, OpenRange[]>();
     for (const inserter of inserters) {
-        assert(EntityId.isMachine(inserter.source.entity_id) || EntityId.isChest(inserter.source.entity_id),
-            `even hands are only made where every inserter takes from a machine or a chest; ${inserter.entity_id.id} does not`);
+        assertEvenHandsSource(inserter);
         const transfer = transfers.get(inserter.entity_id.id);
         assert(transfer !== undefined, `${inserter.entity_id.id} is not in the plan's hand counts`);
         const exact = transfer.total_transfer_count.toDecimal() * recipe_lcm;
@@ -112,6 +121,11 @@ export function evenWindows(hands: number, cycle_ticks: number, period: number, 
  * clock-only runs from the start phases and the long run, not by the planning run, whose windows it does not use.
  */
 export function evenHandsClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
+    // These hard physical restrictions already hold in evenHandsWindows. Refuse impossible topology before prepare
+    // or count/LCM planning; supported topologies retain every existing later check and their normal plan.
+    const registry = createEntityRegistryFromConfig(config);
+    assertNoDrills(registry);
+    for (const inserter of registry.getAll().filter(Entity.isInserter)) assertEvenHandsSource(inserter);
     const plan = planRun(config, options);
     const { simulation_context, swing_counts, recipe_lcm, duration, always_enabled_by_config, inserter_clocks } = plan.run;
     assert(always_enabled_by_config.size === 0 && inserter_clocks.size === 0 && alwaysEnabledInserters(simulation_context.entity_registry).length === 0,

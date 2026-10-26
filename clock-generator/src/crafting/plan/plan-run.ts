@@ -185,6 +185,8 @@ export interface SwingBackoffReport {
 
 
 export interface BlueprintGenerationResult {
+    /** Actual final count/cycles of a secondary offered after a derived primitive primary. */
+    secondary_planning?: import("../primitive-grouped-policy").SecondaryPlanningProvenance;
     /** Internal AUTO scheduling provenance; never an imported or saved user override. */
     primitive_grouped?: import("../primitive-grouped-policy").PrimitiveGroupedPolicy;
     blueprint: FactorioBlueprint;

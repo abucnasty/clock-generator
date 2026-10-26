@@ -33,6 +33,8 @@ describe("primitive primary integration and legacy sibling compatibility", () =>
         expect(generate).toHaveBeenCalledOnce();
         expect(recovery).not.toHaveBeenCalled();
         expect(plan.context).toMatchObject({ swings: 1, planned_swings: 1 });
+        expect(plan.context.secondary_planning).toEqual({ source: "primitive-primary", terminal_swing_count: 1 });
+        expect(structuredClone(plan.context)).toEqual(JSON.parse(JSON.stringify(plan.context)));
         expect(plan.primary?.alternatives[0].label).toContain("Small batches");
         expect(plan.primary?.alternatives[0].result.grouped_hands).toEqual({ shared_windows: false });
         expect(plan.primary?.alternatives[0].assessment.backpressure_loss?.survives).toBe(true);
@@ -42,7 +44,8 @@ describe("primitive primary integration and legacy sibling compatibility", () =>
         const generate = vi.spyOn(generation, "generateClockWithSwingBackoff").mockImplementation((_config, requested) => ({
             ...base, grouped_hands: { shared_windows: requested?.shared_windows === true } }));
         vi.spyOn(trial, "backpressureLossVerdictOf").mockReturnValue({ backpressure_loss: recovered });
-        planClockAlternatives(config, options);
+        const plan = planClockAlternatives(config, options);
+        expect(plan.context).not.toHaveProperty("secondary_planning");
         expect(generate.mock.calls.some(call => call[1]?.shared_windows === true)).toBe(true);
     });
 });

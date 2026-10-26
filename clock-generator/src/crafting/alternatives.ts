@@ -22,6 +22,7 @@ import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock, terminalCountForAlternativePlanning } from "./generate-clock";
+import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
 import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
@@ -105,6 +106,8 @@ const EXTENDED_SWING_COUNTS = 3;
 
 /** What the remaining alternatives need from the first (batched swings) run */
 export interface ClockAlternativeContext {
+    /** Count-only AUTO policy from an accepted primitive primary; other families still choose their own LCM. */
+    secondary_planning?: SecondaryPlanningCount;
     swings: number;
     /** The output swings per cycle the plan started with: more than `swings` when it backed off to a lower count */
     planned_swings?: number;
@@ -260,7 +263,8 @@ function withFuelHandRoomWhereNeeded(
     try {
         const with_room = withFuelHandRoom();
         return with_room !== undefined && Object.keys(with_room.fuel_hand_room_ticks).length > 0 && holds(with_room) ? with_room : result;
-    } catch {
+    } catch (error) {
+        if (error instanceof SecondaryPlanningInvariantError) throw error;
         return result;
     }
 }
@@ -371,16 +375,18 @@ function alternativeDefinitionsWithFuelHandRoom(
     quiet: GenerateClockOptions,
     known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
-    const definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
-    if (config.overrides?.backed_up_belts !== true || !takesFuelOffABelt(config)) {
-        return definitions;
+    let definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
+    if (config.overrides?.backed_up_belts === true && takesFuelOffABelt(config)) {
+        const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
+        definitions = definitions.map(definition => {
+            const with_room = with_fuel_hand_room.find(it => it.id === definition.id);
+            return with_room === undefined ? definition
+                : { ...definition, run: () => withFuelHandRoomWhereNeeded(definition.run, with_room.run) };
+        });
     }
-    const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
-    return definitions.map(definition => {
-        const with_room = with_fuel_hand_room.find(it => it.id === definition.id);
-        return with_room === undefined ? definition
-            : { ...definition, run: () => withFuelHandRoomWhereNeeded(definition.run, with_room.run) };
-    });
+    // This boundary also serves shared/loop/fuel/chest variants. Annotate the actual returned plan, not the request.
+    return secondaryPlanningCountOf(config, context) === undefined ? definitions : definitions.map(definition => ({ ...definition,
+        run: () => withSecondaryPlanningProvenance(definition.run()) }));
 }
 
 /**
@@ -422,7 +428,9 @@ function alternativeDefinitionsFor(
     quiet: GenerateClockOptions,
     known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
-    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const secondary = secondaryPlanningCountOf(config, context);
+    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false,
+        ...(secondary === undefined ? {} : { terminal_swing_count: secondary.terminal_swing_count }) } };
     const fractional = config.overrides?.use_fractional_swings === true;
     const { swings } = context;
     const withSwings = (count: number, extra: GenerateClockOptions) => generateClockForConfig(
@@ -658,6 +666,7 @@ function runAlternative(
     try {
         shared_definition = definition.shared_windows();
     } catch (error) {
+        if (error instanceof SecondaryPlanningInvariantError) throw error;
         logger.log(`Clock alternative "${definition.label}" with shared windows could not be generated: ${error instanceof Error ? error.message : String(error)}`);
         return run;
     }
@@ -703,6 +712,7 @@ function runAlternativeOf(
     try {
         result = definition.run();
     } catch (error) {
+        if (error instanceof SecondaryPlanningInvariantError) throw error;
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Clock alternative "${definition.label}" could not be generated: ${reason}`);
         on_not_made?.({ id: definition.id, label: definition.label, reason });
@@ -738,6 +748,7 @@ function runAlternativeOf(
                 logger.log(`Clock alternative "${definition.label}": the windows out of its loop did not meet goal 1; always enabled: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
             }
         } catch (error) {
+            if (error instanceof SecondaryPlanningInvariantError) throw error;
             logger.log(`Clock alternative "${definition.label}" with the inserters out of its loop always enabled could not be generated: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -752,6 +763,7 @@ function runAlternativeOf(
             if (fallback === undefined) continue;
             made = fallback.run();
         } catch (error) {
+            if (error instanceof SecondaryPlanningInvariantError) throw error;
             logger.log(`Clock alternative "${definition.label}" with its drill windows ${index === 0 ? "a tick longer" : "always enabled"} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
             continue;
         }
@@ -871,6 +883,7 @@ function runAlternativeOf(
             const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
             return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_period: rounded_ticks };
         } catch (error) {
+            if (error instanceof SecondaryPlanningInvariantError) throw error;
             not_tried_on_its_period = error instanceof Error ? error.message : String(error);
             logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks could not be tried on its own period: ${not_tried_on_its_period}`);
             return null;
@@ -965,6 +978,8 @@ function planPrimaryAndTasks(
         without_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: false }, options.on_progress_detail),
     };
     const context: ClockAlternativeContext = {
+        ...(result.primitive_grouped === undefined ? {} : { secondary_planning: {
+            source: "primitive-primary" as const, terminal_swing_count: result.primitive_grouped.terminal_swing_count } }),
         swings: terminalCountForAlternativePlanning(result),
         planned_swings: result.primitive_grouped?.terminal_swing_count ?? result.swing_backoff_report?.period_limit_pruning?.requested_terminal_swing_count
             ?? result.swing_backoff_report?.initial_terminal_swing_count,

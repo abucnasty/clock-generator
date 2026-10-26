@@ -10,8 +10,9 @@ import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from 
 import type { PrimitiveGroupedAttemptReport } from "./primitive-grouped-policy";
 
 /** New budget-pruned results retain planner-unit requests separately from legacy final-taker aggregate reporting. */
-export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenerationResult, 'used_terminal_swing_count' | 'swing_backoff_report' | 'primitive_grouped'>): number {
+export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenerationResult, 'used_terminal_swing_count' | 'swing_backoff_report' | 'primitive_grouped' | 'secondary_planning'>): number {
     if (result.primitive_grouped !== undefined) return result.primitive_grouped.terminal_swing_count;
+    if (result.secondary_planning !== undefined) return result.secondary_planning.terminal_swing_count;
     const report = result.swing_backoff_report;
     return report?.period_limit_pruning === undefined ? result.used_terminal_swing_count
         : report.stable_terminal_swing_count ?? report.initial_terminal_swing_count;
