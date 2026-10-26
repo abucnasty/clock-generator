@@ -17,8 +17,8 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : null;
 /** A folder to keep the recordings and what they show in; without it they go to a temporary folder that is removed */
 const KEEP = process.env.TAKER_ORDER_CAPTURE_DIR ? path.resolve(process.env.TAKER_ORDER_CAPTURE_DIR) : null;
-/** Ticks recorded from the staged start: 37 periods of agricultural science's 96-tick hands */
-const RECORDED_TICKS = 3600;
+/** Ticks recorded from the staged start: 150 periods of agricultural science's 96-tick hands */
+const RECORDED_TICKS = 14400;
 /** Ticks a machine has to show who was served first on, to be judged */
 const DECIDED_TICKS = 10;
 /** The share of those ticks one taker has to have been served first on, for the order to count as fixed */
