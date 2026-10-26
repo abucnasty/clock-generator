@@ -71,6 +71,8 @@ export const ConfigPaths = {
     REAL_OWNER_PINK_SCIENCE_RECYCLER: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-recycler', 'pink-science-recycler.json'),
     /** The original duplicated electromagnetic science scaffold, described as one cell: five cells make 240/s */
     REAL_OWNER_PINK_SCIENCE_ORIGINAL: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-original', 'pink-science-original.json'),
+    /** The same scaffold with its buffer chests replaced by infinity chests that remove all and its final takers removed: the science plants' drains are its terminal outputs */
+    REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-original-no-buffers', 'pink-science-original-no-buffers.json'),
     REAL_OWNER_LITHIUM_SILO: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'lithium-silo', 'lithium-silo.json'),
     /** The iron plate build, 80 a second: a big mining drill drops ore into a car, which two furnaces empty */
     REAL_OWNER_CAR: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'car', 'car.json'),
