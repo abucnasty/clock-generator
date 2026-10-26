@@ -1,7 +1,7 @@
 name: Test
 
 # Pull requests run the unit tests, build the UI and generate a clock in it in a browser. Pull requests to master, which
-# are what gets released, run the generation tests as well: they generate the clock alternatives of whole samples and
+# are what gets released, and to an integration branch (feature/...), run the generation tests as well: they generate the clock alternatives of whole samples and
 # take minutes, except when the pull request changes documentation only (see the `changes` job). "Run workflow" (or
 # `gh workflow run test.yml --ref <branch>`) runs them all on any branch.
 # release.yml and publish-sidecar.yml call this workflow and do nothing unless it passes; a release runs the generation
@@ -66,20 +66,21 @@ jobs:
       - name: Unit tests
         run: npm test -- --reporter=default
 
-  # Whether the generation tests have anything to test: not when a pull request to master changes documentation only.
+  # Whether the generation tests have anything to test: not when a pull request to master or to a feature/ branch
+  # changes documentation only.
   # Decided by the files the pull request changes, never by its branch name. A run asked for the generation tests (by
   # hand, or a release) runs them whatever it changes. Anything this cannot tell, such as a checkout that is not a merge
   # commit, runs them.
   changes:
     name: Changed files
     # the input rather than the event, since a called run has the event of its caller: a push or a run by hand
-    if: inputs.generation || github.base_ref == 'master'
+    if: inputs.generation || github.base_ref == 'master' || startsWith(github.base_ref, 'feature/')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       generation: ${{ steps.files.outputs.generation }}
     steps:
-      # a pull request is checked out as the merge of its head into master: the first parent of that commit is master,
+      # a pull request is checked out as the merge of its head into its base: the first parent of that commit is the base,
       # the second the head, and the two together are what the pull request changes
       - uses: actions/checkout@v4
         with:
@@ -190,7 +191,7 @@ jobs:
     name: Generation tests
     needs: [changes, generation-shards]
     # not skipped with the shards: it is the job that tells what became of them
-    if: ${{ !cancelled() && (inputs.generation || github.base_ref == 'master') }}
+    if: ${{ !cancelled() && (inputs.generation || github.base_ref == 'master' || startsWith(github.base_ref, 'feature/')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
