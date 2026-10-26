@@ -102,6 +102,9 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
             ...ROW_GRID_SX, p: 1.5, pt: 1.5, ...selectionStyle,
         }}>
             <InserterEditor {...editor} value={value} label={label} layout="workbench" onChange={onChange}
+                routeSummary={<Typography variant="caption">
+                    Stack {Number.isFinite(effectiveInserterStackSize(value)) ? effectiveInserterStackSize(value) : 'unavailable'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
+                </Typography>}
                 identity={<>
                     {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)}
                         slotProps={{ input: { 'aria-label': selectRowName(label) } }} sx={{ p: 0.5 }} />}
@@ -128,9 +131,7 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
                             setRuleRevision(previous => previous + 1);
                         }} />
                 }]}
-                summary={<Typography variant="caption">
-                    Stack {Number.isFinite(effectiveInserterStackSize(value)) ? effectiveInserterStackSize(value) : 'unavailable'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
-                </Typography>}>
+                summary={null}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, overflowWrap: 'anywhere' }}>{fullMetadata}</Typography>
                 {fields}
             </EntitySettings>} />

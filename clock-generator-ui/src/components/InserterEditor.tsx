@@ -1,4 +1,5 @@
 import { Box, Button, Typography } from '@mui/material';
+import { ArrowForward } from '@mui/icons-material';
 import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { memo, useMemo, useRef, type ReactNode } from 'react';
 import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
@@ -38,6 +39,8 @@ export interface InserterEditorProps {
     rowActions?: ReactNode;
     /** Header actions follow the route fields in keyboard order, before expanded settings. */
     routeActions?: ReactNode;
+    /** Compact route status shares the space below the source field. */
+    routeSummary?: ReactNode;
     rowSettings?: (fields: ReactNode) => ReactNode;
     /** A List card shares its memoized options across its rows. */
     options?: EntityOption[];
@@ -46,7 +49,7 @@ export interface InserterEditorProps {
 const NO_DRILLS: readonly DrillFormData[] = [];
 
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
-export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, drills = NO_DRILLS, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options, identity }: InserterEditorProps) {
+export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, drills = NO_DRILLS, itemNames, getRecipeInfo, onChange, rowActions, routeActions, routeSummary, rowSettings, options, identity }: InserterEditorProps) {
     const row = layout !== 'stacked';
     const workbench = layout === 'workbench';
     const timing = inserterTimingLabels(value);
@@ -109,19 +112,21 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
         </Box>
     );
     if (workbench) return <>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) 16px minmax(204px, 240px) 16px minmax(0, 1fr) auto', gap: 1, alignItems: 'start', minWidth: 0,
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) 24px auto 24px minmax(0, 1fr) auto', gap: 1, alignItems: 'start', minWidth: 0,
             '@container inserter-row (max-width: 900px)': { gridTemplateColumns: 'minmax(0, 1fr) auto',
                 '& > [data-workbench-identity]': { gridColumn: 1, gridRow: 1 },
                 '& > [data-workbench-source]': { gridColumn: '1 / -1', gridRow: 2 },
-                '& > [data-workbench-filters]': { gridColumn: '1 / -1', gridRow: 3 },
+                '& > [data-workbench-filters]': { gridColumn: '1 / -1', gridRow: 3, width: 'auto', maxWidth: '100%' },
                 '& > [data-workbench-sink]': { gridColumn: '1 / -1', gridRow: 4 },
                 '& > [data-workbench-actions]': { gridColumn: 2, gridRow: 1 },
                 '& > [data-workbench-arrow]': { display: 'none' } } }}>
             <Box data-workbench-identity="" sx={{ display: 'flex', alignItems: 'center', minHeight: 40 }}>{identity}</Box>
-            <Box data-workbench-source="" sx={{ minWidth: 0, pt: 1 }}>{picker('source', 'Source')}</Box>
-            <Typography data-workbench-arrow="" aria-hidden sx={{ pt: 2 }}>→</Typography>
-            <Box data-workbench-filters="" sx={{ minWidth: 0, pt: 0.625 }}>{filterFields}</Box>
-            <Typography data-workbench-arrow="" aria-hidden sx={{ pt: 2 }}>→</Typography>
+            <Box data-workbench-source="" sx={{ minWidth: 0, pt: 1 }}>{picker('source', 'Source')}
+                {routeSummary && <Box sx={{ mt: 0.5, color: 'text.secondary', overflowWrap: 'anywhere' }}>{routeSummary}</Box>}
+            </Box>
+            <ArrowForward data-workbench-arrow="" aria-hidden sx={{ mt: 2, fontSize: 24, color: 'text.primary' }} />
+            <Box data-workbench-filters="" sx={{ minWidth: 0, width: 'max-content', maxWidth: 240, pt: 0.625 }}>{filterFields}</Box>
+            <ArrowForward data-workbench-arrow="" aria-hidden sx={{ mt: 2, fontSize: 24, color: 'text.primary' }} />
             <Box data-workbench-sink="" sx={{ minWidth: 0, pt: 1 }}>{picker('sink', 'Destination')}</Box>
             <Box data-workbench-actions="" sx={{ display: 'flex', alignItems: 'center', pt: 1 }}>{routeActions}</Box>
         </Box>
