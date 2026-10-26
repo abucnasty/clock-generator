@@ -1187,7 +1187,9 @@ export function buildAsBuiltConfig(
     const inserter_clocks = unplannedInserterClocks(entity_registry, period, undefined, undefined, alwaysEnabledByConfig(config));
     const clocked = withInserterClocks(decider_windows, inserter_clocks, period);
     assert(Number.isFinite(main_clock_shift), "The main clock shift must be finite");
-    const shift = ((main_clock_shift % period) + period) % period;
+    // a shift inside the period is used as it is: adding and taking the period again makes float noise on a fractional period
+    // (209 becomes 209.00000000000003), which drops the first tick of a rotated window
+    const shift = main_clock_shift >= 0 && main_clock_shift < period ? main_clock_shift : ((main_clock_shift % period) + period) % period;
     for (const [key, ranges] of clocked) {
         const shifted = shift === 0 ? ranges : rotateRanges(ranges, shift, period);
         windows.set(key, shiftRangesForCircuitLatency(shifted, period));

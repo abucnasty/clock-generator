@@ -7,6 +7,7 @@ import { TickProvider } from "../control-logic/current-tick-provider";
 import { EnableControl } from "../control-logic/enable-control";
 import * as planning from "./plan/plan-run";
 import { constructPrimitiveGroupedHands } from "./candidates/primitive-grouped-hands";
+import { rotateRanges } from "./clock";
 import { buildAsBuiltConfig, exhaustiveCrossingKey, exhaustiveStartPhases, runAsBuiltCheck, runClockOnBuild, startDependenceOf } from "./trial";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
@@ -129,6 +130,20 @@ describe("shared main-clock phase composition", () => {
         assertTranslated(canonical, shifted, 40, 3);
         expect(canonicalKey(canonical)).not.toBe(canonicalKey(shifted));
         expect(buildAsBuiltConfig(config, ranges, 40, undefined, "built", 40)).toEqual(canonical);
+    });
+
+    it("shifts by a whole-tick start of a fractional period exactly, as rotating the windows does, with no float noise at the window's first tick", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
+        const period = 19200 / 83;
+        const ranges = new Map(config.inserters.map((inserter, index) => [`inserter:${inserter.id ?? index + 1}`, [OpenRange.from(1, 34)]]));
+        for (const offset of [197, 209, 212, 225]) {
+            const rotated = new Map(Array.from(ranges, ([key, windows]) => [key, rotateRanges(windows, offset, period)] as const));
+            const shifted = buildAsBuiltConfig(config, ranges, period, undefined, "built", offset);
+            const rotatedFirst = buildAsBuiltConfig(config, rotated, period);
+            for (const { id } of controlsOf(shifted)) {
+                expect(clocked(shifted, id).ranges, `offset ${offset}, inserter ${id}`).toEqual(clocked(rotatedFirst, id).ranges);
+            }
+        }
     });
 
     it.each([NaN, Infinity, -Infinity])("rejects nonfinite phase%s without mutating configuration", shift => {
