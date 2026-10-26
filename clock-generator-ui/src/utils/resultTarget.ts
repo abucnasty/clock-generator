@@ -5,10 +5,10 @@ import { entityOptionsOf, type EntityOption } from './inserterOptions';
 /** The direct output target field of a machine that places its results itself: every text in one place */
 export const RESULT_TARGET_TEXT = {
     label: 'Direct output target',
-    /** The empty choice: no target, results stay available in the recycler output for inserters */
-    none: 'Keep results in machine output',
+    /** The empty choice describes the physical receiver, without promising to disable ejection. */
+    none: 'No direct receiver (ground)',
     helpLabel: 'About direct output targets',
-    help: 'A recycler places results into one machine or container at its output side. A machine takes the results its recipe uses. Other results stay in the recycler output for inserters to take. With no target, all results stay available to inserters.',
+    help: 'Select the machine or container at the recycler’s output. A machine receives the results its recipe uses. Other results remain available to inserters. Choose “No direct receiver (ground)” when no machine or container is at the output.',
 } as const;
 
 /** The accessible name of the field of one machine: "Direct output target, Machine 1" */

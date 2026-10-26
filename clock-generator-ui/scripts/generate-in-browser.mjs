@@ -143,6 +143,7 @@ async function repairOutputFocusAt(browser, url) {
             await importBuild('output-route-focus.json', config);
 
             const machineRow = page.locator('#entity-machine-1');
+            await machineRow.getByRole('button', { name: /^Output routes/ }).click();
             await machineRow.getByText('No route for this item').waitFor();
             await page.getByRole('button', { name: 'Diagram beta view' }).click();
             if (fullscreenMode) await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
@@ -202,6 +203,8 @@ async function repairOutputFocusAt(browser, url) {
 
             await page.getByRole('button', { name: 'Enable Remove unfiltered items for Chest 1' }).click();
             await page.getByRole('button', { name: 'List view' }).click();
+            const repairedRoutes = machineRow.getByRole('button', { name: /^Output routes/ });
+            if (await repairedRoutes.getAttribute('aria-expanded') !== 'true') await repairedRoutes.click();
             await page.waitForFunction(() => {
                 const row = document.querySelector('#entity-machine-1');
                 return !!row && row.textContent?.includes('Speed 1×') && !row.textContent.includes('No route for this item');

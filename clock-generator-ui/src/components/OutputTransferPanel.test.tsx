@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { OutputTransferSummary, SerializableMachineFacts } from 'clock-generator/browser';
 import { GameNamesContext } from '../hooks/useGameNames';
 import { OutputTransferPanel } from './OutputTransferPanel';
+import { ResultTargetField } from './ResultTargetField';
 
 const names = { item: { 'electronic-circuit': 'Electronic circuit', 'advanced-circuit': 'Advanced circuit' }, recipe: {} };
 const facts: SerializableMachineFacts = {
@@ -66,4 +67,46 @@ it('shows the observed zero-acceptance target without drawing a direct product r
         ],
     };
     expect(render(summary)).toContain('This target takes none of these results. Inserters must take them from the machine output.');
+});
+
+it('starts a compact machine row with its physical target visible and route details unmounted', () => {
+    const summary: OutputTransferSummary = {
+        source: { type: 'machine', id: 7 }, physical_target: null, mechanism: 'result-placement', status: 'known', results: [
+            { item_name: 'electronic-circuit', direct: 'none', inserters: [{ inserter_id: 4, target: { type: 'belt', id: 2 } }], coverage: 'covered' },
+            { item_name: 'advanced-circuit', direct: 'none', inserters: [{ inserter_id: 5, target: { type: 'belt', id: 3 } }], coverage: 'covered' },
+        ],
+    };
+    const html = renderToStaticMarkup(<GameNamesContext.Provider value={names}>
+        <OutputTransferPanel collapsible summary={summary} chests={[]} facts={facts}
+            control={<ResultTargetField machine={{ id: 7 }} machineLabel="Machine 7"
+                build={{ machines: [], chests: [], belts: [], inserters: [], drills: [] }} onChange={() => {}} />} />
+    </GameNamesContext.Provider>);
+    expect(html).toContain('aria-label="Direct output target, Machine 7"');
+    expect(html).toContain('No direct receiver (ground)');
+    expect(html).toContain('Output routes (2)');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-controls=');
+    expect(html).not.toContain('Electronic circuit');
+    expect(html).not.toContain('Inserter 4');
+    expect(html).not.toContain('Expected 1.5 per craft');
+});
+
+it('keeps missing-route counts and generation refusals visible while details are collapsed', () => {
+    const summary: OutputTransferSummary = {
+        source: { type: 'machine', id: 7 }, physical_target: { type: 'machine', id: 8 }, mechanism: 'result-placement', status: 'known', results: [
+            { item_name: 'advanced-circuit', direct: 'rejected', inserters: [], coverage: 'missing' },
+        ],
+    };
+    const html = renderToStaticMarkup(<OutputTransferPanel collapsible summary={summary} chests={[]} facts={facts}
+        generationIssues={[{ code: 'no-accepted-results', machine_id: 7, target_machine_id: 8, accepted_items: [], message: 'This physical target cannot be clocked.' }]} />);
+    expect(html).toContain('1 output needs a route');
+    expect(html).toContain('This physical target cannot be clocked.');
+    expect(html).not.toContain('This target takes none of these results.');
+});
+
+it('keeps loading and unavailable states distinct from a missing route in compact rows', () => {
+    const renderCompact = (loading: boolean) => renderToStaticMarkup(<OutputTransferPanel collapsible summary={null} chests={[]} facts={facts} loading={loading} />);
+    expect(renderCompact(true)).toContain('Checking output routes…');
+    expect(renderCompact(false)).toContain('Output routes unavailable');
+    expect(renderCompact(false)).not.toContain('needs a route');
 });

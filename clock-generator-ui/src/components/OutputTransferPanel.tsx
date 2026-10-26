@@ -1,5 +1,6 @@
-import { ArrowForward } from '@mui/icons-material';
+import { ArrowForward, ExpandLess, ExpandMore } from '@mui/icons-material';
 import { Alert, Box, Button, Typography } from '@mui/material';
+import { useId, useState, type ReactNode } from 'react';
 import type { MachineTargetRate, OutputTransferGenerationIssue, OutputTransferSummary, SerializableMachineFacts } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import type { ChestFormData } from '../hooks/useConfigForm';
@@ -8,20 +9,48 @@ import { formatNumberText } from '../utils/numberText';
 import { FactorioIcon } from './FactorioIcon';
 import { PanelSection } from './Panel';
 
-export function OutputTransferPanel({ summary, chests, facts, targetRate, atTarget = false, fallbackItems = [], control, generationIssues = [], loading = false, onFix, onEditInserter }:
+/** List rows disclose route detail on demand while the physical target and problems remain visible. */
+function OutputTransferSection({ control, children, collapsible, count, missing, status, generationIssues }: {
+    control?: ReactNode; children: ReactNode; collapsible: boolean; count: number; missing: number;
+    status?: string; generationIssues: OutputTransferGenerationIssue[];
+}) {
+    const [expanded, setExpanded] = useState(false);
+    const detailsId = useId();
+    return <PanelSection level={4} title="Output transfer">
+        {control}
+        {generationIssues.map(issue => <Alert key={`${issue.machine_id}:${issue.target_machine_id}:${issue.code}`} severity="warning" sx={{ mb: 1 }}>{issue.message}</Alert>)}
+        {collapsible && <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1 }}>
+            <Button size="small" color="inherit" startIcon={expanded ? <ExpandLess /> : <ExpandMore />}
+                aria-expanded={expanded} aria-controls={detailsId} onClick={() => setExpanded(value => !value)}
+                sx={{ p: 0, minHeight: 28, textTransform: 'none' }}>Output routes ({count})</Button>
+            {missing > 0 && <Typography variant="caption" color="warning.main">{missing} {missing === 1 ? 'output needs' : 'outputs need'} a route</Typography>}
+            {status && <Typography variant="caption" color="text.secondary">{status}</Typography>}
+        </Box>}
+        {collapsible ? <Box id={detailsId} hidden={!expanded}>{expanded && children}</Box> : children}
+    </PanelSection>;
+}
+
+export function OutputTransferPanel({ summary, chests, facts, targetRate, atTarget = false, fallbackItems = [], control, generationIssues = [], loading = false, collapsible = false, onFix, onEditInserter }:
     { summary: OutputTransferSummary | null; chests: ChestFormData[]; facts?: SerializableMachineFacts | null; targetRate?: MachineTargetRate;
       generationIssues?: OutputTransferGenerationIssue[];
       atTarget?: boolean;
       fallbackItems?: string[];
       loading?: boolean;
+      /** Machine list rows start compact; an entity editor already provides focused context. */
+      collapsible?: boolean;
       control?: React.ReactNode; onFix?: (item: string) => void; onEditInserter?: (id: number) => void }) {
     const { itemLabel } = useGameNames();
     const outputFacts = facts?.outputs ?? (facts ? [{ item_name: facts.output_item, amount_per_craft: facts.output_per_craft,
         rate_per_second: facts.output_rate_per_second, rate_ratio: facts.output_rate_ratio ?? { numerator: facts.output_rate_per_second, denominator: 1 },
         output_block_size: facts.output_block_size, stochastic: false }] : []);
+    const section = (children: ReactNode) => <OutputTransferSection control={control} collapsible={collapsible}
+        count={summary?.results.length ?? (outputFacts.length || fallbackItems.length)}
+        missing={summary?.results.filter(result => result.coverage === 'missing').length ?? 0}
+        status={loading ? 'Checking output routes…' : !summary || summary.status === 'unavailable' || summary.results.some(result => result.coverage === 'unknown') ? 'Output routes unavailable' : undefined}
+        generationIssues={generationIssues}>{children}</OutputTransferSection>;
     if (!summary) {
         const items = outputFacts.length ? outputFacts.map(output => output.item_name) : fallbackItems;
-        return <PanelSection level={4} title="Output transfer">{control}
+        return section(<>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>{loading ? 'Checking output routes…' : 'Output routes unavailable'}</Typography>
             {items.map(item => {
                 const fact = outputFacts.find(output => output.item_name === item);
@@ -34,16 +63,14 @@ export function OutputTransferPanel({ summary, chests, facts, targetRate, atTarg
                     </Box>
                 </Box>;
             })}
-        </PanelSection>;
+        </>);
     }
     const labelOf = (target: { type: 'machine' | 'belt' | 'chest'; id: number }) => target.type === 'chest'
         ? chestLabel(chests.find(chest => chest.id === target.id) ?? { id: target.id })
         : entityLabel(target.type, target.id);
     const target = summary.physical_target;
     const directTargetLabel = target ? labelOf(target) : null;
-    return <PanelSection level={4} title="Output transfer">
-        {control}
-        {generationIssues.map(issue => <Alert key={`${issue.machine_id}:${issue.target_machine_id}:${issue.code}`} severity="warning" sx={{ mb: 1 }}>{issue.message}</Alert>)}
+    return section(<>
         {summary.status === 'unavailable' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Output routes unavailable</Typography>}
         {summary.mechanism === 'result-placement' && summary.results.length > 0 && summary.results.every(result => result.direct === 'rejected') && (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>This target takes none of these results. Inserters must take them from the machine output.</Typography>
@@ -85,5 +112,5 @@ export function OutputTransferPanel({ summary, chests, facts, targetRate, atTarg
                 </Box>
             </Box>;
         })}
-    </PanelSection>;
+    </>);
 }

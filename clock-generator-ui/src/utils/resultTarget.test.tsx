@@ -70,7 +70,7 @@ describe('the direct output target picker', () => {
         expect(resultTargetOptions(elsewhere, labels, getRecipeInfo)[1].sublabel).toBe('No items inferred');
     });
 
-    it('is a select of its own, with the empty choice keeping results in machine output', () => {
+    it('is a select of its own, with an explicit no-receiver ground choice', () => {
         const html = renderToStaticMarkup(<ResultTargetField machine={form.machines[0]} machineLabel="Machine 1" build={build} onChange={() => { }} />);
         expect(html).toContain('Direct output target');
         expect(html).toContain('aria-label="Direct output target, Machine 1"');
@@ -78,7 +78,7 @@ describe('the direct output target picker', () => {
         expect(html).not.toContain('aria-invalid="true"');
         expect(html).toContain('aria-label="About direct output targets"');
         const none = renderToStaticMarkup(<ResultTargetField machine={{ id: 1 }} machineLabel="Machine 1" build={build} onChange={() => { }} />);
-        expect(none).toContain('Keep results in machine output');
+        expect(none).toContain('No direct receiver (ground)');
         expect(none).not.toContain('aria-invalid="true"');
     });
 
@@ -87,14 +87,14 @@ describe('the direct output target picker', () => {
         const html = renderToStaticMarkup(<ResultTargetField machine={unset.machines[0]} machineLabel="Machine 1"
             build={{ machines: unset.machines, belts: unset.belts, chests: unset.chests, inserters: unset.inserters, drills: [] }} onChange={() => { }} />);
         expect(html).toMatch(/aria-invalid="true"/);
-        expect(html).not.toContain('Keep results in machine output');
+        expect(html).not.toContain('No direct receiver (ground)');
     });
 
     it('says in the words it was given', () => {
         expect(RESULT_TARGET_TEXT.label).toBe('Direct output target');
-        expect(RESULT_TARGET_TEXT.none).toBe('Keep results in machine output');
+        expect(RESULT_TARGET_TEXT.none).toBe('No direct receiver (ground)');
         expect(RESULT_TARGET_TEXT.helpLabel).toBe('About direct output targets');
-        expect(RESULT_TARGET_TEXT.help).toBe('A recycler places results into one machine or container at its output side. A machine takes the results its recipe uses. Other results stay in the recycler output for inserters to take. With no target, all results stay available to inserters.');
+        expect(RESULT_TARGET_TEXT.help).toBe('Select the machine or container at the recycler’s output. A machine receives the results its recipe uses. Other results remain available to inserters. Choose “No direct receiver (ground)” when no machine or container is at the output.');
         expect(resultTargetName('Machine 3')).toBe('Direct output target, Machine 3');
     });
 });

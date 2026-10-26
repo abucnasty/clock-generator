@@ -8,7 +8,7 @@ import { RESULT_TARGET_TEXT, resultTargetName, resultTargetOptions, type ResultT
 import { HelpButton } from './HelpButton';
 import { ContentIcons, RouteBadge } from './RouteIdentity';
 
-/** The value of the empty choice, which no container id can be */
+/** The value of the no-receiver choice, which no container id can be. */
 const OWN_OUTPUT = 'own-output';
 
 function Choice({ option }: { option: ResultTargetOption }) {
@@ -25,8 +25,7 @@ function Choice({ option }: { option: ResultTargetOption }) {
 }
 
 /**
- * Where a machine that places its results itself (a recycler) puts them: one of the build's containers, or its own
- * output, where inserters take them. Empty, and marked, when its container was deleted.
+ * The physical receiver at a recycler's output, or no receiver. Empty, and marked, when its container was deleted.
  */
 export function ResultTargetField({ machine, machineLabel, build, getRecipeInfo, onChange, sx }: {
     machine: Pick<MachineFormData, 'id' | 'result_target'>;
