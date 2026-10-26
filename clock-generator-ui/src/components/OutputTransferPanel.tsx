@@ -3,7 +3,7 @@ import { Alert, Box, Button, Typography } from '@mui/material';
 import { useId, useState, type ReactNode } from 'react';
 import type { MachineTargetRate, OutputTransferGenerationIssue, OutputTransferSummary, SerializableMachineFacts } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
-import type { ChestFormData } from '../hooks/useConfigForm';
+import { isInfinityChest, type ChestFormData } from '../hooks/useConfigForm';
 import { chestLabel, entityLabel } from '../utils/entityLabel';
 import { formatNumberText } from '../utils/numberText';
 import { FactorioIcon } from './FactorioIcon';
@@ -70,10 +70,17 @@ export function OutputTransferPanel({ summary, chests, facts, targetRate, atTarg
         : entityLabel(target.type, target.id);
     const target = summary.physical_target;
     const directTargetLabel = target ? labelOf(target) : null;
+    const targetChest = target?.type === 'chest' ? chests.find(chest => chest.id === target.id) : undefined;
+    const canEnableRemoval = targetChest && isInfinityChest(targetChest) && !targetChest.remove_unfiltered_items;
     return section(<>
         {summary.status === 'unavailable' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Output routes unavailable</Typography>}
         {summary.mechanism === 'result-placement' && summary.results.length > 0 && summary.results.every(result => result.direct === 'rejected') && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>This target takes none of these results. Inserters must take them from the machine output.</Typography>
+            <Box sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">This target currently takes none of these results. Change the target or its settings, or remove the results with inserters.</Typography>
+                {canEnableRemoval && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    On {directTargetLabel}, enable “Also remove unfiltered items” to accept these results directly.
+                </Typography>}
+            </Box>
         )}
         {summary.results.map(result => {
             const fact = outputFacts.find(output => output.item_name === result.item_name);

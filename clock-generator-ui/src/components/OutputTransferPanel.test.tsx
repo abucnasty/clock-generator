@@ -4,6 +4,7 @@ import type { OutputTransferSummary, SerializableMachineFacts } from 'clock-gene
 import { GameNamesContext } from '../hooks/useGameNames';
 import { OutputTransferPanel } from './OutputTransferPanel';
 import { ResultTargetField } from './ResultTargetField';
+import type { ChestFormData } from '../hooks/useConfigForm';
 
 const names = { item: { 'electronic-circuit': 'Electronic circuit', 'advanced-circuit': 'Advanced circuit' }, recipe: {} };
 const facts: SerializableMachineFacts = {
@@ -15,8 +16,8 @@ const facts: SerializableMachineFacts = {
     ],
 };
 
-function render(summary: OutputTransferSummary | null, onFix?: (item: string) => void, loading = false) {
-    return renderToStaticMarkup(<GameNamesContext.Provider value={names}><OutputTransferPanel summary={summary} chests={[]} facts={facts} fallbackItems={facts.outputs?.map(output => output.item_name)} loading={loading} onFix={onFix} /></GameNamesContext.Provider>);
+function render(summary: OutputTransferSummary | null, onFix?: (item: string) => void, loading = false, chests: ChestFormData[] = []) {
+    return renderToStaticMarkup(<GameNamesContext.Provider value={names}><OutputTransferPanel summary={summary} chests={chests} facts={facts} fallbackItems={facts.outputs?.map(output => output.item_name)} loading={loading} onFix={onFix} /></GameNamesContext.Provider>);
 }
 
 it('keeps all known products visible while route data is pending', () => {
@@ -66,7 +67,21 @@ it('shows the observed zero-acceptance target without drawing a direct product r
             { item_name: 'advanced-circuit', direct: 'rejected', inserters: [], coverage: 'missing' },
         ],
     };
-    expect(render(summary)).toContain('This target takes none of these results. Inserters must take them from the machine output.');
+    expect(render(summary)).toContain('This target currently takes none of these results. Change the target or its settings, or remove the results with inserters.');
+    expect(render(summary)).not.toContain('enable “Also remove unfiltered items”');
+});
+
+it('identifies enabling infinity-chest removal as an alternative for rejected direct outputs', () => {
+    const summary: OutputTransferSummary = {
+        source: { type: 'machine', id: 7 }, physical_target: { type: 'chest', id: 3 }, mechanism: 'result-placement', status: 'known', results: [
+            { item_name: 'advanced-circuit', direct: 'rejected', inserters: [], coverage: 'missing' },
+        ],
+    };
+    const chest = { id: 3, _uuid: 'chest-3', type: 'infinity-chest', item_filter: [{ item_name: 'iron-plate', request_count: 200 }], remove_unfiltered_items: false } satisfies ChestFormData;
+    expect(render(summary, undefined, false, [chest])).toContain('On Chest 3, enable “Also remove unfiltered items” to accept these results directly.');
+    expect(render(summary)).not.toContain('enable “Also remove unfiltered items”');
+    expect(render(summary, undefined, false, [{ ...chest, remove_unfiltered_items: true }])).not.toContain('enable “Also remove unfiltered items”');
+    expect(render({ ...summary, results: [{ ...summary.results[0], direct: 'accepted', coverage: 'covered' }] }, undefined, false, [chest])).not.toContain('enable “Also remove unfiltered items”');
 });
 
 it('starts a compact machine row with its physical target visible and route details unmounted', () => {
@@ -101,7 +116,7 @@ it('keeps missing-route counts and generation refusals visible while details are
         generationIssues={[{ code: 'no-accepted-results', machine_id: 7, target_machine_id: 8, accepted_items: [], message: 'This physical target cannot be clocked.' }]} />);
     expect(html).toContain('1 output needs a route');
     expect(html).toContain('This physical target cannot be clocked.');
-    expect(html).not.toContain('This target takes none of these results.');
+    expect(html).not.toContain('This target currently takes none of these results.');
 });
 
 it('keeps loading and unavailable states distinct from a missing route in compact rows', () => {
