@@ -1,22 +1,25 @@
 import { Alert, AlertTitle, Box, Button, Menu, MenuItem, Stack, Typography } from '@mui/material';
 import { memo, useId, useMemo, useState } from 'react';
-import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
+import type { InserterCoverageIssue, InserterFixOption, OutputTransferSummary } from 'clock-generator/browser';
 import type { BeltFormData, ChestFormData, MachineFormData } from '../hooks/useConfigForm';
 import { MachineIcon } from './MachineIcon';
 import { useGameNames } from '../hooks/useGameNames';
-import { entityLabel } from '../utils/entityLabel';
+import { chestLabel, entityLabel } from '../utils/entityLabel';
 import { coverageIssueElementId } from '../utils/firstProblem';
 import { EntityBadge } from './EntityBadge';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { entityOptionsOf, findOption, type EntityOption } from '../utils/inserterOptions';
 import { RouteBadge, ContentIcons } from './RouteIdentity';
+import { directReceiverRemovalOptions } from '../utils/directReceiverRemoval';
 
 interface Props {
     issues: InserterCoverageIssue[];
     machines?: MachineFormData[];
     belts?: BeltFormData[];
     chests?: ChestFormData[];
+    outputTransfers?: readonly OutputTransferSummary[] | null;
+    onEnableRemoval?: (chestIndex: number) => void;
     onApplyFix: (issue: InserterCoverageIssue, fix: InserterFixOption) => void;
     fixUnavailable?: (fix: InserterFixOption, issue: InserterCoverageIssue) => string | null;
     focusTargets?: boolean;
@@ -55,9 +58,9 @@ function repairLabel({ issue, fix }: Repair): string {
     }
 }
 
-const ConnectionRepairs = memo(function ConnectionRepairs({ issues, onApplyFix, fixUnavailable, focusTargets = true, options }: Props & { options: EntityOption[] }) {
+const ConnectionRepairs = memo(function ConnectionRepairs({ issues, onApplyFix, fixUnavailable, focusTargets = true, options, chests = [], outputTransfers, onEnableRemoval }: Props & { options: EntityOption[] }) {
     const { itemLabel } = useGameNames();
-    const [menu, setMenu] = useState<{ anchor: HTMLElement; choices: Repair[]; label: string } | null>(null);
+    const [menu, setMenu] = useState<{ anchor: HTMLElement; choices: Repair[]; label: string; includeReceiverRepairs: boolean } | null>(null);
     const menuId = useId();
     const choices = useMemo(() => {
         const repairs = new Map<string, Repair>();
@@ -73,6 +76,7 @@ const ConnectionRepairs = memo(function ConnectionRepairs({ issues, onApplyFix, 
     const connections = choices.filter(choice => choice.fix.type === 'existing_connection' || choice.fix.type === 'machine_to_machine');
     const preferred = reviews.length ? reviews : connections;
     const other = choices.filter(choice => !preferred.includes(choice));
+    const receiverRepairs = onEnableRemoval ? directReceiverRemovalOptions(issues, outputTransfers, chests) : [];
     const input = issues[0].kind === 'missing_input_inserter';
     const itemText = (repair: Repair) => repair.items.map(itemLabel).join(', ');
     const detail = (repair: Repair) => repair.fix.type === 'review_filters'
@@ -103,7 +107,7 @@ const ConnectionRepairs = memo(function ConnectionRepairs({ issues, onApplyFix, 
         setMenu(null);
         onApplyFix(repair.issue, repair.fix);
     };
-    const openChoices = (anchor: HTMLElement, list: Repair[], label: string) => setMenu({ anchor, choices: list, label });
+    const openChoices = (anchor: HTMLElement, list: Repair[], label: string, includeReceiverRepairs = false) => setMenu({ anchor, choices: list, label, includeReceiverRepairs });
     return <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5, minWidth: 0 }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, flex: '1 1 200px', minWidth: 0 }}>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>{input ? 'In' : 'Out'}</Typography>
@@ -123,13 +127,20 @@ const ConnectionRepairs = memo(function ConnectionRepairs({ issues, onApplyFix, 
                 onClick={event => openChoices(event.currentTarget, preferred, reviews.length ? 'Review filters' : input ? 'Choose a source' : 'Choose a destination')}>
                 {reviews.length ? 'Review connection…' : input ? 'Choose source…' : 'Choose destination…'}
             </Button>}
-            {other.length > 0 && <Button size="small" color="inherit" aria-haspopup="menu" aria-controls={menu ? menuId : undefined}
-                onClick={event => openChoices(event.currentTarget, other, 'Other connection options')}>
-                {preferred.length ? 'Other options…' : input ? 'Add source…' : 'Add destination…'}
+            {(other.length > 0 || receiverRepairs.length > 0) && <Button size="small" color="inherit" aria-haspopup="menu" aria-controls={menu ? menuId : undefined}
+                onClick={event => openChoices(event.currentTarget, other, 'Other connection options', true)}>
+                {preferred.length || receiverRepairs.length ? 'Other options…' : input ? 'Add source…' : 'Add destination…'}
             </Button>}
         </Box>
         <Menu id={menuId} anchorEl={menu?.anchor ?? null} open={menu !== null} onClose={() => setMenu(null)}
             slotProps={{ list: { 'aria-label': menu?.label }, paper: { sx: { maxWidth: 'calc(100vw - 24px)', maxHeight: 'min(420px, calc(100dvh - 32px))' } } }}>
+            {menu?.includeReceiverRepairs && receiverRepairs.map(({ chest, index }) => <MenuItem key={`removal:${chest.id}`}
+                onClick={() => { setMenu(null); onEnableRemoval?.(index); }} sx={{ whiteSpace: 'normal', py: 1 }}>
+                <Box>
+                    <Typography variant="body2">Enable “Also remove unfiltered items” on {chestLabel(chest)}</Typography>
+                    <Typography variant="caption" color="text.secondary">Accepts these results directly · no inserter added</Typography>
+                </Box>
+            </MenuItem>)}
             {menu?.choices.map(repair => {
                 const problem = fixUnavailable?.(repair.fix, repair.issue);
                 return <MenuItem key={repair.key} aria-label={actionLabel(repair)} aria-disabled={Boolean(problem)} onClick={() => apply(repair)} sx={{ whiteSpace: 'normal', py: 1 }}>
@@ -178,7 +189,7 @@ export const MissingInserterAlert = memo(function MissingInserterAlert({ issues,
                         </Box>
                     </Box>
                     <Stack spacing={0.5}>
-                        {directions.map(direction => <ConnectionRepairs key={direction[0].kind} issues={direction} options={options} {...props} />)}
+                        {directions.map(direction => <ConnectionRepairs key={direction[0].kind} issues={direction} options={options} chests={chests} {...props} />)}
                     </Stack>
                 </Box>;
             })}

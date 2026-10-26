@@ -1257,7 +1257,7 @@ function App() {
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
                                 <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
-                                <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
+                                <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
                                     onReview={goToTarget} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
                                 {/* in the order a row's sources are made in: an inserter's machines, belts and chests are above it */}
@@ -1583,7 +1583,7 @@ function App() {
                         </IconButton>
                     </Box>
                     <Box sx={{ px: 2, pt: 1, flexShrink: 0 }}>
-                        <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters}
+                        <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                             onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
                             onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} focusTargets={false} />
                     </Box>

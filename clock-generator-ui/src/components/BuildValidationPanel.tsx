@@ -1,5 +1,5 @@
 import { Box, Button, Typography } from '@mui/material';
-import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
+import type { InserterCoverageIssue, InserterFixOption, OutputTransferSummary } from 'clock-generator/browser';
 import type { ChestType } from 'clock-generator/light';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import type { RepeatedUnitsRecovery } from '../worker/types';
@@ -11,10 +11,11 @@ import { MissingInserterAlert } from './MissingInserterAlert';
 import { OutputChestAlert } from './OutputChestAlert';
 import { ValidationPanel } from './ValidationPanel';
 
-export function BuildValidationPanel({ issues, machines, belts, chests, inserters, onApplyFix, fixUnavailable,
+export function BuildValidationPanel({ issues, machines, belts, chests, inserters, outputTransfers, onApplyFix, fixUnavailable,
     onSwitchType, onEnableRemoval, onReview, recovery, conversionPending, onConvert, counts, focusTargets = true }: {
     issues: BuildValidationIssue[];
     machines: MachineFormData[]; belts: BeltFormData[]; chests: ChestFormData[]; inserters: InserterFormData[];
+    outputTransfers?: readonly OutputTransferSummary[] | null;
     onApplyFix: (issue: InserterCoverageIssue, fix: InserterFixOption) => void;
     fixUnavailable?: (fix: InserterFixOption, issue: InserterCoverageIssue) => string | null;
     onSwitchType: (index: number, type: ChestType, disposal?: boolean) => void;
@@ -31,7 +32,7 @@ export function BuildValidationPanel({ issues, machines, belts, chests, inserter
                     : issue.coverage ? <>
                         <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{issue.text}</Typography>
                         <MissingInserterAlert embedded focusTargets={false} issues={[issue.coverage]} machines={machines} belts={belts} chests={chests}
-                            onApplyFix={onApplyFix} fixUnavailable={fixUnavailable} />
+                            onApplyFix={onApplyFix} fixUnavailable={fixUnavailable} outputTransfers={outputTransfers} onEnableRemoval={onEnableRemoval} />
                     </> : issue.source === 'engine' ? <CheckErrorAlert embedded message={issue.text} recovery={recovery} counts={counts}
                         machineCount={machines.length} conversionPending={conversionPending} onConvert={onConvert} />
                         : <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}>
