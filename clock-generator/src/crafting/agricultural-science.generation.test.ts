@@ -106,7 +106,9 @@ describe("generateClockForConfig", () => {
 
         // The windows of 9 and 10 on the 1-swing clock (all but 72 of the 480 ticks, 160 eggs a period, 27 under the science
         // biochamber's insertion limit) are kept only when the clock passes the as-built check with them as it did without.
-        // It no longer does, so they stay always on.
+        // It no longer does: with them the nutrients loss runs dry under the fixed taker order. That verdict rests on the
+        // order of takers that both hold part of a hand, which the game serves in a varying order the simulator does not
+        // model yet (0.24.0), so they stay always on.
         it("leaves the inserters that take eggs into the science biochamber always on, as well as those of the loop, on the 1-swing clock", () => {
             const clocked = Object.keys(windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
             expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
