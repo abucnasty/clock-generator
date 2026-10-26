@@ -5,14 +5,14 @@ import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, Mach
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useGameNames } from '../hooks/useGameNames';
 import { useAnnounce } from '../hooks/useMessages';
-import { entityOptionsOf, findOption, stackSizeFrom, type EntityOption } from '../utils/inserterOptions';
+import { entityOptionsOf, findOption, type EntityOption } from '../utils/inserterOptions';
 import { inferInserterItems, sourceItemsOf } from '../utils/inferInserterItems';
 import { BLACKLIST_NOTE, filtersLabel, removeFilterSlot, setFilterSlot, usesAutomaticFilters, usesBlacklist } from '../utils/inserterFilters';
-import { DROP_ROUTE_READ_ONLY, endpointUpdate, effectiveInserterStackSize, INSERTER_TIMING_ASSUMPTION, inserterTimingLabels, inserterStackSizeHelp } from '../utils/inserterMetadata';
+import { DROP_ROUTE_READ_ONLY, endpointUpdate, INSERTER_TIMING_ASSUMPTION, inserterTimingLabels } from '../utils/inserterMetadata';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NearLaneSelect } from './NearLaneSelect';
 import { PickupTypeSelect } from './PickupTypeSelect';
-import { NumberField } from './NumberField';
+import { InserterStackSizeControl } from './InserterStackSizeControl';
 import { EntitySelector } from './EntitySelector';
 import { isContainerChest } from '../utils/configForm/formData';
 import { entityLabel } from '../utils/entityLabel';
@@ -49,10 +49,7 @@ const NO_DRILLS: readonly DrillFormData[] = [];
 export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, inserters, belts, chests, drills = NO_DRILLS, itemNames, getRecipeInfo, onChange, rowActions, routeActions, rowSettings, options, identity }: InserterEditorProps) {
     const row = layout !== 'stacked';
     const workbench = layout === 'workbench';
-    const capacity = effectiveInserterStackSize(value);
     const timing = inserterTimingLabels(value);
-    const stackHelp = value.stack_size !== undefined ? `Explicit: ${value.stack_size} items.`
-        : row && Number.isFinite(capacity) ? `Automatic: ${capacity} items.` : inserterStackSizeHelp(value);
     const { itemLabel, recipeLabel } = useGameNames();
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
@@ -105,9 +102,8 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
         <Box sx={row ? { display: 'flex', gridColumn: '1 / -1', flexWrap: 'wrap', alignItems: 'start', gap: 1.5, minWidth: 0 } : { display: 'contents' }}>
             {workbench && <PickupTypeSelect source={value.source} entityLabel={label} onChange={source => onChange({ source })} />}
             {row && <NearLaneSelect compact source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />}
-            <NumberField id={`${row ? '' : 'diagram-'}inserter-stack-size-${value.id}`} label="Stack size" value={value.stack_size ?? null}
-                placeholder="Automatic" helperText={stackHelp} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
-                min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
+            <InserterStackSizeControl id={`${row ? '' : 'diagram-'}inserter-stack-size-${value.id}`}
+                value={value} label={label} compact={row} onChange={stackSize => onChange({ stack_size: stackSize })} />
             {!workbench && filterFields}
             {row && rowActions}
         </Box>

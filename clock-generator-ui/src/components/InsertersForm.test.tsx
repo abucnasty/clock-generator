@@ -58,6 +58,17 @@ it('keeps advanced stack settings out of the default workbench view', () => {
     expect(html).not.toContain('Nearest lane');
 });
 
+it('shows only the effective stack size in the row summary', () => {
+    const automatic = render({ ...base, stack_size: undefined });
+    const overridden = render({ ...base, stack_size: 1 });
+    expect(automatic).toContain('Stack 16');
+    expect(overridden).toContain('Stack 1');
+    for (const html of [automatic, overridden]) {
+        expect(html).not.toContain('(automatic)');
+        expect(html).not.toContain('(explicit)');
+    }
+});
+
 it('keeps every imported filter editable when a legacy list exceeds five slots', () => {
     const html = render({ ...base, filters: ['iron-plate', 'copper-plate', 'iron-gear-wheel', 'battery', 'stone', 'coal'] });
     expect((html.match(/aria-label="Filter \d+:/g) ?? [])).toHaveLength(6);

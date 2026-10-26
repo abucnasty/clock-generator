@@ -129,7 +129,7 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
                         }} />
                 }]}
                 summary={<Typography variant="caption">
-                    Stack {effectiveInserterStackSize(value)}{value.stack_size === undefined ? ' (automatic)' : ' (explicit)'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
+                    Stack {Number.isFinite(effectiveInserterStackSize(value)) ? effectiveInserterStackSize(value) : 'unavailable'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
                 </Typography>}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, overflowWrap: 'anywhere' }}>{fullMetadata}</Typography>
                 {fields}
