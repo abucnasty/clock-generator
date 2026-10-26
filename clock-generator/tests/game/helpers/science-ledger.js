@@ -1,7 +1,9 @@
 "use strict";
 // Per-branch accounting of the original electromagnetic science scaffold's native runs: reads the probe's endpoint stocks
 // and its per-boundary series (recycler-original-clock-probe.lua) and closes the science of each branch (one science plant,
-// its steel buffer, the arm between them and the final taker) at every period boundary. It observes; it judges nothing.
+// its steel buffer, the arm between them and the final taker) at every period boundary. It observes; it judges nothing,
+// except branchDeliveryGate, the gate of each branch's terminal deliveries. Without buffer chests a branch is the science
+// plant and its drain, which drops into an infinity chest and is the terminal.
 const assert=require('node:assert/strict');
 const ITEM='electromagnetic-science-pack';
 const values=value=>Object.values(value??{});
@@ -16,25 +18,28 @@ function nativeScienceLedger(recording,report){
   assert.equal(machines.length,4,'four actual science machines');
   assert(machines.every(row=>row.position),'every science machine has its recorded native position');
   const arms=recording.inserters.map(row=>({...row,position:inserterConfigs.get(row.id)?.position}));
-  const outputs=arms.filter(row=>row.source?.type==='chest'&&row.sink?.type==='chest'
-    &&chestConfigs.get(row.source.id)?.type==='buffer-chest'&&chestConfigs.get(row.source.id)?.item_filter===ITEM
-    &&chestConfigs.get(row.sink.id)?.type==='infinity-chest').sort(byPosition);
-  assert.equal(outputs.length,4,'four actual final takers, not internal drains');
+  // a terminal drops into an infinity chest: from a science buffer, or (no buffer) straight from a science machine
+  const fromScience=row=>row.source?.type==='machine'&&machineConfigs.get(row.source.id)?.recipe===ITEM;
+  const outputs=arms.filter(row=>row.sink?.type==='chest'&&chestConfigs.get(row.sink.id)?.type==='infinity-chest'
+    &&(fromScience(row)||row.source?.type==='chest'&&chestConfigs.get(row.source.id)?.type==='buffer-chest'
+      &&chestConfigs.get(row.source.id)?.item_filter===ITEM)).sort(byPosition);
+  assert.equal(outputs.length,4,'four actual terminals: final takers, or drains where there is no buffer');
   assert(outputs.every(row=>row.position),'every final taker has its recorded native position');
   const memberships=new Map(),seenMachines=new Set(),seenBuffers=new Set();
   const branches=outputs.map((terminal,index)=>{
-    const drains=arms.filter(row=>row.sink?.type==='chest'&&row.sink.id===terminal.source.id&&row.source?.type==='machine'
-      &&machineConfigs.get(row.source.id)?.recipe===ITEM);
+    const buffered=!fromScience(terminal);
+    const drains=buffered?arms.filter(row=>row.sink?.type==='chest'&&row.sink.id===terminal.source.id&&fromScience(row)):[terminal];
     assert.equal(drains.length,1,'one native science source per steel buffer');
     const drain=drains[0],machineIndex=machines.findIndex(row=>row.id===drain.source.id);
-    assert(machineIndex>=0);assert(!seenMachines.has(machineIndex));assert(!seenBuffers.has(terminal.source.id));
-    seenMachines.add(machineIndex);seenBuffers.add(terminal.source.id);
-    for(const unit of[terminal.unit_number,drain.unit_number]){assert(Number.isFinite(unit));assert(!memberships.has(unit));memberships.set(unit,index);}
+    assert(machineIndex>=0);assert(!seenMachines.has(machineIndex));
+    if(buffered){assert(!seenBuffers.has(terminal.source.id));seenBuffers.add(terminal.source.id);}
+    seenMachines.add(machineIndex);
+    for(const unit of new Set([terminal.unit_number,drain.unit_number])){assert(Number.isFinite(unit));assert(!memberships.has(unit));memberships.set(unit,index);}
     // The probe's buffers follow its sorted final takers; its machine outputs follow its sorted science machines.
     return{branch:index,terminal_unit:terminal.unit_number,terminal_recorded_id:terminal.id,terminal_position:terminal.position,
       drain_unit:drain.unit_number,drain_recorded_id:drain.id,
       machine_unit:machines[machineIndex].unit_number,machine_recorded_id:machines[machineIndex].id,machine_position:machines[machineIndex].position,
-      buffer_recorded_id:terminal.source.id,machine_output_index:machineIndex,buffer_stock_index:index};
+      buffer_recorded_id:buffered?terminal.source.id:null,machine_output_index:machineIndex,buffer_stock_index:index};
   });
   // Every endpoint is reconciled; a mismatch or a hand outside the closed branches is recorded, never thrown away or zeroed.
   const endpoints=[];
@@ -157,4 +162,28 @@ function branchSeriesLedger(report,{period=report.period,settle_ticks,baseline_p
     note:'products_finished is per machine (one per craft completion and one per productivity bonus completion; a science pack recipe yields 1, so it counts packs). '
       +'A nonzero residual is a probe or mapping defect (e.g. a drop and a pickup by a terminal in one tick), not a tolerance question.'};
 }
-module.exports={nativeScienceLedger,branchSeriesLedger};
+// ---- The gate of each branch's terminal deliveries over judged periods (the baseline, or a trial's hold).
+// The probe names each branch's gate by the sink its drain drops into (report.topology.branches[i].gate): "exact", into a
+// buffer, is the share in every period; "rate", into a sink that never blocks, is never more than the hand behind the
+// share a period, counted from the first period, with any surplus allowed (the sink takes it).
+/**
+ * @param {any} report
+ * @param {number[][]} periods
+ */
+function branchDeliveryGate(report,periods){
+  const share=report.share_per_period,hand=report.hand,gates=values(report.topology?.branches).map(branch=>branch.gate);
+  assert(Number.isFinite(share)&&Number.isFinite(hand)&&gates.length===4,'the probe names a share, a hand and four branch gates');
+  assert(Array.isArray(periods)&&periods.length>0&&periods.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite)),
+    'four finite branch deliveries per judged period');
+  const branches=gates.map((gate,index)=>{
+    let ahead=0,lowest=0,highest=0,first_behind=null;const off=[];
+    periods.forEach((row,k)=>{const count=row[index];ahead+=count-share;lowest=Math.min(lowest,ahead);highest=Math.max(highest,ahead);
+      if(count!==share)off.push(k);if(ahead<-hand&&first_behind===null)first_behind=k;});
+    const passes=gate==='exact'?off.length===0:gate==='rate'?first_behind===null:false;
+    return{branch:index,gate,delivered:periods.reduce((sum,row)=>sum+row[index],0),expected:share*periods.length,
+      surplus:ahead,lowest_ahead:lowest,highest_ahead:highest,periods_off_share:off.length,first_period_off_share:off[0]??null,
+      first_period_beyond_hand:first_behind,passes};
+  });
+  return{periods:periods.length,share_per_period:share,hand,branches,passes:branches.every(branch=>branch.passes)};
+}
+module.exports={nativeScienceLedger,branchSeriesLedger,branchDeliveryGate};
