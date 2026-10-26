@@ -12,7 +12,7 @@ import { TargetProductionRate } from "../target-production-rate";
 import * as planning from "../plan/plan-run";
 import { ClockPeriodLimitError } from "../plan/clock-period-limit";
 import * as unplanned from "../sequence/unplanned-inserter-clock";
-import { groupedHandsPlan, GroupedHandsNotApplicable, type GroupedHandsComposition } from "./grouped-hands";
+import { groupedHandsPlan, GroupedHandsNotApplicable, heldAtTurn, roomAtTurn, type GroupedHandsComposition } from "./grouped-hands";
 import { assertAcyclicGroupedDependencies, constructPrimitiveGroupedHands } from "./primitive-grouped-hands";
 
 describe("pure primitive grouped construction", () => {
@@ -81,6 +81,38 @@ describe("pure primitive grouped construction", () => {
             checked++;
         }
         expect(checked).toBeGreaterThan(0);
+    });
+
+    it("gives each science plant room when its supercapacitor turn opens, which the drain left where it was did not give the east plant", () => {
+        const artifact = constructPrimitiveGroupedHands(config);
+        const registry = createEntityRegistryFromConfig(config);
+        const takers = config.inserters.filter(inserter => inserter.source.type === "machine" && inserter.sink.type === "machine"
+            && config.machines.find(machine => machine.id === inserter.source.id)?.recipe === "supercapacitor");
+        const drainOf = (machine: number) => config.inserters.find(inserter => inserter.source.type === "machine" && inserter.source.id === machine && inserter.sink.type === "chest")!;
+        let checked = 0;
+        for (const attempt of artifact.attempts) {
+            // every way of placing the windows is made: none has a turn without room
+            expect(attempt.result.kind).toBe("constructed");
+            if (attempt.result.kind !== "constructed") continue;
+            const windows = attempt.result.planned_windows;
+            const start = (id: number) => {
+                const ranges = windows[`inserter:${id}`]!;
+                return ranges.find(range => !ranges.some(other => (other.end + 1) % 40 === range.start))!.start;
+            };
+            for (const taker of takers) {
+                const plant = registry.getEntityByIdOrThrow(EntityId.forMachine(taker.sink.id)) as Machine;
+                expect(roomAtTurn(plant, heldAtTurn(plant, start(taker.id!), [start(drainOf(taker.sink.id).id!)], 40))).toBe(true);
+                checked++;
+            }
+        }
+        expect(checked).toBe(16);
+        // before the drains moved (ede1733f): machine 4's turn (9) at 38, its drain (8) left at 2 with machine 1's (5): 36 ticks
+        // of 0.41 packs, 14.79, over its block of 12 less one; machine 1's turn (6) at 18 came 16 ticks after its drain, 6.57 packs
+        const second = registry.getEntityByIdOrThrow(EntityId.forMachine(4)) as Machine;
+        expect(heldAtTurn(second, 38, [2], 40)).toBeCloseTo(14.788, 3);
+        expect(roomAtTurn(second, heldAtTurn(second, 38, [2], 40))).toBe(false);
+        expect(heldAtTurn(second, 18, [2], 40)).toBeCloseTo(6.5725, 3);
+        expect(roomAtTurn(second, heldAtTurn(second, 18, [2], 40))).toBe(true);
     });
 
     it("retains the computed rejected-result control in composed windows and control keys without a planned red hand", () => {
