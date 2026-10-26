@@ -30,6 +30,8 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Inserters that take from a loop of machines into another machine get wake windows where the clock still holds and recovers with them, so builds with such a loop need far fewer wake-ups.
 - Where a loss is told, such as "military science pack is not taken away", the result names the item as the game does, not by its internal id, and a clock named Fewest deciders says what that means.
 - Inserters that take from one machine are served in the order the game uses, the first taking a full hand and the next what is left, and a clock counts as stable only if it holds and recovers whichever of them the game serves first.
+- Where inserters take turns at one machine, the inserters that empty each machine they fill, into a chest or onto a belt, take their turn with it, so each of those machines is emptied at the same point of its turn.
+- A clock is not offered where a machine filled in turn would still hold its product at its ingredient limit when its turn opens, since that turn would bring it nothing; the planning log names the machine and the amount.
 
 ### Removed
 - Clocks for a shorter period, labelled "shorter period (… not in the period)", are no longer offered: where one was selected, batched swings or shifted swings are now (the swing plan's "Exclude from LCM" leaves an ingredient out of the period by hand).
