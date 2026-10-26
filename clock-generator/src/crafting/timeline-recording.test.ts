@@ -78,6 +78,20 @@ describe('optional timeline observer', () => {
         expect(JSON.stringify(config)).toBe(before);
         expect(() => recordSimulationTimeline({ ...request, period_ticks: 0 })).toThrow('cannot be recorded');
     });
+
+    it('records a settled period when asked for periods from the cold start, and the first one after the warm-up when not', () => {
+        const period_ticks = runBuild(config, { logger: quiet }).duration.ticks;
+        const request = { config, mode: 'clock' as const, period_ticks, terminal_swing_count: 2, windows: {} };
+        const first = recordSimulationTimeline(request);
+        // fewer periods than the warm-up already runs change nothing
+        expect(recordSimulationTimeline({ ...request, settle_periods: 3 })).toEqual(first);
+        const settled = recordSimulationTimeline({ ...request, settle_periods: 25 });
+        expect(settled).toMatchObject({ end_tick: period_ticks, ticks_before_recording: 25 * period_ticks });
+        expect(first.ticks_before_recording).toBe(10 * period_ticks);
+        // the plan run is of the planning controls: it is never settled
+        const plan = recordSimulationTimeline({ ...request, mode: 'plan' });
+        expect(recordSimulationTimeline({ ...request, mode: 'plan', settle_periods: 25 })).toEqual(plan);
+    });
 });
 
 it('records real burner inventory and energy while replaying the saved independent fuel clock', async () => {

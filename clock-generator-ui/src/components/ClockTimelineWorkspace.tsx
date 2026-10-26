@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import type { Config, SerializableClockWindows, SerializableStateTransitionHistory, SerializableTransferHistory, TimelineEntity } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import type { TimelineViewContext } from '../utils/buildViewContext';
-import { timelineRequestFor } from '../utils/timelineRequest';
+import { settledPeriodLabel, timelineRequestFor } from '../utils/timelineRequest';
 import { useTimelineRecording } from '../hooks/useTimelineRecording';
 import { useGameNames } from '../hooks/useGameNames';
 import { DEFAULT_INSPECTION, validInspection, resolveTimelineEntity, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
@@ -114,6 +114,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted]);
     const primary = useTimelineRecording(request, retry);
     const recording = primary.data;
+    const settledLabel = settledPeriodLabel(request, recording);
     const selected = useMemo(() => resolveTimelineEntity(recording?.entities ?? options, inspection.entityId), [recording, options, inspection.entityId]);
     const selectedId = selected?.id ?? null;
     const effectiveInspection = useMemo(() => ({ ...inspection, entityId: selectedId }), [inspection, selectedId]);
@@ -228,6 +229,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                     <Slider aria-label="Timeline tick cursor" value={tick} min={0} max={Math.max(1, Math.floor(duration))} step={1} onChange={(_, value) => setTick(Number(value))} sx={{ mx: 1, flex: 1 }} />
                     <Typography variant="caption" sx={{ minWidth: 55 }}>{number(tick / 60)} s</Typography>
                 </Box>
+                {settledLabel && <Typography variant="caption" component="p" sx={{ mt: 1, fontWeight: 600 }}>{settledLabel}</Typography>}
                 {recording && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>One modelled unit · {inspection.run === 'clock' ? 'exported clock, including circuit latency' : 'planning controls'} · tick 0 is the baseline after preparation/warm-up ({number(recording.ticks_before_recording)} ticks excluded); controls restart at phase 0 with that inventory. Full input supplies; delivery rates exclude events before tick 0. This replay does not change the clock assessment.</Typography>}
             </Box>
             {recordingWanted && selected && recording && <TimelineTickInspector recording={recording} entity={selected} inspection={effectiveInspection} tick={tick} events={tickEvents} connected={connected} onEntityChange={entityId => patch({ entityId, ...(isFlow ? { replayFocus: true, replayTransferScope: 'selection' } as const : {}) })} />}
