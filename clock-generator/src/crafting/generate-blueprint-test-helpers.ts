@@ -40,14 +40,14 @@ export const rocketFuelSample = async (path: string): Promise<RocketFuelSample> 
     // with the searches, whose clocks the tests of these samples read as well: batched swings is stable on both
     const { alternatives } = generateClockAlternatives(withSearches(config));
     const alternative = (id: string) => alternatives.find(a => a.id === id)!;
-    const moved = (inserter_id: string): number => alternative("planned").result.serializable_transfer_history.entities
+    const moved = (inserter_id: string): number => alternative("planned-belt-slack").result.serializable_transfer_history.entities
         .find(entity => entity.entity_id === inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
     return {
         config,
         alternatives,
         alternative,
         moved,
-        period: alternative("planned").result.simulation_duration.ticks,
+        period: alternative("planned-belt-slack").result.simulation_duration.ticks,
         jelly_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "machine"),
         output_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "belt" && it.source.id !== 2),
         // belt 1 carries bioflux and jellynut: machine 2 takes the jellynut, the rocket fuel machines the bioflux
@@ -73,3 +73,17 @@ export function alwaysOnReasonProblems(config: Config, result: BlueprintGenerati
 /** The problems of every alternative of a generation (see alwaysOnReasonProblems) */
 export const alwaysOnReasonProblemsOf = (config: Config, generated: Pick<ClockAlternativesResult, "alternatives">): string[] =>
     generated.alternatives.flatMap(alternative => alwaysOnReasonProblems(config, alternative.result, alternative.id));
+
+/**
+ * Fixtures whose belts are backed up at normal speed on an underground entrance, exit or front exit: a backed-up
+ * belt there refills a pickup slower than a stack a tick, so no clock made for backed-up belts is stable, and since
+ * clocks are made only for the belts a config names, none is made for a moving belt either (issue 456). Their game
+ * recordings were made on that moving-belt clock, which the generator no longer makes; they are not compared with
+ * a selection.
+ */
+export const BACKED_UP_GENERATION_GAP: ReadonlySet<string> = new Set([
+    "electromagnetic-normal-underground-entrance-backed",
+    "electromagnetic-normal-underground-exit-backed",
+    "front-exit-normal-mirrored-backed-different-items",
+    "front-exit-normal-unmirrored-backed-different-items",
+]);

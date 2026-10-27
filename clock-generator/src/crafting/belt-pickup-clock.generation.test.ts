@@ -3,7 +3,7 @@ import {generateClockAlternatives} from "./generate-blueprint";
 import {rotateRanges, SerializableClockWindows} from "./clock";
 import {backpressureLossOf, simulateClockOnly} from "./trial";
 import {OpenRange} from "../data-types";
-import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf, BACKED_UP_GENERATION_GAP} from "./generate-blueprint-test-helpers";
 import {pickupClockConfig, pickupClockSpeedCases} from "../../tests/game/builds/pickup-clock-speed-coverage";
 import {clockHash, readControls} from "../../tests/game/builds/clock-controls";
 import {expectColdStartRunsOnSelection} from "../../tests/game/builds/pickup-clock-cold-start-runs";
@@ -36,6 +36,14 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         const result = generateClockAlternatives(config, {logger: quiet});
         expect(alwaysOnReasonProblemsOf(config, result), "every inserter and drill a clock leaves always on says why").toEqual([]);
         const selected = result.alternatives[result.selected_index];
+        if (BACKED_UP_GENERATION_GAP.has(variant.name)) {
+            // no clock for the backed-up belts holds here and none is made for a moving belt: the recording of the
+            // native control was made on that clock, which is no longer made (issue 456)
+            expect(result.alternatives.some(it => it.id === "planned-moving-belt")).toBe(false);
+            expect(selected.verdict).not.toBe("stable");
+            expect(selected.belt?.kind).toBe("backed_up");
+            return;
+        }
         const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
         expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as the pin (its identity: no text or metadata)")
             .toBe(pin!.clock_sha256);
@@ -57,8 +65,7 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         if (startup) {
             // The fixed windows stay as a check of the simulator against the game's measured cold starts (a
             // fully jammed start at offset 1287 alternates 144/208 natively), independent of the selection:
-            // the generator now selects the clock planned with the belts moving here (#275), which the branches
-            // below judge on its own recording.
+            // the clock the game was recorded on was planned with the belts moving (#275), which is no longer made.
             for (const phase of startup.phases) {
                 const windows = Object.fromEntries(Object.entries(startup.clock_windows).map(([id, ranges]) =>
                     [id, rotateRanges(ranges.map(range => OpenRange.from(range.start, range.end)), phase.offset, startup.period)
@@ -101,9 +108,7 @@ for (const family of ["electromagnetic", "same-item"] as const) describe(`native
         } else if (meetsTarget) {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
-            // a backed-up config gets a clock for a moving belt only as the fallback, where no other clock is stable
-            // (the normal underground entrance and exit, whose backed-up belts refill slower than a stack a tick)
-            expect(selected.belt?.kind).toBe(variant.backed && selected.id !== "planned-moving-belt" ? "backed_up" : "moving");
+            expect(selected.belt?.kind).toBe(variant.backed ? "backed_up" : "moving");
             expect(result.why_not_stable).toBeNull();
         } else {
             // A fallback requiring backed-up supply is not a verified clock for moving input.
