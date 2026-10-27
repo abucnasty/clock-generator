@@ -255,6 +255,10 @@ the family's `*.generation.test.ts` (pull requests to master).
 - Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
   difference after its staged start, agricultural science with backed-up belts having no difference, and the moved
   inserters of chemical science with a shared foundry): `scaffold-recordings-clock-pins.json`.
+- The agricultural science scaffold's control on the 2-swing clock keeps one line: inserter 11 moves 371.33 a period in the
+  game and 370.16 in the simulator. Since #333 the simulator runs a clock of whole ticks by its own period (960 ticks for
+  this one, where the plan has 480), so the run the test compares is twice as long, and its two one-hand dips fall before
+  the compared part (#364, #401). The backed-up case needs no allowance.
 
 ## Over-the-hood operating clocks
 
