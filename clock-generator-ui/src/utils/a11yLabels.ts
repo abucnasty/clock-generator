@@ -131,7 +131,3 @@ export function deleteLaneName(beltLabel: string, lane: number): string {
     return `Delete lane ${lane} of ${beltLabel}`;
 }
 
-/** The name of a filter slot's remove button, "Remove filter 1: iron-plate" (the slot is counted from 1) */
-export function removeFilterName(slot: number, item: string): string {
-    return `Remove filter ${slot}: ${item}`;
-}
