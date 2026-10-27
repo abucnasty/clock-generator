@@ -983,8 +983,11 @@ function simulate(
         .map(it => it.inserter_state)
         .filter(state => all_output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
     const dropped_before_run = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0);
+    // a run that is watched for a repeat may end long before the periods it was asked for, so it grows its series
+    const may_end_early = repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks;
     const stock_recorder = options.machine_stock
-        ? new StockRecorder(new_simulation_context.machines.map(it => it.machine_state), new_simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })))
+        ? new StockRecorder(new_simulation_context.machines.map(it => it.machine_state), new_simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })),
+            may_end_early ? undefined : recorded_duration.ticks)
         : undefined;
     const timeline_recorder = options.timeline_recording
         ? new TimelineRecorder(new_simulation_context, options.timeline_recording)

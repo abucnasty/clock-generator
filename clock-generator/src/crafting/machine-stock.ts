@@ -49,59 +49,107 @@ function barOf(progress: number): number {
     return Math.min(1, Math.max(0, Math.floor(progress * 10000 + 0.5) / 10000));
 }
 
+/** The longest run whose series are made at their full length at once; a longer one grows them as it goes (V8 keeps an array of more than 2^25 items in a slow form) */
+const MAX_PREALLOCATED_TICKS = 1 << 24;
+
+/** The series of one item of a machine, with the item they are about */
+type ItemSeries = readonly [item_name: string, series: number[]];
+
 /** Samples what the machines and inserters hold after each tick of a run */
 export class StockRecorder {
     private ticks = 0;
-    private readonly machines: { state: MachineState; series: MachineStockSeries }[];
+    private readonly machines: { state: MachineState; series: MachineStockSeries; inputs: ItemSeries[]; outputs: ItemSeries[]; fuel_item: string | undefined }[];
     private readonly inserters: { state: InserterState; sink: EntityState; series: InserterHandSeries }[];
 
-    /** @param inserters every inserter with what it puts into, which decides the state the game shows while it waits */
-    constructor(machine_states: readonly MachineState[], inserters: readonly { state: InserterState; sink: EntityState }[]) {
-        this.machines = machine_states.map(state => ({
-            state,
-            series: {
+    /**
+     * @param inserters every inserter with what it puts into, which decides the state the game shows while it waits
+     * @param expected_ticks the ticks the run will record, when it cannot end sooner: the series are then made at that
+     *      length and written by index, instead of grown by push. Left out for a run that may stop early at a repeat,
+     *      whose request is far longer than what it records.
+     */
+    constructor(machine_states: readonly MachineState[], inserters: readonly { state: InserterState; sink: EntityState }[], expected_ticks?: number) {
+        const series_of_ticks = (): number[] => expected_ticks !== undefined && expected_ticks <= MAX_PREALLOCATED_TICKS ? new Array<number>(expected_ticks) : [];
+        const strings_of_ticks = (): string[] => expected_ticks !== undefined && expected_ticks <= MAX_PREALLOCATED_TICKS ? new Array<string>(expected_ticks) : [];
+        this.machines = machine_states.map(state => {
+            const series: MachineStockSeries = {
                 machine_id: state.entity_id.id,
                 recipe: state.machine.metadata.recipe.name,
-                inputs: Object.fromEntries(Array.from(state.machine.inputs.values(), input => [input.item_name, [] as number[]])),
-                outputs: Object.fromEntries(state.machine.outputs.map(output => [output.item_name, [] as number[]])),
-                fuel: state.machine.fuel_slot ? [] : undefined,
-                status: [],
-                products_finished: [],
-                crafts_started: [],
-                ...(state.machine.metadata.places_results === true && { results_placed: [] as number[] }),
-                crafting_progress: [],
-                bonus_progress: [],
-            },
+                inputs: Object.fromEntries(Array.from(state.machine.inputs.values(), input => [input.item_name, series_of_ticks()])),
+                outputs: Object.fromEntries(state.machine.outputs.map(output => [output.item_name, series_of_ticks()])),
+                fuel: state.machine.fuel_slot ? series_of_ticks() : undefined,
+                status: strings_of_ticks(),
+                products_finished: series_of_ticks(),
+                crafts_started: series_of_ticks(),
+                ...(state.machine.metadata.places_results === true && { results_placed: series_of_ticks() }),
+                crafting_progress: series_of_ticks(),
+                bonus_progress: series_of_ticks(),
+            };
+            // the items and their series are listed once, in the order Object.keys gives them
+            return {
+                state, series, inputs: Object.entries(series.inputs), outputs: Object.entries(series.outputs),
+                fuel_item: state.machine.fuel_slot?.fuel.item_name,
+            };
+        });
+        this.inserters = inserters.map(({ state, sink }) => ({
+            state, sink,
+            series: { inserter_id: state.entity_id.id, held: series_of_ticks(), held_item: strings_of_ticks(), status: strings_of_ticks(), factorio_state: strings_of_ticks() },
         }));
-        this.inserters = inserters.map(({ state, sink }) => ({ state, sink, series: { inserter_id: state.entity_id.id, held: [], held_item: [], status: [], factorio_state: [] } }));
     }
 
     public record(): void {
+        const tick = this.ticks;
         this.ticks += 1;
-        for (const { state, series } of this.machines) {
-            for (const item_name of Object.keys(series.inputs)) {
-                series.inputs[item_name].push(MachineState.ingredientQuantity(state, item_name));
+        for (const { state, series, inputs, outputs, fuel_item } of this.machines) {
+            for (const [item_name, item_series] of inputs) {
+                item_series[tick] = MachineState.ingredientQuantity(state, item_name);
             }
-            for (const item_name of Object.keys(series.outputs)) {
-                series.outputs[item_name].push(state.inventoryState.getQuantity(item_name));
+            for (const [item_name, item_series] of outputs) {
+                item_series[tick] = state.inventoryState.getQuantity(item_name);
             }
-            series.fuel?.push(state.fuelInventory.getQuantity(state.machine.fuel_slot!.fuel.item_name));
-            series.status.push(state.status);
-            series.products_finished.push(state.productsFinished);
-            series.crafts_started.push(state.craftsStarted);
-            series.results_placed?.push(state.resultsPlaced);
-            series.crafting_progress.push(barOf(state.craftingProgress.progress));
-            series.bonus_progress.push(barOf(state.bonusProgress.progress));
+            if (series.fuel !== undefined) {
+                series.fuel[tick] = state.fuelInventory.getQuantity(fuel_item!);
+            }
+            series.status[tick] = state.status;
+            series.products_finished[tick] = state.productsFinished;
+            series.crafts_started[tick] = state.craftsStarted;
+            if (series.results_placed !== undefined) {
+                series.results_placed[tick] = state.resultsPlaced;
+            }
+            series.crafting_progress[tick] = barOf(state.craftingProgress.progress);
+            series.bonus_progress[tick] = barOf(state.bonusProgress.progress);
         }
         for (const { state, sink, series } of this.inserters) {
-            series.held.push(state.held_item?.quantity ?? 0);
-            series.held_item.push(state.held_item?.item_name ?? "");
-            series.status.push(state.status);
-            series.factorio_state.push(factorioInserterState(state, sink));
+            series.held[tick] = state.held_item?.quantity ?? 0;
+            series.held_item[tick] = state.held_item?.item_name ?? "";
+            series.status[tick] = state.status;
+            series.factorio_state[tick] = factorioInserterState(state, sink);
         }
     }
 
     public recording(): StockRecording {
+        this.trimSeries();
         return { ticks: this.ticks, machines: this.machines.map(it => it.series), inserters: this.inserters.map(it => it.series) };
+    }
+
+    /** Cuts the series made for more ticks than were recorded back to the ticks recorded */
+    private trimSeries(): void {
+        const cut = (series: unknown[] | undefined): void => {
+            if (series !== undefined && series.length > this.ticks) {
+                series.length = this.ticks;
+            }
+        };
+        for (const { series } of this.machines) {
+            for (const item_series of [...Object.values(series.inputs), ...Object.values(series.outputs)]) {
+                cut(item_series);
+            }
+            for (const column of [series.fuel, series.status, series.products_finished, series.crafts_started, series.results_placed, series.crafting_progress, series.bonus_progress]) {
+                cut(column);
+            }
+        }
+        for (const { series } of this.inserters) {
+            for (const column of [series.held, series.held_item, series.status, series.factorio_state]) {
+                cut(column);
+            }
+        }
     }
 }
