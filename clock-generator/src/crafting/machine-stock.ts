@@ -52,6 +52,11 @@ function barOf(progress: number): number {
 /** The longest run whose series are made at their full length at once; a longer one grows them as it goes (V8 keeps an array of more than 2^25 items in a slow form) */
 const MAX_PREALLOCATED_TICKS = 1 << 24;
 
+/** Whether a series can be made at this length: a whole number of ticks (a rounded or subtick clock can give a fraction) that is not too long */
+function canPreallocate(expected_ticks: number | undefined): expected_ticks is number {
+    return expected_ticks !== undefined && Number.isInteger(expected_ticks) && expected_ticks >= 0 && expected_ticks <= MAX_PREALLOCATED_TICKS;
+}
+
 /** The series of one item of a machine, with the item they are about */
 type ItemSeries = readonly [item_name: string, series: number[]];
 
@@ -68,8 +73,8 @@ export class StockRecorder {
      *      whose request is far longer than what it records.
      */
     constructor(machine_states: readonly MachineState[], inserters: readonly { state: InserterState; sink: EntityState }[], expected_ticks?: number) {
-        const series_of_ticks = (): number[] => expected_ticks !== undefined && expected_ticks <= MAX_PREALLOCATED_TICKS ? new Array<number>(expected_ticks) : [];
-        const strings_of_ticks = (): string[] => expected_ticks !== undefined && expected_ticks <= MAX_PREALLOCATED_TICKS ? new Array<string>(expected_ticks) : [];
+        const series_of_ticks = (): number[] => canPreallocate(expected_ticks) ? new Array<number>(expected_ticks) : [];
+        const strings_of_ticks = (): string[] => canPreallocate(expected_ticks) ? new Array<string>(expected_ticks) : [];
         this.machines = machine_states.map(state => {
             const series: MachineStockSeries = {
                 machine_id: state.entity_id.id,

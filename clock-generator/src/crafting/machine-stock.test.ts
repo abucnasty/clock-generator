@@ -32,7 +32,8 @@ describe("the stock recorder", () => {
         expect(grown.ticks).toBe(20);
         expect(seriesOf(grown).length).toBeGreaterThan(0);
         // exactly the ticks made for, fewer (a run that ended at a repeat) and more (cannot happen, but is still recorded)
-        for (const expected_ticks of [20, 50, 8]) {
+        // and a length that is no count of ticks (a fraction, a negative, not a number) is grown as before, not refused
+        for (const expected_ticks of [20, 50, 8, 20.5, 0.5, -3, Number.NaN, Infinity]) {
             const made = recorded(20, expected_ticks);
             expect(made).toEqual(grown);
             for (const series of seriesOf(made)) {
