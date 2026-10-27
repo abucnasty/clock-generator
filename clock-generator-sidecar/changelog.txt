@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.15.0
+Date: 2026-10-27
   Features:
     - captures supported belt bends with their pickup geometry
     - exports the container a recycler puts its results into
@@ -8,6 +9,7 @@ Version: 0.15.0
     - keeps filtered inserters into empty output belts when their item is known
 ---------------------------------------------------------------------------------------------------
 Version: 0.14.0
+Date: 2026-10-24
   Features:
     - exports the way the belt runs where an inserter drops onto it, so the Clock Generator can tell which of the drops along it comes first
   Bugfixes:

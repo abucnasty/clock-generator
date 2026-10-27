@@ -161,14 +161,15 @@ export interface HarnessOptions {
 /**
  * A staged start: the build is made without the inserters of the cell (those with an end on a crafting machine) and run until every
  * belt lane under a pickup of the cell is saturated; then the game is paused and, in that one tick, the inserters of the cell are
- * built one after the other and the clock is wired, and the recording starts. The game serves inserters that ask for the same
- * thing in the same tick in the order of their unit numbers, the last built first (docs/mechanics, inserters), so the order they
- * are built in decides who is served first.
+ * built one after the other and the clock is wired, and the recording starts. The game serves inserters that take from one
+ * machine in the same tick in one fixed order while their hands are empty, and in an order that varies (mostly the one that went
+ * to sleep first) when both hold part of a hand (docs/stability.md, #428). The build order of a staged start therefore fixes only
+ * the start, not who is served first.
  */
 export interface StagedStartOptions {
     /**
-     * The order the inserters of the cell are BUILT in, by config id: "ascending" (the default: the highest config id is built last,
-     * so it is served first, which is what a blueprint of the cell in config order does), "descending" (the lowest is served first),
+     * The order the inserters of the cell are BUILT in, by config id: "ascending" (the default: the highest config id is built last
+     * and was served first in the #100 recording, which is what a blueprint of the cell in config order does), "descending" (the lowest is built last),
      * or a list of config ids, built in that order, followed by any not named in the order of the blueprint.
      */
     build_order?: "ascending" | "descending" | number[];
