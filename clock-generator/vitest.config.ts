@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config'
 
@@ -12,6 +13,15 @@ const exclude = [
 ];
 // the tests read the game data from resources/, as the Node entry points do
 const setupFiles = ['src/data/factorio-data-file.ts'];
+
+/**
+ * How many test files run at once. VITEST_MAX_WORKERS sets it when it is set (Vitest reads it itself and lets it win over
+ * this file), so a guarded job or a CI runner can pick its own. The default is six, or one fewer than the cores where
+ * there are fewer: measured on a 16-core desktop, the generation tests took 539 s with 2 workers, 280 s with 4, 206 s
+ * with 6, 211 s with 8 and 188 s with 12 (peak 1.5, 2.1, 2.9, 3.4 and 4.4 GiB), and the unit tests 49 s, 31 s, 25 s and
+ * 23 s with 2, 4, 6 and 8; beyond six the slowest test file, not the workers, sets the time.
+ */
+const maxWorkers = Number.parseInt(process.env.VITEST_MAX_WORKERS ?? '', 10) || Math.max(1, Math.min(6, os.availableParallelism() - 1));
 
 const src = path.resolve(__dirname, 'src');
 const dist = path.resolve(__dirname, 'dist');
@@ -70,6 +80,7 @@ export default defineConfig({
     plugins: [],
     test: {
         silent: true,
+        maxWorkers,
         projects: [
             {
                 plugins: [engineFromBuild()],
