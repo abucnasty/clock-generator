@@ -4,13 +4,9 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, test } from "vitest";
-import { Config } from "../../../../src/config";
-import { loadConfigFromFile } from "../../../../src/config/loader";
-import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
-import { InserterPickupMode } from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
-import { EntityState } from "../../../../src/state";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { makeInputBeltBackedUp } from "./belt-pickup-fixtures";
+import { BACKED_UP_GEOMETRIES, BACKED_UP_ITEMS, backedUpPickupConfig, simulatedHand } from "./backed-up-hand";
 
 const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS;
 interface Stack { at: number; count: number; item: string; id: number }
@@ -36,46 +32,18 @@ function fullHands(samples: Sample[]): string[] {
     return hands;
 }
 
-function simulatedHand(config: Config): string {
-    const context = SimulationContext.fromConfig(config);
-    const input = context.inserters.find(inserter => inserter.inserter_state.inserter.source.entity_id.type === "belt")!.inserter_state;
-    const source = context.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id);
-    if (!EntityState.isBelt(source)) throw new Error("expected belt input");
-    const mode = InserterPickupMode.create({
-        inserterState: input, sourceState: source, tick_provider: context.tick_provider,
-        sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id),
-    });
-    const configured = config.inserters.find(inserter => inserter.source.type === "belt")!;
-    expect(input.inserter.pickup_length).toBe(configured.source.type === "belt" ? configured.source.pickup_length : undefined);
-    expect(input.inserter.belt_supply).toBe("backed_up");
-    expect(source.pickup_lanes.size).toBe(0);
-    const grabs: number[] = [];
-    for (let tick = 0; tick < 20 && (input.held_item?.quantity ?? 0) < 16; tick++) {
-        context.tick_provider.setCurrentTick(tick);
-        const before = input.held_item?.quantity ?? 0;
-        mode.executeForTick();
-        if ((input.held_item?.quantity ?? 0) > before) grabs.push(tick);
-    }
-    expect(input.held_item?.quantity).toBe(16);
-    return grabs.map(tick => tick - grabs[0]).join(",");
-}
-
 describe.sequential("backed-up pickup geometry", () => {
-    for (const name of ["straight-belt", "underground-entrance", "underground-exit"]) {
-        for (const item of ["accumulator", "supercapacitor"]) {
+    for (const name of BACKED_UP_GEOMETRIES) {
+        for (const item of BACKED_UP_ITEMS) {
             test(`${name}, ${item}: backed-up stacks fill a hand in consecutive ticks`, async context => {
                 const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
                 context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
                 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "backed-up-pickup-"));
                 try {
-                    const config = await loadConfigFromFile(path.join(SAMPLE, "config.json"));
-                    config.overrides = { ...config.overrides, backed_up_belts: true };
+                    const config = await backedUpPickupConfig(name, item);
                     const input = config.inserters.find(inserter => inserter.source.type === "belt")!;
                     if (input.source.type !== "belt") throw new Error("expected belt input");
-                    const pickup_length = name === "straight-belt" ? 1 : 0.5;
-                    input.source.pickup_length = pickup_length;
-                    input.source.pickup_layout = name === "straight-belt" ? "side-straight" : name === "underground-entrance" ? "side-entrance" : "side-exit";
-                    input.filters = [item];
+                    const pickup_length = input.source.pickup_length;
                     const scaffold = fs.readFileSync(path.join(SAMPLE, `${name}-scaffold.txt`), "utf8");
                     const result = await recordInFactorio({
                         factorio: factorio!, save: save!, config, blueprint: makeInputBeltBackedUp(scaffold),

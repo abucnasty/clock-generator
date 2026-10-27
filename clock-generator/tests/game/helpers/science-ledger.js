@@ -164,8 +164,9 @@ function branchSeriesLedger(report,{period=report.period,settle_ticks,baseline_p
 }
 // ---- The gate of each branch's terminal deliveries over judged periods (the baseline, or a trial's hold).
 // The probe names each branch's gate by the sink its drain drops into (report.topology.branches[i].gate): "exact", into a
-// buffer, is the share in every period; "rate", into a sink that never blocks, is never more than the hand behind the
-// share a period, counted from the first period, with any surplus allowed (the sink takes it).
+// buffer, is the share in every period; "rate", into a sink that never blocks, never falls more than the hand below its
+// best running total (counted from the first period, as src/crafting/terminal-rate.ts does), with any surplus allowed
+// (the sink takes it).
 /**
  * @param {any} report
  * @param {number[][]} periods
@@ -178,7 +179,7 @@ function branchDeliveryGate(report,periods){
   const branches=gates.map((gate,index)=>{
     let ahead=0,lowest=0,highest=0,first_behind=null;const off=[];
     periods.forEach((row,k)=>{const count=row[index];ahead+=count-share;lowest=Math.min(lowest,ahead);highest=Math.max(highest,ahead);
-      if(count!==share)off.push(k);if(ahead<-hand&&first_behind===null)first_behind=k;});
+      if(count!==share)off.push(k);if(ahead<highest-hand&&first_behind===null)first_behind=k;});
     const passes=gate==='exact'?off.length===0:gate==='rate'?first_behind===null:false;
     return{branch:index,gate,delivered:periods.reduce((sum,row)=>sum+row[index],0),expected:share*periods.length,
       surplus:ahead,lowest_ahead:lowest,highest_ahead:highest,periods_off_share:off.length,first_period_off_share:off[0]??null,
