@@ -7,6 +7,11 @@ import { generateClockAlternatives } from "../alternatives";
 import { generateClockForConfig } from "../generate-clock";
 import { backpressureLossKey, backpressureLossVerdictOf } from "../trial";
 import { BlueprintGenerationResult, planRun, runBuild, trialRunOf } from "./plan-run";
+import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
+import { DrillInventoryTransferPlugin } from "../../control-logic/drill/plugins/drill-inventory-transfer-plugin";
+import { InserterStateTransitionTrackerPlugin } from "../../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
+import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
+import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plugins/drill-state-transition-tracker-plugin";
 import { RUN_MEMO_MIN_TICKS, RunMemo, canonicalKey, currentRunMemo, withRunMemo } from "./run-memo";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -91,6 +96,39 @@ describe("the memo of the runs of a generation", () => {
             expect(third.stability_check.holds).toBe(holds);
             expect(third.stability_check.as_built).toBeUndefined();
             expect(second.stability_check.holds).toBe(holds);
+        }, 0);
+    });
+
+    it("keeps no controlled context and no plugin that feeds a history, so a kept run pins no raw history", () => {
+        const history_plugins = [InserterInventoryHistoryPlugin, DrillInventoryTransferPlugin, InserterStateTransitionTrackerPlugin,
+            MachineStateTransitionTrackerPlugin, DrillStateTransitionTrackerPlugin];
+        const run = runBuild(config, options);
+        expect(run).not.toHaveProperty("new_simulation_context");
+        const context = run.simulation_context;
+        const state_machines = [...context.inserters, ...context.machines, ...context.drills];
+        expect(state_machines.length).toBeGreaterThan(0);
+        for (const state_machine of state_machines) {
+            for (const plugin of state_machine.getPlugins()) {
+                expect(history_plugins.some(history_plugin => plugin instanceof history_plugin)).toBe(false);
+            }
+        }
+        // what is still read off the returned context
+        expect(context.entity_registry).toBeDefined();
+        expect(run.final_history).toBeDefined();
+        expect(run.state_transition_history).toBeDefined();
+    });
+
+    it("reads a kept run as a run made anew: the windows of a plan and a trial", () => {
+        const fresh = planRun(config, options);
+        const fresh_trial = trialRunOf(fresh.run);
+        withRunMemo(() => {
+            const first = planRun(config, options);
+            const again = planRun(config, options);
+            expect(currentRunMemo()!.hits).toBe(1);
+            expect(again.unslacked_windows).toEqual(fresh.unslacked_windows);
+            expect(first.unslacked_windows).toEqual(fresh.unslacked_windows);
+            expect(trialRunOf(again.run).stability_check).toEqual(fresh_trial.stability_check);
+            expect(trialRunOf(again.run).serializable_transfer_history).toEqual(fresh_trial.serializable_transfer_history);
         }, 0);
     });
 
