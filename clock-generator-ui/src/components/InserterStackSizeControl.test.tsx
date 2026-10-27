@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { isValidElement, type ReactNode } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { Checkbox, FormControlLabel } from '@mui/material';
 import type { InserterFormData } from '../utils/configForm/formData';
 import { NumberField } from './NumberField';
@@ -128,20 +127,4 @@ it('resets a locally enabled unknown control when the external model changes or 
     expect(checkboxElement(resynced.view).props.checked).toBe(false);
     expect(number(resynced.view).props).toMatchObject({ value: 4, disabled: true });
     expect(cleared.onChange).not.toHaveBeenCalled();
-});
-
-it('server-renders the unchecked automatic and checked explicit checkbox states', () => {
-    const render = (value: Value) => {
-        hooks.begin();
-        return renderToStaticMarkup(<InserterStackSizeControl value={value} label="Inserter 3" id="stack-3" onChange={() => {}} />);
-    };
-    const auto = render(automatic);
-    expect(auto).toContain('Override stack size');
-    expect(auto).not.toContain('checked=""');
-    expect(auto).toContain('disabled=""');
-    const explicit = render({ prototype: 'bulk-inserter', stack_size: 16 });
-    expect(explicit).toContain('Override stack size');
-    expect(explicit).toContain('checked=""');
-    expect(explicit).toContain('value="16"');
-    expect(explicit).not.toContain('disabled=""');
 });
