@@ -10,7 +10,7 @@ import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-cov
 import {overHoodClockCases, overHoodClockConfig} from "./over-hood-clock-fixtures";
 import {clockHash, readControls} from "./clock-controls";
 import {reversedDeciders} from "./reversed-deciders";
-import {BACKED_UP_GENERATION_GAP} from "../../../src/crafting/generate-blueprint-test-helpers";
+import {RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {beltPickupVariantOf} from "./pickup-clock-cold-start-runs";
 
 interface ColdStartClock {
@@ -144,8 +144,8 @@ export function pickupClockColdStartTestsAt(tier: FixtureBeltSpeed["name"]) {
     // (expectColdStartRunsOnSelection).
     describe("cold start runs name the clock they were recorded on", () => {
         const selected = new Map<string, Promise<{blueprint: any; schedule: any}>>();
-        // the runs recorded on the clock for a moving belt that the fixtures of the gap had (issue 456) name a clock no longer made
-        const inTheGap = (run: ColdStartRun) => BACKED_UP_GENERATION_GAP.has(`electromagnetic-${run.case.replace(/-l[12]$/, "")}`);
+        // the runs recorded on the clock planned with the belts moving name a clock no longer made (#460)
+        const inTheGap = (run: ColdStartRun) => RECORDED_ON_THE_MOVING_BELT_CLOCK.has(`electromagnetic-${run.case.replace(/-l[12]$/, "")}`);
         test.each(names.filter(name => beltPickupVariantOf(controls.runs[name]) === undefined && !inTheGap(controls.runs[name])))("%s", async name => {
             const run = controls.runs[name];
             const clock = controls.clocks[run.clock];

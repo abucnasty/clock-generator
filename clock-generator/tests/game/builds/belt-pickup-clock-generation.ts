@@ -3,7 +3,7 @@ import {generateClockAlternatives} from "../../../src/crafting/generate-blueprin
 import {rotateRanges, SerializableClockWindows} from "../../../src/crafting/clock";
 import {backpressureLossOf, simulateClockOnly} from "../../../src/crafting/trial";
 import {OpenRange} from "../../../src/data-types";
-import {alwaysOnReasonProblemsOf, BACKED_UP_GENERATION_GAP} from "../../../src/crafting/generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf, RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 import {FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {clockHash, readControls} from "./clock-controls";
@@ -40,12 +40,13 @@ export function beltPickupClockTestsAt(tier: FixtureBeltSpeed["name"]) {
             const result = generateClockAlternatives(config, {logger: quiet});
             expect(alwaysOnReasonProblemsOf(config, result), "every inserter and drill a clock leaves always on says why").toEqual([]);
             const selected = result.alternatives[result.selected_index];
-            if (BACKED_UP_GENERATION_GAP.has(variant.name)) {
-                // no clock for the backed-up belts holds here and none is made for a moving belt: the recording of the
-                // native control was made on that clock, which is no longer made (issue 456)
-                expect(result.alternatives.some(it => it.id === "planned-moving-belt")).toBe(false);
-                expect(selected.verdict).not.toBe("stable");
-                expect(selected.belt?.kind).toBe("backed_up");
+            const pinned = RECORDED_ON_THE_MOVING_BELT_CLOCK.get(variant.name);
+            if (pinned !== undefined) {
+                // a clock for the backed-up belts that holds the target; the native control was recorded on the clock
+                // planned with the belts moving, which is no longer made (#460)
+                expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as pinned (its identity: no text or metadata)").toBe(pinned);
+                expect({verdict: selected.verdict, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind})
+                    .toEqual({verdict: "stable", holds: true, rate: config.target_output.items_per_second, supply: "backed_up"});
                 return;
             }
             const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;

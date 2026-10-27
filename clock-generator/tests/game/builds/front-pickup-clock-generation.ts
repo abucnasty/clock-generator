@@ -3,9 +3,9 @@ import {expect, test} from "vitest";
 import {FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
-import {alwaysOnReasonProblemsOf, BACKED_UP_GENERATION_GAP} from "../../../src/crafting/generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf, RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {frontClockConfig, frontEntranceClockCases, frontExitClockCases} from "./front-clock-fixtures";
-import {readControls} from "./clock-controls";
+import {clockHash, readControls} from "./clock-controls";
 
 // each selection pinned beside the in-game recording of its clock
 const controls = readControls("front-clock-controls.json");
@@ -23,12 +23,13 @@ export function frontPickupClockTestsAt(tier: FixtureBeltSpeed["name"]) {
             const generated = generateClockAlternatives(config, {logger: quiet});
             expect(alwaysOnReasonProblemsOf(config, generated), "every inserter and drill a clock leaves always on says why").toEqual([]);
             const selected = generated.alternatives[generated.selected_index];
-            if (BACKED_UP_GENERATION_GAP.has(variant.name)) {
-                // no clock for the backed-up belts holds here and none is made for a moving belt: the recording of the
-                // native control was made on that clock, which is no longer made (issue 456)
-                expect(generated.alternatives.some(it => it.id === "planned-moving-belt")).toBe(false);
-                expect(selected.verdict).not.toBe("stable");
-                expect(selected.belt?.kind).toBe("backed_up");
+            const pinned = RECORDED_ON_THE_MOVING_BELT_CLOCK.get(variant.name);
+            if (pinned !== undefined) {
+                // a clock for the backed-up belts that holds the target; the native control was recorded on the clock
+                // planned with the belts moving, which is no longer made (#460)
+                expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as pinned (its identity: no text or metadata)").toBe(pinned);
+                expect({verdict: selected.verdict, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind})
+                    .toEqual({verdict: "stable", holds: true, rate: config.target_output.items_per_second, supply: "backed_up"});
                 return;
             }
             const result = selected.result;

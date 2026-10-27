@@ -75,15 +75,15 @@ export const alwaysOnReasonProblemsOf = (config: Config, generated: Pick<ClockAl
     generated.alternatives.flatMap(alternative => alwaysOnReasonProblems(config, alternative.result, alternative.id));
 
 /**
- * Fixtures whose belts are backed up at normal speed on an underground entrance, exit or front exit: a backed-up
- * belt there refills a pickup slower than a stack a tick, so no clock made for backed-up belts is stable, and since
- * clocks are made only for the belts a config names, none is made for a moving belt either (issue 456). Their game
- * recordings were made on that moving-belt clock, which the generator no longer makes; they are not compared with
- * a selection.
+ * Fixtures whose belts are backed up at normal speed on an underground entrance, exit or front exit, by the sha256 of the
+ * identity (`clockIdentity`) of the clock they select: a clock for backed-up belts whose belt-fed windows last as long as
+ * a hand takes from the lanes at rest (#456). Their game recordings were made on the clock planned with the belts moving
+ * (#275), which is no longer made, so the selection is pinned here and not compared with them until they are recorded
+ * again (#460).
  */
-export const BACKED_UP_GENERATION_GAP: ReadonlySet<string> = new Set([
-    "electromagnetic-normal-underground-entrance-backed",
-    "electromagnetic-normal-underground-exit-backed",
-    "front-exit-normal-mirrored-backed-different-items",
-    "front-exit-normal-unmirrored-backed-different-items",
+export const RECORDED_ON_THE_MOVING_BELT_CLOCK: ReadonlyMap<string, string> = new Map([
+    ["electromagnetic-normal-underground-entrance-backed", "91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e"],
+    ["electromagnetic-normal-underground-exit-backed", "91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e"],
+    ["front-exit-normal-mirrored-backed-different-items", "3bc059b39c583ed0748405ac06b4714179b699c2ecf5abc29e11ffa8272b7fe5"],
+    ["front-exit-normal-unmirrored-backed-different-items", "91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e"],
 ]);
