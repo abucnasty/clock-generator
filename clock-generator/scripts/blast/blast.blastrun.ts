@@ -10,8 +10,8 @@
 // Env: BLAST_OUT (folder; one JSON per job, and _jobs.json, the job list with each config's sha256), BLAST_CLAIMS
 // (folder shared by parallel processes, default <BLAST_OUT>/.claims: a job is claimed by creating <claims>/<job>),
 // BLAST_MODE (generate, the default, or jobs: write _jobs.json only), BLAST_ONLY (comma list of job names),
-// BLAST_GROUPS (default config,refusal; also pickup,overhood,front,blocked,containers), BLAST_SKIP (default
-// REAL_THAELN_CELL09; "" runs it), BLAST_FUNCTIONS (1: record the functions each job runs; off by default; see below), BLAST_ONE (1:
+// BLAST_GROUPS (default config,refusal; also pickup,overhood,front,blocked,containers), BLAST_SKIP (comma list of
+// jobs to leave out; none by default), BLAST_FUNCTIONS (1: record the functions each job runs; off by default; see below), BLAST_ONE (1:
 // the process runs the first job nobody has claimed and stops, and leaves <BLAST_OUT>/.drained when none is left: blast.sh
 // starts a process for every job, so that no job meets what an earlier one left in the engine's memory, a memo for one).
 //
@@ -42,9 +42,7 @@ const CLAIMS = process.env.BLAST_CLAIMS || (OUT && path.join(OUT, '.claims'));
 const MODE = process.env.BLAST_MODE ?? 'generate';
 const ONE = process.env.BLAST_ONE === '1';
 const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefined;
-// Thaeln's cell 09 is out of scope for 0.19.0 (decided 2026-10-20) and takes ~1,000 s alone: skipped unless BLAST_SKIP
-// is set ("" runs it)
-const SKIP = (process.env.BLAST_SKIP ?? 'REAL_THAELN_CELL09').split(',').filter(Boolean);
+const SKIP = (process.env.BLAST_SKIP ?? '').split(',').filter(Boolean);
 const GROUPS = (process.env.BLAST_GROUPS || 'config,refusal').split(',');
 const { ConfigPaths } = configPaths;
 // the samples that exist to be refused, by ConfigPaths key, with the error each must fail with; a worktree from before

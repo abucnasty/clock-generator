@@ -54,8 +54,7 @@
 # stores a base meant for later selective runs, e.g. after an engine merge); recording makes a full generation about 1.5
 # times as long in CPU time.
 #
-# Env: BLAST_GROUPS, BLAST_SKIP (default REAL_THAELN_CELL09: Thaeln's cell 09 is out of scope for 0.19.0, decided
-# 2026-10-20; it is in no cache entry), BLAST_ONLY (run only; never cached), BLAST_SETUP (comma list of setup files from
+# Env: BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only; never cached), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
 # that lets one blast generate at a time on the machine, default <cache>/.generate.lock).
