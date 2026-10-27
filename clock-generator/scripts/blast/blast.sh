@@ -60,7 +60,8 @@
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
 # that lets one blast generate at a time on the machine, default <cache>/.generate.lock).
 # Needs the worktree's own node_modules (scripts/worktree/setup.sh). N defaults to 4: each process is one vitest run
-# and one fork worker on one core; keep the machine's total in mind when other sessions run.
+# and one fork worker on one core, and the 53 jobs of the default groups peak at about 2.8 GiB with 4 (0.24.0), inside the
+# 4.5 GiB at which a 5 GiB guard cap throttles; keep the machine's total in mind when other sessions run.
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd -P)
 # the main checkout: the parent of the repository's common git folder, the same from every worktree
