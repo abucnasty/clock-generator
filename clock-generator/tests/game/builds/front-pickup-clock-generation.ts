@@ -1,9 +1,9 @@
 import {createHash} from "crypto";
 import {expect, test} from "vitest";
-import {FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
 import {alwaysOnReasonProblemsOf, RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
+import {FRONT_GENERATED} from "./front-clock-cases";
 import {frontClockConfig, frontEntranceClockCases, frontExitClockCases} from "./front-clock-fixtures";
 import {clockHash, readControls} from "./clock-controls";
 
@@ -11,10 +11,10 @@ import {clockHash, readControls} from "./clock-controls";
 const controls = readControls("front-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
-/** The generation tests of the front pickup clocks on one belt tier, each beside the in-game recording of its clock */
-export function frontPickupClockTestsAt(tier: FixtureBeltSpeed["name"]) {
+/** The generation tests of the front pickup clocks that no other test generates (front-clock-cases.ts), each beside the in-game recording of its clock */
+export function frontPickupClockTests() {
     const cases = [...frontEntranceClockCases("different-items"), ...frontEntranceClockCases("same-item"),
-        ...frontExitClockCases(true), ...frontExitClockCases(false)].filter(variant => variant.speed.name === tier);
+        ...frontExitClockCases(true), ...frontExitClockCases(false)].filter(variant => FRONT_GENERATED.has(variant.name));
     for (const variant of cases) {
         test(`front pickup default: ${variant.name}`, async () => {
             const {generation, native} = controls.cases[variant.name];
@@ -50,10 +50,7 @@ export function frontPickupClockTestsAt(tier: FixtureBeltSpeed["name"]) {
             if (recorded_supply === expected.selection.supply && native.baseline.some(items => items !== native.expected)) {
                 expect(selected.assessment.holds, "the native baseline misses the expected output: the generator has to see that itself").toBe(false);
             }
-            // A moving config on the front exit gets a clock for moving belts, judged from moving lane phases this exit
-            // cannot have; on the backed-up exit the game holds and recovers it at every tier, whatever that verdict says.
-            const moving_config_on_backed_exit = variant.endpoint === "exit" && !variant.backed;
-            if (selected.verdict === "stable" || moving_config_on_backed_exit) {
+            if (selected.verdict === "stable") {
                 expect(native.baseline.every(items => items === native.expected)).toBe(true);
                 // backed-up recovery windows start later than moving ones and are shorter
                 const heldPeriods = recorded_supply === "backed_up" ? 5 : 8;

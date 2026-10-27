@@ -1,5 +1,5 @@
-import {frontPickupClockTestsAt} from "../../tests/game/builds/front-pickup-clock-generation";
+import {frontPickupClockTests} from "../../tests/game/builds/front-pickup-clock-generation";
 
-// the front pickup clocks on the fast belt; the other tiers are in the files beside this one, so that a shard of the
-// generation tests does not wait on all four
-frontPickupClockTestsAt("fast");
+// the front pickup clocks that no other test generates (tests/game/builds/front-clock-cases.ts); the rest of the
+// fixtures are checked against the recorded figures without generating (front-clock-mechanics.test.ts)
+frontPickupClockTests();
