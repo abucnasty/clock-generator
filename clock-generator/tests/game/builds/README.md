@@ -422,8 +422,11 @@ Factorio 2.1.21 on `b9fd341b` (#277); express stack 3 again on `6367fc83`, for t
 now. **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery output (33 periods).** Output stops one to ten periods into the block, once the belt behind the drop is full (about 39
 stacks), where the simulator holds the output inserter at once; the periods judged after the release are the same in
 both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-and-drops)). The portable
-`blocked-output-clock.generation.test.ts` pins each selection and its exported clock (each entry's `generation`) and
-checks it against its native summary beside it.
+`blocked-output-clock-mechanics.test.ts` checks all 16 controls against the fixture config, the documentation and the
+belt-drop calibration's drop figures, and runs a plain clock built from those figures through the block and release in
+the simulator, without generating a clock. `blocked-output-clock.generation.test.ts` pins the selection and exported clock
+(each entry's `generation`) of the three cases in [blocked-output-clock-cases.ts](blocked-output-clock-cases.ts) (the even-hands
+and shifted-swings paths, and the longest drop), and checks it against its native summary beside it.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/blocked-output-new \

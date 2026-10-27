@@ -4,13 +4,15 @@ import {generateClockAlternatives} from "./generate-blueprint";
 import {clockIdentity} from "./clock-identity";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {blockedOutputClockCases, blockedOutputClockConfig} from "../../tests/game/builds/blocked-output-clock-fixtures";
+import {BLOCKED_OUTPUT_GENERATED} from "../../tests/game/builds/blocked-output-clock-cases";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
-// each selection pinned beside the in-game recording of its clock
+// each selection pinned beside the in-game recording of its clock, for the cases of blocked-output-clock-cases.ts; the other
+// cases are checked without generating by blocked-output-clock-mechanics.test.ts
 const controls = readControls("blocked-output-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
-for (const variant of blockedOutputClockCases()) {
+for (const variant of blockedOutputClockCases().filter(it => BLOCKED_OUTPUT_GENERATED.has(it.name))) {
     test(`blocked output default: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];
         const expected = generation!;
