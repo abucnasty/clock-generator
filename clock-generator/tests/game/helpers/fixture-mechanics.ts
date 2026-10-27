@@ -4,6 +4,7 @@ import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {SimulationContext} from "../../../src/crafting/sequence/simulation-context";
+import {CompositeControlLogic, TickControlLogic} from "../../../src/control-logic";
 import {InserterPickupMode} from "../../../src/control-logic/inserter/modes/pickup/pickup-mode";
 import {BeltPickupLane} from "../../../src/state/belt-pickup-lane";
 import {EntityState} from "../../../src/state";
@@ -87,4 +88,25 @@ export function expectControlIsConsistent(native: {period: number; expected: num
     expect(targetItemsPerSecond * native.period / 60, "output per period at the target rate").toBe(native.expected);
     expect(native.baseline.length).toBeGreaterThan(0);
     for (const loss of native.recovery) expect(loss.recovered.length).toBeGreaterThan(0);
+}
+
+/**
+ * A car, tank or cargo wagon between its supplies and a machine, run in the simulator with no clock: the supplies fill
+ * the container as far as its slots allow. Returns the container's slot count and, for each item, the most of it the
+ * container held in the run and the most its slots may hold (`getCapacity`). A run long enough has the two equal: the
+ * stock a cut of that item has to use up (the cut length of the container clock family is sized by it).
+ */
+export function unclockedContainerStock(config: Config, items: string[], ticks = 15_000): {
+    slots: number; peak: Record<string, number>; capacity: Record<string, number>;
+} {
+    const context = SimulationContext.fromConfig(config);
+    const container = context.state_registry.getAllStates().find(EntityState.isSlotContainer);
+    if (!container) throw new Error("expected a slot container");
+    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const peak = Object.fromEntries(items.map(item => [item, 0]));
+    for (let i = 0; i < ticks; i++) {
+        tick.executeForTick();
+        for (const item of items) peak[item] = Math.max(peak[item], container.getCurrentQuantity(item));
+    }
+    return {slots: container.chest.slot_count, peak, capacity: Object.fromEntries(items.map(item => [item, container.chest.getCapacity(item)]))};
 }
