@@ -1,6 +1,7 @@
 #!/bin/bash
-# blast.sh: the blast radius of an engine change (every sample config as it is and backed up, every pickup and over-hood
-# fixture; every alternative's exported clock hashed), from any worktree, with a cache keyed by the engine's content.
+# blast.sh: the blast radius of an engine change (every sample config as it is, with the belts it names; BLAST_GROUPS adds the
+# pickup, over-hood, front, blocked-output and container fixtures, which have generation tests of their own; every
+# alternative's exported clock hashed), from any worktree, with a cache keyed by the engine's content.
 #
 #   blast.sh key <worktree>                 the cache key of the worktree as it is (engine from git, job list from a
 #                                           config-only pass, ~10 s) and whether it is cached
@@ -48,8 +49,10 @@
 # the main path (generateClockForConfig, the grouped hands) reruns nearly every job: the footprints say which jobs run a
 # function, not which jobs a change of it alters. BLAST_SETUP and BLAST_ONLY runs, and runs of a worktree with uncommitted
 # changes outside src/, are never selective. --full turns selection off; --base K
-# names the cache entry to carry from (blast.sh list); `select` says what a run would rerun and why; BLAST_FUNCTIONS=0
-# records nothing (the entry then cannot be a base); recording makes a full generation about 1.5 times as long in CPU time.
+# names the cache entry to carry from (blast.sh list); `select` says what a run would rerun and why; the functions
+# are recorded only with BLAST_FUNCTIONS=1 (by default nothing is, and the entry then cannot be a base: set it for the run that
+# stores a base meant for later selective runs, e.g. after an engine merge); recording makes a full generation about 1.5
+# times as long in CPU time.
 #
 # Env: BLAST_GROUPS, BLAST_SKIP (default REAL_THAELN_CELL09: Thaeln's cell 09 is out of scope for 0.19.0, decided
 # 2026-10-20; it is in no cache entry), BLAST_ONLY (run only; never cached), BLAST_SETUP (comma list of setup files from
@@ -183,7 +186,7 @@ generate() {
   set +m; trap - INT TERM
   rm -rf "$out/.lock"
   [ "$failed" = 0 ] || echo "blast.sh: $failed of $n processes failed (see $out/.logs/)" >&2
-  if [ -z "${BLAST_ONLY:-}" ] && [ -z "${BLAST_SETUP:-}" ] && { [ "${BLAST_FUNCTIONS:-}" != 0 ] || [ -f "$out/.seed.json" ]; }; then
+  if [ -z "${BLAST_ONLY:-}" ] && [ -z "${BLAST_SETUP:-}" ] && { [ "${BLAST_FUNCTIONS:-}" = 1 ] || [ -f "$out/.seed.json" ]; }; then
     node "$HERE/functions.js" collect --dist "$E/dist" --raw "$out/.functions" --out "$out/functions" --carry "$out/.seed.json" \
       || echo "blast.sh: could not write the footprints; the entry will not be a base" >&2
   fi
