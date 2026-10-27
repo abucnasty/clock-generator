@@ -10,23 +10,23 @@ import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
 // ---- Definitions that can change ------------------------------------------------------------------------------------
 
 /** Glossary, "wake window" */
-export const WAKE_WINDOW_DEFINITION = 'A stretch of ticks during which the clock switches an inserter or drill on. '
+const WAKE_WINDOW_DEFINITION = 'A stretch of ticks during which the clock switches an inserter or drill on. '
     + 'Between its wake windows it is off, so the game has nothing to wake.';
 
 /** Glossary, "wake-up" (option (b), approved provisionally on 2026-10-14) */
-export const WAKE_UP_DEFINITION = PROVISIONAL_WAKE_UP_DEFINITION;
+const WAKE_UP_DEFINITION = PROVISIONAL_WAKE_UP_DEFINITION;
 
 /** What the per-row figure is */
-export const WAKE_UPS_COLUMN_HELP =
+const WAKE_UPS_COLUMN_HELP =
     'Wake-ups a minute of this inserter, for one copy of the build, counted by the simulator over a long run of the clock. '
     + 'The rows add up to the clock\'s figure in the clocks table.';
 
 // ---- Tunables the notes use -----------------------------------------------------------------------------------------
 
 /** On for this share of the clock period or more, the clock does little (the engine's MOSTLY_ENABLED_SHARE) */
-export const MOSTLY_ON_SHARE = 0.8;
+const MOSTLY_ON_SHARE = 0.8;
 /** A window this many ticks long or shorter is called very short */
-export const SHORT_WINDOW_TICKS = 4;
+const SHORT_WINDOW_TICKS = 4;
 /** Ticks between the clock reaching a window and the inserter acting on it (the engine's CIRCUIT_LATENCY_TICKS) */
 const CIRCUIT_LATENCY_TICKS = 2;
 /** Windows a row's accessible name lists before "and N more" */
@@ -57,11 +57,11 @@ export const KEYBOARD_HINT = 'Up and down arrow keys move between rows. Left and
 export const SHOW_AS_TABLE = 'Show as table';
 
 /** A row the clock leaves always on, where the engine does not say why */
-export const ALWAYS_ON_TEXT = 'Always on: not on the clock';
-export const NEVER_TEXT = 'Never switched on';
-export const WAKE_UPS_ROW_LABEL = 'Wake-ups/min';
-export const NOT_COUNTED = 'Not counted';
-export const NOT_COUNTED_DRILL = 'Not counted for drills';
+const ALWAYS_ON_TEXT = 'Always on: not on the clock';
+const NEVER_TEXT = 'Never switched on';
+const WAKE_UPS_ROW_LABEL = 'Wake-ups/min';
+const NOT_COUNTED = 'Not counted';
+const NOT_COUNTED_DRILL = 'Not counted for drills';
 export const NOT_COUNTED_NOTE = 'No wake-up count for this clock';
 export const NOT_COUNTED_REASON = 'This clock was not run long enough to count wake-ups. '
     + 'The count needs a clock that holds its rate over a long run.';
@@ -107,18 +107,13 @@ function listText(items: string[], cap: number): string {
 }
 
 /** "600 ticks (10 s)", "550.96 ticks (9.18 s)" */
-export function periodText(ticks: number): string {
+function periodText(ticks: number): string {
     return `${ticksText(ticks)} (${secondsText(ticks)})`;
 }
 
 /** "29 ticks, 0.48 s" */
-export function lengthText(ticks: number): string {
+function lengthText(ticks: number): string {
     return `${ticksText(ticks)}, ${secondsText(ticks)}`;
-}
-
-/** The axis end */
-export function periodEndText(ticks: number): string {
-    return `Clock period: ${periodText(ticks)}`;
 }
 
 /** A mark of the axis: the ticks, and below them the seconds; the first mark names its unit */
@@ -137,7 +132,7 @@ export function rowRouteText(source: string | null, sink: string | null): string
  * What a row moves and between what, in words: "Iron plate: Belt 1 to Machine 2"; a drill's "Iron ore: into Machine 1".
  * `itemLabel` gives an item's game name; the screen shows the items as icons, this is for the spoken name.
  */
-export function rowDetailText(row: Pick<WakeWindowRow, 'items' | 'route'>, itemLabel: (id: string) => string = id => id): string {
+function rowDetailText(row: Pick<WakeWindowRow, 'items' | 'route'>, itemLabel: (id: string) => string = id => id): string {
     const what = row.items.map(itemLabel).join(', ');
     return what && row.route ? `${what}: ${row.route}` : what || row.route;
 }
@@ -146,7 +141,7 @@ export function rowDetailText(row: Pick<WakeWindowRow, 'items' | 'route'>, itemL
  * Why the clock leaves an inserter or drill always on, in the words of the glossary: "Always on: its swings fill the
  * whole clock period (24 ticks), so a wake window would never switch it off". The old words when the engine gives none.
  */
-export function alwaysOnText(reason: AlwaysOnReason | undefined): string {
+function alwaysOnText(reason: AlwaysOnReason | undefined): string {
     if (reason === undefined) {
         return ALWAYS_ON_TEXT;
     }
@@ -195,7 +190,7 @@ function chestDrillWhyText(why: Extract<AlwaysOnReason, { kind: 'chest-drill' }>
 }
 
 /** "Own clock: on 6 ticks every 400 (fuel)" */
-export function ownClockText(clock: OwnClock): string {
+function ownClockText(clock: OwnClock): string {
     return `Own clock: on ${ticksText(clock.windowTicks)} every ${num(clock.everyTicks)} (fuel)`;
 }
 
@@ -211,11 +206,6 @@ export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | 'alwaysO
         case 'windows':
             return null;
     }
-}
-
-/** "On for 14% of the clock period" */
-export function onForText(share: number): string {
-    return `On for ${percentText(share)} of the clock period`;
 }
 
 /** The share alone, for the table: "14%" */

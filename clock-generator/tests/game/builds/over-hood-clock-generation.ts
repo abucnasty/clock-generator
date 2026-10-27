@@ -1,19 +1,19 @@
 import {createHash} from "crypto";
 import {expect, test} from "vitest";
-import {FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
 import {alwaysOnReasonProblemsOf} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {overHoodClockCases, overHoodClockConfig} from "./over-hood-clock-fixtures";
 import {readControls} from "./clock-controls";
+import {OVER_HOOD_GENERATED} from "./over-hood-clock-cases";
 
 // each selection pinned beside the in-game recording of its clock
 const controls = readControls("over-hood-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
-/** The generation tests of the over-the-hood clocks on one belt tier, each beside the in-game recording of its clock */
-export function overHoodClockTestsAt(tier: FixtureBeltSpeed["name"]) {
-    for (const family of ["different-items", "same-item"] as const) for (const variant of overHoodClockCases(family).filter(it => it.speed.name === tier)) {
+/** The generation tests of the over-the-hood clocks that no other test generates (over-hood-clock-cases.ts), each beside the in-game recording of its clock */
+export function overHoodClockTests() {
+    for (const family of ["different-items", "same-item"] as const) for (const variant of overHoodClockCases(family).filter(it => OVER_HOOD_GENERATED.has(it.name))) {
         test(`phase-checked default: ${variant.name}`, () => {
             const {generation, native} = controls.cases[variant.name];
             const expected = generation!;

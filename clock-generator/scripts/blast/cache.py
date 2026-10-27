@@ -119,7 +119,9 @@ def main(argv):
               f"; missing {len(c['missing'])}"
               f"{' ' + ', '.join(c['missing'][:10]) if c['missing'] else ''}"
               f"{'; not in the job list (left out of the cache): ' + ', '.join(c['extra']) if c['extra'] else ''}")
-        sys.exit(1 if c['missing'] else 0)
+        if not c['listed']:
+            print('the job list is empty: BLAST_ONLY, BLAST_GROUPS or BLAST_SKIP leave no job', file=sys.stderr)
+        sys.exit(1 if c['missing'] or not c['listed'] else 0)
     if cmd == 'lookup':
         entry = os.path.join(argv[1], argv[2])
         m = os.path.join(entry, 'MANIFEST.json')
