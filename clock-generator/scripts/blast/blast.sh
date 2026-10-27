@@ -55,7 +55,7 @@
 # stores a base meant for later selective runs, e.g. after an engine merge); recording makes a full generation about 1.5
 # times as long in CPU time.
 #
-# Env: BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only; never cached), BLAST_SETUP (comma list of setup files from
+# Env: BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only these jobs, by ConfigPaths name; never cached; the run is complete, and exits 0, when every listed job is done), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
 # that lets one blast generate at a time on the machine, default <cache>/.generate.lock).
@@ -152,9 +152,14 @@ generate() {
   for c in "$out"/.claims/*; do [ -d "$c" ] && [ ! -f "$out/$(basename "$c").json" ] && rmdir "$c"; done
   if [ "$build" = 1 ]; then say "npm run build ($E)"; (cd "$E" && npm run --silent build) || { rm -rf "$out/.lock"; die "npm run build failed"; }; fi
   [ -f "$out/.seed.json" ] || seed "$out" || { rm -rf "$out/.lock"; exit 1; }
-  # the job list as the built engine makes it, for the processes below and for the check that dist/ is not stale
+  # the job list as the built engine makes it, for the processes below and for the check that dist/ is not stale. It is the
+  # list of BLAST_ONLY (and BLAST_GROUPS, BLAST_SKIP) when one is set: a deliberate subset is complete when its jobs are done.
+  # A list made under another BLAST_ONLY is made again
+  if [ -f "$out/_jobs.json" ] && [ "$(python3 -c "import json,sys; print(','.join(json.load(open(sys.argv[1])).get('only') or []))" "$out/_jobs.json")" != "${BLAST_ONLY:-}" ]; then
+    rm -f "$out/_jobs.json"
+  fi
   if [ ! -f "$out/_jobs.json" ]; then
-    (cd "$E" && env -u CLOCK_PROOF_PHASES -u BLAST_ONLY BLAST_FUNCTIONS=0 NO_COLOR=1 SCRATCH_INCLUDE=$TEST SCRATCH_SETUP="${BLAST_SETUP:-}" BLAST_MODE=jobs BLAST_OUT="$out" \
+    (cd "$E" && env -u CLOCK_PROOF_PHASES BLAST_FUNCTIONS=0 NO_COLOR=1 SCRATCH_INCLUDE=$TEST SCRATCH_SETUP="${BLAST_SETUP:-}" BLAST_MODE=jobs BLAST_OUT="$out" \
       ./node_modules/.bin/vitest run --config $SCRATCH/vitest.scratch-dist.config.ts > "$out/.logs/jobs-pass.log" 2>&1) \
       && [ -f "$out/_jobs.json" ] || { rm -rf "$out/.lock"; die "the job-list pass of the built engine failed ($out/.logs/jobs-pass.log)"; }
   fi
