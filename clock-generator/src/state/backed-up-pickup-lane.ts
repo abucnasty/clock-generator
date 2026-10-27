@@ -79,3 +79,32 @@ export class BackedUpPickupLane implements BeltPickupStock {
         this.tick = tick;
     }
 }
+
+/**
+ * The ticks one hand grabs its stacks in from backed-up lanes at rest (a full queue of full stacks at the endpoint), from
+ * the first grab: a stack a tick while reachable stock lasts, the first lane that has one in the order given (the
+ * preferred lane, then the other lane with the same item), and then as fast as the belt brings stacks into reach. The
+ * same queue as the simulator's. Recorded in Factorio 2.1.21 with 16-item hands on four-item belt stacks: `0,1,2,3` at
+ * every tier on a straight belt and at turbo and express on an underground end, `0,1,2,5` fast and `0,1,2,9` normal on
+ * an underground end with the item on one lane (docs/belt-pickup/experiments.md, tick-pattern matrix).
+ */
+export function backedUpHandGrabTicks(belt_speed: BeltSpeed, lanes: readonly {length_tiles: number; stack_size: number}[], hand: number): number[] {
+    if (lanes.length === 0 || hand <= 0) return [];
+    const stock = lanes.map(lane => new BackedUpPickupLane(belt_speed, lane.length_tiles, lane.stack_size));
+    const grabs: number[] = [];
+    let held = 0;
+    // a stack spacing is 64 units, and every belt moves at least one unit a tick
+    const last_tick = (Math.ceil(hand / Math.min(...lanes.map(lane => lane.stack_size))) + 1) * 64;
+    for (let tick = 0; held < hand && tick <= last_tick; tick++) {
+        for (const lane of stock) {
+            const taken = lane.take(tick, hand - held);
+            if (taken > 0) {
+                held += taken;
+                grabs.push(tick);
+                break;
+            }
+        }
+    }
+    if (held < hand) throw new Error("A backed-up lane did not refill a hand");
+    return grabs;
+}

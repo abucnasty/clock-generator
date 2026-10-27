@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {beforeAll, expect, test} from "vitest";
-import {BackedUpPickupLane} from "./backed-up-pickup-lane";
+import {BackedUpPickupLane, backedUpHandGrabTicks} from "./backed-up-pickup-lane";
 import {BeltSpeed} from "../entities/belt";
 import {Config} from "../config";
 import {loadConfigFromFile} from "../config/loader";
@@ -85,4 +85,27 @@ test("partial stacks remain until consumed and one lane cannot give two stacks i
     expect(lane.take(1, 4)).toBe(2);
     expect(lane.take(2, 4)).toBe(4);
     expect(() => lane.snapshot(1)).toThrow("backwards in time");
+});
+
+// The first hands recorded from backed-up lanes at rest in Factorio 2.1.21, 16-item hands on four-item belt stacks
+// (docs/belt-pickup/experiments.md, tick-pattern matrix): a stack a tick while the pickup exposes enough of them, then as
+// fast as the belt brings them into reach.
+const TIERS = [
+    ["turbo", BeltSpeed.TURBO_TRANSPORT_BELT], ["express", BeltSpeed.EXPRESS_TRANSPORT_BELT],
+    ["fast", BeltSpeed.FAST_TRANSPORT_BELT], ["normal", BeltSpeed.TRANSPORT_BELT],
+] as const;
+const one_lane = (length_tiles: number) => [{length_tiles, stack_size: 4}];
+test.each(TIERS)("a hand fills from a straight belt at rest a stack a tick at %s", (_, speed) => {
+    expect(backedUpHandGrabTicks(speed, one_lane(1), 16)).toEqual([0, 1, 2, 3]);
+});
+test.each([...TIERS.map(([name, speed]) => [name, speed, {turbo: [0, 1, 2, 3], express: [0, 1, 2, 3], fast: [0, 1, 2, 5], normal: [0, 1, 2, 9]}[name]] as const)])(
+    "a hand fills from the half tile of an underground end at rest, the item on one lane, at %s", (_, speed, grabs) => {
+        expect(backedUpHandGrabTicks(speed, one_lane(0.5), 16)).toEqual(grabs);
+    });
+test.each(TIERS)("the other lane with the same item fills the hand a stack a tick at %s", (_, speed) => {
+    expect(backedUpHandGrabTicks(speed, [...one_lane(0.5), ...one_lane(0.5)], 16)).toEqual([0, 1, 2, 3]);
+});
+test("a hand of no stacks, or with no lane of its item, has no grabs", () => {
+    expect(backedUpHandGrabTicks(BeltSpeed.TRANSPORT_BELT, one_lane(0.5), 0)).toEqual([]);
+    expect(backedUpHandGrabTicks(BeltSpeed.TRANSPORT_BELT, [], 16)).toEqual([]);
 });

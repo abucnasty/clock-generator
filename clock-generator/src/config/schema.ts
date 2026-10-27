@@ -789,8 +789,9 @@ export const ConfigOverridesSchema = z.preprocess(migrateBeltSupplyOverrides, z.
      */
     use_fractional_swings: z.boolean().optional(),
     /**
-     * Input supply is backed up at the pickup: items stop between grabs and upstream supply refills the gaps,
-     * so one stack is available each eligible pickup tick. Geometry is retained independently of this rule.
+     * Input supply is backed up at the pickup: items stop between grabs and upstream supply refills the gaps at belt
+     * speed, so a hand takes the stacks in reach a tick each and then waits for the belt to bring the rest. Geometry is
+     * retained independently of this rule.
      *
      * A clock is made for a moving belt by default: each window of an inserter that picks up from a belt stays open
      * a few ticks longer (belt pickup slack), and a clock without it is only selected when no clock with it holds the
