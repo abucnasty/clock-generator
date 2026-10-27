@@ -27,7 +27,7 @@ describe("generateClockForConfig", () => {
             expect(period).toBe(128);
         });
 
-        it.each(["planned-belt-slack", "planned", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {
+        it.each(["planned-belt-slack", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {
             expect(alternative(id).verdict).toBe("stable");
             expect(alternative(id).result.stability_check.as_built?.holds).toBe(true);
             expect(alternative(id).assessment.items_per_second).toBe(60);
@@ -49,7 +49,7 @@ describe("generateClockForConfig", () => {
         // one hand of bioflux each 64 ticks rather than both at once: both at once holds the rocket fuel machine's
         // bioflux over its insertion limit, and the jelly inserters wait for it
         it("spreads the two hands of bioflux a period over two windows", () => {
-            const windows = alternative("planned").result.clock_windows;
+            const windows = alternative("planned-belt-slack").result.clock_windows;
             for (const id of sample.bioflux_inserter_ids) {
                 expect(windows[id].length).toBe(2);
                 expect(windows[id][1].start - windows[id][0].start).toBe(64);
@@ -57,7 +57,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("clocks the fuel and seed inserters outside the plan", () => {
-            const clocks = Object.values(alternative("planned").result.unplanned_inserter_clocks ?? {});
+            const clocks = Object.values(alternative("planned-belt-slack").result.unplanned_inserter_clocks ?? {});
             expect(clocks.filter(clock => clock.kind === "fuel").length).toBe(3);
             expect(clocks.filter(clock => clock.kind === "by-product").length).toBe(1);
         });
@@ -65,10 +65,10 @@ describe("generateClockForConfig", () => {
         // A rocket fuel biochamber's slot is filled up to 11 nutrients and the jellynut one's to 9. In a run of the
         // exported clock they lasted at least 208 and 246 ticks, as in game. Less the 14 ticks a hand takes to arrive,
         // the fuel clocks are 192 and 224, divisors of 21 periods, so one clock of 2688 ticks holds them; on the 128
-        // tick clock both were 64. Since belt windows close before their last return swing the view measures 216 and
-        // 248: the machines idle briefly on the jellynut wait and burn slower, while the sizing keeps the sure bound.
+        // tick clock both were 64. The sample's belts move: with the belt pickup slack the view measures 208 and
+        // 248, and 216 and 248 with them backed up, where it has none: the machines idle briefly on the jellynut wait and burn slower, while the sizing keeps the sure bound.
         it("looks at each fuel slot nearly as seldom as its fuel is sure to last, on fuel clocks of their own", () => {
-            const clocks = alternative("planned").result.unplanned_inserter_clocks!;
+            const clocks = alternative("planned-belt-slack").result.unplanned_inserter_clocks!;
             const fuel_moduli = sample.config.inserters
                 .filter(it => it.source.type === "belt" && it.source.id === 3)
                 .map(it => [it.sink.id, clocks[`inserter:${it.id}`]] as const);
@@ -78,17 +78,17 @@ describe("generateClockForConfig", () => {
                 expect(clock.modulus).toBe(machine_id === 2 ? 224 : 192);
                 expect(clock.window).toEqual({ start: 0, end: 7 });
             }
-            expect(alternative("planned").result.fuel_plan?.merged_clock_ticks).toBe(2688);
-            const lasted = alternative("planned").result.fuel_consumption_view!.fuel_levels.map(levels => levels.limit_lasts_ticks);
+            expect(alternative("planned-belt-slack").result.fuel_plan?.merged_clock_ticks).toBe(2688);
+            const lasted = alternative("planned-belt-slack").result.fuel_consumption_view!.fuel_levels.map(levels => levels.limit_lasts_ticks);
             // PROVISIONAL: decision pending a re-check under the staged start
             // (246 before the staged start, 247 from it)
-            expect(lasted[0]).toBe(216);
+            expect(lasted[0]).toBe(208);
             expect(lasted[1]).toBeGreaterThanOrEqual(245);
-            expect(lasted[2]).toBe(216);
+            expect(lasted[2]).toBe(208);
         });
 
         it("keeps every machine fuelled over the fuel consumption view", () => {
-            const view = alternative("planned").result.fuel_consumption_view!;
+            const view = alternative("planned-belt-slack").result.fuel_consumption_view!;
             expect(view.fuel_swings_recorded).toBe(true);
             // a hand of 16 nutrients each time, and no fuel slot ever runs dry; a brief jellynut INGREDIENT_SHORTAGE
             // is allowed while the output holds, since the belt window trim lets the machine idle on the wait
@@ -137,7 +137,7 @@ describe("generateClockForConfig", () => {
             expect(period).toBe(64);
         });
 
-        it.each(["planned-belt-slack", "planned", "fractional", "derived"])("%s is stable as built", (id) => {
+        it.each(["planned-belt-slack", "fractional", "derived"])("%s is stable as built", (id) => {
             expect(alternative(id).verdict).toBe("stable");
             expect(alternative(id).result.stability_check.as_built?.holds).toBe(true);
             expect(alternative(id).assessment.items_per_second).toBe(60);
@@ -146,7 +146,7 @@ describe("generateClockForConfig", () => {
         // the hand a jelly inserter picks up at the end of a period is dropped in the next one: its pickup needs a
         // window at the end of the period, or the exported clock moves 7 of the 8 hands
         it("keeps the jelly inserters enabled for the hand that is in flight when the period starts", () => {
-            const windows = alternative("planned").result.clock_windows;
+            const windows = alternative("planned-belt-slack").result.clock_windows;
             for (const id of jelly_inserter_ids) {
                 const last_window = windows[id][windows[id].length - 1];
                 expect(windows[id].length).toBe(2);
@@ -155,7 +155,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("moves the planned 8 hands of jelly a period", () => {
-            const history = alternative("planned").result.serializable_transfer_history;
+            const history = alternative("planned-belt-slack").result.serializable_transfer_history;
             for (const id of jelly_inserter_ids) {
                 const moved = history.entities.find(entity => entity.entity_id === id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
                 expect(moved).toBe(8 * 15);
@@ -165,7 +165,7 @@ describe("generateClockForConfig", () => {
         // 3 hands of 16 jellynut a period: refilled up to the insertion limit of 67 instead, the hands come 5 at a
         // time every 100 ticks or so, and the one period that is observed sees 1 of them
         it("brings the planned 3 hands of jellynut in the planned period", () => {
-            const history = alternative("planned").result.serializable_transfer_history;
+            const history = alternative("planned-belt-slack").result.serializable_transfer_history;
             const moved = history.entities.find(entity => entity.entity_id === jellynut_inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
             expect(moved).toBe(3 * 16);
         });

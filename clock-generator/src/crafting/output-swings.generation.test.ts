@@ -170,7 +170,7 @@ describe("generateClockForConfig", () => {
                 })
             });
 
-            // These three alternatives were confirmed to hold full output in game with their windows from before the
+            // These alternatives were confirmed to hold full output in game with their windows from before the
             // belt window trim; these are not recorded
             describe("clock alternatives", () => {
                 let alternatives: ClockAlternative[];
@@ -181,7 +181,7 @@ describe("generateClockForConfig", () => {
                     ({ alternatives } = generateClockAlternatives(withSearches(config)));
                 });
 
-                it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
+                it.each(["planned-belt-slack", "derived"])("%s is stable", (id) => {
                     expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
                 });
 
@@ -192,14 +192,6 @@ describe("generateClockForConfig", () => {
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
                         "inserter:3": [{ start: 13, end: 37 }, { start: 181, end: 205 }, { start: 214, end: 226 }],
                         "inserter:1": [{ start: 206, end: 218 }],
-                    });
-                });
-
-                it("planned keeps the simulated windows", () => {
-                    expect(windowsOf("planned")).toEqual({
-                        "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:3": [{ start: 13, end: 33 }, { start: 181, end: 201 }, { start: 214, end: 222 }],
-                        "inserter:1": [{ start: 206, end: 214 }],
                     });
                 });
 
@@ -248,7 +240,7 @@ describe("generateClockForConfig", () => {
             let planned: ClockAlternative;
 
             beforeAll(() => {
-                planned = alternatives.find(a => a.id === "planned")!;
+                planned = alternatives.find(a => a.id === "planned-belt-slack")!;
             });
 
             it("is stable and repeats every period", () => {
@@ -275,7 +267,7 @@ describe("generateClockForConfig", () => {
             const insight = (id: string, insight_id: string) => insightsOf(id).find(it => it.id === insight_id);
 
             it("says how much time the machine has to spare", () => {
-                expect(insight("planned", "spare-time")).toMatchObject({
+                expect(insight("planned-belt-slack", "spare-time")).toMatchObject({
                     scope: "build",
                     title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each clock period",
                     table: { rows: [["Machine 1 (flying-robot-frame)", "279", "9", "17.4"]] },
@@ -283,23 +275,23 @@ describe("generateClockForConfig", () => {
             });
 
             it("lists every ingredient's insertion limit and hands per period", () => {
-                expect(insight("planned", "insertion-limits")?.table?.rows).toEqual([
+                expect(insight("planned-belt-slack", "insertion-limits")?.table?.rows).toEqual([
                     ["Machine 1 (flying-robot-frame)", "steel-plate", "1", "6", "Inserter 2", "16", "1"],
                     ["Machine 1 (flying-robot-frame)", "electric-engine-unit", "1", "6", "Inserter 2", "16", "1"],
                     ["Machine 1 (flying-robot-frame)", "electronic-circuit", "3", "18", "Inserter 3", "16", "3"],
                     ["Machine 1 (flying-robot-frame)", "battery", "2", "12", "Inserter 3", "16", "2"],
                 ]);
-                expect(insight("planned", "insertion-limits")?.what).toContain("takes electronic-circuit only while it holds fewer than 18");
+                expect(insight("planned-belt-slack", "insertion-limits")?.what).toContain("takes electronic-circuit only while it holds fewer than 18");
             });
 
             it("says how long a full output hand takes", () => {
-                expect(insight("planned", "output-hand")?.title).toBe("A full hand of flying-robot-frame takes 139.4 ticks to make");
+                expect(insight("planned-belt-slack", "output-hand")?.title).toBe("A full hand of flying-robot-frame takes 139.4 ticks to make");
             });
 
             // the clock-only run from the staged start drops at 7, 151 where the plan had 5, 149: within the 4 ticks the
             // insight allows, so there is nothing to point out (the prepared build dropped at 7, 19)
             it("points out nothing where the exported clock swings as the plan does", () => {
-                expect(insight("planned", "plan-versus-clock")).toBeUndefined();
+                expect(insight("planned-belt-slack", "plan-versus-clock")).toBeUndefined();
             });
 
             it("does not compare shifted swings with the plan they were moved off", () => {

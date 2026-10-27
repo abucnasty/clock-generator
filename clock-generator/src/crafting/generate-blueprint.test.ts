@@ -92,7 +92,7 @@ describe("generateClockForConfig", () => {
             expect(transferRanges(result, 1).sort((a, b) => a[0] - b[0])).toEqual([[52, 63], [63, 74], [76, 87], [87, 98]]);
         });
 
-        // These three alternatives were confirmed to hold full output in game with their windows from before the belt
+        // These alternatives were confirmed to hold full output in game with their windows from before the belt
         // window trim, which ended 4 ticks later than these; the build has no scaffold, so these were not recorded
         describe("clock alternatives", () => {
             let alternatives: ClockAlternative[];
@@ -107,7 +107,7 @@ describe("generateClockForConfig", () => {
                 expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
             });
 
-            it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
+            it.each(["planned-belt-slack", "derived"])("%s is stable", (id) => {
                 expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
             });
 
@@ -117,13 +117,6 @@ describe("generateClockForConfig", () => {
                 expect(windowsOf("planned-belt-slack")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
                     "inserter:1": [{ start: 52, end: 99 }],
-                });
-            });
-
-            it("planned keeps the simulated windows", () => {
-                expect(windowsOf("planned")).toEqual({
-                    "inserter:2": [{ start: 1, end: 49 }],
-                    "inserter:1": [{ start: 52, end: 71 }, { start: 76, end: 95 }],
                 });
             });
 
