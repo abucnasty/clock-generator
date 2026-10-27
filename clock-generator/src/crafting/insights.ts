@@ -3,7 +3,7 @@ import { InserterStatus, MachineStatus } from "../state";
 import { MAX_RECOVERY_PERIODS, type BackpressureLossVerdict } from "./backpressure-loss";
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
-import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/compact-history";
+import { CompactEntityStateTransitions, CompactStateTransitionHistory, transitionsOf } from "./sequence/compact-history";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
 import { notTriedSentence, type SpareTime } from "./why-not-stable";
@@ -57,8 +57,8 @@ const SAME_SWING_TOLERANCE_TICKS = 4;
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 const ticksList = (ticks: number[]) => ticks.length === 0 ? "never" : ticks.join(", ");
 
-function workingTicks(entity: SerializableEntityStateTransitions, period: number): number {
-    const sorted = [...entity.transitions].sort((a, b) => a.tick - b.tick);
+function workingTicks(run: CompactStateTransitionHistory, entity: CompactEntityStateTransitions, period: number): number {
+    const sorted = transitionsOf(run, entity).sort((a, b) => a.tick - b.tick);
     const segments = [
         { status: entity.initial_status, start: 0, end: sorted[0]?.tick ?? period },
         ...sorted.map(it => ({ status: it.to_status, start: it.tick, end: it.tick + it.duration_ticks })),
@@ -68,18 +68,19 @@ function workingTicks(entity: SerializableEntityStateTransitions, period: number
         .reduce((sum, it) => sum + Math.max(0, Math.min(it.end, period) - Math.max(it.start, 0)), 0);
 }
 
-function dropTicks(history: SerializableStateTransitionHistory, entity_id: string): number[] {
-    return (history.entities.find(it => it.entity_id === entity_id)?.transitions ?? [])
+function dropTicks(history: CompactStateTransitionHistory, entity_id: string): number[] {
+    const entity = history.entities.find(it => it.entity_id === entity_id);
+    return (entity === undefined ? [] : transitionsOf(history, entity))
         .filter(it => it.to_status === InserterStatus.DROP_OFF && it.from_status !== InserterStatus.TARGET_FULL)
         .map(it => it.tick)
         .sort((a, b) => a - b);
 }
 
 /** How much of each clock period the machines are not needed, the slack all timing has to fit in */
-function spareTimeInsight(result: BlueprintGenerationResult, run: SerializableStateTransitionHistory): ClockInsight | null {
+function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTransitionHistory): ClockInsight | null {
     const period = run.total_duration_ticks;
     const machines = run.entities.filter(it => it.entity_type === "machine").map(entity => {
-        const working = workingTicks(entity, period);
+        const working = workingTicks(run, entity, period);
         const facts = result.machine_facts.find(it => it.entity_id === entity.entity_id)?.facts;
         return { entity, working, spare: period - working, facts };
     });
@@ -112,7 +113,7 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: SerializableSt
 }
 
 /** Per ingredient: when the machine takes it, how much comes per hand and how many hands a period needs */
-function insertionLimitsInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
+function insertionLimitsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[]): ClockInsight | null {
     const rows: { machine: string; item: string; per_craft: number; limit: number; inserter: string; hand: number; hands: number }[] = [];
     for (const planned of result.serializable_transfer_plan.entities) {
         const inserter = entities.find(it => it.entity_id === planned.entity_id);
@@ -162,7 +163,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Ser
 }
 
 /** Machines whose recipe makes one of its own ingredients, which the simulation starts already holding that ingredient */
-function loopingRecipeInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[], loop_seed_items: number): ClockInsight | null {
+function loopingRecipeInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[], loop_seed_items: number): ClockInsight | null {
     const rows = result.machine_facts.flatMap(machine => machine.facts.inputs
         .filter(input => FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
         .map(input => ({
@@ -194,7 +195,7 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Seria
 }
 
 /** How long a machine takes to make a full hand for the inserter that empties it */
-function outputHandInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
+function outputHandInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[]): ClockInsight | null {
     const rows: { machine: string; item: string; inserter: string; hand: number; per_craft: number; crafts: number; ticks: number }[] = [];
     for (const planned of result.serializable_transfer_plan.entities) {
         const inserter = entities.find(it => it.entity_id === planned.entity_id);
@@ -281,7 +282,7 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
 const MOSTLY_ENABLED_SHARE = 0.8;
 
 /** How often the machines wake the inserters under this clock (goal 2 of GOALS.md), and which inserters most */
-function wakeUpsInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
+function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[]): ClockInsight | null {
     const wake_ups = result.stability_check.as_built?.wake_ups;
     if (wake_ups === undefined || wake_ups.inserters.length === 0) {
         return null;

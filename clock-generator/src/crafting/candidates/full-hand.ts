@@ -9,6 +9,7 @@ import { AsBuiltRun, AsBuiltStabilityCheck, runClockOnBuild } from "../trial";
 import { StockRecording } from "../machine-stock";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { SpareOutputWindows, withSingleSwingOutput } from "./transforms";
+import { transitionsOf } from "../sequence/compact-history";
 
 
 const FULL_HAND_WINDOW_LENGTHS = [4, 6, 8];
@@ -105,7 +106,7 @@ function fullHandOutputWindows(
             if (!output_swings.has(entity.entity_id)) {
                 continue;
             }
-            const transitions = [...entity.transitions].sort((a, b) => a.tick - b.tick);
+            const transitions = transitionsOf(result.serializable_state_transition_history, entity).sort((a, b) => a.tick - b.tick);
             transitions.forEach((transition, index) => {
                 if (transition.to_status === InserterStatus.DROP_OFF) {
                     swings++;
@@ -129,7 +130,7 @@ function fullHandOutputWindows(
             if (!output_machine_ids.has(entity.entity_id)) {
                 continue;
             }
-            const transitions = [...entity.transitions].sort((a, b) => a.tick - b.tick);
+            const transitions = transitionsOf(result.serializable_state_transition_history, entity).sort((a, b) => a.tick - b.tick);
             let status = entity.initial_status;
             let since = 0;
             for (const transition of transitions) {

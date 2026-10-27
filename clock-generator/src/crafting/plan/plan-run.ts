@@ -51,7 +51,7 @@ import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpres
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
-import { CompactStateTransitionHistory, SerializableStateTransitionHistory, expandStateTransitionHistory } from "../sequence/compact-history";
+import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { InserterStateTransitionTrackerPlugin } from "../../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
 import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
 import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plugins/drill-state-transition-tracker-plugin";
@@ -120,13 +120,13 @@ export interface FuelConsumptionView {
     /** A burner machine had no fuel at all at some tick of the view */
     ran_out_of_fuel: boolean;
     transfer_history: SerializableTransferHistory;
-    state_transition_history: SerializableStateTransitionHistory;
+    state_transition_history: CompactStateTransitionHistory;
 }
 
 /** What the build does when only the exported clock windows drive it, from the unshifted clock start */
 export interface ClockOnlyRun {
     transfer_history: SerializableTransferHistory;
-    state_transition_history: SerializableStateTransitionHistory;
+    state_transition_history: CompactStateTransitionHistory;
 }
 
 
@@ -219,8 +219,8 @@ export interface BlueprintGenerationResult {
     transfer_history: InventoryTransferHistory;
     /** Serializable transfer history for UI visualization */
     serializable_transfer_history: SerializableTransferHistory;
-    /** Serializable state transition history for UI visualization */
-    serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** The state transitions of the run, sealed (read them with transitionsOf or expandStateTransitionHistory) */
+    serializable_state_transition_history: CompactStateTransitionHistory;
     /** Insertion limits, crafting time and output per craft of every machine */
     machine_facts: MachineFactsEntry[];
     /**
@@ -1216,7 +1216,8 @@ export interface TrialRun {
     simulation_duration: Duration;
     transfer_history: InventoryTransferHistory;
     serializable_transfer_history: SerializableTransferHistory;
-    serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** The state transitions of the run, sealed: the same object for every trial of the run */
+    serializable_state_transition_history: CompactStateTransitionHistory;
     /** Insertion limits, crafting time and output per craft of every machine */
     machine_facts: MachineFactsEntry[];
     /** With the fuel_levels option: the fuel each burner machine held over the run */
@@ -1237,7 +1238,7 @@ export function trialRunOf(run: BuildRun): TrialRun {
         simulation_duration: run.duration,
         transfer_history: run.final_history,
         serializable_transfer_history: serializeTransferHistory(run.final_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
-        serializable_state_transition_history: expandStateTransitionHistory(run.state_transition_history),
+        serializable_state_transition_history: run.state_transition_history,
         machine_facts: run.simulation_context.machines.map(it => ({
             entity_id: it.machine_state.machine.entity_id.id,
             facts: Machine.getMachineFacts(it.machine_state.machine),
@@ -1495,7 +1496,7 @@ export function exportClock(
             simulation_duration: duration,
             transfer_history: final_history,
             serializable_transfer_history: serializeTransferHistory(final_history, simulation_context.entity_registry, recorded_duration.ticks),
-            serializable_state_transition_history: expandStateTransitionHistory(state_transition_history),
+            serializable_state_transition_history: state_transition_history,
             machine_facts: simulation_context.machines.map(it => ({
                 entity_id: it.machine_state.machine.entity_id.id,
                 facts: Machine.getMachineFacts(it.machine_state.machine),

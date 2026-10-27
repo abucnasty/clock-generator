@@ -6,7 +6,7 @@ import { DebugSettingsProvider } from "../sequence/debug/debug-settings-provider
 import { generateClockAlternatives } from "../alternatives";
 import { generateClockForConfig } from "../generate-clock";
 import { backpressureLossKey, backpressureLossVerdictOf } from "../trial";
-import { BlueprintGenerationResult, planRun, runBuild } from "./plan-run";
+import { BlueprintGenerationResult, planRun, runBuild, trialRunOf } from "./plan-run";
 import { RUN_MEMO_MIN_TICKS, RunMemo, canonicalKey, currentRunMemo, withRunMemo } from "./run-memo";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -79,6 +79,9 @@ describe("the memo of the runs of a generation", () => {
             const second = runBuild(config, options);
             expect([memo.size, memo.hits]).toEqual([1, 1]);
             expect(second.final_history).toBe(first.final_history);
+            // one sealed copy of the state transitions, which every trial of the run hands out as it is
+            expect(second.state_transition_history).toBe(first.state_transition_history);
+            expect(trialRunOf(second).serializable_state_transition_history).toBe(first.state_transition_history);
             expect(second.stability_check).toEqual(first.stability_check);
             // what a clock's check writes into its run reaches no other caller, the first included
             const holds = first.stability_check.holds;

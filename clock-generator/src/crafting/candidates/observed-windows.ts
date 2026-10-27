@@ -11,6 +11,7 @@ import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_
 import { fullHandTransferWindows } from "./full-hand";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
+import { transitionsOf } from "../sequence/compact-history";
 import { deriveUnevenOutputClockWindows } from "./uneven-output";
 
 
@@ -129,7 +130,7 @@ export function deriveWithOutputWindows(
             || always_enabled_by_config.has(entity.entity_id) || always_enabled.has(entity.entity_id)) {
             continue;
         }
-        const ranges = busyDeciderRanges(entity.initial_status, entity.transitions, period);
+        const ranges = busyDeciderRanges(entity.initial_status, transitionsOf(derivation.serializable_state_transition_history, entity), period);
         if (ranges.length > 0) {
             busy_windows.set(entity.entity_id, ranges);
         }

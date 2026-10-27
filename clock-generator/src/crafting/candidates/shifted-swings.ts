@@ -8,6 +8,7 @@ import { AsBuiltRun } from "../trial";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { Confirmed, QuickTrial, SearchRangeEdge, SearchReport, confirm, quickTrial, search } from "./search";
 import { cycleOfWindow, withCycleShifted } from "./transforms";
+import { transitionsOf } from "../sequence/compact-history";
 
 /** Positions tried for a shifted crafting cycle, each a quick trial */
 const MAX_SHIFTED_CYCLE_CANDIDATES = 48;
@@ -122,7 +123,7 @@ function shiftEdgeNotes(
         if (entity === undefined) {
             return [];
         }
-        const sorted = [...entity.transitions].sort((a, b) => a.tick - b.tick);
+        const sorted = transitionsOf(run.serializable_state_transition_history, entity).sort((a, b) => a.tick - b.tick);
         const first_tick = sorted[0]?.tick ?? run.serializable_state_transition_history.total_duration_ticks;
         return [
             { status: entity.initial_status, start: 0, end: first_tick },
