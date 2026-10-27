@@ -14,7 +14,7 @@ const controls = readControls<{cold_start: {runs: Record<string, {case: string; 
 // tests (belt-pickup-clock-<tier>.generation.test.ts) generate too; they are checked there, on that generation
 // (expectColdStartRunsOnSelection).
 describe("cold start runs name the clock they were recorded on", () => {
-    test("the runs on the selection of a side pickup fixture are checked on the generation of belt-pickup-clock.generation.test.ts", () => {
+    test("the runs on the selection of a side pickup fixture are checked on the generation of belt-pickup-clock-<tier>.generation.test.ts", () => {
         const variants = pickupClockSpeedCases("electromagnetic").map(it => it.name);
         let shared = 0;
         for (const [name, run] of Object.entries(controls.runs)) {
