@@ -397,7 +397,7 @@ inserter in the first two ticks after the clock starts, which matters where the 
 the period's end (or a start inside a window) into ticks 0-1; in the 11 such runs the game follows the rule, the
 simulator without it in none. A near-lane-2 crafting cell needs its plant mirrored as well as the reflection
 (`reflectOrdinaryPickup` turns it half a turn, leaving its fluid inputs off the pipes). The 57 clocked runs are pinned
-by `pickup-clock-cold-start-<tier>.generation.test.ts` against `tests/game/builds/pickup-clock-start-controls.json` (`cold_start`).
+by `pickup-clock-cold-start-mechanics.test.ts` (the simulator from placement, the stored windows against the recorded clock) against `tests/game/builds/pickup-clock-start-controls.json` (`cold_start`).
 
 One later hand differs: on the backed turbo entrance started inside a window, a hand that comes back from its swing in
 the tick the output inserter takes the machine's products off its output block waits a tick in the game and not in

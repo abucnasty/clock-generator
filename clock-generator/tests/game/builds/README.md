@@ -222,11 +222,17 @@ probe, every period on the placement lattice, and both series as kept. Its probe
 (`pickup-clock-cold-start-probe.lua`) only observes. The raw runs, the scratch fixture they came from and their
 analyses were not kept in the repository.
 
-`pickup-clock-cold-start.generation.test.ts` runs the simulator from each cold start and holds both clocked inserters'
+`pickup-clock-cold-start-mechanics.test.ts` runs the simulator from each cold start and holds both clocked inserters'
 counts in every tick and their items in every period: 57 of 57, the input of one held only by its output (a hand back
 from its swing as the output block is lifted, a tick early in the simulator, once). On the engine before the clock's
 start rule the 11 runs where a window the latency carries over the period's end reaches ticks 0-1 fail, and the
 other 46 pass.
+
+The same test builds each run's clock from its stored windows and requires the hash the run was recorded on (the four
+fractional-clock runs of the fast tier cannot be rebuilt from windows, and the test says so). `pickup-clock-cold-start.generation.test.ts`
+generates only the seven runs of `pickup-clock-cold-start-cases.ts`, each the one of a path through the generator
+(near lane 2, an underground exit, a cautious verdict, a backed-up clock, an over-the-hood clock) that the nine belt
+pickup fixtures do not take.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
@@ -252,7 +258,9 @@ the family's `*.generation.test.ts` (pull requests to master).
 - A game test checks the hash of the clock it generated against the recorded one before it starts Factorio
   (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
 - The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
-  `clock_sha256` (checked by `pickup-clock-cold-start.generation.test.ts` against the selection or the pinned windows)
+  `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
+  pin, and for the seven runs of `pickup-clock-cold-start-cases.ts` and those of the nine belt pickup fixtures by the generation tests
+  against the selection)
   and `recorded_clock_sha256` (checked by the game test).
 - Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
   difference after its staged start, agricultural science with backed-up belts having no difference, and the moved
