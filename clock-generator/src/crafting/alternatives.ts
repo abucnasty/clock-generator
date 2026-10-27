@@ -21,7 +21,7 @@ import { sharedResultWindowClock } from "./candidates/result-windows-clock";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
-import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock, terminalCountForAlternativePlanning } from "./generate-clock";
+import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
 import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
@@ -148,12 +148,6 @@ export interface ClockAlternativesPlan {
 
 /** The options Small batches is verified with, as the primary alternative's (see primaryDefinition) */
 const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, belt_pickup_slack: "always" };
-
-/** The id of the alternative made without belt pickup slack on purpose: batched swings for a backed-up belt */
-const WITHOUT_BELT_PICKUP_SLACK_ID = "planned";
-
-/** The id of the alternative made for a moving belt on a config whose belts are backed up */
-const FOR_A_MOVING_BELT_ID = "planned-moving-belt";
 
 
 interface AlternativeDefinition {
@@ -300,11 +294,8 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
     };
 }
 
-/**
- * A sentence for an alternative's description about the belt its clock is made for, and why. `made_without_slack` is
- * the alternative that leaves belt pickup slack out on purpose.
- */
-function beltNote(config: Config, result: BlueprintGenerationResult, made_without_slack: boolean): string {
+/** A sentence for an alternative's description about the belt its clock is made for, and why */
+function beltNote(config: Config, result: BlueprintGenerationResult): string {
     const { belt } = result;
     if (belt === null) {
         return "";
@@ -318,12 +309,6 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
             + "(belt pickup slack), long enough for one more full hand at one belt stack a tick. On a moving belt, and more so on "
             + "one with gaps, a pickup can come late; the extra ticks let it finish instead of the inserter being switched off "
             + `holding a partial hand.${pickup}`;
-        if (config.overrides?.backed_up_belts === true) {
-            return `${moving} The config says the input belts are backed up: this clock is planned with the belts moving, so a hand `
-                + "is given the time moving stacks take to come into reach, and it is checked with the belts backed up. A backed-up "
-                + "belt refills a pickup at its own speed, which can be slower than a stack a tick. It is only made when no clock "
-                + "made for a backed-up belt can be selected as stable.";
-        }
         return moving;
     }
     const backed_up = " Made for a backed-up belt: its belt inserters get only the windows they need with backed-up supply at the pickup, "
@@ -343,9 +328,7 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
     if (!Number.isInteger(result.simulation_duration.ticks)) {
         return `${backed_up} The slack is not given to a clock whose period is not a whole number of ticks.`;
     }
-    const only_selected_when = "it is only selected for you when no clock for a moving belt holds the target rate.";
-    return made_without_slack ? `${backed_up} So ${only_selected_when}`
-        : `${backed_up} This clock did not hold the expected output with the slack, so ${only_selected_when}`;
+    return `${backed_up} This clock did not hold the expected output with the slack, so it is only selected for you when no clock for a moving belt holds the target rate.`;
 }
 
 /**
@@ -454,13 +437,6 @@ function alternativeDefinitionsFor(
     const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
         : Array.from({ length: planned + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i)
             .filter(count => count < planned + EXTENDED_SWING_COUNTS || (planned > 1 && count % planned === 0));
-    // Supply still matters for always-enabled and fuel pickups, even when the clock has no belt windows.
-    const offer_backed_up_belt = config.overrides?.backed_up_belts !== true
-        && config.inserters.some(inserter => inserter.source.type === "belt");
-    // the reverse for a config whose belts are backed up, as a fallback: made where no clock for them can be selected as stable
-    const offer_moving_belt = config.overrides?.backed_up_belts === true
-        && config.inserters.some(inserter => inserter.source.type === "belt");
-
     // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
     // out, not tried, so no other count or search is offered; even hands moves the same hands
     if (config.target_output.counts === "destroyed" && context.result_windows === true) {
@@ -481,25 +457,6 @@ function alternativeDefinitionsFor(
         }];
     }
     return [
-        ...(offer_moving_belt ? [{
-            id: FOR_A_MOVING_BELT_ID,
-            label: `${BATCHED_SWINGS_LABEL}, moving belt`,
-            description: BATCHED_SWINGS_DESCRIPTION,
-            run: () => generateClockWithSwingBackoff(base_config, quiet, movingBeltClock),
-            fallback: true,
-        }] : []),
-        ...(offer_backed_up_belt ? [{
-            id: WITHOUT_BELT_PICKUP_SLACK_ID,
-            label: `${BATCHED_SWINGS_LABEL}, backed-up belt`,
-            description: BATCHED_SWINGS_DESCRIPTION,
-            run: () => {
-                const result = generateClockWithSwingBackoff(
-                    { ...base_config, overrides: { ...base_config.overrides, backed_up_belts: true } },
-                    { ...quiet, belt_pickup_slack: "never" });
-                // The simulation uses backed-up supply, but this alternative still opts out of the user's moving-belt choice.
-                return { ...result, belt_pickup_slack_left_out: result.belt !== null && Number.isInteger(result.simulation_duration.ticks) };
-            },
-        }] : []),
         {
             id: "fractional",
             label: fractional ? "Without fractional swings" : "Fractional swings",
@@ -830,7 +787,7 @@ function runAlternativeOf(
         + search.moved!.map(it => `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(", ")}`).join("; ")
         + `) start ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const { belt } = result;
-    const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
+    const belt_note = beltNote(config, result);
     const period = result.simulation_duration.ticks;
     /** What a trial of the clock found, on the exact period or, for a clock rounded down, on its own */
     interface Trial {
