@@ -449,8 +449,11 @@ lasts 4 periods (the disposal chest is filled), and recovery is judged over 40 p
 
 [container-clock-controls.json](container-clock-controls.json) holds the 6 native summaries, recorded on Factorio 2.1.21
 at commit `000ad913`. **All 6 selected clocks are stable, meet exact baseline output (63 periods), drop to 0 in every
-disturbance and are exact in all 33 judged periods after each.** `container-clock.generation.test.ts` pins each
-selection and its exported clock and checks it against its native summary.
+disturbance and are exact in all 33 judged periods after each.** `container-clock-mechanics.test.ts` checks all 6 without
+generating: each container's slots and stock in the simulator, the cut lengths against the stock, the periods the game
+took to run dry under each cut, and the controls against the fixture configs. `container-clock.generation.test.ts` pins
+the selection and exported clock of the 2 cases in [container-clock-cases.ts](container-clock-cases.ts) (one a recipe: the
+clock depends on the recipe, and the 3 fixtures of each recipe record one clock hash) and checks each against its native summary.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \

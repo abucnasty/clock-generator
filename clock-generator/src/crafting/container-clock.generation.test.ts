@@ -5,12 +5,14 @@ import {clockIdentity} from "./clock-identity";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {containerClockCases, containerClockConfig} from "../../tests/game/builds/container-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
+import {CONTAINER_GENERATED} from "../../tests/game/builds/container-clock-cases";
 
-// each selection pinned beside the in-game recording of its clock
+// each selection pinned beside the in-game recording of its clock; only the fixtures of container-clock-cases.ts are
+// generated, the rest are checked by container-clock-mechanics.test.ts
 const controls = readControls("container-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
-for (const variant of containerClockCases()) {
+for (const variant of containerClockCases().filter(it => CONTAINER_GENERATED.has(it.name))) {
     test(`container clock default: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];
         const expected = generation!;
