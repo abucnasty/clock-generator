@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Compare two blast-radius runs: per job, the selected clock's hash, id, verdict, holds, rate and supply, and how many
 alternatives' exported clocks changed. The clock hash is of the clock's identity (no text); alternatives whose text alone
-changed (text_sha256, where both sides have it) are counted apart.
+changed (text_sha256, where both sides have it) are counted apart. The results digest (results_sha256, with the sha of
+each component beside it) covers what the clock hash leaves out (label, description, insights, verdict, assessment, the
+histories, the clock-only run, the fuel view, why_not_stable): a job whose digest differs is listed with the alternative
+and component that moved, whether or not its clock did. A side without the digest (a cache entry from before it) is named.
 
 usage: compare.py <before> <after> [--json out.json]
 
@@ -23,6 +26,21 @@ def load(d):
 
 def is_check(j):
     return 'refused' in j
+
+def results_moved(b, a):
+    """The components of the results digest that differ between two sides of a job, as 'job:name' or 'alternative:name';
+    None where a side has no digest"""
+    if 'results_sha256' not in b or 'results_sha256' not in a:
+        return None
+    moved = [f"job:{n}" for n in sorted(set(b['job_results']['results']) | set(a['job_results']['results']))
+             if b['job_results']['results'].get(n) != a['job_results']['results'].get(n)]
+    alt_b = {x['id']: x['results'] for x in b['alternatives']}
+    alt_a = {x['id']: x['results'] for x in a['alternatives']}
+    for i in sorted(set(alt_b) | set(alt_a)):
+        if i not in alt_b or i not in alt_a:
+            moved.append(f"{i}:{'added' if i in alt_a else 'removed'}"); continue
+        moved += [f"{i}:{n}" for n in sorted(set(alt_b[i]) | set(alt_a[i])) if alt_b[i].get(n) != alt_a[i].get(n)]
+    return moved
 
 before, after = load(sys.argv[1]), load(sys.argv[2])
 rows = []
@@ -47,8 +65,10 @@ for key in sorted(before):
     text_only = sorted(i for i in set(alt_b) & set(alt_a) if alt_b[i] == alt_a[i] and text_b[i] and text_a[i] and text_b[i] != text_a[i])
     alt_verdicts = sorted(f"{x['id']}:{y['verdict']}->{x['verdict']}" for x in a['alternatives'] for y in b['alternatives']
                           if x['id'] == y['id'] and (x['verdict'] != y['verdict'] or x['holds'] != y['holds']))
+    results = results_moved(b, a)
     rows.append({
         'key': key, 'status': 'ok', 'selected_hash_changed': sb['clock_sha256'] != sa['clock_sha256'],
+        'results_changed': results, 'results_digest': None if results is None else b['results_sha256'] != a['results_sha256'],
         'selected_fields_changed': {f: [sb[f], sa[f]] for f in changed_fields},
         'before': {f: sb[f] for f in fields + ['clock_sha256']}, 'after': {f: sa[f] for f in fields + ['clock_sha256']},
         'wake_ups': [sb.get('wake_ups'), sa.get('wake_ups')],
@@ -60,11 +80,18 @@ hash_changed = [r for r in rows if r.get('selected_hash_changed')]
 verdict_only = [r for r in rows if r['status'] == 'ok' and not r['selected_hash_changed'] and r['selected_fields_changed']]
 alt_only = [r for r in rows if r['status'] == 'ok' and not r['selected_hash_changed'] and not r['selected_fields_changed'] and (r['alternatives_hash_changed'] or r['alternative_verdict_changes'])]
 text_only = sum(len(r.get('alternatives_text_only_changed', [])) for r in rows)
-print(f"jobs {len(rows)}; selected clock hash changed: {len(hash_changed)}; selection fields changed without a hash change: {len(verdict_only)}; only other alternatives changed: {len(alt_only)}; alternatives whose text alone changed: {text_only}")
+results_changed = [r for r in rows if r['status'] == 'ok' and r['results_changed']]
+undigested = [r['key'] for r in rows if r['status'] == 'ok' and r['results_changed'] is None]
+print(f"jobs {len(rows)}; selected clock hash changed: {len(hash_changed)}; selection fields changed without a hash change: {len(verdict_only)}; only other alternatives changed: {len(alt_only)}; alternatives whose text alone changed: {text_only}; results digest changed: {len(results_changed)}")
 for title, group in [('selected clock hash changed', hash_changed), ('selected verdict/holds changed, same clock', verdict_only), ('only other alternatives changed', alt_only)]:
     print(f'\n## {title}')
     for r in group:
         print(f"- {r['key']}: {r['selected_fields_changed'] or ''} before {r['before']['id']} {r['before']['verdict']} holds={r['before']['holds']} {r['before']['clock_sha256'][:12]} -> after {r['after']['id']} {r['after']['verdict']} holds={r['after']['holds']} {r['after']['clock_sha256'][:12]}; wake-ups {r['wake_ups']}; alternatives changed {len(r['alternatives_hash_changed'])}; alt verdict changes {r['alternative_verdict_changes']}")
+print('\n## results digest changed')
+for r in results_changed:
+    print(f"- {r['key']}: {', '.join(r['results_changed'])}")
+if undigested:
+    print(f"results digest not compared (a side has none): {len(undigested)} jobs")
 checks = [j for j in after.values() if is_check(j)]
 if checks:
     failed = sorted(f"{j['group']}:{j['name']}" for j in checks if not j['refused'])

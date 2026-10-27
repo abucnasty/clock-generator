@@ -10,7 +10,7 @@ interface ColdStartRuns {
 const coldStart = readControls<{cold_start: ColdStartRuns}>("pickup-clock-start-controls.json").cold_start;
 
 /**
- * The name of the belt-pickup-clock.generation.test.ts variant (`electromagnetic-<tier>-<geometry>-<supply>`) whose
+ * The name of the belt-pickup-clock-<tier>.generation.test.ts variant (`electromagnetic-<tier>-<geometry>-<supply>`) whose
  * generation a cold-start run names its clock from, or undefined where it does not share one. A run of a side pickup
  * fixture on near lane 1 that the generator's selection was recorded on (`rotate` 0) is the selection for exactly the
  * config that variant is generated from.
@@ -22,7 +22,7 @@ export function beltPickupVariantOf(run: {case: string; rotate: number}): string
 
 /**
  * Checks the cold-start runs that name `variant`'s selection as the clock they were recorded on, on the generation
- * belt-pickup-clock.generation.test.ts made of it: the same checks as pickup-clock-cold-start.generation.test.ts makes of
+ * belt-pickup-clock-<tier>.generation.test.ts made of it: the same checks as pickup-clock-cold-start-<tier>.generation.test.ts makes of
  * the other runs, without generating the fixture again.
  */
 export function expectColdStartRunsOnSelection(variant: string, selected: ClockAlternative) {
