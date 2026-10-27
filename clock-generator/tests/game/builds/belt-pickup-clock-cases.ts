@@ -1,8 +1,8 @@
 /**
  * The belt pickup fixtures (`pickup-clock-speed-coverage.ts`) whose clock the generation test still generates end to
  * end; the other 39 of the 48 are checked without generating, by belt-pickup-clock-mechanics.test.ts (the recorded
- * figures against the simulator's) and, for the different-items family, by the cold-start generation tests, which
- * generate the selection their recorded runs name. Each is the one case of a path through the generator that no sample
+ * figures against the simulator's) and, for the different-items family, by pickup-clock-cold-start-mechanics.test.ts,
+ * which builds the clock their recorded runs name from its stored windows and compares it with the pin. Each is the one case of a path through the generator that no sample
  * takes:
  */
 export const BELT_PICKUP_GENERATED: ReadonlyMap<string, string> = new Map([
