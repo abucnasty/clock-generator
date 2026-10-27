@@ -3,7 +3,7 @@ import { InserterStatus, MachineStatus } from "../state";
 import { MAX_RECOVERY_PERIODS, type BackpressureLossVerdict } from "./backpressure-loss";
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
-import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
+import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/compact-history";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
 import { notTriedSentence, type SpareTime } from "./why-not-stable";

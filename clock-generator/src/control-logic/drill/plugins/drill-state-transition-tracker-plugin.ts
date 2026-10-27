@@ -1,41 +1,24 @@
-import { EntityId } from "../../../entities";
 import { DrillStatus } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
 import { ModePlugin, Transition } from "../../mode";
 import { DrillMode } from "../modes/drill-mode";
 
-/**
- * Represents a single state transition for a drill
- */
-interface DrillStateTransition {
-    entity_id: EntityId;
-    tick: number;
-    from_status: DrillStatus;
-    to_status: DrillStatus;
-    reason: string;
+/** Where the transitions of a drill are recorded (a recorder of the state transition history) */
+interface DrillTransitionRecorder {
+    recordTransition(tick: number, from_status: DrillStatus, to_status: DrillStatus, reason_id: number): void;
 }
-
-type DrillStateTransitionCallback = (transition: DrillStateTransition) => void;
 
 /**
  * Plugin that tracks state transitions for a drill state machine.
- * Records each mode transition with timing and reason information.
+ * Records each mode transition with its tick and the number of its reason.
  */
 export class DrillStateTransitionTrackerPlugin implements ModePlugin<DrillMode> {
     constructor(
-        private readonly entity_id: EntityId,
         private readonly tick_provider: TickProvider,
-        private readonly callback: DrillStateTransitionCallback,
+        private readonly recorder: DrillTransitionRecorder,
     ) {}
 
     onTransition(fromMode: DrillMode, transition: Transition<DrillMode>): void {
-        const state_transition: DrillStateTransition = {
-            entity_id: this.entity_id,
-            tick: this.tick_provider.getCurrentTick(),
-            from_status: fromMode.status,
-            to_status: transition.toMode.status,
-            reason: transition.reason,
-        };
-        this.callback(state_transition);
+        this.recorder.recordTransition(this.tick_provider.getCurrentTick(), fromMode.status, transition.toMode.status, transition.reason_id);
     }
 }

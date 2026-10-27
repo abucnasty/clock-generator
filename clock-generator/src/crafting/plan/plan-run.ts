@@ -51,7 +51,7 @@ import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpres
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
-import { SerializableStateTransitionHistory, serializeStateTransitionHistory } from "../sequence/state-transition-serializer";
+import { CompactStateTransitionHistory, SerializableStateTransitionHistory, expandStateTransitionHistory } from "../sequence/compact-history";
 import { InserterStateTransitionTrackerPlugin } from "../../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
 import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
 import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plugins/drill-state-transition-tracker-plugin";
@@ -468,7 +468,8 @@ export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     state_repeat?: StateRepeat;
     /** The transfers of the recorded run, as the windows of the plan are read off them */
     final_history: InventoryTransferHistory;
-    state_transition_history: StateTransitionHistory;
+    /** The state transitions of the recorded run, sealed when it ended */
+    state_transition_history: CompactStateTransitionHistory;
     fuel_levels: FuelLevelSeries[] | undefined;
     machine_stock: StockRecording | undefined;
     timeline_recording?: TimelineRecording;
@@ -517,7 +518,6 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const transfer_plan = planTransfers(config, crafting_cycle_plan, simulation_context, logger);
     // a staged scaffold starts with nothing in its machines: the plan stands, the build is made anew and seeded
     const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
-    const { state_transition_history } = build;
     const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger);
     const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger, period => {
         // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
@@ -537,6 +537,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const repeat_periods = warmUp(config, controlled, duration, warmup_period, debug, debug_steps, logger);
     const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
+    // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
+    const state_transition_history = build.state_transition_history.seal(build.simulation_context.entity_registry, simulated.recorded_duration.ticks);
     const final_history = finalHistoryOf(build, crafting_cycle_plan, all_output_inserters, duration, logger);
     const output = checkOutput(build, controlled, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
     const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, crafting_cycle_plan.entity_transfer_map,
@@ -1235,7 +1237,7 @@ export function trialRunOf(run: BuildRun): TrialRun {
         simulation_duration: run.duration,
         transfer_history: run.final_history,
         serializable_transfer_history: serializeTransferHistory(run.final_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
-        serializable_state_transition_history: serializeStateTransitionHistory(run.state_transition_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
+        serializable_state_transition_history: expandStateTransitionHistory(run.state_transition_history),
         machine_facts: run.simulation_context.machines.map(it => ({
             entity_id: it.machine_state.machine.entity_id.id,
             facts: Machine.getMachineFacts(it.machine_state.machine),
@@ -1493,7 +1495,7 @@ export function exportClock(
             simulation_duration: duration,
             transfer_history: final_history,
             serializable_transfer_history: serializeTransferHistory(final_history, simulation_context.entity_registry, recorded_duration.ticks),
-            serializable_state_transition_history: serializeStateTransitionHistory(state_transition_history, simulation_context.entity_registry, recorded_duration.ticks),
+            serializable_state_transition_history: expandStateTransitionHistory(state_transition_history),
             machine_facts: simulation_context.machines.map(it => ({
                 entity_id: it.machine_state.machine.entity_id.id,
                 facts: Machine.getMachineFacts(it.machine_state.machine),
@@ -2427,58 +2429,31 @@ function configureStateTransitionPlugins(
     factorio_states: boolean,
 ): StateTransitionHistory {
     const state_transition_history = new StateTransitionHistory();
-    const inserter_transition_callback = state_transition_history.createInserterCallback();
-    const machine_transition_callback = state_transition_history.createMachineCallback();
-    const drill_transition_callback = state_transition_history.createDrillCallback();
 
     // Add inserter state transition plugins
     simulation_context.inserters.forEach(it => {
-        it.addPlugin(new InserterStateTransitionTrackerPlugin(
-            it.inserter_state.entity_id,
-            relative_tick_provider,
-            inserter_transition_callback
-        ));
+        const recorder = state_transition_history.recorderFor(it.inserter_state.entity_id, "inserter");
+        it.addPlugin(new InserterStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(
-                it.inserter_state.entity_id,
-                relative_tick_provider,
-                () => factorioInserterState(it.inserter_state, it.sink_state),
-                state_transition_history.createFactorioStateCallback("inserter"),
-            ));
+            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioInserterState(it.inserter_state, it.sink_state), recorder));
         }
     });
 
     // Add machine state transition plugins
     simulation_context.machines.forEach(it => {
-        it.addPlugin(new MachineStateTransitionTrackerPlugin(
-            it.machine_state.entity_id,
-            relative_tick_provider,
-            machine_transition_callback
-        ));
+        const recorder = state_transition_history.recorderFor(it.machine_state.entity_id, "machine");
+        it.addPlugin(new MachineStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(
-                it.machine_state.entity_id,
-                relative_tick_provider,
-                () => factorioMachineState(it.machine_state),
-                state_transition_history.createFactorioStateCallback("machine"),
-            ));
+            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioMachineState(it.machine_state), recorder));
         }
     });
 
     // Add drill state transition plugins
     simulation_context.drills.forEach(it => {
-        it.addPlugin(new DrillStateTransitionTrackerPlugin(
-            it.drill_state.entity_id,
-            relative_tick_provider,
-            drill_transition_callback
-        ));
+        const recorder = state_transition_history.recorderFor(it.drill_state.entity_id, "drill");
+        it.addPlugin(new DrillStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(
-                it.drill_state.entity_id,
-                relative_tick_provider,
-                () => factorioDrillState(it.drill_state),
-                state_transition_history.createFactorioStateCallback("drill"),
-            ));
+            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioDrillState(it.drill_state), recorder));
         }
     });
 
