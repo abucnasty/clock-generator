@@ -139,9 +139,10 @@ phases shows the game never settling from it or from four other phases, the exit
 it cycles at 143 a period against 176 (`tests/game/builds/lane-phase-controls.json`, #266).
 The two normal backed-up underground defaults are the clock planned with the belts moving, given belt pickup slack
 and checked on the backed-up belts (#275): 176 in every baseline period and after every disturbance. A backed-up belt
-at normal speed refills the pickup slower than a stack a tick, so every clock planned for backed-up supply closes its
-windows before the hand is full; the fractional clock selected before missed natively (128, 128, 96 against 176),
-matching its holds false. The generator makes the moving-belt clock last, only when no other clock can be selected as
+at normal speed refills the pickup slower than a stack a tick, so every clock planned for backed-up supply then closed
+some windows before a hand that starts in them is full; the fractional clock selected before missed natively (128, 128,
+96 against 176), matching its holds false. Since #456 each belt-fed window of a backed-up clock lasts as long as a hand
+takes from the lanes at rest, and these fixtures select a stable clock for backed-up belts, not yet recorded (#460). The generator makes the moving-belt clock last, only when no other clock can be selected as
 stable. Their fully jammed cold-start controls alternate 144/208 items at offset 1287 as fixed-window simulator
 checks. The two express moving underground defaults are
 observed windows at 3 output swings, made for moving supply (#269): exact baseline and recovery in the game, while the
@@ -157,9 +158,10 @@ front entrance on the compact assembler scaffold (32: both families, mirroring s
 front exit on the electromagnetic plant, backed up (8) and on a moving config (8). All 48 are exact in baseline and
 recovery. All 32 entrance clocks are stable. The backed-up exit's are stable at every tier; at normal, in both
 mirroring states, every clock planned for backed-up supply fails (the fractional clock selected before, holds false,
-missed natively, 128, 128, 96 repeating against 176, the generator's own as-built repeat), and the selection is the
-clock planned with the belts moving and checked on the backed-up belts (#275), the same clock the moving config gets,
-which moves 176 in every period. **A moving config on
+missed natively, 128, 128, 96 repeating against 176, the generator's own as-built repeat), and the selection recorded
+was the clock planned with the belts moving and checked on the backed-up belts (#275), the same clock the moving config
+gets, which moves 176 in every period. Since #456 the backed-up config selects a stable clock for backed-up belts of its
+own, every belt-fed window as long as a hand takes from the lanes at rest; it is not recorded yet (#460). **A moving config on
 the front exit is safe on this layout:** the input stands on the exit's output tile, so the belt is backed up in the
 game whatever the config says, and the clock made for moving belts holds and recovers exactly at every tier. That
 includes the express clocks the generator calls "no recovery" and the normal ones it calls "unstable", both judged
