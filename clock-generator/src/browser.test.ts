@@ -78,7 +78,9 @@ describe("the light entry", () => {
             "config/migrate-belt-supply.ts",
             "config/migrate-blocked-slots.ts",
             "config/migrate-mining-productivity.ts",
+            "control-logic/mode/reason-table.ts",
             "crafting/rank.ts",
+            "crafting/sequence/compact-history.ts",
             "crafting/why-not-stable.ts",
             "data-types/fraction.ts",
             "data-types/map-extended.ts",
@@ -87,7 +89,9 @@ describe("the light entry", () => {
             "entities/machine/machine-rule.ts",
             "entities/machine/machine-type.ts",
             "state/entity-status.ts",
+            "state/factorio-state-names.ts",
             "state/status-category.ts",
+            "state/status-codes.ts",
         ]);
     });
 });

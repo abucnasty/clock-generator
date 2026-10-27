@@ -1,68 +1,14 @@
-import { Entity, EntityType, ReadableEntityRegistry } from "../../entities";
+import { Entity, ReadableEntityRegistry } from "../../entities";
 import { StateTransitionHistory, StateTransitionEntityType } from "./state-transition-history";
 import { chestName } from "../../common/entity-types";
+import type {
+    SerializableEntityStateTransitions,
+    SerializableFactorioState,
+    SerializableStateTransition,
+    SerializableStateTransitionHistory,
+} from "./compact-history";
 
-/**
- * A single state transition entry that is JSON-serializable
- */
-export interface SerializableStateTransition {
-    tick: number;
-    from_status: string;
-    to_status: string;
-    reason: string;
-    /** Duration until next transition (computed during serialization) */
-    duration_ticks: number;
-}
-
-/**
- * A serializable representation of state transitions for a single entity
- */
-export interface SerializableEntityStateTransitions {
-    /** Entity ID string (e.g., "inserter:1") */
-    entity_id: string;
-    /** Entity type */
-    entity_type: StateTransitionEntityType;
-    /** Human-readable label for the entity */
-    label: string;
-    /** The source entity info (for inserters) */
-    source?: {
-        entity_id: string;
-        entity_type: EntityType;
-        label: string;
-    };
-    /** The sink/target entity info (for inserters, drills) */
-    sink?: {
-        entity_id: string;
-        entity_type: EntityType;
-        label: string;
-    };
-    /** Item names associated with this entity (recipe output for machines, resource for drills, filtered items for inserters) */
-    items: string[];
-    /** Initial status at start of simulation */
-    initial_status: string;
-    /** All state transitions for this entity */
-    transitions: SerializableStateTransition[];
-    /** The state the entity would show in Factorio at the start of the run */
-    initial_factorio_state: string;
-    /** The state the entity would show in Factorio, each time it changes, with how long it lasts */
-    factorio_states: SerializableFactorioState[];
-}
-
-export interface SerializableFactorioState {
-    tick: number;
-    state: string;
-    duration_ticks: number;
-}
-
-/**
- * The complete serializable state transition history
- */
-export interface SerializableStateTransitionHistory {
-    /** Total simulation duration in ticks */
-    total_duration_ticks: number;
-    /** All entity state transition histories */
-    entities: SerializableEntityStateTransitions[];
-}
+export type { SerializableEntityStateTransitions, SerializableFactorioState, SerializableStateTransition, SerializableStateTransitionHistory };
 
 /**
  * Convert a StateTransitionHistory to a serializable format suitable for JSON
