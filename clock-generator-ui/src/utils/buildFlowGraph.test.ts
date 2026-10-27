@@ -6,6 +6,7 @@ import { createDefaultConfig, type ConfigFormData, type EnableControlOverride, t
 import { buildFlowGraph, flowNodeEntity, type InserterNodeData } from './buildFlowGraph';
 import { flowNodeRect, routeFlowEdges, type FlowPort } from './flowRouting';
 import { describeEnableRule } from './enableRuleLabel';
+import type { OutputTransferSummary } from 'clock-generator/browser';
 
 type End = InserterFormData['source'];
 
@@ -112,7 +113,12 @@ describe('buildFlowGraph', () => {
             const { edges } = graph(fixture());
             expect(edges.length, name).toBeGreaterThan(0);
             for (const edge of edges) {
-                expect((edge.markerEnd as { type: MarkerType }).type, `${name}: ${edge.id}`).toBe(MarkerType.ArrowClosed);
+                if (edge.id.startsWith('output-transfer-unknown-') || edge.id.startsWith('output-transfer-none-') || edge.id.startsWith('output-transfer-drill-unknown-')) {
+                    expect(edge.markerEnd, `${name}: ${edge.id}`).toBeUndefined();
+                    expect(edge.style?.strokeDasharray, `${name}: ${edge.id}`).toBe('5 4');
+                } else {
+                    expect((edge.markerEnd as { type: MarkerType }).type, `${name}: ${edge.id}`).toBe(MarkerType.ArrowClosed);
+                }
             }
         }
     });
@@ -123,6 +129,129 @@ describe('buildFlowGraph', () => {
         const { edges } = graph(config);
         expect(edges.some(edge => edge.source === 'drill-1' && edge.target === 'chest-1')).toBe(true);
         expect(edges.some(edge => edge.source === 'drill-1' && edge.target.startsWith('machine'))).toBe(false);
+    });
+
+    describe('a machine that places its results itself', () => {
+        // a recycler whose car is emptied back into it by an inserter: the car both feeds the machine and takes its results
+        const recycler = (target: { type: 'chest'; id: number } | undefined, inserters = [inserter(1, chest(1), machine(1))]) => {
+            const base = form({ machines: 1, chests: 2 }, inserters);
+            return { ...base, machines: base.machines.map(row => ({ ...row, prototype: 'recycler', ...(target && { result_target: target }) })) };
+        };
+
+        it('draws its results into its result target as an edge to the container, as a drill\'s drop is', () => {
+            const { edges } = graph(recycler({ type: 'chest', id: 2 }));
+            expect(edges.some(edge => edge.source === 'machine-1' && edge.target === 'chest-2')).toBe(true);
+            expect(edges.every(edge => edge.id.startsWith('output-transfer-unknown-')
+                ? edge.markerEnd === undefined && edge.style?.strokeDasharray === '5 4'
+                : (edge.markerEnd as { type: MarkerType }).type === MarkerType.ArrowClosed)).toBe(true);
+        });
+
+        it('draws no edge for a machine without a result target, or whose container is deleted', () => {
+            expect(graph(recycler(undefined)).edges.some(edge => edge.source === 'machine-1' && edge.target.startsWith('chest'))).toBe(false);
+            expect(graph(recycler({ type: 'chest', id: 0 })).edges.some(edge => edge.source === 'machine-1' && edge.target.startsWith('chest'))).toBe(false);
+        });
+
+        it('draws the container twice, in and out, when inserters take the results back into the machine', () => {
+            const { nodes, edges } = graph(recycler({ type: 'chest', id: 1 }));
+            expect(nodes.map(node => node.id)).toEqual(expect.arrayContaining(['chest-1-in', 'chest-1-out']));
+            expect(edges.some(edge => edge.source === 'machine-1' && edge.target === 'chest-1-out')).toBe(true);
+            expect(edges.some(edge => edge.source === 'chest-1-in' && edge.target === 'inserter-1')).toBe(true);
+            expect(x(nodes, 'chest-1-in')).toBeLessThan(x(nodes, 'inserter-1'));
+            expect(x(nodes, 'inserter-1')).toBeLessThan(x(nodes, 'machine-1'));
+            expect(x(nodes, 'machine-1')).toBeLessThan(x(nodes, 'chest-1-out'));
+        });
+
+        it('groups accepted product labels on one physical target edge and reads inserter items from shared output facts', () => {
+            const config = recycler({ type: 'chest', id: 2 }, [inserter(9, machine(1), belt(1))]);
+            const summary: OutputTransferSummary = {
+                source: { type: 'machine', id: 1 }, physical_target: { type: 'chest', id: 2 }, mechanism: 'result-placement', status: 'known', results: [
+                    { item_name: 'electronic-circuit', direct: 'accepted', inserters: [], coverage: 'covered' },
+                    { item_name: 'advanced-circuit', direct: 'accepted', inserters: [{ inserter_id: 9, target: { type: 'belt', id: 1 } }], coverage: 'covered' },
+                ],
+            };
+            const { nodes, edges } = buildFlowGraph(config.machines, config.inserters, config.belts, config.chests, [], undefined, false, {
+                itemLabel: name => name === 'electronic-circuit' ? 'Electronic circuit' : 'Advanced circuit', recipeLabel: name => name,
+            }, 0, [summary]);
+            const resultEdges = edges.filter(edge => edge.id.startsWith('output-transfer-machine-1-'));
+            expect(resultEdges).toHaveLength(1);
+            expect((resultEdges[0].data as { outputItems: { name: string; label: string }[] }).outputItems).toEqual([
+                { name: 'advanced-circuit', label: 'Advanced circuit' }, { name: 'electronic-circuit', label: 'Electronic circuit' },
+            ]);
+            expect((nodes.find(node => node.id === 'inserter-9')?.data as InserterNodeData).filterIcons).toEqual(['advanced-circuit']);
+            expect(nodes.filter(node => node.id === 'machine-1')).toHaveLength(1);
+        });
+
+        it('shows a selected zero-acceptance target as a dashed physical reference with no direct arrow', () => {
+            const config = recycler({ type: 'chest', id: 2 });
+            const summary: OutputTransferSummary = {
+                source: { type: 'machine', id: 1 }, physical_target: { type: 'chest', id: 2 }, mechanism: 'result-placement', status: 'known', results: [
+                    { item_name: 'advanced-circuit', direct: 'rejected', inserters: [], coverage: 'missing' },
+                ],
+            };
+            const { edges } = buildFlowGraph(config.machines, config.inserters, config.belts, config.chests, [], undefined, false, undefined, 0, [summary]);
+            const edge = edges.find(candidate => candidate.id.startsWith('output-transfer-none-1-'))!;
+            expect(edge.markerEnd).toBeUndefined();
+            expect(edge.style?.strokeDasharray).toBe('5 4');
+            expect((edge.data as { labelText: string }).labelText).toBe('No direct transfer');
+        });
+
+        it('keeps an unavailable result-less source distinct from a known zero-transfer target', () => {
+            const config = recycler({ type: 'chest', id: 2 });
+            const summary: OutputTransferSummary = {
+                source: { type: 'machine', id: 1 }, physical_target: { type: 'chest', id: 2 }, mechanism: 'result-placement', status: 'unavailable', results: [],
+            };
+            const { edges } = buildFlowGraph(config.machines, config.inserters, config.belts, config.chests, [], undefined, false, undefined, 0, [summary]);
+            const edge = edges.find(candidate => candidate.id.startsWith('output-transfer-none-1-'))!;
+            expect(edge.markerEnd).toBeUndefined();
+            expect((edge.data as { labelText: string }).labelText).toBe('Output routes unavailable');
+        });
+
+        it('draws the container once when nothing takes the results back', () => {
+            const { nodes } = graph(recycler({ type: 'chest', id: 2 }));
+            expect(nodes.some(node => node.id === 'chest-2')).toBe(true);
+            expect(nodes.some(node => node.id.startsWith('chest-2-'))).toBe(false);
+        });
+
+        it('says in the node\'s name where the results go', () => {
+            const config = recycler({ type: 'chest', id: 1 });
+            const { nodes } = buildFlowGraph(config.machines, config.inserters, config.belts, config.chests, [], undefined, false);
+            expect((nodes.find(node => node.id === 'machine-1') as Node & { ariaLabel?: string }).ariaLabel).toContain('puts its results into Chest 1');
+        });
+    });
+
+    describe('a drill drop target', () => {
+        const graphFor = (direct: 'accepted' | 'rejected' | 'unknown', status: 'known' | 'unavailable') => {
+            const config = edits.updateDrill(form({ machines: 1, chests: 1, drills: 1 }, []), 0, {
+                mined_item_name: 'iron-ore', target: { type: 'chest', id: 1 },
+            });
+            const summary: OutputTransferSummary = {
+                source: { type: 'drill', id: 1 }, physical_target: { type: 'chest', id: 1 }, mechanism: 'mining-drop', status,
+                results: [{ item_name: 'iron-ore', direct, inserters: [], coverage: direct === 'accepted' ? 'covered' : direct === 'rejected' ? 'missing' : 'unknown' }],
+            };
+            return buildFlowGraph(config.machines, config.inserters, config.belts, config.chests, config.drills?.configs ?? [], undefined, false, undefined, 0, [summary]);
+        };
+
+        it('shows a known accepted result as an active drop', () => {
+            const { edges } = graphFor('accepted', 'known');
+            const edge = edges.find(candidate => candidate.id.startsWith('output-transfer-drill-1-'))!;
+            expect((edge.markerEnd as { type: MarkerType }).type).toBe(MarkerType.ArrowClosed);
+            expect((edge.data as { outputItems: { name: string; label: string }[] }).outputItems).toEqual([{ name: 'iron-ore', label: 'iron-ore' }]);
+        });
+
+        it('shows a known rejected result as a non-transferring reference', () => {
+            const { edges } = graphFor('rejected', 'known');
+            const edge = edges.find(candidate => candidate.id.startsWith('output-transfer-drill-none-1-'))!;
+            expect(edge.markerEnd).toBeUndefined();
+            expect(edge.style?.strokeDasharray).toBe('5 4');
+            expect((edge.data as { labelText: string }).labelText).toBe('No direct transfer');
+        });
+
+        it('keeps an unavailable drill result visibly unknown', () => {
+            const { edges } = graphFor('unknown', 'unavailable');
+            const edge = edges.find(candidate => candidate.id.startsWith('output-transfer-drill-unknown-1-'))!;
+            expect(edge.markerEnd).toBeUndefined();
+            expect((edge.data as { labelText: string }).labelText).toBe('Output routes unavailable');
+        });
     });
 
     it('places the sources, then the machine, then the outputs', () => {

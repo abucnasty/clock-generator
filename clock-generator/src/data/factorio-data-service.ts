@@ -182,6 +182,12 @@ export class FactorioDataService {
         return result;
     }
 
+    /** The ticks an item takes to spoil, as the game data has them; null for an item that does not spoil or that the data does not have */
+    public static itemSpoilTicks(itemName: ItemName): number | null {
+        const spoil_ticks = this.getData().item[itemName]?.spoil_ticks;
+        return typeof spoil_ticks === "number" && spoil_ticks > 0 ? spoil_ticks : null;
+    }
+
     public static getMiningDrillSpec(type: MiningDrillType): MiningDrillSpec {
         const spec = this.getData()["mining-drill"][type];
         assert(spec, `Mining drill spec for type ${type} was not found`);
@@ -251,6 +257,15 @@ export class FactorioDataService {
     public static itemDisplayName(id: string): string {
         const names = this.getData().names?.item ?? {};
         return Object.prototype.hasOwnProperty.call(names, id) ? names[id] : displayNameOfId(id);
+    }
+
+    /**
+     * An item's game name for the middle of a sentence, its first letter lower case: "iron plate" for "iron-plate",
+     * "military science pack" for "military-science-pack", "power armor MK2" for "power-armor-mk2"
+     */
+    public static itemNameInSentence(id: string): string {
+        const name = this.itemDisplayName(id);
+        return name.charAt(0).toLowerCase() + name.slice(1);
     }
 
     /** The game's English name of a recipe id, else of the item of that id, else as `itemDisplayName` makes it */

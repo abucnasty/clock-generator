@@ -44,7 +44,7 @@ export function FilterSlotSelector({ priority, filters,
         requestAnimationFrame(() => slotRefs.current[Math.min(index, Math.max(0, displayed.length - 1))]?.focus());
     };
     return <Box>
-        <Box role="group" aria-label="Inserter filter slots" sx={{ display: 'flex', gap: 0.5, p: 0.5, pb: automatic && displayed.length ? 1.5 : 0.5, width: 'fit-content', bgcolor: 'action.hover', border: 1, borderColor: 'divider', borderRadius: 0.5, boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.25)' }}>
+        <Box role="group" aria-label="Inserter filter slots" sx={{ display: 'flex', flexWrap: 'wrap', maxWidth: '100%', gap: 0.5, p: 0.5, pb: automatic && displayed.length ? 1.5 : 0.5, width: 'fit-content', bgcolor: 'action.hover', border: 1, borderColor: 'divider', borderRadius: 0.5, boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.25)' }}>
             {Array.from({ length: slotCount }, (_, index) => {
                 const item = displayed[index];
                 const auto = automatic && Boolean(item);

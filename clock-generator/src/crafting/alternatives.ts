@@ -1,4 +1,5 @@
 import assert from "../common/assert";
+import type { TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
@@ -6,25 +7,31 @@ import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
 import { warnSideLoadedDrops } from "../config/side-loaded-drop";
 import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
+import { FactorioBlueprint } from "../blueprints/blueprint";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
 import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, sideLoadedDropInsights, startDependenceInsight } from "./insights";
-import { chestDrillFallbackConfig, hasPlannedChestDrill } from "./chest-drill-windows";
+import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
+import { chestDrillReasons } from "./always-on-reasons";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
+import { sharedResultWindowClock } from "./candidates/result-windows-clock";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
-import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock } from "./generate-clock";
+import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock, terminalCountForAlternativePlanning } from "./generate-clock";
+import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
+import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
+import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
+import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
 import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, roundedClockTrial, startDependenceVerdictOf, withSettledOutput } from "./trial";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
-import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
-import { NotMadeClock, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
+import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 
 
@@ -34,6 +41,8 @@ export interface ClockAlternative {
     description: string;
     /** Total decider windows across inserters, as exported; fewer means more batched swings */
     inserter_window_count: number;
+    /** The decider combinators that switch inserters and drills on and off in the exported blueprint, the clock's own not counted */
+    deciders: number;
     /** The windows the selection compares last: `inserter_window_count` without the windows of the output feeders */
     ranking_window_count: number;
     /** What the trial of the clock on its build found: holds, survives backpressure loss, rate, wake-ups */
@@ -87,6 +96,8 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
     /** Runs with the same clock, physical assumptions and checked behavior are duplicates; only the first is listed */
     signature: string;
     alternatives: T[];
+    /** Runs of the same clock made with shared windows (see `SHARED_WINDOWS_NOTE`), listed after this run when it is */
+    also?: ClockAlternativeRun<T>[];
 }
 
 /** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
@@ -97,14 +108,18 @@ const EXTENDED_SWING_COUNTS = 3;
 
 /** What the remaining alternatives need from the first (batched swings) run */
 export interface ClockAlternativeContext {
+    /** Count-only AUTO policy from an accepted primitive primary; other families still choose their own LCM. */
+    secondary_planning?: SecondaryPlanningCount;
     swings: number;
     /** The output swings per cycle the plan started with: more than `swings` when it backed off to a lower count */
     planned_swings?: number;
     primary_stable: boolean;
     /** Clock period of the primary alternative */
     period_ticks: number;
-    /** The items whose hands set the period of the plan: a clock is also made with each of them left out of it (see `leanPeriodItems`) */
-    lean_period_items?: LeanPeriodItem[];
+    /** The primary alternative's results come too rarely for whole hands in a period: it is a clock of result windows */
+    result_windows?: boolean;
+    /** Small batches was tried for the primary alternative (its first plan's period too long): it is not offered again */
+    primitive_tried?: boolean;
 }
 
 
@@ -130,6 +145,9 @@ export interface ClockAlternativesPlan {
     /** Independent of each other, so they can run in parallel; listed in display order */
     tasks: ClockAlternativeTask[];
 }
+
+/** The options Small batches is verified with, as the primary alternative's (see primaryDefinition) */
+const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, belt_pickup_slack: "always" };
 
 /** The id of the alternative made without belt pickup slack on purpose: batched swings for a backed-up belt */
 const WITHOUT_BELT_PICKUP_SLACK_ID = "planned";
@@ -158,6 +176,18 @@ interface AlternativeDefinition {
      * chestDrillFallbackConfig). Absent where the generator makes no such windows.
      */
     chest_drill_fallbacks?: (() => AlternativeDefinition | undefined)[];
+    /**
+     * The same alternative with the windows of the takers that open together shared (`shared_windows` of
+     * GenerateClockOptions), made when this one is a clock of the grouped hands rule. Throws or gives nothing where
+     * it has none.
+     */
+    shared_windows?: () => AlternativeDefinition | undefined;
+    /**
+     * The same alternative with the inserters that take out of a loop always enabled (`loop_windows` of
+     * GenerateClockOptions false): made when its clock has windows for them (`loop_windows` of the result) and does not
+     * hold, or does not get back from a loss, with them.
+     */
+    without_loop_windows?: () => AlternativeDefinition | undefined;
 }
 
 /** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
@@ -183,9 +213,31 @@ function holds(result: BlueprintGenerationResult): boolean {
     return result.stability_check.as_built?.holds ?? result.stability_check.holds;
 }
 
+/** The decider combinators of a clock's blueprint that switch inserters and drills on and off */
+export function windowDeciderCount(blueprint: FactorioBlueprint): number {
+    return blueprint.entities.filter(entity => entity.name === "decider-combinator"
+        && ((entity.tags as { clock_generator?: { inserters?: unknown; drills?: unknown } } | undefined)?.clock_generator?.inserters !== undefined
+            || (entity.tags as { clock_generator?: { drills?: unknown } } | undefined)?.clock_generator?.drills !== undefined)).length;
+}
+
+/** What a clock with shared windows says about itself, after how its alternative is made */
+const SHARED_WINDOWS_NOTE = "Inserters that take into their machines at the same moment share one wake window, as long as the longest of them needs, "
+    + "so they share one decider combinator. An inserter that needs fewer hands than that window stays enabled longer than it must, "
+    + "so it can wake more often. It is only listed when it keeps the rate and recovers after being starved or jammed.";
+
 /** The alternative every run starts with, and the one the others are described against */
 const BATCHED_SWINGS_LABEL = "Batched swings";
 
+
+const RESULTS_IN_TURN_ID = "results-in-turn";
+const RESULTS_IN_TURN_LABEL = "Results in turn";
+const RESULTS_IN_TURN_DESCRIPTION = "For results that come by small chances. The inserters that take each result out of the container "
+    + "the machine fills open once a period, in turn, each for as many hands as its results give in all but 1 period in 740, "
+    + "with room for the part hand it may still hold. The period is the longest whose results the container holds at the "
+    + "worst moment, just before an opening.";
+const ALL_RESULTS_AT_ONCE_DESCRIPTION = "For results that come by small chances. Every inserter that takes a result out of the "
+    + "container the machine fills opens at the start of the period, for as long as the busiest one needs. The period is "
+    + "the longest in which the container holds a whole period of every result, in all but 1 period in 740.";
 
 const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for the target rate. The build is simulated with each "
     + "inserter waiting on its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are "
@@ -218,7 +270,8 @@ function withFuelHandRoomWhereNeeded(
     try {
         const with_room = withFuelHandRoom();
         return with_room !== undefined && Object.keys(with_room.fuel_hand_room_ticks).length > 0 && holds(with_room) ? with_room : result;
-    } catch {
+    } catch (error) {
+        if (error instanceof SecondaryPlanningInvariantError) throw error;
         return result;
     }
 }
@@ -231,6 +284,14 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
     const result = config.overrides?.backed_up_belts === true
         ? withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined)
         : generate(config);
+    if (result.result_windows !== undefined) {
+        return { id: RESULTS_IN_TURN_ID, label: RESULTS_IN_TURN_LABEL, description: RESULTS_IN_TURN_DESCRIPTION, run: () => result };
+    }
+    if (result.primitive_grouped !== undefined) {
+        return { id: "primitive-grouped", label: "Small batches",
+            description: "Uses small output batches when the initial clock would be too long. Checked for timing margin, clock starts and recovery after interruptions.",
+            run: () => result };
+    }
     return {
         id: "planned-belt-slack",
         label: BATCHED_SWINGS_LABEL,
@@ -302,7 +363,17 @@ function alternativeDefinitions(
 ): AlternativeDefinition[] {
     const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
         with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
-    return definitions;
+    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule, and
+    // with the inserters that take out of a loop always enabled, made when a clock with windows for them does not meet goal 1
+    let shared: AlternativeDefinition[] | undefined;
+    let without_loop: AlternativeDefinition[] | undefined;
+    return definitions.map(definition => ({ ...definition, shared_windows: () => {
+        shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
+        return shared.find(it => it.id === definition.id);
+    }, without_loop_windows: () => {
+        without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false }, known_stable);
+        return without_loop.find(it => it.id === definition.id);
+    } }));
 }
 
 function alternativeDefinitionsWithFuelHandRoom(
@@ -311,16 +382,18 @@ function alternativeDefinitionsWithFuelHandRoom(
     quiet: GenerateClockOptions,
     known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
-    const definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
-    if (config.overrides?.backed_up_belts !== true || !takesFuelOffABelt(config)) {
-        return definitions;
+    let definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
+    if (config.overrides?.backed_up_belts === true && takesFuelOffABelt(config)) {
+        const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
+        definitions = definitions.map(definition => {
+            const with_room = with_fuel_hand_room.find(it => it.id === definition.id);
+            return with_room === undefined ? definition
+                : { ...definition, run: () => withFuelHandRoomWhereNeeded(definition.run, with_room.run) };
+        });
     }
-    const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
-    return definitions.map(definition => {
-        const with_room = with_fuel_hand_room.find(it => it.id === definition.id);
-        return with_room === undefined ? definition
-            : { ...definition, run: () => withFuelHandRoomWhereNeeded(definition.run, with_room.run) };
-    });
+    // This boundary also serves shared/loop/fuel/chest variants. Annotate the actual returned plan, not the request.
+    return secondaryPlanningCountOf(config, context) === undefined ? definitions : definitions.map(definition => ({ ...definition,
+        run: () => withSecondaryPlanningProvenance(definition.run()) }));
 }
 
 /**
@@ -349,75 +422,38 @@ function withChestDrillFallbacks(
     return definitions.map(definition => ({ ...definition, chest_drill_fallbacks: fallbacks.map(of => of(definition.id)) }));
 }
 
-/** An item's name as a person says it: "low-density-structure" as "low density structure" */
-function plainItemName(item: string): string {
-    return item.replace(/-/g, " ");
-}
-
-/**
- * The clocks for a shorter period: for each item whose hands set the period of the plan, the plan is made with that item
- * left out of the period (`overrides.ignored_lcm_ingredients`), the period it would have if its hands did not have to
- * come out whole. The item's inserters stay clocked; their windows are the plan's, or what they were seen to do. The
- * observed windows of such a plan are a search, so they wait for the same reason as the other searches.
- */
-function shorterPeriodDefinitions(
-    config: Config,
-    context: ClockAlternativeContext,
-    quiet: GenerateClockOptions,
-): AlternativeDefinition[] {
-    if (config.overrides?.lcm !== undefined) {
-        return [];
-    }
-    const lean_items = context.lean_period_items ?? [];
-    const planned = lean_items.map(({ item, lcm, lcm_without }) => {
-        const ignored = [...(config.overrides?.ignored_lcm_ingredients ?? []), item];
-        const planned_on: Config = { ...config, overrides: { ...config.overrides, ignored_lcm_ingredients: ignored } };
-        const lean_config: Config = { ...planned_on, overrides: { ...planned_on.overrides, derive_clock_windows: false } };
-        const label = `${BATCHED_SWINGS_LABEL}, shorter period (${plainItemName(item)} not in the period)`;
-        const how = `The clock period is ${lcm_without} crafting ${lcm_without === 1 ? "cycle" : "cycles"} instead of ${lcm}: the period of the other `
-            + `alternatives is set by how often the hands of ${plainItemName(item)} come out whole, and here it is not. The inserters that move `
-            + `${plainItemName(item)} stay clocked, so they take their hands when their windows open, but the period is not stretched to fit them.`;
-        return { item, planned_on, lean_config, label, how, shorter_than_limit: context.period_ticks * lcm_without / lcm <= MAX_OBSERVED_WINDOWS_PERIOD_TICKS };
-    });
-    return [
-        ...planned.map(({ item, planned_on, lean_config, label, how }): AlternativeDefinition => ({
-            id: `planned-lean-${item}`,
-            label,
-            description: `${BATCHED_SWINGS_DESCRIPTION} ${how}`,
-            run: () => generateClockWithSwingBackoff(lean_config, { ...quiet, belt_pickup_slack: "always" }),
-            planned_on,
-        })),
-        ...planned.filter(it => it.shorter_than_limit).map(({ item, planned_on, lean_config, how }): AlternativeDefinition => ({
-            id: `derived-lean-${item}`,
-            label: `Observed windows, shorter period (${plainItemName(item)} not in the period)`,
-            description: "Built from what the inserters actually do rather than from the planned schedule, as the observed windows "
-                + `alternative is. ${how}`,
-            run: () => generateClockWithSwingBackoff(lean_config, quiet, (swings_config, options) => observedWindowsClock(swings_config, options, "always")),
-            planned_on,
-            search: true,
-        })),
-    ];
-}
-
 /** The alternatives as the config asks for them, each made once */
+const EVEN_HANDS_DESCRIPTION = "One window for each hand an inserter moves in the clock period, the windows spread evenly over the period "
+    + "and each a tick shorter than the inserter's hand cycle, so a window moves one hand whenever in it the source "
+    + "has the hand and the sink takes it. Inserters that move the same hands a period, such as those of two "
+    + "halves of a build that do the same thing, get the same windows and share a window decider. Only offered "
+    + "where every inserter takes from a machine or a chest and moves a whole number of hands a period.";
+
 function alternativeDefinitionsFor(
     config: Config,
     context: ClockAlternativeContext,
     quiet: GenerateClockOptions,
     known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
-    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const secondary = secondaryPlanningCountOf(config, context);
+    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false,
+        ...(secondary === undefined ? {} : { terminal_swing_count: secondary.terminal_swing_count }) } };
     const fractional = config.overrides?.use_fractional_swings === true;
     const { swings } = context;
+    // as the primary alternative makes it (see primaryDefinition), on the config's own counts
+    const small_batches_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const withSwings = (count: number, extra: GenerateClockOptions) => generateClockForConfig(
         { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, extra);
     // a forced count applies to every alternative
     const swings_forced = config.overrides?.terminal_swing_count !== undefined;
     const lower_counts = swings_forced ? [] : Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
     // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
-    // output inserter takes hands, so longer cycles can work too
+    // output inserter takes hands, so longer cycles can work too, but the machine holds the planned count when a cycle's
+    // swings start: the farthest count is only tried as a multiple of it (the planned cycle repeated)
+    const planned = context.planned_swings ?? swings;
     const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
-        : Array.from({ length: Math.max(swings, context.planned_swings ?? swings) + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i);
+        : Array.from({ length: planned + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i)
+            .filter(count => count < planned + EXTENDED_SWING_COUNTS || (planned > 1 && count % planned === 0));
     // Supply still matters for always-enabled and fuel pickups, even when the clock has no belt windows.
     const offer_backed_up_belt = config.overrides?.backed_up_belts !== true
         && config.inserters.some(inserter => inserter.source.type === "belt");
@@ -425,6 +461,25 @@ function alternativeDefinitionsFor(
     const offer_moving_belt = config.overrides?.backed_up_belts === true
         && config.inserters.some(inserter => inserter.source.type === "belt");
 
+    // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
+    // out, not tried, so no other count or search is offered; even hands moves the same hands
+    if (config.target_output.counts === "destroyed" && context.result_windows === true) {
+        // results that come by small chances: the windows are worked out, and the other way to open them is offered
+        return [{
+            id: "all-results-at-once",
+            label: "All results at once",
+            description: ALL_RESULTS_AT_ONCE_DESCRIPTION,
+            run: () => generateClockWithSwingBackoff(base_config, quiet, sharedResultWindowClock),
+        }];
+    }
+    if (config.target_output.counts === "destroyed") {
+        return [{
+            id: "even-hands",
+            label: "Even hands",
+            description: EVEN_HANDS_DESCRIPTION,
+            run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
+        }];
+    }
     return [
         ...(offer_moving_belt ? [{
             id: FOR_A_MOVING_BELT_ID,
@@ -460,11 +515,7 @@ function alternativeDefinitionsFor(
         {
             id: "even-hands",
             label: "Even hands",
-            description: "One window for each hand an inserter moves in the clock period, the windows spread evenly over the period "
-                + "and each a tick shorter than the inserter's hand cycle, so a window moves one hand whenever in it the source "
-                + "has the hand and the sink takes it. Inserters that move the same hands a period, such as those of two "
-                + "halves of a build that do the same thing, get the same windows and share a window decider. Only offered "
-                + "where every inserter takes from a machine or a chest and moves a whole number of hands a period.",
+            description: EVEN_HANDS_DESCRIPTION,
             run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
         },
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
@@ -553,7 +604,21 @@ function alternativeDefinitionsFor(
             },
             search: true,
         },
-        ...shorterPeriodDefinitions(config, context, quiet),
+        // Small batches where its first plan's period was not too long, so the primary did not try it: a fallback, made
+        // only where no clock made before it can be selected as stable, so it never moves a clock that was selected
+        ...(context.primitive_tried === true || !primitiveGroupedOptionsSupported(small_batches_config, SMALL_BATCHES_OPTIONS)
+            || !primitiveGroupedConfigSupported(small_batches_config) ? [] : [{
+            id: "primitive-grouped",
+            label: "Small batches",
+            description: "Uses small output batches when no planned clock holds. Checked for timing margin, clock starts and recovery after interruptions.",
+            run: () => {
+                const made = verifiedPrimitiveGroupedClock(small_batches_config, { ...quiet, ...SMALL_BATCHES_OPTIONS },
+                    context.planned_swings ?? swings, "no-count-holds");
+                if (made.clock === null) throw new Error(made.report.reason ?? "no clock of small batches holds");
+                return made.clock;
+            },
+            fallback: true,
+        }]),
     ];
 }
 
@@ -580,7 +645,7 @@ function backpressureLossNote(verdict: BackpressureLossVerdict | null, not_tried
         return "";
     }
     return verdict.broken_by.length === 0 ? " It was off its expected output in the run the backpressure losses are tried on, so it is not counted as stable."
-        : ` It does not survive backpressure loss: the build does not get back to its expected output under this clock after ${verdict.broken_by.join(", or after ")}.`;
+        : ` It does not survive backpressure loss: the build does not get back to its expected output under this clock after ${verdict.broken_by.join(", or after ")}.${notTriedSentence(verdict.not_tried)}`;
 }
 
 
@@ -602,7 +667,55 @@ function plannedChestDrillWindows(result: BlueprintGenerationResult): boolean {
     return result.chest_drills?.some(drill => drill.planned && drill.enabled_ticks !== null) ?? false;
 }
 
+/**
+ * A run of the alternative and, where its clock is the grouped hands rule's, the run of the same alternative with shared
+ * windows (`also`) when that holds the rate and recovers and is another clock than the separate one.
+ */
 function runAlternative(
+    definition: AlternativeDefinition,
+    config: Config,
+    logger: Logger,
+    report?: (detail: string) => void,
+    assessed?: ReadonlySet<string>,
+    verification_cache?: Map<string, VerificationAssessment>,
+    on_not_made?: (clock: NotMadeClock) => void,
+    settle_unstable?: boolean,
+): ClockAlternativeRun | null {
+    const run = runAlternativeOf(definition, config, logger, report, assessed, verification_cache, on_not_made, settle_unstable);
+    if (run === null || definition.shared_windows === undefined || !run.alternatives.some(it => it.result.grouped_hands !== undefined
+        && it.result.primitive_grouped === undefined)) {
+        return run;
+    }
+    let shared_definition: AlternativeDefinition | undefined;
+    try {
+        shared_definition = definition.shared_windows();
+    } catch (error) {
+        if (error instanceof SecondaryPlanningInvariantError) throw error;
+        logger.log(`Clock alternative "${definition.label}" with shared windows could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+        return run;
+    }
+    if (shared_definition === undefined) {
+        return run;
+    }
+    const shared_run = shared_definition.run;
+    const shared = runAlternativeOf({
+        ...shared_definition,
+        // a clock that is not the grouped hands' with shared windows is not an alternative, and not worth assessing
+        run: () => {
+            const made = shared_run();
+            if (made.grouped_hands?.shared_windows !== true) throw new Error("no shared windows hold");
+            return made;
+        },
+        id: `${definition.id}-shared`,
+        label: `${definition.label}, shared windows`,
+        description: `${definition.description} ${SHARED_WINDOWS_NOTE}`,
+        shared_windows: undefined,
+    }, config, logger, report, new Set([...(assessed ?? []), run.signature]), verification_cache, undefined, settle_unstable);
+    const listed = shared?.alternatives.filter(it => it.verdict === "stable" && it.result.grouped_hands?.shared_windows === true) ?? [];
+    return shared === null || listed.length === 0 ? run : { ...run, also: [...(run.also ?? []), { ...shared, alternatives: listed }] };
+}
+
+function runAlternativeOf(
     definition: AlternativeDefinition,
     config: Config,
     logger: Logger,
@@ -623,6 +736,7 @@ function runAlternative(
     try {
         result = definition.run();
     } catch (error) {
+        if (error instanceof SecondaryPlanningInvariantError) throw error;
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Clock alternative "${definition.label}" could not be generated: ${reason}`);
         on_not_made?.({ id: definition.id, label: definition.label, reason });
@@ -638,13 +752,32 @@ function runAlternative(
     // the planning simulation drives inserters from inventory levels and can over- or undershoot
     // where the exported clock does not; in game, recordings matched the clock-only check
     let held = holds(result);
-    const cached = verification_cache?.get(signature);
+    const completed = result.primitive_grouped?.verification;
+    const cached = completed?.signature === signature ? { backpressure_loss: completed.backpressure_loss,
+        backpressure_loss_not_tried: undefined, start_dependence: completed.start_dependence } : verification_cache?.get(signature);
     let loss: BackpressureLossAssessment = cached
         ? { backpressure_loss: cached.backpressure_loss, backpressure_loss_not_tried: cached.backpressure_loss_not_tried }
         : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
+    let used = definition;
+    // the inserters that take out of a loop on windows: a clock that does not meet goal 1 with them is made again with
+    // them always enabled, as every clock was before they had windows (see trialWithLoopWindows)
+    if (cached === undefined && result.loop_windows !== undefined && !(held && loss.backpressure_loss?.survives !== false)) {
+        const without = definition.without_loop_windows?.();
+        try {
+            if (without !== undefined) {
+                result = without.run();
+                used = without;
+                held = holds(result);
+                loss = held ? backpressureLossVerdictOf(without.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
+                logger.log(`Clock alternative "${definition.label}": the windows out of its loop did not meet goal 1; always enabled: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
+            }
+        } catch (error) {
+            if (error instanceof SecondaryPlanningInvariantError) throw error;
+            logger.log(`Clock alternative "${definition.label}" with the inserters out of its loop always enabled could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
     // the drills into chests on their fewest windows: a clock that does not meet goal 1 with them is made again with
     // them a tick longer, then always enabled, as it was before they had windows, and the first that does is kept
-    let used = definition;
     const fallbacks = cached === undefined && !(held && loss.backpressure_loss?.survives !== false) && plannedChestDrillWindows(result)
         ? definition.chest_drill_fallbacks ?? [] : [];
     for (const [index, fallbackOf] of fallbacks.entries()) {
@@ -654,6 +787,7 @@ function runAlternative(
             if (fallback === undefined) continue;
             made = fallback.run();
         } catch (error) {
+            if (error instanceof SecondaryPlanningInvariantError) throw error;
             logger.log(`Clock alternative "${definition.label}" with its drill windows ${index === 0 ? "a tick longer" : "always enabled"} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
             continue;
         }
@@ -666,14 +800,15 @@ function runAlternative(
     }
     if (used !== definition && !plannedChestDrillWindows(result) && result.chest_drills !== undefined) {
         // left always enabled by the fallback: say so, not that the config asks for it
-        result = { ...result, chest_drills: result.chest_drills.map(drill => drill.enabled_ticks !== null ? drill
-            : { ...drill, planned: true, always_enabled_because: "the clock does not meet goal 1 with its fewest windows, nor with them a tick longer" }) };
+        const chest_drills = result.chest_drills.map((drill): ChestDrillClock => drill.enabled_ticks !== null ? drill
+            : { ...drill, planned: true, always_enabled_because: { kind: "fallback" } });
+        result = { ...result, chest_drills, always_on_reasons: { ...result.always_on_reasons, ...chestDrillReasons(chest_drills) } };
     }
     const { backpressure_loss } = loss;
-    const label = withOutputSwings(definition, result.used_terminal_swing_count);
+    const label = withOutputSwings(definition, result.used_terminal_swing_count, config.target_output.counts);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
-    const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.output_feeders);
+    const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.loop_windows);
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
     const start_dependence = cached ? cached.start_dependence : config.overrides?.check_start_dependence === true
         ? startDependenceVerdictOf(used.planned_on ?? config, result, held, logger, report)
@@ -748,7 +883,7 @@ function runAlternative(
             items_per_second: itemsPerSecondOverCopies(achieved_output_items, trial.clock_period, copies),
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null, start_dependence: trial.start_dependence };
         const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
-            inserter_window_count, ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
+            inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         return { ...clock, ranking: rankingOf(clock, config) };
     };
     const exact_trial: Trial = { result, held, loss, start_dependence, clock_period: period };
@@ -772,6 +907,7 @@ function runAlternative(
             const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
             return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_period: rounded_ticks };
         } catch (error) {
+            if (error instanceof SecondaryPlanningInvariantError) throw error;
             not_tried_on_its_period = error instanceof Error ? error.message : String(error);
             logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks could not be tried on its own period: ${not_tried_on_its_period}`);
             return null;
@@ -843,6 +979,14 @@ export function planClockAlternatives(
      */
     on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
 ): ClockAlternativesPlan {
+    return withRunMemo(() => planPrimaryAndTasks(config, options, on_tasks));
+}
+
+function planPrimaryAndTasks(
+    config: Config,
+    options: GenerateClockOptions,
+    on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
+): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
     const definition = primaryDefinition(config, options, options.on_progress_detail);
     const result = definition.run();
@@ -851,15 +995,22 @@ export function planClockAlternatives(
     warnLanesSharedByCopies(config, logger);
     warnSideLoadedDrops(config, logger);
     warnMachinePrototypes(config, logger);
-    const primary = withChestDrillFallbacks([definition], config, true,
-        fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0];
+    const primary = {
+        ...withChestDrillFallbacks([definition], config, true,
+            fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0],
+        shared_windows: () => primaryDefinition(config, { ...options, shared_windows: true }, options.on_progress_detail),
+        without_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: false }, options.on_progress_detail),
+    };
     const context: ClockAlternativeContext = {
-        swings: result.used_terminal_swing_count,
-        planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
+        ...(result.primitive_grouped === undefined ? {} : { secondary_planning: {
+            source: "primitive-primary" as const, terminal_swing_count: result.primitive_grouped.terminal_swing_count } }),
+        swings: terminalCountForAlternativePlanning(result),
+        planned_swings: result.primitive_grouped?.terminal_swing_count ?? result.swing_backoff_report?.period_limit_pruning?.requested_terminal_swing_count
+            ?? result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,
-        lean_period_items: config.overrides?.lcm === undefined
-            ? leanPeriodItems(result.serializable_transfer_plan, config.overrides?.ignored_lcm_ingredients) : [],
+        ...((result.primitive_grouped !== undefined || result.swing_backoff_report?.primitive_grouped_attempt !== undefined) && { primitive_tried: true }),
+        ...(result.result_windows !== undefined && { result_windows: true }),
     };
     const tasks = alternativeDefinitions(config, context, {})
         .map(definition => ({
@@ -873,14 +1024,16 @@ export function planClockAlternatives(
 
 /**
  * The label of an alternative with the output swings per cycle it ended up with, e.g. "Batched swings: 6 output swings
- * per cycle". The alternatives named after a swing count already say it.
+ * per cycle", or, for a target that counts an item destroyed, the hands of it brought in a cycle ("Even hands: 5 hands
+ * brought in per cycle"). The alternatives named after a swing count already say it.
  */
-function withOutputSwings(definition: { id: string; label: string }, swings: number): string {
+function withOutputSwings(definition: { id: string; label: string }, swings: number, counts?: TargetCounts): string {
     if (definition.id.startsWith("swings-")) {
         return definition.label;
     }
     const count = Number.isInteger(swings) ? `${swings}` : swings.toFixed(2).replace(/0+$/, "");
-    return `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
+    return counts === "destroyed" ? `${definition.label}: ${count} hand${swings === 1 ? "" : "s"} brought in per cycle`
+        : `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
 }
 
 /** Generates one alternative listed by planClockAlternatives; progress goes to options.on_progress_detail */
@@ -891,6 +1044,16 @@ export function runClockAlternativeTask(
     options: GenerateClockOptions = {},
     /** Signatures of clocks other runs assess, as the primary alternative's (see planClockAlternatives) */
     assessed_signatures: readonly string[] = [],
+): ClockAlternativeRun | null {
+    return withRunMemo(() => runTask(config, context, task_id, options, assessed_signatures));
+}
+
+function runTask(
+    config: Config,
+    context: ClockAlternativeContext,
+    task_id: string,
+    options: GenerateClockOptions,
+    assessed_signatures: readonly string[],
 ): ClockAlternativeRun | null {
     const logger = options.logger ?? defaultLogger;
     const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
@@ -936,6 +1099,10 @@ export function generateClockAlternatives(
     config: Config,
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
+    return withRunMemo(() => generateAllAlternatives(config, options));
+}
+
+function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
     const logger = options.logger ?? defaultLogger;
     let current_step = BATCHED_SWINGS_LABEL;
     let completed = 0;

@@ -12,10 +12,12 @@ import { InserterDropMode, InserterPickupMode } from "../../control-logic/insert
  */
 const PLAIN_FIELDS: Record<string, string[]> = {
     // the running totals are left out of its key
-    MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "craftsStarted", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick", "windowOpeningTakeDecider"],
+    MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "craftsStarted", "resultsPlaced", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick", "windowOpeningTakeDecider"],
     // `tick` and the counts of items are left out of its key
     inserter: ["status", "tick", "held_item", "items_picked_up", "items_dropped", "waits_for_sink", "enabled"],
     drill: ["status"],
+    // the container a machine places its results into (null where it has none), the same in every tick
+    MachineWorkingMode: ["result_target"],
     MachineDropLogic: ["current_tick"],
     ChestDropLogic: ["current_tick"],
     // Belt position is in the source state; pickup age no longer drives any decision.
@@ -26,6 +28,8 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     ChestPickupLogic: ["current_tick"],
     IdleModeTransitionEvaluator: ["saw_sink_blocked", "window_opens"],
     InserterSwingModeTransitionEvaluator: ["entered_tick", "from"],
+    // whether it swings a part hand at its source (a machine that places its results itself), the same in every tick
+    PickupModeTransitionEvaluator: ["swings_part_hands"],
 };
 
 function plainFields(value: object, skip: string[] = []): string[] {

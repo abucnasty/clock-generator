@@ -2,13 +2,13 @@ import { FactorioDataService } from "../data/factorio-data-service";
 import { Option } from "../data-types/option";
 import { ImportInput, ImportedMachine, ImportPipeline, ImportStep } from "./import-pipeline";
 import { MachineType } from "../entities/machine/machine-type";
-import { machineRuleOf } from "./machine-prototype";
+import { machinePlacesResults, machineRuleOf } from "./machine-prototype";
 
 /**
  * The newest version of the sidecar mod. The mod has a version of its own (see "Versioning" in the README) and
  * this is bumped with it, when the mod changes: a paste from an older mod is told to update to this version.
  */
-export const LATEST_SIDECAR_VERSION = "0.14.0";
+export const LATEST_SIDECAR_VERSION = "0.15.0";
 
 /** The first version of the sidecar mod that exports the energy consumption of biochambers. */
 export const SIDECAR_VERSION_WITH_ENERGY_CONSUMPTION = "0.6.0";
@@ -116,8 +116,15 @@ export const DRILL_PRODUCTIVITY_FEATURE: SidecarFeature = {
     missing: () => "The mining drills' productivity modules were not exported, so each drill's productivity is the "
         + "mining productivity research only. Check each drill's productivity by hand.",
 };
+/** Before 0.15.0 the container a recycler puts its results into was not exported: it is picked by hand */
+export const RESULT_TARGET_FEATURE: SidecarFeature = {
+    name: "result-target", since: "0.15.0",
+    appliesTo: input => FactorioDataService.isInitialized() && input.machines.some(machine => machine.prototype !== undefined
+        && machinePlacesResults({ prototype: machine.prototype })),
+    missing: () => "The container a recycler puts its results into was not exported, so pick it in Results into on each recycler.",
+};
 export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE, INFINITY_CHEST_FEATURE, MOVING_PICKUP_FEATURE,
-    MACHINE_PROTOTYPE_FEATURE, DRILL_PRODUCTIVITY_FEATURE];
+    MACHINE_PROTOTYPE_FEATURE, DRILL_PRODUCTIVITY_FEATURE, RESULT_TARGET_FEATURE];
 
 /** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
 const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";

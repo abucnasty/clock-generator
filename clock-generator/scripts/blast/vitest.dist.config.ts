@@ -36,6 +36,9 @@ function engineFromBuild(): Plugin {
         },
     };
 }
+// blast.sh's function recorder (a setup file that starts V8 coverage before the engine loads), installed beside this config
+const recorder = path.join(__dirname, 'blast.recorder.ts');
+const recorders = process.env.BLAST_FUNCTIONS !== '0' && fs.existsSync(recorder) ? [recorder] : [];
 const include = process.env.SCRATCH_INCLUDE;
 if (!include) throw new Error('SCRATCH_INCLUDE names the scratch test to run, e.g. tests/game/builds/.scratch/blast.blastrun.ts');
 export default defineConfig({
@@ -44,7 +47,7 @@ export default defineConfig({
     test: {
         include: [include],
         exclude: [...configDefaults.exclude, 'dist/*'],
-        setupFiles: ['src/data/factorio-data-file.ts', ...(process.env.SCRATCH_SETUP ?? '').split(',').filter(Boolean)],
+        setupFiles: [...recorders, 'src/data/factorio-data-file.ts', ...(process.env.SCRATCH_SETUP ?? '').split(',').filter(Boolean)],
         server: { deps: { external: [new RegExp(`^${dist.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/`)] } },
         testTimeout: 24 * 3600_000,
         silent: process.env.SCRATCH_SILENT !== '0',

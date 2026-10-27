@@ -21,9 +21,18 @@ const COPY_CURRENT_BEST_LABEL = 'Copy current best';
 /** Tooltip of the Copy buttons while a generation is still making clocks */
 export const COPY_CURRENT_BEST_TOOLTIP = 'More clocks are still being made. This copies the best one so far.';
 
-/** The causes a clock does not recover from, in a sentence part: "coal stops arriving, or after iron-plate is not taken away" */
+/** The causes a clock does not recover from, in a sentence part: "coal stops arriving, or after iron plate is not taken away" */
 export function lossesOf(alternative: Pick<ClockAlternativeView, 'assessment'>): string {
     return alternative.assessment.backpressure_loss?.broken_by.join(', or after ') ?? '';
+}
+
+/**
+ * The sentence for the losses that were not tried because the clock already failed one, to follow another sentence
+ * (" Not tried, since one failure is enough: coal stops arriving, iron plate is not taken away."); empty when all were tried
+ */
+export function notTriedOf(alternative: Pick<ClockAlternativeView, 'assessment'>): string {
+    const notTried = alternative.assessment.backpressure_loss?.not_tried ?? [];
+    return notTried.length === 0 ? '' : ` Not tried, since one failure is enough: ${notTried.join(', ')}.`;
 }
 
 /**
@@ -54,7 +63,7 @@ function clockWarningOf(
     if (alternative.assessment.backpressure_loss?.survives === false || alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
         warnings.push(losses
-            ? `This clock does not recover: after ${losses} for a while, the build does not get back to its rate by itself in the simulator.`
+            ? `This clock does not recover: after ${losses} for a while, the build does not get back to its rate by itself in the simulator.${notTriedOf(alternative)}`
             : alternative.assessment.backpressure_loss === null
                 ? 'No usable recovery result is available for this clock.'
                 : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');

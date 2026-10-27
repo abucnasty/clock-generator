@@ -3,7 +3,7 @@ import { generateClockForConfig, generateClockAlternatives, validateConfig, type
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
-import { withSearches } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, withSearches } from "./generate-blueprint-test-helpers";
 
 /** The transfers recorded for an inserter, as [start, end] tick ranges in the order they were recorded */
 const transferRanges = (result: BlueprintGenerationResult, inserter_id: number): [number, number][] => result.transfer_history
@@ -35,6 +35,10 @@ describe("generateClockForConfig", () => {
             const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
             inserterId = keys.find(k => k.id === "inserter:1")!;
             drillId = keys.find(k => k.id === "drill:1")!;
+        });
+
+        it("names why every inserter and drill the clock leaves always on is", () => {
+            expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
         });
 
         it("generates a blueprint, a crafting cycle plan of 144 ticks for stone bricks and a simulation duration", () => {
@@ -97,6 +101,10 @@ describe("generateClockForConfig", () => {
             beforeAll(() => {
                 // batched swings is stable, so observed windows are only made when they are asked for
                 ({ alternatives } = generateClockAlternatives(withSearches(config)));
+            });
+
+            it("names why every inserter and drill a clock leaves always on is", () => {
+                expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
             });
 
             it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
@@ -171,6 +179,7 @@ describe("generateClockForConfig", () => {
 
         it("records the input inserter transferring both required ingredient types", () => {
             const result = generateClockForConfig(config);
+            expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
             const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
             const inserterTransfers = result.transfer_history.getOrThrow(keys.find(k => k.id === EntityId.forInserter(1).id)!);
             expect(inserterTransfers.length).toBeGreaterThan(0);
@@ -185,6 +194,7 @@ describe("generateClockForConfig", () => {
 
         it("is stable, and clocks the inserters filling the belt for what is taken off it", () => {
             const result = generateClockForConfig(config);
+            expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
             expect(result.stability_check.holds).toBe(true);
             expect(moved(result, 1) + moved(result, 2)).toBe(moved(result, 3));
         });
@@ -201,6 +211,10 @@ describe("generateClockForConfig", () => {
 
         beforeAll(() => {
             ({ alternatives } = generateClockAlternatives(config));
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
         });
 
         it.each([
@@ -234,6 +248,7 @@ describe("generateClockForConfig", () => {
             const validation = validateConfig(config);
             const generated = generateClockForConfig(config);
 
+            expect(alwaysOnReasonProblems(config, generated, "planned")).toEqual([]);
             expect(validation.transfer_plan).toEqual(generated.serializable_transfer_plan);
             expect(validation).toMatchObject({ used_lcm: 2, output_swings_per_cycle: 1, cycle_ticks: 144, period_ticks: 288 });
         });

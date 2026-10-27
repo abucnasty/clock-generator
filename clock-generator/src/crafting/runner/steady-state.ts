@@ -22,7 +22,7 @@ function supplyKey(state: EntityState): string {
 /** What drives the entity besides its inventory; a chest has nothing else, a belt only the stacks on its lanes */
 function ownStateKey(state: EntityState, tick: number): string {
     if (EntityState.isMachine(state)) {
-        return MachineState.stateKey(state, tick);
+        return MachineState.stateKey(state);
     }
     if (EntityState.isInserter(state)) {
         return InserterState.stateKey(state, tick);

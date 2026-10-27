@@ -1,7 +1,8 @@
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { EntityId } from "../entities";
-import { generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult } from "./generate-blueprint";
+import { Entity, EntityId } from "../entities";
+import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { generateClockAlternatives, type BlueprintGenerationResult, type ClockAlternative, type ClockAlternativesResult } from "./generate-blueprint";
 
 /** A logger for the generations whose log the test does not read */
 export const quiet = { log() { }, warn() { }, error() { }, debug() { } };
@@ -54,3 +55,21 @@ export const rocketFuelSample = async (path: string): Promise<RocketFuelSample> 
         bioflux_inserter_ids: ids(it => it.source.type === "belt" && it.source.id === 1 && it.sink.id !== 2),
     };
 };
+
+/**
+ * Where the clock's inserters and drills are always on and the result says nothing of why, or says why for one that has
+ * windows (or a clock of its own): "swings-2: inserter:2", "planned: drill:1 has windows". Empty when every one that is on
+ * all the time names its reason.
+ */
+export function alwaysOnReasonProblems(config: Config, result: BlueprintGenerationResult, label: string): string[] {
+    const ids = createEntityRegistryFromConfig(config).getAll().filter(it => Entity.isInserter(it) || Entity.isDrill(it)).map(it => it.entity_id.id);
+    const on = (id: string) => result.clock_windows[id] === undefined && result.unplanned_inserter_clocks?.[id]?.own_clock !== true;
+    return [
+        ...ids.filter(id => on(id) && result.always_on_reasons?.[id] === undefined).map(id => `${label}: ${id} is always on with no reason`),
+        ...Object.keys(result.always_on_reasons ?? {}).filter(id => !ids.includes(id) || !on(id)).map(id => `${label}: ${id} has a reason and is not always on`),
+    ];
+}
+
+/** The problems of every alternative of a generation (see alwaysOnReasonProblems) */
+export const alwaysOnReasonProblemsOf = (config: Config, generated: Pick<ClockAlternativesResult, "alternatives">): string[] =>
+    generated.alternatives.flatMap(alternative => alwaysOnReasonProblems(config, alternative.result, alternative.id));

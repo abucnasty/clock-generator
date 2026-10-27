@@ -15,12 +15,12 @@ export function RouteBadge({ option }: { option: EntitySelectorOption }) {
     </Box>;
 }
 
-export function ContentIcons({ option, size = 18 }: { option: EntitySelectorOption; size?: number }) {
+export function ContentIcons({ option, size = 18, maxIcons = 2 }: { option: EntitySelectorOption; size?: number; maxIcons?: number }) {
     const icons = option.ingredientIcons ?? [];
     if (!icons.length) return null;
     return <Box component="span" aria-hidden sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
-        {icons.slice(0, 2).map((item, i) => <FactorioIcon key={`${item}-${i}`} name={item} size={size} alt="" />)}
-        {icons.length > 2 && <Typography component="span" variant="caption">+{icons.length - 2}</Typography>}
+        {icons.slice(0, maxIcons).map((item, i) => <FactorioIcon key={`${item}-${i}`} name={item} size={size} alt="" />)}
+        {icons.length > maxIcons && <Typography component="span" variant="caption">+{icons.length - maxIcons}</Typography>}
     </Box>;
 }
 

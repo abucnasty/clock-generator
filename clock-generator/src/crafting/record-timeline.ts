@@ -15,6 +15,12 @@ export interface RecordTimelineRequest {
     terminal_swing_count: number;
     windows: SerializableClockWindows;
     inserter_clocks?: Record<string, SerializableInserterClock>;
+    /**
+     * Periods the clock runs from the cold start before the recorded one (mode "clock"): the clock's first judged tick
+     * in periods, `as_built.first_judged_tick`, so that the recording shows a settled period. Absent: the first period
+     * after the warm-up.
+     */
+    settle_periods?: number;
 }
 
 /** Replay the saved build, never the form being edited. This is independent of generation and its assessment. */
@@ -24,7 +30,7 @@ export function recordSimulationTimeline(request: RecordTimelineRequest): Timeli
     }
     const config = { ...request.config, overrides: { ...request.config.overrides, terminal_swing_count: request.terminal_swing_count, derive_clock_windows: false } };
     const logger: Logger = { log() {}, warn() {}, error() {}, debug() {} };
-    const options = { logger, timeline_recording: { period_ticks: request.period_ticks }, factorio_states: false };
+    const options = { logger, timeline_recording: { period_ticks: request.period_ticks, ...(request.mode === "clock" && request.settle_periods !== undefined && request.settle_periods > 0 && { settle_periods: Math.floor(request.settle_periods) }) }, factorio_states: false };
     const windows = new Map(Object.entries(request.windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
     const fuel_clocks = new Map<string, InserterClock>(Object.entries(request.inserter_clocks ?? {}).map(([id, clock]) => [id, {
         ...clock, inserter_id: EntityId.forInserter(Number(id.split(":")[1])), window: OpenRange.from(clock.window.start, clock.window.end),

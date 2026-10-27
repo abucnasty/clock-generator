@@ -5,11 +5,12 @@ export { FuelConsumptionView, ClockOnlyRun, SimulationStabilityCheck, SwingAttem
 export { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
 export { ConfigValidation, validateConfig } from "./plan/validate-config";
 export { SerializableClockWindows, ClockBelt, clockBeltLabel } from "./clock";
-export { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict, clockVerdictOf, OUTPUT_FEEDER_CHECK_TICKS, simulateClockOnly, clockFromWindows, backpressureLossOf } from "./trial";
+export { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict, clockVerdictOf, LOOP_WINDOW_CHECK_TICKS, simulateClockOnly, clockFromWindows, backpressureLossOf } from "./trial";
 export { observedWindowsClock } from "./candidates/observed-windows";
 export { SearchReport, SearchCandidate, SearchRangeEdge } from "./candidates/search";
 export { hasPlannedWindowsNotHands } from "./candidates/full-hand";
-export { feedersOfOutputMachines, anyFeederCarriesFuel } from "./candidates/output-feeders";
+export { anyFeederCarriesFuel, drawWindowTicks } from "./candidates/loop-windows";
 export { ClockRanking, rankingOf, rankingWindowCount, combineClockAlternativeRuns, selectableAsStable, searchesAreNeeded } from "./rank";
 export { ClockAlternative, ClockAlternativesResult, ClockAlternativeRun, ClockAlternativeContext, ClockAlternativeTask, ClockAlternativesPlan, planClockAlternatives, runClockAlternativeTask, generateClockAlternatives } from "./alternatives";
 export { blueprintFileFor } from "./blueprint-export";
+export type { AlwaysOnReason, AlwaysOnReasons } from "./always-on-reasons";

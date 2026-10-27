@@ -11,6 +11,7 @@ import { buildWakeWindowRows } from '../utils/wakeWindows';
 import { BlueprintOutput } from './BlueprintOutput';
 import { InstallSteps, WiringList } from './InstallSteps';
 import { TabBody } from './TabBody';
+import { HANDS_TEXT } from '../utils/targetCounts';
 
 /** On-demand help shared by the toolbar and fullscreen workspace. Closing keeps the last reference tab. */
 export function InstallClockDialog({ open, onClose, selected, blueprintString, staleFor, copyLabel, copied, onCopy }: {
@@ -42,7 +43,7 @@ export function InstallClockDialog({ open, onClose, selected, blueprintString, s
     return <Dialog ref={setModalRoot} open={open} onClose={onClose} fullWidth maxWidth="md" aria-labelledby={`${id}-title`}>
         <DialogTitle id={`${id}-title`}>Install in Factorio</DialogTitle>
         <DialogContent dividers>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.terminalSwingCount} {selected.terminalSwingCount === 1 ? 'swing' : 'swings'} · {wakeUpsText(selected).value.replace(' a minute', ' wake-ups/min')}{selected.beltLabel && ` · ${beltCellText(selected.beltLabel)}`}</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.counts === 'destroyed' ? HANDS_TEXT.clock(selected.terminalSwingCount) : `${selected.terminalSwingCount} ${selected.terminalSwingCount === 1 ? 'swing' : 'swings'}`} · {wakeUpsText(selected).value.replace(' a minute', ' wake-ups/min')}{selected.beltLabel && ` · ${beltCellText(selected.beltLabel)}`}</Typography>
             <Typography variant="caption" color="text.secondary" component="p">{clockTechnicalName(selected)} · {REQUIRES_FACTORIO}</Typography>
             {warning && <Alert severity="warning" sx={{ mt: 1 }}>{warning}</Alert>}
             <Tabs value={tab} onChange={(_, value: 'guide' | 'wiring') => setTab(value)} aria-label="Installation help" sx={{ mt: 1, borderBottom: 1, borderColor: 'divider' }}>

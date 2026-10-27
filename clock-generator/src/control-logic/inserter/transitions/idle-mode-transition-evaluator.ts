@@ -4,8 +4,6 @@ import { InserterMode } from "../modes/inserter-mode";
 import { InserterPickupMode } from "../modes/pickup/pickup-mode";
 import { EnableControl } from "../../enable-control";
 import { InserterDisabledMode } from "../modes/disabled-mode";
-import { TickProvider } from "../../current-tick-provider";
-import { handSizeFor } from "../../../entities";
 import { actsInTheTickTheBlockIsLifted } from "../waiting-inserter";
 
 export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<InserterMode> {
@@ -16,7 +14,6 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         sink_state: EntityState,
         pickup_mode: InserterPickupMode,
         disabled_mode: InserterDisabledMode,
-        tick_provider: TickProvider,
         enable_control: EnableControl,
     }): IdleModeTransitionEvaluator {
         return new IdleModeTransitionEvaluator(
@@ -25,7 +22,6 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
             args.sink_state,
             args.pickup_mode,
             args.disabled_mode,
-            args.tick_provider,
             args.enable_control,
         );
     }
@@ -36,7 +32,6 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         private readonly sink_state: EntityState,
         private readonly pickup_mode: InserterPickupMode,
         private readonly disabled_mode: InserterDisabledMode,
-        private readonly tick_provider: TickProvider,
         private readonly enable_control: EnableControl,
     ) {}
 
@@ -52,11 +47,11 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
 
     /**
      * What the per-tick questions use, set up on first ask (the states never change identity): per filtered item, the
-     * blocked-ask on a machine sink and, for a machine source, the live stock with the inserter's hand size.
+     * blocked-ask on a machine sink and, for a machine source, the live stock.
      */
     private readonly hot: {
         sink_blocked_asks: (() => boolean)[] | null;
-        pickup_views: Map<string, { item_name: string; stock: LiveQuantity; hand_size: number }> | null;
+        pickup_views: Map<string, { item_name: string; stock: LiveQuantity }> | null;
     } = { sink_blocked_asks: null, pickup_views: null };
 
     public stateKey(): string {
@@ -197,24 +192,19 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         const pickup_amount_condition = 1;
 
         const views = this.hot.pickup_views ??= new Map(Array.from(state.inserter.filtered_items, item_name =>
-            [item_name, { item_name, stock: new LiveQuantity(source.inventoryState, item_name), hand_size: handSizeFor(state.inserter, item_name) }]));
+            [item_name, { item_name, stock: new LiveQuantity(source.inventoryState, item_name) }]));
         const held = state.held_item;
-        let items: Iterable<{ item_name: string; stock: LiveQuantity; hand_size: number }> = views.values();
+        let items: Iterable<{ item_name: string; stock: LiveQuantity }> = views.values();
 
         if (held !== null) {
             const view = views.get(held.item_name)
-                ?? { item_name: held.item_name, stock: new LiveQuantity(source.inventoryState, held.item_name), hand_size: handSizeFor(state.inserter, held.item_name) };
+                ?? { item_name: held.item_name, stock: new LiveQuantity(source.inventoryState, held.item_name) };
             items = [view];
         }
 
-        const inserter_id = state.inserter.entity_id.id;
-        const current_tick = this.tick_provider.getCurrentTick();
         for (const view of items) {
             const quantity = view.stock.get();
-            // asked even when there is nothing to take, so the inserters waiting on a machine know of each other
-            const room_in_hand = view.hand_size - (held?.quantity ?? 0);
-            const its_turn = MachineState.takesTurnForOutput(source, view.item_name, inserter_id, current_tick, room_in_hand);
-            if (quantity >= pickup_amount_condition && its_turn) {
+            if (quantity >= pickup_amount_condition) {
                 return ModeTransition.transition(this.pickup_mode, `machine has ${quantity} of ${view.item_name} to pickup`);
             }
         }

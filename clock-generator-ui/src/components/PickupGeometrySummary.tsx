@@ -26,7 +26,7 @@ export function PickupGeometrySummary({ build, onEdit, busy = false, savedRun = 
                 : geometry.unverified.length ? `${geometry.unverified.length} belt ${geometry.unverified.length === 1 ? 'pickup needs' : 'pickups need'} a supported capture before generation. Recorded unsupported or unclassified pickups are retained when this build is saved.`
                 : geometry.backedUp ? 'Backed-up input belts · Saturated supply with captured pickup rules.'
                 : savedRun ? `Moving input belts · Pickup type known for ${geometry.known === geometry.total ? `all ${geometry.total}` : `${geometry.known} of ${geometry.total}`} belt-fed ${geometry.total === 1 ? 'inserter' : 'inserters'}.`
-                    : 'Moving input belts · Straight belt is the default. Choose the underground endpoint and pickup approach.'}
+                    : 'Moving input belts · Straight belt is the default. Choose the belt shape and pickup approach.'}
         </Typography>
         {geometry.unsupported.length > 0 && <Typography variant="body2" color="text.secondary">
             Not supported: Inserter {detailsOf(geometry.unsupported).join(', ')}. {OUT_OF_SCOPE_PICKUP_SCOPE}

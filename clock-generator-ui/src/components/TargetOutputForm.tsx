@@ -9,17 +9,23 @@ import { itemsPerSecondHelper } from '../utils/numberText';
 import { ELEMENT_IDS } from '../utils/firstProblem';
 import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
 import { targetRateLineOf, type MachinesMax } from '../utils/targetRateLimit';
+import { COUNTS_CHOICES, COUNTS_TEXT, type TargetCounts } from '../utils/targetCounts';
 
 interface TargetOutputFormProps {
     recipe: string;
     itemsPerSecond: number;
     /** Number of duplicate setups being modeled; may be fractional, such as 5.5, for a partial block */
     copies: number;
-    /** The most the machines making the recipe can make, for the problem line under Items per Second; null while unknown */
+    /** What the rate counts: the item made and taken out, or the item brought in and destroyed */
+    counts: TargetCounts;
+    /** The most the machines making (or destroying) the recipe's item can make, for the problem line under Items per Second; null while unknown */
     machinesMax: MachinesMax | null;
     recipeNames: string[];
+    /** The items the build's machines take in, which a target that counts an item destroyed is chosen from */
+    destroyedItemNames?: string[];
     onRecipeChange: (recipe: string) => void;
     onItemsPerSecondChange: (value: number) => void;
+    onCountsChange: (counts: TargetCounts) => void;
     onCopiesChange: (value: number) => void;
     /** Where the next copy stands from this one, in tiles; undefined while not given */
     copyOffset?: CopyOffset;
@@ -34,10 +40,13 @@ export function TargetOutputForm({
     recipe,
     itemsPerSecond,
     copies,
+    counts,
     machinesMax,
     recipeNames,
+    destroyedItemNames = [],
     onRecipeChange,
     onItemsPerSecondChange,
+    onCountsChange,
     onCopiesChange,
     copyOffset,
     showCopyOffset = false,
@@ -50,17 +59,18 @@ export function TargetOutputForm({
         <Paper component="section" variant="outlined" data-build-anchor="target" aria-labelledby={TARGET_OUTPUT_HEADING_ID}
             sx={{ mb: 2, p: 1.5, containerType: 'inline-size', containerName: 'target-output' }}>
             <Box sx={{ display: 'grid', gap: 1.5, alignItems: 'start', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                '@container target-output (min-width: 700px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 160px 110px', alignItems: 'center' } }}>
+                '@container target-output (min-width: 820px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 160px 200px 110px', alignItems: 'center' } }}>
                 <Typography component="h2" variant="subtitle1" id={TARGET_OUTPUT_HEADING_ID} tabIndex={-1}
-                    sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container target-output (min-width: 700px)': { gridColumn: 'auto' } }}>Target Output</Typography>
+                    sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container target-output (min-width: 820px)': { gridColumn: 'auto' } }}>Target Output</Typography>
                 <ItemSelector
-                    kind="recipe"
+                    // an item destroyed is no recipe's product (scrap is mined): it is chosen from what the machines take in
+                    kind={counts === 'destroyed' ? 'item' : 'recipe'}
                     inputId={ELEMENT_IDS.targetRecipe}
-                    sx={{ minWidth: 0, gridColumn: '1 / -1', '@container target-output (min-width: 700px)': { gridColumn: 'auto' } }}
+                    sx={{ minWidth: 0, gridColumn: '1 / -1', '@container target-output (min-width: 820px)': { gridColumn: 'auto' } }}
                     minWidth={0}
                     dropdownMinWidth={300}
                     size="small"
-                    options={recipeNames}
+                    options={counts === 'destroyed' ? destroyedItemNames : recipeNames}
                     value={recipe || null}
                     onChange={(newValue) => onRecipeChange(newValue || '')}
                     label="Recipe"
@@ -82,8 +92,18 @@ export function TargetOutputForm({
                     required
                     error={itemsPerSecond <= 0}
                     helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : undefined}
-                    problem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax })}
+                    problem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax, counts })}
                 />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                    <TextField select size="small" fullWidth label={COUNTS_TEXT.label} value={counts}
+                        onChange={(event) => onCountsChange(event.target.value as TargetCounts)} sx={{ minWidth: 0 }}>
+                        {COUNTS_CHOICES.map(choice => <MenuItem key={choice.value} value={choice.value}>{choice.label}</MenuItem>)}
+                    </TextField>
+                    <HelpButton label={COUNTS_TEXT.helpLabel}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>{COUNTS_TEXT.helpMade}</Typography>
+                        <Typography variant="body2">{COUNTS_TEXT.helpDestroyed}</Typography>
+                    </HelpButton>
+                </Box>
                 <NumberField
                     id={ELEMENT_IDS.targetCopies}
                     label="Copies"

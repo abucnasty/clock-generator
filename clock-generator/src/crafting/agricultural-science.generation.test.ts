@@ -2,7 +2,9 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockAlternatives, simulateClockOnly, validateConfig, type ClockAlternative, type SerializableClockWindows } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { alwaysOnReasonProblemsOf } from "./generate-blueprint-test-helpers";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
+import { expectPinnedScaffoldClock } from "../../tests/game/builds/scaffold-recordings-clock-pins";
 
 describe("generateClockForConfig", () => {
 
@@ -16,8 +18,9 @@ describe("generateClockForConfig", () => {
     // for 144000 ticks after 4800 to settle: with 1 output swing per cycle one module made 400 packs in each of 300
     // periods, and so it did with 5 output swings per cycle; with 2 it came up a hand short in 3 of 150 periods and
     // with 4 in 12 of 75 (before the idle-window rules of 2026-10-09; recorded again with them, 2 made the same in each of 75 periods). The simulator has the 5-swing clock hold its
-    // rate too. It was the one selected until 2026-10-10: in the simulator it does not get back from a loss of nutrients
-    // (GOALS.md, "Backpressure Loss"), which the 2-swing and the 1-swing clock do, and the 2-swing clock is selected.
+    // rate too. It was the one selected until 2026-10-10, and is again since a trial short only late in its 40 periods runs
+    // on: in the simulator it is back from the second period after a loss of nutrients and one to three hands short once,
+    // 33 to 37 periods after it, which the game shows too (2026-10-24); from 2026-10-10 the 2-swing clock was selected.
     describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         let alternatives: ClockAlternative[];
@@ -33,6 +36,10 @@ describe("generateClockForConfig", () => {
             windows = one_swing.result.clock_windows;
             five_swings = alternatives.find(a => a.id === "planned-belt-slack")!;
             five_swing_windows = five_swings.result.clock_windows;
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
         });
 
         // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and
@@ -57,38 +64,52 @@ describe("generateClockForConfig", () => {
 
         // From 2026-10-10 the build did not get back to its rate under the 5-swing clock once the nutrients had run
         // out, and the 2-swing clock was selected. Since the rules of issue 152 (GOALS.md, "When a waiting inserter
-        // acts") the 5-swing clock leaves the inserters that bring eggs to the science biochamber always enabled, and the
-        // build gets back from every loss under it; recorded in the game tests on 2026-10-14, 400 in every period.
-        // KNOWN REGRESSION under the staged start: nutrient-loss recovery dips; the recovery rule is being reviewed (see docs/stability.md)
-        it.fails("calls the 5-swing clock stable: the build gets back to its rate under it from every loss", () => {
+        // acts") the 5-swing clock leaves the inserters that bring eggs to the science biochamber always enabled; recorded
+        // in the game tests on 2026-10-14, 400 in every period. Its nutrients trials dip a hand late in their 40 periods,
+        // and run on until 40 periods at its rate follow (docs/stability.md).
+        it("calls the 5-swing clock stable: the build gets back to its rate under it from every loss", () => {
             expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
             expect(five_swings.verdict).toBe("stable");
             expect(five_swings.ranking.meets_target_rate).toBe(true);
         });
 
-        // Fractional swings can be planned here since a hand is counted in while the stock before it is under the
-        // insertion limit (2026-10-14): it gets back from every loss too, at the same wake-ups as batched swings, which
-        // comes first
-        // KNOWN REGRESSION under the staged start: nutrient-loss recovery dips; the recovery rule is being reviewed (see docs/stability.md)
-        it.fails("selects the 5-swing clock, the one with the fewest wake-ups of those that get back from every loss", () => {
+        // Until 0.23.0 the 1- and 2-swing clocks were stable too, and the 5-swing clock had the fewest wake-ups of the three.
+        // The inserters that take from one egg biochamber are served in one fixed order now (docs/simulator.md, "Two
+        // inserters that take from one machine"), and a clock is checked under each order of them: the 1-swing clock no
+        // longer gets back after the bioflux stops (no recovery, below) and the 2-swing clock makes nothing in the as-built
+        // check (0 of 800), so the 5-swing clock is the only one that gets back from every loss (blast of 2026-10-26).
+        // The 2-swing clock's 0 is the simulator's, not the game's: on the scaffold the game moved 800 in every period from
+        // the 11th to the 37th (2026-10-26), where the takers that both held part of a hand were not served in one order
+        // (docs/simulator.md, "Two inserters that take from one machine", open).
+        it("selects the 5-swing clock, the only one that gets back from every loss", () => {
             const stable = alternatives.filter(a => a.verdict === "stable");
-            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle", "Batched swings: 5 output swings per cycle", "Fractional swings: 5 output swings per cycle"]);
+            expect(stable.map(a => a.label).sort()).toEqual(["Batched swings: 5 output swings per cycle"]);
             expect(alternatives[selected_index].label).toBe("Batched swings: 5 output swings per cycle");
-            for (const other of stable.filter(a => a !== five_swings)) {
-                if (other.id === "fractional") {
-                    expect(five_swings.assessment.wake_ups_per_minute).toBeCloseTo(other.assessment.wake_ups_per_minute!, 6);
-                } else {
-                    expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(other.assessment.wake_ups_per_minute!);
-                }
-            }
         });
 
-        it("also holds it with one output swing per cycle", () => {
-            expect(one_swing.verdict).toBe("stable");
+        // The values the scaffold recordings expect of this build (no dip and no open issue after its staged start) were seen on
+        // one clock. The build is generated here, from the same config, and not again for that test
+        // (scaffold-recordings-clock.generation.test.ts).
+        it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
+            expectPinnedScaffoldClock("agricultural science", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: false }, alternatives[selected_index]);
+        });
+
+        // Recorded in the game with 400 in every period; in the simulator the 1-swing clock holds the rate under both orders of
+        // the egg takers, but with the takers served in one fixed order it does not get back after the bioflux stops, so it
+        // is no longer stable.
+        it("still holds the rate with one output swing per cycle, but no longer gets back after the bioflux stops", () => {
+            expect(one_swing.verdict).toBe("no recovery");
+            expect(one_swing.assessment.holds).toBe(true);
             expect(one_swing.assessment.items_per_second).toBeCloseTo(250, 6);
+            expect(one_swing.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["bioflux stops arriving"] });
         });
 
-        it("leaves the inserters that take eggs from the egg biochambers into the science biochamber always enabled on the 1-swing clock, and clocks the rest", () => {
+        // The windows of 9 and 10 on the 1-swing clock (all but 72 of the 480 ticks, 160 eggs a period, 27 under the science
+        // biochamber's insertion limit) are kept only when the clock passes the as-built check with them as it did without.
+        // It no longer does: with them the nutrients loss runs dry under the fixed taker order. That verdict rests on the
+        // order of takers that both hold part of a hand, which the game serves in a varying order the simulator does not
+        // model yet (0.24.0), so they stay always on.
+        it("leaves the inserters that take eggs into the science biochamber always on, as well as those of the loop, on the 1-swing clock", () => {
             const clocked = Object.keys(windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
             expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
         });
@@ -99,14 +120,16 @@ describe("generateClockForConfig", () => {
             expect(Object.keys(two_swings.result.clock_windows).sort()).not.toContain("inserter:10");
         });
 
-        // Until the rules of issue 152 the 5-swing clock gave them windows of their own (0 to 67 of every 96 ticks), which
-        // the as-built check passed. Since a hand from a machine waits while the machine it puts into is at its block,
-        // the generator keeps no windows for them on this sample: they stay always enabled. Variants with other hands
-        // still get them (agricultural-science-feeders.generation.test.ts).
-        it("leaves the inserters that take eggs into the science biochamber always enabled on the 5-swing clock too", () => {
+        // The inserters that take out of the egg loop get windows where the science biochamber was under its output block
+        // in the clock's long run (agricultural-science-loop-windows.generation.test.ts); those of the loop stay always on.
+        // The clock holds from every start and gets back from every loss with them, at 1,258 wake-ups a minute against 2,674
+        // with them always enabled.
+        it("clocks the inserters that take eggs into the science biochamber on the 5-swing clock, and leaves those of the loop always on", () => {
             const clocked = Object.keys(five_swing_windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
+            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
+            expect(five_swings.result.loop_windows?.inserter_ids.slice().sort()).toEqual(["inserter:10", "inserter:9"]);
             expect(five_swing_windows["inserter:12"].slice(0, 2)).toEqual([{ start: 0, end: 36 }, { start: 96, end: 132 }]);
+            expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(1300);
         });
 
         it("gives the inserters bringing nutrients to the egg biochambers windows of two hands, 44 hands for the 35 planned a period", () => {

@@ -12,6 +12,8 @@ export interface ExampleBuild {
     /** Its Target Output */
     recipe: string;
     items_per_second: number;
+    /** "destroyed" when the rate counts the item destroyed; none, the item made */
+    counts?: 'destroyed';
     copies: number;
     machines: number;
     inserters: number;
@@ -29,6 +31,7 @@ function isExampleBuild(row: unknown): row is ExampleBuild {
     const r = row as Record<string, unknown>;
     return isText(r.id) && isText(r.file) && isText(r.recipe)
         && typeof r.items_per_second === 'number' && Number.isFinite(r.items_per_second) && r.items_per_second > 0
+        && (r.counts === undefined || r.counts === 'destroyed')
         && typeof r.copies === 'number' && Number.isFinite(r.copies) && r.copies > 0 && isShortDecimalCopies(r.copies)
         && isCount(r.machines) && isCount(r.inserters) && isCount(r.belts) && isCount(r.chests);
 }
@@ -62,10 +65,10 @@ export function exampleTitle(example: Pick<ExampleBuild, 'recipe'>, name: (id: s
 
 const countOf = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** "240/s · 11 copies · 1 machine, 3 inserters" */
+/** "240/s · 11 copies · 1 machine, 3 inserters"; "400/s destroyed · 1 copy · …" for a rate that counts the item destroyed */
 export function exampleSummary(example: ExampleBuild): string {
     return [
-        `${formatNumberText(example.items_per_second)}/s`,
+        `${formatNumberText(example.items_per_second)}/s${example.counts === 'destroyed' ? ' destroyed' : ''}`,
         countOf(example.copies, 'copy', 'copies'),
         `${countOf(example.machines, 'machine', 'machines')}, ${countOf(example.inserters, 'inserter', 'inserters')}`,
     ].join(' · ');

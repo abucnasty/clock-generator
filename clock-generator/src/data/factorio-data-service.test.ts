@@ -39,6 +39,18 @@ describe("the game data of Factorio 2.1.21", () => {
     });
 });
 
+describe("an item's name in a sentence", () => {
+    it("is the game's name with its first letter lower case", () => {
+        expect(FactorioDataService.itemNameInSentence("military-science-pack")).toBe("military science pack");
+        expect(FactorioDataService.itemNameInSentence("tungsten-ore")).toBe("tungsten ore");
+        expect(FactorioDataService.itemNameInSentence("power-armor-mk2")).toBe("power armor MK2");
+    });
+
+    it("is the id as words for an id the data does not name", () => {
+        expect(FactorioDataService.itemNameInSentence("not-an-item")).toBe("not an item");
+    });
+});
+
 describe("a result's chance in the 2.1 data", () => {
     it("reads a shared probability as the width of the result's slice, so uranium processing keeps its expected amounts", async () => {
         // 2.0 said probability 0.007 and 0.993; 2.1 says shared_probability {0, 0.007} and {0.007, 1}
@@ -55,6 +67,24 @@ describe("a result's chance in the 2.1 data", () => {
         const { RecipeMetadata, expectedAmount } = await import("../entities/machine/recipe/recipe-metadata");
         const seed = RecipeMetadata.fromRecipeName("jellynut-processing").outputs.find(it => it.name === "jellynut-seed")!;
         expect(expectedAmount(seed)).toBeCloseTo(0.02, 9);
+    });
+
+    it("reads a recycling recipe's extra count fraction as the chance of one item, and its variance as a Bernoulli's", async () => {
+        // measured on the recycler (2.1.21): a gear gives an iron plate at 0.4978 over 47,992 crafts; an electronic
+        // circuit an iron plate at 0.2527 and a copper cable at 0.7487 over 19,196; iron ore itself back at 0.2511
+        const { RecipeMetadata, expectedAmount, amountVariance } = await import("../entities/machine/recipe/recipe-metadata");
+        const gear = RecipeMetadata.fromRecipeName("iron-gear-wheel-recycling");
+        expect(gear.outputs.map(it => [it.name, expectedAmount(it)])).toEqual([["iron-plate", 0.5]]);
+        expect(amountVariance(gear.output)).toBeCloseTo(0.25, 12);
+        const circuit = RecipeMetadata.fromRecipeName("electronic-circuit-recycling");
+        expect(circuit.output.name).toBe("copper-cable");
+        expect(Object.fromEntries(circuit.outputs.map(it => [it.name, expectedAmount(it)]))).toEqual({ "copper-cable": 0.75, "iron-plate": 0.25 });
+        expect(amountVariance(circuit.output)).toBeCloseTo(0.1875, 12);
+        const ore = RecipeMetadata.fromRecipeName("iron-ore-recycling");
+        expect(expectedAmount(ore.output)).toBe(0.25);
+        expect(amountVariance(ore.output)).toBeCloseTo(0.1875, 12);
+        // a result that always comes in its amount has none
+        expect(amountVariance(RecipeMetadata.fromRecipeName("iron-gear-wheel").output)).toBe(0);
     });
 
     it("gives a car and a tank 80 slots at every quality, and a cargo wagon 40 to 100 by its quality", () => {
@@ -78,5 +108,15 @@ describe("a result's chance in the 2.1 data", () => {
         expect(FactorioDataService.itemWeightOrThrow("processing-unit")).toBe(218453333 / 65536);
         expect(FactorioDataService.itemWeightOrThrow("iron-plate")).toBe(1000);
         expect(FactorioDataService.itemWeightOrThrow("rocket-fuel")).toBe(10000);
+    });
+
+    it("has the ticks an item takes to spoil, for the items that spoil only", () => {
+        expect(FactorioDataService.itemSpoilTicks("iron-bacteria")).toBe(3600);
+        expect(FactorioDataService.itemSpoilTicks("nutrients")).toBe(18000);
+        expect(FactorioDataService.itemSpoilTicks("pentapod-egg")).toBe(54000);
+        expect(FactorioDataService.itemSpoilTicks("agricultural-science-pack")).toBe(216000);
+        expect(FactorioDataService.itemSpoilTicks("bioflux")).toBe(432000);
+        expect(FactorioDataService.itemSpoilTicks("iron-plate")).toBeNull();
+        expect(FactorioDataService.itemSpoilTicks("spoilage")).toBeNull();
     });
 });

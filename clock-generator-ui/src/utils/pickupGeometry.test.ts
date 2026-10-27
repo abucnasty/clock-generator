@@ -137,3 +137,38 @@ it('requires recapture for an old positive underground declaration instead of al
     expect(withPickupType(source, 'side-entrance')).toBe(source);
     expect(pickupGeometryOf({inserters: [{id: 1, source}]}).unverified).toEqual([1]);
 });
+
+
+describe('measured right-bend pickup', () => {
+    const captured: InserterFormData['source'] = {type: 'belt', id: 1, near_lane: 1, pickup_length: 1,
+        pickup_layout: 'bend-right-upstream', pickup_capture: {status: 'supported', model: 'belt', model_version: 3,
+            entity_type: 'transport-belt', entity_name: 'turbo-transport-belt', sidecar_version: '0.15.0'}};
+
+    it('retains measured geometry and capture provenance through file save and reload', () => {
+        const form = createDefaultConfig();
+        form.inserters = [{id: 4, _uuid: 'bend', source: captured, sink: {type: 'machine', id: 1}}];
+        const restored = configToFormData(JSON.parse(JSON.stringify(formDataToConfig(form))));
+        expect(restored.inserters[0].source).toEqual(captured);
+        expect(pickupTypeOf(restored.inserters[0].source)).toBe('bend-right-upstream');
+        expect(pickupGeometryOf(restored)).toMatchObject({known: 1, missing: [], unverified: []});
+        expect(withPickupType(captured, 'bend-right-upstream').pickup_capture).toEqual(captured.pickup_capture);
+    });
+
+    it('sets the measured lane on manual selection without retaining a different physical capture', () => {
+        const straight: InserterFormData['source'] = {...captured, near_lane: 2, pickup_layout: 'side-straight',
+            pickup_capture: {status: 'supported', model: 'belt', model_version: 2, entity_type: 'transport-belt',
+                entity_name: 'turbo-transport-belt', sidecar_version: '0.15.0'}};
+        const bend = withPickupType(straight, 'bend-right-upstream');
+        expect(bend).toEqual({type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'bend-right-upstream'});
+        expect(straight.near_lane).toBe(2);
+        expect(withPickupType(captured, 'side-straight')).not.toHaveProperty('pickup_capture');
+    });
+
+    it('requires recapture of a saved unsupported bend before it can use the supported layout', () => {
+        const source: InserterFormData['source'] = {...captured, pickup_capture: {status: 'unsupported',
+            entity_type: 'transport-belt', reason: 'bend', sidecar_version: '0.14.0'}};
+        expect(withPickupType(source, 'bend-right-upstream')).toBe(source);
+        expect(pickupTypeOf(source)).toBe('unverified');
+        expect(pickupGeometryOf({inserters: [{id: 4, source}]})).toMatchObject({known: 0, unverified: [4]});
+    });
+});

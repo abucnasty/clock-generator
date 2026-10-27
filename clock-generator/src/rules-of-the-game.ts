@@ -145,3 +145,22 @@ export { DrillChestWorkingMode } from "./control-logic/drill/modes/chest-working
  * ore) and the containers family's drill fills (200 a tick).
  */
 export { MiningProgress } from "./control-logic/drill/modes/mining-progress";
+
+/**
+ * 18. A machine that places its results itself (the recycler, by its prototype's `vector_to_place_result`; docs/simulator.md
+ * "A machine that places its results itself"): its results go into its output whatever it holds, any number of stacks, and
+ * while a stack of any one of them waits there it starts no craft and takes no ingredients; with a result target (the
+ * machine or container at its result spot) it puts what waits into that target each tick: into a machine by the
+ * mining drill's stop (3, shared `placeIntoMachine`), into a container as far as it has room, what the
+ * tick's crafts gave included. At its
+ * output a bulk inserter waits for a full hand, and any other swings what it holds. A result that comes by chance is made
+ * at its expected amount, the fraction carried to the next craft (`expectedAmount`: the chance times the amount and its
+ * extra count fraction). Cases: `crafting/places-results.test.ts`. Recorded in the game (2.1.21, a lab on the ore voider
+ * benchmark's saves): 4 crafts a tick at crafting speed 7.5, iron ore back at 0.2511 a craft over 47,992, gears at 0.4978,
+ * returns a tick a binomial of its crafts, and 50 ore waiting in its output when its car was full, its 12 result slots
+ * not filled; on scrap (a lab beside it), each result in a slot of its own, a full stack of the rarest result stopping it
+ * as one of the commonest did, a stack inserter waiting with a part hand and a long-handed inserter swinging each low
+ * density structure on its own; on the ore voider's exact-speed cell under its clock (an hour), nothing left in its output
+ * after any tick while its car had room, and no ore brought into it while a stack waited with its car full.
+ */
+export { MachineWorkingMode } from "./control-logic/machine/modes/machine-working-mode";

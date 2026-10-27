@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import type { Config } from "../config/schema";
 import { generateClockAlternatives, type ClockAlternativesResult } from "./generate-blueprint";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
 import { clockIdentity } from "./clock-identity";
 import { createHash } from "crypto";
 import { readControls } from "../../tests/game/builds/clock-controls";
@@ -14,9 +15,14 @@ import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/thaeln-cell09-clo
 // no search is needed. Before, the observed-windows search ran for about twenty minutes and found no clock that recovers.
 describe("a clock for Thaeln's cell 09 from the hands and the order of the chain", () => {
     let result: ClockAlternativesResult;
+    let config: Config;
     beforeAll(async () => {
-        const config = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
+        config = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
         result = generateClockAlternatives(config, { logger: quiet });
+    });
+
+    it("names why every inserter and drill a clock leaves always on is", () => {
+        expect(alwaysOnReasonProblemsOf(config, result)).toEqual([]);
     });
 
     it("selects a stable clock of one cycle at the target rate, and runs no search", () => {
@@ -26,7 +32,6 @@ describe("a clock for Thaeln's cell 09 from the hands and the order of the chain
         expect(selected.assessment.items_per_second).toBeCloseTo(480, 6);
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);
         expect(result.alternatives.map(it => it.id)).not.toContain("derived");
-        expect(result.alternatives.map(it => it.id)).not.toContain("derived-lean-coal");
         expect(result.skipped_searches.length).toBeGreaterThan(0);
         expect(result.why_not_stable).toBeNull();
     });

@@ -268,6 +268,22 @@ describe('buildWakeWindowRows', () => {
         expect(rows[0].onTicks).toBe(10);
     });
 
+    it('carries the engine\'s reason on a row the clock leaves always on, and on no other', () => {
+        const rows = buildWakeWindowRows(source({
+            clockWindows: { 'inserter:1': [{ start: 0, end: 9 }] },
+            alwaysOnReasons: { 'inserter:2': { kind: 'busy', period_ticks: 24 }, 'inserter:1': { kind: 'loop' } },
+            stateTransitionHistory: {
+                total_duration_ticks: 600,
+                entities: [entity('inserter:1'), entity('inserter:2'), entity('inserter:3')],
+            },
+        }));
+        expect(rows.map(row => [row.id, row.mode, row.alwaysOnReason])).toEqual([
+            ['inserter:1', 'windows', undefined],
+            ['inserter:2', 'always-on', { kind: 'busy', period_ticks: 24 }],
+            ['inserter:3', 'always-on', undefined],
+        ]);
+    });
+
     it('keeps a fuel inserter on the period clock when it has windows', () => {
         const rows = buildWakeWindowRows(source({ clockWindows: { 'inserter:4': [{ start: 0, end: 5 }] }, fuelView: fuelView('inserter:4') }));
         expect(rows[0].mode).toBe('windows');

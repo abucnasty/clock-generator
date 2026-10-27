@@ -3,7 +3,7 @@ import { assertPickupCaptureSupported } from "../../config/pickup-capture";
 import { assertInserterInScope } from "../../config/inserter-scope";
 import { InserterConfig } from "../../config";
 import { FactorioDataService, ItemName } from "../../data";
-import { BeltStackSize, Lane } from "../belt";
+import { BeltSpeed, BeltStackSize, Lane } from "../belt";
 import { EntityType } from "../entity-type";
 import { InserterMetadata } from "./metadata/inserter-metadata";
 import { InserterAnimation } from "./inserter-animation";
@@ -12,6 +12,7 @@ import { assertIsBelt, assertIsChest, assertIsMachine, Entity } from "../entity"
 import { Chest } from "../chest";
 import { EntityId } from "../entity-id";
 import { EntityRegistry } from "../entity-registry";
+import { MachineType } from "../machine/machine-type";
 import { BeltDropMetadata } from "./metadata/animation";
 import { assertSupportedInserterKind, configuredHandSize } from "./metadata/inserter-spec";
 import { InserterType } from "./metadata/inserter-type";
@@ -117,6 +118,8 @@ export class InserterFactory {
         if (source.type === EntityType.BELT) {
             const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(source.id));
             assertIsBelt(belt)
+            assert(source.pickup_layout !== "bend-right-upstream" || belt.belt_speed === BeltSpeed.TURBO_TRANSPORT_BELT,
+                "Right-bend upstream pickup timing is calibrated for turbo belts only.");
             belt.lanes.forEach(lane => {
                 source_provided_items.add(lane.ingredient_name)
             })
@@ -165,6 +168,14 @@ export class InserterFactory {
             // the spoilage an inserter clears off a machine, which no recipe lists
             config.filters.forEach(it => {
                 if (sink.type === EntityType.MACHINE) {
+                    const machine = this.entity_registry.getEntityByIdOrThrow(EntityId.forMachine(sink.id));
+                    assertIsMachine(machine);
+                    // a furnace (a recycler too) picks its recipe from what it is brought: another item would switch it
+                    assert(sink_consumed_items.has(it) || machine.metadata.type !== MachineType.FURNACE,
+                        `Inserter ${config.id} brings ${it} into Machine ${sink.id}, which makes ${machine.metadata.recipe.name} from `
+                        + `${Array.from(machine.inputs.keys()).join(" and ")}. A furnace or a recycler picks its recipe from the items it is `
+                        + "brought, so it would switch to another recipe for this one, with what the old one left in it: a build that "
+                        + "brings it more than its recipe's items is not planned.");
                     assert(sink_consumed_items.has(it), `Inserter filter ${it} is not a valid item for sink entity ${sink.id} of type ${sink.type}`);
                 } else {
                     // it has to be an item of the game, or the inserter would never fire

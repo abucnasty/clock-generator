@@ -12,10 +12,11 @@ import type { LiveCoverage } from '../worker/types';
 function coverageKey(config: Config): string {
     return JSON.stringify({
         target: config.target_output,
-        machines: config.machines.map(({ id, recipe, fuel, productivity, prototype }) => [id, recipe, fuel, productivity, prototype]),
+        machines: config.machines.map(({ id, recipe, fuel, productivity, prototype, result_target }) => [id, recipe, fuel, productivity, prototype,
+            result_target?.type ?? null, result_target?.id ?? null]),
         belts: config.belts.map(({ id, type, lanes }) => [id, type, lanes.map(lane => [lane.ingredient, lane.stack_size,
             'consumption_per_second' in lane ? lane.consumption_per_second : null])]),
-        chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter
+        chests: config.chests?.map(chest => [chest.id, chest.type, 'quality' in chest ? chest.quality ?? null : null, chest.type === 'buffer-chest' ? chest.item_filter
             : chest.type === 'infinity-chest' ? [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]
                 : [chest.contents ?? [], 'slot_filters' in chest ? chest.slot_filters ?? [] : []]]),
         inserters: config.inserters.map(({ id, source, sink, filters, filter_mode, prototype, quality, stack_size }) =>

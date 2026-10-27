@@ -1,12 +1,18 @@
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
-import { DRILL_ITEMS_PER_SWING, EntityTransferCountMap } from "../sequence/cycle/swing-counts";
+import { DRILL_ITEMS_PER_SWING, EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
-import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
+import { alwaysEnabledInserters, isByProductOnlyInserter, unplannedInserterClocks, type InserterClock } from "../sequence/unplanned-inserter-clock";
 import { ClockBelt, beltPickupSlackTicks } from "../clock";
-import { runClockOnBuild } from "../trial";
+import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
+import { TurnGroup } from "../turn-groups";
+import type { AlwaysOnReason } from "../always-on-reasons";
+import { sharedItemDeadlockRisks } from "../deadlock-risk";
+import { rankingWindowCount } from "../rank";
+import { outputAtWindow } from "./taker-turns";
+import { isNeverBlockingSink } from "../terminal-rate";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -19,7 +25,7 @@ const FEEDER_OFFSETS_TICKS = [16, 1];
 /** Ticks every group of windows is moved either way to see that the clock does not hold at one placement only */
 const MARGIN_SHIFT_TICKS = 1;
 
-/** How the windows of one try are made: see groupedHandsClock, which tries them in order */
+/** How the windows of one way are made: see groupedHandsClock, which makes them in every way and ranks the clocks */
 export interface GroupedHandsOptions {
     /**
      * An inserter whose machine would take more than one hand over the hands it moves (a surplus hand it keeps) gets a window
@@ -28,12 +34,36 @@ export interface GroupedHandsOptions {
     surplus_guard: boolean;
     /** Ticks after a taker's window opens that the window of an inserter filling the machine it takes from opens */
     feeder_offset: number;
+    /** The takers whose windows open on the same tick share one window: the longest any of them needs */
+    share_windows: boolean;
+    /**
+     * An output inserter that takes from a machine and drops into a sink that never blocks (terminal-rate.ts) gets a
+     * window of one swing more than its hands, as a drain into a chest does, in place of one for its hands alone: the
+     * sink takes every hand, so the hand a machine made ahead of its share goes out with the next one instead of holding
+     * the machine at its output block
+     */
+    output_room?: boolean;
 }
 
-const DEFAULT_OPTIONS: GroupedHandsOptions = { surplus_guard: false, feeder_offset: 1 };
+/** Opt-in route facts for pure construction; existing generated clocks retain their original construction path. */
+export interface GroupedHandsComposition {
+    /** Real computed controls remain outside planned transfer accounting, not outside the physical build. */
+    readonly retained_clocks: ReadonlyMap<string, InserterClock>;
+    readonly output_paths: readonly OutputPath[];
+    /** Accepted direct placement has no hand, window or invented delivery latency. */
+    readonly direct_sources: ReadonlyMap<string, readonly string[]>;
+}
+
+const DEFAULT_OPTIONS: GroupedHandsOptions = { surplus_guard: false, feeder_offset: 1, share_windows: false };
 
 /** Why the grouped hands rule does not apply to a build; the clock then keeps the windows it was planned with */
 export class GroupedHandsNotApplicable extends Error { }
+
+/**
+ * A way of placing the windows in which a machine filled in turn would hold its product at its ingredient block when its
+ * turn opens (`heldAtTurn`): it would take nothing in its turn. That way is not offered; another way may be.
+ */
+export class TurnWithoutRoom extends GroupedHandsNotApplicable { }
 
 function refuse(reason: string): never {
     throw new GroupedHandsNotApplicable(reason);
@@ -44,6 +74,158 @@ function windowFrom(start: number, ticks: number, period: number): OpenRange[] {
     const first = ((start % period) + period) % period;
     const last = first + ticks - 1;
     return last < period ? [OpenRange.from(first, last)] : [OpenRange.from(first, period - 1), OpenRange.from(0, last - period)];
+}
+
+/**
+ * The windows of the takers that open on the same tick made one: the earliest start and the latest end any of them needs,
+ * which is the longest window from that tick. The takers that are left open all period have none to share.
+ */
+function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], period: number): void {
+    const open = new Map<string, { ticks: number; ids: string[] }>();
+    for (const taker of takers) {
+        const ranges = windows.get(taker.inserter.entity_id.id);
+        if (ranges === undefined) continue;
+        const key = `${ranges[0].start_inclusive}`;
+        const known = open.get(key) ?? { ticks: 0, ids: [] };
+        known.ticks = Math.max(known.ticks, taker.window_ticks);
+        known.ids.push(taker.inserter.entity_id.id);
+        open.set(key, known);
+    }
+    for (const [key, { ticks, ids }] of open) {
+        for (const id of ids) windows.set(id, windowFrom(Number(key), ticks, period));
+    }
+}
+
+/**
+ * The takers of one machine's product that fill machines of one recipe and are enabled in the same ticks take turns where
+ * the machine cannot give all their hands in one window (`outputAtWindow`: what it made since their window a period
+ * before, up to its output block, and what it makes in the window, against one hand of each): then the game serves the
+ * first in its order with what the machine holds and the next with the rest, so one machine would be fed before the other
+ * by an order a config does not tell. In the order of their sinks, the windows of the second open a share of the period
+ * after the first's, and so on, each the length it was given. Turns that would meet one another leave the windows as they
+ * are; the clock-only check judges both.
+ *
+ * The inserters that hand a turned machine's product on (`hands_out`: into a chest or onto a belt) move with its turn, so
+ * every machine filled in turn is emptied at the same point of its own turn. Left where they were, one turn would fall
+ * while its machine holds its output block, when the machine takes nothing and its taker picks nothing up, and the other
+ * turns would not: what the one taker leaves goes to the next, and one machine would get less than the others in every
+ * period (Factorio 2.1.21, the original #100 scaffold: 93 against 94 supercapacitors in 16 periods). The groups that take
+ * turns are returned, each in the order of its turns, for the check that every turn has room (`turnsWithoutRoom`).
+ */
+function takeTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], period: number,
+    hands_out: readonly Inserter[] = []): TurnedTakers[] {
+    const turned: TurnedTakers[] = [];
+    const contested = new Map<string, { machine: Machine; item: string; takers: Taker[] }>();
+    for (const taker of takers) {
+        if (taker.drain === true || !EntityId.isMachine(taker.source) || !EntityId.isMachine(taker.sink) || !windows.has(taker.inserter.entity_id.id)) continue;
+        const machine = entity_registry.getEntityByIdOrThrow(taker.source) as Machine;
+        const recipe = (entity_registry.getEntityByIdOrThrow(taker.sink) as Machine).metadata.recipe.name;
+        for (const item of taker.inserter.filtered_items) {
+            if (!machine.outputs.some(output => output.item_name === item)) continue;
+            const key = `${taker.source.id}|${item}|${recipe}`;
+            const known = contested.get(key) ?? { machine, item, takers: [] };
+            known.takers.push(taker);
+            contested.set(key, known);
+        }
+    }
+    const byNumber = (a: EntityId, b: EntityId) => a.number - b.number;
+    for (const { machine, item, takers: group } of contested.values()) {
+        if (group.length < 2) continue;
+        const ranges = group.map(taker => windows.get(taker.inserter.entity_id.id)!);
+        const enabled = new Uint8Array(period);
+        let together = false;
+        for (const taker_ranges of ranges) {
+            const own = new Uint8Array(period);
+            for (const range of taker_ranges) for (let tick = range.start_inclusive; tick <= range.end_inclusive; tick++) own[tick] = 1;
+            for (let tick = 0; tick < period; tick++) {
+                if (own[tick] === 1 && enabled[tick] === 1) together = true;
+                enabled[tick] |= own[tick];
+            }
+        }
+        if (!together) continue;
+        const width = Math.max(...group.map(taker => taker.window_ticks));
+        if (period / group.length < width) continue;
+        const draw = group.reduce((sum, taker) => sum + handSizeFor(taker.inserter, item), 0);
+        if (draw <= outputAtWindow(machine, item, period - width, width)) continue;
+        const ordered = [...group].sort((a, b) => byNumber(a.sink, b.sink) || byNumber(a.inserter.entity_id, b.inserter.entity_id));
+        const first = windows.get(ordered[0].inserter.entity_id.id)![0].start_inclusive;
+        const moved = new Set<string>();
+        ordered.forEach((taker, turn) => {
+            if (turn === 0) return;
+            const id = taker.inserter.entity_id.id;
+            const shift = first + Math.round(turn * period / ordered.length) - windows.get(id)![0].start_inclusive;
+            windows.set(id, windowFrom(first + Math.round(turn * period / ordered.length), taker.window_ticks, period));
+            if (moved.has(taker.sink.id)) return;
+            moved.add(taker.sink.id);
+            for (const out of hands_out) {
+                const ranges = windows.get(out.entity_id.id);
+                if (out.source.entity_id.id === taker.sink.id && ranges !== undefined) windows.set(out.entity_id.id, shiftedWindows(ranges, shift, period));
+            }
+        });
+        turned.push({ item, takers: ordered });
+    }
+    return turned;
+}
+
+/** The takers of one item of a machine that take turns, in the order of their turns */
+interface TurnedTakers {
+    item: string;
+    takers: Taker[];
+}
+
+/** The tick a window opens: the start of its range that no other range of it runs into (a window may wrap the period) */
+function openingTick(ranges: readonly OpenRange[], period: number): number {
+    return (ranges.find(range => !ranges.some(other => (other.end_inclusive + 1) % period === range.start_inclusive)) ?? ranges[0]).start_inclusive;
+}
+
+/**
+ * What a machine holds of its product when a turn to fill it opens at `turn_start`, by arithmetic: what it makes at its rate
+ * in the ticks since the last hand out of it started (`hand_starts`, ticks in the period): what its last output window left
+ * after that hand, and what it made since the window closed. A hand out takes what the machine made since the hand before.
+ */
+export function heldAtTurn(machine: Machine, turn_start: number, hand_starts: readonly number[], period: number): number {
+    const since = Math.min(...hand_starts.map(start => (((turn_start - start) % period) + period) % period));
+    return machine.output.production_rate.amount_per_tick.toDecimal() * since;
+}
+
+/**
+ * Whether a machine that holds `held` of its product has room for the turn that fills it: below its ingredient block less one
+ * payout (a craft it finishes as the turn opens). At the block it takes no ingredients, and its taker, holding a part hand,
+ * picks nothing up (Factorio 2.1.21, the original #100 scaffold).
+ */
+export function roomAtTurn(machine: Machine, held: number): boolean {
+    return held < machine.output.outputBlock.ingredients_blocked_at - machine.output.ingredient.amount;
+}
+
+/**
+ * The machines filled in turn (`turned`, from takeTurns) that would hold their product at the block when their turn opens,
+ * as a player reads it; empty where every turn has room. A machine whose product is handed on in no window (an inserter
+ * enabled all the time, or placed straight into the next machine) holds none of it.
+ */
+function turnsWithoutRoom(entity_registry: ReadableEntityRegistry, windows: ReadonlyMap<string, OpenRange[]>, turned: readonly TurnedTakers[],
+    hands_out: ReadonlyMap<Inserter, number>, period: number): string[] {
+    const reasons: string[] = [];
+    for (const { item: taken, takers } of turned) for (const taker of takers) {
+        const machine = entity_registry.getEntityByIdOrThrow(taker.sink) as Machine;
+        const ranges = windows.get(taker.inserter.entity_id.id);
+        const hand_starts: number[] = [];
+        let always = false;
+        for (const [out, hands] of hands_out) {
+            if (out.source.entity_id.id !== taker.sink.id) continue;
+            const out_ranges = windows.get(out.entity_id.id);
+            if (out_ranges === undefined) { always = true; continue; }
+            const opens = openingTick(out_ranges, period);
+            for (let hand = 0; hand < hands; hand++) hand_starts.push((opens + hand * out.animation.total.ticks) % period);
+        }
+        if (ranges === undefined || always || hand_starts.length === 0) continue;
+        const held = heldAtTurn(machine, openingTick(ranges, period), hand_starts, period);
+        if (roomAtTurn(machine, held)) continue;
+        const item = machine.output.item_name;
+        reasons.push(`${taker.sink.id} would still hold about ${Math.round(held * 10) / 10} ${item} when its turn to take `
+            + `${taken} from ${taker.source.id} begins, and it takes no ingredients from `
+            + `${machine.output.outputBlock.ingredients_blocked_at} ${item}: that turn would bring it nothing`);
+    }
+    return reasons;
 }
 
 /** The windows moved `ticks` later in the period (earlier when negative) */
@@ -86,13 +268,15 @@ const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
  * whole hands. The hands of the inserters that fill a machine, or a chest a machine is filled from, are made whole by
  * rounding them up (rule F, below), so they set nothing. Null where the plan has no such inserter.
  */
-export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap): number | null {
+export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap, composition?: GroupedHandsComposition): number | null {
     let lcm = 1;
     let found = false;
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
     const chests_taken_from = new Set(inserters.filter(it => EntityId.isMachine(it.sink.entity_id) && EntityId.isChest(it.source.entity_id)).map(it => it.source.entity_id.id));
+    for (const path of composition?.output_paths ?? []) if (path.container !== null) chests_taken_from.add(path.container.entity_id.id);
     for (const inserter of inserters) {
+        if (composition?.retained_clocks.has(inserter.entity_id.id)) continue;
         // an inserter that fills a machine, or a chest that machines are filled from, has its hands rounded up
         if (EntityId.isMachine(inserter.sink.entity_id) || chests_taken_from.has(inserter.sink.entity_id.id)) continue;
         const transfer = transfers.get(inserter.entity_id.id);
@@ -138,9 +322,12 @@ export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swin
  *   chain, from the output: the output machines' inputs from belts and chests, then those from machines, each stage
  *   when the previous one's window ends, and the inserters that fill a source machine a tick after the one that takes
  *   from it, so the machine is emptied before it is filled. One group serves such a chain (the draw against a source's
- *   block and rate is not the test there; the clock-only runs are).
+ *   block and rate is not the test there; the clock-only runs are). Takers of one machine that it cannot serve together
+ *   take turns (`takeTurns`), and every machine filled in turn must have room when its turn opens: what it made since the
+ *   last hand out of it started, below its ingredient block less one payout (`heldAtTurn`, `roomAtTurn`).
  *
- * Throws GroupedHandsNotApplicable where the build does not fit this, or the hands do not follow each other under the limit.
+ * Throws GroupedHandsNotApplicable where the build does not fit this, or the hands do not follow each other under the limit,
+ * and TurnWithoutRoom where a turn would open while its machine holds its block.
  */
 export function groupedHandsWindows(
     entity_registry: ReadableEntityRegistry,
@@ -153,10 +340,48 @@ export function groupedHandsWindows(
     /** Where the output inserters stand on a shared belt: among groupings that serve the sources equally, the one whose hands fit on the belt */
     drop_tie_break: DropTieBreak | null = null,
 ): Map<string, OpenRange[]> {
+    return groupedHandsPlan(entity_registry, swing_counts, recipe_lcm, period, with_belt_slack, options, drop_tie_break).windows;
+}
+
+/** The windows of `groupedHandsWindows` and the groups that take turns in them */
+export interface GroupedHandsPlan {
+    windows: Map<string, OpenRange[]>;
+    /**
+     * The groups of machines that take turns, in the order of their turns, with the inserters and drills of each in the order of
+     * the turn: what lays the clock's combinators out by group. Empty where the build is one group (one turn, or a chain of
+     * machines, which one group serves).
+     */
+    turns: TurnGroup[];
+    /** The ids of the takers busy all the time, whose hands take the whole period: they have no window */
+    busy: string[];
+}
+
+/** The windows of `groupedHandsWindows`, with the groups whose turns they are */
+export function groupedHandsPlan(
+    entity_registry: ReadableEntityRegistry,
+    swing_counts: EntityTransferCountMap,
+    recipe_lcm: number,
+    period: number,
+    with_belt_slack: boolean = true,
+    options: GroupedHandsOptions = DEFAULT_OPTIONS,
+    drop_tie_break: DropTieBreak | null = null,
+    composition?: GroupedHandsComposition,
+): GroupedHandsPlan {
     if (!Number.isInteger(period)) refuse(`the period is ${period} ticks, not a whole number`);
     const entities = entity_registry.getAll();
-    const inserters = entities.filter(Entity.isInserter);
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
+    const computed_clocks = composition?.retained_clocks.size ? unplannedInserterClocks(entity_registry, period) : new Map<string, InserterClock>();
+    for (const [id, clock] of composition?.retained_clocks ?? []) {
+        const inserter = entities.filter(Entity.isInserter).find(it => it.entity_id.id === id);
+        const computed = computed_clocks.get(id);
+        if (inserter === undefined || clock.kind !== "by-product" || !isByProductOnlyInserter(entity_registry, inserter)
+            || transfers.has(id) || clock.inserter_id.id !== id || clock.own_clock || period % clock.modulus !== 0
+            || computed === undefined || computed.modulus !== clock.modulus
+            || computed.window.start_inclusive !== clock.window.start_inclusive || computed.window.end_inclusive !== clock.window.end_inclusive) {
+            refuse(`${id} is not a retained unplanned by-product clock`);
+        }
+    }
+    const inserters = entities.filter(Entity.isInserter).filter(it => !composition?.retained_clocks.has(it.entity_id.id));
     const belt_slack = with_belt_slack ? beltPickupSlackTicks(entity_registry) : new Map<string, number>();
 
     const outputHands = (inserter: Inserter): number => {
@@ -184,11 +409,13 @@ export function groupedHandsWindows(
     const outputs: Inserter[] = [];
     // the chests something takes from to fill a machine: an inserter that fills one from a machine is a taker of that machine
     const chests_taken_from = new Set(inserters.filter(it => EntityId.isMachine(it.sink.entity_id) && EntityId.isChest(it.source.entity_id)).map(it => it.source.entity_id.id));
+    for (const path of composition?.output_paths ?? []) if (path.container !== null) chests_taken_from.add(path.container.entity_id.id);
     for (const inserter of inserters) {
         if (EntityId.isMachine(inserter.source.entity_id) && chests_taken_from.has(inserter.sink.entity_id.id)) sinks.add(inserter.sink.entity_id.id);
     }
     // a chain: a machine or a chest that something takes from is itself filled
-    const chained = inserters.some(it => EntityId.isMachine(it.sink.entity_id) && sinks.has(it.source.entity_id.id));
+    const chained = inserters.some(it => EntityId.isMachine(it.sink.entity_id) && sinks.has(it.source.entity_id.id))
+        || (composition?.direct_sources.size ?? 0) > 0;
     for (const inserter of inserters) {
         const { source, sink } = inserter;
         if (EntityId.isMachine(sink.entity_id)) {
@@ -242,6 +469,8 @@ export function groupedHandsWindows(
     if (takers.length === 0 || outputs.length === 0) refuse("the build has no input hands or no output hands");
     const output_ticks = (output: Inserter): number => {
         const hands = outputHands(output);
+        if (options.output_room === true && EntityId.isMachine(output.source.entity_id)
+            && isNeverBlockingSink(entity_registry.getEntityByIdOrThrow(output.sink.entity_id))) return hands * output.animation.total.ticks + WINDOW_MARGIN_TICKS;
         return hands === 1 ? 1 : hands * output.animation.total.ticks + 1;
     };
     // an inserter whose hands (rounded up) take the whole period, or all but the offset of its window, is busy all the time: a window
@@ -250,9 +479,10 @@ export function groupedHandsWindows(
     const gated = takers.filter(it => !open_all_period(it));
     if (gated.length === 0) refuse(`every taker is busy the whole period of ${period} ticks`);
     const longest = Math.max(...gated.map(it => it.window_ticks));
-    const leaveOpen = (made: Map<string, OpenRange[]>): Map<string, OpenRange[]> => {
-        for (const taker of takers.filter(open_all_period)) made.delete(taker.inserter.entity_id.id);
-        return made;
+    const leaveOpen = (made: Map<string, OpenRange[]>): Pick<GroupedHandsPlan, "windows" | "busy"> => {
+        const busy = takers.filter(open_all_period).map(taker => taker.inserter.entity_id.id);
+        for (const id of busy) made.delete(id);
+        return { windows: made, busy };
     };
 
     // the machines, in the order of their ids, and the fewest groups every source can serve
@@ -338,10 +568,34 @@ export function groupedHandsWindows(
                 feed(feeder, depth + 1);
             }
         };
-        for (const taker of top.filter(filled)) feed(taker, 0);
+        if (composition === undefined) {
+            for (const taker of top.filter(filled)) feed(taker, 0);
+        } else {
+            const feedSite = (site: string, start: number, path: ReadonlySet<string> = new Set()): void => {
+                if (path.has(site)) refuse("the chain of machines loops");
+                const next = new Set(path).add(site);
+                for (const feeder of takers.filter(it => it.sink.id === site)) {
+                    const at = start + options.feeder_offset;
+                    windows.set(feeder.inserter.entity_id.id, windowFrom(at, feeder.window_ticks, period));
+                    feedSite(feeder.source.id, at, next);
+                }
+                for (const source of composition.direct_sources.get(site) ?? []) feedSite(source, start, next);
+            };
+            for (const taker of top.filter(filled)) feedSite(taker.source.id, startOf(taker));
+        }
         const unplaced = takers.find(it => !placed(it));
         if (unplaced !== undefined) refuse(`${unplaced.inserter.entity_id.id} fills ${unplaced.sink.id}, which is neither an output machine nor taken from`);
-        return leaveOpen(windows);
+        const drains = takers.filter(it => it.drain === true);
+        const hands_out = new Map<Inserter, number>([
+            ...outputs.map(it => [it, outputHands(it)] as const),
+            ...drains.map(it => [it.inserter, (it.window_ticks - WINDOW_MARGIN_TICKS) / it.inserter.animation.total.ticks] as const),
+        ]);
+        const turned = takeTurns(entity_registry, windows, takers, period, [...hands_out.keys()]);
+        if (options.share_windows) sharedWindows(windows, gated, period);
+        const made = leaveOpen(windows);
+        const without_room = turnsWithoutRoom(entity_registry, made.windows, turned, hands_out, period);
+        if (without_room.length > 0) throw new TurnWithoutRoom(without_room.join("; "));
+        return { ...made, turns: [] };
     }
     const start_of = (machine: string): number => Math.round(group_of.get(machine)! * period / groups);
     for (const taker of takers) {
@@ -350,6 +604,7 @@ export function groupedHandsWindows(
     for (const output of outputs) {
         windows.set(output.entity_id.id, windowFrom(start_of(output.source.entity_id.id), output_ticks(output), period));
     }
+    if (options.share_windows) sharedWindows(windows, gated, period);
     // a drill's window is computed from what its machine takes of it, and the drills of one group have one window: the longest
     const drill_ticks = new Map<number, number>();
     for (const drill of drills) {
@@ -363,7 +618,18 @@ export function groupedHandsWindows(
     for (const drill of drills) {
         windows.set(drill.entity_id.id, windowFrom(start_of(drill.sink_id.id) + INPUT_OFFSET_TICKS, drill_ticks.get(group_of.get(drill.sink_id.id)!)!, period));
     }
-    return leaveOpen(windows);
+    // each group's turn begins with its output swings; then its inputs, then its drills, each by entity number. The inserters left
+    // enabled all the time are named as well: a window that one of them is given later stands in its group
+    const byNumber = (a: { entity_id: EntityId }, b: { entity_id: EntityId }) => a.entity_id.number - b.entity_id.number;
+    const turns: TurnGroup[] = groups === 1 ? [] : Array.from({ length: groups }, (_, group) => ({
+        start: Math.round(group * period / groups),
+        entity_ids: [
+            ...outputs.filter(it => group_of.get(it.source.entity_id.id) === group).sort(byNumber),
+            ...takers.map(it => it.inserter).filter(it => group_of.get(it.sink.entity_id.id) === group).sort(byNumber),
+            ...drills.filter(it => group_of.get(it.sink_id.id) === group).sort(byNumber),
+        ].map(it => it.entity_id.id),
+    }));
+    return { ...leaveOpen(windows), turns };
 }
 
 /**
@@ -371,7 +637,7 @@ export function groupedHandsWindows(
  * windows) is moved a tick either way with the others where they are: one run of the build on each, from the cold start.
  * A clock that holds at one placement and not next to it is not offered (working rule 3). The reason it is not, or null.
  */
-function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>, period: number): string | null {
+export function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>, period: number): string | null {
     if (!runClockOnBuild(plan.config, windows, period, plan.logger).stability_check.holds) return "the windows do not hold";
     const groups = new Map<string, string[]>();
     for (const [id, ranges] of windows) {
@@ -390,15 +656,72 @@ function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>, perio
     return null;
 }
 
-/** The tries, in order: a window for every start the limit refuses, then for the hands only where a surplus hand would be kept; staged, then compact */
-const TRIES: GroupedHandsOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset =>
-    [false, true].map(surplus_guard => ({ surplus_guard, feeder_offset })));
+/**
+ * The ways the windows are placed: a window for every start the limit refuses, or for the hands only where a surplus hand
+ * would be kept; each with the feeders of a chain staged or compact. Each is the only one that holds on some build. A tie
+ * in the ranking of their clocks goes to the first in this order.
+ */
+const SEPARATE_TRIES: GroupedHandsOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset =>
+    [false, true].map(surplus_guard => ({ surplus_guard, feeder_offset, share_windows: false })));
+
+/** The same ways with the windows of the takers that open together made one */
+const SHARED_TRIES: GroupedHandsOptions[] = SEPARATE_TRIES.map(way => ({ ...way, share_windows: true }));
+
+/** A way of placing the windows whose clock holds with its margin and from every start phase */
+interface HoldingWay {
+    way: GroupedHandsOptions;
+    clock: BlueprintGenerationResult;
+}
+
+/**
+ * Of the clocks of the ways that hold, the one the selection ranks first (`combineClockAlternativeRuns`): one that gets
+ * back from every backpressure loss, then one whose losses could not be tried, then the others; among those the fewest
+ * wake-ups a minute, then the fewest windows, then the first tried. The losses are tried in that order, and only until
+ * one gets back. On a build with a deadlock risk they do not decide (`rankingOf`) and are not tried. Shared windows are
+ * kept only where they get back or could not be tried: null where none is.
+ */
+export function groupedClockRank(entity_registry: Pick<ReadableEntityRegistry, "getAll">, clock: BlueprintGenerationResult): [number, number] {
+    const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+    const windows = entity_registry.getAll().filter(Entity.isInserter)
+        .reduce((sum, inserter) => sum + (clock.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
+    // to a thousandth, as the selection counts them
+    return [wake_ups === undefined ? Number.MAX_SAFE_INTEGER : Math.round(wake_ups * 1000), rankingWindowCount(windows, clock.clock_windows, clock.loop_windows)];
+}
+
+function bestHolding(made: PlanRun, holding: HoldingWay[], shared: boolean): HoldingWay | null {
+    const entity_registry = made.run.simulation_context.entity_registry;
+    const ranked = holding.map((held, index) => ({ held, index, rank: groupedClockRank(entity_registry, held.clock) }))
+        .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.index - b.index)
+        .map(it => it.held);
+    if (!shared && sharedItemDeadlockRisks(entity_registry).length > 0) return ranked[0] ?? null;
+    let untried: HoldingWay | null = null;
+    for (const held of ranked) {
+        const { backpressure_loss } = backpressureLossVerdictOf(made.config, held.clock, made.logger);
+        if (backpressure_loss?.survives === true) return held;
+        if (backpressure_loss === null) untried ??= held;
+    }
+    return untried ?? (shared ? null : ranked[0] ?? null);
+}
+
+/** How a way is named in the planning log */
+function wayName(way: GroupedHandsOptions): string {
+    return `${way.feeder_offset === FEEDER_OFFSETS_TICKS[0] ? "staged" : "compact"}${way.surplus_guard ? " with the surplus guard" : ""}`;
+}
 
 /**
  * The clock of the windows as the generator exports it, checked as a clock with windows of its own is (the clock-only runs
  * from the start phases and the long run): it holds when that check does
  */
-function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options: GenerateClockOptions): BlueprintGenerationResult {
+export function finishedClock(
+    made: PlanRun,
+    windows: Map<string, OpenRange[]>,
+    turns: TurnGroup[],
+    options: GenerateClockOptions,
+    /** The takers busy the whole period, which the windows leave out */
+    left_open: ReadonlyMap<string, AlwaysOnReason>,
+    /** A constructed schedule's margins belong to its windows, never to the planning history's windows. */
+    constructed?: Pick<BlueprintGenerationResult, "random_margins">,
+): BlueprintGenerationResult {
     // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
     const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
     const slack = beltPickupSlackTicks(made.run.simulation_context.entity_registry);
@@ -406,26 +729,24 @@ function finishedClock(made: PlanRun, windows: Map<string, OpenRange[]>, options
     const moving = made.config.overrides?.backed_up_belts !== true;
     const belt: ClockBelt | null = belt_fed.length === 0 ? null
         : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
-    const named = { ...exported, belt, belt_pickup_slack_left_out: false,
+    const named = { ...exported, ...(constructed === undefined ? {} : { random_margins: constructed.random_margins }),
+        belt, belt_pickup_slack_left_out: false, turns,
         applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
-    // inserters with the same windows share a decider unless the items they carry differ, and the check builds them in the order it
-    // derives from their filters (deciderBuildOrder): so the filters tell them apart here too, not the planning run's items
-    const item_names = new Map(made.item_names);
-    for (const inserter of made.run.simulation_context.entity_registry.getAll().filter(Entity.isInserter)) {
-        item_names.set(inserter.entity_id.id, Array.from(inserter.filtered_items).sort().join(","));
-    }
-    const result = checkedClock({ ...made, item_names }, named, windows, { ...options, verify_as_built: true });
-    result.stability_check.holds = result.stability_check.as_built?.holds ?? false;
-    return result;
+    const result = checkedClock(made, named, windows, { ...options, verify_as_built: true }, { left_open });
+    // the check of the plan's run is the same object for every clock made from the plan, and the next clock's check
+    // overwrites it: this clock keeps a copy of its own
+    return { ...result, stability_check: { ...result.stability_check, holds: result.stability_check.as_built?.holds ?? false } };
 }
 
 /**
  * The clock of a plan with the windows of groupedHandsWindows, checked as a clock with windows of its own is: by the
  * clock-only runs from the start phases and the long run, and by the margin of `holdsWithMargin`. The plan is made again
  * for the cycles of `groupedHandsCycles` where those are not its own and the config does not set them. The windows are
- * tried in the ways of TRIES, the first that holds with its margin, and from every start phase, is the clock; those that make the same windows are one.
- * Null where the rule does not apply to the build. It holds when its own windows hold, not when the planning run of the
- * plan does.
+ * made in every way of SEPARATE_TRIES, or of SHARED_TRIES where `options.shared_windows` asks for the windows to be
+ * shared (those that make the same windows are one), and of those that hold with their margin and from every start
+ * phase the clock is the one `bestHolding` ranks first; where none holds from every start, the first that holds with its
+ * margin. Null where the rule does not apply to the build. It holds when its own windows hold, not when the planning run
+ * of the plan does.
  */
 export function groupedHandsClock(
     plan: PlanRun,
@@ -433,6 +754,7 @@ export function groupedHandsClock(
 ): BlueprintGenerationResult | null {
     let made = plan;
     let finished: BlueprintGenerationResult | null = null;
+    const holding: HoldingWay[] = [];
     const reasons: string[] = [];
     try {
         if (plan.run.always_enabled_by_config.size > 0 || plan.run.inserter_clocks.size > 0 || alwaysEnabledInserters(plan.run.simulation_context.entity_registry).length > 0) {
@@ -445,19 +767,37 @@ export function groupedHandsClock(
         const { simulation_context, swing_counts, recipe_lcm, duration } = made.run;
         const tried = new Set<string>();
         const drops = dropTieBreak(made.config, duration.ticks);
-        for (const way of TRIES) {
-            const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
-                made.config.overrides?.backed_up_belts !== true, way, drops);
+        for (const way of options.shared_windows === true ? SHARED_TRIES : SEPARATE_TRIES) {
+            let planned: GroupedHandsPlan;
+            try {
+                planned = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
+                    made.config.overrides?.backed_up_belts !== true, way, drops);
+            } catch (error) {
+                // a turn without room is this way's: another way may place the turns with room
+                if (!(error instanceof TurnWithoutRoom)) throw error;
+                reasons.push(error.message);
+                continue;
+            }
+            const { windows, turns, busy } = planned;
+            const left_open = new Map<string, AlwaysOnReason>(busy.map(id => [id, { kind: "busy", period_ticks: duration.ticks }]));
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
             if (tried.has(key)) continue;
             tried.add(key);
             const unmoved = holdsWithMargin(made, windows, duration.ticks);
             if (unmoved !== null) { reasons.push(unmoved); continue; }
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
-            const clock_of_windows = finishedClock(made, windows, options);
-            finished ??= clock_of_windows;
-            if (clock_of_windows.stability_check.holds) { finished = clock_of_windows; break; }
-            reasons.push(`the windows ${key} do not hold from every start`);
+            const clock_of_windows = finishedClock(made, windows, turns, options, left_open);
+            if (clock_of_windows.stability_check.holds) { holding.push({ way, clock: clock_of_windows }); continue; }
+            reasons.push(`the ${way.share_windows ? "shared " : ""}windows ${key} do not hold from every start`);
+            // shared windows are kept only if they hold
+            if (!way.share_windows) finished ??= clock_of_windows;
+        }
+        if (holding.length > 0) {
+            const best = bestHolding(made, holding, options.shared_windows === true);
+            plan.logger.log(`Grouped hands: ${holding.map(it => `${wayName(it.way)} holds at ${it.clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wake-ups a minute`).join(", ")}; `
+                + (best === null ? "none gets back from every loss" : `kept ${wayName(best.way)}`));
+            finished = best?.clock ?? finished;
+            if (finished === null) reasons.push("no shared windows that hold get back from every loss");
         }
         if (finished === null) refuse(reasons.join("; "));
     } catch (error) {
@@ -467,5 +807,5 @@ export function groupedHandsClock(
         }
         throw error;
     }
-    return finished!;
+    return { ...finished!, grouped_hands: { shared_windows: options.shared_windows === true } };
 }

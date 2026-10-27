@@ -1,5 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/real/owner/grenade/grenade.json?raw';
+import militarySample from '../../../clock-generator/resources/config-samples/science/military-science/military-science-1-inserter.json?raw';
 import { afterEach, expect, it, vi } from 'vitest';
 import { LATEST_SIDECAR_VERSION, type Config } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, WorkerRequest, WorkerResponse } from './types';
@@ -10,6 +11,36 @@ import { applyPaste } from '../utils/pastePreview';
 import { buildValidationIssues } from '../utils/buildValidation';
 
 afterEach(() => { vi.unstubAllGlobals(); });
+
+it('answers output-transfer queries from the engine for both recycler products and their actual separate routes', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    const config: Config = {
+        target_output: { recipe: 'supercapacitor', items_per_second: 1, copies: 1 },
+        machines: [
+            { id: 1, recipe: 'processing-unit-recycling', crafting_speed: 1, productivity: 0, prototype: 'recycler', result_target: { type: 'machine', id: 2 } },
+            { id: 2, recipe: 'supercapacitor', crafting_speed: 1, productivity: 0, prototype: 'electromagnetic-plant' },
+        ],
+        inserters: [{ id: 7, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 3 }, filters: ['advanced-circuit'], stack_size: 1 }],
+        belts: [{ id: 3, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
+        chests: [],
+    } as Config;
+    const answer = await send({ type: 'query', requestId: 701, query: { kind: 'output-transfers', config } });
+    expect(answer).toMatchObject({ type: 'answer', requestId: 701, answer: {
+        generation_issues: [],
+        transfers: expect.arrayContaining([
+            { source: { type: 'machine', id: 1 }, physical_target: { type: 'machine', id: 2 }, mechanism: 'result-placement', status: 'known', results: [
+                { item_name: 'electronic-circuit', direct: 'accepted', inserters: [], coverage: 'covered' },
+                { item_name: 'advanced-circuit', direct: 'rejected', inserters: [{ inserter_id: 7, target: { type: 'belt', id: 3 } }], coverage: 'covered' },
+            ] },
+        ]),
+    } });
+});
 
 it.each(['blocked', 'markers'] as const)('keeps blocked container slots through Sidecar paste (%s), save/reload and engine validation', async spelling => {
     vi.resetModules();
@@ -44,6 +75,46 @@ it.each(['blocked', 'markers'] as const)('keeps blocked container slots through 
     expect(config.chests![0]).toEqual({ id: 1, type: 'car',
         slot_filters: [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, blocked: true }))] });
     expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
+});
+
+it('keeps an out-of-order recycler machine target, byproduct belt, and bend capture through Sidecar paste and saved-config mapping', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    const send = async (data: WorkerRequest) => { await port.onmessage!({ data }); return posted.at(-1)!; };
+    await send({ type: 'initialize', factorioData });
+    const capture = { status: 'supported' as const, model: 'belt' as const, model_version: 3, entity_type: 'transport-belt',
+        entity_name: 'turbo-transport-belt', sidecar_version: '0.15.0' };
+    const result = await send({ type: 'query', requestId: 210, query: {
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, suggested_target: undefined, drills: [], chests: [],
+        // IDs are deliberately sparse and the target machine precedes the recycler in raw Sidecar export order.
+        machines: [
+            { id: 44, recipe: 'supercapacitor', crafting_speed: 63.75, productivity: 175, prototype: 'electromagnetic-plant' },
+            { id: 8, recipe: 'processing-unit-recycling', crafting_speed: 14.7805, productivity: 0, prototype: 'recycler',
+                result_target: { type: 'machine', id: 44 } },
+        ],
+        belts: [
+            { id: 90, type: 'turbo-transport-belt', lanes: [{ ingredient: 'advanced-circuit', stack_size: 4 }] },
+            { id: 22, type: 'turbo-transport-belt', lanes: [{ ingredient: 'processing-unit', stack_size: 4 }] },
+        ],
+        inserters: [
+            { id: 31, source: { type: 'machine', id: 8 }, sink: { type: 'belt', id: 90 }, filters: ['advanced-circuit'], prototype: 'stack-inserter', quality: 'legendary' },
+            { id: 32, source: { type: 'belt', id: 22, near_lane: 1, pickup_length: 1, pickup_layout: 'bend-right-upstream', pickup_capture: capture },
+                sink: { type: 'machine', id: 8 }, filters: ['processing-unit'], prototype: 'stack-inserter', quality: 'legendary' },
+        ],
+    } });
+    expect(result.type).toBe('answer');
+    const pasted = (result as { answer: PastedEntities }).answer;
+    const form = applyPaste(createDefaultConfig(), pasted, { target: false, machines: true, drills: true, inserters: true, belts: true, chests: true });
+    const saved = readSavedConfig(serializeConfig(form))!;
+    const roundTripped = formDataToConfig(configToFormData(formDataToConfig(saved)));
+    expect(roundTripped.machines.find(machine => machine.id === 8)?.result_target).toEqual({ type: 'machine', id: 44 });
+    expect(roundTripped.inserters.find(inserter => inserter.id === 31)).toMatchObject({ source: { type: 'machine', id: 8 },
+        sink: { type: 'belt', id: 90 }, filters: ['advanced-circuit'] });
+    expect(roundTripped.inserters.find(inserter => inserter.id === 32)?.source).toMatchObject({ id: 22,
+        pickup_layout: 'bend-right-upstream', pickup_capture: capture });
 });
 
 it('uses the real engine for typed Check/generation recovery and recomputed conversion, separating planning refusal from query failure', async () => {
@@ -342,3 +413,19 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
     expect(without.dropRoom).toBeNull();
     expect(without.copyGapNeeded).not.toBeNull();
 });
+
+// A real plan of five copies: about 2 s alone, over vitest's 5 s default on a loaded CI runner. Fewer copies make no shared-windows clock.
+it('passes on the clock made with shared windows after the clock it shares, with each clock\'s decider count', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    await port.onmessage!({ data: { type: 'initialize', factorioData } });
+    await port.onmessage!({ data: { type: 'plan', runId: 50, config: JSON.parse(militarySample) as Config, debugSteps: { prepare: false, warm_up: false, simulate: false }, streamLogs: false } });
+    const completed = posted.find(response => response.type === 'primary-completed');
+    expect(completed?.type).toBe('primary-completed');
+    const primary = completed?.type === 'primary-completed' ? completed.primary : null;
+    expect(primary?.alternatives.map(it => [it.id, it.deciders])).toEqual([['planned-belt-slack', 5]]);
+    expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['planned-belt-slack-shared', 4, 'stable']]);
+}, 30_000);

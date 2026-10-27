@@ -187,7 +187,8 @@ function mapRawDataToFilteredFactorioData(rawData) {
     // categories they burn when their energy source is a burner (none for an electric one); what the simulation rule
     // of a machine follows from (src/entities/machine/machine-rule.ts). Their base crafting speed (the game's default
     // 1 when the prototype sets none) picks the machine for an older config's type (src/config/migrate-machine-type.ts).
-    // The rocket silo is in `rocket_silo`.
+    // A machine that places its results itself into what stands at a spot beside it (the recycler) has that spot as its
+    // `vector_to_place_result`, kept where the prototype has one. The rocket silo is in `rocket_silo`.
     filtered["crafting_machine"] = {};
     for (const category of ["assembling-machine", "furnace"]) {
         for (const [name, machine] of Object.entries(rawData[category] ?? {})) {
@@ -201,6 +202,7 @@ function mapRawDataToFilteredFactorioData(rawData) {
                 crafting_categories: machine.crafting_categories ?? [],
                 burner_fuel_categories: fuel_categories,
                 crafting_speed: machine.crafting_speed ?? 1,
+                ...(Array.isArray(machine.vector_to_place_result) && { vector_to_place_result: machine.vector_to_place_result }),
             };
         }
     }
@@ -284,11 +286,13 @@ function inserterResearch(technologies) {
     return total;
 }
 
+/** An item: its stack size, and the ticks it takes to spoil where it spoils (the prototype's `spoil_ticks`) */
 function mapAsItem(struct) {
     return {
         name: struct.name,
         type: "item",
-        stack_size: struct.stack_size
+        stack_size: struct.stack_size,
+        ...(struct.spoil_ticks > 0 && { spoil_ticks: struct.spoil_ticks }),
     };
 }
 

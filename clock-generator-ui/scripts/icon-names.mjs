@@ -66,6 +66,18 @@ function sourceNames(known) {
 }
 
 /**
+ * The recycling recipes the page draws an icon for: each is the picture of the item it recycles with the recycling arrows
+ * around it, so the page has one wherever it has the item's. Recycling recipes of items with no icon (barrels, hidden
+ * and debug items) have none either.
+ */
+export function recyclingIcons() {
+    const data = JSON.parse(readFileSync(FACTORIO_DATA_FILE, 'utf8'));
+    return Object.entries(data.recipe)
+        .filter(([, recipe]) => (recipe.categories ?? []).includes('recycling') && Array.isArray(recipe.ingredients) && recipe.ingredients.length === 1)
+        .map(([name, recipe]) => ({ icon: iconFileName(name), item: iconFileName(recipe.ingredients[0].name) }));
+}
+
+/**
  * `requested`: every icon file the page can ask for, which are the icons worth keeping.
  * `required`: the icons the page cannot do without, as it draws them for any config: the names in its own source, the
  * drills, the crafting machines (the Machine picker), and the resources and what they yield. The other names come from

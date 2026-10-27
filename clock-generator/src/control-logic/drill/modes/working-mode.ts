@@ -1,7 +1,7 @@
 import { assertIsMachineState, DrillState, DrillStatus, EntityState, MachineState } from "../../../state";
 import { DrillMode } from "./drill-mode";
 import { Item } from "../../../data";
-import { miningDrillMaxInsertion } from "../../../entities";
+import { placeIntoMachine } from "../../place-into-machine";
 import { MiningProgress } from "./mining-progress";
 
 /**
@@ -39,11 +39,7 @@ export class DrillWorkingMode implements DrillMode {
         const item_name = this.mined_item.name;
         const drill_inventory = this.state.inventoryState;
         const held = drill_inventory.getItemOrThrow(item_name).quantity;
-        const drop = Math.min(held, Math.max(0, this.mining_insertion_limit - this.sink_current_inventory_quantity));
-        if (drop > 0) {
-            drill_inventory.removeQuantity(item_name, drop);
-            this.sink_state.inventoryState.addQuantity(item_name, drop);
-        }
+        const drop = placeIntoMachine(drill_inventory, this.sink_state, this.mined_item);
         if (held - drop > 0) {
             // what it mined before is still in the drill: the machine is at the drill's stop, so it mines nothing
             return;
@@ -54,18 +50,8 @@ export class DrillWorkingMode implements DrillMode {
         }
     }
 
-    private get mining_insertion_limit(): number {
-        return miningDrillMaxInsertion(
-            this.state.drill,
-            this.sink_state.machine,
-        );
-    }
-
     private get mined_item(): Item {
         return this.state.drill.item;
     }
 
-    private get sink_current_inventory_quantity(): number {
-        return this.sink_state.inventoryState.getItemOrThrow(this.mined_item.name).quantity;
-    }
 }

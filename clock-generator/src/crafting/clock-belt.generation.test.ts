@@ -3,8 +3,9 @@ import { clockBeltLabel, generateClockAlternatives, type ClockAlternative, type 
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-import { quiet, withSearches } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblemsOf, quiet, withSearches } from "./generate-blueprint-test-helpers";
 import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
+import { expectPinnedScaffoldClock } from "../../tests/game/builds/scaffold-recordings-clock-pins";
 
 const backedUpBelts = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
 
@@ -36,14 +37,20 @@ describe("the belt a clock is made for", () => {
         const alternative = (id: string) => alternatives.find(a => a.id === id)!;
 
         let by_default: ClockAlternativesResult;
+        let problems: string[];
 
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
             by_default = generateClockAlternatives(backedUpBelts(config), { logger: quiet });
+            problems = alwaysOnReasonProblemsOf(backedUpBelts(config), by_default);
             // with the searches, for the clocks of theirs that get back from every loss
             const generated = generateClockAlternatives(withSearches(backedUpBelts(config)), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(problems).toEqual([]);
         });
 
         it("makes every clock without the slack, also one that only holds with it", () => {
@@ -74,8 +81,7 @@ describe("the belt a clock is made for", () => {
             expect(batched.verdict).toBe("stable");
             expect(batched.deadlock_risks).toHaveLength(1);
             expect(batched.ranking.meets_target_rate).toBe(true);
-            // the plan with the low density structure out of the period has half the period, 336 ticks, and fewer wake-ups
-            expect(selected.id).toBe("planned-lean-low-density-structure");
+            expect(selected.id).toBe("planned-belt-slack");
             // from the staged start the search for uneven output swings finds no clock for this build, so there is none
             // to compare with (the prepared build gave one that got back from every loss, at more wake-ups)
             expect(alternatives.some(a => a.id === "uneven-output")).toBe(false);
@@ -86,9 +92,8 @@ describe("the belt a clock is made for", () => {
         it("does not search for another clock by default, since batched swings can be selected as it is", () => {
             expect(by_default.skipped_searches).toEqual([
                 "Observed windows", "Uneven output swings", "Shifted swings", "Full-hand output swings",
-                "Observed windows, shorter period (low density structure not in the period)",
             ]);
-            expect(by_default.alternatives[by_default.selected_index].id).toBe("planned-lean-low-density-structure");
+            expect(by_default.alternatives[by_default.selected_index].id).toBe("planned-belt-slack");
             // from the staged start (empty machines) some clock is stable here; with the prepared build none was
             expect(by_default.alternatives.some(a => a.verdict === "stable")).toBe(true);
         });
@@ -101,12 +106,18 @@ describe("the belt a clock is made for", () => {
     describe("agricultural science, with backed-up belts", () => {
         let selected: ClockAlternative;
         let batched: ClockAlternative;
+        let problems: string[];
 
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
             const generated = generateClockAlternatives(backedUpBelts(config), { logger: quiet });
+            problems = alwaysOnReasonProblemsOf(backedUpBelts(config), generated);
             selected = generated.alternatives[generated.selected_index];
             batched = generated.alternatives.find(a => a.id === "planned-belt-slack")!;
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(problems).toEqual([]);
         });
 
         it("makes batched swings with room for a hand of fuel, as a clock for a backed-up belt, and it holds the target rate", () => {
@@ -121,14 +132,20 @@ describe("the belt a clock is made for", () => {
 
         // It was the clock selected until a clock had to get back from a backpressure loss as well (GOALS.md), and from
         // then the 2-swing clock was, since the build did not get back to its rate under it once the nutrients had run
-        // out. Since the rules of issue 152 (GOALS.md, "When a waiting inserter acts") it gets back from every loss, and
-        // is selected again; the game tests recorded it on 2026-10-14, 400 in every period.
-        // KNOWN REGRESSION under the staged start: nutrient-loss recovery dips; the recovery rule is being reviewed (see docs/stability.md)
-        it.fails("selects it: the build gets back to its rate under it from every loss", () => {
+        // out. Since the rules of issue 152 (GOALS.md, "When a waiting inserter acts") its nutrients trials dip a hand only
+        // late in their 40 periods, and since such a trial runs on until 40 periods at its rate follow (docs/stability.md)
+        // it gets back from every loss and is selected again.
+        it("selects it: the build gets back to its rate under it from every loss", () => {
             expect(batched.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
             expect(selected.id).toBe("planned-belt-slack");
             expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "backed_up" });
+        });
+
+        // The values the scaffold recordings expect of this build with backed-up belts were seen on one clock. The build is
+        // generated here, from the same config, and not again for that test (scaffold-recordings-clock.generation.test.ts).
+        it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
+            expectPinnedScaffoldClock("agricultural science (belts are backed up)", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: true }, selected);
         });
 
         it("lengthens every window of those inserters by the fill of a hand of nutrients", () => {
@@ -148,12 +165,18 @@ describe("the belt a clock is made for", () => {
     describe("automation science, with backed-up belts", () => {
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
+        let problems: string[];
 
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
             const generated = generateClockAlternatives(backedUpBelts(config), { logger: quiet });
+            problems = alwaysOnReasonProblemsOf(backedUpBelts(config), generated);
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
+        });
+
+        it("names why every inserter and drill a clock leaves always on is", () => {
+            expect(problems).toEqual([]);
         });
 
         it("makes full-hand output swings from batched swings that cannot get back to their rate", () => {

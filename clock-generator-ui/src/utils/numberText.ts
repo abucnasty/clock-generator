@@ -1,4 +1,5 @@
 import { copiesProblem } from './copiesProblem';
+import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /**
  * How a number reads on the page, and the words that go with the numbers of the target output and the clocks table.
@@ -111,9 +112,10 @@ export function rateHeader(copies: number): string {
     return copies !== 1 && !copiesProblem(copies) ? `Rate (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : 'Rate (items/s)';
 }
 
-/** The compact clocks table's header of the same rate, which says what the clock makes */
-export function makesHeader(copies: number): string {
-    return copies !== 1 && !copiesProblem(copies) ? `Makes (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : 'Makes (items/s)';
+/** The compact clocks table's header of the same rate, which says what the clock makes (or destroys, for a target that counts the item destroyed) */
+export function makesHeader(copies: number, counts?: TargetCounts): string {
+    const verb = rateVerbs(counts).title;
+    return copies !== 1 && !copiesProblem(copies) ? `${verb} (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : `${verb} (items/s)`;
 }
 
 /** A stretch of time as Results prints every one: "240 ticks (4 s)", "1.5 ticks (0.03 s)" */

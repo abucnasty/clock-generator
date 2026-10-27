@@ -1,10 +1,11 @@
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
-import { lossesOf } from './rateWarning';
-import type { PickRule } from './recommendedClock';
+import { lossesOf, notTriedOf } from './rateWarning';
+import { fewestDecidersReason, recommendedIndexOf, type PickRule } from './recommendedClock';
+import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
-export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment'>;
+export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'deciders'> & { counts?: TargetCounts };
 
 /**
  * The smallest distance from the target rate that names a clock by its rate, as the Copy button's "below target"
@@ -22,8 +23,9 @@ export const SUMMARY_COPY = {
     startDependent: 'Depends on how it is started',
     backedUpBelts: 'For backed-up belts',
     fewestWakeUps: 'Fewest wake-ups',
+    fewestDeciders: 'Fewest deciders',
     fewestWakeWindows: 'Fewest wake windows',
-    another: (rate: string) => `Another way to make ${rate}/s`,
+    another: (rate: string, counts?: TargetCounts) => `Another way to ${rateVerbs(counts).base} ${rate}/s`,
     // the card's tiles
     makes: (rate: string) => `${rate}/s`,
     allCopies: (copies: number) => `all ${copies} copies`,
@@ -35,12 +37,14 @@ export const SUMMARY_COPY = {
     recoversNotTested: 'Not tested',
     recoversUnavailable: 'Unavailable',
     recoversYesDetail: 'In the simulator, it gets back to its rate by itself after it is starved or jammed.',
-    recoversNoDetail: (losses: string) => losses
-        ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.`
+    recoversNoDetail: (losses: string, notTried = '') => losses
+        ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.${notTried}`
         : 'In the simulator, after it is starved or jammed, it does not get back to its rate by itself.',
     recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
     recoversNotTriedDetail: (reason: string) => `Recovery could not be tried in the simulator: ${reason.replace(/\.$/, '')}.`,
     recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
+    recoversLossLimit: (duration: string, item: string) =>
+        `Checked for losses up to ${duration}. A longer loss spoils the ${item} in the build, and no clock brings it back.`,
     beltMoving: 'Moving',
     beltBackedUp: 'Backed up',
     beltNone: 'None',
@@ -50,7 +54,7 @@ export const SUMMARY_COPY = {
     beltLineBackedUp: 'Made for backed-up belts.',
     beltLineNone: 'No inserter on the clock picks up from a belt.',
     // how a selected clock differs from the recommended one
-    differsRate: (rate: string, target: string) => `This one makes ${rate}/s, not ${target}/s.`,
+    differsRate: (rate: string, target: string, counts?: TargetCounts) => `This one ${rateVerbs(counts).third} ${rate}/s, not ${target}/s.`,
     differsMoreWakeUps: (n: number) => `It wakes inserters ${n} more ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
     differsFewerWakeUps: (n: number) => `It wakes inserters ${n} fewer ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
     differsBelt: 'It is made for backed-up belts.',
@@ -58,7 +62,7 @@ export const SUMMARY_COPY = {
     differsUnstable: 'It does not hold its rate.',
     differsNothing: 'It is not the recommended clock.',
     // the compare table
-    foldedMakes: (count: number, rate: string) => `All ${count} clocks make ${rate}/s.`,
+    foldedMakes: (count: number, rate: string, counts?: TargetCounts) => `All ${count} clocks ${rateVerbs(counts).base} ${rate}/s.`,
     worksYes: 'Yes',
     worksBackedUpBelts: 'Designed for backed-up supply',
     worksOffTarget: (rate: string) => `Misses the rate (${rate}/s)`,
@@ -89,7 +93,7 @@ const isContender = (clock: SummaryClock) => clock.ranking.meets_target_rate && 
  * The name of a clock by what it is for, against the other clocks of its generation ("Fewest wake-ups"). The first
  * rule that matches wins: a clock off the target rate is named by its rate; one that does not recover, or does not hold
  * its rate, by that; one for backed-up belts (when the build asked for moving ones) by its belt; among the
- * others, the one with the fewest wake-ups, else the fewest wake windows; any other by the rate it makes. Tied clocks
+ * others, the one with the fewest wake-ups, else the fewest deciders, else the fewest wake windows; any other by the rate it makes. Tied clocks
  * share a name; the engine's name under it tells them apart. The target is each clock's own, so an edit to the build
  * since never renames a clock.
  */
@@ -117,14 +121,34 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
         const contenders = clocks.filter(isContender);
         const wakeUps = wakeUpsKey(clock.ranking.wake_ups_per_minute);
         const counted = contenders.map(it => wakeUpsKey(it.ranking.wake_ups_per_minute)).filter(it => it !== null);
-        if (wakeUps !== null && wakeUps === Math.min(...counted)) {
+        const fewestWakeUps = Math.min(...counted);
+        if (wakeUps !== null && wakeUps === fewestWakeUps) {
             return SUMMARY_COPY.fewestWakeUps;
+        }
+        // the fewest decider combinators of clocks that do not all have the same number, and fewer than the clocks with the
+        // fewest wake-ups and the recommended one have: a clock that only ties them has no name of its own for it
+        const deciders = contenders.map(it => it.deciders);
+        const fewest = Math.min(...deciders);
+        if (clock.deciders === fewest && fewest < Math.max(...deciders)) {
+            const recommended = recommendedIndexOf(clocks);
+            const toBeat = clocks.filter((it, at) => at === recommended || (isContender(it) && wakeUpsKey(it.ranking.wake_ups_per_minute) === fewestWakeUps));
+            if (toBeat.every(it => fewest < it.deciders)) {
+                return SUMMARY_COPY.fewestDeciders;
+            }
         }
         if (clock.ranking.window_count === Math.min(...contenders.map(it => it.ranking.window_count))) {
             return SUMMARY_COPY.fewestWakeWindows;
         }
     }
-    return SUMMARY_COPY.another(rateText(clock.assessment.items_per_second));
+    return SUMMARY_COPY.another(rateText(clock.assessment.items_per_second), clock.counts);
+}
+
+/**
+ * What the name of a clock means, for the clocks whose name is not self-evident: a clock named Fewest deciders is the one
+ * with the least wiring to do by hand. Empty for any other clock (the pick's own reason says what Fewest wake-ups means).
+ */
+export function pickNameMeaning(clocks: SummaryClock[], index: number, rule: PickRule | null): string {
+    return plainClockName(clocks, index) === SUMMARY_COPY.fewestDeciders ? fewestDecidersReason(clocks[index], rule) : '';
 }
 
 /** The engine's own name for a clock, which says how it is made; the card and the table say it the same way */
@@ -140,11 +164,31 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
 } {
     const loss = clock.assessment.backpressure_loss;
     if (loss?.survives === true) return { kind: 'yes', value: SUMMARY_COPY.recoversYes, detail: SUMMARY_COPY.recoversYesDetail };
-    if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock)) };
+    if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock), notTriedOf(clock)) };
     if (loss?.survives === false) return { kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail };
     const notTried = clock.assessment.backpressure_loss_not_tried;
     return { kind: 'not-tested', value: clock.assessment.holds ? SUMMARY_COPY.recoversUnavailable : SUMMARY_COPY.recoversNotTested,
         detail: notTried !== undefined ? SUMMARY_COPY.recoversNotTriedDetail(notTried) : SUMMARY_COPY.recoversNotTestedDetail };
+}
+
+/** A stretch of time as the loss limit says it: "3 min 45 s", "3 min", "45 s" */
+export function minutesAndSecondsText(ticks: number): string {
+    const seconds = Math.round(ticks / 6) / 10;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds - minutes * 60;
+    if (minutes === 0) return `${formatNumberText(rest)} s`;
+    return rest === 0 ? `${minutes} min` : `${minutes} min ${formatNumberText(rest)} s`;
+}
+
+/**
+ * For a build whose items spoil, the losses its clocks were checked for, in a sentence ("Checked for losses up to 45 s. A
+ * longer loss spoils the iron bacteria in the build, …"); null for any other build, or a clock whose losses were not tried
+ */
+export function lossLimitText(clock: Pick<SummaryClock, 'assessment'>, itemLabel: (id: string) => string): string | null {
+    const limit = clock.assessment.backpressure_loss?.loss_limit;
+    if (!limit) return null;
+    const name = itemLabel(limit.item);
+    return SUMMARY_COPY.recoversLossLimit(minutesAndSecondsText(limit.ticks), name.charAt(0).toLowerCase() + name.slice(1));
 }
 
 /** What the clock makes, for all the copies, and the line under it: "240/s", "all 11 copies" (nothing for one copy) */
@@ -207,7 +251,7 @@ export function differenceFromRecommended(selected: SummaryClock, recommended: S
     const sentences: string[] = [];
     if (isStartDependent(selected)) sentences.push('It depends on how it is started.');
     if (isOffTarget(selected)) {
-        sentences.push(SUMMARY_COPY.differsRate(rateText(selected.assessment.items_per_second), rateText(targetOf(selected))));
+        sentences.push(SUMMARY_COPY.differsRate(rateText(selected.assessment.items_per_second), rateText(targetOf(selected)), selected.counts));
     }
     const mine = selected.assessment.wake_ups_per_minute;
     const theirs = recommended.assessment.wake_ups_per_minute;
@@ -241,12 +285,12 @@ const FOLD_MIN_ROWS = 3;
  * "All 5 clocks make 240/s." when 3 or more clocks shown make the same rate at two decimals, so the compare table can
  * leave out a column that says the same on every row; null when they differ, or there are too few to fold.
  */
-export function foldedMakes(clocks: Pick<SummaryClock, 'assessment'>[]): string | null {
+export function foldedMakes(clocks: Pick<SummaryClock, 'assessment' | 'counts'>[]): string | null {
     if (clocks.length < FOLD_MIN_ROWS) {
         return null;
     }
     const rates = new Set(clocks.map(clock => clock.assessment.items_per_second.toFixed(2)));
-    return rates.size === 1 ? SUMMARY_COPY.foldedMakes(clocks.length, rateText(clocks[0].assessment.items_per_second)) : null;
+    return rates.size === 1 ? SUMMARY_COPY.foldedMakes(clocks.length, rateText(clocks[0].assessment.items_per_second), clocks[0].counts) : null;
 }
 
 /**

@@ -10,9 +10,10 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { memo, useState } from 'react';
-import type { Config, MachineTargetRate } from 'clock-generator/browser';
-import type { MachineFormData } from '../hooks/useConfigForm';
+import { memo, useMemo, useState } from 'react';
+import type { Config, MachineTargetRate, OutputTransferGenerationIssue, OutputTransferSummary } from 'clock-generator/browser';
+import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useMachineTargetRates } from '../hooks/useMachineTargetRates';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
@@ -22,12 +23,16 @@ import { MachineSettingsFields } from './EntityFields';
 import { MachineIcon } from './MachineIcon';
 import { MachineIconPicker, RecipeNotMadeNote } from './MachineFields';
 import { useCraftingMachines, useMachineRecipeOptions } from '../hooks/useCraftingMachines';
-import { burnsNutrients, machineIconText, recipePatch } from '../utils/machinePrototype';
+import { burnsNutrients, machineIconText, placesResults, recipePatch } from '../utils/machinePrototype';
+import type { ResultTargetBuild } from '../utils/resultTarget';
+import { ResultTargetField } from './ResultTargetField';
 import { HelpCommand } from './HelpButton';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { MachineProductionSummary } from './MachineProductionSummary';
+import { OutputTransferPanel } from './OutputTransferPanel';
+import { InputRoutesPanel } from './InputRoutesPanel';
 import { SidecarModLink } from './IntroCard';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
@@ -41,6 +46,12 @@ import { BUTTON_NAMES, changeMachineName, recipeName } from '../utils/a11yLabels
 interface MachinesFormProps {
     engineConfig: Config;
     machines: MachineFormData[];
+    /** The build's other entities: a machine that places its results itself puts them into one of its containers */
+    belts: BeltFormData[];
+    chests: ChestFormData[];
+    inserters: InserterFormData[];
+    drills: readonly DrillFormData[];
+    getRecipeInfo?: (name: string) => RecipeInfo | null;
     recipeNames: string[];
     onAdd: () => void;
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
@@ -48,6 +59,11 @@ interface MachinesFormProps {
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
     onDuplicate: (index: number) => void;
+    outputTransfers?: readonly OutputTransferSummary[] | null;
+    outputGenerationIssues?: OutputTransferGenerationIssue[];
+    outputTransfersLoading?: boolean;
+    onFixOutput?: (machineId: number, item: string) => void;
+    onEditInserter?: (id: number) => void;
 }
 
 const CRAFTING_SPEED_COMMAND = '/c game.print(game.player.selected.crafting_speed)';
@@ -55,6 +71,11 @@ const CRAFTING_SPEED_COMMAND = '/c game.print(game.player.selected.crafting_spee
 function MachinesFormComponent({
     engineConfig,
     machines,
+    belts,
+    chests,
+    inserters,
+    drills,
+    getRecipeInfo,
     recipeNames,
     onAdd,
     onUpdate,
@@ -62,11 +83,17 @@ function MachinesFormComponent({
     onRemove,
     onReorder,
     onDuplicate,
+    outputTransfers = null,
+    outputGenerationIssues = [],
+    outputTransfersLoading = false,
+    onFixOutput,
+    onEditInserter,
 }: MachinesFormProps) {
     const { itemLabel } = useGameNames();
     const craftingMachines = useCraftingMachines();
     const [rateView, setRateView] = useState<'max' | 'target'>('max');
     const targetRates = useMachineTargetRates(engineConfig, rateView === 'target');
+    const build = useMemo(() => ({ machines, belts, chests, inserters, drills }), [machines, belts, chests, inserters, drills]);
     const common = machines.length === 0 ? [] : [
         machines.every(row => row.productivity === machines[0].productivity) ? `productivity ${machines[0].productivity}%` : null,
         machines.every(row => row.crafting_speed === machines[0].crafting_speed) ? `speed ${machines[0].crafting_speed}×` : null,
@@ -97,7 +124,7 @@ function MachinesFormComponent({
                     <>
                         <Typography variant="body2" sx={{ mb: 1 }}>
                             Rates are per machine, per copy. Max shows the machine's capacity; At target shows its share
-                            of the requested output. Open a machine's settings to edit its speed and productivity.
+                            of the requested output. Open Entity details to edit a machine's speed and productivity or inspect its routes.
                         </Typography>
                         {common.length > 0 && <Typography variant="body2" sx={{ mb: 1 }}>
                             All {machines.length} machines: {common.join(' · ')}. Each machine's values remain editable.
@@ -146,9 +173,17 @@ function MachinesFormComponent({
                                 machine={machine}
                                 index={index}
                                 recipeNames={recipeNames}
+                                build={build}
+                                getRecipeInfo={getRecipeInfo}
                                 atTarget={rateView === 'target'}
                                 targetRate={targetRates.rates?.find(rate => rate.machine_id === machine.id)}
                                 targetUpdating={targetRates.updating}
+                                outputTransfer={outputTransfers?.find(transfer => transfer.source.type === 'machine' && transfer.source.id === machine.id) ?? null}
+                                outputGenerationIssues={outputGenerationIssues.filter(issue => issue.machine_id === machine.id)}
+                                outputTransfersLoading={outputTransfersLoading}
+                                allOutputTransfers={outputTransfers}
+                                onFixOutput={onFixOutput}
+                                onEditInserter={onEditInserter}
                                 canDelete={machines.length > 1}
                                 dragHandle={dragHandle}
                                 onUpdate={onUpdate}
@@ -170,9 +205,17 @@ interface MachineRowProps {
     atTarget: boolean;
     targetRate?: MachineTargetRate;
     targetUpdating: boolean;
+    outputTransfer: OutputTransferSummary | null;
+    outputGenerationIssues: OutputTransferGenerationIssue[];
+    outputTransfersLoading: boolean;
+    allOutputTransfers: readonly OutputTransferSummary[] | null;
+    onFixOutput?: (machineId: number, item: string) => void;
+    onEditInserter?: (id: number) => void;
     machine: MachineFormData;
     index: number;
     recipeNames: string[];
+    build: ResultTargetBuild;
+    getRecipeInfo?: (name: string) => RecipeInfo | null;
     canDelete: boolean;
     onDuplicate: () => void;
     onMoveUp?: () => void;
@@ -183,7 +226,7 @@ interface MachineRowProps {
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetUpdating, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
+function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarget, targetRate, targetUpdating, outputTransfer, outputGenerationIssues, outputTransfersLoading, allOutputTransfers, onFixOutput, onEditInserter, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
     const { itemLabel, recipeLabel } = useGameNames();
     const craftingMachines = useCraftingMachines();
     const recipes = useMachineRecipeOptions(machine.prototype, recipeNames);
@@ -195,6 +238,9 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
         energy_consumption_bonus: machine.energy_consumption_bonus,
         fuel: machine.fuel,
     });
+    const inputs = [...new Set(!updating && facts ? facts.inputs.map(input => input.item_name)
+        : [...(getRecipeInfo?.(machine.recipe)?.ingredients ?? []), ...(machine.fuel ? [machine.fuel] : [])])];
+    const missingOutputs = outputTransfer?.results.filter(result => result.coverage === 'missing').length ?? 0;
 
     return (
         <Box
@@ -265,21 +311,33 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
                 </Box>
             </Box>
             <RecipeNotMadeNote machine={machine} sx={{ mb: 1 }} />
-            <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[{ label: 'Machine facts', content: !machine.recipe
+            {placesResults(machine, craftingMachines) && <ResultTargetField machine={machine} machineLabel={entityLabel('machine', machine.id)} build={build}
+                getRecipeInfo={getRecipeInfo} sx={{ mt: 1, mb: 1.5 }} onChange={result_target => onPatch(index, { result_target })} />}
+            <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[
+                { label: 'Input Routes', content: <InputRoutesPanel machineId={machine.id} build={build} getRecipeInfo={getRecipeInfo} inputs={inputs}
+                    transfers={allOutputTransfers} loading={outputTransfersLoading || updating} onEditInserter={onEditInserter} /> },
+                { label: 'Output Routes', content: <OutputTransferPanel summary={outputTransfer} chests={build.chests} facts={updating ? null : facts}
+                    fallbackItems={machine.recipe ? getRecipeInfo?.(machine.recipe)?.results ?? [] : []} targetRate={atTarget ? targetRate : undefined} atTarget={atTarget}
+                    generationIssues={outputGenerationIssues} loading={outputTransfersLoading} onFix={item => onFixOutput?.(machine.id, item)} onEditInserter={onEditInserter} /> },
+                { label: 'Machine Facts', content: !machine.recipe
                 ? <Typography variant="body2">Choose a recipe to see machine facts.</Typography>
                 : updating || (atTarget && targetUpdating)
                     ? <Typography variant="body2">Updating production…</Typography>
                     : atTarget && !targetRate
                         ? <Typography variant="body2">At-target rates unavailable for this build.</Typography>
-                        : <MachineFactsAccordion inline machineId={machine.id} facts={facts} error={error} targetRate={atTarget ? targetRate : undefined} /> }]} summary={
+                : <MachineFactsAccordion inline machineId={machine.id} facts={facts} error={error} targetRate={atTarget ? targetRate : undefined} /> }]} summary={openTab =>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 0.75, justifyContent: 'space-between' }}>
-                    {updating || (atTarget && targetUpdating)
+                    {updating
                         ? <Typography variant="caption">Updating production…</Typography>
-                        : facts && !error && (!atTarget || targetRate) && <MachineProductionSummary facts={facts} targetRate={atTarget ? targetRate : undefined} />}
+                        : facts && !error && <MachineProductionSummary facts={facts} targetRate={atTarget ? targetRate : undefined} atTarget={atTarget} />}
                     <Typography variant="caption">
                         Speed {Number(machine.crafting_speed.toFixed(3))}× · Productivity {machine.productivity}%
                         {burnsNutrients(machine, craftingMachines) && ` · Energy ${Number((machine.energy_consumption_bonus ?? 0).toFixed(2))}%`}
                     </Typography>
+                    {missingOutputs > 0 && <Button size="small" color="warning" onClick={() => openTab('Output Routes')}>
+                        {missingOutputs} {missingOutputs === 1 ? 'output needs' : 'outputs need'} a route</Button>}
+                    {outputGenerationIssues.length > 0 && <Button size="small" color="warning" onClick={() => openTab('Output Routes')}>Output target cannot be clocked</Button>}
+                    {!outputTransfersLoading && (!outputTransfer || outputTransfer.status === 'unavailable') && <Button size="small" color="inherit" onClick={() => openTab('Output Routes')}>Output routes unavailable</Button>}
                 </Box>
             }>
             <MachineSettingsFields machine={machine} onChange={(field, value) => onUpdate(index, field, value)} onPatch={patch => onPatch(index, patch)}

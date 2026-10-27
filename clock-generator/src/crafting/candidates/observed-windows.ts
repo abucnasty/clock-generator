@@ -7,7 +7,7 @@ import { InventoryTransferHistory } from "../sequence/inventory-transfer-history
 import { Logger } from "../../common/logger";
 import { withBeltPickupSlack } from "../clock";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, planRun, windowsFromHistory } from "../plan/plan-run";
-import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 import { fullHandTransferWindows } from "./full-hand";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
@@ -166,7 +166,7 @@ export function deriveWithOutputWindows(
  * (`fullHandTransferWindows`). With `mode` "prefer_planned" the planned windows stay where they pass the clock-only
  * check from every start phase, which is what the config override `derive_clock_windows` asks for; "always" derives
  * anyway; "uneven_output" derives with one output swing moved off its planned start (`deriveUnevenOutputClockWindows`).
- * The feeders of the output machine are kept or dropped as for a planned clock. When nothing derived passes, the
+ * The windows of the inserters of a loop are kept or dropped as for a planned clock. When nothing derived passes, the
  * planned windows are exported with the report of what was tried.
  *
  * The clock-only checks made here of the windows observed and of the planned windows judge each moving lane-phase
@@ -182,9 +182,8 @@ export function observedWindowsClock(
     const plan = planRun(config, options);
     const clock = clockOfPlan(plan, options);
     const { logger, run } = plan;
-    const { stability_check, duration, final_history, output_inserter_ids, output_machine_state_machines, all_output_inserters, simulation_context } = run;
+    const { stability_check, duration, final_history, output_inserter_ids, output_machine_state_machines, simulation_context } = run;
     const planned_windows = clock.windows;
-    const output_machine_ids = new Set(all_output_inserters.map(os => os.inserter.source.entity_id.id));
     const planned_stable = stability_check.holds;
     const non_deriving_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const planned_run = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
@@ -198,10 +197,10 @@ export function observedWindowsClock(
             FREE_RUNNING_CHECK_TICKS, { run: planned_run, long_run_ticks: FREE_RUNNING_CHECK_TICKS }, true).check;
     }
     logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
-    // the feeders of the output machine are part of the planned windows, kept or dropped here as without derivation
+    // the windows of the inserters of a loop are part of the planned windows, kept or dropped here as without derivation
     const feedPlanned = () => {
         const fed = planned_stable && planned_check.holds
-            ? trialWithOutputFeeders(non_deriving_config, planned_windows, duration.ticks, output_machine_ids, { check: planned_check, stock: planned_run.stock },
+            ? trialWithLoopWindows(non_deriving_config, planned_windows, duration.ticks, { check: planned_check, stock: planned_run.stock },
                 planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES, logger, options.on_progress_detail, true)
             : null;
         if (fed !== null) {
@@ -212,7 +211,7 @@ export function observedWindowsClock(
     };
     const exportPlanned = (fed: ReturnType<typeof feedPlanned>, derived_clock_windows: DerivedClockWindowsReport, report?: SearchReport): BlueprintGenerationResult =>
         exportClock(plan, clock, fed?.windows ?? planned_windows, options,
-            { clock_only_run, output_feeders: fed?.output_feeders, item_names: fed?.item_names, derived_clock_windows, search: report });
+            { clock_only_run, loop_windows: fed?.loop_windows, item_names: fed?.item_names, derived_clock_windows, search: report });
     if (planned_stable && planned_check.holds && mode === "prefer_planned") {
         // planned windows keep the plan's batched swings, which derived windows would break into per-craft swings
         const fed = feedPlanned();

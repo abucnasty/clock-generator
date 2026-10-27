@@ -25,7 +25,7 @@ export const OUT_OF_SCOPE_PICKUPS: Readonly<Record<OutOfScopePickup, { label: st
 
 /** Why no update of Sidecar or recapture makes an out-of-scope pickup supported, and what to build instead */
 export const OUT_OF_SCOPE_PICKUP_SCOPE = 'Splitters and side-loaded belt tiles are out of scope.'
-    + ' The clock generator models a belt that runs straight onto the pickup tile, an underground endpoint and an over-the-hood pickup.'
+    + ' Use a supported straight belt, bend or underground pickup.'
     + ' Rebuild the pickup as one of these, then recapture it with Sidecar.';
 
 /**
@@ -42,9 +42,10 @@ export function unsupportedPickupOf(source: { pickup_capture?: Capture }): OutOf
 export function withPickupType(source: Source, type: PickupType): Source {
     if (source.type !== 'belt' || pickupTypeOf(source) === 'unverified') return source;
     const length = pickupLengthForLayout(type);
-    const updated = { ...source, pickup_length: length, pickup_layout: type };
+    const updated = { ...source, pickup_length: length, pickup_layout: type,
+        ...(type === 'bend-right-upstream' && {near_lane: 1 as const}) };
     // A deliberate geometry edit becomes a manual configuration, not a new physical capture.
-    if (pickupTypeOf(source) !== type) delete updated.pickup_capture;
+    if (pickupTypeOf(source) !== type || updated.near_lane !== source.near_lane) delete updated.pickup_capture;
     return updated;
 }
 
@@ -65,7 +66,8 @@ export function pickupGeometryOf(build: PickupBuild) {
     const unverified = inputs.filter(inserter => isUnverified(inserter.source.pickup_capture)).map(i => i.id);
     // Out of scope: a subset of the unverified pickups, which no recapture makes supported
     const unsupported = inputs.filter(inserter => unsupportedPickupOf(inserter.source) !== null).map(i => i.id);
-    const missing = inputs.filter(inserter => (inserter.source.pickup_length !== 1 && inserter.source.pickup_length !== 0.5)
-        || (inserter.source.pickup_length === 0.5 && !inserter.source.pickup_layout)).map(i => i.id);
+    const missing = inputs.filter(({source}) => source.pickup_layout
+        ? source.pickup_length !== pickupLengthForLayout(source.pickup_layout)
+        : source.pickup_length !== 1).map(i => i.id);
     return { total: inputs.length, known: inputs.filter(i => !missing.includes(i.id) && !unverified.includes(i.id)).length, missing, unverified, unsupported, backedUp: build.overrides?.backed_up_belts === true };
 }

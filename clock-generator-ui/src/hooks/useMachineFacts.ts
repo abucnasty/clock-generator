@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { SerializableMachineFacts } from 'clock-generator/browser';
 import { askEngine } from '../worker/engineClient';
 import { machinesMaxOf, type MachinesMax } from '../utils/targetRateLimit';
+import type { TargetCounts } from '../utils/targetCounts';
 
 interface UseMachineFactsParams {
     recipe: string;
@@ -96,13 +97,16 @@ export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsR
 
 interface MachineSettings extends UseMachineFactsParams {
     id: number;
+    /** What the machine puts into its result target is taken back into it (see `resultComesBack`) */
+    comesBack?: boolean;
 }
 
 /**
- * The most the machines making the target `recipe` can make together in one copy of the build, from their Machine
- * Facts (see `machinesMaxOf`). Null when none makes it, and while the facts of a machine are still being worked out.
+ * The most the machines making the target `recipe` can make together in one copy of the build (or, for a target that
+ * counts the item destroyed, the most they destroy), from their Machine Facts (see `machinesMaxOf`). Null when none
+ * makes it, and while the facts of a machine are still being worked out.
  */
-export function useMachinesMax(recipe: string, machines: MachineSettings[]): MachinesMax | null {
+export function useMachinesMax(recipe: string, machines: MachineSettings[], counts: TargetCounts = 'made'): MachinesMax | null {
     const withRecipe = recipe ? machines.filter((machine) => machine.recipe !== '') : [];
     const keys = withRecipe.map(keyOf);
     const wanted = JSON.stringify(keys.filter((key) => !known.has(key)));
@@ -125,7 +129,7 @@ export function useMachinesMax(recipe: string, machines: MachineSettings[]): Mac
         };
     }, [wanted]);
 
-    const max = machinesMaxOf(recipe, withRecipe.map((machine, index) => ({ id: machine.id, facts: known.get(keys[index]) })));
+    const max = machinesMaxOf(recipe, withRecipe.map((machine, index) => ({ id: machine.id, facts: known.get(keys[index]), comesBack: machine.comesBack })), counts);
     // the same object while the machines and their sum are the same, for what is worked out from it
     const ids = max?.machineIds.join(',') ?? null;
     const perCopy = max?.perCopy ?? null;

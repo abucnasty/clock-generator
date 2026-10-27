@@ -30,6 +30,11 @@ export interface MachineFormData {
     recipe_quality?: Config['machines'][number]['recipe_quality'];
     /** Where it stands in the game; Sidecar exports it, nothing reads it */
     position?: Config['machines'][number]['position'];
+    /**
+     * The container a machine that places its results itself (a recycler) puts them into, picked as its direct output
+     * field, as a drill's `target`. Unset (id 0) once the container is deleted; none, the results stay in the machine.
+     */
+    result_target?: Config['machines'][number]['result_target'];
 }
 
 /** The icon of a machine: its prototype when the config has it, else an assembling machine's, as it is simulated */
@@ -280,6 +285,8 @@ export interface ConfigFormData {
         copies: number;
         /** Where the next copy stands from this one, in tiles: the result checks the drops of the copies onto a shared belt with it */
         copy_offset?: { x: number; y: number };
+        /** What the rate counts: the item made and taken out (none set, or "made"), or the item taken in and destroyed */
+        counts?: Config['target_output']['counts'];
     };
     machines: MachineFormData[];
     inserters: InserterFormData[];

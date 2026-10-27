@@ -1,4 +1,4 @@
-import { handSizeFor } from "../../../entities";
+import { handSizeFor, isBulkInserter } from "../../../entities";
 import { EntityState, InserterState, MachineState } from "../../../state";
 import { EnableControl } from "../../enable-control";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
@@ -18,7 +18,13 @@ export class PickupModeTransitionEvaluator implements ModeTransitionEvaluator<In
         private readonly enable_control: EnableControl,
         private readonly wait_for_sink_mode?: InserterWaitForSinkMode,
         private readonly source_state?: EntityState,
-    ) { }
+    ) {
+        // at a machine that places its results itself, an inserter that is no bulk one swings what it holds (rule 18)
+        this.swings_part_hands = source_state !== undefined && EntityState.isMachine(source_state)
+            && source_state.machine.metadata.places_results === true && !isBulkInserter(inserterState.inserter.metadata.type);
+    }
+
+    private readonly swings_part_hands: boolean;
 
     public onEnter(fromMode: InserterMode): void { }
 
@@ -29,6 +35,10 @@ export class PickupModeTransitionEvaluator implements ModeTransitionEvaluator<In
         const held_item = this.inserterState.held_item;
         if (held_item !== null && held_item.quantity === handSizeFor(this.inserterState.inserter, held_item.item_name)) {
             return ModeTransition.transition(this.swing_mode, `Picked up full stack of ${this.heldItemName()}`);
+        }
+
+        if (held_item !== null && this.swings_part_hands) {
+            return ModeTransition.transition(this.swing_mode, `Picked up ${held_item.quantity} ${held_item.item_name}, which it swings without waiting for a full hand`);
         }
 
         if (!this.enable_control.isEnabled()) {

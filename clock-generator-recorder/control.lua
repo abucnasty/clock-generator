@@ -82,6 +82,18 @@ remote.add_interface("clock-generator-recorder", {
         script.on_event(defines.events.on_tick, on_tick_while_recording)
         return helpers.table_to_json(report)
     end,
+    ---@param job_json string
+    ---@return string
+    harness_place_clock = function(job_json)
+        return helpers.table_to_json(harness.place_clock(helpers.json_to_table(job_json)))
+    end,
+    ---@param job_json string
+    ---@return string
+    harness_advance = function(job_json)
+        local report = harness.advance(helpers.json_to_table(job_json))
+        script.on_event(defines.events.on_tick, on_tick_while_recording)
+        return helpers.table_to_json(report)
+    end,
     ---@return string
     harness_status = function()
         return helpers.table_to_json(harness.status())

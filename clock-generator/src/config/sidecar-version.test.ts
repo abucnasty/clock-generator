@@ -168,3 +168,18 @@ it("tells a paste with drills from a sidecar before 0.12.0 that the drills' prod
     expect(Option.toNullable(checkSidecarImport('0.11.0', [], undefined, [], [], []))).not.toContain('productivity modules');
     expect(checkSidecarImport(LATEST_SIDECAR_VERSION, [], undefined, [], [], drills)).toEqual(Option.none());
 });
+
+describe("a recycler in a capture before 0.15.0", () => {
+    const recycler = [{ recipe: "iron-ore-recycling", prototype: "recycler" }];
+    const guidance = (version: string | undefined, machines: readonly { recipe: string; prototype?: string }[]) => Option.toNullable(checkSidecarImport(version, machines));
+
+    it("is told that the container it puts its results into was not exported", () => {
+        expect(guidance("0.14.0", recycler)).toBe("This was exported by Clock Generator Sidecar 0.14.0. The container a recycler puts its results into was not exported, "
+            + `so pick it in Results into on each recycler. Update the mod to ${LATEST_SIDECAR_VERSION} to import everything automatically.`);
+    });
+
+    it("is told nothing from the version that exports it, nor for a machine that places its results in its own output", () => {
+        expect(guidance("0.15.0", recycler)).toBeNull();
+        expect(guidance("0.14.0", [{ recipe: "iron-gear-wheel", prototype: "assembling-machine-3" }])).toContain("Nothing is missing from this import.");
+    });
+});

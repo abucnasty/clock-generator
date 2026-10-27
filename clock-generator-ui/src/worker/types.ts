@@ -1,6 +1,7 @@
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
 import type {
+    AlwaysOnReasons,
     AsBuiltStabilityCheck,
     BeltConfigSchema,
     ChestConfigSchema,
@@ -28,6 +29,8 @@ import type {
     SerializableClockWindows,
     SerializableMachineFacts,
     MachineTargetRate,
+    OutputTransferSummary,
+    OutputTransferGenerationIssue,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
     SuggestedTarget,
@@ -40,6 +43,7 @@ import type {
 } from 'clock-generator/browser';
 import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
+import type { TargetCounts } from '../utils/targetCounts';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
 export interface FuelSwing {
@@ -116,6 +120,8 @@ export interface ClockAlternativeView {
     label: string;
     description: string;
     inserterWindowCount: number;
+    /** The decider combinators that switch inserters and drills on and off in the clock's blueprint, the clock's own not counted */
+    deciders: number;
     /** The windows the selection compares last: the count without the windows of the output feeders */
     rankingWindowCount: number;
     /** What the trial of the clock found: holds, survives backpressure loss, rate, wake-ups */
@@ -124,6 +130,8 @@ export interface ClockAlternativeView {
     assumptions: ClockModelAssumptions;
     /** Copies of the build the target rate is shared over; the rate in the assessment is the total for all of them */
     copies: number;
+    /** What the rate counts: the item made (none set, as before) or the item destroyed, which the results say in their words */
+    counts?: TargetCounts;
     /** The one word for the clock: stable, no recovery, or unstable */
     verdict: ClockVerdict;
     /** How the clock ranks against the others; the selection compares these, in order */
@@ -157,6 +165,8 @@ export interface ClockAlternativeView {
     fuelView: FuelViewData | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
+    /** Why the clock leaves an inserter or drill always on, by entity id; missing from clocks kept before it was carried */
+    alwaysOnReasons?: AlwaysOnReasons;
     /** Ticks of belt pickup slack at the end of each window, by inserter id */
     beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */
@@ -361,6 +371,8 @@ export interface CraftingMachineInfo {
     burner_fuel_categories: string[];
     /** Base crafting speed, which picks the machine for a recipe */
     crafting_speed: number;
+    /** Where it places its results itself, from its centre in tiles: only a machine that does (the recycler) has it */
+    vector_to_place_result?: number[];
 }
 
 export interface CraftingMachineData {
@@ -419,6 +431,7 @@ export type EngineQuery =
     | { kind: 'lookups' }
     | { kind: 'machine-facts'; params: ComputeMachineFactsParams }
     | { kind: 'machine-target-rates'; config: Config }
+    | { kind: 'output-transfers'; config: Config }
     | { kind: 'inserter-coverage'; config: Config }
     | { kind: 'repeated-unit-conversion'; config: Config }
     /** The form state saved in localStorage, migrated but not yet checked against the config schema */
@@ -465,6 +478,7 @@ export interface EngineAnswers {
     /** Null when they cannot be worked out, e.g. for an unknown recipe */
     'machine-facts': SerializableMachineFacts | null;
     'machine-target-rates': MachineTargetRate[];
+    'output-transfers': { transfers: OutputTransferSummary[]; generation_issues: OutputTransferGenerationIssue[] };
     /**
      * The coverage of each machine, or the refusal of the first inserter that is out of scope (a belt pickup by another
      * inserter than the legendary stack inserter, a blacklist, a side-loaded pickup) with no coverage, as Check does; and

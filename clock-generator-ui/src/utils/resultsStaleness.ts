@@ -1,5 +1,6 @@
 import type { Config } from 'clock-generator/browser';
 import { beltQuestionOf, type BeltQuestion } from './beltQuestion';
+import type { TargetCounts } from './targetCounts';
 
 /** Label of every button that copies the blueprint of clocks made for an earlier build */
 export const STALE_COPY_LABEL = 'Copy old clock…';
@@ -21,6 +22,8 @@ export interface GeneratedFor {
     key: string;
     recipe: string;
     itemsPerSecond: number;
+    /** What the rate counts, when it is the item destroyed; none, the item made */
+    counts?: TargetCounts;
     beltQuestion: BeltQuestion;
     generatedAt: number;
 }
@@ -38,6 +41,7 @@ export function generatedForOf(config: Config, at: number = Date.now()): Generat
         key: configKeyOf(config),
         recipe: config.target_output.recipe,
         itemsPerSecond: config.target_output.items_per_second,
+        ...(config.target_output.counts === 'destroyed' && { counts: 'destroyed' as const }),
         beltQuestion: beltQuestionOf(config),
         generatedAt: at,
     };
@@ -48,9 +52,12 @@ export function isStale(generatedFor: GeneratedFor | null, currentKey: string): 
     return generatedFor !== null && generatedFor.key !== currentKey;
 }
 
-/** "{recipe} at {rate}/s", for the sentences that say what the clocks were made for; `recipeLabel` gives the recipe's game name */
-export function generatedForText({ recipe, itemsPerSecond }: GeneratedFor, recipeLabel: (id: string) => string = (id) => id): string {
-    return `${recipeLabel(recipe)} at ${Number(itemsPerSecond.toFixed(2)).toString()}/s`;
+/**
+ * "{recipe} at {rate}/s", for the sentences that say what the clocks were made for ("Iron ore at 400/s destroyed" for a
+ * target that counts the item destroyed); `recipeLabel` gives the recipe's game name
+ */
+export function generatedForText({ recipe, itemsPerSecond, counts }: GeneratedFor, recipeLabel: (id: string) => string = (id) => id): string {
+    return `${recipeLabel(recipe)} at ${Number(itemsPerSecond.toFixed(2)).toString()}/s${counts === 'destroyed' ? ' destroyed' : ''}`;
 }
 
 /** "made at 14:02" for clocks made today, "made on 12 Oct" for clocks made before, in the player's own format */

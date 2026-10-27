@@ -118,7 +118,8 @@ export interface HarnessOptions {
      * How many times the build holds the config, for a build of copies that share belts: a generated `clock` is wired to the
      * inserters of each. The copies are found from the build's machines and inserters (see matchCopies) and the run is refused
      * when their count differs. Absent, the build is one copy, and a machine or inserter beyond the config is refused as a
-     * mismatch. Needs `clock`; not in a staged start.
+     * mismatch. Needs `clock`. In a staged start the inserters of every copy are built, and each config id of the clock is wired to
+     * one inserter of each copy.
      */
     copies?: number;
     /** Remove the clock of the build and let its inserters run freely */
@@ -179,6 +180,119 @@ export interface StagedStartOptions {
     loop_seed?: number;
     /** Ticks a trial build of the whole blueprint runs, to tell which built inserter is which config inserter. Default 900 */
     trial_build_ticks?: number;
+    /**
+     * Place the clock first: once the belts are saturated, the clock is built while the inserters of the cell are not, and runs alone
+     * until its main counter (the decider described as "Clock for ...") reads this value on its own network. The counter is read with
+     * the game paused, after every single tick, never worked out from the tick. In the paused tick it reads this value, the inserters
+     * of the cell are built in the order asked for and wired to that same clock: nothing of the clock is built again, reset or
+     * changed. 0 wires them in the tick the clock is placed in, when its counter has not counted yet. Needs a clock. Absent, the clock
+     * is built in the tick the inserters are.
+     */
+    clock_phase?: number;
+}
+
+/** One inserter of the cell in a staged start, in the order the inserters are built: its config id, its copy (0 for the first) and where it stands from the middle of the blueprint */
+export interface StagedInserter {
+    config_id: number;
+    copy: number;
+    x: number;
+    y: number;
+}
+
+/**
+ * The order a staged start builds the inserters of the cell in (StagedStartOptions.build_order), from where each config inserter of
+ * each copy stands. "ascending": by config id, and the copies of one id in the order of the copies; "descending": exactly that order
+ * reversed; a list: the config ids named, each in every copy in the order of the copies, then the rest ascending. Refused when a
+ * listed id matches no inserter of a copy.
+ */
+export function stagedBuildOrder(copies: Map<number, { x: number; y: number }>[], build_order: StagedStartOptions["build_order"]): StagedInserter[] {
+    const ascending = copies
+        .flatMap((stands_at, copy) => Array.from(stands_at, ([config_id, at]) => ({ config_id, copy, x: at.x, y: at.y })))
+        .sort((a, b) => a.config_id - b.config_id || a.copy - b.copy);
+    if (Array.isArray(build_order)) {
+        const named = build_order.flatMap(id => copies.map((stands_at, copy) => {
+            const found = ascending.find(it => it.config_id === id && it.copy === copy);
+            if (!found) {
+                const matched = Array.from(stands_at.keys()).sort((a, b) => a - b).join(", ");
+                throw new Error(`The build order names config inserter ${id}, which matches no inserter of the build`
+                    + `${copies.length > 1 ? ` in copy ${copy + 1} of ${copies.length}` : ""} (matched: ${matched})`);
+            }
+            return found;
+        }));
+        return [...named, ...ascending.filter(it => !build_order.includes(it.config_id))];
+    }
+    return build_order === "descending" ? [...ascending].reverse() : ascending;
+}
+
+/** One reading of the main counter of a clock placed first, with the game paused after the tick */
+export interface ClockReading {
+    tick: number;
+    counter: number;
+}
+
+/**
+ * Throws when the readings of a clock placed first are not one a tick from its placement on: each after exactly one more tick than
+ * the one before, the last the first to read the phase asked for, and within two periods and two ticks of the placement.
+ */
+export function assertClockPriming(trace: ClockReading[], clock_phase: number, period: number): void {
+    if (trace.length === 0) {
+        throw new Error("The clock placed first was never read");
+    }
+    for (let index = 1; index < trace.length; index++) {
+        if (trace[index].tick !== trace[index - 1].tick + 1) {
+            throw new Error(`The clock placed first was read at tick ${trace[index - 1].tick} and next at tick ${trace[index].tick}: every tick is read`);
+        }
+    }
+    const first = trace.findIndex(it => it.counter === clock_phase);
+    if (first !== trace.length - 1) {
+        throw new Error(first === -1
+            ? `The main counter of the clock placed first never read ${clock_phase}: it read ${trace.map(it => it.counter).join(", ")}`
+            : `The main counter of the clock placed first read ${clock_phase} at tick ${trace[first].tick}, before its last reading`);
+    }
+    if (trace.length - 1 > 2 * period + 2) {
+        throw new Error(`The main counter of the clock placed first took ${trace.length - 1} ticks to read ${clock_phase}, over two periods of ${period} ticks and two`);
+    }
+}
+
+/** What the game reports of a clock placed first, when it is placed (harness_place_clock) and when the inserters are wired to it (harness_start) */
+interface PlacedClockReport {
+    tick: number;
+    counter: number;
+    main_unit: number;
+    combinators: Record<string, number> | number[];
+    cell_ghosts: number;
+    stock?: Record<string, { type: string; name: string; unit_number: number; input?: number; output?: number }> | { type: string; name: string; unit_number: number; input?: number; output?: number }[];
+    placed_tick?: number;
+}
+
+/**
+ * Throws when the inserters of a staged start were not wired to the clock placed first as it was placed and read: in the tick of its
+ * last reading, with its counter reading the phase then, the same combinators and main counter, no inserter of the cell built
+ * before, and the crafting machines empty.
+ */
+export function assertClockAttached(priming: { target: number; placed: PlacedClockReport; trace: ClockReading[] }, attach: PlacedClockReport | undefined): void {
+    if (!attach) {
+        throw new Error("The game did not report wiring the inserters to the clock placed first");
+    }
+    const last = priming.trace[priming.trace.length - 1];
+    if (attach.tick !== last.tick || attach.placed_tick !== priming.placed.tick) {
+        throw new Error(`The inserters were wired at tick ${attach.tick} to a clock placed at tick ${attach.placed_tick}, not at tick ${last.tick} to the one placed at tick ${priming.placed.tick}`);
+    }
+    if (attach.counter !== priming.target) {
+        throw new Error(`The main counter read ${attach.counter} when the inserters were wired, not ${priming.target}`);
+    }
+    const placed_units = Object.values(priming.placed.combinators);
+    const attach_units = Object.values(attach.combinators);
+    if (attach.main_unit !== priming.placed.main_unit || attach_units.length !== placed_units.length || attach_units.some((unit, index) => unit !== placed_units[index])) {
+        throw new Error(`The clock the inserters were wired to is not the one placed first: combinators ${attach_units.join(", ")} against ${placed_units.join(", ")}`);
+    }
+    if (attach.cell_ghosts !== priming.placed.cell_ghosts) {
+        throw new Error(`${priming.placed.cell_ghosts - attach.cell_ghosts} inserters of the cell were built while the clock ran alone`);
+    }
+    const filled = Object.values(attach.stock ?? {}).filter(row => row.type !== "container" && ((row.input ?? 0) > 0 || (row.output ?? 0) > 0));
+    if (filled.length > 0) {
+        throw new Error(`Machines of the cell hold items before its inserters are built: ${filled.map(row => `${row.name} (unit ${row.unit_number}): ${row.input ?? 0} in, ${row.output ?? 0} out`).join("; ")}`);
+    }
 }
 
 export interface HarnessResult {
@@ -489,23 +603,46 @@ export function matchBuiltCopies(described: any, config: Config, named_copies?: 
 }
 
 /**
- * Per copy, the unit number of the built drill behind each config drill id: a config drill is the one whose target machine
- * is the machine of the copy that the built drill drops into.
+ * Per copy, the unit number of the built drill behind each config drill id: a config drill is the one whose target is
+ * what the built drill drops into, a machine matched to the config's or a chest (a car, a cargo wagon, a rocket silo)
+ * that a matched inserter of the copy moves items of.
  */
 export function matchBuiltDrills(described: any, config: Config, named_copies?: number): Map<number, number>[] {
-    const { copies } = matchBuild(described, config, named_copies);
+    const { as_recording, copies } = matchBuild(described, config, named_copies);
     return copies.map(match => {
+        const chests = matchedChests(as_recording, config, match);
         const unit_numbers = new Map<number, number>();
         for (const drill of Object.values<any>(described.drills ?? {})) {
-            if (drill.target?.type !== "machine") continue;
-            const machine_id = match.machines.get(drill.target.id);
-            const configured = (config.drills?.configs ?? []).find(it => it.target.type === "machine" && it.target.id === machine_id);
+            const target = drill.target as { type: string; id: number } | undefined;
+            const target_id = target?.type === "machine" ? match.machines.get(target.id)
+                : target?.type === "chest" ? chests.get(target.id) : undefined;
+            const configured = (config.drills?.configs ?? []).find(it => it.target.type === target?.type && it.target.id === target_id);
             if (configured !== undefined && drill.unit_number !== undefined) {
                 unit_numbers.set(configured.id, drill.unit_number);
             }
         }
         return unit_numbers;
     });
+}
+
+/**
+ * The config chest behind each chest of the build that a matched inserter of the copy takes from or drops into, where
+ * the config has one chest of its type. The inserters' match keys a chest end by "chest" and does not tell chests apart,
+ * so two chests of one type in the config cannot be told apart and are left out (a drill into either is then refused).
+ */
+function matchedChests(recording: Recording, config: Config, match: { inserters: Map<number, number> }): Map<number, number> {
+    const recorded_types = new Map(((recording.config.chests ?? []) as { id: number; type: string }[]).map(chest => [chest.id, chest.type]));
+    const chests = new Map<number, number>();
+    for (const inserter of recording.inserters) {
+        if (!match.inserters.has(inserter.id)) continue;
+        for (const end of [inserter.source, inserter.sink]) {
+            const of_type = (config.chests ?? []).filter(chest => end.type === "chest" && chest.type === recorded_types.get(end.id));
+            if (of_type.length === 1) {
+                chests.set(end.id, of_type[0].id);
+            }
+        }
+    }
+    return chests;
 }
 
 /** What the mod is told of the inserters a clock enables: per config id the unit number of its inserter, a list of them where the build has copies */
@@ -736,8 +873,8 @@ function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
     }
-    if (options.copies !== undefined && (!Number.isInteger(options.copies) || options.copies < 1 || !options.clock || options.staged_start)) {
-        throw new Error("`copies` is a whole number of copies of the config that a generated clock is wired to: it needs a clock, and a staged start places one cell");
+    if (options.copies !== undefined && (!Number.isInteger(options.copies) || options.copies < 1 || !options.clock)) {
+        throw new Error("`copies` is a whole number of copies of the config that a generated clock is wired to: it needs a clock");
     }
     if (options.built_clock && (options.unclocked || options.staged_start)) {
         throw new Error("A named clock of the build is kept or replaced: it cannot be asked for with an unclocked run or a staged start");
@@ -753,6 +890,16 @@ function assertBuildOptions(options: BuildOptions): void {
         }
         if (!options.config && (options.clock || !Array.isArray(order))) {
             throw new Error("A staged start needs the config, to tell which built inserter is which config id (unless the build order is a list and there is no clock)");
+        }
+        const phase = options.staged_start.clock_phase;
+        if (phase !== undefined) {
+            if (!options.clock || options.unclocked) {
+                throw new Error("A staged start places its clock first only with a generated clock to place");
+            }
+            const period = clockPeriodOf(options.clock.schedule);
+            if (!Number.isInteger(phase) || phase < 0 || phase > period) {
+                throw new Error(`The phase the clock is placed first to is a value its main counter reads, a whole number from 0 to its period of ${period} ticks, not ${phase}`);
+            }
         }
         // the recording runs for exactly the ticks asked for, from the placement tick
         assertRecordableTicks(options.ticks, null);
@@ -1018,7 +1165,7 @@ export class HarnessSession {
         const replaces_clock = options.clock !== undefined || options.unclocked;
 
         // trial build: which inserter is which
-        let order: { x: number; y: number; config_id: number }[] = [];
+        let order: { x: number; y: number; config_id: number; copy?: number }[] = [];
         let position = options.position;
         if (options.config) {
             const trial = await this.call("harness_build", {
@@ -1032,33 +1179,21 @@ export class HarnessSession {
             });
             await this.waitFor("the trial build", deadline, status => status.ready);
             const described = await this.call("harness_describe");
-            const unit_numbers = matchBuiltInserters(described, options.config);
+            // one copy unless the test names the copies, which are then matched as a clock of copies is wired (see matchCopies)
+            const copies = matchBuiltCopies(described, options.config, options.copies);
             const stands_at = new Map<number, { x: number; y: number }>(described.movers.inserters.map((it: any) => [it.unit_number, it.position]));
-            const known: { config_id: number; x: number; y: number }[] = Array.from(unit_numbers).flatMap(([config_id, unit_number]) => {
+            const known = copies.map(unit_numbers => new Map(Array.from(unit_numbers).flatMap(([config_id, unit_number]) => {
                 const at = stands_at.get(unit_number);
-                return at === undefined ? [] : [{ config_id, x: at.x - trial.origin.x, y: at.y - trial.origin.y }];
-            });
-            const config_ids = known.map(it => it.config_id);
-            const ascending = [...known].sort((a, b) => a.config_id - b.config_id);
-            const listed = Array.isArray(staged.build_order) ? staged.build_order : null;
-            if (listed !== null) {
-                const named = listed.map(id => {
-                    const found = known.find(it => it.config_id === id);
-                    if (!found) {
-                        throw new Error(`The build order names config inserter ${id}, which matches no inserter of the build (matched: ${config_ids.sort((a, b) => a - b).join(", ")})`);
-                    }
-                    return found;
-                });
-                order = [...named, ...ascending.filter(it => !listed.includes(it.config_id))];
-            } else {
-                order = staged.build_order === "descending" ? [...ascending].reverse() : ascending;
-            }
+                return at === undefined ? [] : [[config_id, { x: at.x - trial.origin.x, y: at.y - trial.origin.y }] as const];
+            })));
+            order = stagedBuildOrder(known, staged.build_order);
             if (options.clock) {
-                const missing = scheduledInserterIds(options.clock.schedule).filter(id => !unit_numbers.has(id));
+                const missing = copies.flatMap((unit_numbers, copy) => scheduledInserterIds(options.clock!.schedule).filter(id => !unit_numbers.has(id)).map(id => ({ id, copy })));
                 if (missing.length > 0) {
-                    throw new Error(`The clock names inserters ${missing.join(", ")} of the config, which match no inserter of the build`);
+                    throw new Error(`The clock names inserters ${Array.from(new Set(missing.map(it => it.id))).join(", ")} of the config, which match no inserter of the build`
+                        + `${copies.length > 1 ? ` in copy ${Array.from(new Set(missing.map(it => it.copy + 1))).join(", ")} of ${copies.length}` : ""}`);
                 }
-                const not_in_config = buildPartsMissingFromConfig(described, options.config);
+                const not_in_config = buildPartsMissingFromConfig(described, options.config, options.copies);
                 if (not_in_config.length > 0) {
                     throw new Error(missingFromConfigMessage(not_in_config));
                 }
@@ -1066,7 +1201,8 @@ export class HarnessSession {
             }
             position = trial.origin;
             const cleared = await this.call("harness_clear");
-            options.log(`Trial build matched ${unit_numbers.size} config inserters and was removed again (${cleared.removed} entities)`);
+            options.log(`Trial build matched ${copies.map(it => it.size).join(" + ")} config inserters`
+                + `${copies.length > 1 ? ` in ${copies.length} copies` : ""} and was removed again (${cleared.removed} entities)`);
         }
 
         // first stage: everything but the inserters of the cell, until the belts are saturated
@@ -1095,9 +1231,28 @@ export class HarnessSession {
         }
         options.log(`The belts are saturated at tick ${saturated.staged.saturated_tick} (${saturated.staged.saturated_tick - saturated.staged.started_tick} ticks after the build)`);
 
+        // with the clock placed first: the clock alone, read after every tick until its counter reads the phase asked for
+        let priming: { target: number; placed: any; trace: ClockReading[] } | undefined;
+        if (staged.clock_phase !== undefined) {
+            const period = clockPeriodOf(options.clock!.schedule);
+            const placed = await this.call("harness_place_clock", { clock: { blueprint: withInserterTags(options.clock!) } });
+            options.log(`Placed the clock at tick ${placed.tick} with the ${placed.cell_ghosts} inserters of the cell not built; its counter reads ${placed.counter}`);
+            const trace: ClockReading[] = [{ tick: placed.tick, counter: placed.counter }];
+            while (trace[trace.length - 1].counter !== staged.clock_phase && trace.length <= 2 * period + 3) {
+                await this.call("harness_advance", { ticks: 1 });
+                const status = await this.waitFor("one tick of the clock placed first", deadline, it => it.ready);
+                trace.push({ tick: status.tick, counter: status.clock.counter });
+            }
+            assertClockPriming(trace, staged.clock_phase, period);
+            options.log(`The counter reads ${staged.clock_phase} at tick ${trace[trace.length - 1].tick}, ${trace.length - 1} ticks after the clock was placed`);
+            priming = { target: staged.clock_phase, placed, trace };
+        }
+
         // second stage: the inserters of the cell and the clock, in one tick
-        let clock: { blueprint: string; inserters: Record<string, number> } | undefined;
-        if (options.clock) {
+        let clock: { blueprint: string; inserters: Record<string, number> } | { primed: true } | undefined;
+        if (priming) {
+            clock = { primed: true };
+        } else if (options.clock) {
             clock = { blueprint: withInserterTags(options.clock), inserters: {} };
         }
         const start = await this.call("harness_start", {
@@ -1105,9 +1260,20 @@ export class HarnessSession {
             unclocked: options.unclocked,
             seed: options.seed,
             lua: options.lua,
-            staged: { order, loop_seed: staged.loop_seed },
+            staged: { order, loop_seed: staged.loop_seed, copies: options.copies },
             record: { ticks: options.ticks },
         });
+        if (priming) {
+            assertClockAttached(priming, start.staged.clock_attach);
+            start.staged.clock_priming = { target: priming.target, placed: priming.placed, trace: priming.trace };
+        }
+        if (options.copies !== undefined && options.clock) {
+            const wired: { inserter: number }[] = Object.values(start.clock?.wired ?? {});
+            const short = scheduledInserterIds(options.clock.schedule).filter(id => wired.filter(it => it.inserter === id).length !== options.copies);
+            if (short.length > 0) {
+                throw new Error(`The clock is wired to inserters ${short.join(", ")} of the config not once in each of the ${options.copies} copies`);
+            }
+        }
         for (const placed of Object.values<{ unit_number: number; config_id?: number; x: number; y: number; tick: number }>(start.staged.placed ?? {})) {
             options.log(`Built inserter ${placed.config_id !== undefined ? `of config id ${placed.config_id}` : "not in the config"} at (${placed.x}, ${placed.y}) of the blueprint: unit_number ${placed.unit_number}, tick ${placed.tick}`);
         }

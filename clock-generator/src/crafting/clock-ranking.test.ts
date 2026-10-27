@@ -25,6 +25,33 @@ const selectedOf = (clocks: Ranked[], signatures: Record<string, string> = {}): 
 };
 
 describe("combineClockAlternativeRuns", () => {
+    it("lists the runs made with shared windows after the run, once, and ranks them with the rest", () => {
+        const shared = (id: string, ranking: Partial<ClockRanking>, signature: string): ClockAlternativeRun<Ranked> => ({ signature, alternatives: [clock(id, ranking)] });
+        const runs: ClockAlternativeRun<Ranked>[] = [
+            { signature: "a", alternatives: [clock("a", { wake_ups_per_minute: 80 })], also: [shared("a-shared", { wake_ups_per_minute: 20 }, "a-shared")] },
+            // the same clock again, with its shared one: listed once
+            { signature: "a", alternatives: [clock("a-again")], also: [shared("a-shared-again", {}, "a-shared")] },
+            { signature: "b", alternatives: [clock("b", { wake_ups_per_minute: 50 })] },
+        ];
+        const { alternatives, selected_index } = combineClockAlternativeRuns(runs, it => it);
+        expect(alternatives.map(it => it.id)).toEqual(["a", "a-shared", "b"]);
+        expect(alternatives[selected_index].id).toBe("a-shared");
+    });
+
+    it("picks between a clock and its shared one as between any two: the one that keeps the rate and recovers, then the fewest wake-ups, not the fewest deciders", () => {
+        const pair = (separate: Partial<ClockRanking>, shared: Partial<ClockRanking>): string => {
+            const runs: ClockAlternativeRun<Ranked>[] = [
+                { signature: "a", alternatives: [clock("a", separate)], also: [{ signature: "a-shared", alternatives: [clock("a-shared", shared)] }] },
+            ];
+            const { alternatives, selected_index } = combineClockAlternativeRuns(runs, it => it);
+            return alternatives[selected_index].id;
+        };
+        // shared windows keep some inserters enabled longer, so they wake more: the separate clock stays selected
+        expect(pair({ wake_ups_per_minute: 840 }, { wake_ups_per_minute: 1490 })).toBe("a");
+        // where the separate windows do not keep the rate and recover, the shared clock is selected whatever its wake-ups
+        expect(pair({ wake_ups_per_minute: 40, meets_target_rate: false }, { wake_ups_per_minute: 70 })).toBe("a-shared");
+    });
+
     it("selects the clock with the fewest wake-ups among those that meet the target rate", () => {
         expect(selectedOf([
             clock("first", { wake_ups_per_minute: 80 }),
@@ -245,5 +272,13 @@ describe("searchesAreNeeded", () => {
         const subtick = clock("subtick");
         const rounded = clock("rounded", { meets_target_rate: false, rate_off_target: 0.2 });
         expect(searchesAreNeeded([{ signature: "one", alternatives: [rounded, subtick] }], it => it)).toBe(false);
+    });
+});
+
+describe("searchesAreNeeded", () => {
+    it("counts the clock made with shared windows as on offer: no search is needed where it can be selected as stable", () => {
+        const separate = clock("separate", { meets_target_rate: false });
+        expect(searchesAreNeeded([{ signature: "one", alternatives: [separate] }], it => it)).toBe(true);
+        expect(searchesAreNeeded([{ signature: "one", alternatives: [separate], also: [{ signature: "one-shared", alternatives: [clock("shared")] }] }], it => it)).toBe(false);
     });
 });

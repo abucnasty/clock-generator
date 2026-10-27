@@ -1,22 +1,24 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { InserterUpdates, orderIsOpen, TakerOrder } from "./competing-takers";
+import { InserterUpdates, TakerOrder, takerOrderName, takerOrdersToCheck } from "./competing-takers";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { loadConfigFromFile } from "../../config/loader";
 import { ConfigPaths } from "../../config/config-paths";
 import { MachineState } from "../../state";
 
-describe("whether the turn rule leaves the order open", () => {
-    it("is closed for a machine with nothing to take", () => {
-        expect(orderIsOpen(0, false, 16)).toBe(false);
+describe("the orders a clock is checked under", () => {
+    it("is the default alone where no machine has two takers of one product", () => {
+        expect(takerOrdersToCheck(0)).toEqual(["descending"]);
+        expect(takerOrdersToCheck(1)).toEqual(["descending"]);
     });
 
-    it("is open while nobody has taken from the machine, whatever it holds", () => {
-        expect(orderIsOpen(1, false, 16)).toBe(true);
+    it("is both ways round for two takers", () => {
+        expect(takerOrdersToCheck(2)).toEqual(["descending", "ascending"]);
     });
 
-    it("is open for a machine that holds a hand for the biggest of the inserters, and closed under it once someone has taken", () => {
-        expect(orderIsOpen(16, true, 16)).toBe(true);
-        expect(orderIsOpen(15, true, 16)).toBe(false);
+    // two orders would leave the middle taker of three never first and never last
+    it("is the descending order and each of its rotations for more, so every taker is first once and last once", () => {
+        expect(takerOrdersToCheck(3)).toEqual(["descending", { rotation: 1 }, { rotation: 2 }]);
+        expect(takerOrdersToCheck(3).map(takerOrderName)).toEqual(["descending", "rotated by 1", "rotated by 2"]);
     });
 });
 
@@ -33,40 +35,32 @@ describe("the order competing inserters are updated in", () => {
         }
     });
 
-    /** The order the inserters of the foundries 3 and 10 are updated in a tick, with each foundry holding `held` low density structures and `taker` having taken last, if one has */
-    const order = (taker_order: TakerOrder | undefined, held: number, taker?: string) => {
+    /** The order the inserters of the foundries 3 and 10 are updated in a tick, with each foundry holding `held` low density structures */
+    const order = (taker_order: TakerOrder | undefined, held: number) => {
         for (const id of [3, 10]) {
-            const state = foundry(id);
-            state.inventoryState.setQuantity("low-density-structure", held);
-            state.lastOutputTaker.clear();
-            if (taker !== undefined) {
-                state.lastOutputTaker.set("low-density-structure", taker);
-            }
+            foundry(id).inventoryState.setQuantity("low-density-structure", held);
         }
         updated.length = 0;
         new InserterUpdates(context.inserters, context.state_registry, taker_order).executeForTick();
         return updated.filter(id => [5, 7, 22, 25].includes(id));
     };
 
-    it("is the order of the list where nothing is there to take", () => {
-        expect(order("descending", 0)).toEqual([5, 7, 22, 25]);
-    });
-
-    it("serves the one built last first where nobody has taken yet", () => {
+    // the game serves them in one fixed order on every tick, whatever the machine holds (#100's supercapacitor plant)
+    it("serves the one built last first on every tick, whatever the machine holds, for the descending order", () => {
+        expect(order("descending", 0)).toEqual([7, 5, 25, 22]);
         expect(order("descending", 4)).toEqual([7, 5, 25, 22]);
-    });
-
-    it("serves the one built last first where a hand or more is there, also with a taker before", () => {
-        expect(order("descending", 16, "inserter:5")).toEqual([7, 5, 25, 22]);
-    });
-
-    it("leaves the turn rule to decide where less than a hand is there and someone has taken", () => {
-        expect(order("descending", 15, "inserter:5")).toEqual([5, 7, 22, 25]);
+        expect(order("descending", 15)).toEqual([7, 5, 25, 22]);
+        expect(order("descending", 16)).toEqual([7, 5, 25, 22]);
     });
 
     it("serves the one built first first for the ascending order, and the default is descending", () => {
         expect(order("ascending", 4)).toEqual([5, 7, 22, 25]);
         expect(order(undefined, 4)).toEqual([7, 5, 25, 22]);
+    });
+
+    it("turns each group round for a rotation: by one, two takers are served in ascending order", () => {
+        expect(order({ rotation: 1 }, 4)).toEqual([5, 7, 22, 25]);
+        expect(order({ rotation: 2 }, 4)).toEqual([7, 5, 25, 22]);
     });
 
     it("draws an order of its own from a seed, the same one every tick, and another from another seed", () => {
@@ -81,48 +75,15 @@ describe("the order competing inserters are updated in", () => {
         expect(order({seed: 5}, 4)).toEqual([5, 7, 22, 25]);
     });
 
-    it("restores the original order when a reused updater's turn rule closes", () => {
+    it("keeps the order a reused updater has, tick after tick", () => {
         const updates = new InserterUpdates(context.inserters, context.state_registry);
-        const tick = (held: number, history: boolean) => {
-            for (const id of [3, 10]) {
-                const state = foundry(id);
-                state.inventoryState.setQuantity("low-density-structure", held);
-                state.lastOutputTaker.clear();
-                if (history) state.lastOutputTaker.set("low-density-structure", "inserter:5");
-            }
+        const tick = (held: number) => {
+            for (const id of [3, 10]) foundry(id).inventoryState.setQuantity("low-density-structure", held);
             updated.length = 0;
             updates.executeForTick();
             return updated.filter(id => [5, 7, 22, 25].includes(id));
         };
-        expect(tick(16, true)).toEqual([7, 5, 25, 22]);
-        expect(tick(16, true)).toEqual([7, 5, 25, 22]);
-        expect(tick(15, true)).toEqual([5, 7, 22, 25]);
-        expect(tick(4, false)).toEqual([7, 5, 25, 22]);
-        expect(tick(0, false)).toEqual([5, 7, 22, 25]);
-    });
-
-    it("uses the stock at the start of the tick for every group's order", () => {
-        for (const id of [3, 10]) {
-            foundry(id).inventoryState.setQuantity("low-density-structure", id === 3 ? 16 : 0);
-            foundry(id).lastOutputTaker.clear();
-        }
-        const trigger = vi.mocked(context.inserters.find(it => it.inserter_state.entity_id.number === 7)!.executeForTick);
-        const original = trigger.getMockImplementation()!;
-        trigger.mockImplementation(() => {
-            updated.push(7);
-            foundry(10).inventoryState.setQuantity("low-density-structure", 16);
-        });
-        try {
-            const updates = new InserterUpdates(context.inserters, context.state_registry);
-            updated.length = 0;
-            updates.executeForTick();
-            expect(updated.filter(id => [5, 7, 22, 25].includes(id))).toEqual([7, 5, 22, 25]);
-            updated.length = 0;
-            updates.executeForTick();
-            expect(updated.filter(id => [5, 7, 22, 25].includes(id))).toEqual([7, 5, 25, 22]);
-        } finally {
-            trigger.mockImplementation(original);
-        }
+        expect([tick(16), tick(15), tick(4), tick(0)]).toEqual(new Array(4).fill([7, 5, 25, 22]));
     });
 
     it("keeps each foundry's inserters in the places they have in the list", () => {

@@ -38,7 +38,7 @@ export interface TimelineEvent {
 export interface TimelineRecording {
     version: 1;
     mode: "clock" | "plan";
-    /** Tick 0 is the baseline immediately after preparation/warm-up; tick n is after simulated tick n. */
+    /** Tick 0 is the baseline immediately after preparation/warm-up (and the settling asked for); tick n is after simulated tick n. */
     start_tick: 0;
     end_tick: number;
     period_ticks: number;
@@ -54,6 +54,11 @@ export interface TimelineRecordingOptions {
     period_ticks: number;
     max_ticks?: number;
     max_points?: number;
+    /**
+     * Periods the build runs from its cold start before the recorded period, where more than its warm-up: the recording
+     * then shows a settled period (the long run of the clock judges the build from one), not the first after warm-up.
+     */
+    settle_periods?: number;
 }
 
 type ReadSignal = { signal: TimelineSeries; read: () => TimelineValue };

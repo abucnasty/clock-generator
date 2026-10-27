@@ -22,7 +22,7 @@ export function DrillTargetField({ drill, build, getRecipeInfo, onChange, sx }: 
     const options = useMemo(() => drillTargetOptions(drill, build, { item: itemLabel, recipe: recipeLabel }, getRecipeInfo),
         [drill, build, itemLabel, recipeLabel, getRecipeInfo]);
     const value = options.find(option => option.type === drill.target.type && option.id === drill.target.id) ?? null;
-    return <EntitySelector label="Target" ariaLabel={`Target, ${entityLabel('drill', drill.id)}`} options={options} value={value}
+    return <EntitySelector label="Drop target" ariaLabel={`Drop target, ${entityLabel('drill', drill.id)}`} options={options} value={value}
         error={!value} disabledReason={option => option.disabledReason} sx={sx}
         onChange={option => { if (option.type !== drill.target.type || option.id !== drill.target.id) onChange({ type: option.type, id: option.id }); }} />;
 }

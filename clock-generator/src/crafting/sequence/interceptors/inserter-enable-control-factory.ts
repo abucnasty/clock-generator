@@ -1,6 +1,8 @@
 import assert from "../../../common/assert";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
 import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
+import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
+import { resultWindowRanges, takesResultOf } from "../../result-windows";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
 import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { ItemName } from "../../../data";
@@ -71,6 +73,26 @@ export class EnableControlFactory {
 
         const source_state = this.entity_state_registry.getSourceStateOrThrow(entity_id);
         const sink_state = this.entity_state_registry.getSinkStateOrThrow(entity_id);
+
+        // results that come too rarely for whole hands in a period: each taker on its window of the plan (result-windows.ts),
+        // carrying a part hand from one window to the next
+        const result_windows = this.crafting_cycle_plan.result_windows;
+        if (result_windows !== undefined && takesResultOf(result_windows, entity_id)) {
+            const plan = result_windows.find(it => takesResultOf([it], entity_id))!;
+            const ranges = resultWindowRanges(plan).get(entity_id.id)!;
+            return EnableControl.lambda(() => {
+                const tick = this.tick_provider.getCurrentTick() % plan.period;
+                return ranges.some(range => tick >= range.start_inclusive && tick <= range.end_inclusive);
+            });
+        }
+
+        // a target that counts an item destroyed: every inserter of the plan into a machine that destroys it, or out of
+        // where that machine places its results, moves its planned hands and no more (planned by arithmetic)
+        if (this.crafting_cycle_plan.production_rate.counts === "destroyed" && this.entity_transfer_map.has(entity_id)
+            && ((EntityState.isMachine(sink_state) && this.terminal_machine_states.has(sink_state))
+                || Array.from(this.terminal_machine_states).some(machine => machine.machine.result_target?.id === source_state.entity_id.id))) {
+            return this.plannedHandsAndNoMore(entity_state);
+        }
 
         // Check if this is a terminal output inserter
         if (this.terminal_inserter_states.has(entity_state)) {
@@ -593,6 +615,33 @@ export class EnableControlFactory {
                 span = current_span;
             }
             return picked_up < allowed + hand_size - 1;
+        });
+    }
+
+    /**
+     * Holds an inserter of a plan made by arithmetic to its planned hands, as `plannedItemsAndNoMore` holds an output
+     * inserter: every span of cycles allows that many hands more, and it is enabled while it has picked up less than it
+     * was allowed so far, with no hand of slack: what it brings in is the target. Nothing else gates it: it moves as its
+     * source and sink let it.
+     */
+    private plannedHandsAndNoMore(inserter_state: InserterState): EnableControl {
+        const planned = this.transferCountOf(inserter_state.inserter);
+        const swings_per_cycle = planned.total_transfer_count;
+        const hand_size = planned.stack_size;
+        const items_per_span = swings_per_cycle.getNumerator * hand_size;
+        const span_ticks = CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, swings_per_cycle.getDenominator);
+
+        let span: number | null = null;
+        let allowed = 0;
+        return EnableControl.lambda(() => {
+            const picked_up = inserter_state.items_picked_up;
+            const current_span = Math.floor(this.tick_provider.getCurrentTick() / span_ticks);
+            if (span === null || current_span !== span) {
+                const spans_passed = span !== null && current_span > span ? current_span - span : 1;
+                allowed = Math.min(allowed + spans_passed * items_per_span, picked_up + items_per_span);
+                span = current_span;
+            }
+            return picked_up < allowed;
         });
     }
 
@@ -1211,10 +1260,12 @@ export class EnableControlFactory {
      * Find all machines that produce the target output item.
      */
     private findFinalMachines(): Set<MachineState> {
+        const target = { item: this.target_output_item_name, counts: this.crafting_cycle_plan.production_rate.counts };
+        const target_ids = new Set(targetMachinesOf(target, { getAll: () => this.allEntities() }).map(it => it.entity_id.id));
         const final_machines = this.entity_state_registry
             .getAllStates()
             .filter(EntityState.isMachine)
-            .filter(s => s.machine.output.item_name === this.target_output_item_name);
+            .filter(s => target_ids.has(s.entity_id.id));
         assert(
             final_machines.length > 0,
             `No machine found producing target output item ${this.target_output_item_name}`
@@ -1228,6 +1279,18 @@ export class EnableControlFactory {
      */
     private findFinalInserters(): Set<InserterState> {
         const final_inserters = new Set<InserterState>();
+        if (this.crafting_cycle_plan.production_rate.counts === "destroyed") {
+            // the inserters that bring the item in from outside: controlled with the rest of the plan (plannedHandsAndNoMore)
+            const target = { item: this.target_output_item_name, counts: this.crafting_cycle_plan.production_rate.counts };
+            for (const terminal_machine of this.terminal_machine_states) {
+                const ids = new Set(targetInsertersOf(terminal_machine.machine, target, { getAll: () => this.allEntities() }).map(it => it.entity_id.id));
+                for (const inserter of this.entity_state_registry.getAllStates().filter(EntityState.isInserter).filter(it => ids.has(it.entity_id.id))) {
+                    final_inserters.add(inserter);
+                    this.output_sources.set(inserter.entity_id.id, { machine: terminal_machine, container: null });
+                }
+            }
+            return final_inserters;
+        }
         for (const terminal_machine of this.terminal_machine_states) {
             const path = outputPathOf(terminal_machine.machine, { getAll: () => [...this.entities, ...this.chests] });
             const output = path.container === null ? path.feeders : path.takers;
@@ -1250,6 +1313,14 @@ export class EnableControlFactory {
             }
         }
         return final_inserters;
+    }
+
+    /** Every entity of the build, drills included, for the questions of where items come from */
+    private allEntities(): Entity[] {
+        return this.entity_state_registry.getAllStates().flatMap((state): Entity[] =>
+            EntityState.isInserter(state) ? [state.inserter] : EntityState.isMachine(state) ? [state.machine]
+                : EntityState.isChest(state) ? [state.chest] : EntityState.isDrill(state) ? [state.drill]
+                : EntityState.isBelt(state) ? [state.belt] : []);
     }
 
     /**

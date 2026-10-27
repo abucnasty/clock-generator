@@ -3,13 +3,16 @@ import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
+import { rateVerbs, type TargetCounts } from '../utils/targetCounts';
 import {
     beltLine,
     beltValue,
     beltValueSub,
     clockTechnicalName,
     differenceFromRecommended,
+    lossLimitText,
     makesText,
+    pickNameMeaning,
     plainClockName,
     recoversOf,
     wakeUpsText,
@@ -21,12 +24,12 @@ import type { GenerationAssumptions } from '../worker/types';
 import { REQUIRES_FACTORIO } from '../utils/installSteps';
 import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
+import { useGameNames } from '../hooks/useGameNames';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
     heading: 'Selected clock',
     makingFirst: 'Making the first clock…',
-    makes: 'Makes',
     wakeUps: 'Wake-ups',
     recovers: 'Recovers',
     belt: 'Belt pickups',
@@ -96,6 +99,8 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
     const makes = makesText(selected, selected.copies);
     const wakeUps = wakeUpsText(selected);
     const recovers = recoversOf(selected);
+    const { itemLabel } = useGameNames();
+    const lossLimit = lossLimitText(selected, itemLabel);
     return (
         <>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5, mt: 0.5, minHeight: 32 }}>
@@ -135,19 +140,20 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                     mt: 1.5,
                 }}
             >
-                <Fact label={CARD_COPY.makes} value={makes.value} sub={makes.sub} />
+                <Fact label={rateVerbs(selected.counts).title} value={makes.value} sub={makes.sub} />
                 <Fact label={CARD_COPY.wakeUps} value={wakeUps.value.replace(' a minute', '/min')} sub={wakeUps.sub} />
                 <Fact label={CARD_COPY.recovers} value={recovers.value} icon={RECOVERS_ICON[recovers.kind]} />
                 <Fact label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={beltValueSub(props.pickRule, selected.beltLabel) ?? (selected.ranking.matches_belt_choice ? undefined : 'Different setting')} />
             </Box>
             {recovers.kind !== 'yes' && !props.rateWarning && <Typography variant="body2" sx={{ mt: 1 }}>{recovers.detail}</Typography>}
+            {lossLimit && <Typography variant="body2" sx={{ mt: 1 }} data-loss-limit>{lossLimit}</Typography>}
         </>
     );
 }
 
 /** Whether the clock keeps its rate once the machines have warmed up, as a sentence */
-function holdStatusText(rate: string, holds: boolean | null | undefined): string {
-    if (holds === true) return `It keeps making ${rate} once warmed up: yes.`;
+function holdStatusText(rate: string, holds: boolean | null | undefined, counts?: TargetCounts): string {
+    if (holds === true) return `It keeps ${rateVerbs(counts).ing} ${rate} once warmed up: yes.`;
     if (holds === false) return 'It does not keep its rate once warmed up.';
     return 'Whether it keeps its rate once warmed up is unavailable.';
 }
@@ -157,7 +163,7 @@ function ClockExplanation(props: SelectedProps) {
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const reason = selectedIndex === recommendedIndex
         ? recommendationReason(alternatives, recommendedIndex, props.pickRule, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating)
-        : recommended ? differenceFromRecommended(selected, recommended) : '';
+        : recommended ? [pickNameMeaning(alternatives, selectedIndex, props.pickRule), differenceFromRecommended(selected, recommended)].filter(Boolean).join(' ') : '';
     const recovers = recoversOf(selected);
     return <Box sx={{ display: 'grid', gap: 1 }}>
         {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
@@ -165,7 +171,7 @@ function ClockExplanation(props: SelectedProps) {
             {COLD_START} {startCheckSummary([selected], props.generationAssumptions ?? null)}
         </Typography>
         <Typography variant="body2" data-hold-status>
-            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds)}
+            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds, selected.counts)}
         </Typography>
         {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
         {props.runAssumptions}

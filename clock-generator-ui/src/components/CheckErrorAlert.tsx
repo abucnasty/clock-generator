@@ -3,6 +3,7 @@ import { useId } from 'react';
 import { checkErrorText } from '../utils/checkErrorText';
 import { CHECK_TEXT } from '../utils/checkThenGenerate';
 import { ELEMENT_IDS } from '../utils/firstProblem';
+import type { TargetCounts } from '../utils/targetCounts';
 import type { RepeatedUnitsRecovery } from '../worker/types';
 
 function recoveryText(recovery: RepeatedUnitsRecovery): string {
@@ -24,8 +25,10 @@ function recoveryText(recovery: RepeatedUnitsRecovery): string {
  * Engine refusal details inside Build validation, or a standalone operational failure when its worker crashed.
  * Not a live region: focusing the validation panel or the standalone failure reads the message once.
  */
-export function CheckErrorAlert({ message, crashed = false, recovery, machineCount, conversionPending = false, onConvert, embedded = false }: {
+export function CheckErrorAlert({ message, crashed = false, recovery, machineCount, counts, conversionPending = false, onConvert, embedded = false }: {
     message: string | null; crashed?: boolean; recovery?: RepeatedUnitsRecovery; machineCount?: number;
+    /** What the target counts, which the words about the machines' capacity follow */
+    counts?: TargetCounts;
     conversionPending?: boolean; onConvert?: () => void;
     embedded?: boolean;
 }) {
@@ -48,7 +51,7 @@ export function CheckErrorAlert({ message, crashed = false, recovery, machineCou
                         <span>Copies: {recovery.configuredCopies} → {conversion.copies}</span>
                     </Box>
                     <Typography variant="body2">The total target output stays the same. This changes the configuration here; your machines in Factorio are untouched. You can undo it.</Typography>
-                </> : crashed ? CHECK_TEXT.crashText : recovery ? recoveryText(recovery) : checkErrorText(message)}
+                </> : crashed ? CHECK_TEXT.crashText : recovery ? recoveryText(recovery) : checkErrorText(message, counts)}
             </Box>
             {!crashed && recovery?.conversion.kind === 'available' && onConvert && (
                 <Box sx={{ mt: 1, p: '6px' }}>

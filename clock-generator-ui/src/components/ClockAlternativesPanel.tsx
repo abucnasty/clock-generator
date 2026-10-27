@@ -32,11 +32,15 @@ import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
+import { HANDS_TEXT } from '../utils/targetCounts';
 import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
 import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) periods are shown to 3 decimals
+/** The header of the column that counts a clock's decider combinators */
+const DECIDERS_HEADER = 'Deciders';
+
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
 
 /** Every string of the panel that is not the clocks' own or the pick's */
@@ -57,6 +61,7 @@ const COMPARE_COPY = {
         + 'when no clocked inserter picks up from a belt.',
     swingsHelp: 'Total output swings per crafting cycle of each output machine, shared equally across its output inserters. '
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the clock period).',
+    decidersHelp: 'How many decider combinators the clock\'s blueprint has to switch inserters and drills on and off, not counting the clock itself. Each one is wired to the inserters and drills its description names, so fewer deciders is less wiring to do by hand.',
     windowsHelp: 'How many wake windows the clock has in all: stretches of ticks during which it switches an inserter on.',
     wakeUpsHelp: PROVISIONAL_WAKE_UP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
         + 'in a long run of this clock. Shown for clocks that were run long enough to count them. It is the count from '
@@ -198,7 +203,7 @@ export function ClockAlternativesPanel({
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
     // a Makes column that says the same on every row is one line above the table instead
     const fold = allColumns ? null : foldedMakes([...stable, ...unstable].map(({ alternative }) => alternative));
-    const columnCount = allColumns ? 10 : fold === null ? 5 : 4;
+    const columnCount = allColumns ? 11 : fold === null ? 6 : 5;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
     const renderRow = ({ alternative, index }: ClockRow<ClockAlternativeView>) => {
@@ -259,6 +264,7 @@ export function ClockAlternativesPanel({
                         </TableCell>
                         <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
                         <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
+                        <TableCell align="right">{alternative.deciders}</TableCell>
                         <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
                         <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
                         <TableCell align="right">
@@ -289,6 +295,7 @@ export function ClockAlternativesPanel({
                             <TableCell align="right">{formatNumberText(alternative.assessment.items_per_second)}</TableCell>
                         )}
                         <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
+                        <TableCell align="right">{alternative.deciders}</TableCell>
                         <TableCell>
                             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                                 {WORKS_ICON[works.kind]}
@@ -375,9 +382,12 @@ export function ClockAlternativesPanel({
                             {allColumns ? (
                                 <>
                                     <TableCell><HelpHeader label="Belt" help={COMPARE_COPY.beltHelp} /></TableCell>
-                                    <TableCell align="right"><HelpHeader label="Output swings" help={COMPARE_COPY.swingsHelp} /></TableCell>
+                                    <TableCell align="right">{alternatives[0]?.counts === 'destroyed'
+                                        ? <HelpHeader label={HANDS_TEXT.column} help={HANDS_TEXT.columnHelp} />
+                                        : <HelpHeader label="Output swings" help={COMPARE_COPY.swingsHelp} />}</TableCell>
                                     <TableCell align="right">Clock period</TableCell>
                                     <TableCell align="right"><HelpHeader label="Wake windows" help={COMPARE_COPY.windowsHelp} /></TableCell>
+                                    <TableCell align="right"><HelpHeader label={DECIDERS_HEADER} help={COMPARE_COPY.decidersHelp} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={WAKE_UPS_HEADER} help={COMPARE_COPY.wakeUpsHelp} /></TableCell>
                                     <TableCell align="right">{rateHeader(copies)}</TableCell>
                                     <TableCell align="right">{OUTPUT_PER_PERIOD_HEADER}</TableCell>
@@ -385,8 +395,9 @@ export function ClockAlternativesPanel({
                                 </>
                             ) : (
                                 <>
-                                    {fold === null && <TableCell align="right">{makesHeader(copies)}</TableCell>}
+                                    {fold === null && <TableCell align="right">{makesHeader(copies, alternatives[0]?.counts)}</TableCell>}
                                     <TableCell align="right"><TermsHeader label={WAKE_UPS_HEADER} focus={TERMS_FOCUS.wakeUps} /></TableCell>
+                                    <TableCell align="right"><HelpHeader label={DECIDERS_HEADER} help={COMPARE_COPY.decidersHelp} /></TableCell>
                                     <TableCell><TermsHeader label={COMPARE_COPY.works} focus={TERMS_FOCUS.works} /></TableCell>
                                 </>
                             )}

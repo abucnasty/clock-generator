@@ -149,8 +149,8 @@ describe('a clock for a drill into a car between two furnaces', () => {
             } else {
                 // made again with the drill a tick longer, then always enabled: today's clock
                 expect(drill, alternative.id).toBeUndefined();
-                expect(alternative.result.chest_drills?.[0].always_enabled_because, alternative.id)
-                    .toBe('the clock does not meet goal 1 with its fewest windows, nor with them a tick longer');
+                expect(alternative.result.chest_drills?.[0].always_enabled_because, alternative.id).toEqual({ kind: 'fallback' });
+                expect(alternative.result.always_on_reasons?.['drill:1'], alternative.id).toEqual({ kind: 'chest-drill', why: { kind: 'fallback' } });
             }
         }
         // the decider of the drill, named by its ends, its windows a period, its one condition, and tagged with the drill it switches on

@@ -51,7 +51,8 @@ describe("a machine's former type", () => {
         const config = (type: string) => JSON.stringify({ target_output: { recipe: "iron-plate", items_per_second: 1, copies: 1 },
             machines: [machine({ type })], inserters: [], belts: [] });
         await expect(parseConfig(config("something"))).rejects.toThrow("expected one of \"machine\"|\"furnace\"|\"biochamber\"");
-        await expect(parseConfig(config("recycler"))).rejects.toThrow("\"recycler\" is not supported yet");
+        // a recycler is a machine named by its prototype, as any other: no rule is called so
+        await expect(parseConfig(config("recycler"))).rejects.toThrow("expected one of \"machine\"|\"furnace\"|\"biochamber\"");
     });
 
     it("is read from the legacy fixture: each rule's machine, none for a crafting machine none of which makes the recipe", async () => {

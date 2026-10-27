@@ -1,3 +1,5 @@
+import { ClockPeriodLimitError, type SwingPeriodPruning } from "./clock-period-limit";
+import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
 import { Config } from "../../config";
@@ -19,14 +21,18 @@ import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
 import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
-import { buildOutputInsertersOf, EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
+import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
+import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
+import { neverBlockingBranchesOf, type TerminalBranch } from "../terminal-rate";
+import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
+import { carriedItemsOf, RESULT_WINDOWS_CHECK_PERIODS, ResultWindowsPlan } from "../result-windows";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
 import { DrillInventoryTransferPlugin } from "../../control-logic/drill/plugins/drill-inventory-transfer-plugin";
 import { EnableControlFactory } from "../sequence/interceptors/inserter-enable-control-factory";
 import { ConfigurableEnableControlFactory, EntityEnableControlOverrideMap } from "../sequence/interceptors/configurable-enable-control-factory";
-import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
+import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../control-logic/inserter/competing-takers";
@@ -55,7 +61,10 @@ import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
-import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
+import type { TurnGroup } from "../turn-groups";
+import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
+import { RunMemo, currentRunMemo } from "./run-memo";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 /**
  * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
@@ -159,6 +168,10 @@ export interface SwingAttemptResult {
 
 
 export interface SwingBackoffReport {
+    /** An early derived strategy's real checks, separate from ordinary swing simulations. */
+    primitive_grouped_attempt?: import("../primitive-grouped-policy").PrimitiveGroupedAttemptReport;
+    /** Counts refused by period arithmetic, never simulated output/hold attempts. */
+    period_limit_pruning?: SwingPeriodPruning;
     /** Whether the backoff loop was triggered (false when first attempt was stable or backoff is disabled) */
     triggered: boolean;
     /** The terminal_swing_count used in the first attempt */
@@ -173,6 +186,10 @@ export interface SwingBackoffReport {
 
 
 export interface BlueprintGenerationResult {
+    /** Actual final count/cycles of a secondary offered after a derived primitive primary. */
+    secondary_planning?: import("../primitive-grouped-policy").SecondaryPlanningProvenance;
+    /** Internal AUTO scheduling provenance; never an imported or saved user override. */
+    primitive_grouped?: import("../primitive-grouped-policy").PrimitiveGroupedPolicy;
     blueprint: FactorioBlueprint;
     /** What the combinators of the blueprint do, as data: what the recording harness wires and cuts a recording by */
     schedule: ClockSchedule;
@@ -246,16 +263,35 @@ export interface BlueprintGenerationResult {
     /** For observed windows (`observedWindowsClock`, and `config.overrides.derive_clock_windows`) */
     derived_clock_windows?: DerivedClockWindowsReport;
     /**
-     * Present when the exported clock has windows for the inserters that feed the machine the output is taken from
-     * (see `windowsOfInsertersFeedingTheOutputMachine`): their ids, and how many windows they had without. These
-     * windows only reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
+     * Present when the exported clock has windows for the inserters that take out of a loop of machines, which the plan
+     * leaves always enabled (see `loopInserterWindows`): their ids, and how many windows they had without. These windows
+     * only reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
      */
-    output_feeders?: { inserter_ids: string[]; window_count_without_feeder_windows: number };
+    loop_windows?: { inserter_ids: string[]; window_count_without_loop_windows: number };
     /**
      * Each drill that drops into a chest: the windows the clock gives it, from the windows of the inserters that take
      * from the chest (see chestDrillWindows), or why it stays always enabled. Absent when the build has none.
      */
     chest_drills?: ChestDrillClock[];
+    /**
+     * Why each inserter and drill the clock leaves always on has no wake window, by entity id; absent when the clock
+     * leaves none on. An entity that is on with no reason here is one the planner does not say why of.
+     */
+    always_on_reasons?: AlwaysOnReasons;
+    /** The windows are the grouped hands rule's (see groupedHandsClock), and whether its inserters share windows; absent for any other clock */
+    grouped_hands?: { shared_windows: boolean };
+    /**
+     * Where results come by chance (a target that counts an item destroyed by a recycler): the room of the windows that
+     * carry each result, and of each machine's crafting, against the spread of the game's amounts (random-margins.ts).
+     * Absent for any other build.
+     */
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
+    /**
+     * Where results come too rarely for whole hands in a period: the windows of their takers, worked out by arithmetic,
+     * one plan a machine (result-windows.ts), and whether the arithmetic holds (every container holds its results at the
+     * worst moment of the period in all but 1 in 740 periods). Absent for any other clock.
+     */
+    result_windows?: { plans: ResultWindowsPlan[]; holds: boolean };
 }
 
 /**
@@ -301,6 +337,17 @@ export interface GenerateClockOptions {
     on_progress_detail?: (detail: string) => void;
     /** Called with each clock alternative that could not be made, and the generator's reason */
     on_not_made?: (clock: NotMadeClock) => void;
+    /**
+     * Make the clock with windows shared by the inserters that take into their machines at the same moment (see
+     * groupedHandsClock), or not at all: it needs `verify_as_built`, and throws where no shared windows hold.
+     */
+    shared_windows?: boolean;
+    /**
+     * False leaves the inserters that take out of a loop always enabled, as every clock did before they were given
+     * windows where the clock holds with them (see `trialWithLoopWindows`): the clock is made so again where the one with
+     * them does not get back from a loss.
+     */
+    loop_windows?: boolean;
 }
 
 /** What a machine holds when a run starts: see GenerateClockOptions.start_stock */
@@ -401,7 +448,7 @@ export interface RunOptions {
 }
 
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
-interface BuildRun extends PlannedCraftingCycle, TransferPlan {
+export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     simulation_context: SimulationContext;
     /** The build as it runs: every inserter and drill on its enable control */
     new_simulation_context: SimulationContext;
@@ -415,6 +462,8 @@ interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     duration: Duration;
     /** What was recorded: `simulate_periods` periods, or less when `detect_repeat` ended the run at a repeat */
     recorded_duration: Duration;
+    /** The ticks the run was given: the warm-up and the recorded periods (a run that ended at a repeat took fewer) */
+    ticks_simulated: number;
     /** The repeat that ended the recorded run early, when `detect_repeat` found one */
     state_repeat?: StateRepeat;
     /** The transfers of the recorded run, as the windows of the plan are read off them */
@@ -438,15 +487,27 @@ interface BuildRun extends PlannedCraftingCycle, TransferPlan {
  * recorded, its output is counted against the plan's, and, when asked, the backpressure losses are tried from where
  * it ended. Every inserter runs as its enable control says: the plan's
  * controls in a planning run, the clock windows alone in a trial (see `runClockOnBuild`).
+ *
+ * A long run that the generation in progress has made before, with this config and these options, is not made again
+ * (see `RunMemo`).
  */
 export function runBuild(config: Config, options: RunOptions): BuildRun {
+    const memo = currentRunMemo();
+    return memo !== undefined && RunMemo.accepts(options) ? memo.run(config, options, () => simulateBuild(config, options)) : simulateBuild(config, options);
+}
+
+function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const debug = options.debug ?? DebugSettingsProvider.mutable();
     const debug_steps = options.debug_steps ?? {};
     const logger = options.logger ?? defaultLogger;
 
     const planned_build = recordedBuildOf(config, options, debug, logger);
     const { simulation_context } = planned_build;
-    prepareBuild(planned_build, debug, debug_steps, logger);
+    // a target that counts an item destroyed is planned by arithmetic, with no crafts counted: such a build starts as
+    // its staged scaffold does, and never fills up (what is brought in is destroyed)
+    if (config.target_output.counts !== "destroyed") {
+        prepareBuild(planned_build, debug, debug_steps, logger);
+    }
 
     const planned_cycle = planCraftingCycle(config, simulation_context, logger);
     const { crafting_cycle_plan, all_output_inserters } = planned_cycle;
@@ -458,14 +519,29 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
     const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
     const { state_transition_history } = build;
     const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger);
-    const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger);
+    const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger, period => {
+        // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
+        const terminal_swing_count = config.target_output.counts === "destroyed"
+            ? plannedOutputSwingCount(crafting_cycle_plan, planned_cycle.output_inserters,
+                new Set(all_output_inserters.map(state => state.inserter.entity_id.id)))
+            : plannedTerminalSwingCount(crafting_cycle_plan);
+        assert(terminal_swing_count !== undefined, "The crafting plan has no terminal-count arithmetic provenance.");
+        const whole_made = config.target_output.counts !== "destroyed" && config.overrides?.use_fractional_swings !== true
+            && options.period_ticks === undefined && options.timeline_recording?.period_ticks === undefined;
+        return new ClockPeriodLimitError({ terminal_swing_count, base_cycle_ticks: crafting_cycle_plan.total_duration_ticks.toDecimal(),
+            computed_lcm: transfer_plan.computed_lcm, effective_lcm: transfer_plan.recipe_lcm,
+            period_ticks: period, limit_ticks: MAX_SIMULATION_TICKS }, whole_made
+            ? { config_json: JSON.stringify(config), terminal_swing_count } : undefined);
+    });
 
     const repeat_periods = warmUp(config, controlled, duration, warmup_period, debug, debug_steps, logger);
     const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
     const final_history = finalHistoryOf(build, crafting_cycle_plan, all_output_inserters, duration, logger);
     const output = checkOutput(build, controlled, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
-    const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger);
+    const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, crafting_cycle_plan.entity_transfer_map,
+        transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
+    const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger, terminal_branches);
 
     return {
         simulation_context: build.simulation_context,
@@ -485,12 +561,15 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
         inserter_clocks: controlled.inserter_clocks,
         duration,
         recorded_duration: simulated.recorded_duration,
+        ticks_simulated: warmup_period.ticks + simulated.recorded_duration.ticks,
         state_repeat: simulated.state_repeat,
         final_history,
         state_transition_history,
         fuel_levels: simulated.fuel_levels,
         machine_stock: simulated.machine_stock,
-        timeline_recording: simulated.timeline_recording,
+        // the warm-up counts in full where it stopped at a repeating state: the recording is of the period after it
+        timeline_recording: options.timeline_recording?.settle_periods !== undefined && simulated.timeline_recording
+            ? { ...simulated.timeline_recording, ticks_before_recording: warmup_period.ticks } : simulated.timeline_recording,
         stability_check: output.stability_check,
         total_expected_output: output.total_expected_output,
         used_terminal_swing_count: output.used_terminal_swing_count,
@@ -521,6 +600,7 @@ function pluginsOf(context: SimulationContext): ModePlugin<any>[] {
 function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
     // Validate inserter coverage before building the entity graph.
     // Throws InserterCoverageError if any machine ingredient or output lacks an inserter.
+    assertOutputTransferGenerationSupported(config);
     assertInserterCoverage(config);
     // Throws CopiesError if the config holds several identical units where it should describe one and set copies.
     validateCopies(config);
@@ -750,10 +830,13 @@ interface RunPeriods {
 }
 
 /** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
-function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
+function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
+    overLimit: (period_ticks: number) => ClockPeriodLimitError): RunPeriods {
     const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
+    if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= MAX_SIMULATION_TICKS) throw overLimit(duration.ticks);
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
-    const requested_warmup_periods = options.warmup_periods ?? 10;
+    // a recording of a settled period runs the build that long from its cold start, as the long run of the clock does
+    const requested_warmup_periods = Math.max(options.warmup_periods ?? 10, options.timeline_recording?.settle_periods ?? 0);
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
     const warmup_periods = Math.min(requested_warmup_periods, Math.floor((MAX_SIMULATION_TICKS - 1) / duration.ticks));
     if (warmup_periods < requested_warmup_periods) {
@@ -976,6 +1059,25 @@ function finalHistoryOf(
     return final_history;
 }
 
+/** The same planned count used in a result and in a pre-simulation period refusal, including final container takers. */
+function plannedOutputSwingCount(crafting_cycle_plan: CraftingCyclePlan, output_inserters: readonly InserterState[],
+    output_inserter_ids: ReadonlySet<string>): number {
+    const swing_counts = crafting_cycle_plan.entity_transfer_map;
+    // The output swings of one output machine a cycle, over all the inserters that take from it; for a target that counts
+    // an item destroyed, the hands brought into one machine that destroys it, over all the inserters that bring them
+    const destroyed = crafting_cycle_plan.production_rate.counts === "destroyed";
+    const endOf = (inserter: Inserter) => destroyed ? inserter.sink.entity_id.id : inserter.source.entity_id.id;
+    const first_output_machine_id = endOf(output_inserters[0].inserter);
+    let swings_of_first_output_machine = 0;
+    for (const [entity_id, etc] of swing_counts.entries()) {
+        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && endOf(etc.entity) === first_output_machine_id) {
+            swings_of_first_output_machine += etc.total_transfer_count.toDecimal();
+        }
+    }
+    return Math.max(1, Math.round(swings_of_first_output_machine));
+
+}
+
 /** What the recorded run made, against what the plan expects */
 interface OutputCheck {
     output_inserter_ids: Set<string>;
@@ -1015,15 +1117,7 @@ function checkOutput(
         }
     }
     const total_expected_output = Math.round(total_expected_output_float);
-    // The output swings of one output machine a cycle, over all the inserters that take from it
-    const first_output_machine_id = output_inserters[0].inserter.source.entity_id.id;
-    let swings_of_first_output_machine = 0;
-    for (const [entity_id, etc] of swing_counts.entries()) {
-        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && etc.entity.source.entity_id.id === first_output_machine_id) {
-            swings_of_first_output_machine += etc.total_transfer_count.toDecimal();
-        }
-    }
-    const used_terminal_swing_count = Math.max(1, Math.round(swings_of_first_output_machine));
+    const used_terminal_swing_count = plannedOutputSwingCount(crafting_cycle_plan, output_inserters, output_inserter_ids);
 
     const export_shortfalls = exportedLanesShortOfConsumption(simulation_context.entity_registry, final_history, output_inserter_ids, duration.ticks);
     for (const lane of export_shortfalls) {
@@ -1075,6 +1169,8 @@ function backpressureLossOf(
     simulated: SimulatedRun,
     options: RunOptions,
     logger: Logger,
+    /** Where every terminal output drops into a sink that never blocks, its branches: judged by their rate (terminal-rate.ts) */
+    terminal_branches: readonly TerminalBranch[],
 ): LossOutcome | undefined {
     if (!options.backpressure_loss) {
         return undefined;
@@ -1101,7 +1197,7 @@ function backpressureLossOf(
     const watched_exports = exportedItemsOf(trial_context.entity_registry, new Set(simulated.output_inserter_states.map(state => state.entity_id.id)))
         .map(exported => ({ exported, fillers: exported.filler_ids.flatMap(id => inserter_states.get(id) ?? []) }));
     const backpressure_loss = runLossTrials(trial_context, simulated.output_inserter_states, options.backpressure_loss, bin,
-        Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports);
+        Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports, terminal_branches);
     logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
     return backpressure_loss;
 }
@@ -1161,8 +1257,8 @@ export interface PlanRun {
     /** The windows read off the planning run, before any room is added to them (see `clockOfPlan`) */
     unslacked_windows: Map<string, OpenRange[]>;
     /**
-     * The items each inserter or drill moves, by entity id: they keep inserters with identical windows from being
-     * deduplicated into one combinator. An inserter with a clock of its own names the items it carries itself.
+     * The items each inserter or drill moves, by entity id: they keep the inserters outside the plan (a fuel or by-product
+     * inserter) with identical windows from being deduplicated into one combinator when they carry different items.
      */
     item_names: Map<string, string>;
     /** The EntityId of every entity, the history's own where it has one: the blueprint looks up swing counts by EntityId identity */
@@ -1187,7 +1283,7 @@ export function planRun(config: Config, options: PlanRunOptions = {}): PlanRun {
         // the blueprint looks up swing counts by EntityId identity, so prefer the history's own keys
         entity_ids.set(entity_id.id, entity_id);
     }
-    // item names keep inserters with identical windows from being deduplicated into one combinator
+    // item names keep inserters outside the plan with identical windows from being deduplicated into one combinator
     const item_names = new Map(Array.from(final_history.entries(), ([entity_id, transfers]) =>
         [entity_id.id, Array.from(new Set(transfers.map(t => t.item_name))).sort().join(",")] as const
     ));
@@ -1216,6 +1312,10 @@ interface PlannedClock {
     fuel_hand_room: Map<string, number>;
     /** The clock-only check the slack decision already ran on exactly `windows`, which checkedClock reuses */
     as_built_run: AsBuiltRun | null;
+    /** The groups that take turns in the windows, which the blueprint lays its combinators out by; absent where the windows are not in groups */
+    turns?: TurnGroup[];
+    /** The room of the windows that carry a random amount, where there are any (see randomAmountMargins) */
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
 }
 
 /**
@@ -1255,7 +1355,35 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
     const verified = use_belt_pickup_slack ? slack_trial?.verified ?? null : null;
     const windows = verified !== null ? verified.windows
         : withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
-    return { windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room, as_built_run: verified?.run ?? null };
+    // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
+    const room = withRoomForRandomAmounts(plan, windows);
+    return { windows: room.windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room,
+        as_built_run: room.windows === windows ? verified?.run ?? null : null,
+        ...(room.random_margins !== undefined && { random_margins: room.random_margins }) };
+}
+
+/**
+ * A clock's windows with room for the spread of the results that come by chance (see randomAmountMargins): the windows
+ * of the inserters that take such a result out of where a machine places it are lengthened by whole swings where they
+ * have less room than a period gives over its mean in all but 1 in 740 periods (the binomial's quantile at
+ * RANDOM_MARGIN_LEVEL). The same windows, and no margins, for any other build.
+ */
+export function withRoomForRandomAmounts(plan: PlanRun, windows: Map<string, OpenRange[]>): {
+    windows: Map<string, OpenRange[]>;
+    random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
+} {
+    const { logger, run: { crafting_cycle_plan, simulation_context, duration, recipe_lcm } } = plan;
+    const margins = randomAmountMargins(crafting_cycle_plan, simulation_context.entity_registry, windows, duration.ticks, recipe_lcm);
+    if (margins.margins.length === 0 && margins.crafting.length === 0) {
+        return { windows };
+    }
+    const added = margins.margins.filter(it => it.added_hands > 0);
+    for (const margin of added) {
+        logger.log(`Machine ${margin.machine_id}: the windows of ${margin.inserter_ids.join(", ")} get ${margin.added_hands} hand(s) `
+            + `of room each for ${margin.item}: ${margin.room_items} over the ${margin.expected_items} a period brings on average, `
+            + `against ${margin.needed_items.toFixed(1)} needed`);
+    }
+    return { windows: added.length === 0 ? windows : margins.windows, random_margins: { windows: margins.margins, crafting: margins.crafting } };
 }
 
 /** What a clock's export carries beyond the plan and its windows */
@@ -1266,13 +1394,15 @@ interface ClockExportExtras {
      */
     histories?: TrialRun;
     clock_only_run?: ClockOnlyRun;
-    output_feeders?: BlueprintGenerationResult["output_feeders"];
+    loop_windows?: BlueprintGenerationResult["loop_windows"];
     search?: SearchReport;
     derived_clock_windows?: DerivedClockWindowsReport;
     /** Item names for the blueprint in place of the plan's: identical windows and items share one combinator */
     item_names?: ReadonlyMap<string, string>;
     /** In place of the clock's: observed windows are what the inserters did, fuel hands included, so they have none */
     fuel_hand_room_ticks?: Record<string, number>;
+    /** The inserters the strategy that made the windows left without one, with its reason */
+    left_open?: ReadonlyMap<string, AlwaysOnReason>;
 }
 
 /**
@@ -1307,6 +1437,18 @@ export function exportClock(
     // before the blueprint, which exports the fuel clocks this settles on
     const { inserter_clocks, fuel_plan, fuel_consumption_view } = settledFuelClocks(plan, windows, options);
 
+    const clock_windows = withInserterClocks(windows, inserter_clocks, duration.ticks);
+    const always_on_reasons = alwaysOnReasons(
+        simulation_context.entity_registry,
+        id => clock_windows.has(id) || inserter_clocks.get(id)?.own_clock === true,
+        {
+            enable_rule: plan.run.always_enabled_by_config,
+            left_open: extras.left_open ?? new Map(),
+            chest_drills: chest_drill_clock.drills,
+            swung: new Set(Array.from(final_history.entries()).filter(([, transfers]) => transfers.length > 0).map(([entity_id]) => entity_id.id)),
+        },
+    );
+
     const blueprintForWindows = (all_windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): SignalPerInserterBlueprint => {
         const clocked = withInserterClocks(all_windows, inserter_clocks, duration.ticks);
         return createSignalPerInserterBlueprint(
@@ -1317,13 +1459,15 @@ export function exportClock(
             InventoryTransferHistory.removeDuplicateEntities(new InventoryTransferHistory(new Map(
                 Array.from(clocked.entries()).map(([key, ranges]) => [
                     entity_ids.get(key)!,
-                    ranges.map(tick_range => ({ item_name: item_names.get(key) ?? key, tick_range, amount: 0 })),
+                    // the entities of the plan share a combinator whatever they carry; one outside it, by the items it carries
+                    ranges.map(tick_range => ({ item_name: inserter_clocks.has(key) ? item_names.get(key) ?? key : "", tick_range, amount: 0 })),
                 ])
             ))),
             simulation_context.entity_registry,
             subtick_clock,
             use_modulo,
             inserter_clocks,
+            clock.turns,
         );
     };
     const moduloBlueprintFor = (all_windows: Map<string, OpenRange[]>) => {
@@ -1362,13 +1506,14 @@ export function exportClock(
         modulo_blueprint: modulo?.blueprint,
         modulo_schedule: modulo?.schedule,
         subtick: subtickClockFor(windows),
-        clock_windows: serializeClockWindows(withInserterClocks(windows, inserter_clocks, duration.ticks)),
+        clock_windows: serializeClockWindows(clock_windows),
         belt_pickup_slack_ticks: clock.applied_belt_pickup_slack,
         belt_pickup_slack_left_out: clock.belt_pickup_slack_left_out,
         fuel_hand_room_ticks: extras.fuel_hand_room_ticks ?? Object.fromEntries(clock.fuel_hand_room),
+        ...(clock.random_margins !== undefined && { random_margins: clock.random_margins }),
         belt: clock.belt,
         crafting_cycle_plan,
-        output_feeders: extras.output_feeders,
+        loop_windows: extras.loop_windows,
         search: extras.search,
         clock_only_run: extras.clock_only_run,
         fuel_consumption_view,
@@ -1381,6 +1526,7 @@ export function exportClock(
         computed_lcm,
         derived_clock_windows: extras.derived_clock_windows,
         ...(chest_drill_clock.drills.length > 0 ? { chest_drills: chest_drill_clock.drills } : {}),
+        ...(Object.keys(always_on_reasons).length > 0 ? { always_on_reasons } : {}),
     };
 }
 
@@ -1469,40 +1615,48 @@ export function clockOnlyRunOf(run: TrialRun): ClockOnlyRun {
 /**
  * The tail every clock made from a plan goes through: with `verify_as_built`, the clock-only check of the windows
  * (the build driven by them alone, from several start phases and over a long run) and, where it holds, the windows
- * of the inserters feeding the output machine; then the export. The plan's `stability_check` takes the check's verdict.
+ * of the inserters that take out of a loop of machines (unless `loop_windows` is false); then the export. The
+ * plan's `stability_check` takes the check's verdict.
+ *
+ * The windows of the loop are tried wherever the clock-only check holds, whether the planning run held or not: the
+ * planning run of a build with a loop lets the loop run free, and on agricultural science makes 432 of the 400 a period
+ * of every clock, whose verdict follows the clock-only check alone (see `holds` in alternatives.ts).
  */
 export function checkedClock(
     plan: PlanRun,
     clock: PlannedClock,
     windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions = {},
-    extras: Pick<ClockExportExtras, "search"> & {
+    extras: Pick<ClockExportExtras, "search" | "left_open"> & {
         /** A search's confirmation that passed on exactly `windows`, whose early stages the check here takes over */
         verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
     } = {},
 ): BlueprintGenerationResult {
-    const { config, logger, run: { stability_check, total_expected_output, all_output_inserters, duration } } = plan;
+    const { config, logger, run: { stability_check, total_expected_output, duration, crafting_cycle_plan } } = plan;
+    // windows that carry part hands from one period to the next are run for several periods, to see every result taken
+    // out as it comes (result-windows.ts)
+    const long_run_ticks = crafting_cycle_plan.result_windows === undefined ? FREE_RUNNING_CHECK_TICKS
+        : Math.max(FREE_RUNNING_CHECK_TICKS, RESULT_WINDOWS_CHECK_PERIODS * duration.ticks);
     let clock_only_run: ClockOnlyRun | undefined;
-    let output_feeders: BlueprintGenerationResult["output_feeders"];
+    let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
     if (options.verify_as_built ?? false) {
         // the identical check may have run for the slack decision on exactly these windows (see clockOfPlan)
         const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
             : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
                 (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`),
-                FREE_RUNNING_CHECK_TICKS,
+                long_run_ticks,
                 // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
                 extras.verified !== undefined && extras.verified.windows === windows
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);
         let kept_run = as_built_run;
-        if (stability_check.holds && as_built_run.check.holds) {
-            const fed = trialWithOutputFeeders(config, windows, duration.ticks, new Set(all_output_inserters.map(os => os.inserter.source.entity_id.id)),
-                as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail);
-            if (fed !== null) {
-                kept_run = fed;
-                windows = fed.windows;
-                output_feeders = fed.output_feeders;
-                item_names = fed.item_names;
+        if (as_built_run.check.holds && options.loop_windows !== false) {
+            const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail);
+            if (looped !== null) {
+                kept_run = looped;
+                windows = looped.windows;
+                loop_windows = looped.loop_windows;
+                item_names = looped.item_names;
             }
         }
         stability_check.as_built = kept_run.check;
@@ -1510,7 +1664,7 @@ export function checkedClock(
         stability_check.holds = stability_check.holds && stability_check.as_built.holds;
         logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
     }
-    return exportClock(plan, clock, windows, options, { clock_only_run, output_feeders, item_names, search: extras.search });
+    return exportClock(plan, clock, windows, options, { clock_only_run, loop_windows, item_names, search: extras.search, left_open: extras.left_open });
 }
 
 /** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */
@@ -1530,20 +1684,26 @@ interface PlannedCraftingCycle {
  * Throws when the build cannot reach the target rate or an output machine has no inserter taking from it.
  */
 export function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger): PlannedCraftingCycle {
+    assertOutputTransferGenerationSupported(config);
     const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
 
-    // Find all output machines (machines that produce the target output item)
-    const output_machine_state_machines = simulation_context.machines.filter(
-        it => it.machine_state.machine.output.item_name === target_production_rate.machine_production_rate.item
-    );
+    // Find all output machines: the machines that produce the target output item, or that destroy it
+    const target = { item: target_production_rate.machine_production_rate.item, counts: target_production_rate.counts };
+    const returned = returnedTargetRefusal(target, target_production_rate.total_production_rate.amount_per_second.toDecimal(), simulation_context.entity_registry);
+    if (returned !== null) {
+        throw new Error(returned);
+    }
+    const target_machine_ids = new Set(targetMachinesOf(target, simulation_context.entity_registry).map(it => it.entity_id.id));
+    const output_machine_state_machines = simulation_context.machines.filter(it => target_machine_ids.has(it.machine_state.entity_id.id));
     assert(
         output_machine_state_machines.length > 0,
-        `No machine with output item ${target_production_rate.machine_production_rate.item} found`
+        target.counts === "made" ? `No machine with output item ${target.item} found`
+            : `No machine takes ${target.item} in from outside the build to destroy it`
     );
 
     // validate target production rate can be met
     const total_output_capacity_per_second = output_machine_state_machines
-        .map(it => it.machine_state.machine.output.production_rate.amount_per_second)
+        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, simulation_context.entity_registry))
         .reduce((a, b) => a.add(b), fraction(0))
         .multiply(fraction(config.target_output.copies));
     assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
@@ -1556,7 +1716,7 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
     // machine can have several
     const inserter_states = simulation_context.state_registry.getAllStates().filter(EntityState.isInserter);
     const output_ids_by_machine = new Map(output_machine_state_machines.map(machine_state_machine => [machine_state_machine.machine_state.entity_id.id,
-        new Set(buildOutputInsertersOf(machine_state_machine.machine_state.machine, simulation_context.entity_registry).map(it => it.entity_id.id))] as const));
+        new Set(targetInsertersOf(machine_state_machine.machine_state.machine, target, simulation_context.entity_registry).map(it => it.entity_id.id))] as const));
     // machines that put the product into one container share its takers: each is counted once
     const all_output_inserters = Array.from(new Set(Array.from(output_ids_by_machine.values()).flatMap(ids => inserter_states.filter(it => ids.has(it.entity_id.id)))));
     // One of them per output machine, which the swings of a cycle are counted by
@@ -1596,7 +1756,10 @@ export function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCycl
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
 
-    const ignored_ingredients = config.overrides?.ignored_lcm_ingredients;
+    // the results whose hands their windows carry from one period to the next are whole in no period (result-windows.ts)
+    const carried = crafting_cycle_plan.result_windows === undefined ? [] : carriedItemsOf(crafting_cycle_plan.result_windows);
+    const ignored = [...(config.overrides?.ignored_lcm_ingredients ?? []), ...carried];
+    const ignored_ingredients = ignored.length > 0 ? ignored : undefined;
     const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
     return {
         computed_lcm,
@@ -1607,7 +1770,9 @@ export function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCycl
 
 /**
  * An inserter clocked onto a belt has to stay enabled until its hand is full and dropped, but not until it is back:
- * a window still on when it returns lets it swing again onto the endless belt.
+ * a window still on when it returns lets it swing again onto the endless belt. An output taker from a container
+ * dropping into another container also has a whole hand available on its return, so its window must end before
+ * that next pickup too. Takers onto belts keep the belt drop timing.
  */
 function clipBeltFillerWindows(
     history: InventoryTransferHistory,
@@ -1616,10 +1781,12 @@ function clipBeltFillerWindows(
 ): InventoryTransferHistory {
     return new InventoryTransferHistory(new Map(Array.from(history.entries(), ([entity_id, transfers]) => {
         const entity = entity_registry.getEntityByIdOrThrow(entity_id);
-        if (!Entity.isInserter(entity) || output_inserter_ids.has(entity_id.id)
-            || !EntityId.isMachine(entity.source.entity_id) || !EntityId.isBelt(entity.sink.entity_id)) {
-            return [entity_id, transfers] as const;
-        }
+        if (!Entity.isInserter(entity)) return [entity_id, transfers] as const;
+        const belt_filler = !output_inserter_ids.has(entity_id.id)
+            && EntityId.isMachine(entity.source.entity_id) && EntityId.isBelt(entity.sink.entity_id);
+        const container_output = output_inserter_ids.has(entity_id.id)
+            && EntityId.isChest(entity.source.entity_id) && EntityId.isChest(entity.sink.entity_id);
+        if (!belt_filler && !container_output) return [entity_id, transfers] as const;
         const return_swing_ticks = entity.animation.rotation.ticks + 1;
         const min_window_ticks = entity.animation.pickup.ticks + 2;
         return [entity_id, transfers.map(transfer => ({
@@ -2099,6 +2266,10 @@ function computeCraftingCyclePlan(
         output_machine_states.length > 0,
         "At least one output machine is required"
     );
+    if (target_production_rate.counts === "destroyed") {
+        // planned by arithmetic: no prepare run counts its hands (see CraftingCyclePlan.create)
+        return CraftingCyclePlan.create(target_production_rate, entity_registry, fraction(1), config.overrides ?? {});
+    }
     assert(
         output_machine_states.length === output_inserters.length,
         `Mismatch between output machines (${output_machine_states.length}) and output inserters (${output_inserters.length})`
@@ -2137,6 +2308,22 @@ function computeCraftingCyclePlan(
         max_swings_possible!,
         config.overrides ?? {}
     );
+}
+
+/**
+ * The most of the target a machine can make or destroy a second: what it makes of the item, or, for a target that
+ * counts the item destroyed, its crafts a second times what a craft uses of the item less what comes back into it
+ */
+function targetCapacityPerSecond(machine: Machine, target: TargetItem, registry: ReadableEntityRegistry): Fraction {
+    if (target.counts === "made") {
+        return machine.output.production_rate.amount_per_second;
+    }
+    const used = fraction(machine.inputs.getOrThrow(target.item).ingredient.amount);
+    const result_target = machine.result_target;
+    const comes_back = result_target !== undefined && registry.getAll().filter(Entity.isInserter).some(inserter =>
+        inserter.source.entity_id.id === result_target.id && inserter.sink.entity_id.id === machine.entity_id.id && inserter.filtered_items.has(target.item));
+    const returned = comes_back ? machine.outputs.find(output => output.item_name === target.item)?.amount_per_craft ?? fraction(0) : fraction(0);
+    return fraction(machine.crafting_rate.crafts_per_tick).multiply(60).multiply(used.subtract(returned));
 }
 
 /**

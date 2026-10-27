@@ -68,6 +68,11 @@ export const ConfigPaths = {
     REAL_STUPIDFATHOBBIT_CELL06: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell06', 'stupidfathobbit-cell06.json'),
     REAL_ATLAN_CELL29: path.join(CONFIG_SAMPLES_DIR, 'real', 'atlan', 'cell29', 'atlan-cell29.json'),
     /** The lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */
+    REAL_OWNER_PINK_SCIENCE_RECYCLER: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-recycler', 'pink-science-recycler.json'),
+    /** The original duplicated electromagnetic science scaffold, described as one cell: five cells make 240/s */
+    REAL_OWNER_PINK_SCIENCE_ORIGINAL: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-original', 'pink-science-original.json'),
+    /** The same scaffold with its buffer chests replaced by infinity chests that remove all and its final takers removed: the science plants' drains are its terminal outputs */
+    REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-original-no-buffers', 'pink-science-original-no-buffers.json'),
     REAL_OWNER_LITHIUM_SILO: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'lithium-silo', 'lithium-silo.json'),
     /** The iron plate build, 80 a second: a big mining drill drops ore into a car, which two furnaces empty */
     REAL_OWNER_CAR: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'car', 'car.json'),
@@ -75,6 +80,19 @@ export const ConfigPaths = {
     REAL_OWNER_GRENADE: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'grenade', 'grenade.json'),
     /** A productivity module build, 80 a second over 6 copies: a chain of nine machines (plastic, cables, circuits, advanced circuits and the modules) with chests between them, a coal belt and an output belt */
     REAL_OWNER_PRODUCTIVITY_CHAIN: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'productivity-chain', 'productivity-chain.json'),
+    /**
+     * A recycler voiding iron ore at exact speed (16.875, 540 crafts a second), 400 ore a second destroyed: four inserters
+     * bring it in, the recycler places what it gives back into a car, two inserters bring that back (the ore voider
+     * benchmark's save F)
+     */
+    REAL_OWNER_ORE_VOIDER_EXACT_SPEED: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'ore-voider', 'ore-voider-exact-speed.json'),
+    /** The same cell with six beacons on the recycler (26.634, 852.3 crafts a second), 400 ore a second destroyed (save B) */
+    REAL_OWNER_ORE_VOIDER_OVERBEACONED: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'ore-voider', 'ore-voider-overbeaconed.json'),
+    /**
+     * A recycler on scrap at +300% productivity, 2 scrap a second destroyed, placing its twelve results into a rocket
+     * silo (rocket part recipe of uncommon quality), one filter stack inserter for each result out of the silo
+     */
+    RECYCLING_SCRAP_SILO: path.join(CONFIG_SAMPLES_DIR, 'recycling', 'scrap-silo', 'scrap-silo.json'),
     /** The steel build, 26 a second: one cargo wagon as a hub between a mining drill and two furnaces */
     STEEL_CARGO_WAGON: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'steel-wagon', 'steel-wagon.json'),
 } as const;

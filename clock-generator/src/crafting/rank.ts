@@ -135,24 +135,27 @@ export function searchesAreNeeded<T>(
     runs: (ClockAlternativeRun<T> | null)[],
     rankingOf: (alternative: T) => ClockRanking,
 ): boolean {
-    return !runs.some(run => run !== null && run.alternatives.some(alternative => selectableAsStable(rankingOf(alternative))));
+    // a run's clock made with shared windows is on offer as much as the run's own
+    const offersStable = (run: ClockAlternativeRun<T> | null): boolean => run !== null
+        && (run.alternatives.some(alternative => selectableAsStable(rankingOf(alternative))) || (run.also ?? []).some(offersStable));
+    return !runs.some(offersStable);
 }
 
 /**
  * The windows an alternative is ranked by, between clocks with the same wake-ups: those it has without the windows of
- * its output feeders, which only reduce idle checks and must never count against a clock, so its windows rank as they
- * would with its feeders always enabled.
+ * the inserters of a loop, which only reduce idle checks and must never count against a clock, so its windows rank as
+ * they would with those inserters always enabled.
  */
 export function rankingWindowCount(
     inserter_window_count: number,
     clock_windows: SerializableClockWindows,
-    output_feeders: BlueprintGenerationResult["output_feeders"],
+    loop_windows: BlueprintGenerationResult["loop_windows"],
 ): number {
-    if (output_feeders === undefined) {
+    if (loop_windows === undefined) {
         return inserter_window_count;
     }
-    const with_feeder_windows = output_feeders.inserter_ids.reduce((sum, id) => sum + (clock_windows[id]?.length ?? 0), 0);
-    return inserter_window_count - with_feeder_windows + output_feeders.window_count_without_feeder_windows;
+    const with_loop_windows = loop_windows.inserter_ids.reduce((sum, id) => sum + (clock_windows[id]?.length ?? 0), 0);
+    return inserter_window_count - with_loop_windows + loop_windows.window_count_without_loop_windows;
 }
 
 /**
@@ -173,12 +176,15 @@ export function combineClockAlternativeRuns<T>(
 ): { alternatives: T[]; selected_index: number } {
     const seen = new Set<string>();
     const alternatives: T[] = [];
-    for (const run of runs) {
+    const list = (run: ClockAlternativeRun<T> | null): void => {
         if (run && !seen.has(run.signature)) {
             seen.add(run.signature);
             alternatives.push(...run.alternatives);
+            // the same clock with shared windows follows it
+            run.also?.forEach(list);
         }
-    }
+    };
+    runs.forEach(list);
     const rank = (alternative: T): number[] => {
         const ranking = rankingOf(alternative);
         return [

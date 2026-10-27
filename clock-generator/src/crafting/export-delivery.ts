@@ -76,7 +76,7 @@ function shortfallOf(exported: ExportedItem, delivered_per_second: number): Expo
     return {
         belt_id: exported.belt_number,
         item: exported.item,
-        item_label: FactorioDataService.itemDisplayName(exported.item).toLowerCase(),
+        item_label: FactorioDataService.itemNameInSentence(exported.item),
         expected_per_second: exported.items_per_second,
         delivered_per_second,
         inserter_ids: exported.filler_numbers,

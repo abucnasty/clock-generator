@@ -16,6 +16,16 @@ export function drillItemsInto(chestId: number, drills: readonly DrillFormData[]
         .map(drill => drill.mined_item_name))];
 }
 
+/**
+ * What the machines that place their results into a chest put into it: every result of each one's recipe, as the
+ * engine's `itemsPutInto` adds them. Needs the recipes' results, so none without them.
+ */
+export function machineItemsInto(chestId: number, machines: readonly MachineFormData[], getRecipeInfo?: (name: string) => RecipeInfo | null): string[] {
+    if (!getRecipeInfo) return [];
+    return [...new Set(machines.filter(machine => machine.result_target?.type === 'chest' && machine.result_target.id === chestId && machine.recipe)
+        .flatMap(machine => getRecipeInfo(machine.recipe)?.results ?? []))];
+}
+
 export function sourceItemsOf(
     source: EntityRef,
     machines: MachineFormData[],
@@ -38,8 +48,8 @@ export function sourceItemsOf(
             if (isBufferChest(c) && c.item_filter) return [c.item_filter];
             if (isInfinityChest(c)) return c.item_filter.filter(filter => filter.request_count > 0).map(f => f.item_name).filter(Boolean);
             if (!isBufferChest(c)) {
-                // Match the engine's container supply: configured items plus what incoming inserters and drills can bring.
-                const items = new Set([...containerItems(c), ...drillItemsInto(c.id, drills)].filter(Boolean));
+                // Match the engine's container supply: configured items plus what incoming inserters, drills and machines can bring.
+                const items = new Set([...containerItems(c), ...drillItemsInto(c.id, drills), ...machineItemsInto(c.id, machines, getRecipeInfo)].filter(Boolean));
                 for (const incoming of inserters) {
                     if (incoming.sink.type !== 'chest' || incoming.sink.id !== c.id) continue;
                     if (incoming.filters?.length) {

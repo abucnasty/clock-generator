@@ -4,17 +4,26 @@ import {ClockAlternativesResult, backpressureLossOf, clockFromWindows, generateC
 import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
+import type {Config} from "../config/schema";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {GENERATED_ALTERNATIVE, grenadeClockCases} from "../../tests/game/builds/grenade-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
+import {GROUP_GAP_TILES} from "./turn-groups";
 
 // the grenade build (REAL_OWNER_GRENADE): the generated clock pinned beside the in-game recording of it on one copy
 // and on the full build of seven, and the hand-made clock judged by the simulator
 const controls = readControls("grenade-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
+let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE), {logger: quiet});
+    config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    generated = generateClockAlternatives(config, {logger: quiet});
+});
+
+test("grenade: every inserter and drill a clock leaves always on says why", () => {
+    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("grenade: the 112-tick clock holds the target and is selected; the longer ones, planned the same way, do not", () => {
@@ -34,6 +43,82 @@ test("grenade: the 112-tick clock holds the target and is selected; the longer o
     expect([windows["drill:1"], windows["drill:2"]]).toEqual([[{start: 2, end: 3}], [{start: 2, end: 3}]]);
     expect([windows["drill:3"], windows["drill:4"]]).toEqual([[{start: 58, end: 59}], [{start: 58, end: 59}]]);
     expect(generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE).every(it => it.verdict === "unstable")).toBe(true);
+});
+
+type Entities = ClockAlternativesResult["alternatives"][number]["result"]["blueprint"]["entities"];
+const tagged = (entities: Entities, kind: "inserters" | "drills", ids: number[]) =>
+    entities.find(entity => JSON.stringify(entity.tags?.clock_generator?.[kind]) === JSON.stringify(ids))!;
+/** The networks of one colour of a blueprint, as the sorted sets of connectors ("entity number:connector") its wires join */
+const networks = (wires: number[][], green: boolean): string[] => {
+    const parent = new Map<string, string>();
+    const find = (node: string): string => {
+        if (!parent.has(node)) parent.set(node, node);
+        const up = parent.get(node)!;
+        if (up === node) return node;
+        const root = find(up);
+        parent.set(node, root);
+        return root;
+    };
+    for (const [from, from_connector, to, to_connector] of wires) {
+        if ((from_connector % 2 === 0) === green) parent.set(find(`${from}:${from_connector}`), find(`${to}:${to_connector}`));
+    }
+    const sets = new Map<string, string[]>();
+    for (const node of Array.from(parent.keys())) sets.set(find(node), [...(sets.get(find(node)) ?? []), node]);
+    return Array.from(sets.values()).map(members => members.sort().join(",")).sort();
+};
+
+test("grenade: the selected clock stands its combinators in two groups, a gap between them, each in the order of its turn", () => {
+    const {blueprint} = generated.alternatives[generated.selected_index].result;
+    const at = (kind: "inserters" | "drills", ids: number[]) => tagged(blueprint.entities, kind, ids).position.x;
+    // the machines of one row of the belt are a group: the output swings (1 and 2), the plate inserters (3 and 4), the coal drills (1 and 2)
+    const north = [at("inserters", [1, 2]), at("inserters", [3, 4]), at("drills", [1, 2])];
+    const south = [at("inserters", [7, 8]), at("inserters", [5, 6]), at("drills", [3, 4])];
+    expect(north).toEqual([north[0], north[0] + 1, north[0] + 2]);
+    expect(south).toEqual([south[0], south[0] + 1, south[0] + 2]);
+    // the empty tiles between the groups, and nothing else out of place along the row
+    expect(south[0] - north[2] - 1).toBe(GROUP_GAP_TILES);
+    // the clock, its lock and its filter stand before both
+    const row = blueprint.entities.filter(entity => entity.name === "decider-combinator").map(entity => entity.position.x).sort((a, b) => a - b);
+    expect(row.slice(0, 2)).toEqual([0.5, 1.5]);
+    expect(row[2]).toBe(north[0]);
+    expect(new Set(row).size).toBe(row.length);
+});
+
+test("grenade: the first combinator of each group says which turn is its, and no other combinator does", () => {
+    const {blueprint} = generated.alternatives[generated.selected_index].result;
+    const lines = (entity: Entities[number]) => (entity.player_description ?? "").split("\n");
+    const groupLines = blueprint.entities.flatMap(entity => lines(entity).filter(line => line.startsWith("Group ")).map(line => [entity, line] as const));
+    expect(groupLines.map(([entity, line]) => [entity.tags?.clock_generator?.inserters, line])).toEqual([
+        [[1, 2], "Group 1 of 2: takes its turn in ticks 1–44 of the 112-tick period. Its combinators stand together, in the order of the turn."],
+        [[7, 8], "Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick period. Its combinators stand together, in the order of the turn."],
+    ]);
+    // after the lines that say what the combinator switches on and when, which stay the first two
+    for (const [entity] of groupLines) expect(lines(entity)[2]).toMatch(/^Group /);
+    expect(lines(tagged(blueprint.entities, "inserters", [1, 2]))[0]).toBe("2 inserters, each [entity=assembling-machine-3] → [entity=turbo-transport-belt] [item=grenade] (1, 2)");
+    expect(lines(tagged(blueprint.entities, "inserters", [1, 2]))[1]).toBe("1 swing each in 1 window per 112-tick period: open 1");
+});
+
+test("grenade: laying the combinators out by group changes nothing else: the same entities in the same order, conditions, outputs, tags and networks", async () => {
+    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    const selected = generated.alternatives[generated.selected_index].result;
+    // the same windows as a clock that is not in groups: one row in the order of the entity ids
+    const flat = clockFromWindows({...config, overrides: {...config.overrides, terminal_swing_count: 1}}, selected.clock_windows, 112, quiet);
+    const [grouped, plain] = [selected.blueprint, flat.blueprint];
+    expect(plain.entities.some(entity => (entity.player_description ?? "").includes("Group "))).toBe(false);
+    expect(grouped.entities.map(entity => entity.position.x)).not.toEqual(plain.entities.map(entity => entity.position.x));
+    const withoutPlace = (entities: Entities) => entities.map(({position, player_description, ...rest}) => ({...rest, first_lines: (player_description ?? "").split("\n").slice(0, 2)}));
+    expect(withoutPlace(grouped.entities)).toEqual(withoutPlace(plain.entities));
+    expect(selected.schedule).toEqual(flat.schedule);
+    // the same networks: every window combinator on the one network the filter's output makes, the lock on the same red network
+    expect(networks(grouped.wires, true)).toEqual(networks(plain.wires, true));
+    expect(networks(grouped.wires, false)).toEqual(networks(plain.wires, false));
+    // and every wire within the reach of a copper wire
+    const place = (entity_number: number) => grouped.entities.find(entity => entity.entity_number === entity_number)!.position;
+    for (const [from, , to] of grouped.wires) {
+        expect(Math.hypot(place(from).x - place(to).x, place(from).y - place(to).y)).toBeLessThanOrEqual(8);
+    }
+    // the clock is another clock to the game, for what it is placed where: its identity (position and wires are part of it) moves, its schedule does not
+    expect(clockIdentity(selected).blueprint).not.toBe(clockIdentity(flat).blueprint);
 });
 
 test("grenade: every alternative says the lanes of the belt are exactly full, and the selected clock's hands fit between each other", () => {

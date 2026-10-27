@@ -1,5 +1,5 @@
 import { CompositeControlLogic, ControlLogic, EnableControl, TickControlLogic } from "../../../control-logic";
-import { assertIsChest, EntityId } from "../../../entities";
+import { assertIsChest, Entity, EntityId } from "../../../entities";
 import { EntityState, MachineState, MachineStatus } from "../../../state";
 import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../sequence";
 import { InserterInterceptor } from "../../sequence/interceptors/inserter-interceptor";
@@ -27,7 +27,7 @@ export class PrepareStep implements RunnerStep {
      */
     private kickStartLoopingRecipes(): void {
         for (const { machine_state } of this.simulation_context.machines) {
-            for (const item_name of machine_state.machine.self_ingredients) {
+            for (const item_name of machine_state.machine.looping_ingredients) {
                 const limit = machine_state.machine.inputs.getOrThrow(item_name).automated_insertion_limit.quantity;
                 if (machine_state.selfIngredients.getQuantity(item_name) < limit) {
                     machine_state.selfIngredients.setQuantity(item_name, limit);
@@ -134,6 +134,15 @@ export class PrepareStep implements RunnerStep {
                 // Inserters filling chests: wait until source is output blocked (like input inserters)
                 if (chest_sink_inserter_ids.has(inserter_state.inserter.entity_id.id)) {
                     return InserterInterceptor.wait_until_source_is_output_blocked(inserter_state, source_state, sink_state);
+                }
+                // A direct placer's unused results must leave while its downstream machines fill. Otherwise an
+                // unrelated full result stack stops the recycler before the preparation can fill its target.
+                if (EntityState.isMachine(source_state) && source_state.machine.result_target?.type === "machine") {
+                    const target = context.entity_registry.getEntityByIdOrThrow(source_state.machine.result_target);
+                    const items = inserter_state.inserter.filtered_items;
+                    if (Entity.isMachine(target) && items.size > 0 && [...items].every(item => !target.inputs.has(item))) {
+                        return EnableControl.always;
+                    }
                 }
                 // All other inserters (output inserters): disabled until prepare is complete
                 return EnableControl.never

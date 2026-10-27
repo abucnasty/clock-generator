@@ -16,6 +16,7 @@ import { InserterInterceptor } from "./interceptors/inserter-interceptor";
 import { InserterTrace, InserterTraceOptions } from "../../state/inserter-trace";
 import assert from "../../common/assert";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
+import { pickupLaneLength } from "../../common/belt-pickup-layout";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
@@ -63,7 +64,7 @@ export class SimulationContext {
             assert(lanes !== undefined, `Pickup lanes have not been initialized for ${id}`);
             // Transfer logic already holds this array. Keep its identity when seeding the trial.
             lanes.splice(0, lanes.length, ...source.belt.lanes.map((lane, index) => new BeltPickupLane(
-                source.belt.belt_speed, length, lane.stack_size, lane_phases[index])));
+                source.belt.belt_speed, pickupLaneLength(inserter.pickup_layout ?? "side-straight", index + 1, length), lane.stack_size, lane_phases[index])));
         }
     }
 
@@ -137,6 +138,19 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
         })
     }
 
+    for (const source of entity_registry.getAll().filter(Entity.isMachine)) {
+        const target = source.result_target === undefined ? null : entity_registry.getEntityById(source.result_target);
+        if (target === null || !Entity.isMachine(target)) continue;
+        for (const output of source.outputs.filter(output => target.inputs.has(output.item_name))) {
+            const another = entity_registry.getAll().some(entity =>
+                Entity.isInserter(entity) ? entity.sink.entity_id.id === target.entity_id.id && entity.filtered_items.has(output.item_name)
+                    : Entity.isDrill(entity) ? entity.sink_id.id === target.entity_id.id && entity.item.name === output.item_name
+                        : Entity.isMachine(entity) && entity !== source && entity.result_target?.id === target.entity_id.id
+                            && entity.outputs.some(result => result.item_name === output.item_name));
+            assert(!another, `Machine ${target.entity_id.number} gets ${output.item_name} from Machine ${source.entity_id.number} and another source. `
+                + "A clock for several sources of an item placed directly into a machine is not planned yet.");
+        }
+    }
     return entity_registry;
 }
 
@@ -164,6 +178,13 @@ function itemsPutInto(config: Config, chest_id: number, entity_registry: EntityR
             if (chest?.type === "buffer-chest") items.add(chest.item_filter);
             else if (chest?.type === "infinity-chest") chest.item_filter.forEach(filter => items.add(filter.item_name));
             else if (chest !== undefined) (chest.contents ?? []).forEach(content => items.add(content.item));
+        }
+    }
+    // a machine that places its results into the chest puts in every result of its recipe
+    for (const machine of config.machines) {
+        if (machine.result_target?.type === "chest" && machine.result_target.id === chest_id) {
+            const placing = entity_registry.getEntityById(EntityId.forMachine(machine.id));
+            if (placing !== null && Entity.isMachine(placing)) placing.outputs.forEach(output => items.add(output.item_name));
         }
     }
     // a drill that drops into the chest puts in what it mines
@@ -199,8 +220,13 @@ function createSimulationContextFromConfig(
             if (possible_state_machine) {
                 return possible_state_machine;
             }
+            const result_target = machine_state.machine.result_target;
+            const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
+            assert(result_target_state === undefined || EntityState.isChest(result_target_state) || EntityState.isMachine(result_target_state),
+                `${machine_state.machine} places its results into ${result_target}, which is neither a machine nor a chest`);
             return MachineStateMachine.create({
                 machine_state: machine_state,
+                ...(result_target_state !== undefined && { result_target_state }),
             });
         })
 

@@ -143,6 +143,8 @@ export {
     SimulationStabilityCheck,
     SwingAttemptResult,
     SwingBackoffReport,
+    AlwaysOnReason,
+    AlwaysOnReasons,
 } from './crafting/generate-blueprint';
 
 export {
@@ -296,6 +298,7 @@ export {
 
 export {
     SerializableMachineFacts,
+    SerializableMachineOutput,
     SerializableMachineInput,
 } from './data-types';
 
@@ -314,3 +317,8 @@ export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
 export { DEFAULT_LOOP_SEED_ITEMS } from './crafting/runner/cold-start';
 
 export { sidecarPickupInserters } from "./config/pickup-capture";
+
+export { deriveOutputTransfers } from "./config/output-transfer";
+export type { OutputTransferTarget, OutputTransferResult, OutputTransferSummary } from "./config/output-transfer";
+export { outputTransferGenerationIssues, assertOutputTransferGenerationSupported } from "./config/output-transfer-generation";
+export type { OutputTransferGenerationIssue } from "./config/output-transfer-generation";

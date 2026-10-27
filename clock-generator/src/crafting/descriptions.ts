@@ -198,18 +198,34 @@ export function plannedDescriptionLines(
     entity_ids: EntityId[],
     registry: ReadableEntityRegistry,
     item_names: Iterable<string>,
-    swings_a_period: Fraction,
+    /** The swings each of the entities makes in a period */
+    swings_a_period: readonly { entity_id: EntityId; swings: Fraction }[],
     windows: DeciderWindows,
     period_text: string,
 ): string[] {
     const { first, routes } = identityLines(entity_ids, registry, itemIcons(item_names));
-    const each = entity_ids.length > 1 ? " each" : "";
-    const what = EntityId.isDrill(entity_ids[0])
-        ? `Mines ${formatCount(swings_a_period.multiply(DRILL_ITEMS_PER_SWING))}`
-        : `${formatCount(swings_a_period)} ${plural(swings_a_period.toDecimal() === 1 ? 1 : 2, "swing")}`;
+    const drill = EntityId.isDrill(entity_ids[0]);
+    const counts = Array.from(new Set(swings_a_period.map(it => it.swings.toDecimal()))).sort((a, b) => a - b);
+    const swings_of = (count: number) => swings_a_period.find(it => it.swings.toDecimal() === count)!.swings;
+    const count_text = (swings: Fraction) => formatCount(drill ? swings.multiply(DRILL_ITEMS_PER_SWING) : swings);
+    let what: string;
+    if (counts.length > 1) {
+        // inserters or drills that share the window but move different numbers: the range, then each number by who moves it
+        const noun = drill ? "drill" : "inserter";
+        const by_count = counts.map(count => {
+            const numbers = swings_a_period.filter(it => it.swings.toDecimal() === count).map(it => it.entity_id.number).sort((a, b) => a - b);
+            return `${plural(numbers.length, noun)} ${numbers.join(", ")}: ${count_text(swings_of(count))}`;
+        });
+        const [lowest, highest] = [count_text(swings_of(counts[0])), count_text(swings_of(counts[counts.length - 1]))];
+        what = `${drill ? "Mines " : ""}${lowest} to ${highest}${drill ? "" : " swings"} (${by_count.join("; ")})`;
+    } else {
+        const swings = swings_of(counts[0]);
+        const each = entity_ids.length > 1 ? " each" : "";
+        what = `${drill ? `Mines ${count_text(swings)}` : `${count_text(swings)} ${plural(swings.toDecimal() === 1 ? 1 : 2, "swing")}`}${each}`;
+    }
     return [
         first,
-        `${what}${each} in ${windowsText(windows, period_text)}`,
+        `${what} in ${windowsText(windows, period_text)}`,
         ...unusualWindowLines(windows),
         ...routes,
     ];
@@ -299,6 +315,16 @@ export function unplannedDescriptionLines(
         `Clears it: open ${open} of every ${inserter_clock.modulus} ticks; outside the main plan`,
         ...routes,
     ];
+}
+
+/**
+ * The line on the first combinator of a group that takes its turn, when the combinators stand in groups: which group it is and
+ * the ticks of its turn, as the clock counts them (the windows' own numbers, so a turn that runs over the end of the period is two):
+ * "Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick period. Its combinators stand together, in the order of the turn."
+ */
+export function turnLine(group: number, groups: number, turn: OpenRange[], period_text: string): string {
+    return `Group ${group} of ${groups}: takes its turn in ticks ${turn.map(rangeText).join(" and ")} of the ${period_text}-tick period. `
+        + "Its combinators stand together, in the order of the turn.";
 }
 
 /** The line that says which generator made a clock, the clock decider's last: "Made by Clock Generator 0.20.0: clock-generator-self.vercel.app" */

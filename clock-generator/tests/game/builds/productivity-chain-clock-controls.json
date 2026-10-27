@@ -1,13 +1,13 @@
 {
- "meaning": "Native summary of the productivity module chain (REAL_OWNER_PRODUCTIVITY_CHAIN, 80 productivity modules a second over 6 copies, so 13.33 a second and 16 a period of 72 ticks for the one copy of the scaffold) in Factorio 2.1.21, with the generator's selected clock (the 72-tick clock, windows made from the hands, rounded up where they are fractional, in the order of the chain of machines), wired to the inserters of the build by the harness. 63 whole periods before the first disturbance, which comes at period 66: the coal cut for 40 periods (the stock of the build lasts about 33), the output loader taken away for 24 (the belt takes about 11 periods of modules before it is full) and rebuilt, and the iron foundries stopped for 26 (the stock lasts about 14). 'expected' is what the build makes in a period. After each loss the periods before the output is back at 16 are the clock's own recovery.",
+ "meaning": "Native summary of the productivity module chain (REAL_OWNER_PRODUCTIVITY_CHAIN, 80 productivity modules a second over 6 copies, so 13.33 a second and 16 a period of 72 ticks for the one copy of the scaffold) in Factorio 2.1.21, with the generator's selected clock (the 72-tick clock, windows made from the hands, rounded up where they are fractional, in the order of the chain of machines), wired to the inserters of the build by the harness. 63 whole periods before the first disturbance, which comes at period 66: the coal cut for 40 periods (the stock of the build lasts about 33), the output loader taken away for 24 (the belt takes about 11 periods of modules before it is full) and rebuilt, and the iron foundries stopped for 26 (the stock lasts about 13). 'expected' is what the build makes in a period. After each loss the periods before the output is back at 16 are the clock's own recovery.",
  "cases": {
   "generated-one-copy": {
    "recorded": {
     "pr": 0,
-    "commit": "79c70eab",
-    "frozen_head": "79c70eab",
-    "note": "recorded before the PR was opened; pr is set when it is",
-    "clock_sha256": "4eb1109c89f80dc978d86ac375139ca84019c87f2562393bb32a2132fb70330b",
+    "commit": "d67e4839",
+    "frozen_head": "d67e4839",
+    "note": "re-recorded when the grouped hands rule came to rank its placements and kept staged with the surplus guard; pr is set when the PR is opened",
+    "clock_sha256": "15a6523219f3bbce0fa277c4a2e7567d7d02fd694d8dee2ee2975a565a7f7eed",
     "clock_basis": "capture"
    },
    "native": {
@@ -127,8 +127,8 @@
        0
       ],
       "recovered": [
-       0,
        16,
+       0,
        16,
        16,
        16,
@@ -172,7 +172,7 @@
        8
       ],
       "recovered": [
-       0,
+       16,
        16,
        16,
        16,
@@ -203,7 +203,7 @@
        16,
        16,
        16,
-       16,
+       0,
        0,
        0,
        0,
@@ -265,7 +265,7 @@
      "rate": 80,
      "supply": "moving"
     },
-    "clock_sha256": "4eb1109c89f80dc978d86ac375139ca84019c87f2562393bb32a2132fb70330b"
+    "clock_sha256": "15a6523219f3bbce0fa277c4a2e7567d7d02fd694d8dee2ee2975a565a7f7eed"
    }
   }
  }

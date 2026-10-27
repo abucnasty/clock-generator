@@ -20,15 +20,31 @@ const TYPE_LABELS: Record<EntityNodeData['entityType'], string> = {
 
 function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
     const tokens = themeTokens(useTheme());
-    const { facts } = useMachineFacts(params);
+    const { facts, updating } = useMachineFacts(params);
+    if (updating) return <Typography variant="caption" color="text.secondary">Updating production…</Typography>;
     if (!facts) return null;
+    const outputs = facts.outputs?.length ? facts.outputs : [{ item_name: facts.output_item, rate_per_second: facts.output_rate_per_second, stochastic: false }];
     return (
         <Box className="flow-node-rates" sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${tokens.control.edge}`, width: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                <FactorioIcon name={facts.output_item} size={14} titled />
-                <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: tokens.role.orange.main, lineHeight: 1.2 }}>
-                    {formatNumberText(facts.output_rate_per_second)}/s out
-                </Typography>
+            <Box role="group" aria-label="Output capacities per machine">
+                {outputs.length === 1 ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                    <FactorioIcon name={outputs[0].item_name} size={14} titled />
+                    <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: tokens.role.orange.main, lineHeight: 1.2 }}>
+                        {formatNumberText(outputs[0].rate_per_second)}/s out
+                    </Typography>
+                    {outputs[0].stochastic && <Typography variant="caption" color="text.secondary">Expected</Typography>}
+                </Box> : outputs.map(output => <Box key={output.item_name} role="group" sx={{ display: 'grid', gridTemplateColumns: '16px minmax(0, 1fr) auto', alignItems: 'center', columnGap: 0.5, minHeight: 32, mb: 0.5 }}>
+                    <FactorioIcon name={output.item_name} size={14} alt="" />
+                    <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, lineHeight: '16px', overflowWrap: 'anywhere' }}>
+                        <GameName id={output.item_name} />
+                    </Typography>
+                    <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="caption" component="div" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: tokens.role.orange.main, lineHeight: '16px', whiteSpace: 'nowrap' }}>
+                            {formatNumberText(output.rate_per_second)}/s out
+                        </Typography>
+                        {output.stochastic && <Typography variant="caption" component="div" color="text.secondary" sx={{ fontSize: 11, lineHeight: '14px' }}>Expected</Typography>}
+                    </Box>
+                </Box>)}
             </Box>
             {facts.inputs.map(inp => (
                 <Box key={inp.item_name} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
@@ -68,7 +84,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     display: 'flex',
                     flexDirection: 'column',
                     cursor: 'pointer',
-                    width: ENTITY_NODE_WIDTH,
+                    width: data.nodeWidth ?? ENTITY_NODE_WIDTH,
                     boxSizing: 'border-box',
                     '&:hover': { bgcolor: tokens.surface.page },
                 }}

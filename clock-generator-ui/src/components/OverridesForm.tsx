@@ -13,11 +13,14 @@ import { useId, type ReactNode } from 'react';
 import { HelpButton } from './HelpButton';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import type { ConfigFormData } from '../utils/configForm/formData';
+import { FORCE_TEXT, type TargetCounts } from '../utils/targetCounts';
 
 interface OverridesFormProps {
     importedChecks?: ConfigFormData['overrides'];
     lcm?: number;
     terminalSwingCount?: number;
+    /** What the target counts: for the item destroyed, the forced count is of hands brought into a machine, not of output swings */
+    counts?: TargetCounts;
     useFractionalSwings?: boolean;
     searchForFewerWakeUps?: boolean;
     onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
@@ -34,6 +37,7 @@ export function OverridesForm({
     importedChecks,
     lcm,
     terminalSwingCount,
+    counts = 'made',
     useFractionalSwings,
     searchForFewerWakeUps,
     onUpdate,
@@ -46,6 +50,7 @@ export function OverridesForm({
     const forceId = useId();
     const fractionalId = useId();
     const searchId = useId();
+    const force = FORCE_TEXT[counts];
     return (
         <Accordion
             expanded={expanded}
@@ -97,13 +102,9 @@ export function OverridesForm({
                     />
                     <Box sx={{ width: 260, maxWidth: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography component="label" htmlFor={forceId} variant="body2">Force Output Swings</Typography>
-                            <HelpButton label="About Force Output Swings">
-                                <Typography variant="body2">
-                                    Uses exactly this many total output swings per crafting cycle of each output machine for every clock, even if the clock does not hold the rate.
-                                    The total is divided equally among that machine's output inserters; each inserter's count may be fractional.
-                                    Leave empty to let the generator pick the count, lower it until the output holds the rate, and offer other counts as clocks.
-                                </Typography>
+                            <Typography component="label" htmlFor={forceId} variant="body2">{force.label}</Typography>
+                            <HelpButton label={force.helpLabel}>
+                                <Typography variant="body2">{force.help.join(' ')}</Typography>
                             </HelpButton>
                         </Box>
                         <TextField
@@ -116,7 +117,7 @@ export function OverridesForm({
                             size="small"
                         />
                         <Typography id={`${forceId}-help`} variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-                            Total output swings per crafting cycle of each output machine
+                            {force.field}
                         </Typography>
                     </Box>
                     <Box>
@@ -163,7 +164,7 @@ export function OverridesForm({
                 </Box>
                 {planSlot && <Box sx={{ mt: 2 }}>{planSlot}</Box>}
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
-                    Note: Each output machine’s total output swings are divided equally among its output inserters; per-inserter counts may be fractional.
+                    {force.note}
                 </Typography>
             </AccordionDetails>
         </Accordion>

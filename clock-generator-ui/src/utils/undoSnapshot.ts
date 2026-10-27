@@ -106,9 +106,10 @@ const itemsOf = (form: ConfigFormData, kind: EntityKind): { id: number; _uuid: s
 /** A fallback for ordinary form edits; destructive actions keep their more specific messages. */
 export function describeConfigEdit(before: ConfigFormData, after: ConfigFormData): { message: string; key: string } {
     const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
-    for (const field of ['recipe', 'items_per_second', 'copies'] as const) {
+    const TARGET_FIELDS = { recipe: 'target recipe', items_per_second: 'Items per Second', copies: 'Copies', counts: 'Counts' } as const;
+    for (const field of Object.keys(TARGET_FIELDS) as (keyof typeof TARGET_FIELDS)[]) {
         if (changed(before.target_output[field], after.target_output[field])) {
-            return { message: `Updated ${field === 'copies' ? 'Copies' : field === 'recipe' ? 'target recipe' : 'Items per Second'}.`, key: `target:${field}` };
+            return { message: `Updated ${TARGET_FIELDS[field]}.`, key: `target:${field}` };
         }
     }
     for (const kind of Object.keys(KINDS) as EntityKind[]) {
@@ -181,6 +182,15 @@ export function describeRemoval(before: ConfigFormData, after: ConfigFormData, k
     }).map((drill) => drill.id));
     if (unset.length > 0) {
         sentences.push(`${named('drills', unset)} ${hasOrHave(unset)} no Target now.`);
+    }
+    // a machine that places its results itself, whose container went
+    const machinesBefore = new Map(before.machines.map((machine) => [machine._uuid, machine]));
+    const unsetResults = ascending(after.machines.filter((machine) => {
+        const was = machinesBefore.get(machine._uuid);
+        return was?.result_target !== undefined && was.result_target.id !== 0 && machine.result_target?.id === 0;
+    }).map((machine) => machine.id));
+    if (unsetResults.length > 0) {
+        sentences.push(`${named('machines', unsetResults)} ${hasOrHave(unsetResults)} no Direct output target now.`);
     }
     return sentences.join(' ');
 }

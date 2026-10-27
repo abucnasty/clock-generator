@@ -60,6 +60,8 @@ Rule 3 of the rules of the game, as [rules-of-the-game.md](rules-of-the-game.md#
 
 The simulator stops a drill into a machine at the larger of the stack and the automated insertion limit, + 64 (`miningDrillMaxInsertion`). The game's machine never goes above it: 114 for stone in an assembling machine on rail, 214 on landfill, and it reaches it in the rail builds and in `landfill-l45` and its drill-last and moved variants.
 
+A recycler places its results into a machine by this same rule, using the same placement code as a drill. The target takes the results its recipe uses; other results stay in the recycler for inserters to remove. A full stack of any result waiting there stops the recycler. Its `result_target` names the target machine or container.
+
 ## Mining productivity
 
 Each drill has its own productivity (`productivity` of its config, in percent, as a machine's; since 0.20.0). In the game a drill's `productivity_bonus` is the force's mining productivity research bonus (`force.mining_drill_productivity_bonus`, 10% a level researched) and its productivity modules' together, not capped, and its bonus bar moves by its mining step times that bonus in every tick: recorded in the drills family with no modules and with four legendary productivity modules 3 and no research (+100%), and checked in the game with modules on top of research when the level went (+70% and four legendary productivity modules 3: +170%; +440% and two of them: +490%; +70% and three normal productivity modules 1: +82%). Sidecar exports it per drill from 0.12.0 on (`productivity_bonus` x 100). A config with the former `mining_productivity_level` is read as each drill's productivity, the level x 10%. The harness save's research, mining productivity 3 at level 8000, is 7,999 levels, +79,990%.
@@ -81,7 +83,7 @@ The stop into a machine was changed in #310 to the larger of the stack and the i
 ## Known limits
 
 - A chest drill's windows are made from the takes the plan gives its takers: the steel wagon's ore taker takes 320 ore a period in the clock-only run where the plan gives it 160. The clock-only check, the loss trials and the fallback decide goal 1; the windows can be longer than they need where the plan undercounts.
-- The recording harness wires a clocked drill to the built drill that drops into the machine the config's drill does, in each copy of the build (since 0.22.0; before, only in a build with one drill).
+- The recording harness wires a clocked drill to the built drill that drops into the machine the config's drill does, in each copy of the build (since 0.22.0; before, only in a build with one drill). A drill into a chest (a car, a cargo wagon, a rocket silo) is wired to the built drill that drops into the chest the config's does, found through the inserters that move items of it; where the config has two chests of one type the match cannot tell them apart and the harness refuses the clock.
 
 - The first-tick offset above is not modelled.
 - A mining bar that moves a mining time or more in a tick (several items a tick from the mining bar, on scrap a mining speed of 30 a second) is not recorded; the simulator makes one item a tick from it at most.

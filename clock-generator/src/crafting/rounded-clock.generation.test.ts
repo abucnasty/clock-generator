@@ -2,6 +2,8 @@ import {beforeAll, describe, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
+import type {Config} from "../config/schema";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
@@ -10,9 +12,15 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 // gears a period and recovered from two iron ore cuts and a blocked output (#332). A rounded clock meets goal 1 at most
 // 0.1% fast and within what the machines make, tried on its own period (GOALS.md, goal 1).
 describe("Atlan cell 29: a clock rounded down to whole ticks", () => {
+    let config: Config;
     let generated: ClockAlternativesResult;
     beforeAll(async () => {
-        generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_ATLAN_CELL29), {logger: quiet});
+        config = await loadConfigFromFile(ConfigPaths.REAL_ATLAN_CELL29);
+        generated = generateClockAlternatives(config, {logger: quiet});
+    });
+
+    test("every inserter and drill a clock leaves always on says why", () => {
+        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
     });
 
     test("is selected, 0.02% fast, as the 2,888-tick clock it is, and was tried on its own period", () => {

@@ -56,6 +56,26 @@ function helpers.get_target_type(entity)
     return nil
 end
 
+---The calibrated right-turn approach: pivot one tile upstream of the outgoing belt, not mirrored.
+---The two exposed arcs have radii 188/256 and 68/256 and lengths 295/256 and 106/256.
+function helpers.get_bend_layout(inserter, belt)
+    if not belt or not belt.valid or belt.type ~= "transport-belt" or belt.belt_shape ~= "right"
+        or belt.name ~= "turbo-transport-belt" or inserter.mirroring then return nil end
+    local run = {
+        [defines.direction.north] = { x = 0, y = -1 },
+        [defines.direction.east] = { x = 1, y = 0 },
+        [defines.direction.south] = { x = 0, y = 1 },
+        [defines.direction.west] = { x = -1, y = 0 },
+    }
+    local direction = run[belt.direction]
+    if not direction or inserter.direction ~= belt.direction then return nil end
+    local dx, dy = inserter.position.x - belt.position.x, inserter.position.y - belt.position.y
+    if math.abs(dx + direction.x) > 0.01 or math.abs(dy + direction.y) > 0.01 then return nil end
+    if belt.get_transport_line(1).line_length ~= 295 / 256
+        or belt.get_transport_line(2).line_length ~= 106 / 256 then return nil end
+    return "bend-right-upstream"
+end
+
 ---Preferred pickup lane: 1 for the left lane in belt travel direction, 2 for the right one.
 ---Beside a belt this is the nearest lane; supported inline underground approaches depend on mirroring.
 ---Other inline pickups and unsupported pieces remain unclassified. Recorded in Factorio 2.1.21.
@@ -63,6 +83,7 @@ end
 ---@param belt LuaEntity The belt piece the inserter picks up from
 ---@return 1|2|nil
 function helpers.get_near_lane(inserter, belt)
+    if helpers.get_bend_layout(inserter, belt) then return 1 end
     if not belt or not belt.valid or not (belt.type == "underground-belt"
         or (belt.type == "transport-belt" and belt.belt_shape == "straight")) then
         return nil
@@ -110,6 +131,7 @@ end
 ---@param belt LuaEntity
 ---@return number|nil
 function helpers.get_pickup_length(inserter, belt)
+    if helpers.get_bend_layout(inserter, belt) then return 1 end
     if not helpers.get_near_lane(inserter, belt) then return nil end
     local length = belt.get_transport_line(1).line_length
     if length == 0.5 or length == 1 then return length end
@@ -118,6 +140,8 @@ end
 
 ---Physical approach, distinct from exposed length and supply motion.
 function helpers.get_pickup_layout(inserter, belt)
+    local bend = helpers.get_bend_layout(inserter, belt)
+    if bend then return bend end
     if not helpers.get_near_lane(inserter, belt) then return nil end
     if belt.type == "transport-belt" then return "side-straight" end
     local run = {
@@ -136,7 +160,8 @@ end
 
 ---Why capture cannot classify a belt pickup. Never infer geometry from an unsupported piece or observed motion.
 function helpers.get_pickup_problem(inserter, belt)
-    if belt.type == "transport-belt" and belt.belt_shape ~= "straight" then return "bend" end
+    if belt.type == "transport-belt" and belt.belt_shape ~= "straight"
+        and not helpers.get_bend_layout(inserter, belt) then return "bend" end
     if belt.type == "splitter" or belt.type == "lane-splitter" then return "splitter" end
     if belt.type ~= "transport-belt" and belt.type ~= "underground-belt" then return "unsupported" end
     if not helpers.get_near_lane(inserter, belt) then return "inline" end

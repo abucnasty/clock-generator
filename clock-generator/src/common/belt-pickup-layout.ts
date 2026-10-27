@@ -1,11 +1,11 @@
 /** Physical pickup layouts calibrated by the belt experiments. Supply motion is a separate setting. */
 export const BELT_PICKUP_LAYOUTS = [
-    "side-straight", "side-entrance", "side-exit", "front-entrance", "front-exit", "over-hood-exit",
+    "side-straight", "side-entrance", "side-exit", "front-entrance", "front-exit", "over-hood-exit", "bend-right-upstream",
 ] as const;
 export type BeltPickupLayout = typeof BELT_PICKUP_LAYOUTS[number];
 
 export function pickupLengthForLayout(layout: BeltPickupLayout): 0.5 | 1 {
-    return layout === "side-straight" ? 1 : 0.5;
+    return layout === "side-straight" || layout === "bend-right-upstream" ? 1 : 0.5;
 }
 
 export const BELT_PICKUP_LAYOUT_LABELS: Record<BeltPickupLayout, string> = {
@@ -15,19 +15,39 @@ export const BELT_PICKUP_LAYOUT_LABELS: Record<BeltPickupLayout, string> = {
     "front-entrance": "Underground entrance — front pickup",
     "front-exit": "Underground exit — front pickup",
     "over-hood-exit": "Underground exit — over the hood",
+    "bend-right-upstream": "Right bend — upstream pickup",
 };
 
 /** Geometry defaults are safe only for an ordinary straight belt. Underground layouts must be named. */
-export function pickupLayoutProblem(source: {pickup_layout?: BeltPickupLayout; pickup_length?: number}): string | null {
+export function pickupLayoutProblem(source: {pickup_layout?: BeltPickupLayout; pickup_length?: number; near_lane?: number}): string | null {
     if (source.pickup_layout && !BELT_PICKUP_LAYOUTS.includes(source.pickup_layout)) return "Unknown pickup layout.";
+    if (source.pickup_layout === "bend-right-upstream" && source.near_lane !== 1) return "Right-bend upstream pickups use lane 1 first.";
     const length = source.pickup_length ?? (source.pickup_layout ? pickupLengthForLayout(source.pickup_layout) : 1);
     if (!source.pickup_layout) return length === 1 ? null : "Choose the underground pickup layout; half-tile reach alone does not identify the approach.";
     if (length !== pickupLengthForLayout(source.pickup_layout)) return "Pickup layout and exposed length disagree.";
     return null;
 }
 
+/**
+ * Exposed transport line by lane. The right bend is a quarter circle around the upstream-left corner:
+ * the ordinary 60/256-tile lane offset gives radii 188 and 68 units. Factorio floors their arc lengths
+ * to 295 and 106 units (recorded in 2.1.21). pickup_length remains the tile/layout marker, not either arc.
+ */
+export function pickupLaneLength(layout: BeltPickupLayout, lane: number, exposed_length = pickupLengthForLayout(layout)): number {
+    if (layout === "bend-right-upstream") return (lane === 1 ? 295 : 106) / 256;
+    return exposed_length;
+}
+
 /** Distance from the inserter pivot to a stack, in 1/256-tile units. Position increases upstream. */
 export function pickupTargetRadius(layout: BeltPickupLayout, preferred_lane: 1 | 2, lane: number, position: number): number {
+    if (layout === "bend-right-upstream") {
+        const radius = lane === 1 ? 188 : 68;
+        const angle = position / radius;
+        // Outgoing travel is south, pickup pivot is north. Other cardinal rotations are congruent.
+        const x = -128 + radius * Math.cos(angle);
+        const y = 384 - radius * Math.sin(angle);
+        return Math.hypot(x, y);
+    }
     if (layout.startsWith("side-")) {
         const downstream_end = layout === "side-entrance" ? 0 : 128;
         const pivot_to_lane = 256 + (lane === preferred_lane ? -60 : 60);

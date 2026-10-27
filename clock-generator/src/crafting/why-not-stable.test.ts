@@ -65,13 +65,39 @@ describe("why the selected clock does not meet goal 1", () => {
             .toContain("reach inserters 2 and 4 in another phase: from such a start it moves 160 of 176 items a period.");
     });
 
+    it("is the taker order of a clock that holds with the takers of one machine served in one order and not in another", () => {
+        const unstable = clock({
+            label: "Batched swings: 1 output swing per cycle", verdict: "unstable", meets_target_rate: false,
+            assessment: { holds: false, items_per_second: 7.5, backpressure_loss: null },
+            failed_taker_order: "ascending", competing_takers: [["inserter:6", "inserter:7"]],
+            as_built_output: { items: 160 },
+        });
+        expect(whyNotStable([unstable], 0, moving)).toEqual({
+            cause: "taker order",
+            message: "The selected clock (Batched swings: 1 output swing per cycle) holds the target rate when inserters 6 and 7 are "
+                + "served in one order, but not in another: then it moves 160 of 176 items a period. The game serves inserters that "
+                + "take from one machine in a fixed order, which the config does not tell, so the build can fall short.",
+        });
+        // the takers of several machines are named together
+        expect(whyNotStable([{ ...unstable, competing_takers: [["inserter:5", "inserter:7"], ["inserter:22", "inserter:25"]] }], 0, moving)?.message)
+            .toContain("when inserters 5, 7, 22 and 25 are served in one order");
+    });
+
+    it("is no recovery for a clock that gets back after a loss with the takers of one machine served in one order only", () => {
+        const clock_of = noRecovery(["coal stops arriving"], [], { competing_takers: [["inserter:6", "inserter:7"]] });
+        clock_of.assessment.backpressure_loss!.broken_under_other_taker_orders = ["coal stops arriving"];
+        expect(whyNotStable([clock_of], 0, moving)?.message).toContain("holds the target rate, but after coal stops arriving it gets back "
+            + "to it when inserters 6 and 7 are served in one order, but not in another. The game serves inserters that take from one "
+            + "machine in a fixed order, which the config does not tell, so the build can fall short.");
+    });
+
     it("is the moving lane phases of a moving-belt clock that gets back from every loss from the modeled start only", () => {
-        const losses = ["accumulator stops arriving", "electromagnetic-science-pack is not taken away"];
+        const losses = ["accumulator stops arriving", "electromagnetic science pack is not taken away"];
         expect(whyNotStable([noRecovery(losses, losses, { moving_belt: true, label: "Observed windows: 3 output swings per cycle" })], 0, moving)).toEqual({
             cause: "moving lane phases",
             message: "The selected clock (Observed windows: 3 output swings per cycle) is made for a moving belt. It holds the target "
                 + "rate from the modeled start and gets back to it from there after every loss, but not when the lanes come back in "
-                + "another phase after accumulator stops arriving, or after electromagnetic-science-pack is not taken away. In the "
+                + "another phase after accumulator stops arriving, or after electromagnetic science pack is not taken away. In the "
                 + `game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short.${BACKED_UP_ADVICE}`,
         });
     });
@@ -83,31 +109,41 @@ describe("why the selected clock does not meet goal 1", () => {
                 + "it by itself after coal stops arriving. A buffer, or a faster machine, lets it catch up.",
         });
         // a moving-belt clock that misses a loss from the modeled start itself is no recovery too
-        expect(whyNotStable([noRecovery(["tungsten-ore stops arriving"], [], { moving_belt: true })], 0, moving)?.cause).toBe("no recovery");
+        expect(whyNotStable([noRecovery(["tungsten ore stops arriving"], [], { moving_belt: true })], 0, moving)?.cause).toBe("no recovery");
+    });
+
+    it("names the losses that were not tried once one broke the clock", () => {
+        const stopped = noRecovery(["coal stops arriving"], [], {
+            assessment: { holds: true, items_per_second: 7.5, backpressure_loss: { survives: false, broken_by: ["coal stops arriving"],
+                broken_at_other_lane_phases: [], not_tried: ["iron plate stops arriving", "iron gear wheel is not taken away"] } },
+        });
+        expect(whyNotStable([stopped], 0, moving)?.message).toBe("The selected clock (Batched swings: 2 output swings per cycle) holds "
+            + "the target rate, but does not get back to it by itself after coal stops arriving. Not tried, since one failure is enough: "
+            + "iron plate stops arriving, iron gear wheel is not taken away. A buffer, or a faster machine, lets it catch up.");
     });
 
     it("names only the losses it does not get back from, of a clock that gets back from some", () => {
         // the verdict lists the losses that break it; the ones it gets back from are not in it (see verdictOf)
-        const message = whyNotStable([noRecovery(["iron-ore stops arriving", "iron-gear-wheel is not taken away"])], 0, moving)!.message;
-        expect(message).toContain("after iron-ore stops arriving, or after iron-gear-wheel is not taken away.");
+        const message = whyNotStable([noRecovery(["iron ore stops arriving", "iron gear wheel is not taken away"])], 0, moving)!.message;
+        expect(message).toContain("after iron ore stops arriving, or after iron gear wheel is not taken away.");
         expect(message).not.toContain("coal");
     });
 
     it("tells both causes of a moving-belt clock that misses one loss from the modeled start and another only from other lane phases", () => {
-        const several = noRecovery(["tungsten-ore stops arriving", "coal stops arriving"], ["coal stops arriving"], { moving_belt: true });
+        const several = noRecovery(["tungsten ore stops arriving", "coal stops arriving"], ["coal stops arriving"], { moving_belt: true });
         expect(whyNotStable([several], 0, moving)).toEqual({
             cause: "no recovery",
             message: "The selected clock (Batched swings: 2 output swings per cycle) holds the target rate, but does not get back to "
-                + "it by itself after tungsten-ore stops arriving. After coal stops arriving it gets back to it from the modeled start, "
+                + "it by itself after tungsten ore stops arriving. After coal stops arriving it gets back to it from the modeled start, "
                 + "but not when a moving belt's lanes come back in another phase. A buffer, or a faster machine, lets it catch up.",
         });
     });
 
     it("adds the spare time of a machine that takes longer to make up a period than a build is given to get back", () => {
         const spare = (spare_ticks: number, working_ticks: number) => whyNotStable(
-            [noRecovery(["tungsten-ore stops arriving"], [], { spare_time: { machine: "Machine 3 (metallurgic-science-pack)", spare_ticks, working_ticks, recovery_periods: 40 } })],
+            [noRecovery(["tungsten ore stops arriving"], [], { spare_time: { machine: "Machine 3 (metallurgic-science-pack)", spare_ticks, working_ticks, recovery_periods: 40 } })],
             0, moving)!.message;
-        expect(spare(1, 319)).toContain("after tungsten-ore stops arriving. Machine 3 (metallurgic-science-pack) crafts 319 ticks of a period "
+        expect(spare(1, 319)).toContain("after tungsten ore stops arriving. Machine 3 (metallurgic-science-pack) crafts 319 ticks of a period "
             + "and has 1 tick to spare: making up one period it lost takes it 319 periods, more than the 40 a build is given to get back. "
             + "That is too little to make up what it lost. A buffer, or a faster machine, lets it catch up.");
         expect(spare(0, 320)).toContain("making up one period it lost takes it forever");
@@ -124,7 +160,7 @@ describe("why the selected clock does not meet goal 1", () => {
 
     it("is nothing holds where no clock holds the target, with the closest rate and the clocks that could not be made", () => {
         const not_made: NotMadeClock[] = [
-            { id: "even-hands", label: "Even hands", reason: "even hands are only made where every inserter takes from a machine or a chest; inserter:6 does not" },
+            { id: "even-hands", label: "Even hands", reason: "only made where every inserter takes from a machine or a chest; inserter 6 takes from a belt" },
             { id: "shifted-swings", label: "Shifted swings", reason: "no shifted round of swings passes the clock-only check" },
         ];
         const short = clock({ label: "1 output swing per cycle", verdict: "unstable", meets_target_rate: false,
@@ -133,8 +169,8 @@ describe("why the selected clock does not meet goal 1", () => {
             1, { target_items_per_second: 40, backed_up_belts: true, not_made })).toEqual({
             cause: "nothing holds",
             message: "No clock holds the target rate of 40 a second. The closest, 1 output swing per cycle, moves 30.36 a second, 9.64 "
-                + "under the target. Not made: Even hands (even hands are only made where every inserter takes from a machine or a chest; "
-                + "inserter:6 does not); Shifted swings (no shifted round of swings passes the clock-only check).",
+                + "under the target. Not made: Even hands (only made where every inserter takes from a machine or a chest; "
+                + "inserter 6 takes from a belt); Shifted swings (no shifted round of swings passes the clock-only check).",
         });
         const over = { ...short, assessment: { ...short.assessment, items_per_second: 126.09375 } };
         expect(whyNotStable([over], 0, { target_items_per_second: 120, backed_up_belts: false, not_made: [] })?.message)
@@ -264,5 +300,30 @@ describe("what the summary reads of a clock", () => {
             assessment: view.assessment, moving_belt: false, expected_output_items: 4, spare_time: null,
             full_output_chests: [], export_shortfalls: [] });
         expect(whyNotStableClockOf({ ...view, belt: { kind: "backed_up" } }).moving_belt).toBe(false);
+    });
+});
+
+describe("results that are not all taken out of the container a machine places them into", () => {
+    const build: WhyNotStableBuild = { target_items_per_second: 2, backed_up_belts: false, not_made: [] };
+    const taken = (overrides: Partial<WhyNotStableClock> = {}) => clock({ label: "Results in turn: 12 hands brought in per cycle", verdict: "unstable",
+        meets_target_rate: false, assessment: { holds: false, items_per_second: 2, backpressure_loss: null },
+        results_taken: [{ machine_id: "machine:1", waiting_ticks: 240, takers: [
+            { items: ["iron-gear-wheel"], inserter_ids: ["inserter:1"], expected_items: 2150.4, taken_items: 2144, short: false },
+            { items: ["processing-unit", "holmium-ore"], item_labels: ["processing unit", "holmium ore"], inserter_ids: ["inserter:10"], expected_items: 107.5,
+                taken_items: 52, short: true },
+        ] }], ...overrides });
+
+    it("is told as the cause, with the ticks the machine waited and the inserters that fell behind", () => {
+        expect(whyNotStable([taken()], 0, build)).toEqual({
+            cause: "results not taken out",
+            message: "The selected clock (Results in turn: 12 hands brought in per cycle) brings in 2 a second, but its results are not all taken out as "
+                + "they come: Machine 1 waited 240 ticks with a result its container had no room for. Inserter 10 took 52 of the 108 processing unit "
+                + "and holmium ore the crafts gave.",
+        });
+    });
+
+    it("is not said of a clock that is off the target, or whose results were all taken", () => {
+        expect(whyNotStable([taken({ assessment: { holds: false, items_per_second: 1.5, backpressure_loss: null } })], 0, build)?.cause).toBe("nothing holds");
+        expect(whyNotStable([taken({ results_taken: [{ machine_id: "machine:1", waiting_ticks: 0, takers: [] }] })], 0, build)?.cause).toBe("nothing holds");
     });
 });

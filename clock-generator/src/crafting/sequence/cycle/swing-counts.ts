@@ -1,3 +1,4 @@
+import { assertMachineResultTargetsSupported } from "../../../config/output-transfer-generation";
 import Fraction, { fraction } from "../../../data-types/fraction";
 import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
@@ -64,6 +65,7 @@ export class EntityTransferCountMap extends MapExtended<EntityId, EntityTransfer
 
     public static create = computeInserterSwingCountsForMultipleMachines
     public static createForSingleMachine = computeInserterSwingCounts
+    public static createForDestroyedTarget = computeDestroyedTargetTransfers
     public static lcm = computeLCM
     public static print = printInserterSwingCounts
     public static divide = divideTransfers
@@ -104,6 +106,7 @@ function computeInserterSwingCountsForMultipleMachines(
     output_stack_size: number,
     cycle_ticks?: number
 ): EntityTransferCountMap {
+    assertMachineResultTargetsSupported(entity_registry);
     const result = new EntityTransferCountMap();
     const asked_directly: MachineDemand = new Map();
     planOutputInserters(output_machines, entity_registry, output_swing_count_per_machine, output_stack_size, result, asked_directly);
@@ -301,6 +304,7 @@ function computeInserterSwingCounts(
     existing_results: EntityTransferCountMap = new EntityTransferCountMap(),
     known_output_inserter?: Inserter
 ): EntityTransferCountMap {
+    assertMachineResultTargetsSupported(entity_registry);
     const result: EntityTransferCountMap = existing_results;
 
     // Use the known output inserter if provided, otherwise find the first one
@@ -463,18 +467,35 @@ function planMachineLoaders(
     output_items: Fraction,
     result: EntityTransferCountMap,
     demand: MachineDemand,
-    include_fuel: boolean = false
+    include_fuel: boolean = false,
+    /** Ingredients planned apart, which no loader is planned for here */
+    except_items: ReadonlySet<string> = new Set(),
 ): void {
     // the ratio of each ingredient to the output, productivity included: 3 of A for 6 made is 1/2
     const ratios = new Map<string, Fraction>();
     for (const input of machine.inputs.values()) {
-        ratios.set(input.item_name, fraction(input.ingredient.amount).divide(machine.output.amount_per_craft));
+        if (!except_items.has(input.item_name)) {
+            ratios.set(input.item_name, fraction(input.ingredient.amount).divide(machine.output.amount_per_craft));
+        }
     }
     // fuel that comes on the inserters of the plan is one more thing they carry; a fuel-only inserter has a clock of its own
     const fuel_item = machine.fuel_slot?.fuel.item_name;
     if (include_fuel && fuel_item !== undefined && machine.fuel_consumption && !hasFuelOnlyInserter(machine, entity_registry)) {
         const fuel_per_craft = fraction(Math.ceil(machine.fuel_consumption.amount_per_craft * FUEL_PARTS_PER_ITEM), FUEL_PARTS_PER_ITEM);
         ratios.set(fuel_item, (ratios.get(fuel_item) ?? fraction(0)).add(fuel_per_craft.divide(machine.output.amount_per_craft)));
+    }
+
+    // A result placed directly is supplied by its producing machine, with no inserter or synthetic hand.
+    const placers = entity_registry.getAll().filter(Entity.isMachine)
+        .filter(source => source.result_target?.id === machine.entity_id.id);
+    for (const source of placers) {
+        for (const output of source.outputs) {
+            const ratio = ratios.get(output.item_name);
+            if (ratio === undefined) continue;
+            addDemand(demand, source, output_items.multiply(ratio)
+                .multiply(source.output.amount_per_craft).divide(output.amount_per_craft));
+            ratios.delete(output.item_name);
+        }
     }
 
     // Find all inserters that feed into this machine
@@ -578,6 +599,111 @@ function planMachineLoaders(
             });
         }
     }
+}
+
+/**
+ * The transfers of a cycle for a target that counts an item destroyed (target-ends.ts), by plain arithmetic. Each
+ * machine that destroys it is brought `hands_per_machine` hands of it from outside the build a cycle, `brought` items,
+ * split evenly among the inserters that bring it. That sets its crafts: what it is brought over what a craft uses of the
+ * item, less what a craft gives back of it into the machine through its result target (a recycler voiding iron ore uses
+ * 1 and gets 1/4 back: 4/3 crafts an ore brought). Every result the machine places into its result target is taken out
+ * at its expected amount a cycle, split evenly among the inserters that take that item out of it, whether they bring it
+ * back into the machine or take it out of the build; the machine's other ingredients are planned as any machine's.
+ * Nothing here is simulated: the simulator checks the plan.
+ */
+export function computeDestroyedTargetTransfers(
+    machines: Machine[],
+    entity_registry: ReadableEntityRegistry,
+    item: string,
+    hands_per_machine: Fraction,
+): EntityTransferCountMap {
+    assertMachineResultTargetsSupported(entity_registry);
+    const result = new EntityTransferCountMap();
+    for (const machine of machines) {
+        const name = `Machine ${machine.entity_id.number}`;
+        const target_id = machine.result_target;
+        assert(target_id !== undefined && machine.metadata.places_results === true,
+            `${name} destroys ${item}, which is planned for a machine that places its results itself into a container `
+            + "(a recycler with a `result_target`) only");
+        const bringing = insertersBringingIn(machine, item, entity_registry);
+        assert(bringing.length > 0, `${name}: no inserter brings ${item} into it from outside the build`);
+        const hand = handSizeFor(bringing[0], item);
+        for (const inserter of bringing) {
+            assert(handSizeFor(inserter, item) === hand,
+                `${name}: the inserters that bring ${item} in have hands of ${hand} and ${handSizeFor(inserter, item)}; they have to be the same`);
+            const swings = hands_per_machine.divide(bringing.length);
+            addTransfers(result, { entity: inserter, item_transfers: [{ item_name: item, transfer_count: swings }],
+                total_transfer_count: swings, stack_size: hand });
+        }
+        const brought = hands_per_machine.multiply(hand);
+        const crafts = destroyedTargetCrafts(machine, entity_registry, item, brought);
+        const takersOf = (result_item: string) => resultTakersOf(machine, result_item, entity_registry);
+
+        for (const output of machine.outputs) {
+            const takers = takersOf(output.item_name);
+            assert(takers.length > 0, `${name} places ${output.item_name} into ${target_id}, and no inserter takes it out: it fills up`);
+            const per_taker = output.amount_per_craft.multiply(crafts).divide(takers.length);
+            for (const taker of takers) {
+                assert(EntityId.isMachine(taker.sink.entity_id) ? taker.sink.entity_id.id === machine.entity_id.id : true,
+                    `Inserter ${taker.entity_id.number} takes ${output.item_name} out of ${target_id} into another machine, which is not planned yet`);
+                const hand_of_taker = handSizeFor(taker, output.item_name);
+                const swings = per_taker.divide(hand_of_taker);
+                addTransfers(result, { entity: taker, item_transfers: [{ item_name: output.item_name, transfer_count: swings }],
+                    total_transfer_count: swings, stack_size: hand_of_taker });
+            }
+        }
+
+        // its other ingredients and fuel, as any machine's making what these crafts make
+        const made = crafts.multiply(machine.output.amount_per_craft);
+        const others = new EntityTransferCountMap();
+        planMachineLoaders(machine, entity_registry, made, others, new Map(), true, new Set([item]));
+        for (const planned of others.values()) {
+            addTransfers(result, planned);
+        }
+    }
+    return result;
+}
+
+/** The inserters that take a result out of the container a machine places its results into */
+export function resultTakersOf(machine: Machine, item: string, entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
+    const target_id = machine.result_target;
+    return target_id === undefined ? [] : entity_registry.getAll().filter(Entity.isInserter)
+        .filter(inserter => inserter.source.entity_id.id === target_id.id && inserter.filtered_items.has(item));
+}
+
+/**
+ * The crafts of a machine that destroys an item it is brought from outside, `brought` of it: what it is brought over
+ * what a craft uses of it less what a craft gives back of it into the machine, through its result target where the
+ * inserters that take it out of there all bring it back (a recycler voiding iron ore uses 1 and gets 1/4 back: 4/3
+ * crafts an ore brought)
+ */
+export function destroyedTargetCrafts(machine: Machine, entity_registry: Pick<ReadableEntityRegistry, "getAll">, item: string, brought: Fraction): Fraction {
+    const name = `Machine ${machine.entity_id.number}`;
+    const takers = resultTakersOf(machine, item, entity_registry);
+    const returns_into_machine = takers.filter(inserter => inserter.sink.entity_id.id === machine.entity_id.id);
+    assert(returns_into_machine.length === 0 || returns_into_machine.length === takers.length,
+        `${name}: of the inserters that take ${item} out of ${machine.result_target}, some bring it back and some take it elsewhere, which is not planned yet`);
+    const returned = returns_into_machine.length === 0 ? fraction(0)
+        : machine.outputs.find(output => output.item_name === item)?.amount_per_craft ?? fraction(0);
+    const used = fraction(machine.inputs.getOrThrow(item).ingredient.amount);
+    assert(used.toDecimal() > returned.toDecimal(), `${name} gives back as much ${item} as it uses: it destroys none`);
+    return brought.divide(used.subtract(returned));
+}
+
+/**
+ * The inserters that bring an item into a machine from outside the build: from a chest or a belt the build puts nothing
+ * into (no inserter puts into it, no drill drops into it, no machine places its results into it), an infinity chest
+ * among them. A machine is always inside the build.
+ */
+export function insertersBringingIn(machine: Machine, item: string, entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
+    const all = entity_registry.getAll();
+    const filled = new Set([
+        ...all.filter(Entity.isInserter).map(inserter => inserter.sink.entity_id.id),
+        ...all.filter(Entity.isDrill).map(drill => drill.sink_id.id),
+        ...all.filter(Entity.isMachine).flatMap(it => it.result_target === undefined ? [] : [it.result_target.id]),
+    ]);
+    return all.filter(Entity.isInserter).filter(inserter => inserter.sink.entity_id.id === machine.entity_id.id
+        && inserter.filtered_items.has(item) && !EntityId.isMachine(inserter.source.entity_id) && !filled.has(inserter.source.entity_id.id));
 }
 
 /**

@@ -11,9 +11,10 @@ import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
 import {
     chestDrillDescriptionLines, clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, itemIcons, lockFilterDescription, PART_OF_THE_CLOCK,
-    plannedDescriptionLines, shownPeriodTicks, unplannedDescriptionLines,
+    plannedDescriptionLines, shownPeriodTicks, turnLine, unplannedDescriptionLines,
 } from "./descriptions";
 import { GENERATOR } from "../generator";
+import { GROUP_GAP_TILES, placeByTurns, TurnGroup, turnTicks } from "./turn-groups";
 import { FactorioDataService } from "../data/factorio-data-service";
 
 /** The config's inserters and drills that are not among those with windows: no combinator switches them on */
@@ -47,6 +48,8 @@ function createDeciderCombinatorForTransfers(
     inserter_clock?: InserterClock,
     /** The entities with the same windows, which are wired to this combinator too */
     merged_entity_ids: EntityId[] = [],
+    /** The line that says which group's turn the combinator stands first in, for the first combinator of a group */
+    turn_line?: string,
 ): { combinator: DeciderCombinatorEntity; inserter_ids: number[] } {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
     let description_lines: string[] = []
@@ -64,6 +67,12 @@ function createDeciderCombinatorForTransfers(
     }
 
     const entity_ids = [entity_id, ...merged_entity_ids];
+    // the entities that share a decider carry the items of all of them
+    for (const merged_id of merged_entity_ids) {
+        const merged = entity_registry.getEntityById(merged_id);
+        if (merged !== null && Entity.isInserter(merged)) merged.filtered_items.forEach(item_name => items.add(item_name));
+        else if (merged !== null && Entity.isDrill(merged)) items.add(merged.item.name);
+    }
     const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));
 
     if (swing_counts) {
@@ -71,7 +80,10 @@ function createDeciderCombinatorForTransfers(
             entity_ids,
             entity_registry,
             items,
-            swing_counts.total_transfer_count.multiply(cycles_in_period),
+            entity_ids.flatMap(id => {
+                const counts = cycle.entity_transfer_map.get(id);
+                return counts === undefined ? [] : [{ entity_id: id, swings: counts.total_transfer_count.multiply(cycles_in_period) }];
+            }),
             deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, period.subtick_scale),
             period.ticks,
         );
@@ -89,6 +101,11 @@ function createDeciderCombinatorForTransfers(
         description_lines = chestDrillDescriptionLines(entity_ids, entity_registry, items,
             deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, period.subtick_scale),
             period.ticks);
+    }
+
+    // after the lines that say what it switches on and when; the lines Factorio keeps are the first ones
+    if (turn_line !== undefined && description_lines.length > 0) {
+        description_lines.splice(Math.min(2, description_lines.length), 0, turn_line);
     }
 
     const outputs = Array.from(items).map(item_name => SignalId.item(item_name));
@@ -351,6 +368,12 @@ export function createSignalPerInserterBlueprint(
     subtick_clock?: SubtickClock,
     use_modulo: boolean = false,
     inserter_clocks: ReadonlyMap<string, InserterClock> = new Map(),
+    /**
+     * The groups that take turns in the windows (the grouped hands rule's): the combinators stand in a block for each group,
+     * in the order of its turn, with a gap between the blocks, and the first of each says when its turn is. Where there are
+     * none, or the clock is a subtick clock, the combinators stand in one row in the order of their entity ids.
+     */
+    turns: readonly TurnGroup[] = [],
 ): SignalPerInserterBlueprint {
 
     const inventory_transfers = history.getAllTransfers()
@@ -475,10 +498,36 @@ export function createSignalPerInserterBlueprint(
         .setMultiLinePlayerDescription(lockFilterDescription("clock"))
         .build();
 
+    // Where each decider stands. Only where the windows are in groups that take turns does the order change: the deciders of a group
+    // stand together, the groups in the order of their turns, a gap between them. The entities, and so the order they are built in
+    // (which decides which of two inserters enabled in one tick is updated first), stay in the order of the ids.
+    const placed_groups = subtick_clock ? null : placeByTurns(
+        sortedEntityIds.map(entityId => [entityId.id, ...(history.merged_entities.get(entityId.id) ?? []).map(it => it.id)]), turns);
+    const x_of = new Map<EntityId, number>();
+    const turn_lines = new Map<EntityId, string>();
+    if (placed_groups === null) {
+        sortedEntityIds.forEach(entityId => x_of.set(entityId, x += 1));
+    } else {
+        const labelled = placed_groups.filter(group => group.turn !== null).length;
+        placed_groups.forEach((group, index) => {
+            if (index > 0) {
+                x += GROUP_GAP_TILES;
+            }
+            group.deciders.forEach(decider => x_of.set(sortedEntityIds[decider], x += 1));
+            if (group.turn !== null) {
+                const windows = group.deciders.flatMap(decider => wholeRangesInPeriod(inventory_transfers.get(sortedEntityIds[decider])!.map(transfer => transfer.tick_range)));
+                const { start, end } = turnTicks(turns[group.turn].start, windows, total_duration.ticks);
+                const ticks = end < total_duration.ticks
+                    ? [OpenRange.from(start, end)]
+                    : [OpenRange.from(start, total_duration.ticks - 1), OpenRange.from(0, end - total_duration.ticks)];
+                turn_lines.set(sortedEntityIds[group.deciders[0]], turnLine(index + 1, labelled, clockValueRanges(ticks), period.ticks));
+            }
+        });
+    }
+
     sortedEntityIds.forEach(entityId => {
         const transfers = inventory_transfers.get(entityId)!;
         const split = splits.get(entityId);
-        x += 1;
         const { combinator, inserter_ids } = createDeciderCombinatorForTransfers(
             transfers,
             entityId,
@@ -486,11 +535,12 @@ export function createSignalPerInserterBlueprint(
             cycle,
             cycles_in_period,
             period,
-            Position.fromXY(x, 0),
+            Position.fromXY(x_of.get(entityId)!, 0),
             subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRangesInPeriod,
             split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
             inserter_clocks.get(entityId.id),
             history.merged_entities.get(entityId.id),
+            turn_lines.get(entityId),
         );
         deciderCombinatorEntities.push(combinator);
         inserters_of.set(combinator, inserter_ids);
@@ -590,7 +640,8 @@ export function createSignalPerInserterBlueprint(
     }
     wires.push(
         Wire.green(clock_network_output, input(main_filter)),
-        ...Wire.greenChain([output(main_filter), ...deciderCombinatorEntities.map(input)]),
+        // along the row, so that each wire is as short as the next combinator stands (the groups' blocks are not in the order of the ids)
+        ...Wire.greenChain([output(main_filter), ...deciderCombinatorEntities.slice().sort((a, b) => a.position.x - b.position.x).map(input)]),
         ...lockWires(lock, lock_receivers, [clock, ...subtick_combinators, ...modulo_combinators, main_filter, ...deciderCombinatorEntities, ...fuel_combinators]),
     );
 

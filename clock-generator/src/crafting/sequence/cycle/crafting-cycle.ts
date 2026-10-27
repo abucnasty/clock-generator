@@ -1,11 +1,14 @@
+import { assertMachineResultTargetsSupported } from "../../../config/output-transfer-generation";
 import assert from "../../../common/assert";
 import Fraction, { fraction } from "../../../data-types/fraction";
 import { Duration } from "../../../data-types/duration";
 import { TargetProductionRate } from "../../target-production-rate";
-import { buildOutputInsertersOf, EntityTransferCountMap } from "./swing-counts";
-import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
+import { buildOutputInsertersOf, destroyedTargetCrafts, EntityTransferCountMap } from "./swing-counts";
+import { Entity, handSizeFor, Machine, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
+import { returnedTargetRefusal, targetInsertersOf, targetMachinesOf } from "./target-ends";
+import { RESULT_WINDOWS_LONGEST_PERIOD_TICKS, ResultWindowsPlan, resultsFitContainer, resultWindowsFeasible, resultWindowsPlan, sharedHandRefusal } from "../../result-windows";
 
 export interface CraftingCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
@@ -42,12 +45,31 @@ export interface CraftingCyclePlan {
      * AlwaysEnabledControl is used instead of the normal latched control.
      */
     readonly terminal_swing_count_overridden: boolean;
+    /**
+     * A target that counts an item destroyed whose results come too rarely for their takers' hands to come out whole in
+     * a period the container they are placed into holds: the windows of those takers by arithmetic, one plan a machine
+     * (see result-windows.ts). The cycle is then the whole period, and the takers' hands a cycle are not whole: they are
+     * carried from one window to the next. Absent for every other plan.
+     */
+    readonly result_windows?: readonly ResultWindowsPlan[];
 }
 
 export const CraftingCyclePlan = {
     create: createPlan,
     print: print,
     ticksOfCycles: ticksOfCycles,
+}
+
+// Internal arithmetic provenance, separate from final-taker aggregate reporting. It adds no serialized plan/API field.
+const planned_terminal_counts = new WeakMap<CraftingCyclePlan, number>();
+
+export function plannedTerminalSwingCount(plan: CraftingCyclePlan): number | undefined {
+    return planned_terminal_counts.get(plan);
+}
+
+function withPlannedTerminalCount(plan: CraftingCyclePlan, count: Fraction): CraftingCyclePlan {
+    planned_terminal_counts.set(plan, count.toDecimal());
+    return plan;
 }
 
 /**
@@ -59,12 +81,109 @@ function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cy
     return plan.total_duration_ticks.multiply(cycles).toDecimal();
 }
 
+/** Hands of the target item a target machine is brought in a cycle can be this many at most, for a cycle of whole ticks */
+const MAX_DESTROYED_CYCLE_HANDS = 1000;
+
+/**
+ * The plan of a target that counts an item destroyed, by plain arithmetic (computeDestroyedTargetTransfers): a cycle is
+ * the fewest hands of the item brought into each machine that last a whole number of ticks at the target rate (an
+ * overridden output swing count sets them instead), and the transfers of every inserter follow from them.
+ */
+function createDestroyedPlan(
+    target_production_rate: TargetProductionRate,
+    entity_registry: ReadableEntityRegistry,
+    config_overrides: Partial<ConfigOverrides>,
+): CraftingCyclePlan {
+    const item = target_production_rate.machine_production_rate.item;
+    const target = { item, counts: target_production_rate.counts };
+    const machines = targetMachinesOf(target, entity_registry);
+    assert(machines.length > 0, `No machine takes ${item} in from outside the build to destroy it`);
+    const hand = handSizeFor(targetInsertersOf(machines[0], target, entity_registry)[0], item);
+    const per_machine_rate = target_production_rate.machine_production_rate.amount_per_tick.divide(machines.length);
+    const ticks_per_hand = fraction(hand).divide(per_machine_rate);
+    let base_hands = 1;
+    while (base_hands < MAX_DESTROYED_CYCLE_HANDS && ticks_per_hand.multiply(base_hands).getDenominator !== 1) {
+        base_hands++;
+    }
+    const forced = config_overrides.terminal_swing_count;
+    const planOf = (hands: number, result_windows?: readonly ResultWindowsPlan[]): CraftingCyclePlan => {
+        const period_ticks = ticks_per_hand.multiply(hands);
+        return {
+            total_duration: Duration.ofTicks(period_ticks.toDecimal()),
+            total_duration_ticks: period_ticks,
+            entity_transfer_map: EntityTransferCountMap.createForDestroyedTarget(machines, entity_registry, item, fraction(hands)),
+            production_rate: target_production_rate,
+            fractional_swings_enabled: false,
+            terminal_swing_count_overridden: forced !== undefined,
+            ...(result_windows !== undefined && { result_windows }),
+        };
+    };
+    // an inserter that takes several results out of where a machine places them can stop the build for good
+    for (const machine of machines) {
+        const shared = sharedHandRefusal(machine, entity_registry);
+        if (shared !== null) {
+            throw new Error(shared);
+        }
+    }
+    const craftsOf = (machine: Machine, hands: number) => destroyedTargetCrafts(machine, entity_registry, item, fraction(hands * hand)).toDecimal();
+    const whole = planOf(forced ?? base_hands);
+    const cycle_ticks = ticks_per_hand.multiply(base_hands).toDecimal();
+    const crafts_per_cycle = (machine: Machine) => craftsOf(machine, base_hands);
+    if (wholeHandsFit(whole, machines, entity_registry, machine => craftsOf(machine, forced ?? base_hands))
+        || !machines.every(machine => resultWindowsFeasible(machine, entity_registry, cycle_ticks, crafts_per_cycle(machine)))) {
+        return whole;
+    }
+    // the results come too rarely: one window a period for each, on the longest period the containers hold
+    assert(forced === undefined || forced % base_hands === 0,
+        `${forced} hands of ${item} a cycle do not last whole ticks: the windows of results that come this rarely need a multiple of ${base_hands}`);
+    const cycles = forced !== undefined ? forced / base_hands : Math.min(...machines.map(machine =>
+        resultWindowsPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered" }).cycles));
+    return planOf(base_hands * cycles, machines.map(machine =>
+        resultWindowsPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered", cycles })));
+}
+
+/**
+ * Whether the takers' hands of a destroyed target's plan come out whole in a period the windows of results can be
+ * planned on, and each machine's container holds what that period gives in all but 1 in 740 periods (every result
+ * counted over the whole period): then the period is simulated as any other. Where not, the results get one window a
+ * period each (result-windows.ts).
+ */
+function wholeHandsFit(plan: CraftingCyclePlan, machines: Machine[], entity_registry: ReadableEntityRegistry, craftsOf: (machine: Machine) => number): boolean {
+    const cycle_ticks = plan.total_duration_ticks.toDecimal();
+    return machines.every(machine => {
+        const results = new Set(machine.outputs.map(output => output.item_name));
+        let cycles = 1;
+        for (const planned of plan.entity_transfer_map.values()) {
+            if (Entity.isInserter(planned.entity) && planned.entity.source.entity_id.id === machine.result_target?.id
+                && planned.item_transfers.some(transfer => results.has(transfer.item_name))) {
+                const denominator = planned.total_transfer_count.getDenominator;
+                cycles = cycles / gcd(cycles, denominator) * denominator;
+            }
+        }
+        return cycles * cycle_ticks <= RESULT_WINDOWS_LONGEST_PERIOD_TICKS
+            && resultsFitContainer(machine, entity_registry, cycle_ticks, craftsOf(machine), cycles);
+    });
+}
+
+function gcd(a: number, b: number): number {
+    return b === 0 ? a : gcd(b, a % b);
+}
+
 function createPlan(
     target_production_rate: TargetProductionRate,
     entity_registry: ReadableEntityRegistry,
     max_possible_swings: Fraction,
     config_overrides: Partial<ConfigOverrides> = {}
 ): CraftingCyclePlan {
+    assertMachineResultTargetsSupported(entity_registry);
+    if (target_production_rate.counts === "destroyed") {
+        return createDestroyedPlan(target_production_rate, entity_registry, config_overrides);
+    }
+    const returned = returnedTargetRefusal({ item: target_production_rate.machine_production_rate.item, counts: "made" },
+        target_production_rate.total_production_rate.amount_per_second.toDecimal(), entity_registry);
+    if (returned !== null) {
+        throw new Error(returned);
+    }
 
     const output_machines = entity_registry
         .getAll()
@@ -167,7 +286,7 @@ function createPlan(
                 cycle_multiplier
             );
 
-            return {
+            return withPlannedTerminalCount({
                 total_duration: final_period_duration,
                 total_duration_ticks: final_period_ticks,
                 entity_transfer_map: swing_counts.clone(),
@@ -176,18 +295,18 @@ function createPlan(
                 swing_distribution,
                 cycle_multiplier,
                 terminal_swing_count_overridden: config_overrides.terminal_swing_count !== undefined
-            }
+            }, swings_per_cycle);
         }
     }
 
-    return {
+    return withPlannedTerminalCount({
         total_duration: final_period_duration,
         total_duration_ticks: final_period_ticks,
         entity_transfer_map: swing_counts.clone(),
         production_rate: target_production_rate,
         fractional_swings_enabled: false,
         terminal_swing_count_overridden: config_overrides.terminal_swing_count !== undefined
-    }
+    }, swings_per_cycle);
 }
 
 function print(plan: CraftingCyclePlan): void {

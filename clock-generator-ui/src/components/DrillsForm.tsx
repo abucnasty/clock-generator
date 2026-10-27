@@ -34,6 +34,8 @@ import { useGameNames } from '../hooks/useGameNames';
 import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
 import { EntityTypeField } from './EntityFields';
 import { drillsListed, focusLeaves, speedBonusOfPercent, speedBonusPercent } from '../utils/drillsSection';
+import type { OutputTransferSummary } from 'clock-generator/browser';
+import { OutputTransferPanel } from './OutputTransferPanel';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus * 100)';
 const PRODUCTIVITY_COMMAND = '/c game.print(game.player.selected.productivity_bonus * 100)';
@@ -53,11 +55,15 @@ interface DrillsFormProps {
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
     onDuplicate: (index: number) => void;
+    outputTransfers?: readonly OutputTransferSummary[] | null;
+    outputTransfersLoading?: boolean;
 }
 
 
-function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: Pick<DrillsFormProps, 'resourceNames' | 'getRecipeInfo' | 'onUpdate'> & {
+function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, outputTransfer, outputTransfersLoading, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: Pick<DrillsFormProps, 'resourceNames' | 'getRecipeInfo' | 'onUpdate'> & {
     drill: DrillFormData;
+    outputTransfer: OutputTransferSummary | null;
+    outputTransfersLoading: boolean;
     build: DrillTargetBuild;
     index: number;
     onRemove: (index: number) => void;
@@ -70,7 +76,7 @@ function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, onUpdate,
     const label = entityLabel('drill', drill.id);
     return <SortableItem stableKey={drill._uuid} label={label} displayLabel={<EntityBadge id={drill.id}><FactorioIcon name={drill.type} size={28} alt="" /></EntityBadge>}>
         {dragHandle => <Box id={`entity-drill-${drill.id}`} role="group" aria-label={label} sx={{ minWidth: 0, mb: 1, p: 1.5, containerType: 'inline-size', containerName: 'drill-row', bgcolor: (theme: Theme) => themeTokens(theme).surface.row }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container drill-row (max-width: 600px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container drill-row (max-width: 600px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
                 <Box sx={{ gridColumn: 1, gridRow: 1 }}>{dragHandle}</Box>
                 <Box data-row-first="" sx={{ minWidth: 0, gridColumn: 2, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 2 } }}>
                             <ItemSelector
@@ -88,26 +94,30 @@ function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, onUpdate,
                             />
 
                 </Box>
-                <Box sx={{ minWidth: 0, gridColumn: 3, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 3 } }}>
-                            <DrillTargetField drill={drill} build={build} getRecipeInfo={getRecipeInfo} sx={{ minWidth: 0, width: '100%' }}
-                                onChange={target => onUpdate(index, { target })} />
-
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gridColumn: 4, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: 2 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gridColumn: 3, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: 2 } }}>
                     <Box id={`settings-actions-drill-${drill.id}`} sx={{ display: 'flex' }} />
                     <RowActionsMenu label={label} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
                     <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete=""><Delete /></IconButton>
                 </Box>
-                <EntitySettings label={label} actionContainerId={`settings-actions-drill-${drill.id}`} summary={<Typography variant="body2">
+                <DrillTargetField drill={drill} build={build} getRecipeInfo={getRecipeInfo} sx={{ gridColumn: '1 / -1', minWidth: 0, width: '100%' }}
+                    onChange={target => onUpdate(index, { target })} />
+                <EntitySettings label={label} actionContainerId={`settings-actions-drill-${drill.id}`} summary={openTab => <Box>
+                    <Typography variant="body2">
                     Mining speed bonus {Number(speedBonusPercent(drill.speed_bonus).toFixed(2))}% · Productivity {Number(drill.productivity.toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
-                </Typography>} tabs={[{ label: 'Enable control', content: <EnableControlFormContent
-                    key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
-                    currentOverride={drill.overrides?.enable_control} sinkType={drill.target.type === 'chest' ? TargetType.CHEST : TargetType.MACHINE} availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
-                    onCancel={() => setRuleRevision(previous => previous + 1)}
-                    onSave={override => {
-                        if (enableControlOverrideChanged(override, drill.overrides?.enable_control)) onUpdate(index, { overrides: { ...drill.overrides, enable_control: override } });
-                        setRuleRevision(previous => previous + 1);
-                    }} /> }]}>
+                    </Typography>
+                    {outputTransfer?.results.some(result => result.coverage === 'missing') && <Button color="warning" size="small" onClick={() => openTab('Output Routes')}>Output needs a route</Button>}
+                    {!outputTransfersLoading && (!outputTransfer || outputTransfer.status === 'unavailable') && <Button color="inherit" size="small" onClick={() => openTab('Output Routes')}>Output routes unavailable</Button>}
+                </Box>} tabs={[
+                    { label: 'Input Routes', content: <Typography variant="body2">This drill mines {itemLabel(drill.mined_item_name) || 'its selected resource'} from the resource patch. No item input connections are configured.</Typography> },
+                    { label: 'Output Routes', content: <OutputTransferPanel summary={outputTransfer} chests={build.chests}
+                        fallbackItems={drill.mined_item_name ? [drill.mined_item_name] : []} loading={outputTransfersLoading} /> },
+                    { label: 'Machine Facts', content: <Box>
+                        <Typography variant="body2">Drill type: {itemLabel(drill.type)}</Typography>
+                        <Typography variant="body2">Mined resource: {itemLabel(drill.mined_item_name) || 'Not selected'}</Typography>
+                        <Typography variant="body2">Mining speed bonus: {Number(speedBonusPercent(drill.speed_bonus).toFixed(2))}%</Typography>
+                        <Typography variant="body2">Productivity: {Number(drill.productivity.toFixed(2))}%</Typography>
+                    </Box> },
+                ]}>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, minWidth: 0 }}>
                             <EntityTypeField label="Drill Type" value={drill.type} options={DRILL_TYPES}
                                 inputAriaLabel={SELECT_NAMES.drillType} nameOf={value => entityTypeLabel(value, itemLabel)}
@@ -139,6 +149,14 @@ function DrillRow({ drill, index, resourceNames, build, getRecipeInfo, onUpdate,
                                 size="small"
                             />
                     </Box>
+                    <PanelSection level={4} title="Enable control" sx={{ mt: 2 }}><EnableControlFormContent
+                        key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
+                        currentOverride={drill.overrides?.enable_control} sinkType={drill.target.type === 'chest' ? TargetType.CHEST : TargetType.MACHINE} availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
+                        onCancel={() => setRuleRevision(previous => previous + 1)}
+                        onSave={override => {
+                            if (enableControlOverrideChanged(override, drill.overrides?.enable_control)) onUpdate(index, { overrides: { ...drill.overrides, enable_control: override } });
+                            setRuleRevision(previous => previous + 1);
+                        }} /></PanelSection>
                 </EntitySettings>
             </Box>
         </Box>}
@@ -157,6 +175,8 @@ function DrillsFormComponent({
     chests,
     inserters,
     getRecipeInfo,
+    outputTransfers = null,
+    outputTransfersLoading = false,
     onAdd,
     onUpdate,
     onRemove,
@@ -226,6 +246,8 @@ function DrillsFormComponent({
                 <>
                     <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
                     {drills.map((drill, index) => <DrillRow key={drill._uuid} drill={drill} index={index} resourceNames={resourceNames} build={build} getRecipeInfo={getRecipeInfo}
+                        outputTransfer={outputTransfers?.find(transfer => transfer.source.type === 'drill' && transfer.source.id === drill.id) ?? null}
+                        outputTransfersLoading={outputTransfersLoading}
                         onUpdate={onUpdate} onRemove={remove} onDuplicate={() => duplicate(index)}
                         onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
                         onMoveDown={index < drills.length - 1 ? () => onReorder(index, index + 1) : undefined} />)}

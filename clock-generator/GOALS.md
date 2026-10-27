@@ -5,6 +5,8 @@
 
 The goals above are listed in priority order.
 
+Both are worked toward arithmetic first (decided 2026-10-23): what plain arithmetic settles of a plan (a source's buffer and rate against its takers' draws, a machine's stock against the gap until its next window, a window's length against its hands) is settled before anything is simulated, so that fewer clocks are tried for a build. A rule that computes a placement is preferred to one that tries placements in turn, and a rule that deletes code to one that adds it: the simulator judges the result, it does not search for it ([working rules](docs/working-rules.md), rule 6).
+
 Goal 2 was first written as "minimize active inserter windows whenever possible to reduce update time in factorio". Its aim is the update time itself (decided 2026-10-15: "The specific goal is to reduce UPS. Goal as stated is outdated."). The selection does not measure update time yet: it ranks clocks by their wake-ups ("Wake-ups, the measure for goal 2"), which stand in for it. The wake-ups stay the measure until a plan to measure update time replaces them.
 
 ### Goal 1: match the target rate exactly
@@ -14,6 +16,8 @@ Goal 2 was first written as "minimize active inserter windows whenever possible 
 > A clock that does this survives backpressure loss, and one that does not cannot survive backpressure loss. This is what "stable" has meant in this project: a stable clock is one that survives backpressure loss. A clock that only makes its target rate from a clean start, with every machine full of ingredients and emptied of products, does not meet goal 1.
 
 "Exactly" allows one thing: a clock whose period is not a whole number of ticks and whose blueprint counts it rounded down to whole ticks (where no subtick clock gives the exact period, or as the rounded alternative of one) meets goal 1 when it runs at most 0.1% faster than the target and within what the machines can make, tried on its own whole-tick period like any other clock. It is labelled with how much it runs fast, and a clock at exactly the target rate comes first (decided 2026-10-23: Atlan cell 29's 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game, #332).
+
+Inserters that take one product from one machine are served by the game in one fixed order, which a config does not tell (decided 2026-10-25: "Hold under every order"). A clock meets goal 1 only if it holds and recovers whichever of them is served first. Where one machine feeds two or more machines of one recipe, the plan asks by arithmetic first whether the machine can give all their takers' hands in one window together; where it can, they may share the window, and where it cannot, they take turns, so that the order cannot tell ([docs/stability.md](docs/stability.md), "How a clock is started").
 
 The detail is in [docs/stability.md](docs/stability.md).
 

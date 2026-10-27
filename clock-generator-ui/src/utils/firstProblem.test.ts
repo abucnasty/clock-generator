@@ -126,6 +126,25 @@ describe('a target more than the machines can make', () => {
     });
 });
 
+describe('a target that counts the item destroyed, more than the machines can destroy', () => {
+    // Machine 1 of the exact-speed ore voider: 540 crafts a second, a quarter of an ore given back by each
+    const machinesMax = { machineIds: [1], perCopy: 405, perCopyRatio: { numerator: 405, denominator: 1 } };
+    const target = (items_per_second: number) => ({ recipe: 'iron-ore', items_per_second, copies: 1, counts: 'destroyed' as const });
+
+    it('says destroy, goes to Items per Second, and is not there for the 400 the sample asks', () => {
+        expect(problemsOf(filledIn({ targetOutput: target(406), machinesMax }))).toEqual([
+            { text: 'Items per Second is more than the machines can destroy (at most 405/s)', target: { kind: 'target-rate' } }]);
+        expect(problemsOf(filledIn({ targetOutput: target(400), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(405), machinesMax }))).toEqual([]);
+    });
+
+    it('says make for a target that counts the item made, as before', () => {
+        expect(PROBLEM_TEXT.rateAboveMax(405)).toBe('Items per Second is more than the machines can make (at most 405/s)');
+        expect(PROBLEM_TEXT.rateAboveMax(405, 'made')).toBe('Items per Second is more than the machines can make (at most 405/s)');
+        expect(PROBLEM_TEXT.rateAboveMax(405, 'destroyed')).toBe('Items per Second is more than the machines can destroy (at most 405/s)');
+    });
+});
+
 describe('barNoteOf', () => {
     const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
     const rateProblem: Problem = { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } };
@@ -169,7 +188,9 @@ describe('focus targets', () => {
         { kind: 'target-rate' },
         { kind: 'target-copies' },
         { kind: 'add-machine' },
+        { kind: 'add-inserter' },
         { kind: 'machine-recipe', machineId: 3 },
+        { kind: 'machine-result-target', machineId: 3 },
         { kind: 'coverage-issue', issue: coverageKey },
         { kind: 'validation-error' },
     ];
@@ -184,8 +205,10 @@ describe('focus targets', () => {
         expect(focusIdOf({ kind: 'target-rate' })).toBe(ELEMENT_IDS.targetRate);
         expect(focusIdOf({ kind: 'target-copies' })).toBe(ELEMENT_IDS.targetCopies);
         expect(focusIdOf({ kind: 'add-machine' })).toBe(ELEMENT_IDS.addMachine);
+        expect(focusIdOf({ kind: 'add-inserter' })).toBe('add-inserter');
         expect(focusIdOf({ kind: 'validation-error' })).toBe(ELEMENT_IDS.validationError);
         expect(focusIdOf({ kind: 'machine-recipe', machineId: 3 })).toBe(machineRecipeElementId(3));
+        expect(focusIdOf({ kind: 'machine-result-target', machineId: 3 })).toBe('machine-result-target-3');
         expect(machineRecipeElementId(3)).toBe('machine-recipe-3');
         // the contract with MissingInserterAlert, which sets the row's id from the whole issue
         expect(focusIdOf({ kind: 'coverage-issue', issue: coverageKey }))
@@ -193,8 +216,8 @@ describe('focus targets', () => {
         expect(coverageIssueElementId(coverageKey)).toBe('coverage-issue-missing_output_inserter-4-logistic-science-pack');
     });
 
-    it('needs the List for the machine fields only', () => {
-        expect(targets.filter(needsListView).map((t) => t.kind)).toEqual(['add-machine', 'machine-recipe']);
+    it('needs the List for machine fields and the Add Inserter action', () => {
+        expect(targets.filter(needsListView).map((t) => t.kind)).toEqual(['add-machine', 'add-inserter', 'machine-recipe', 'machine-result-target']);
     });
 });
 

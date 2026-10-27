@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData } from '../utils/configForm/formData';
-import { craftingMachineOf, craftingSpeedHint, MACHINE_QUALITIES, MACHINE_QUALITY_HELP, machineSpeedText, prototypeSourceText, qualityLabel, recipeNotMadeText } from '../utils/machinePrototype';
+import { craftingMachineOf, craftingSpeedHint, MACHINE_QUALITIES, MACHINE_QUALITY_HELP, machineChoicePatch, machineSpeedText, prototypeSourceText, qualityLabel, recipeNotMadeText } from '../utils/machinePrototype';
 import { FilterItemPicker } from './FilterItemPicker';
 import { HelpButton } from './HelpButton';
 import { ItemPickerField } from './ItemPickerField';
@@ -27,11 +27,8 @@ function useMachineChoices(machine: Pick<MachineFormData, 'prototype' | 'quality
         const info = craftingMachineOf(data, name);
         return info && machineSpeedText(info, machine.quality);
     }, [data, machine.quality]);
-    return { names, detailOf };
+    return { names, detailOf, data };
 }
-
-/** The patch that sets a row's machine, chosen by hand */
-const chosen = (prototype: string): Partial<MachineFormData> => ({ prototype, _prototype_source: 'hand' });
 
 /**
  * The machine a row is: a crafting machine of the game data, set by Sidecar, picked for the row's recipe or chosen here
@@ -42,12 +39,12 @@ export function MachinePrototypeField({ machine, onPatch, inputAriaLabel, sx }: 
     machine: MachineFormData; onPatch: Patch; inputAriaLabel: string; sx?: SxProps<Theme>;
 }) {
     const { itemLabel } = useGameNames();
-    const { names, detailOf } = useMachineChoices(machine);
+    const { names, detailOf, data } = useMachineChoices(machine);
     return <Tooltip title={machine.prototype ? `${itemLabel(machine.prototype)}, ${prototypeSourceText(machine._prototype_source)}` : ''} describeChild placement="top">
         <Box sx={[{ display: 'flex', minWidth: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}>
             <ItemPickerField kind="machine" label="Machine" inputAriaLabel={inputAriaLabel} value={machine.prototype ?? null} options={names} detailOf={detailOf}
                 icon={machine.prototype ? <MachineIcon machine={machine} size={20} /> : undefined}
-                onChange={value => { if (value) onPatch(chosen(value)); }} />
+                onChange={value => { if (value) onPatch(machineChoicePatch(value, machine, data)); }} />
         </Box>
     </Tooltip>;
 }
@@ -59,7 +56,7 @@ export function MachinePrototypeField({ machine, onPatch, inputAriaLabel, sx }: 
 export function MachineIconPicker({ machine, onPatch, buttonName, rowName, children }: {
     machine: MachineFormData; onPatch: Patch; buttonName: string; rowName: string; children: ReactNode;
 }) {
-    const { names, detailOf } = useMachineChoices(machine);
+    const { names, detailOf, data } = useMachineChoices(machine);
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
     const close = () => setAnchor(null);
     return <>
@@ -68,7 +65,7 @@ export function MachineIconPicker({ machine, onPatch, buttonName, rowName, child
             {children}
         </ButtonBase>
         {anchor && <FilterItemPicker anchor={anchor} label={`Choose a machine for ${rowName}`} kind="machine" initialItem={machine.prototype ?? null}
-            itemNames={names} detailOf={detailOf} onClose={close} onApply={name => { onPatch(chosen(name)); close(); }} />}
+            itemNames={names} detailOf={detailOf} onClose={close} onApply={name => { onPatch(machineChoicePatch(name, machine, data)); close(); }} />}
     </>;
 }
 

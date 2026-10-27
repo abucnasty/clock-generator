@@ -1,9 +1,11 @@
 import { Config, BeltConfig, ChestConfig, InserterConfig, MachineConfiguration, MiningDrillConfig } from './schema';
 import { FactorioDataService } from '../data/factorio-data-service';
 import { BurnerEnergySource } from '../entities';
-import { machineRuleOf } from './machine-prototype';
+import { machinePlacesResults, machineRuleOf } from './machine-prototype';
 import { InserterCoverageError, InserterCoverageIssue, InserterFixOption } from './errors';
 import { assertInsertersInScope } from './inserter-scope';
+import { chestAcceptsItem, filtersExclude, deriveOutputTransfers, outputInserterAcceptsItem } from './output-transfer';
+export { chestAcceptsItem, filtersExclude } from './output-transfer';
 
 // ============================================================================
 // Item-source coverage helpers
@@ -34,40 +36,6 @@ function chestNamesItem(chest: ChestConfig, itemName: string): boolean {
     }
     const slot_filters = 'slot_filters' in chest ? chest.slot_filters ?? [] : [];
     return (chest.contents ?? []).some(content => content.item === itemName) || slot_filters.some(filter => filter.item === itemName);
-}
-
-export function chestAcceptsItem(chest: ChestConfig, itemName: string): boolean {
-    if (chest.type === 'infinity-chest') {
-        return chest.remove_unfiltered_items === true || chest.item_filter.some(filter => filter.item_name === itemName);
-    }
-    if (chest.type === 'buffer-chest') {
-        return chestSuppliesItem(chest, itemName);
-    }
-    if (chest.type === 'rocket-silo') {
-        return true;
-    }
-    // a slot filtered to another item does not take it; one free slot is enough
-    const filtered = new Map((chest.slot_filters ?? []).map(filter => [filter.slot, filter.item]));
-    return (chest.slot_filters ?? []).some(filter => filter.item === itemName)
-        || !isEverySlotFiltered(chest.type, ('quality' in chest ? chest.quality : undefined) ?? 'normal', filtered.size);
-}
-
-/** Whether a container's every slot is filtered; its slot count is the game data's, so without the data it is not */
-function isEverySlotFiltered(type: 'car' | 'tank' | 'cargo-wagon', quality: string, filtered: number): boolean {
-    if (!FactorioDataService.isAvailable()) {
-        return false;
-    }
-    try {
-        return filtered >= FactorioDataService.containerSlots(type, quality);
-    } catch {
-        return false;
-    }
-}
-
-/** Whether the inserter's own filters keep it from moving the item: a whitelist without it, or a blacklist with it */
-export function filtersExclude(inserter: InserterConfig, itemName: string): boolean {
-    if (!inserter.filters?.length) return false;
-    return inserter.filter_mode === 'blacklist' ? inserter.filters.includes(itemName) : !inserter.filters.includes(itemName);
 }
 
 /** Returns true if this inserter carries `itemName` into machine `machineId`. */
@@ -124,7 +92,7 @@ function inserterCoversOutputItem(
     inserter: InserterConfig,
     machineId: number,
     itemName: string,
-    chests: ChestConfig[],
+    config: Config,
 ): boolean {
     if (inserter.source.type !== 'machine' || inserter.source.id !== machineId) {
         return false;
@@ -132,11 +100,12 @@ function inserterCoversOutputItem(
     if (filtersExclude(inserter, itemName)) {
         return false;
     }
-    if (inserter.sink.type === 'chest') {
-        const chest = chests.find(chest => chest.id === inserter.sink.id);
-        return chest !== undefined && chestAcceptsItem(chest, itemName);
-    }
-    return true;
+    const source = config.machines.find(machine => machine.id === machineId);
+    if (source !== undefined && machinePlacesResults(source)) return outputInserterAcceptsItem(inserter, itemName, config) === true;
+    // Keep ordinary-source compatibility in this slice; its legacy machine/belt sink check is a separate concern.
+    if (inserter.sink.type !== 'chest') return true;
+    const chest = config.chests?.find(chest => chest.id === inserter.sink.id);
+    return chest !== undefined && chestAcceptsItem(chest, itemName);
 }
 
 // ============================================================================
@@ -162,6 +131,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
     const belts = config.belts;
     const chests = config.chests ?? [];
     const machines = config.machines;
+    const outputTransfers = new Map(deriveOutputTransfers(config).filter(summary => summary.source.type === 'machine').map(summary => [summary.source.id, summary]));
 
     for (const machine of checkedMachines) {
         let recipe;
@@ -184,7 +154,9 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
                 config.inserters.some((ins) =>
                     inserterCoversInputItem(ins, machine.id, itemName, belts, chests, machines),
                 ) ||
-                drills.some((drill) => drillCoversInputItem(drill, machine.id, itemName));
+                drills.some((drill) => drillCoversInputItem(drill, machine.id, itemName)) ||
+                machines.some(source => source.result_target?.type === 'machine' && source.result_target.id === machine.id
+                    && FactorioDataService.findRecipeOrThrow(source.recipe).results.some(result => result.name === itemName));
 
             if (!covered) {
                 const fixOptions: InserterFixOption[] = [];
@@ -255,16 +227,17 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
         }
 
         // ── Output results ───────────────────────────────────────────────────
+        const handling = outputTransfers.get(machine.id);
         for (const result of recipe.results) {
             const itemName = result.name;
-            const covered = config.inserters.some((ins) =>
-                inserterCoversOutputItem(ins, machine.id, itemName, chests),
-            );
+            const covered = machinePlacesResults(machine)
+                ? handling?.results.find(result => result.item_name === itemName)?.coverage === 'covered'
+                : config.inserters.some(inserter => inserterCoversOutputItem(inserter, machine.id, itemName, config));
 
             if (!covered) {
                 const fixOptions: InserterFixOption[] = [];
                 const blocked = config.inserters.filter(ins => filtersExclude(ins, itemName)
-                    && inserterCoversOutputItem({ ...ins, filters: undefined }, machine.id, itemName, chests));
+                    && inserterCoversOutputItem({ ...ins, filters: undefined }, machine.id, itemName, config));
                 blocked.forEach(ins => fixOptions.push({ type: 'review_filters', inserter_id: ins.id ?? config.inserters.indexOf(ins) + 1, item_name: itemName }));
                 const alreadyConnected = (type: 'machine' | 'belt' | 'chest', id: number) => blocked.some(ins => ins.sink.type === type && ins.sink.id === id);
                 for (const belt of belts) {
@@ -317,16 +290,16 @@ export function createInserterCoverageValidator(): (config: Config) => InserterC
     return config => {
         if (!FactorioDataService.isAvailable()) return [];
         const nextCatalog = JSON.stringify({
-            machines: config.machines.map(({ id, recipe, prototype, fuel }) => [id, recipe, prototype, fuel]),
-            belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => lane.ingredient)]),
-            chests: config.chests?.map(chest => [chest.id, chest.type, chest.type === 'buffer-chest' ? chest.item_filter
+            machines: config.machines.map(({ id, recipe, prototype, fuel, result_target }) => [id, recipe, prototype, fuel, result_target]),
+            belts: config.belts.map(({ id, lanes }) => [id, lanes.map(lane => [lane.ingredient, lane.stack_size])]),
+            chests: config.chests?.map(chest => [chest.id, chest.type, 'quality' in chest ? chest.quality : undefined, chest.type === 'buffer-chest' ? chest.item_filter
                 : chest.type === 'infinity-chest' ? [chest.remove_unfiltered_items ?? false, ...chest.item_filter.map(filter => [filter.item_name, filter.request_count > 0])]
                     : [chest.contents ?? [], 'slot_filters' in chest ? chest.slot_filters ?? [] : []]]),
         });
         if (catalog !== nextCatalog) { cached.clear(); catalog = nextCatalog; }
         const routes = new Map<number, unknown[]>();
         config.inserters.forEach((inserter, index) => {
-            const route = [inserter.id ?? index + 1, inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters, inserter.filter_mode];
+            const route = [inserter.id ?? index + 1, inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters, inserter.filter_mode, inserter.sink.type === 'belt' ? inserter.sink.drop : undefined];
             const ids = new Set<number>();
             if (inserter.source.type === 'machine') ids.add(inserter.source.id);
             if (inserter.sink.type === 'machine') ids.add(inserter.sink.id);

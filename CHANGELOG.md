@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.23.0] - Unreleased
+
+### Added
+- Recyclers: builds with a recycler now get a clock when its results go into a container (such as an ore voider; Target Output counts items made or destroyed), straight into another machine, or come by small chances (scrap into a rocket silo). Sidecar 0.15.0 exports where a recycler's results go.
+- Small batches: builds whose planned clock is too long to check (large buffer chests between machines) or where no planned clock holds get a clock that moves a few hands at a time.
+- Outputs into infinity chests that remove items are checked by their rate over the cycle, so builds without buffer chests before their sinks get a clock.
+- Clock inputs that pick up from supported belt bends.
+- Machine details: every recipe result with its rate and output routes, tabs, a compact inserter editor, and a repair that adds a missing output chest.
+
+### Changed
+- Fewer deciders (inserters with the same windows share one) and fewer wake-ups on many builds (chains, loops, inserters taking turns at one machine).
+- Inserters that take from one machine are served in the game's order; a clock counts as stable only if it holds whichever the game serves first.
+- Recovery is checked as the game allows (losses shorter than spoil times; a clock that fails one loss is not tried on the rest) and shown as such.
+- Clearer results: why an inserter is always on, item names in losses, grouped combinators, Fewest deciders explained; long-period builds generate much faster.
+- Captures from before belt bends must be captured again where they pick up from a bend.
+
+### Removed
+- Clocks for a shorter period ("not in the period").
+
+### Fixed
+- Buffered outputs no longer make a working clock look unstable; chance-only products are planned at their average; the timeline shows a settled period.
+
 ## [0.22.0] - 2026-10-24
 
 ### Added

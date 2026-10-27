@@ -112,6 +112,16 @@ export function fullResearchHandSize(prototype: string): number {
     return 1 + (inserter.stack_size_bonus ?? 0) + bonus;
 }
 
+/**
+ * Whether an inserter of the prototype is a bulk one (prototype `bulk`: the bulk and the stack inserter), by the game data.
+ * At a machine that places its results itself, a bulk inserter waits for a full hand and any other swings what it holds
+ * (recorded on a recycler on scrap, 2.1.21: a stack inserter waited at it with a part hand of holmium ore for 10.5 minutes,
+ * a long-handed inserter swung each low density structure on its own).
+ */
+export function isBulkInserter(prototype: string): boolean {
+    return FactorioDataService.findInserterOrThrow(prototype).bulk === true;
+}
+
 /** The hand a config gives an inserter: its `stack_size` when it sets one, else the full research hand of its prototype */
 export function configuredHandSize(inserter: { prototype?: string, stack_size?: number }): number {
     return inserter.stack_size ?? fullResearchHandSize(inserter.prototype ?? InserterType.STACK_INSERTER);

@@ -38,6 +38,78 @@ describe('machinesMaxOf', () => {
     });
 });
 
+/**
+ * The recycler of the exact-speed ore voider, as the engine's facts have it: 540 crafts a second, each using 1 iron ore
+ * and giving back a quarter of one on average (135 a second), and the overbeaconed one at 852.3 crafts a second.
+ */
+const recycler = (crafts: number, exact?: { numerator: number; denominator: number }) => ({
+    output_item: 'iron-ore', output_per_craft: 0.25, output_rate_per_second: crafts / 4,
+    ...(exact && { output_rate_ratio: exact }),
+    inputs: [{ item_name: 'iron-ore', consumption_rate_per_second: crafts, automated_insertion_limit: 4, amount_per_craft: 1 }],
+});
+
+describe('machinesMaxOf for a target that counts the item destroyed', () => {
+    it('is the crafts a second times what a craft uses less what it gives back: 540 x (1 - 1/4) = 405', () => {
+        const max = machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540, { numerator: 135, denominator: 1 }), comesBack: true }], 'destroyed')!;
+        expect(max.machineIds).toEqual([1]);
+        expect(max.perCopy).toBe(405);
+        expect(max.perCopyRatio).toEqual({ numerator: 405, denominator: 1 });
+        expect(totalMachineCapacity(max, 1)).toBe(405);
+        expect(isTargetAboveMax(400, 1, max)).toBe(false);
+        expect(isTargetAboveMax(405, 1, max)).toBe(false);
+        expect(isTargetAboveMax(405.01, 1, max)).toBe(true);
+    });
+
+    it('is 639.2 for the overbeaconed recycler, 852.3 x 0.75', () => {
+        const max = machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(852.3), comesBack: true }], 'destroyed')!;
+        expect(max.perCopy).toBeCloseTo(639.225, 6);
+        expect(maxRateText(max.perCopy, 'en-US')).toBe('639.22/s');
+    });
+
+    it('takes off nothing when what it gives back is not taken back into it', () => {
+        const max = machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540, { numerator: 135, denominator: 1 }) }], 'destroyed')!;
+        expect(max.perCopy).toBe(540);
+        expect(max.perCopyRatio).toEqual({ numerator: 540, denominator: 1 });
+    });
+
+    it('takes off nothing when the machine\'s own output is another item', () => {
+        const facts = { ...recycler(10), output_item: 'copper-ore' };
+        expect(machinesMaxOf('iron-ore', [{ id: 1, facts, comesBack: true }], 'destroyed')!.perCopy).toBe(10);
+    });
+
+    it('counts the machines that take the item in, not the ones that make it', () => {
+        const max = machinesMaxOf('iron-ore', [
+            { id: 1, facts: recycler(540), comesBack: true },
+            { id: 2, facts: { output_item: 'iron-ore', output_rate_per_second: 99, output_per_craft: 1, inputs: [] } },
+            { id: 3, facts: recycler(100), comesBack: true },
+        ], 'destroyed')!;
+        expect(max.machineIds).toEqual([1, 3]);
+        expect(max.perCopy).toBe(405 + 75);
+        expect(machinesMaxOf('iron-ore', [{ id: 2, facts: { output_item: 'iron-ore', output_rate_per_second: 99 } }], 'destroyed')).toBeNull();
+        expect(machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540) }, { id: 2, facts: null }], 'destroyed')!.machineIds).toEqual([1]);
+    });
+
+    it('is unknown while a machine\'s facts are, and when the facts do not say what a craft uses', () => {
+        expect(machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540) }, { id: 2, facts: undefined }], 'destroyed')).toBeNull();
+        const { output_per_craft: _, ...without } = recycler(540);
+        void _;
+        expect(machinesMaxOf('iron-ore', [{ id: 1, facts: without }], 'destroyed')).toBeNull();
+    });
+
+    it('says destroys in the line under the rate, and gives the same line as before for a target that counts the item made', () => {
+        const max = machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540, { numerator: 135, denominator: 1 }), comesBack: true }], 'destroyed')!;
+        const destroyed = (itemsPerSecond: number, copies = 1) => targetRateLineOf({ itemsPerSecond, copies, max, counts: 'destroyed', locale: 'en-US' });
+        expect(destroyed(400)).toBeNull();
+        expect(destroyed(406)).toBe('At most 405/s: Machine 1 destroys 405/s. Lower the rate or raise Copies. Describe one unit in the build.');
+        expect(destroyed(4000, 2)).toBe('At most 810/s: Machine 1 destroys 405/s, times 2 copies. Lower the rate or raise Copies. Describe one unit in the build.');
+        const two: MachinesMax = { machineIds: [1, 2], perCopy: 30 };
+        expect(targetRateLineOf({ itemsPerSecond: 400, copies: 1, max: two, counts: 'destroyed', locale: 'en-US' }))
+            .toBe('At most 30/s: Machines 1 and 2 destroy 30/s together. Lower the rate or raise Copies. Describe one unit in the build.');
+        expect(targetRateLineOf({ itemsPerSecond: 400, copies: 1, max: two, counts: 'made', locale: 'en-US' }))
+            .toBe('At most 30/s: Machines 1 and 2 make 30/s together. Lower the rate or raise Copies. Describe one unit in the build.');
+    });
+});
+
 describe('maxRateText', () => {
     it('rounds down, so that a target typed in from it can be made', () => {
         expect(maxRateText(252.65624125798462, 'en-US')).toBe('252.65/s');

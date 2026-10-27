@@ -86,6 +86,108 @@ describe("mergeOverlappingRanges and correctNegativeOffsets", () => {
     });
 });
 
+describe("mergeOverlappingRanges groups the transfers of each item into windows", () => {
+    // the grouping this replaced: every merged window filters all the transfers of its item for the ones that overlap it
+    const filteringMerge = (original: ReadonlyMap<EntityId, InventoryTransfer[]>, overlap_threshold = 1) => {
+        const result = new Map<EntityId, InventoryTransfer[]>();
+        original.forEach((ranges, entity_id) => {
+            const by_item = new Map<string, InventoryTransfer[]>();
+            ranges.forEach(it => by_item.set(it.item_name, (by_item.get(it.item_name) ?? []).concat(it)));
+            by_item.forEach((item_ranges, item_name) => {
+                const windows = OpenRange.reduceRanges(item_ranges.map(it => it.tick_range), overlap_threshold).map(window => {
+                    const merged = item_ranges.filter(it => window.overlaps(it.tick_range));
+                    const before_run = merged.map(it => it.pickup_tick_before_run).filter(tick => tick !== undefined);
+                    return {
+                        item_name,
+                        tick_range: window,
+                        amount: merged.reduce((sum, it) => sum + it.amount, 0),
+                        pickup_tick_before_run: before_run.length > 0 ? Math.min(...before_run) : undefined,
+                    };
+                });
+                result.set(entity_id, (result.get(entity_id) ?? []).concat(windows));
+            });
+        });
+        return result;
+    };
+
+    const first = EntityId.forInserter(1);
+    const second = EntityId.forInserter(2);
+    const transfer = (item_name: string, start: number, end: number, amount: number, pickup_tick_before_run?: number): InventoryTransfer =>
+        ({ item_name, tick_range: OpenRange.from(start, end), amount, ...(pickup_tick_before_run === undefined ? {} : { pickup_tick_before_run }) });
+    const merge = (transfers: InventoryTransfer[], overlap_threshold?: number) =>
+        InventoryTransferHistory.mergeOverlappingRanges(new InventoryTransferHistory(new Map([[first, transfers]])), overlap_threshold).get(first);
+    const windows = (transfers: InventoryTransfer[] | undefined) => transfers?.map(it => [it.item_name, it.tick_range.start_inclusive, it.tick_range.end_inclusive, it.amount]);
+
+    it("leaves an empty history, an entity with no transfers and a single transfer as they are", () => {
+        expect(InventoryTransferHistory.mergeOverlappingRanges(new InventoryTransferHistory()).size).toBe(0);
+        expect(merge([])).toBeUndefined();
+        expect(windows(merge([transfer("iron-plate", 5, 9, 16)]))).toEqual([["iron-plate", 5, 9, 16]]);
+    });
+
+    it("joins transfers that overlap, in any order, and adds their amounts", () => {
+        const transfers = [transfer("iron-plate", 10, 20, 3), transfer("iron-plate", 0, 12, 5), transfer("iron-plate", 18, 30, 7)];
+        expect(windows(merge(transfers))).toEqual([["iron-plate", 0, 30, 15]]);
+        expect(windows(merge(transfers.slice().reverse()))).toEqual([["iron-plate", 0, 30, 15]]);
+    });
+
+    it("joins transfers that touch (the next tick) unless the threshold says apart, and keeps ones with a gap", () => {
+        const transfers = [transfer("iron-plate", 0, 5, 1), transfer("iron-plate", 6, 10, 2), transfer("iron-plate", 12, 15, 4)];
+        expect(windows(merge(transfers))).toEqual([["iron-plate", 0, 10, 3], ["iron-plate", 12, 15, 4]]);
+        expect(windows(merge(transfers, 0))).toEqual([["iron-plate", 0, 5, 1], ["iron-plate", 6, 10, 2], ["iron-plate", 12, 15, 4]]);
+        expect(windows(merge(transfers, 2))).toEqual([["iron-plate", 0, 15, 7]]);
+    });
+
+    it("joins a transfer that lies inside another and one that shares its first tick", () => {
+        const transfers = [transfer("iron-plate", 0, 40, 10), transfer("iron-plate", 5, 8, 1), transfer("iron-plate", 0, 3, 2), transfer("iron-plate", 40, 40, 4), transfer("iron-plate", 60, 60, 8)];
+        expect(windows(merge(transfers))).toEqual([["iron-plate", 0, 40, 17], ["iron-plate", 60, 60, 8]]);
+    });
+
+    it("keeps the items of one entity apart, whose windows overlap each other, and the entities apart", () => {
+        const history = new InventoryTransferHistory(new Map([
+            [first, [transfer("iron-plate", 0, 10, 1), transfer("copper-plate", 5, 15, 2), transfer("iron-plate", 8, 20, 4), transfer("copper-plate", 40, 50, 8)]],
+            [second, [transfer("iron-plate", 0, 10, 16)]],
+        ]));
+        const merged = InventoryTransferHistory.mergeOverlappingRanges(history);
+        expect(windows(merged.get(first))).toEqual([["iron-plate", 0, 20, 5], ["copper-plate", 5, 15, 2], ["copper-plate", 40, 50, 8]]);
+        expect(windows(merged.get(second))).toEqual([["iron-plate", 0, 10, 16]]);
+    });
+
+    it("takes the earliest pickup before the run of the transfers in a window, and none for a window without one", () => {
+        const merged = merge([
+            transfer("jelly", 1, 5, 15, -3), transfer("jelly", 4, 9, 15, -8), transfer("jelly", 9, 12, 15),
+            transfer("jelly", 30, 40, 16),
+            transfer("jelly", 50, 60, 16, -1),
+        ])!;
+        expect(merged.map(it => [it.amount, it.pickup_tick_before_run])).toEqual([[45, -8], [16, undefined], [16, -1]]);
+    });
+
+    it("gives the same windows, amounts and pickups as the grouping it replaced, on histories of many transfers", () => {
+        let state = 12345;
+        const random = (below: number) => {
+            state = (state * 1103515245 + 12345) % 2147483648;
+            return state % below;
+        };
+        const items = ["iron-plate", "copper-plate", "plastic-bar"];
+        for (const threshold of [0, 1, 3]) {
+            for (let round = 0; round < 20; round++) {
+                const original = new Map<EntityId, InventoryTransfer[]>();
+                for (const entity of [first, second]) {
+                    original.set(entity, Array.from({ length: 1 + random(400) }, () => {
+                        const start = random(2000);
+                        return transfer(items[random(items.length)], start, start + random(30), random(5) * 8, random(4) === 0 ? -random(50) : undefined);
+                    }));
+                }
+                const expected = filteringMerge(original, threshold);
+                const merged = InventoryTransferHistory.mergeOverlappingRanges(new InventoryTransferHistory(original), threshold);
+                expect(Array.from(merged.keys())).toEqual(Array.from(expected.keys()));
+                for (const [entity_id, expected_windows] of expected) {
+                    expect(merged.get(entity_id)).toEqual(expected_windows);
+                }
+            }
+        }
+    });
+});
+
 describe("removeDuplicateEntities", () => {
     it("remembers which entities were merged into the one that is kept", () => {
         const window = (): InventoryTransfer[] => [{ item_name: "jelly", tick_range: OpenRange.from(1, 9), amount: 15 }];

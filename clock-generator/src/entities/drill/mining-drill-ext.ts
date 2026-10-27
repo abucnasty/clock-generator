@@ -1,5 +1,6 @@
 import { MiningDrill } from "./mining-drill";
 import { Machine } from "../machine";
+import { Item } from "../../data";
 
 /**
  * the actual limit of how much the drill can insert into a machine per tick is the automated insertion limit + 64
@@ -10,7 +11,11 @@ export function miningDrillMaxInsertion(
     drill: MiningDrill,
     sink_machine: Machine
 ): number {
-    const mined_item = drill.item
+    return directMachineInsertionLimit(drill.item, sink_machine);
+}
+
+/** Results placed directly into a machine use the mining drill's stop, not an inserter's limit. */
+export function directMachineInsertionLimit(mined_item: Item, sink_machine: Machine): number {
     const machine_input = sink_machine.inputs.getOrThrow(mined_item.name);
     const automated_insertion_limit = machine_input.automated_insertion_limit.quantity;
     const mined_item_stack_size = mined_item.stack_size;

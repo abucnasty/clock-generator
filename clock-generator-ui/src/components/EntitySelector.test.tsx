@@ -21,3 +21,13 @@ it('keeps fixed imported routes read-only, with no extra actions', () => {
     expect(html).toContain('readOnly');
     expect(html).not.toContain('aria-label="Filter Source by entity type"');
 });
+
+it('uses a short selected chest name and item icons while retaining its complete accessible description', () => {
+    const chest: EntitySelectorOption = { type: 'chest', id: 3, label: 'Chest 3', icon: 'infinity-chest',
+        sublabel: 'Processing unit, Holmium plate, Superconductor, Battery',
+        ingredientIcons: ['processing-unit', 'holmium-plate', 'superconductor', 'battery'] };
+    const html = renderToStaticMarkup(<EntitySelector options={[chest]} value={chest} onChange={() => {}} label="Source" compactValue />);
+    expect(html).toContain('value="Chest 3"');
+    expect(html).toContain('aria-description="Chest 3 - Processing unit, Holmium plate, Superconductor, Battery"');
+    for (const item of chest.ingredientIcons!) expect(html).toContain(`/icons/${item}.png`);
+});

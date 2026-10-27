@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
 import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
 
 const BACKED_UP_ADVICE = " If the input belts back up at their pickups, answer Backed up for the belts and generate again: a clock may hold then.";
@@ -22,11 +22,13 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
     });
 
     it("is no recovery for a sample that holds its target and is not taken away from for a while", async () => {
-        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL06), { logger: quiet });
+        const config = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL06);
+        const generated = generateClockAlternatives(config, { logger: quiet });
+        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
         expect(generated.why_not_stable).toEqual({
             cause: "no recovery",
             message: "The selected clock (Batched swings: 6 output swings per cycle, subtick clock) holds the target rate, but does not "
-                + "get back to it by itself after steel-plate is not taken away. A buffer, or a faster machine, lets it catch up.",
+                + "get back to it by itself after steel plate is not taken away. A buffer, or a faster machine, lets it catch up.",
         });
     });
 
@@ -34,13 +36,14 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
         const sample = await loadConfigFromFile(ConfigPaths.SAMPLE_CONFIG);
         const config = { ...sample, inserters: sample.inserters.map(inserter => ({ ...inserter, stack_size: 2 })) };
         const generated = generateClockAlternatives(config, { logger: quiet });
-        expect(generated.not_made.map(it => it.id)).toEqual(["even-hands", "uneven-output", "shifted-swings"]);
+        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
+        expect(generated.not_made.map(it => it.id)).toEqual(["even-hands", "uneven-output", "shifted-swings", "primitive-grouped"]);
         expect(generated.why_not_stable).toEqual({
             cause: "nothing holds",
             message: "No clock holds the target rate of 240 a second. The closest, 2 output swings per cycle, moves 180 a second, 60 "
-                + "under the target. Not made: Even hands (even hands are only made where every inserter takes from a machine or a "
-                + "chest; inserter:1 does not); Uneven output swings (no moved output swing passes the clock-only check); Shifted "
-                + "swings (no shifted round of swings passes the clock-only check).",
+                + "under the target. Not made: Even hands (only made where every inserter takes from a machine or a "
+                + "chest; inserter 1 takes from a belt); Uneven output swings (no moved output swing passes the clock-only check); Shifted "
+                + "swings (no shifted round of swings passes the clock-only check); Small batches (the chain of machines loops).",
         });
     });
 
@@ -59,13 +62,15 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
                 + "so it holds 9,600 of 9,600 and inserters 1 and 2 have nowhere to drop. The closest, Batched swings: 2 output swings per "
                 + "cycle, moves 0 a second, 48 under the target. Use an infinity chest, or add an inserter that takes the items out, and "
                 + "generate again. Not made: Fractional swings (Cannot satisfy fractional swing constraint: sub-cycle 1 requires 3 swings, but "
-                + "maximum allowed is 2 due to insertion limits. Total swings: 3200, cycle multiplier: 1100); Even hands (even hands are not "
-                + "made for a build with inserters outside the plan); Shifted swings (no shifted round of swings passes the clock-only check).",
+                + "maximum allowed is 2 due to insertion limits. Total swings: 3200, cycle multiplier: 1100); Even hands (only "
+                + "made where every inserter takes from a machine or a chest; inserter 5 takes from a belt); Shifted swings (no shifted round of swings passes the clock-only check).",
         });
     });
 
     it("is not said of a sample whose selected clock is stable", async () => {
-        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE), { logger: quiet });
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const generated = generateClockAlternatives(config, { logger: quiet });
+        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
         expect(generated.alternatives[generated.selected_index].verdict).toBe("stable");
         expect(generated.why_not_stable).toBeNull();
     });

@@ -121,7 +121,6 @@ function createInserterStateMachine(args: {
         sink_state: sink_state,
         enable_control: enable_control,
         disabled_mode: disabled_mode,
-        tick_provider: tick_provider,
         pickup_mode: pickup_mode,
     })
 

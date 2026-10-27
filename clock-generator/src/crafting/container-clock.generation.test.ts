@@ -2,6 +2,7 @@ import {createHash} from "crypto";
 import {expect, test} from "vitest";
 import {generateClockAlternatives} from "./generate-blueprint";
 import {clockIdentity} from "./clock-identity";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {containerClockCases, containerClockConfig} from "../../tests/game/builds/container-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
@@ -13,7 +14,9 @@ for (const variant of containerClockCases()) {
     test(`container clock default: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];
         const expected = generation!;
-        const generated = generateClockAlternatives(containerClockConfig(variant), {logger: quiet});
+        const config = containerClockConfig(variant);
+        const generated = generateClockAlternatives(config, {logger: quiet});
+        expect(alwaysOnReasonProblemsOf(config, generated), "every inserter and drill a clock leaves always on says why").toEqual([]);
         const selected = generated.alternatives[generated.selected_index];
         const result = selected.result;
         const period = result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks;

@@ -159,23 +159,47 @@ function mergeOverlappingRanges(original: ReadonlyMap<EntityId, InventoryTransfe
         const by_item: Map<string, InventoryTransfer[]> = new Map()
 
         ranges.forEach(it => {
-            const transfers = by_item.get(it.item_name) ?? []
-            by_item.set(it.item_name, transfers.concat(it))
+            const transfers = by_item.get(it.item_name)
+            if (transfers === undefined) {
+                by_item.set(it.item_name, [it])
+            } else {
+                transfers.push(it)
+            }
         })
 
         by_item.forEach((ranges, itemName) => {
-            const merged_ranges: InventoryTransfer[] = OpenRange.reduceRanges(ranges.map(it => it.tick_range), overlap_threshold).map(it => {
-                const merged = ranges.filter(r => it.overlaps(r.tick_range));
-                const before_run = merged.map(r => r.pickup_tick_before_run).filter(tick => tick !== undefined);
-                return {
-                    item_name: itemName,
-                    tick_range: it,
-                    amount: merged.reduce((sum, r) => sum + r.amount, 0),
-                    pickup_tick_before_run: before_run.length > 0 ? Math.min(...before_run) : undefined,
+            const merged_ranges: OpenRange[] = OpenRange.reduceRanges(ranges.map(it => it.tick_range), overlap_threshold)
+            // The merged ranges are in order and apart, and every transfer lies inside one of them, so a transfer
+            // belongs to the last merged range that starts at or before it. Finding it by bisection keeps the cost of
+            // a history of n transfers at n log n (every run of a long period records tens of thousands).
+            const amounts: number[] = merged_ranges.map(() => 0)
+            const pickups_before_run: (number | undefined)[] = merged_ranges.map(() => undefined)
+            ranges.forEach(transfer => {
+                let low = 0
+                let high = merged_ranges.length - 1
+                while (low < high) {
+                    const middle = (low + high + 1) >> 1
+                    if (merged_ranges[middle].start_inclusive <= transfer.tick_range.start_inclusive) {
+                        low = middle
+                    } else {
+                        high = middle - 1
+                    }
+                }
+                amounts[low] += transfer.amount
+                const pickup = transfer.pickup_tick_before_run
+                if (pickup !== undefined) {
+                    const earliest = pickups_before_run[low]
+                    pickups_before_run[low] = earliest === undefined ? pickup : Math.min(earliest, pickup)
                 }
             })
+            const merged: InventoryTransfer[] = merged_ranges.map((tick_range, index) => ({
+                item_name: itemName,
+                tick_range,
+                amount: amounts[index],
+                pickup_tick_before_run: pickups_before_run[index],
+            }))
             const existing_ranges = result.get(entityId) ?? []
-            result.set(entityId, existing_ranges.concat(merged_ranges))
+            result.set(entityId, existing_ranges.concat(merged))
         })
     })
 
@@ -259,7 +283,8 @@ function printInventoryTransfers(
 }
 
 /**
- * if two entities have the exact same transfer ranges and items, we can reduce them to one entity
+ * if two entities have the exact same transfer ranges and items, we can reduce them to one entity. The planned
+ * entities of a clock all carry the same name here (see exportClock): they share a combinator whatever they carry.
  */
 function deduplicateEntityTransfers(
     transfers: ReadonlyMap<EntityId, InventoryTransfer[]>,

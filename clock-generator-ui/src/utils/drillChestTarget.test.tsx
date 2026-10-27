@@ -29,7 +29,7 @@ it("shows a drill's container in the one Target picker, with its icon and the or
     const html = renderToStaticMarkup(<DrillsForm drills={form.drills!.configs} resourceNames={['iron-ore']}
         machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
         onAdd={() => { }} onUpdate={() => { }} onRemove={() => { }} onReorder={() => { }} onDuplicate={() => { }} />);
-    expect(html).toContain('aria-label="Target, Drill 1"');
+    expect(html).toContain('aria-label="Drop target, Drill 1"');
     expect(html).toContain('value="Car 1 - iron-ore"');
     expect(html).toContain('/icons/car.png');
     expect(html).not.toMatch(/readonly/i);
@@ -42,7 +42,7 @@ it('marks an unset target', () => {
     const html = renderToStaticMarkup(<DrillsForm drills={form.drills!.configs} resourceNames={['iron-ore']}
         machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
         onAdd={() => { }} onUpdate={() => { }} onRemove={() => { }} onReorder={() => { }} onDuplicate={() => { }} />);
-    expect(html).toMatch(/aria-invalid="true"[^>]*aria-label="Target, Drill 1"|aria-label="Target, Drill 1"[^>]*aria-invalid="true"/);
+    expect(html).toMatch(/aria-invalid="true"[^>]*aria-label="Drop target, Drill 1"|aria-label="Drop target, Drill 1"[^>]*aria-invalid="true"/);
 });
 
 it('unsets the target of a drill whose chest is removed, and keeps it on a machine removed', () => {

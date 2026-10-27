@@ -4,16 +4,24 @@ import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blu
 import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
+import type {Config} from "../config/schema";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {lithiumSiloCases} from "../../tests/game/builds/lithium-silo-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
 // each clock pinned beside the in-game recording of it
 const controls = readControls("lithium-silo-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
+let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO), {logger: quiet});
+    config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO);
+    generated = generateClockAlternatives(config, {logger: quiet});
+});
+
+test("lithium silo: every inserter and drill a clock leaves always on says why", () => {
+    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("lithium silo: the clock with 3 output swings is selected", () => {

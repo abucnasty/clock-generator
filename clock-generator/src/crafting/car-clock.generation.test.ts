@@ -3,18 +3,27 @@ import path from "path";
 import {beforeAll, describe, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
 import {clockIdentity} from "./clock-identity";
+import {backpressureLossVerdictOf} from "./trial";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
+import type {Config} from "../config/schema";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {carCases} from "../../tests/game/builds/car-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
 // each clock pinned beside the in-game recording of it
 const controls = readControls("car-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
+let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR), {logger: quiet});
+    config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR);
+    generated = generateClockAlternatives(config, {logger: quiet});
+});
+
+test("car: every inserter and drill a clock leaves always on says why", () => {
+    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("car: the clock with 3 output swings is selected, and the drill into the car is enabled the tick before the takers", () => {
@@ -58,25 +67,27 @@ for (const variant of carCases()) {
 // the car's Sidecar export (car.sidecar-export.json) as the web app pastes it, at the export's suggested target: the
 // furnaces' ceiling, 80.78015625, floored to 80.780/s (U11)
 describe("the car paste at 80.78/s", () => {
+    let paste_config: Config;
     let paste: ClockAlternativesResult;
     beforeAll(async () => {
-        paste = generateClockAlternatives(await loadConfigFromFile(path.join(__dirname, "fixtures", "car-paste-80.78.json")), {logger: quiet});
+        paste_config = await loadConfigFromFile(path.join(__dirname, "fixtures", "car-paste-80.78.json"));
+        paste = generateClockAlternatives(paste_config, {logger: quiet});
     });
 
-    // 192000/4039 ticks: no subtick clock (a scale above 1000), so its blueprint counts 47 ticks and asks 64 plates of
-    // them, above what the furnaces make
-    test("lists the lean clock of 47.537 ticks as the clock rounded to 47 it is, at its own rate, and does not select it", () => {
-        const lean = paste.alternatives.find(alternative => alternative.id === "planned-lean-iron-ore")!;
-        expect(lean.result.simulation_duration.ticks).toBeCloseTo(47.537, 3);
-        expect(lean.result.subtick).toBeUndefined();
-        // 1.14% fast: more than the 0.1% a rounded clock may run, so it is not tried on its own period
-        expect(lean.label).toMatch(/\(clock rounded to 47 ticks, runs 1\.14% fast\)$/);
-        expect(lean.assessment.items_per_second).toBeCloseTo(64 * 60 / 47, 6);
-        expect(lean.rounded).toMatchObject({period_ticks: 47, tried_on_its_period: false});
-        expect(lean.ranking).toMatchObject({meets_target_rate: false, recovery_untried: false});
-        expect(lean.ranking.runs_fast).toBeUndefined();
-        expect(paste.alternatives.filter(alternative => alternative.id.startsWith("planned-lean-iron-ore"))).toHaveLength(1);
-        expect(paste.alternatives[paste.selected_index].id).not.toMatch(/lean/);
+    // 5 swings is 356.524 ticks: no subtick clock (a scale above 1000), so its blueprint counts 356 ticks and takes 416
+    // plates of them
+    test("lists the clock of 356.524 ticks as the clock rounded to 356 it is, at its own rate, and does not select it", () => {
+        const five = paste.alternatives.find(alternative => alternative.id === "swings-5")!;
+        expect(five.result.simulation_duration.ticks).toBeCloseTo(356.524, 3);
+        expect(five.result.subtick).toBeUndefined();
+        // 0.15% fast: more than the 0.1% a rounded clock may run, so it is not tried on its own period
+        expect(five.label).toMatch(/\(clock rounded to 356 ticks, runs 0\.15% fast\)$/);
+        expect(five.assessment.items_per_second).toBeCloseTo(416 * 60 / 356, 6);
+        expect(five.rounded).toMatchObject({period_ticks: 356, tried_on_its_period: false});
+        expect(five.ranking).toMatchObject({meets_target_rate: false, recovery_untried: false});
+        expect(five.ranking.runs_fast).toBeUndefined();
+        expect(paste.alternatives.filter(alternative => alternative.id.startsWith("swings-5"))).toHaveLength(1);
+        expect(paste.alternatives[paste.selected_index].id).not.toBe("swings-5");
     });
 
     // 285 ticks of 285.19: 0.08% fast, but above the furnaces' 80.78015625/s, so not tried on its own period either
@@ -87,11 +98,12 @@ describe("the car paste at 80.78/s", () => {
         expect(rounded.ranking.meets_target_rate).toBe(false);
     });
 
-    test("says why the lean clock's recovery was not tried, and the selected clock meets the target rate", () => {
-        const lean = paste.alternatives.find(alternative => alternative.id === "planned-lean-iron-ore")!;
-        expect(lean.assessment.backpressure_loss).toBeNull();
-        expect(lean.assessment.backpressure_loss_not_tried).toMatch(/^A clock of 47\.537 ticks does not repeat in whole ticks/);
-        expect(lean.description).toContain("Its backpressure losses could not be tried");
+    test("says why the recovery of a clock of 356.524 ticks cannot be tried, and the selected clock meets the target rate", () => {
+        const five = paste.alternatives.find(alternative => alternative.id === "swings-5")!;
+        expect(backpressureLossVerdictOf(paste_config, five.result, quiet)).toEqual({
+            backpressure_loss: null,
+            backpressure_loss_not_tried: "A clock of 356.524 ticks does not repeat in whole ticks, so its output cannot be counted by the period",
+        });
         const selected = paste.alternatives[paste.selected_index];
         expect(selected.assessment.items_per_second).toBeCloseTo(80.78, 6);
         expect(selected.assessment.backpressure_loss).not.toBeNull();

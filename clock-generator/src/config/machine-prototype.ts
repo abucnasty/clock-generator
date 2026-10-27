@@ -1,6 +1,6 @@
 import type { Logger } from "../common/logger";
 import { FactorioDataService } from "../data/factorio-data-service";
-import { machineCanMake, machineRuleOfPrototype } from "../entities/machine/machine-rule";
+import { machineCanMake, machineRuleOfPrototype, placesResultsItself } from "../entities/machine/machine-rule";
 import { MachineType } from "../entities/machine/machine-type";
 import type { Config, MachineConfiguration } from "./schema";
 
@@ -11,6 +11,12 @@ import type { Config, MachineConfiguration } from "./schema";
 export function machineRuleOf(machine: Pick<MachineConfiguration, "prototype">): MachineType {
     const prototype = machine.prototype === undefined ? null : FactorioDataService.findCraftingMachine(machine.prototype);
     return prototype === null ? MachineType.MACHINE : machineRuleOfPrototype(prototype);
+}
+
+/** Whether a machine of the config places its results itself, by its prototype's game data (machine-rule.ts) */
+export function machinePlacesResults(machine: Pick<MachineConfiguration, "prototype">): boolean {
+    const prototype = machine.prototype === undefined ? null : FactorioDataService.findCraftingMachine(machine.prototype);
+    return prototype !== null && placesResultsItself(prototype);
 }
 
 /**

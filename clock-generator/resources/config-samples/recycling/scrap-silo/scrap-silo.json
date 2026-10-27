@@ -1,0 +1,321 @@
+{
+  "target_output": {
+    "recipe": "scrap",
+    "items_per_second": 2,
+    "copies": 1,
+    "counts": "destroyed"
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "scrap-recycling",
+      "productivity": 300,
+      "crafting_speed": 0.5,
+      "prototype": "recycler",
+      "result_target": {
+        "type": "chest",
+        "id": 14
+      }
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "iron-gear-wheel"
+      ]
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "solid-fuel"
+      ]
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "concrete"
+      ]
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "ice"
+      ]
+    },
+    {
+      "id": 5,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 5
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "steel-plate"
+      ]
+    },
+    {
+      "id": 6,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 6
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "battery"
+      ]
+    },
+    {
+      "id": 7,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 7
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "stone"
+      ]
+    },
+    {
+      "id": 8,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 8
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "advanced-circuit"
+      ]
+    },
+    {
+      "id": 9,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 9
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "copper-cable"
+      ]
+    },
+    {
+      "id": 10,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 10
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "processing-unit"
+      ]
+    },
+    {
+      "id": 11,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 11
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "low-density-structure"
+      ]
+    },
+    {
+      "id": 12,
+      "source": {
+        "type": "chest",
+        "id": 14
+      },
+      "sink": {
+        "type": "chest",
+        "id": 12
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "holmium-ore"
+      ]
+    },
+    {
+      "id": 13,
+      "source": {
+        "type": "chest",
+        "id": 13
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "normal",
+      "filters": [
+        "scrap"
+      ]
+    }
+  ],
+  "belts": [],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 2,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 3,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 4,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 5,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 6,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 7,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 8,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 9,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 10,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 11,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 12,
+      "item_filter": [],
+      "remove_unfiltered_items": true
+    },
+    {
+      "type": "infinity-chest",
+      "id": 13,
+      "item_filter": [
+        {
+          "item_name": "scrap",
+          "request_count": 50
+        }
+      ]
+    },
+    {
+      "type": "rocket-silo",
+      "id": 14,
+      "recipe_quality": "uncommon"
+    }
+  ]
+}

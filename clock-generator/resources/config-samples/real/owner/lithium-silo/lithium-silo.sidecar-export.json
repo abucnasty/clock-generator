@@ -1,5 +1,5 @@
 {
-  "sidecar_version": "0.14.0",
+  "sidecar_version": "0.15.0",
   "machines": [
     {
       "id": 1,
@@ -377,7 +377,7 @@
         "drop_capture": {
           "status": "side-loaded",
           "tiles": 3,
-          "sidecar_version": "0.14.0"
+          "sidecar_version": "0.15.0"
         },
         "belt_direction": 0
       },
@@ -401,7 +401,7 @@
         "drop_capture": {
           "status": "side-loaded",
           "tiles": 3,
-          "sidecar_version": "0.14.0"
+          "sidecar_version": "0.15.0"
         },
         "belt_direction": 8
       },

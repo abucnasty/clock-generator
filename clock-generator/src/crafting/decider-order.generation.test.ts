@@ -7,6 +7,7 @@ import { OpenRange } from "../data-types";
 import { EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { deciderBuildOrder } from "./decider-order";
+import { alwaysOnReasonProblemsOf } from "./generate-blueprint-test-helpers";
 
 /**
  * The order the check of a clock gives its deciders (`deciderBuildOrder`, from the windows and the inserters' filters)
@@ -27,6 +28,10 @@ describe("the decider build order of a clock's check", () => {
                 const loaded = await loadConfigFromFile(ConfigPaths[sample]);
                 config = { ...loaded, overrides: { ...loaded.overrides, backed_up_belts: true } };
                 ({ alternatives } = generateClockAlternatives(config));
+            });
+
+            it("names why every inserter and drill a clock leaves always on is", () => {
+                expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
             });
 
             it("is the order the exported blueprint builds them in", () => {

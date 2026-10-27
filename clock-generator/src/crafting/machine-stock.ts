@@ -16,6 +16,11 @@ export interface MachineStockSeries {
     products_finished: number[];
     /** Crafts started so far, per tick: the times the machine took the ingredients of a craft (the simulator's true starts) */
     crafts_started: number[];
+    /**
+     * Results placed so far where inserters take them, per tick, for a machine that places its results itself (its
+     * result target, else its own output); absent for any other machine
+     */
+    results_placed?: number[];
     /** The crafting bar and the bonus (productivity) bar of the machine per tick, in 0 to 1 and to four decimals as the recorder writes them */
     crafting_progress: number[];
     bonus_progress: number[];
@@ -63,6 +68,7 @@ export class StockRecorder {
                 status: [],
                 products_finished: [],
                 crafts_started: [],
+                ...(state.machine.metadata.places_results === true && { results_placed: [] as number[] }),
                 crafting_progress: [],
                 bonus_progress: [],
             },
@@ -83,6 +89,7 @@ export class StockRecorder {
             series.status.push(state.status);
             series.products_finished.push(state.productsFinished);
             series.crafts_started.push(state.craftsStarted);
+            series.results_placed?.push(state.resultsPlaced);
             series.crafting_progress.push(barOf(state.craftingProgress.progress));
             series.bonus_progress.push(barOf(state.bonusProgress.progress));
         }

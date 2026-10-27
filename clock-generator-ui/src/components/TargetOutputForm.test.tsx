@@ -4,11 +4,84 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { TargetOutputForm } from './TargetOutputForm';
 import { copyOffsetOf, copyOffsetShown, type CopyOffset } from '../utils/copyOffset';
 import { ELEMENT_IDS } from '../utils/firstProblem';
+import { COUNTS_CHOICES } from '../utils/targetCounts';
 
 const text = (html: string) => html.replace(/<style[^>]*>[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
 const form = (props: Partial<Parameters<typeof TargetOutputForm>[0]> = {}) => renderToStaticMarkup(
-    <TargetOutputForm recipe="grenade" itemsPerSecond={240} copies={7} machinesMax={null} recipeNames={['grenade']}
-        onRecipeChange={() => {}} onItemsPerSecondChange={() => {}} onCopiesChange={() => {}} {...props} />);
+    <TargetOutputForm recipe="grenade" itemsPerSecond={240} copies={7} counts="made" machinesMax={null} recipeNames={['grenade']}
+        onRecipeChange={() => {}} onItemsPerSecondChange={() => {}} onCountsChange={() => {}} onCopiesChange={() => {}} {...props} />);
+
+describe('what the rate counts', () => {
+    it('is a field shown always, beside Items per Second, that reads Items made by default', () => {
+        for (const props of [{}, { showCopyOffset: true, onCopyOffsetChange: () => {} }, { recipe: '', itemsPerSecond: 0 }]) {
+            const html = form(props);
+            expect(html).toContain('>Counts<');
+            expect(html).toContain('value="made"');
+            expect(text(html)).toContain('Items made');
+            expect(html).toContain('aria-label="About made and destroyed"');
+        }
+    });
+
+    it('reads Items destroyed for a target that counts the item destroyed', () => {
+        const html = form({ counts: 'destroyed' });
+        expect(html).toContain('value="destroyed"');
+        expect(text(html)).toContain('Items destroyed');
+    });
+
+    it('chooses the item destroyed from what the machines take in, not from the recipes (scrap is no recipe\'s product)', () => {
+        const props = { recipe: 'scrap', itemsPerSecond: 2, copies: 1, machinesMax: null, recipeNames: ['scrap-recycling', 'iron-gear-wheel'],
+            destroyedItemNames: ['scrap'], onRecipeChange: () => {}, onItemsPerSecondChange: () => {}, onCountsChange: () => {}, onCopiesChange: () => {} };
+        const picker = (counts: 'made' | 'destroyed') => findElement(TargetOutputForm({ ...props, counts }), (it) => it.inputId === ELEMENT_IDS.targetRecipe);
+        expect([picker('destroyed').kind, picker('destroyed').options]).toEqual(['item', ['scrap']]);
+        expect([picker('made').kind, picker('made').options]).toEqual(['recipe', ['scrap-recycling', 'iron-gear-wheel']]);
+    });
+
+    it('offers Items made, the default, then Items destroyed, and reports the one picked', () => {
+        expect(COUNTS_CHOICES.map(choice => [choice.value, choice.label])).toEqual([['made', 'Items made'], ['destroyed', 'Items destroyed']]);
+        let picked: string | undefined;
+        const select = findElement(TargetOutputForm({ recipe: 'iron-ore', itemsPerSecond: 400, copies: 1, counts: 'made', machinesMax: null, recipeNames: [],
+            onRecipeChange: () => {}, onItemsPerSecondChange: () => {}, onCountsChange: (counts) => { picked = counts; }, onCopiesChange: () => {} }),
+            (props) => props.label === 'Counts');
+        (select.onChange as (event: { target: { value: string } }) => void)({ target: { value: 'destroyed' } });
+        expect(picked).toBe('destroyed');
+    });
+
+    it('explains the two in the help, one paragraph each, in the words it was given', () => {
+        const help = findElement(TargetOutputForm({ recipe: 'iron-ore', itemsPerSecond: 400, copies: 1, counts: 'made', machinesMax: null, recipeNames: [],
+            onRecipeChange: () => {}, onItemsPerSecondChange: () => {}, onCountsChange: () => {}, onCopiesChange: () => {} }),
+            (props) => props.label === 'About made and destroyed');
+        const paragraphs = (Array.isArray(help.children) ? help.children : [help.children]).map((paragraph) => (paragraph as ReactElement<{ children: string }>).props.children);
+        expect(paragraphs).toEqual([
+            'Items made: the build makes the item and its inserters take it out.',
+            'Items destroyed: inserters bring the item into the build and a recycler destroys it, as in an ore voider. '
+                + 'The rate is what they bring in. What the recycler gives back and the build puts back into it is not counted.',
+        ]);
+    });
+
+    it('says destroys in the problem line under Items per Second for a target the machines cannot destroy', () => {
+        const max = { machineIds: [1], perCopy: 405, perCopyRatio: { numerator: 405, denominator: 1 } };
+        expect(text(form({ recipe: 'iron-ore', itemsPerSecond: 500, copies: 1, counts: 'destroyed', machinesMax: max })))
+            .toContain('At most 405/s: Machine 1 destroys 405/s.');
+        expect(text(form({ recipe: 'iron-ore', itemsPerSecond: 500, copies: 1, counts: 'made', machinesMax: max })))
+            .toContain('At most 405/s: Machine 1 makes 405/s.');
+        expect(text(form({ recipe: 'iron-ore', itemsPerSecond: 400, copies: 1, counts: 'destroyed', machinesMax: max }))).not.toContain('At most');
+    });
+});
+
+/** The props of the first element of a form's element tree that `match` accepts (the form called as a function, without a DOM) */
+function findElement(tree: ReactNode, match: (props: Record<string, unknown>) => boolean) {
+    const found: { onChange?: unknown; children?: ReactNode; [key: string]: unknown }[] = [];
+    const walk = (node: ReactNode) => {
+        if (Array.isArray(node)) node.forEach(walk);
+        else if (isValidElement<{ children?: ReactNode }>(node)) {
+            if (match(node.props as Record<string, unknown>)) found.push(node.props as never);
+            walk(node.props.children);
+        }
+    };
+    walk(tree);
+    expect(found).toHaveLength(1);
+    return found[0];
+}
 
 describe('the gap between copies', () => {
     it('is asked for beside Copies when the copies drop onto a belt from inserters with places, and not otherwise', () => {
@@ -46,8 +119,8 @@ describe('the gap between copies', () => {
     // field as 0, and keep the result within min. Called as a function, the form is its element tree, so the field's own
     // props can be read and the steps applied to them without a DOM.
     const fieldOf = (copyOffset: CopyOffset | undefined, onCopyOffsetChange: (value: CopyOffset | undefined) => void) => {
-        const tree = TargetOutputForm({ recipe: 'grenade', itemsPerSecond: 240, copies: 7, machinesMax: null, recipeNames: ['grenade'],
-            onRecipeChange: () => {}, onItemsPerSecondChange: () => {}, onCopiesChange: () => {},
+        const tree = TargetOutputForm({ recipe: 'grenade', itemsPerSecond: 240, copies: 7, counts: 'made', machinesMax: null, recipeNames: ['grenade'],
+            onRecipeChange: () => {}, onItemsPerSecondChange: () => {}, onCountsChange: () => {}, onCopiesChange: () => {},
             copyOffset, showCopyOffset: true, onCopyOffsetChange });
         const found: ReactElement<{ id?: string; value: number | null; min: number; step: number; onValueChange: (value: number | null) => void }>[] = [];
         const walk = (node: ReactNode) => {

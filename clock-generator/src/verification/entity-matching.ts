@@ -66,63 +66,75 @@ export function matchRecordingToConfig(recording: Recording, config: Config): En
         return mapping;
     });
 
+    // a chest end is told by its type where both sides name it (a car from an infinity chest, which a recycler's inserters
+    // both take from), else it is any chest
+    const config_chest_types = new Map((config.chests ?? []).map(chest => [chest.id, chest.type as string]));
+    const recorded_chest_types = new Map(((recording.config as { chests?: { id: number; type?: string }[] }).chests ?? [])
+        .flatMap(chest => chest.type === undefined ? [] : [[chest.id, chest.type] as const]));
+    const chestKey = (types: Map<number, string>, id: number, typed: boolean) => typed ? `chest:${types.get(id) ?? "unknown"}` : "chest";
     // an output belt is often empty when selected, so the sidecar can't export (or id) it; only belt sources need lane contents
-    const configEndpointKey = (endpoint: Endpoint, role: "source" | "sink"): string => {
+    const configEndpointKey = (endpoint: Endpoint, role: "source" | "sink", typed: boolean): string => {
         if (endpoint.type === "machine") return `machine:${endpoint.id}`;
         if (endpoint.type === "belt") return role === "sink" ? "belt" : `belt:${config_belt_keys.get(endpoint.id) ?? endpoint.id}`;
-        return "chest";
+        return chestKey(config_chest_types, endpoint.id, typed);
     };
-    const recordedEndpointKey = (endpoint: Endpoint, role: "source" | "sink", machine_mapping: Map<number, number>): string => {
+    const recordedEndpointKey = (endpoint: Endpoint, role: "source" | "sink", machine_mapping: Map<number, number>, typed: boolean): string => {
         if (endpoint.type === "machine") return `machine:${machine_mapping.get(endpoint.id) ?? `unmapped-${endpoint.id}`}`;
         if (endpoint.type === "belt") return role === "sink" ? "belt" : `belt:${recorded_belt_keys.get(endpoint.id) ?? endpoint.id}`;
-        return "chest";
+        return chestKey(recorded_chest_types, endpoint.id, typed);
     };
 
-    const config_keys = config_inserters.map(ins => ({
+    const configKeys = (typed: boolean) => config_inserters.map(ins => ({
         id: ins.id,
-        key: `${configEndpointKey(ins.source, "source")}>${configEndpointKey(ins.sink, "sink")}#${filterKey(ins.filters)}`,
-        unfiltered_key: `${configEndpointKey(ins.source, "source")}>${configEndpointKey(ins.sink, "sink")}`,
+        key: `${configEndpointKey(ins.source, "source", typed)}>${configEndpointKey(ins.sink, "sink", typed)}#${filterKey(ins.filters)}`,
+        unfiltered_key: `${configEndpointKey(ins.source, "source", typed)}>${configEndpointKey(ins.sink, "sink", typed)}`,
         has_filters: (ins.filters ?? []).length > 0,
     }));
-    const recordedEndpoints = (ins: Recording["inserters"][number], mapping: Map<number, number>): string =>
-        `${recordedEndpointKey(ins.source, "source", mapping)}>${recordedEndpointKey(ins.sink, "sink", mapping)}`;
-    const recordedKey = (ins: Recording["inserters"][number], mapping: Map<number, number>): string => {
+    const config_keys_by_typing = { typed: configKeys(true), untyped: configKeys(false) };
+    const recordedEndpoints = (ins: Recording["inserters"][number], mapping: Map<number, number>, typed: boolean): string =>
+        `${recordedEndpointKey(ins.source, "source", mapping, typed)}>${recordedEndpointKey(ins.sink, "sink", mapping, typed)}`;
+    const recordedKey = (ins: Recording["inserters"][number], mapping: Map<number, number>, typed: boolean): string => {
         const filters = recording.config.inserters[ins.id - 1]?.filters;
-        return `${recordedEndpoints(ins, mapping)}#${filterKey(filters)}`;
+        return `${recordedEndpoints(ins, mapping, typed)}#${filterKey(filters)}`;
     };
 
     const assignInserters = (mapping: Map<number, number>): Map<number, number> => {
         const used = new Set<number>();
         const assigned = new Map<number, number>();
-        for (const ins of recording.inserters) {
-            const key = recordedKey(ins, mapping);
-            const match = config_keys.find(c => c.key === key && !used.has(c.id));
-            if (match) {
-                used.add(match.id);
-                assigned.set(ins.id, match.id);
+        // with the chests' types first, so that an inserter from a car is not taken for one from an infinity chest
+        for (const typed of [true, false]) {
+            const config_keys = typed ? config_keys_by_typing.typed : config_keys_by_typing.untyped;
+            for (const ins of recording.inserters) {
+                if (assigned.has(ins.id)) continue;
+                const key = recordedKey(ins, mapping, typed);
+                const match = config_keys.find(c => c.key === key && !used.has(c.id));
+                if (match) {
+                    used.add(match.id);
+                    assigned.set(ins.id, match.id);
+                }
             }
-        }
-        // config inserters without filters pick up whatever their source offers, so match them on endpoints only
-        for (const ins of recording.inserters) {
-            if (assigned.has(ins.id)) continue;
-            const endpoints = recordedEndpoints(ins, mapping);
-            const match = config_keys.find(c => !c.has_filters && c.unfiltered_key === endpoints && !used.has(c.id));
-            if (match) {
-                used.add(match.id);
-                assigned.set(ins.id, match.id);
+            // config inserters without filters pick up whatever their source offers, so match them on endpoints only
+            for (const ins of recording.inserters) {
+                if (assigned.has(ins.id)) continue;
+                const endpoints = recordedEndpoints(ins, mapping, typed);
+                const match = config_keys.find(c => !c.has_filters && c.unfiltered_key === endpoints && !used.has(c.id));
+                if (match) {
+                    used.add(match.id);
+                    assigned.set(ins.id, match.id);
+                }
             }
-        }
-        // a build's inserter often has no filters set where the config names what it takes: with no filtered
-        // inserter on the same endpoints left to take, it is that config inserter
-        for (const ins of recording.inserters) {
-            if (assigned.has(ins.id)) continue;
-            const recorded_filters = recording.config.inserters[ins.id - 1]?.filters ?? [];
-            if (recorded_filters.length > 0) continue;
-            const endpoints = recordedEndpoints(ins, mapping);
-            const match = config_keys.find(c => c.has_filters && c.unfiltered_key === endpoints && !used.has(c.id));
-            if (match) {
-                used.add(match.id);
-                assigned.set(ins.id, match.id);
+            // a build's inserter often has no filters set where the config names what it takes: with no filtered
+            // inserter on the same endpoints left to take, it is that config inserter
+            for (const ins of recording.inserters) {
+                if (assigned.has(ins.id)) continue;
+                const recorded_filters = recording.config.inserters[ins.id - 1]?.filters ?? [];
+                if (recorded_filters.length > 0) continue;
+                const endpoints = recordedEndpoints(ins, mapping, typed);
+                const match = config_keys.find(c => c.has_filters && c.unfiltered_key === endpoints && !used.has(c.id));
+                if (match) {
+                    used.add(match.id);
+                    assigned.set(ins.id, match.id);
+                }
             }
         }
         return assigned;

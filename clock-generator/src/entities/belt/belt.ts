@@ -44,9 +44,16 @@ function secondsPerTile(belt_speed: BeltSpeed): Fraction {
     return fraction(1).divide(tiles_per_second)
 }
 
+const ticks_per_tile_cache = new Map<BeltSpeed, Fraction>();
+
+/** A belt speed has one answer, and an inserter that drops on a belt asks for it on every attempt of every tick */
 function ticksPerTile(belt_speed: BeltSpeed): Fraction {
-    const seconds_per_tile = secondsPerTile(belt_speed);
-    return seconds_per_tile.multiply(60);
+    let ticks = ticks_per_tile_cache.get(belt_speed);
+    if (ticks === undefined) {
+        ticks = secondsPerTile(belt_speed).multiply(60);
+        ticks_per_tile_cache.set(belt_speed, ticks);
+    }
+    return ticks;
 }
 
 function ticksPerDrop(belt_speed: BeltSpeed): Fraction {

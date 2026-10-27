@@ -56,6 +56,17 @@ const RECORDED_TICKS = 36_000;
  */
 const WAKE_UPS_TOLERANCE = 0.25;
 /**
+ * Agricultural science: an inserter that brings nutrients to an egg biochamber shows "waiting for source items" in the
+ * first tick of its window, and in the next the nutrient biochamber it takes from, at its output block, puts out the
+ * products it holds as the inserter takes. The game counts a wake there, the simulator does not (docs/simulator.md,
+ * "Products a machine cannot put out"). The gap was inside the tolerance while the inserters into the science biochamber
+ * were always on (3,187.9 a minute in the game against 2,673.8 on the same clock, 2026-10-24), and is not since they
+ * have windows.
+ */
+const AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN = "the game counts a wake of the inserters that bring nutrients to the egg biochambers in the tick after "
+    + "their window opens, where the nutrient biochamber puts out the products it holds as they take, and the simulator does not: "
+    + "134.3 a minute each in the game against 36.6 in the simulator, 1,791.4 in all against 1,257.8 (1,821.3 with belts backed up; 2026-10-24)";
+/**
  * Places in the period the simulator starts the clock at to find the steady state the game settled into, when the
  * wake-ups of its own run are not the game's. Batched swings on utility science makes 192 a period at 10.7, 26.8 or
  * 32.1 wake-ups a minute depending on where the clock starts; the game shows 26.8, as the generator's run does from the staged start (it counted 10.7 from the prepared build).
@@ -109,23 +120,24 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
         settle_ticks: 4800,
-        // Recorded 2026-10-16 (swings-2 is the selected clock): 800 in every period but two in a row, one hand (16) short each
-        // time, in periods 8 and 9 of the settling after the staged start; the same clock in the game a run before gave the
-        // same two, and the batched clock holds its 400 in all 119 periods of a run of 57,600 ticks. The simulator has such a
-        // one-hand dip too, in other periods (its 2nd period after the first third), and Inserter 11 moves 371.33 items a
-        // period in the game against 368.00 in the simulator.
+        // Recorded 2026-10-24 on batched swings (5 output swings per cycle) with windows on the two inserters that take eggs
+        // out of the loop into the science biochamber (ticks 23 to 46 of every 96): 400 in every one of 74 periods after the
+        // staged start, and the simulator moves what the game moved through every inserter and machine; the same clock with
+        // them always on made the same that day, and so did the family cuts on the new one (64 periods, then back at 400
+        // from the second period after each cut). The 2-swing clock selected before (recorded 2026-10-16) was one hand short
+        // in periods 8 and 9 of the settling after the staged start.
         staged_start: {
-            dips: [{ start: 7680, items: 784 }, { start: 8640, items: 784 }],
-            open_issues: [
-                "Inserter 11 (belt 1 -> machine 5) moves 371.33 items a period in the game and 368.00 in the simulator.",
-                "The simulator put out something other than the expected 800 items in 1 of 18 clock periods (2: 784).",
-            ],
+            dips: [],
+            open_issues: [],
         },
+        wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
     // its clocks have no belt pickup slack: batched swings has room for a hand of fuel in the windows of the three
-    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Since the rules of
-    // issue 152 (2026-10-14) batched swings gets back from every loss and is selected; from 2026-10-10 until then the
-    // clock with 2 output swings per cycle was, since batched swings did not get back from a loss of nutrients
+    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Batched swings is
+    // selected, the same clock as with belts that move (recorded 2026-10-24: 400 in every one of 74 periods, no
+    // difference between the game and the simulator); the 2-swing clock was while a loss of nutrients broke batched
+    // swings (2026-10-10 to 2026-10-14), and again while its nutrients trials dipped a hand late in their 40 periods,
+    // until such a trial ran on (2026-10-24)
     "agricultural science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE,
@@ -133,11 +145,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 300,
         settle_ticks: 4800,
         backed_up_belts: true,
-        moved_open: {
-            inserter_ids: [3, 4, 6, 7],
-            why: "under the 2-swing clock the inserters that bring nutrients to the egg biochambers move 979.89 nutrients a period in "
-                + "the game and 980.85 in the simulator, of which 800 packs come out in both",
-        },
+        wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
     "automation science": {
         scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-scaffold.txt"),
@@ -223,9 +231,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 2400,
         backed_up_belts: true,
-        wake_ups_open: "the clock leaves five inserters enabled its whole period of 36 ticks (the plates, gear plates and circuits), and the game "
-            + "wakes them more often than the simulator, for a reason not yet found: 8,678.6 wake-ups a minute against 5,103.8 to 5,268.8 "
-            + "by where the clock starts, on 2026-10-21. Without the switch the game and the simulator agree: ",
     },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
     // copies. Its clock of 792 ticks takes two periods more than the others to settle.
@@ -418,7 +423,7 @@ afterAll(async () => {
     }
 }, 60_000);
 
-/** The clocks the values of three builds belong to (scaffold-recordings-clock-pins.json); src/crafting/scaffold-recordings-clock.generation.test.ts checks the selection */
+/** The clocks the values of three builds belong to (scaffold-recordings-clock-pins.json); the generation tests check the selection (src/crafting/scaffold-recordings-clock.generation.test.ts) */
 const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {

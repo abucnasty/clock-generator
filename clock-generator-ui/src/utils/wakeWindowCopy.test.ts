@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { AlwaysOnReason } from 'clock-generator/browser';
 import * as copy from './wakeWindowCopy';
 import {
     MOSTLY_ON_SHARE,
@@ -6,6 +7,7 @@ import {
     WAKE_UP_DEFINITION,
     WAKE_UPS_COLUMN_HELP,
     WAKE_WINDOW_DEFINITION,
+    alwaysOnText,
     lengthText,
     onForText,
     periodText,
@@ -92,6 +94,44 @@ describe('rowSummary', () => {
         const spans = Array.from({ length: 7 }, (_, index) => ({ start: index * 50, end: index * 50 + 9 }));
         const text = rowSummary(row({ windows: windowsOf(spans, 600) }), 600);
         expect(text).toContain('7 wake windows: ticks 0–9, 50–59, 100–109, 150–159 and 3 more.');
+    });
+
+    it('names why a row is always on, in the engine\'s words where it gives a reason, and the old words where it gives none', () => {
+        const on = (alwaysOnReason?: AlwaysOnReason) => rowSummary(row({ mode: 'always-on', windows: [], onShare: 1, alwaysOnReason }), 600);
+        expect(on()).toContain('Always on: not on the clock. On for 100%');
+        expect(on({ kind: 'busy', period_ticks: 24 }))
+            .toContain('Always on: its swings fill the whole clock period (24 ticks), so a wake window would never switch it off. On for 100%');
+        expect(on({ kind: 'busy', period_ticks: 1 })).toContain('(1 tick)');
+    });
+
+    it('has a sentence for every reason the engine gives', () => {
+        const whys: Extract<AlwaysOnReason, { kind: 'chest-drill' }>['why'][] = [
+            { kind: 'other-drill', drill_number: 2, item: 'iron-ore' },
+            { kind: 'filler', inserter_number: 5, item: 'iron-ore' },
+            { kind: 'no-taker', item: 'iron-ore' },
+            { kind: 'taker-without-window', inserter_number: 1, item: 'iron-ore' },
+            { kind: 'no-take', item: 'iron-ore' },
+            { kind: 'no-room', item: 'iron-ore' },
+            { kind: 'needs-whole-period' },
+            { kind: 'would-cover-period' },
+            { kind: 'fallback' },
+            { kind: 'windows-did-not-hold' },
+            { kind: 'no-window' },
+        ];
+        const reasons: AlwaysOnReason[] = [
+            { kind: 'enable-rule' }, { kind: 'loop' }, { kind: 'from-loop' }, { kind: 'busy', period_ticks: 24 }, { kind: 'no-swing' },
+            ...whys.map(why => ({ kind: 'chest-drill' as const, why })),
+        ];
+        const texts = reasons.map(alwaysOnText);
+        for (const text of texts) {
+            expect(text).toMatch(/^Always on: [a-z]/);
+            expect(text).not.toMatch(BAD_OUTPUT);
+            // the game's words, not the engine's: no item ids, no internal kinds
+            expect(text).not.toMatch(/iron-ore|chest-drill|enable-rule|from-loop|no-swing|undefined/);
+        }
+        expect(new Set(texts).size).toBe(reasons.length);
+        expect(texts[0]).toBe('Always on: its enable rule is Always on');
+        expect(texts[5]).toBe('Always on: drill 2 fills the same chest with the same item, so the clock cannot time this drill on its own');
     });
 
     it('reads the rows without bars', () => {

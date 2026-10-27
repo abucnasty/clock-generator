@@ -6,12 +6,13 @@ import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
-import type { SpareTime } from "./why-not-stable";
+import { notTriedSentence, type SpareTime } from "./why-not-stable";
 import { FactorioDataService } from "../data";
 import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPickups } from "../config/pickup-calibration";
 import type { Config } from "../config/schema";
 import { describeSideLoadedDrop, SIDE_LOADED_DROP_ADVICE, SIDE_LOADED_DROP_TITLE, sideLoadedDrops } from "../config/side-loaded-drop";
 import { chestName } from "../common/entity-types";
+import { chestDrillBecause } from "./chest-drill-windows";
 import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/drop-spacing";
 import { lanesExactlyFull, lanesExactlyFullNote } from "../config/lane-capacity-validator";
 
@@ -364,7 +365,7 @@ export function startDependenceInsight(note: string, dependence: StartDependence
 export function backpressureLossInsight(verdict: BackpressureLossVerdict, expected_output_items: number): ClockInsight {
     const what = verdict.broken_by.length > 0
         ? `This clock moves its ${expected_output_items} items every clock period for as long as nothing runs out and nothing backs up. `
-            + `It does not get back to them after a loss: ${verdict.broken_by.join("; ")}.`
+            + `It does not get back to them after a loss: ${verdict.broken_by.join("; ")}.${notTriedSentence(verdict.not_tried)}`
         : `The run the losses are tried on did not hold ${expected_output_items} items a clock period with nothing cut, so no loss says `
             + "anything about this clock.";
     return {
@@ -516,7 +517,7 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
         what: drills.map(drill => {
             const into = `Drill ${drill.drill_id} drops ${drill.item.replace(/-/g, " ")} into ${chestName(drill.chest_type, drill.chest_id)}`;
             if (drill.enabled_ticks === null) {
-                return `${into} and is always enabled: ${drill.always_enabled_because}.`;
+                return `${into} and is always enabled: ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because)}.`;
             }
             const ticks = Number(drill.enabled_ticks.toFixed(2));
             return `${into} and is enabled ${ticks} tick${ticks === 1 ? "" : "s"} of the ${period}-tick period, in ${drill.window_count} window${drill.window_count === 1 ? "" : "s"}.`;
