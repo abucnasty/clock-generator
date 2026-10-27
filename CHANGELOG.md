@@ -11,36 +11,24 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.23.0] - Unreleased
 
 ### Added
-- A build whose planned clock period is too long to check, such as one with large buffer chests between machines, now gets a clock: Small batches moves a few hands at a time and is checked for its margin, its starts and recovery after a loss, as every clock is.
-- Machine summaries show every recipe result, its production rate, and its direct or inserter output routes.
+- Recyclers: builds with a recycler now get a clock when its results go into a container (such as an ore voider; Target Output counts items made or destroyed), straight into another machine, or come by small chances (scrap into a rocket silo). Sidecar 0.15.0 exports where a recycler's results go.
+- Small batches: builds whose planned clock is too long to check (large buffer chests between machines) or where no planned clock holds get a clock that moves a few hands at a time.
+- Outputs into infinity chests that remove items are checked by their rate over the cycle, so builds without buffer chests before their sinks get a clock.
 - Clock inputs that pick up from supported belt bends.
-- A recycler can put its results straight into another machine, which it fills as a mining drill does, past the machine's insertion limit.
-- The list of a clock's inserters and drills says why each one the clock leaves always on is: its swings fill the clock period, it is part of a loop of machines, its enable rule is Always on, or nothing can time a drill into a chest.
-- A build whose recycler puts its results into a container, such as an ore voider, now gets a clock: Target Output's Counts field says whether the rate counts items made or items destroyed, and a recycler's row has a Results into field for that container.
-- A recycler whose results come by small chances, such as scrap into a rocket silo, now gets a clock: each inserter that takes a result out opens once a period, in turn, for what that result gives; an inserter that takes several of its results is refused, since it can stop the build for good.
+- Machine details: every recipe result with its rate and output routes, tabs, a compact inserter editor, and a repair that adds a missing output chest.
 
 ### Changed
-- Clocks need fewer decider combinators: inserters with the same wake windows share one decider whatever they carry, and a clock with shared wake windows is offered next to the separate one; the list of clocks shows each one's decider count.
-- In a clock whose machines take turns in groups, the combinators stand together by group, a gap between the groups, each group in the order of its turn, and the first combinator of each group says its turn.
-- Fewer clocks that cannot hold the rate are listed: the clock with three more output swings per cycle than planned is left out unless that count is a multiple of the planned one.
-- A build whose clock period runs to many thousands of ticks generates much faster.
-- A chain of machines that feed each other gets the clock with the fewest wake-ups among those that hold and recover, not the first that holds.
-- A clock that falls short only late in the 40 periods it has to get back after a loss is followed on, and counts as recovered once 40 periods at its rate follow, so some builds get a clock with fewer wake-ups.
-- A build whose items spoil is checked for losses shorter than three quarters of its shortest spoil time, since a longer one spoils it in the game whatever the clock, and Recovers says the limit.
-- A clock that does not get back after a loss is not tried on the losses after it, which the result shows as "Not tried"; builds with such clocks generate faster.
-- Inserters that take from a loop of machines into another machine get wake windows where the clock still holds and recovers with them, so builds with such a loop need far fewer wake-ups.
-- Where a loss is told, such as "military science pack is not taken away", the result names the item as the game does, not by its internal id, and a clock named Fewest deciders says what that means.
-- Inserters that take from one machine are served in the order the game uses, the first taking a full hand and the next what is left, and a clock counts as stable only if it holds and recovers whichever of them the game serves first.
-- Where inserters take turns at one machine, the inserter that empties each machine they fill, into a chest or onto a belt, moves with that machine's turn, so each of them is emptied at the same point of its turn and none gets less than the others.
-- A clock is not offered where a machine filled in turn would still be too full of its product to take ingredients when its turn opens, since that turn would bring it nothing; the log under Developer tools names the machine and the amount.
+- Fewer deciders (inserters with the same windows share one) and fewer wake-ups on many builds (chains, loops, inserters taking turns at one machine).
+- Inserters that take from one machine are served in the game's order; a clock counts as stable only if it holds whichever the game serves first.
+- Recovery is checked as the game allows (losses shorter than spoil times; a clock that fails one loss is not tried on the rest) and shown as such.
+- Clearer results: why an inserter is always on, item names in losses, grouped combinators, Fewest deciders explained; long-period builds generate much faster.
+- Captures from before belt bends must be captured again where they pick up from a bend.
 
 ### Removed
-- Clocks for a shorter period, labelled "shorter period (… not in the period)", are no longer offered: where one was selected, batched swings or shifted swings are now (the swing plan's "Exclude from LCM" leaves an ingredient out of the period by hand).
+- Clocks for a shorter period ("not in the period").
 
 ### Fixed
-- Buffered outputs are checked where their items leave the build, so transfers into a buffer no longer make a working clock appear unstable.
-- A recipe whose main product comes only by chance, such as uranium processing or asteroid reprocessing, is planned at what a craft gives on average, not as if every craft gave it.
-- The timeline of a clock shows a period after the build has settled, the one its long run is judged on, and says which; a build that takes a while to start no longer looks stalled the whole period.
+- Buffered outputs no longer make a working clock look unstable; chance-only products are planned at their average; the timeline shows a settled period.
 
 ## [0.22.0] - 2026-10-24
 
