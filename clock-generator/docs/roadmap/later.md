@@ -1,6 +1,6 @@
 # Later: ships when ready
 
-This is the list of planned work that has no release of its own: each package ships when it is ready, in the release then in flight, and leaves this page when it ships. Live status is on the Real Boy board, https://github.com/users/abucnasty/projects/2; this page does not follow every merge. The milestones and follow-ups it names are in [ROADMAP.md](../ROADMAP.md), and the themed release is in [0.24.0.md](0.24.0.md).
+This is the list of planned work that has no release of its own: each package ships when it is ready, in the release then in flight, and leaves this page when it ships. Live status is on the Real Boy board, https://github.com/users/abucnasty/projects/2; this page does not follow every merge. The milestones and follow-ups it names are in [ROADMAP.md](../ROADMAP.md), and the themed releases are in [0.24.0.md](0.24.0.md), [0.25.0.md](0.25.0.md) and [0.26.0.md](0.26.0.md).
 
 The goals keep their order ([GOALS.md](../../GOALS.md)): goal 1, the clock meets its target exactly and recovers; goal 2, the fewest wake-ups. Model corrections are reported apart from search-only changes, and search-only changes keep every result identical. The time spent searching at generation does not grow ([working rules](../working-rules.md), rule 6).
 
@@ -27,6 +27,10 @@ Packages are named `later/<code>` and come in no fixed order.
 ### Spoilage-removal inserters
 
 **`later/f6`** delivers follow-up F6: spoilage-removal inserters clocked from the spoil time. The simulator has no spoilage ([game-data-and-scope.md](../game-data-and-scope.md)). Since 0.23.0 a build whose items spoil is tried with losses shorter than three quarters of its shortest spoil time ([stability.md](../stability.md)); this package would add the inserters that remove the spoilage.
+
+### Out of scope for now
+
+Not scheduled: placing the results of a drill or of a recycler onto a belt (today only chests and machines are targets).
 
 ## Decisions before they start
 
