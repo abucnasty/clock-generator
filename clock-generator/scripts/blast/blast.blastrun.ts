@@ -1,9 +1,10 @@
 // The blast radius: generate every sample config as it is (its belts moving or backed up as the config says; nothing makes
 // a copy with the other supply) and, when BLAST_GROUPS asks for them, every pickup, over-hood, front and blocked-output
 // fixture and every container config (each has a generation test of its own that runs in CI), and hash every alternative's
-// exported clock as over-hood-clock.generation.test.ts does
+// exported clock as over-hood-clock-<tier>.generation.test.ts do
 // (clock_sha256: sha256 of its identity, clockIdentity of subtick ?? result: the blueprint without its text or metadata,
-// and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description); the samples that exist to be refused (ExpectedRefusals in
+// and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description;
+// results_sha256 and results: the digest of what the clock hash leaves out, see blast.digest.ts); the samples that exist to be refused (ExpectedRefusals in
 // src/config/config-paths.ts) are checked instead: each must fail with its error, as it is and backed up. Run by
 // scripts/blast/blast.sh, which installs it into the worktree's tests/game/builds/.scratch/ (gitignored), where its
 // imports resolve, with vitest.scratch-dist.config.ts (the engine from dist/); it is not run from scripts/.
@@ -32,10 +33,12 @@ import { loadConfigFromFile } from '../../../../src/config/loader';
 import * as configPaths from '../../../../src/config/config-paths';
 import { pickupClockConfig, pickupClockSpeedCases } from '../pickup-clock-speed-coverage';
 import { overHoodClockCases, overHoodClockConfig } from '../over-hood-clock-fixtures';
+import { digestAlternative, digestJob, type ExpandHistory } from './blast.digest';
 
 /** The job file format; blast.sh puts it in the cache key, so a change here never hits an older cache entry. 2: clock_sha256
- * is the hash of the clock's identity, without its text (1 hashed the text too) */
-const FORMAT = 't1-blast-2';
+ * is the hash of the clock's identity, without its text (1 hashed the text too). 3: results_sha256 and results, the digest
+ * of what the clock hash leaves out, for each alternative and for the job */
+const FORMAT = 't1-blast-3';
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const OUT = process.env.BLAST_OUT;
 const CLAIMS = process.env.BLAST_CLAIMS || (OUT && path.join(OUT, '.claims'));
@@ -172,8 +175,16 @@ function descriptionsCut(result: any): number | null {
             .filter((entity: any) => wasCut(entity.player_description ?? '')).length;
 }
 
+/** expandStateTransitionHistory, where the build has it (a worktree from before the sealed histories has not, and its histories are plain) */
+async function historyExpander(): Promise<ExpandHistory | undefined> {
+    const file = path.resolve(__dirname, '../../../..', 'src', 'crafting', 'sequence', 'compact-history.ts');
+    if (!fs.existsSync(file)) return undefined;
+    // a path, not a literal, so that a worktree without the file neither resolves nor typechecks the import
+    return (await import(file)).expandStateTransitionHistory;
+}
+
 /** Every alternative of a config, each exported clock hashed, and the selected one */
-function clocksOf(config: any) {
+function clocksOf(config: any, expand: ExpandHistory | undefined) {
     const generated = generateClockAlternatives(config, { logger: quiet });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
@@ -183,11 +194,16 @@ function clocksOf(config: any) {
             supply: a.belt?.kind ?? null, period: a.result.subtick?.clock.period_ticks ?? a.result.simulation_duration.ticks,
             wake_ups: a.assessment.wake_ups?.wake_ups_per_minute ?? a.result.stability_check?.as_built?.wake_ups?.wake_ups_per_minute ?? null,
             clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), descriptions_cut: descriptionsCut(a.result), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
+            ...digestAlternative(a, expand),
         };
     };
+    const alternatives = generated.alternatives.map(summary);
+    const job_results = digestJob(generated);
+    // the job's own digest: why_not_stable, the selected index and the ids, then every alternative's, in order
+    const results_sha256 = sha([job_results.results_sha256, ...alternatives.map(a => a.results_sha256)]);
     return {
-        selected_index: generated.selected_index,
-        selected: summary(generated.alternatives[generated.selected_index]), alternatives: generated.alternatives.map(summary),
+        selected_index: generated.selected_index, results_sha256, job_results,
+        selected: alternatives[generated.selected_index], alternatives,
     };
 }
 
@@ -209,6 +225,7 @@ test.skipIf(!OUT)('blast', async () => {
     // one job per process: blast.sh writes the job list first, and each process would build every config again
     if (!ONE || MODE === 'jobs' || !fs.existsSync(path.join(OUT!, '_jobs.json'))) await writeJobList(jobs);
     if (MODE === 'jobs') return;
+    const expand = await historyExpander();
     const recorder = functionRecorder();
     if (recorder) {
         // what ran before the first job: the engine loading and the job list. Every job depends on it, so it is a record of its own
@@ -225,7 +242,7 @@ test.skipIf(!OUT)('blast', async () => {
         let body: any;
         try {
             const config = await job.config();
-            body = { group: job.group, name: job.name, ...(job.refusal ? refusalCheck(config, job.refusal) : clocksOf(config)) };
+            body = { group: job.group, name: job.name, ...(job.refusal ? refusalCheck(config, job.refusal) : clocksOf(config, expand)) };
         } catch (error: any) {
             body = { group: job.group, name: job.name, error: `${error?.name}: ${error?.message}` };
         }

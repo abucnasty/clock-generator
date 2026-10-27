@@ -18,11 +18,12 @@
 #   blast.sh store <worktree> <jobs-dir> --note <text>
 #                                           stores finished jobs (made elsewhere, on the same engine and job list) as
 #                                           the worktree's entry; jobs not in its list are left out and named
-#   blast.sh compare <before> <after> [--json f]   compare.py (folders or cache entries)
+#   blast.sh compare <before> <after> [--json f]   compare.py (folders or cache entries): the clocks, and the results digest
+#                                           (every job file's results_sha256: what the clock hash leaves out) per job and component
 #   blast.sh same <a> <b>                   whether two jobs folders (or cache entries) hold the same results, job by job
 #   blast.sh list                           the cache's entries
 #
-# The worktree may be another checkout than this script's: blast.blastrun.ts, blast.recorder.ts and the two vitest configs beside this
+# The worktree may be another checkout than this script's: blast.blastrun.ts, blast.digest.ts, blast.recorder.ts and the two vitest configs beside this
 # script are copied into its tests/game/builds/.scratch/ (gitignored) and run there, so a worktree from before these
 # scripts can be measured too. The key's engine half is key.py's; its jobs half the job list's hash.
 #
@@ -81,6 +82,7 @@ worktree() {
   git -C "$W" check-ignore -q "$E/$SCRATCH/x.ts" || die "$E/$SCRATCH is not gitignored in this worktree; refusing to write there"
   mkdir -p "$E/$SCRATCH"
   cp "$HERE/blast.blastrun.ts" "$E/$TEST" && cp "$HERE/blast.recorder.ts" "$E/$SCRATCH/blast.recorder.ts" \
+    && cp "$HERE/blast.digest.ts" "$E/$SCRATCH/blast.digest.ts" \
     && cp "$HERE/vitest.src.config.ts" "$E/$SCRATCH/vitest.scratch-src.config.ts" \
     && cp "$HERE/vitest.dist.config.ts" "$E/$SCRATCH/vitest.scratch-dist.config.ts" || die "could not copy the blast test into $E/$SCRATCH"
 }
