@@ -141,7 +141,9 @@ the generator's verifier fails the two normal moving underground clocks from, [3
 that start.
 
 The portable `belt-pickup-clock.generation.test.ts` checks the selected periods, verdicts and supply against
-these native controls. A build whose warm recording holds while the generator finds a failing cold lane phase has
+these native controls for the nine fixtures of `belt-pickup-clock-cases.ts`, each the only one to take its path through
+the generator; `belt-pickup-clock-mechanics.test.ts` checks the recorded figures of all 48 against the simulator without
+generating. A build whose warm recording holds while the generator finds a failing cold lane phase has
 to fail at the pinned phase, and one whose recording holds and recovers while the generator says "no recovery" has to
 fail every loss it fails from its pinned lane phase. A measured shortfall on any build still fails, and where a clock was recorded under
 its own supply, a baseline miss has to make the generator's own holds verdict false. Fresh generation also

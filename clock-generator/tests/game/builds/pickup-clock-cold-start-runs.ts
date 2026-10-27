@@ -2,6 +2,7 @@ import {expect} from "vitest";
 import {ClockAlternative} from "../../../src/crafting/generate-blueprint";
 import {clockHash, readControls} from "./clock-controls";
 import {reversedDeciders} from "./reversed-deciders";
+import {BELT_PICKUP_GENERATED} from "./belt-pickup-clock-cases";
 
 interface ColdStartRuns {
     clocks: Record<string, {clock_sha256: string}>;
@@ -11,13 +12,15 @@ const coldStart = readControls<{cold_start: ColdStartRuns}>("pickup-clock-start-
 
 /**
  * The name of the belt-pickup-clock.generation.test.ts variant (`electromagnetic-<tier>-<geometry>-<supply>`) whose
- * generation a cold-start run names its clock from, or undefined where it does not share one. A run of a side pickup
+ * generation a cold-start run names its clock from, or undefined where it does not share one: that test generates only
+ * some of the variants (belt-pickup-clock-cases.ts), and the cold-start generation tests generate the others. A run of a side pickup
  * fixture on near lane 1 that the generator's selection was recorded on (`rotate` 0) is the selection for exactly the
  * config that variant is generated from.
  */
 export function beltPickupVariantOf(run: {case: string; rotate: number}): string | undefined {
     const fixture = run.rotate === 0 ? /^(\w+)-(.+)-(moving|backed)-l1$/.exec(run.case) : null;
-    return fixture ? `electromagnetic-${fixture[1]}-${fixture[2]}-${fixture[3]}` : undefined;
+    const variant = fixture ? `electromagnetic-${fixture[1]}-${fixture[2]}-${fixture[3]}` : undefined;
+    return variant !== undefined && BELT_PICKUP_GENERATED.has(variant) ? variant : undefined;
 }
 
 /**

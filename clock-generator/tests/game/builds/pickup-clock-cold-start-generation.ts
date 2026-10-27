@@ -139,9 +139,9 @@ export function pickupClockColdStartTestsAt(tier: FixtureBeltSpeed["name"]) {
     // beginning (`rotate` 0), the pinned windows built into a clock for the others, with the deciders in the mirror order where
     // the run was. The game test checks this hash against the clock it builds; nothing else did, so a selection that moved
     // left these runs pinned to the old one (#275).
-    // The runs of a side pickup fixture on near lane 1 name the selection of a config that the belt-pickup-clock generation
-    // tests (belt-pickup-clock-<tier>.generation.test.ts) generate too; they are checked there, on that generation
-    // (expectColdStartRunsOnSelection).
+    // The runs of a side pickup fixture on near lane 1 name the selection of a config. The few of those configs that the
+    // belt-pickup-clock generation test (belt-pickup-clock.generation.test.ts, belt-pickup-clock-cases.ts) generates are checked
+    // there, on that generation (expectColdStartRunsOnSelection); this file generates the others.
     describe("cold start runs name the clock they were recorded on", () => {
         const selected = new Map<string, Promise<{blueprint: any; schedule: any}>>();
         // the runs recorded on the clock planned with the belts moving name a clock no longer made (#460)
