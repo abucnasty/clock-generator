@@ -450,8 +450,6 @@ export interface RunOptions {
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
 export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     simulation_context: SimulationContext;
-    /** The build as it runs: every inserter and drill on its enable control */
-    new_simulation_context: SimulationContext;
     output_inserter_ids: Set<string>;
     swing_counts: EntityTransferCountMap;
     crafting_shares: Map<string, number>;
@@ -544,10 +542,12 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, crafting_cycle_plan.entity_transfer_map,
         transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
     const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger, terminal_branches);
+    // the run is over: the contexts it hands back keep their machines' states, and no longer the plugins that fed the
+    // histories (which would keep the raw transfers and transitions of the run alive for as long as the run is kept)
+    detachHistoryPlugins(build, simulation_context, controlled.new_simulation_context);
 
     return {
         simulation_context: build.simulation_context,
-        new_simulation_context: controlled.new_simulation_context,
         target_production_rate: planned_cycle.target_production_rate,
         output_machine_state_machines: planned_cycle.output_machine_state_machines,
         output_inserters: planned_cycle.output_inserters,
@@ -596,6 +596,15 @@ interface RecordedBuild {
 /** Every plugin on the state machines of a simulation */
 function pluginsOf(context: SimulationContext): ModePlugin<any>[] {
     return [...context.inserters, ...context.machines, ...context.drills].flatMap((it): ModePlugin<any>[] => it.getPlugins());
+}
+
+/** Takes the plugins that only feed the two histories off every state machine of these contexts */
+function detachHistoryPlugins(build: RecordedBuild, ...contexts: SimulationContext[]): void {
+    for (const context of contexts) {
+        for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
+            state_machine.removePlugins(build.history_plugins);
+        }
+    }
 }
 
 /** The simulation of a config, with the debug, transfer and state plugins on every entity; nothing is recorded yet */
@@ -900,9 +909,7 @@ export function coldControlledTrialBuild(
     const build = coldBuildOf(config, options, DebugSettingsProvider.mutable(), logger);
     const controlled = withEnableControls(config, build, crafting_cycle_plan, recipe_lcm, logger);
     const context = controlled.new_simulation_context;
-    for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
-        state_machine.removePlugins(build.history_plugins);
-    }
+    detachHistoryPlugins(build, context);
     controlled.resettable_registry.resetAll(true);
     return context;
 }
@@ -1182,9 +1189,7 @@ function backpressureLossOf(
     build.state_transition_history.recording = false;
     // so the plugins that feed them have nothing to do: a trial ticks a few hundred thousand times
     const trial_context = controlled.new_simulation_context;
-    for (const state_machine of [...trial_context.inserters, ...trial_context.machines, ...trial_context.drills]) {
-        state_machine.removePlugins(build.history_plugins);
-    }
+    detachHistoryPlugins(build, trial_context);
     const loss_period = options.backpressure_loss.period_ticks;
     const repeat = subtickClockForPeriod(loss_period);
     const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
