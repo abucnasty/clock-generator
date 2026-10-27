@@ -51,6 +51,3 @@ vite.config.ts.timestamp-*
 # copied from clock-generator/resources by `npm run dev` and `npm run build` in the UI
 clock-generator-ui/public/data-filtered.json
 clock-generator-ui/public/examples/
-
-# working files
-work/**/*

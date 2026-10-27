@@ -55,8 +55,7 @@
 # 2026-10-20; it is in no cache entry), BLAST_ONLY (run only; never cached), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
-# that lets one blast generate at a time on the machine, default <main checkout>/work/blast-cache/.generate.lock where
-# that folder exists, else <cache>/.generate.lock: a copy of this tool kept outside the repository takes the first).
+# that lets one blast generate at a time on the machine, default <cache>/.generate.lock).
 # Needs the worktree's own node_modules (scripts/worktree/setup.sh). N defaults to 4: each process is one vitest run
 # and one fork worker on one core; keep the machine's total in mind when other sessions run.
 set -u
@@ -65,7 +64,6 @@ HERE=$(cd "$(dirname "$0")" && pwd -P)
 MAIN=$(cd "$(git -C "$HERE" rev-parse --path-format=absolute --git-common-dir)/.." && pwd -P)
 CACHE=${BLAST_CACHE:-$MAIN/clock-generator/.scratch/blast-cache}
 if [ -n "${BLAST_LOCK:-}" ]; then LOCK=$BLAST_LOCK
-elif [ -d "$MAIN/work/blast-cache" ]; then LOCK=$MAIN/work/blast-cache/.generate.lock
 else LOCK=$CACHE/.generate.lock; fi
 SCRATCH=tests/game/builds/.scratch
 TEST=$SCRATCH/blast.blastrun.ts
