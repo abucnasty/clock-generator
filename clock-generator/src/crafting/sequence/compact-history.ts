@@ -2,7 +2,7 @@
 
 import { reasonText } from "../../control-logic/mode/reason-table";
 import type { EntityType } from "../../entities/entity-type";
-import { FACTORIO_STATE_NAMES, STATUS_NAMES } from "../../state/status-codes";
+import { FACTORIO_STATE_NAMES, STATUS_NAMES, factorioStateCode, statusCode } from "../../state/status-codes";
 import type { StateTransitionEntityType } from "./state-transition-history";
 import type { SealedEntityColumns } from "./transition-columns";
 
@@ -181,5 +181,35 @@ export function toPortable(history: CompactStateTransitionHistory): PortableStat
         }
         return { ...entity, columns: { ...entity.columns, reason: local } };
     });
+    return { total_duration_ticks: history.total_duration_ticks, entities, reasons };
+}
+
+/**
+ * The portable form of a serializable history, which reads back as it (the durations are worked out again from the
+ * ticks). For histories made by hand, as in the tests of the page.
+ */
+export function portableFromSerializable(history: SerializableStateTransitionHistory): PortableStateTransitionHistory {
+    const reasons: string[] = [];
+    const local_ids = new Map<string, number>();
+    const idOf = (reason: string) => {
+        let id = local_ids.get(reason);
+        if (id === undefined) {
+            id = reasons.length;
+            local_ids.set(reason, id);
+            reasons.push(reason);
+        }
+        return id;
+    };
+    const entities = history.entities.map(({ transitions, factorio_states, ...entity }) => ({
+        ...entity,
+        columns: {
+            tick: Int32Array.from(transitions, it => it.tick),
+            from: Uint8Array.from(transitions, it => statusCode(it.from_status)),
+            to: Uint8Array.from(transitions, it => statusCode(it.to_status)),
+            reason: Uint32Array.from(transitions, it => idOf(it.reason)),
+            state_tick: Int32Array.from(factorio_states, it => it.tick),
+            state: Uint8Array.from(factorio_states, it => factorioStateCode(it.state)),
+        },
+    }));
     return { total_duration_ticks: history.total_duration_ticks, entities, reasons };
 }

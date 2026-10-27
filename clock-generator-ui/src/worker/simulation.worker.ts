@@ -149,9 +149,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         blueprintString: clockGenerator.encodeBlueprintFileBrowser(clockGenerator.blueprintFileFor(result)),
         install: installFactsOf(result),
         transferHistory: result.serializable_transfer_history,
-        stateTransitionHistory: clockGenerator.expandStateTransitionHistory(result.serializable_state_transition_history),
-        clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,
-        clockOnlyStateTransitionHistory: result.clock_only_run ? clockGenerator.expandStateTransitionHistory(result.clock_only_run.state_transition_history) : null,
+        // the columns go as they are, copied by the structured clone (never transferred: alternatives share them)
+        stateTransitionHistory: clockGenerator.toPortable(result.serializable_state_transition_history),
         fuelView: fuelViewOf(result),
         clockWindows: result.clock_windows,
         alwaysOnReasons: result.always_on_reasons ?? {},

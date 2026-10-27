@@ -265,6 +265,7 @@ export {
     PortableStateTransitionHistory,
     expandStateTransitionHistory,
     factorioStatesOf,
+    portableFromSerializable,
     toPortable,
     transitionsOf,
 } from './crafting/sequence/compact-history';

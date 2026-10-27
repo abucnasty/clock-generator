@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { reasonId } from "../../control-logic/mode/reason-table";
 import { factorioStateCode, statusCode } from "../../state/status-codes";
-import { CompactStateTransitionHistory, expandStateTransitionHistory, factorioStatesOf, toPortable, transitionsOf } from "./compact-history";
+import { CompactStateTransitionHistory, expandStateTransitionHistory, factorioStatesOf, portableFromSerializable, toPortable, transitionsOf } from "./compact-history";
 import { EntityTransitionColumns } from "./transition-columns";
 
 const columnsOf = (transitions: [number, string, string, string][], states: [number, string][] = []) => {
@@ -74,5 +74,10 @@ describe("a compact history, read", () => {
         expect(toPortable(portable)).toBe(portable);
         expect(expandStateTransitionHistory(portable)).toEqual(expandStateTransitionHistory(history));
         expect(expandStateTransitionHistory(structuredClone(portable))).toEqual(expandStateTransitionHistory(history));
+    });
+
+    it("is what a serializable history made portable reads back as", () => {
+        const expanded = expandStateTransitionHistory(history);
+        expect(expandStateTransitionHistory(portableFromSerializable(expanded))).toEqual(expanded);
     });
 });

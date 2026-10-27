@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactNode } from 'react';
 import type { SerializableEntityStateTransitions, SerializableStateTransitionHistory, SerializableTransferHistory } from 'clock-generator/browser';
+import { portableFromSerializable } from 'clock-generator/light';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 import { defaultBuildViewContext, type TimelineViewContext } from '../utils/buildViewContext';
@@ -35,7 +36,7 @@ const history: SerializableStateTransitionHistory = { total_duration_ticks: 40, 
 let options: TimelineViewContext;
 function renderStates(data = history) {
     controls.items = []; controls.buttons.clear(); controls.titles = [];
-    return renderToStaticMarkup(<StateTransitionTimeline stateTransitionHistory={data} options={options} onOptionsChange={next => { options = next; }} />);
+    return renderToStaticMarkup(<StateTransitionTimeline stateTransitionHistory={portableFromSerializable(data)} options={options} onOptionsChange={next => { options = next; }} />);
 }
 function clickItem(text: string, occurrence = 0) {
     const item = controls.items.filter(item => item.text === text)[occurrence];

@@ -11,9 +11,7 @@ function clock(id: string, entries = 0): ClockAlternativeView {
         label: id,
         blueprintString: 'bp',
         transferHistory: { total_duration_ticks: 60, entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', label: 'Inserter 1', transfers }] },
-        stateTransitionHistory: { total_duration_ticks: 60, entities: [] },
-        clockOnlyTransferHistory: { total_duration_ticks: 60, entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', label: 'Inserter 1', transfers }] },
-        clockOnlyStateTransitionHistory: null,
+        stateTransitionHistory: { total_duration_ticks: 60, entities: [], reasons: [] },
         clockWindows: {},
         fuelView: null,
         assumptions: { loopSeeds: [{ machineId: 'machine:1', item: 'pentapod-egg', items: 37 }], outputDrops: [],
@@ -95,12 +93,12 @@ describe('the memory store', () => {
 
     it('keeps a generation over the size cap without its developer timelines', async () => {
         const store = createMemoryResultsStore();
-        // 60 000 transfers in each of two histories, 100 bytes each: about 12 MB per clock
-        await store.put(results('big', { clocks: [clock('a', 60_000), clock('b', 60_000)] }), null, 1);
+        // 90 000 transfers, 100 bytes each: about 9 MB per clock
+        await store.put(results('big', { clocks: [clock('a', 90_000), clock('b', 90_000)] }), null, 1);
         const kept = await store.get('big');
         expect(kept?.lean).toBe(true);
         expect(kept?.alternatives[0].transferHistory.entities).toEqual([]);
-        expect(kept?.alternatives[0].clockOnlyTransferHistory).toBeNull();
+        expect(kept?.alternatives[0].stateTransitionHistory.entities).toEqual([]);
         expect(kept?.alternatives[0].blueprintString).toBe('bp');
     });
 

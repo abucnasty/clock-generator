@@ -12,7 +12,7 @@ import type {
     LogMessage,
     DebugSteps,
     SerializableClockWindows,
-    SerializableStateTransitionHistory,
+    PortableStateTransitionHistory,
     SerializableTransferHistory,
     SwingBackoffReport,
 } from 'clock-generator/browser';
@@ -81,10 +81,7 @@ interface ResultsWorkspaceProps {
     blueprintString: string | null;
     simulationDurationTicks: number | null;
     transferHistory: SerializableTransferHistory | null;
-    stateTransitionHistory: SerializableStateTransitionHistory | null;
-    /** The selected clock driven only by its exported windows; null when the histories above already are that run */
-    clockOnlyTransferHistory: SerializableTransferHistory | null;
-    clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    stateTransitionHistory: PortableStateTransitionHistory | null;
     /** Fuel use and the exported fuel clocks of the selected clock; null when no inserter only fills a fuel slot */
     fuelView: FuelViewData | null;
     clockWindows: SerializableClockWindows | null;
@@ -287,7 +284,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                             timeline: props.timeline, onTimelineChange: props.onTimelineChange,
                             wakeAsTable: props.wakeAsTable, onWakeAsTableChange: props.onWakeAsTableChange,
                             transferHistory: props.transferHistory, stateTransitionHistory: props.stateTransitionHistory,
-                            clockOnlyTransferHistory: props.clockOnlyTransferHistory, clockOnlyStateTransitionHistory: props.clockOnlyStateTransitionHistory,
                             clockWindows: props.clockWindows,
                         }}
                         assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>

@@ -429,3 +429,26 @@ it('passes on the clock made with shared windows after the clock it shares, with
     expect(primary?.alternatives.map(it => [it.id, it.deciders])).toEqual([['planned-belt-slack', 5]]);
     expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['planned-belt-slack-shared', 4, 'stable']]);
 }, 30_000);
+
+it('posts the state transitions in columns with their own reasons, which a structured clone carries and which read back the same', async () => {
+    vi.resetModules();
+    const posted: WorkerResponse[] = [];
+    const port = { postMessage: (response: WorkerResponse) => posted.push(response), onmessage: null as ((event: { data: WorkerRequest }) => Promise<void>) | null };
+    vi.stubGlobal('self', port);
+    await import('./simulation.worker');
+    await port.onmessage!({ data: { type: 'initialize', factorioData } });
+    await port.onmessage!({ data: { type: 'plan', runId: 60, config: JSON.parse(grenadeSample) as Config, debugSteps: { prepare: false, warm_up: false, simulate: false }, streamLogs: false } });
+    const completed = posted.find(response => response.type === 'primary-completed');
+    const primary = completed?.type === 'primary-completed' ? completed.primary : null;
+    const history = primary!.alternatives[0].stateTransitionHistory;
+    expect(history.entities.length).toBeGreaterThan(0);
+    expect(history.entities[0].columns.tick).toBeInstanceOf(Int32Array);
+    expect(new Set(history.entities.flatMap(entity => Array.from(entity.columns.reason))).size).toBe(history.reasons.length);
+    const { expandStateTransitionHistory } = await import('clock-generator/light');
+    const expanded = expandStateTransitionHistory(history);
+    expect(expanded.entities.some(entity => entity.transitions.length > 0 && entity.transitions.every(it => it.reason.length > 0))).toBe(true);
+    // what the page receives
+    const received = structuredClone(completed) as Extract<WorkerResponse, { type: 'primary-completed' }>;
+    expect(expandStateTransitionHistory(received.primary!.alternatives[0].stateTransitionHistory)).toEqual(expanded);
+    expect(primary!.alternatives[0]).not.toHaveProperty('clockOnlyStateTransitionHistory');
+}, 30_000);

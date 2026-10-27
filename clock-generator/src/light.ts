@@ -26,7 +26,7 @@ export type { CraftingMachineRuleFacts, NamedCraftingMachine } from "./entities/
 
 export { InserterStatus, MachineStatus, DrillStatus } from "./state/entity-status";
 
-export { expandStateTransitionHistory, factorioStatesOf, toPortable, transitionsOf } from "./crafting/sequence/compact-history";
+export { expandStateTransitionHistory, factorioStatesOf, portableFromSerializable, toPortable, transitionsOf } from "./crafting/sequence/compact-history";
 export type {
     CompactEntityStateTransitions,
     CompactStateTransitionHistory,
