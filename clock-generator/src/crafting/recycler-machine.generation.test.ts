@@ -8,15 +8,15 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 describe('electromagnetic science with recycler direct insertion', () => {
     let generated: ReturnType<typeof generateClockAlternatives>;
     beforeAll(async () => { generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_RECYCLER), {logger: quiet}); });
-    // The simulator serves the takers of one machine in a single fixed order and a clock is kept only if it holds under
-    // every order; the game recovers this build from its losses, the simulator under one order does not: verdict
-    // "no recovery" (taker order, docs/simulator.md).
-    it('has a 40-tick clock at 240 science packs per second across five copies that the taker order leaves with no recovery', () => {
+    // Its science packs drop into infinity chests that remove them, a sink that never blocks, so recovery from a loss is
+    // judged by each branch's rate over the cycle (terminal-rate.ts): at most a hand behind its share. Judged exactly in
+    // every period it read "no recovery"; by its rate it gets back from every loss under both taker orders.
+    it('has a stable 40-tick clock at 240 science packs per second across five copies: by its rate over the cycle into a sink that never blocks, it gets back from every loss', () => {
         const selected = generated.alternatives[generated.selected_index];
-        expect(selected.verdict).toBe('no recovery');
+        expect(selected.verdict).toBe('stable');
         expect(selected.assessment.items_per_second).toBe(240);
         expect(selected.result.simulation_duration.ticks).toBe(40);
-        expect(selected.assessment.backpressure_loss?.survives).toBe(false);
+        expect(selected.assessment.backpressure_loss?.survives).toBe(true);
     });
     it('ends a chest output window before the returning inserter can start another hand', () => {
         const selected = generated.alternatives[generated.selected_index];

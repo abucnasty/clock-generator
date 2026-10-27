@@ -22,6 +22,8 @@ import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock, terminalCountForAlternativePlanning } from "./generate-clock";
+import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
+import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
 import { withRunMemo } from "./plan/run-memo";
@@ -116,6 +118,8 @@ export interface ClockAlternativeContext {
     period_ticks: number;
     /** The primary alternative's results come too rarely for whole hands in a period: it is a clock of result windows */
     result_windows?: boolean;
+    /** Small batches was tried for the primary alternative (its first plan's period too long): it is not offered again */
+    primitive_tried?: boolean;
 }
 
 
@@ -141,6 +145,9 @@ export interface ClockAlternativesPlan {
     /** Independent of each other, so they can run in parallel; listed in display order */
     tasks: ClockAlternativeTask[];
 }
+
+/** The options Small batches is verified with, as the primary alternative's (see primaryDefinition) */
+const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, belt_pickup_slack: "always" };
 
 /** The id of the alternative made without belt pickup slack on purpose: batched swings for a backed-up belt */
 const WITHOUT_BELT_PICKUP_SLACK_ID = "planned";
@@ -433,6 +440,8 @@ function alternativeDefinitionsFor(
         ...(secondary === undefined ? {} : { terminal_swing_count: secondary.terminal_swing_count }) } };
     const fractional = config.overrides?.use_fractional_swings === true;
     const { swings } = context;
+    // as the primary alternative makes it (see primaryDefinition), on the config's own counts
+    const small_batches_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const withSwings = (count: number, extra: GenerateClockOptions) => generateClockForConfig(
         { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, extra);
     // a forced count applies to every alternative
@@ -595,6 +604,21 @@ function alternativeDefinitionsFor(
             },
             search: true,
         },
+        // Small batches where its first plan's period was not too long, so the primary did not try it: a fallback, made
+        // only where no clock made before it can be selected as stable, so it never moves a clock that was selected
+        ...(context.primitive_tried === true || !primitiveGroupedOptionsSupported(small_batches_config, SMALL_BATCHES_OPTIONS)
+            || !primitiveGroupedConfigSupported(small_batches_config) ? [] : [{
+            id: "primitive-grouped",
+            label: "Small batches",
+            description: "Uses small output batches when no planned clock holds. Checked for timing margin, clock starts and recovery after interruptions.",
+            run: () => {
+                const made = verifiedPrimitiveGroupedClock(small_batches_config, { ...quiet, ...SMALL_BATCHES_OPTIONS },
+                    context.planned_swings ?? swings, "no-count-holds");
+                if (made.clock === null) throw new Error(made.report.reason ?? "no clock of small batches holds");
+                return made.clock;
+            },
+            fallback: true,
+        }]),
     ];
 }
 
@@ -985,6 +1009,7 @@ function planPrimaryAndTasks(
             ?? result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,
+        ...((result.primitive_grouped !== undefined || result.swing_backoff_report?.primitive_grouped_attempt !== undefined) && { primitive_tried: true }),
         ...(result.result_windows !== undefined && { result_windows: true }),
     };
     const tasks = alternativeDefinitions(config, context, {})

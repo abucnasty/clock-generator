@@ -23,6 +23,7 @@
  * every trial.
  */
 import { SimulationTick } from "./runner/simulation-tick";
+import { atRateFrom, branchesScaledTo, cycleAtRate, firstBinAtRate, type BranchBins, type TerminalBranch } from "./terminal-rate";
 import { FactorioDataService, ItemName } from "../data";
 import { Chest, Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { EntityState, InserterState } from "../state";
@@ -161,9 +162,12 @@ export const LATE_AFTER_PERIODS = MAX_RECOVERY_PERIODS - RECOVERY_HOLD_PERIODS;
 
 /**
  * Whether a trial that is not back at the end of its window runs on: no state of it repeated (one that did proves what
- * it does for good), its last short bin comes after `late_after_bins` bins of the window, and the `back_bins` bins
- * before those were all at the expected output. A bin of many periods (a subtick clock's) leaves no room for that: such
- * a trial does not run on.
+ * it does for good), it is not at the rate from any bin before `late_after_bins` on (it fell behind its share after the
+ * mark), and it was at the rate over the `back_bins` bins before the mark. A bin of many periods (a subtick clock's)
+ * leaves no room for that: such a trial does not run on.
+ *
+ * @param branches the bins of each branch of the terminal outputs into sinks that never block (see terminal-rate.ts);
+ *                 without them the output as one branch with no hand to spare
  */
 export function runsOn(
     output_per_bin: readonly number[],
@@ -171,18 +175,13 @@ export function runsOn(
     repeats_from: number | null,
     late_after_bins: number,
     back_bins: number,
+    branches: readonly BranchBins[] = [{ bins: output_per_bin, share_per_bin: expected_per_bin, hand: 0, takes_surplus: false }],
 ): boolean {
     if (repeats_from !== null || late_after_bins < back_bins || back_bins < 1) {
         return false;
     }
-    let last_off = -1;
-    output_per_bin.forEach((items, index) => {
-        if (items !== expected_per_bin) {
-            last_off = index;
-        }
-    });
-    return last_off >= late_after_bins
-        && output_per_bin.slice(late_after_bins - back_bins, late_after_bins).every(items => items === expected_per_bin);
+    const before_the_mark = branches.map(branch => ({ ...branch, bins: branch.bins.slice(late_after_bins - back_bins, late_after_bins) }));
+    return firstBinAtRate(branches) >= late_after_bins && atRateFrom(before_the_mark, 0);
 }
 
 export interface BackpressureLossOptions {
@@ -236,9 +235,9 @@ export interface LossTrial {
     stopped_after_ticks: number | null;
     /** What the output inserters dropped in each bin after the item was back, the first bin starting in that tick */
     output_per_bin: number[];
-    /** The build is back at exactly its expected output in every bin, and stays there */
+    /** The build is back at its expected output, exactly or at the rate of every branch, and stays there (see judgeRecovery) */
     recovers: boolean;
-    /** Bins after the item was back that were not at the expected output, the last one counted; null when it does not recover */
+    /** Bins after the item was back before the first from which it is at the rate; null when it does not recover */
     recovered_after_bins: number | null;
     /** The state of the build repeated, so what it did in its last bins it does for good; without it the verdict is of the bins run */
     proven: boolean;
@@ -359,29 +358,32 @@ function switchOf(context: SimulationContext, loss: BackpressureLoss): { cut(): 
 }
 
 /**
- * Whether the build is back at its expected output, from what it dropped in each bin after the item came back.
+ * Whether the build is back at its expected output, from what it dropped in each bin after the item came back: exactly
+ * in every bin, or, where every terminal output drops into a sink that never blocks, back at the rate of every branch
+ * (terminal-rate.ts), each carrying its share over the cycle in whole hands. The bins before the first from which every
+ * branch is at the rate to the end are the ones it took to get back.
  *
  * @param repeats_from with the state at the end of the last bin equal to the state at the end of this bin (0: the
- *                     tick the item came back), the bins after it repeat for good; null when no state repeated
- * @param hold_bins without a repeat, the bins at the end that all have to be at the expected output
+ *                     tick the item came back), the bins after it repeat for good: they have to carry every share
+ *                     (cycleAtRate); null when no state repeated
+ * @param hold_bins without a repeat, the bins at the end that all have to be at the rate, from the first of them
+ * @param branches the bins of each branch; without them the output as one branch with no hand to spare
  */
 export function judgeRecovery(
     output_per_bin: readonly number[],
     expected_per_bin: number,
     repeats_from: number | null,
     hold_bins: number,
+    branches: readonly BranchBins[] = [{ bins: output_per_bin, share_per_bin: expected_per_bin, hand: 0, takes_surplus: false }],
 ): Pick<LossTrial, "recovers" | "recovered_after_bins" | "proven" | "ends_in"> {
     const proven = repeats_from !== null;
     const ends_in = proven ? output_per_bin.slice(repeats_from) : output_per_bin.slice(-hold_bins);
-    const held = proven || output_per_bin.length >= hold_bins;
-    const recovers = held && ends_in.length > 0 && ends_in.every(items => items === expected_per_bin);
-    let last_off = -1;
-    output_per_bin.forEach((items, index) => {
-        if (items !== expected_per_bin) {
-            last_off = index;
-        }
-    });
-    return { recovers, recovered_after_bins: recovers ? last_off + 1 : null, proven, ends_in };
+    const from = firstBinAtRate(branches);
+    const from_bin = (start: number) => branches.map(branch => ({ ...branch, bins: branch.bins.slice(start) }));
+    const recovers = ends_in.length > 0 && (proven
+        ? cycleAtRate(from_bin(repeats_from)) && from <= repeats_from
+        : output_per_bin.length >= hold_bins && from <= output_per_bin.length - hold_bins && atRateFrom(branches, output_per_bin.length - hold_bins));
+    return { recovers, recovered_after_bins: recovers ? from : null, proven, ends_in };
 }
 
 /**
@@ -429,9 +431,21 @@ export function runLossTrials(
     quiet_ticks: number,
     proof_stride: number | null,
     watched_exports: readonly WatchedExport[] = [],
+    /**
+     * Where every terminal output drops into a sink that never blocks, its branches, each with its share
+     * (terminal-rate.ts); without them the output inserters as one branch with no hand to spare: exact in every bin
+     */
+    terminal_branches?: readonly TerminalBranch[],
 ): LossOutcome {
     const { loss } = options;
     const expected_per_bin = options.expected_output_items * bin.periods;
+    // into sinks that never block, each branch at its rate, its surplus taken; otherwise the output exactly in every bin
+    const takes_surplus = terminal_branches !== undefined && terminal_branches.length > 0;
+    const branches = !takes_surplus
+        ? [{ source_id: "", inserter_ids: output_inserters.map(state => state.entity_id.id), share_per_period: options.expected_output_items, hand: 0 }]
+        : branchesScaledTo(terminal_branches, options.expected_output_items);
+    const branch_states = branches.map(branch => output_inserters.filter(state => branch.inserter_ids.includes(state.entity_id.id)));
+    const branchDropped = () => branch_states.map(states => states.reduce((sum, state) => sum + state.items_dropped, 0));
     // the most ticks a loss lasts: until the build has stopped, at most the periods of MAX_LOSS_PERIODS, and shorter
     // than the loss limit of a build whose items spoil
     const limit_ticks = options.loss_limit_ticks !== undefined ? Math.max(1, Math.ceil(options.loss_limit_ticks) - 1) : Infinity;
@@ -567,6 +581,7 @@ export function runLossTrials(
         const restore_at = (now() - start_tick) % bin.ticks;
 
         const output_per_bin: number[] = [];
+        const branch_bins: BranchBins[] = branches.map(branch => ({ bins: [], share_per_bin: branch.share_per_period * bin.periods, hand: branch.hand, takes_surplus }));
         const backlog_per_bin: number[] = [];
         const export_per_bin: number[][] = watched_exports.map(() => []);
         const bin_by_state = new Map<string, number>();
@@ -574,20 +589,22 @@ export function runLossTrials(
         if (proof_stride !== null) {
             bin_by_state.set(simulationStateKey(context), 0);
         }
-        // bins at the expected output since the last short one
-        let exact_bins = 0;
+        // bins at the rate at the end of the trial so far (see firstBinAtRate)
+        const binsAtRate = () => output_per_bin.length - firstBinAtRate(branch_bins);
         const runBin = () => {
             const before = dropped();
+            const branch_before = branchDropped();
             const exported_before = watched_exports.map(it => it.fillers.reduce((sum, state) => sum + state.items_dropped, 0));
             for (let tick = 0; tick < bin.ticks; tick++) {
                 step();
             }
             const items = dropped() - before;
             output_per_bin.push(items);
+            const branch_after = branchDropped();
+            branch_bins.forEach((branch, at) => (branch.bins as number[]).push(branch_after[at] - branch_before[at]));
             if (watched_container !== undefined) {
                 backlog_per_bin.push(backlogNow());
             }
-            exact_bins = items === expected_per_bin ? exact_bins + 1 : 0;
             watched_exports.forEach((it, at) => export_per_bin[at].push(it.fillers.reduce((sum, state) => sum + state.items_dropped, 0) - exported_before[at]));
             // only boundaries a whole stride apart have every clock standing at the same place, so only they compare
             if (proof_stride !== null && output_per_bin.length % proof_stride === 0) {
@@ -600,14 +617,14 @@ export function runLossTrials(
             runBin();
         }
         let judged_hold_bins = hold_bins;
-        let judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, hold_bins);
+        let judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, hold_bins, branch_bins);
         const window_bins = output_per_bin.length;
-        if (!judged.recovers && window_bins < max_run_on_bins && runsOn(output_per_bin, expected_per_bin, repeats_from, late_after_bins, hold_bins)) {
-            while (output_per_bin.length < max_run_on_bins && repeats_from === null && exact_bins < run_on_bins) {
+        if (!judged.recovers && window_bins < max_run_on_bins && runsOn(output_per_bin, expected_per_bin, repeats_from, late_after_bins, hold_bins, branch_bins)) {
+            while (output_per_bin.length < max_run_on_bins && repeats_from === null && binsAtRate() < run_on_bins) {
                 runBin();
             }
             judged_hold_bins = run_on_bins;
-            judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, run_on_bins);
+            judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, run_on_bins, branch_bins);
         }
         const ran_on_bins = output_per_bin.length - window_bins;
         // the backlog the loss left has to be gone by the end, where it is watched

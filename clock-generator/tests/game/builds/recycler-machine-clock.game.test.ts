@@ -24,7 +24,7 @@ test('recycler direct insertion: the science clock holds its rate and the plant 
         const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_RECYCLER);
         const generated = generateClockAlternatives(config, {logger: quiet});
         const selected = generated.alternatives[generated.selected_index];
-        expect(selected.verdict).toBe('no recovery'); // the simulator's fixed taker order (docs/simulator.md); the game assertions below stay
+        expect(selected.verdict).toBe('stable'); // judged by its rate over the cycle into a sink that never blocks (terminal-rate.ts)
         const clock = selected.result.subtick ?? selected.result;
         const period = selected.result.simulation_duration.ticks;
         const options = {period, settle_periods: 600, baseline_periods: 3600, probe_ticks: 3600, wait_ticks: 600};

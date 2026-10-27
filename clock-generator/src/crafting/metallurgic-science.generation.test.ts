@@ -11,11 +11,13 @@ describe("generateClockForConfig", () => {
 
     // Metallurgic science at the speeds the game gives its scaffold (68.875, 40.3125, 180.75, 191.481), its packs taken
     // into a chest that removes them. The science foundry makes 45.19 packs a second against the target of 45, so it
-    // has 1 tick to spare in a period of 320. From the staged start of the simulator (every machine empty, the clock at
-    // its tick 0) one clock holds the target rate on the moving belts: the observed windows of 3 output swings, which
-    // do not get back from a loss of tungsten ore. Every other clock falls short, the plain 1-swing clock among them. No
-    // clock of the build meets goal 1, so the one nearest to the target rate is selected (GOALS.md). With the belts
-    // backed up, the observed windows of 2 output swings are stable.
+    // has 1 tick to spare in a period of 320. The packs drop into an infinity chest, a sink that never blocks, so each
+    // lane-phase start and each loss is judged by the rate over the cycle (terminal-rate.ts). From the staged start of the
+    // simulator (every machine empty, the clock at its tick 0) the observed windows of 2 output swings, on a subtick
+    // clock, hold the target rate on the moving belts and get back from every loss. Judged exactly in every period, the
+    // observed windows of 3 output swings held instead and did not get back from a loss of tungsten ore; by the rate
+    // more of their paddings pass the quick check from a dozen starts, the confirmations go to paddings that fail a
+    // later start, and the observed windows back off to 2 output swings. With the belts backed up, the same clock.
     // The game disagrees about the moving belts. Recorded on the scaffold on 2026-10-21, with the ore belt drained: back
     // to 240 a period after the ore was cut for two periods, and after the output was blocked and the coal cut. In the
     // game the science foundry also runs at its full speed under either clock, where the simulator holds it to the
@@ -27,6 +29,7 @@ describe("generateClockForConfig", () => {
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
         let observed: ClockAlternative;
+        let observed_rounded: ClockAlternative;
         let one_swing: ClockAlternative;
         let two_swings: ClockAlternative;
         let backed_up: ClockAlternative;
@@ -35,7 +38,8 @@ describe("generateClockForConfig", () => {
             const generated = generateClockAlternatives(config);
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
-            observed = alternatives.find(a => a.label === "Observed windows: 3 output swings per cycle")!;
+            observed = alternatives.find(a => a.label === "Observed windows: 2 output swings per cycle, subtick clock")!;
+            observed_rounded = alternatives.find(a => a.id === "derived")!;
             one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
             two_swings = alternatives.find(a => a.label === "2 output swings per cycle, subtick clock")!;
             const backed = generateClockAlternatives({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
@@ -46,20 +50,17 @@ describe("generateClockForConfig", () => {
             expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
         });
 
-        it("selects the observed windows of 3 output swings at 45 a second: the only clock that holds", () => {
+        it("selects the observed windows of 2 output swings on a subtick clock at 45 a second: by the rate over the cycle into a sink that never blocks, the only clocks that hold are these windows", () => {
             expect(selected).toBe(observed);
             expect(selected.assessment.items_per_second).toBeCloseTo(45, 6);
-            expect(selected.result.simulation_duration.ticks).toBe(320);
-            expect(selected.belt?.kind).toBe("moving");
-            expect(alternatives.filter(a => a.assessment.holds)).toEqual([observed]);
+            expect(selected.result.subtick?.clock.period_ticks).toBe(640);
+            expect(alternatives.filter(a => a.assessment.holds)).toEqual([observed, observed_rounded]);
         });
 
-        // A build no clock on offer survives backpressure loss on (GOALS.md): it keeps its clocks, named for what they are
-        it("calls no clock of the build stable: the one that holds does not get back to its rate once the tungsten ore has run out", () => {
-            expect(selected.verdict).toBe("no recovery");
-            expect(selected.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["tungsten ore stops arriving"] });
+        it("calls the observed windows stable: by its rate over the cycle into a sink that never blocks, it gets back from every loss, the tungsten ore's included", () => {
+            expect(selected.verdict).toBe("stable");
+            expect(selected.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
             expect(selected.result.stability_check.as_built?.long_run_proven).toBe(true);
-            expect(alternatives.some(a => a.verdict === "stable")).toBe(false);
         });
 
         it("calls the 1-swing and 2-swing clocks unstable, and ranks them after the clock that holds", () => {

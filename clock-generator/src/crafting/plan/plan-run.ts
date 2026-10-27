@@ -23,6 +23,7 @@ import { ModePlugin } from "../../control-logic/mode";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
+import { neverBlockingBranchesOf, type TerminalBranch } from "../terminal-rate";
 import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
 import { carriedItemsOf, RESULT_WINDOWS_CHECK_PERIODS, ResultWindowsPlan } from "../result-windows";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
@@ -538,7 +539,9 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
     const final_history = finalHistoryOf(build, crafting_cycle_plan, all_output_inserters, duration, logger);
     const output = checkOutput(build, controlled, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
-    const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger);
+    const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, crafting_cycle_plan.entity_transfer_map,
+        transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
+    const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger, terminal_branches);
 
     return {
         simulation_context: build.simulation_context,
@@ -1166,6 +1169,8 @@ function backpressureLossOf(
     simulated: SimulatedRun,
     options: RunOptions,
     logger: Logger,
+    /** Where every terminal output drops into a sink that never blocks, its branches: judged by their rate (terminal-rate.ts) */
+    terminal_branches: readonly TerminalBranch[],
 ): LossOutcome | undefined {
     if (!options.backpressure_loss) {
         return undefined;
@@ -1192,7 +1197,7 @@ function backpressureLossOf(
     const watched_exports = exportedItemsOf(trial_context.entity_registry, new Set(simulated.output_inserter_states.map(state => state.entity_id.id)))
         .map(exported => ({ exported, fillers: exported.filler_ids.flatMap(id => inserter_states.get(id) ?? []) }));
     const backpressure_loss = runLossTrials(trial_context, simulated.output_inserter_states, options.backpressure_loss, bin,
-        Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports);
+        Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports, terminal_branches);
     logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
     return backpressure_loss;
 }

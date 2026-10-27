@@ -48,4 +48,24 @@ describe("primitive primary integration and legacy sibling compatibility", () =>
         expect(plan.context).not.toHaveProperty("secondary_planning");
         expect(generate.mock.calls.some(call => call[1]?.shared_windows === true)).toBe(true);
     });
+
+    it("offers Small batches where the primary did not try it only as a fallback: it never re-counts the other alternatives", () => {
+        vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue(base);
+        vi.spyOn(trial, "backpressureLossVerdictOf").mockReturnValue({ backpressure_loss: recovered });
+        const plan = planClockAlternatives(config, options);
+        expect(plan.context).not.toHaveProperty("secondary_planning");
+        expect(plan.context).not.toHaveProperty("primitive_tried");
+        expect(plan.tasks.find(task => task.id === "primitive-grouped")).toEqual({ id: "primitive-grouped", label: "Small batches", only_when_needed: true, fallback: true });
+    });
+
+    it("does not offer Small batches again where the primary tried it", () => {
+        const report = { strategy: "primitive-grouped" as const, eligibility: "separate-windows-only" as const, outcome: "failed" as const, attempts: [] };
+        const attempt = { terminal_swing_count: 1, holds: false, actual_output_items: 0, expected_output_items: 1 };
+        vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue({ ...base, swing_backoff_report: { triggered: false,
+            initial_terminal_swing_count: 1, initial_attempt: attempt, stable_terminal_swing_count: null, attempts: [], primitive_grouped_attempt: report } });
+        vi.spyOn(trial, "backpressureLossVerdictOf").mockReturnValue({ backpressure_loss: recovered });
+        const plan = planClockAlternatives(config, options);
+        expect(plan.context.primitive_tried).toBe(true);
+        expect(plan.tasks.some(task => task.id === "primitive-grouped")).toBe(false);
+    });
 });

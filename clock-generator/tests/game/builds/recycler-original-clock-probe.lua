@@ -2,10 +2,16 @@
 -- It also keeps, for the per-branch accounting of the test: a branch map (terminal, buffer, drain and science machine per sorted
 -- terminal) and every inserter's native position; per branch the science it holds and its machine's products_finished in every
 -- stock reading; and one row per period boundary from the baseline start in report.series.
+-- The same probe observes the scaffold without buffer chests, where each science plant's drain drops into an infinity
+-- chest and is the terminal. Each branch is judged by the sink its drain drops into: into a buffer (a chest that can
+-- fill), its terminal delivers exactly its share every period; into a sink that never blocks (an infinity chest), the
+-- branch carries its share as a rate, never more than its hand behind from the hold start, a surplus taken by the sink.
 local all_entities = ...
 local function run_probe(entities)
 options.trials = options.trials or {}
 local ITEM = "electromagnetic-science-pack"
+-- what each branch carries a period, and how far a branch whose drain never blocks may fall behind it
+local SHARE, HAND = options.share_per_period or 16, options.hand or 16
 local outputs, recyclers, science, capacitors, bends, disposal, inserters = {}, {}, {}, {}, {}, {}, {}
 local feeds, feed_units, output_units, bend_units, red_units = {}, {}, {}, {}, {}
 local science_units, capacitor_units, recycler_units, buffers = {}, {}, {}, {}
@@ -41,9 +47,6 @@ for _, e in pairs(entities) do
         if e.type == "inserter" then
             table.insert(inserters, e)
             local source, sink = e.pickup_target, e.drop_target
-            if source and sink and source.name == "steel-chest" and sink.type == "infinity-container" then
-                table.insert(outputs, e); output_units[e.unit_number] = true
-            end
             if source and source.type == "transport-belt" and source.belt_shape ~= "straight" then
                 table.insert(bends, e); bend_units[e.unit_number] = true
             end
@@ -57,37 +60,56 @@ for _, e in pairs(entities) do
         end
     end
 end
+-- the terminal outputs: every arm that drops into an infinity chest, from a buffer (a container) or straight from a
+-- science machine (no buffer)
+for _, e in ipairs(inserters) do
+    local source, sink = e.pickup_target, e.drop_target
+    if source and sink and sink.type == "infinity-container"
+        and (source.type == "container" or science_units[source.unit_number]) then
+        table.insert(outputs, e); output_units[e.unit_number] = true
+    end
+end
 for _, group in ipairs({outputs, recyclers, science, capacitors, bends, inserters}) do table.sort(group, by_position) end
 report.topology = {outputs = #outputs, science = #science, recyclers = #recyclers, capacitors = #capacitors,
     bends = {}, disposal = #disposal, recycler_targets = {}, red_outlets = {}}
 check(#outputs == 4 and #science == 4 and #recyclers == 2 and #capacitors == 2 and #bends == 2 and #disposal == 1,
     "original two-cell topology")
 local buffer_units, result_targets = {}, {}
+-- buffers[i] is the buffer terminal i takes from, false where it takes straight from its science machine
 for _, e in ipairs(outputs) do
-    local buffer = e.pickup_target
-    check(not buffer_units[buffer.unit_number], "one original steel buffer per terminal taker")
-    buffer_units[buffer.unit_number] = true; table.insert(buffers, buffer)
+    local source = e.pickup_target
+    if science_units[source.unit_number] then table.insert(buffers, false)
+    else
+        check(not buffer_units[source.unit_number], "one original steel buffer per terminal taker")
+        buffer_units[source.unit_number] = true; table.insert(buffers, source)
+    end
 end
 -- branch i follows sorted terminal i: its buffer, the one arm dropping into that buffer from a science machine, and
--- that machine. The four branch machines are exactly the four science machines.
+-- that machine; without a buffer the terminal is that arm. The four branch machines are exactly the four science machines.
+-- Its gate follows the sink of its drain: "exact" into a buffer, "rate" into a sink that never blocks.
 local branches, branch_machines = {}, {}
 report.topology.branches = {}
 local function at(e) return {unit = e.unit_number, position = e.position} end
 for i, terminal in ipairs(outputs) do
     local buffer, drain = buffers[i], nil
-    for _, e in ipairs(inserters) do
-        if e.drop_target and e.drop_target.unit_number == buffer.unit_number and e.pickup_target
-            and science_units[e.pickup_target.unit_number] then
-            check(drain == nil, "exactly one science arm drops into each steel buffer"); drain = e
+    if buffer then
+        for _, e in ipairs(inserters) do
+            if e.drop_target and e.drop_target.unit_number == buffer.unit_number and e.pickup_target
+                and science_units[e.pickup_target.unit_number] then
+                check(drain == nil, "exactly one science arm drops into each steel buffer"); drain = e
+            end
         end
-    end
-    check(drain ~= nil, "a science arm drops into each steel buffer")
+        check(drain ~= nil, "a science arm drops into each steel buffer")
+    else drain = terminal end
     local machine = drain.pickup_target
     check(not branch_machines[machine.unit_number], "one steel buffer per science machine")
     branch_machines[machine.unit_number] = true
-    branches[i] = {terminal = terminal, buffer = buffer, drain = drain, machine = machine}
-    report.topology.branches[i] = {terminal = at(terminal), buffer = at(buffer), drain = at(drain), machine = at(machine)}
+    local gate = drain.drop_target.type == "infinity-container" and "rate" or "exact"
+    branches[i] = {terminal = terminal, buffer = buffer or nil, drain = drain, machine = machine, gate = gate}
+    report.topology.branches[i] = {terminal = at(terminal), buffer = buffer and at(buffer) or nil, drain = at(drain),
+        machine = at(machine), gate = gate}
 end
+report.share_per_period, report.hand = SHARE, HAND
 for unit in pairs(science_units) do check(branch_machines[unit], "every science machine is a branch machine") end
 -- (record only) every inserter of the build with its native position, for the cold-start wiring audit
 report.topology.arms = {}
@@ -171,8 +193,9 @@ local function crafts()
 end
 local function science_stock()
     local stock = {total = 0, buffers = {}, machine_outputs = {}, held = {}, products_finished = crafts()}
+    -- one count per terminal, 0 where it takes straight from its machine
     for _, e in ipairs(buffers) do
-        local count = e.get_inventory(defines.inventory.chest).get_item_count(ITEM)
+        local count = e and e.get_inventory(defines.inventory.chest).get_item_count(ITEM) or 0
         stock.total = stock.total + count; table.insert(stock.buffers, count)
     end
     for _, e in ipairs(science) do
@@ -188,9 +211,9 @@ local function science_stock()
     -- per branch, the science it holds (buffer, machine output, drain and terminal hands) and its machine's counter
     stock.reserve_by_branch, stock.pf_by_branch = {}, {}
     for i, b in ipairs(branches) do
-        local reserve = b.buffer.get_inventory(defines.inventory.chest).get_item_count(ITEM)
+        local reserve = (b.buffer and b.buffer.get_inventory(defines.inventory.chest).get_item_count(ITEM) or 0)
             + b.machine.get_inventory(defines.inventory.crafter_output).get_item_count(ITEM)
-        for _, e in ipairs({b.drain, b.terminal}) do
+        for _, e in ipairs(b.drain == b.terminal and {b.drain} or {b.drain, b.terminal}) do
             if e.held_stack.valid_for_read and e.held_stack.name == ITEM then reserve = reserve + held(e) end
         end
         stock.reserve_by_branch[i], stock.pf_by_branch[i] = reserve, b.machine.products_finished
@@ -228,6 +251,8 @@ end
 check(red_batch_max > 0 and red_batch_max <= red_stack_size, "native advanced-circuit result batch")
 local red_stop_min = red_stack_size - red_batch_max + 1
 local started, previous, current = game.tick, {}, {0, 0, 0, 0}
+-- (record only) the game tick of probe tick 0, to read the recorder's samples in probe phases
+report.started_game_tick = started
 for i, e in ipairs(outputs) do previous[i] = held(e) end
 local stage, trial_index, stage_at = "settle", 0, 0
 local quiet_ticks, craft_quiet_ticks, output_quiet_ticks, last_crafts = 0, 0, 0, crafts()
@@ -249,6 +274,23 @@ local function loss(on, tick)
         check(entity.disabled_by_script == on, "loss flag must take effect on " .. entity.name)
     end
     event(on and "cut" or "restore", tick)
+end
+-- Whether hold periods, from the first, meet every branch's gate: an exact branch carries SHARE in each; a rate branch
+-- never falls more than HAND behind SHARE a period from the first, and may run ahead (the sink takes the surplus).
+local function hold_meets_gates(periods)
+    for i, b in ipairs(branches) do
+        local ahead = 0
+        for _, period in ipairs(periods) do
+            local count = period.output[i]
+            if b.gate == "exact" then
+                if count ~= SHARE then return false end
+            else
+                ahead = ahead + count - SHARE
+                if ahead < -HAND then return false end
+            end
+        end
+    end
+    return true
 end
 local function phase_offset(trial)
     local phase = trial.phase_offset
@@ -324,7 +366,7 @@ script.on_nth_tick(1, function()
         if tick % options.period == 0 then
             local stock, exact = science_stock(), true
             local bin_stage, bin_trial, bin_delivered = stage, trial_index, current
-            for _, count in ipairs(current) do if count ~= 16 then exact = false end end
+            for _, count in ipairs(current) do if count ~= SHARE then exact = false end end
             if stage == "settle" and tick >= options.settle_ticks then
                 stage, stage_at = "baseline", tick; report.baseline_stock_start = stock
             elseif stage == "baseline" then
@@ -345,10 +387,12 @@ script.on_nth_tick(1, function()
                     end
                     consecutive = exact and consecutive + 1 or 0
                     max_consecutive = math.max(max_consecutive, consecutive); trial.max_exact_periods = max_consecutive
-                    if exact then
-                        table.insert(hold, {output = current, stock_start = last_boundary_stock})
-                        if #hold > options.recovery_hold_periods then table.remove(hold, 1) end
-                    else hold = {} end
+                    -- the hold starts at the earliest period from which every gate is met (where every branch is
+                    -- exact: the last periods that were all exact)
+                    table.insert(hold, {output = current, stock_start = last_boundary_stock})
+                    while #hold > options.recovery_hold_periods or (#hold > 0 and not hold_meets_gates(hold)) do
+                        table.remove(hold, 1)
+                    end
                     if #hold == options.recovery_hold_periods then
                         local first_stock = hold[1].stock_start
                         local drift = stock.total - first_stock.total

@@ -12,6 +12,7 @@ import { alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unp
 import { canonicalVerificationJson } from "../verification-signature";
 import { MAX_SIMULATION_TICKS } from "../plan/plan-run";
 import { ClockPeriodLimitError } from "../plan/clock-period-limit";
+import { isNeverBlockingSink } from "../terminal-rate";
 import { groupedHandsCycles, groupedHandsPlan, GroupedHandsNotApplicable, type GroupedHandsComposition, type GroupedHandsOptions } from "./grouped-hands";
 
 type Windows = Record<string, { start: number; end: number }[]>;
@@ -61,12 +62,17 @@ export function assertAcyclicGroupedDependencies(registry: Pick<ReadableEntityRe
  * user override. Normal generation/selection do not call this function yet. Existing stock/hand/slack rules decide
  * each construction; a constructed artifact does not imply its windows hold.
  */
-export function constructPrimitiveGroupedHands(config: Config): PrimitiveGroupedConstruction {
-    assertOutputTransferGenerationSupported(config);
-    if (config.target_output.counts === "destroyed" || config.overrides?.terminal_swing_count !== undefined
+/** Whether a config leaves the made item's counts and every control to the generator, as primitive construction needs */
+export function primitiveGroupedConfigSupported(config: Config): boolean {
+    return !(config.target_output.counts === "destroyed" || config.overrides?.terminal_swing_count !== undefined
         || config.overrides?.lcm !== undefined || config.overrides?.use_fractional_swings === true
         || config.inserters.some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO")
-        || (config.drills?.configs ?? []).some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO")) {
+        || (config.drills?.configs ?? []).some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO"));
+}
+
+export function constructPrimitiveGroupedHands(config: Config): PrimitiveGroupedConstruction {
+    assertOutputTransferGenerationSupported(config);
+    if (!primitiveGroupedConfigSupported(config)) {
         throw new GroupedHandsNotApplicable("primitive grouped construction requires automatic made-item controls and count policy");
     }
     assertInserterCoverage(config);
@@ -117,9 +123,16 @@ export function constructPrimitiveGroupedHands(config: Config): PrimitiveGrouped
             : drains.has(inserter.entity_id.id) ? "internal-buffer-drain" : Entity.isMachine(registry.getEntityByIdOrThrow(inserter.sink.entity_id)) ? "machine-input" : "planned-transfer",
     }));
     const attempts: PrimitiveGroupedAttempt[] = [], known = new Map<string, number>();
-    // Same separate/shared, staged/compact and surplus-guard choices as existing grouped construction.
+    // Same separate/shared, staged/compact and surplus-guard choices as existing grouped construction. The ways with room
+    // for one more output swing (`output_room`) come after all the others: they are verified only where none of those
+    // holds (see verifiedPrimitiveGroupedClock), and made only where a terminal output takes from a machine and drops into
+    // a sink that never blocks
+    const machine_outputs = output_paths.some(path => path.container === null
+        && path.feeders.some(it => Entity.isMachine(registry.getEntityByIdOrThrow(it.source.entity_id))
+            && isNeverBlockingSink(registry.getEntityByIdOrThrow(it.sink.entity_id))));
+    for (const output_room of machine_outputs ? [false, true] : [false])
     for (const share_windows of [false, true]) for (const feeder_offset of [16, 1]) for (const surplus_guard of [false, true]) {
-        const options = { share_windows, feeder_offset, surplus_guard };
+        const options: GroupedHandsOptions = { share_windows, feeder_offset, surplus_guard, ...(output_room && { output_room }) };
         try {
             const plan = groupedHandsPlan(registry, cycle.entity_transfer_map, grouped_cycles, period_ticks,
                 config.overrides?.backed_up_belts !== true, options, null, composition);

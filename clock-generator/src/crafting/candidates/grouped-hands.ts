@@ -12,6 +12,7 @@ import type { AlwaysOnReason } from "../always-on-reasons";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
 import { outputAtWindow } from "./taker-turns";
+import { isNeverBlockingSink } from "../terminal-rate";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -35,6 +36,13 @@ export interface GroupedHandsOptions {
     feeder_offset: number;
     /** The takers whose windows open on the same tick share one window: the longest any of them needs */
     share_windows: boolean;
+    /**
+     * An output inserter that takes from a machine and drops into a sink that never blocks (terminal-rate.ts) gets a
+     * window of one swing more than its hands, as a drain into a chest does, in place of one for its hands alone: the
+     * sink takes every hand, so the hand a machine made ahead of its share goes out with the next one instead of holding
+     * the machine at its output block
+     */
+    output_room?: boolean;
 }
 
 /** Opt-in route facts for pure construction; existing generated clocks retain their original construction path. */
@@ -461,6 +469,8 @@ export function groupedHandsPlan(
     if (takers.length === 0 || outputs.length === 0) refuse("the build has no input hands or no output hands");
     const output_ticks = (output: Inserter): number => {
         const hands = outputHands(output);
+        if (options.output_room === true && EntityId.isMachine(output.source.entity_id)
+            && isNeverBlockingSink(entity_registry.getEntityByIdOrThrow(output.sink.entity_id))) return hands * output.animation.total.ticks + WINDOW_MARGIN_TICKS;
         return hands === 1 ? 1 : hands * output.animation.total.ticks + 1;
     };
     // an inserter whose hands (rounded up) take the whole period, or all but the offset of its window, is busy all the time: a window
