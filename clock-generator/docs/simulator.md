@@ -148,10 +148,10 @@ upstream is modelled as a plain belt, which is wrong when the splitter's other o
 withdrawals, other bend approaches, other orientations and arbitrary relative lane phases remain unverified.
 A moving front exit cannot be built: the inserter on the exit's output tile blocks the belt. A config that says
 moving supply gets a clock for moving belts there anyway; on the backed-up exit the game holds and recovers it
-at every tier ([generated clocks](belt-pickup/experiments.md#generated-clocks-and-drops)). The reverse also holds
-at normal speed: a backed-up belt refills a pickup slower than a stack a tick, so on a config whose belts are backed
-up the generator, when no other clock can be selected as stable, makes one planned with the belts moving and checks
-it on the backed-up belts (the normal side underground entrance and exit and front exit select it, recorded exact).
+at every tier ([generated clocks](belt-pickup/experiments.md#generated-clocks-and-drops)). Clocks are made only for the
+belts the config names. At normal speed a backed-up belt refills a pickup slower than a stack a tick, so on a config
+whose belts are backed up no clock for the normal side underground entrance and exit and the front exit is stable; the
+generator no longer makes one planned with the belts moving for them, as it did until 0.23.0 (recorded exact then).
 
 ### Starting on supplied belts
 

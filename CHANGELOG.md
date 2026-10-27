@@ -12,6 +12,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Changed
 - Large builds take less memory to generate.
+- Clocks are made only for the belts the build is set to: moving or backed up.
 
 ## [0.23.0] - Unreleased
 
