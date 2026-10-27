@@ -18,7 +18,8 @@ import {
 /** A clock with `entries` transfers and as many transitions, and a blueprint of `blueprint` characters */
 function fakeClock(id: string, { entries = 0, blueprint = 100 }: { entries?: number; blueprint?: number } = {}): ClockAlternativeView {
     const transfers = Array.from({ length: entries }, (_, i) => ({ item_name: 'iron-plate', start_tick: i, end_tick: i + 1, amount: 1 }));
-    const transitions = Array.from({ length: entries }, (_, i) => ({ tick: i, from_status: 'a', to_status: 'b', reason: '', duration_ticks: 1 }));
+    const columns = { tick: new Int32Array(entries), from: new Uint8Array(entries), to: new Uint8Array(entries), reason: new Uint32Array(entries),
+        state_tick: new Int32Array(0), state: new Uint8Array(0) };
     return {
         id,
         label: id,
@@ -26,10 +27,9 @@ function fakeClock(id: string, { entries = 0, blueprint = 100 }: { entries?: num
         transferHistory: { total_duration_ticks: 60, entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', label: 'Inserter 1', transfers }] },
         stateTransitionHistory: {
             total_duration_ticks: 60,
-            entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', label: 'Inserter 1', items: [], initial_status: 'a', transitions, initial_factorio_state: 'a', factorio_states: [] }],
+            entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', label: 'Inserter 1', items: [], initial_status: 'IDLE', initial_factorio_state: 'working', columns }],
+            reasons: [''],
         },
-        clockOnlyTransferHistory: { total_duration_ticks: 60, entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', label: 'Inserter 1', transfers }] },
-        clockOnlyStateTransitionHistory: null,
         clockWindows: { 'inserter:1': [] },
         fuelView: null,
     } as unknown as ClockAlternativeView;
@@ -123,18 +123,16 @@ describe('estimateKeptBytes and leanResults', () => {
         expect(estimateKeptBytes(fakeResults('k', { clocks: [fakeClock('a', { blueprint: 10_000 })] }))).toBeGreaterThan(small);
     });
 
-    it('empties the four histories, keeps the wake windows, blueprints and fuel, and fits a big record under the cap', () => {
-        // 30 000 entries in each of three histories, 100 bytes each: about 9 MB per clock
-        const big = fakeResults('k', { clocks: [fakeClock('a', { entries: 30_000 }), fakeClock('b', { entries: 30_000 })] });
+    it('empties the histories, keeps the wake windows, blueprints and fuel, and fits a big record under the cap', () => {
+        // 45 000 entries in each of two histories, 100 bytes each: about 9 MB per clock
+        const big = fakeResults('k', { clocks: [fakeClock('a', { entries: 45_000 }), fakeClock('b', { entries: 45_000 })] });
         expect(estimateKeptBytes(big)).toBeGreaterThan(RECORD_BYTES_CAP);
         const lean = leanResults(big);
         expect(lean.lean).toBe(true);
         expect(estimateKeptBytes(lean)).toBeLessThan(RECORD_BYTES_CAP);
         const [clock] = lean.alternatives;
         expect(clock.transferHistory).toEqual({ total_duration_ticks: 60, entities: [] });
-        expect(clock.stateTransitionHistory).toEqual({ total_duration_ticks: 60, entities: [] });
-        expect(clock.clockOnlyTransferHistory).toBeNull();
-        expect(clock.clockOnlyStateTransitionHistory).toBeNull();
+        expect(clock.stateTransitionHistory).toEqual({ total_duration_ticks: 60, entities: [], reasons: [] });
         expect(clock.clockWindows).toEqual(big.alternatives[0].clockWindows);
         expect(clock.blueprintString).toBe(big.alternatives[0].blueprintString);
         expect(clock.fuelView).toBe(big.alternatives[0].fuelView);

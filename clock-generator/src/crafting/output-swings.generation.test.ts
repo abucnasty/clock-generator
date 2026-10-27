@@ -5,6 +5,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
 import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, withSearches } from "./generate-blueprint-test-helpers";
+import { transitionsOf } from "./sequence/compact-history";
 
 describe("generateClockForConfig", () => {
 
@@ -257,8 +258,8 @@ describe("generateClockForConfig", () => {
 
             // the timelines default to this run; it differs from the planning run the windows were taken from
             it("carries the clock-only run, where both hands are dropped after the first window", () => {
-                const dropsOf = (history: typeof planned.result.serializable_state_transition_history) => history.entities
-                    .find(entity => entity.entity_id === "inserter:1")!.transitions
+                const dropsOf = (history: typeof planned.result.serializable_state_transition_history) =>
+                    transitionsOf(history, history.entities.find(entity => entity.entity_id === "inserter:1")!)
                     .filter(transition => transition.to_status === "DROP")
                     .map(transition => transition.tick);
 

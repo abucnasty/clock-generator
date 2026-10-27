@@ -157,8 +157,6 @@ function App() {
         blueprintString,
         transferHistory,
         stateTransitionHistory,
-        clockOnlyTransferHistory,
-        clockOnlyStateTransitionHistory,
         fuelView,
         clockWindows,
         shiftOptions,
@@ -1430,8 +1428,6 @@ function App() {
                                 simulationDurationTicks={simulationDurationTicks}
                                 transferHistory={transferHistory}
                                 stateTransitionHistory={stateTransitionHistory}
-                                clockOnlyTransferHistory={clockOnlyTransferHistory}
-                                clockOnlyStateTransitionHistory={clockOnlyStateTransitionHistory}
                                 fuelView={fuelView}
                                 clockWindows={clockWindows}
                                 shiftOptions={shiftOptions}

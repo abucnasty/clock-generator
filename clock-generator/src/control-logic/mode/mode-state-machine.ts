@@ -51,10 +51,7 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
     }
 
     public forceTransitionTo(mode: M): void {
-        const transition: Transition<M> = {
-            toMode: mode,
-            reason: "forced transition",
-        };
+        const transition = new Transition(mode, "forced transition");
         this.current = this.executeTransition(this.current, transition);
         this.current_evaluator = this.modeEvaluatorForMode(this.current);
     }

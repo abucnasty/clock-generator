@@ -13,7 +13,7 @@ import type { GeneratedFor } from './resultsStaleness';
  * The shape of what is kept. Bump it whenever `KeptResults` or `ClockAlternativeView` changes shape (a field added,
  * removed or changed): kept results of another version are thrown away when the page opens, never shown.
  */
-export const RESULTS_SCHEMA_VERSION = 3;
+export const RESULTS_SCHEMA_VERSION = 4;
 
 /** The most generations kept, one per build */
 export const MAX_KEPT = 10;
@@ -81,12 +81,12 @@ const BYTES_PER_CHARACTER = 2;
 const BYTES_PER_HISTORY_ENTRY = 100;
 const BYTES_PER_CLOCK = 2048;
 
-type History = { entities: { transfers?: unknown[]; transitions?: unknown[]; factorio_states?: unknown[] }[] } | null;
+type History = { entities: { transfers?: unknown[]; columns?: { tick: ArrayLike<number>; state_tick: ArrayLike<number> } }[] } | null;
 
-/** The transfers, transitions and Factorio states of a history */
+/** The transfers of a history, or its transitions and Factorio states (counted as before they went into columns) */
 function historyEntries(history: History): number {
     return history?.entities.reduce((sum, entity) =>
-        sum + (entity.transfers?.length ?? 0) + (entity.transitions?.length ?? 0) + (entity.factorio_states?.length ?? 0), 0) ?? 0;
+        sum + (entity.transfers?.length ?? 0) + (entity.columns?.tick.length ?? 0) + (entity.columns?.state_tick.length ?? 0), 0) ?? 0;
 }
 
 /**
@@ -100,8 +100,6 @@ export function estimateKeptBytes(results: Pick<KeptResults, 'alternatives'>): n
         + BYTES_PER_HISTORY_ENTRY * (
             historyEntries(clock.transferHistory)
             + historyEntries(clock.stateTransitionHistory)
-            + historyEntries(clock.clockOnlyTransferHistory)
-            + historyEntries(clock.clockOnlyStateTransitionHistory)
         ), 0);
 }
 
@@ -113,9 +111,7 @@ export function leanResults(results: KeptResults): KeptResults {
         alternatives: results.alternatives.map((clock) => ({
             ...clock,
             transferHistory: { total_duration_ticks: clock.transferHistory.total_duration_ticks, entities: [] },
-            stateTransitionHistory: { total_duration_ticks: clock.stateTransitionHistory.total_duration_ticks, entities: [] },
-            clockOnlyTransferHistory: null,
-            clockOnlyStateTransitionHistory: null,
+            stateTransitionHistory: { total_duration_ticks: clock.stateTransitionHistory.total_duration_ticks, entities: [], reasons: [] },
         })),
     };
 }

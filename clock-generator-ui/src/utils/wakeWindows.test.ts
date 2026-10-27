@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AsBuiltStabilityCheck, FuelInserterPlan, SerializableEntityStateTransitions } from 'clock-generator/browser';
+import type { AsBuiltStabilityCheck, CompactEntityStateTransitions, FuelInserterPlan } from 'clock-generator/browser';
 import type { FuelViewData } from '../worker/types';
 import {
     axisTicks,
@@ -19,17 +19,16 @@ import {
     type WakeWindowSource,
 } from './wakeWindows';
 
-function entity(id: string, extra: Partial<SerializableEntityStateTransitions> = {}): SerializableEntityStateTransitions {
+function entity(id: string, extra: Partial<CompactEntityStateTransitions> = {}): CompactEntityStateTransitions {
     const [type, number] = id.split(':');
     return {
         entity_id: id,
-        entity_type: type as SerializableEntityStateTransitions['entity_type'],
+        entity_type: type as CompactEntityStateTransitions['entity_type'],
         label: `${type} ${number}`,
         items: [],
         initial_status: 'IDLE',
-        transitions: [],
         initial_factorio_state: 'working',
-        factorio_states: [],
+        columns: { tick: new Int32Array(0), from: new Uint8Array(0), to: new Uint8Array(0), reason: new Uint32Array(0), state_tick: new Int32Array(0), state: new Uint8Array(0) },
         ...extra,
     };
 }
@@ -72,7 +71,7 @@ function source(extra: Partial<WakeWindowSource> = {}): WakeWindowSource {
     return {
         simulationDurationTicks: 600,
         clockWindows: {},
-        stateTransitionHistory: { total_duration_ticks: 600, entities: [] },
+        stateTransitionHistory: { reasons: [], total_duration_ticks: 600, entities: [] },
         asBuilt: null,
         fuelView: null,
         beltPickupSlackTicks: {},
@@ -205,7 +204,7 @@ describe('barsToDraw', () => {
 describe('buildWakeWindowRows', () => {
     it('orders inserters then drills, by number', () => {
         const rows = buildWakeWindowRows(source({
-            stateTransitionHistory: {
+            stateTransitionHistory: { reasons: [],
                 total_duration_ticks: 600,
                 entities: [entity('drill:1'), entity('inserter:10'), entity('machine:1'), entity('inserter:2')],
             },
@@ -216,7 +215,7 @@ describe('buildWakeWindowRows', () => {
 
     it('says what a row moves, between what, in the names every view uses', () => {
         const [inserter, drill] = buildWakeWindowRows(source({
-            stateTransitionHistory: {
+            stateTransitionHistory: { reasons: [],
                 total_duration_ticks: 600,
                 entities: [
                     entity('inserter:3', {
@@ -248,7 +247,7 @@ describe('buildWakeWindowRows', () => {
     it('tells the modes apart', () => {
         const rows = buildWakeWindowRows(source({
             clockWindows: { 'inserter:1': [{ start: 0, end: 9 }], 'inserter:2': [] },
-            stateTransitionHistory: {
+            stateTransitionHistory: { reasons: [],
                 total_duration_ticks: 600,
                 entities: [entity('inserter:1'), entity('inserter:2'), entity('inserter:3'), entity('inserter:4'), entity('drill:1')],
             },
@@ -272,7 +271,7 @@ describe('buildWakeWindowRows', () => {
         const rows = buildWakeWindowRows(source({
             clockWindows: { 'inserter:1': [{ start: 0, end: 9 }] },
             alwaysOnReasons: { 'inserter:2': { kind: 'busy', period_ticks: 24 }, 'inserter:1': { kind: 'loop' } },
-            stateTransitionHistory: {
+            stateTransitionHistory: { reasons: [],
                 total_duration_ticks: 600,
                 entities: [entity('inserter:1'), entity('inserter:2'), entity('inserter:3')],
             },
