@@ -130,13 +130,14 @@ jobs:
     if: needs.changes.outputs.generation == 'true'
     runs-on: ubuntu-latest
     # the whole suite took 1,302 s on an Intel Xeon 8573C runner and 1,490 s on an AMD EPYC 7763 on 2026-10-24 (one
-    # runner, 3 workers); a shard has about a quarter of it, and a single file takes up to 6.5 minutes
+    # runner, 3 workers); a shard has about an eighth of it, and no single file takes more than about 2 minutes (the
+    # slowest clock families are one file for each belt tier), bar the one test of container-output
     timeout-minutes: 25
     strategy:
       # every shard finishes, so that a pull request shows all its failures at once
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
         working-directory: clock-generator
@@ -152,9 +153,9 @@ jobs:
       - run: npm ci
 
       # Vitest starts the files that took longest in the run before; without its results it starts the largest files,
-      # and over-hood-clock, a short file and one of the slowest, started last and ran alone for minutes. The results
-      # are saved at the end of every run (one cache entry each, one series for each shard) and the newest of the shard
-      # is restored, after `npm ci`, which empties node_modules.
+      # and a short file that is one of the slowest, started last, runs alone for minutes. The results are saved at
+      # the end of every run (one cache entry each, one series for each shard count and shard: a change of the number
+      # of shards starts new series) and the newest of the shard is restored, after `npm ci`, which empties node_modules.
       - name: Durations of the last generation tests
         uses: actions/cache@v4
         with:
