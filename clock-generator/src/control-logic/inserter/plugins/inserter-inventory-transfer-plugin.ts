@@ -19,6 +19,7 @@ export class InserterInventoryHistoryPlugin implements ModePlugin<InserterMode> 
             this.tick_provider,
             this.inserter_state,
             this.recordTransferSnapshot.bind(this),
+            () => this.transfer_history.recording,
         );
     }
 

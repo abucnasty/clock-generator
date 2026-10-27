@@ -338,7 +338,10 @@ than a 63-period recording fits under the harness's 72,000-tick cap, and moved 6
 false. Its observed windows at 800 ticks hold 80 a period, in the game too.
 The portable `over-hood-clock.generation.test.ts` checks these selections, exact clock hashes and the final
 untouched final native recovery windows for clocks marked stable (at least eight periods for moving supply,
-five for backed-up supply, whose assessment starts later).
+five for backed-up supply, whose assessment starts later), for the nine fixtures of `over-hood-clock-cases.ts`, each the
+only one to take its path through the generator. `over-hood-clock-mechanics.test.ts` checks the recorded first hands and
+the controls of all 32 against the simulator and the fixture configs without generating (the recovery windows
+included).
 
 The raw recordings of #254 and of the bounded shorter-loss trace were not kept in the repository; their summaries
 above are the record. Earlier short-outage pilots are separate; an outage hidden by buffers does not add recovery
@@ -402,8 +405,11 @@ the express ones the generator calls "no recovery" and the normal ones it calls 
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
 
 The portable `front-pickup-clock.generation.test.ts` pins each selection and its exact exported clock (each entry's
-`generation`), and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false; a stable clock, or a moving-config
-clock on the backed-up exit, needs an exact baseline and its last recovery periods at target. 29 of the 32
+`generation`) for the nine fixtures of `front-clock-cases.ts`, each the only one to take its path through the generator,
+and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false;
+a stable clock needs an exact baseline and its last recovery periods at target. `front-clock-mechanics.test.ts` checks the
+recorded figures of all 48 against the simulator without generating: the first hands of each tier, and the controls
+(exact baseline and recovery, the verdicts of the moving-config exits, the rate over the pinned period). 29 of the 32
 entrance clocks are byte-identical to the over-the-hood pins of the same speed, mirroring, supply and family;
 the builds differ in the game, so each has its own control.
 
@@ -430,8 +436,11 @@ Factorio 2.1.21 on `b9fd341b` (#277); express stack 3 again on `6367fc83`, for t
 now. **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery output (33 periods).** Output stops one to ten periods into the block, once the belt behind the drop is full (about 39
 stacks), where the simulator holds the output inserter at once; the periods judged after the release are the same in
 both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-and-drops)). The portable
-`blocked-output-clock.generation.test.ts` pins each selection and its exported clock (each entry's `generation`) and
-checks it against its native summary beside it.
+`blocked-output-clock-mechanics.test.ts` checks all 16 controls against the fixture config, the documentation and the
+belt-drop calibration's drop figures, and runs a plain clock built from those figures through the block and release in
+the simulator, without generating a clock. `blocked-output-clock.generation.test.ts` pins the selection and exported clock
+(each entry's `generation`) of the three cases in [blocked-output-clock-cases.ts](blocked-output-clock-cases.ts) (the even-hands
+and shifted-swings paths, and the longest drop), and checks it against its native summary beside it.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/blocked-output-new \
@@ -457,8 +466,11 @@ lasts 4 periods (the disposal chest is filled), and recovery is judged over 40 p
 
 [container-clock-controls.json](container-clock-controls.json) holds the 6 native summaries, recorded on Factorio 2.1.21
 at commit `000ad913`. **All 6 selected clocks are stable, meet exact baseline output (63 periods), drop to 0 in every
-disturbance and are exact in all 33 judged periods after each.** `container-clock.generation.test.ts` pins each
-selection and its exported clock and checks it against its native summary.
+disturbance and are exact in all 33 judged periods after each.** `container-clock-mechanics.test.ts` checks all 6 without
+generating: each container's slots and stock in the simulator, the cut lengths against the stock, the periods the game
+took to run dry under each cut, and the controls against the fixture configs. `container-clock.generation.test.ts` pins
+the selection and exported clock of the 2 cases in [container-clock-cases.ts](container-clock-cases.ts) (one a recipe: the
+clock depends on the recipe, and the 3 fixtures of each recipe record one clock hash) and checks each against its native summary.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \
