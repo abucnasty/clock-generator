@@ -397,8 +397,11 @@ the express ones the generator calls "no recovery" and the normal ones it calls 
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
 
 The portable `front-pickup-clock.generation.test.ts` pins each selection and its exact exported clock (each entry's
-`generation`), and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false; a stable clock, or a moving-config
-clock on the backed-up exit, needs an exact baseline and its last recovery periods at target. 29 of the 32
+`generation`) for the nine fixtures of `front-clock-cases.ts`, each the only one to take its path through the generator,
+and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false;
+a stable clock needs an exact baseline and its last recovery periods at target. `front-clock-mechanics.test.ts` checks the
+recorded figures of all 48 against the simulator without generating: the first hands of each tier, and the controls
+(exact baseline and recovery, the verdicts of the moving-config exits, the rate over the pinned period). 29 of the 32
 entrance clocks are byte-identical to the over-the-hood pins of the same speed, mirroring, supply and family;
 the builds differ in the game, so each has its own control.
 
