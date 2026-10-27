@@ -330,7 +330,10 @@ than a 63-period recording fits under the harness's 72,000-tick cap, and moved 6
 false. Its observed windows at 800 ticks hold 80 a period, in the game too.
 The portable `over-hood-clock.generation.test.ts` checks these selections, exact clock hashes and the final
 untouched final native recovery windows for clocks marked stable (at least eight periods for moving supply,
-five for backed-up supply, whose assessment starts later).
+five for backed-up supply, whose assessment starts later), for the nine fixtures of `over-hood-clock-cases.ts`, each the
+only one to take its path through the generator. `over-hood-clock-mechanics.test.ts` checks the recorded first hands and
+the controls of all 32 against the simulator and the fixture configs without generating (the recovery windows
+included).
 
 The raw recordings of #254 and of the bounded shorter-loss trace were not kept in the repository; their summaries
 above are the record. Earlier short-outage pilots are separate; an outage hidden by buffers does not add recovery
