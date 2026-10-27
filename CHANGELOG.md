@@ -13,6 +13,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ### Changed
 - Large builds take less memory to generate.
 - Clocks are made only for the belts the build is set to: moving or backed up.
+- Backed-up belts at normal speed: clocks give each input window time for the belt to bring a whole hand, so pickups from an underground end get a stable clock.
 
 ## [0.23.0] - Unreleased
 

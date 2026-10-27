@@ -149,9 +149,14 @@ withdrawals, other bend approaches, other orientations and arbitrary relative la
 A moving front exit cannot be built: the inserter on the exit's output tile blocks the belt. A config that says
 moving supply gets a clock for moving belts there anyway; on the backed-up exit the game holds and recovers it
 at every tier ([generated clocks](belt-pickup/experiments.md#generated-clocks-and-drops)). Clocks are made only for the
-belts the config names. At normal speed a backed-up belt refills a pickup slower than a stack a tick, so on a config
-whose belts are backed up no clock for the normal side underground entrance and exit and the front exit is stable; the
-generator no longer makes one planned with the belts moving for them, as it did until 0.23.0 (recorded exact then).
+belts the config names. At normal speed a backed-up belt refills a pickup slower than a stack a tick: the half tile of
+an underground end holds three stacks in reach and the fourth comes 8 ticks later, so a hand takes 10 ticks. A window
+read off the planning run is as long as the hand there took, which is shorter where that hand had started before the
+window or had waited for its machine while the belt refilled; a hand that starts in it from another start is cut. So
+on backed-up belts every belt-fed window lasts at least as long as a hand takes from the lanes at rest
+(`backedUpHandTicks`, the same queue), where that is slower than a stack a tick (#456): the normal side underground
+entrance and exit and the front exit get a stable clock for backed-up belts. Until 0.23.0 they got one planned with the
+belts moving (recorded exact then); the new clocks are checked in the simulator only so far (#460).
 
 ### Starting on supplied belts
 

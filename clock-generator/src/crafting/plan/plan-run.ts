@@ -59,7 +59,7 @@ import { FactorioStatePlugin } from "../../control-logic/plugins/factorio-state-
 import { factorioDrillState, factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
-import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
+import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
@@ -1361,8 +1361,11 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
     // the slack decision already checked the slacked windows: hand its run over, with the exact map it ran on
     // (with the slack in use the fuel hand room is empty, so these are the windows the clock gets)
     const verified = use_belt_pickup_slack ? slack_trial?.verified ?? null : null;
+    // on backed-up belts every belt-fed window lasts as long as a hand takes from the lanes at rest at the belt's speed
+    const backed_up_hand_ticks = backed_up_belts ? backedUpHandTicks(simulation_context.entity_registry) : new Map<string, number>();
     const windows = verified !== null ? verified.windows
-        : withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
+        : withWindowsAtLeast(withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks),
+            backed_up_hand_ticks, duration.ticks);
     // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
     const room = withRoomForRandomAmounts(plan, windows);
     return { windows: room.windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room,

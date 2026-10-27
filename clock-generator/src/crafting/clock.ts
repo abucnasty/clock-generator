@@ -2,6 +2,8 @@ import { EnableControlRange } from "../config/schema";
 import { OpenRange } from "../data-types";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../entities";
 import { SubtickClock } from "./blueprint";
+import { pickupLaneLength } from "../common/belt-pickup-layout";
+import { backedUpHandGrabTicks } from "../state/backed-up-pickup-lane";
 
 /**
  * Ticks between the clock reaching a value and an inserter acting on its decider (combinator output, then the
@@ -110,6 +112,67 @@ export function beltPickupSlackTicks(entity_registry: ReadableEntityRegistry): M
 }
 
 
+/**
+ * The ticks a hand off a backed-up belt takes to fill from the lanes at rest, by belt-fed inserter id, where the belt
+ * refills its pickup slower than a lane stack a tick: the pickup exposes fewer stacks than a hand takes, and the belt
+ * brings the rest into reach at its speed (`backedUpHandGrabTicks`). A window read off the planning run is as long as
+ * the hand took there, which is shorter where that hand had started before the window or had waited for its machine
+ * while the belt refilled. Absent for moving supply and where the belt gives a stack a tick (turbo and express on an
+ * underground end, every tier on a straight belt with four-item stacks).
+ */
+export function backedUpHandTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
+    const hand_ticks = new Map<string, number>();
+    for (const entity of entity_registry.getAll()) {
+        if (!Entity.isInserter(entity) || entity.belt_supply !== "backed_up") {
+            continue;
+        }
+        const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
+        if (!Entity.isBelt(source)) {
+            continue;
+        }
+        const order = entity.near_lane === 2 ? [1, 0] : [0, 1];
+        const layout = entity.pickup_layout ?? "side-straight";
+        let ticks = 0;
+        for (const item of entity.filtered_items) {
+            const lanes = order.filter(index => source.lanes[index]?.ingredient_name === item).map(index => ({
+                length_tiles: pickupLaneLength(layout, index + 1, entity.pickup_length ?? 1),
+                stack_size: source.lanes[index].stack_size,
+            }));
+            const grabs = backedUpHandGrabTicks(source.belt_speed, lanes, handSizeFor(entity, item));
+            const fill_ticks = grabs.length === 0 ? 0 : grabs[grabs.length - 1] + 1;
+            if (fill_ticks > grabs.length) {
+                ticks = Math.max(ticks, fill_ticks);
+            }
+        }
+        if (ticks > 0) {
+            hand_ticks.set(entity.entity_id.id, ticks);
+        }
+    }
+    return hand_ticks;
+}
+
+/** Windows that last at least the ticks given, by key: a shorter window is lengthened at its end (whole-tick periods only) */
+export function withWindowsAtLeast(
+    windows: Map<string, OpenRange[]>,
+    least_ticks: ReadonlyMap<string, number>,
+    period: number,
+): Map<string, OpenRange[]> {
+    const result = new Map<string, OpenRange[]>();
+    for (const [key, ranges] of windows) {
+        const ticks = least_ticks.get(key) ?? 0;
+        if (ticks === 0 || !Number.isInteger(period) || ranges.every(r => r.end_inclusive - r.start_inclusive + 1 >= ticks)) {
+            result.set(key, ranges);
+            continue;
+        }
+        const lengthened = ranges.flatMap(r => {
+            const length = Math.min(Math.max(r.end_inclusive - r.start_inclusive, ticks - 1), period - 1);
+            return rotateRanges([OpenRange.from(0, length)], r.start_inclusive, period);
+        });
+        result.set(key, OpenRange.reduceRanges(lengthened));
+    }
+    return result;
+}
+
 export function withBeltPickupSlack(
     windows: Map<string, OpenRange[]>,
     slack: Map<string, number>,
@@ -152,8 +215,9 @@ export function shiftRangesForCircuitLatency(ranges: OpenRange[], period: number
 }
 
 /**
- * The belt supply a clock is designed for. Moving pickups time reachable stacks; backed-up supply provides a
- * stack each eligible pickup tick. Moving clocks add slack for late pickups (see "Wake-ups, the measure for goal 2" in GOALS.md).
+ * The belt supply a clock is designed for. Moving pickups time reachable stacks; backed-up supply refills reachable
+ * stacks at belt speed, and its windows last as long as a hand takes from the lanes at rest (see backedUpHandTicks).
+ * Moving clocks add slack for late pickups (see "Wake-ups, the measure for goal 2" in GOALS.md).
  */
 export type ClockBelt =
     /** Belt pickup slack lengthened the windows of its belt-fed inserters, by these ticks (each value once, ascending) */
