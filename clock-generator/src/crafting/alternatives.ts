@@ -23,6 +23,7 @@ import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, movingBeltClock, terminalCountForAlternativePlanning } from "./generate-clock";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
+import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
 import { withRunMemo } from "./plan/run-memo";
@@ -605,7 +606,8 @@ function alternativeDefinitionsFor(
         },
         // Small batches where its first plan's period was not too long, so the primary did not try it: a fallback, made
         // only where no clock made before it can be selected as stable, so it never moves a clock that was selected
-        ...(context.primitive_tried === true || !primitiveGroupedOptionsSupported(small_batches_config, SMALL_BATCHES_OPTIONS) ? [] : [{
+        ...(context.primitive_tried === true || !primitiveGroupedOptionsSupported(small_batches_config, SMALL_BATCHES_OPTIONS)
+            || !primitiveGroupedConfigSupported(small_batches_config) ? [] : [{
             id: "primitive-grouped",
             label: "Small batches",
             description: "Uses small output batches when no planned clock holds. Checked for timing margin, clock starts and recovery after interruptions.",

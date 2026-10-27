@@ -62,12 +62,17 @@ export function assertAcyclicGroupedDependencies(registry: Pick<ReadableEntityRe
  * user override. Normal generation/selection do not call this function yet. Existing stock/hand/slack rules decide
  * each construction; a constructed artifact does not imply its windows hold.
  */
-export function constructPrimitiveGroupedHands(config: Config): PrimitiveGroupedConstruction {
-    assertOutputTransferGenerationSupported(config);
-    if (config.target_output.counts === "destroyed" || config.overrides?.terminal_swing_count !== undefined
+/** Whether a config leaves the made item's counts and every control to the generator, as primitive construction needs */
+export function primitiveGroupedConfigSupported(config: Config): boolean {
+    return !(config.target_output.counts === "destroyed" || config.overrides?.terminal_swing_count !== undefined
         || config.overrides?.lcm !== undefined || config.overrides?.use_fractional_swings === true
         || config.inserters.some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO")
-        || (config.drills?.configs ?? []).some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO")) {
+        || (config.drills?.configs ?? []).some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO"));
+}
+
+export function constructPrimitiveGroupedHands(config: Config): PrimitiveGroupedConstruction {
+    assertOutputTransferGenerationSupported(config);
+    if (!primitiveGroupedConfigSupported(config)) {
         throw new GroupedHandsNotApplicable("primitive grouped construction requires automatic made-item controls and count policy");
     }
     assertInserterCoverage(config);

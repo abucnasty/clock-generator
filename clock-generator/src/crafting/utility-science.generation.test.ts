@@ -49,8 +49,9 @@ describe("the searches only run when they are needed", () => {
 
         it("plans the searches as tasks that wait for the others, and as tasks like the others when the config asks for them", () => {
             const waiting = (planned: Config) => planClockAlternatives(planned, { logger: quiet }).tasks.filter(task => task.only_when_needed).map(task => task.id);
-            expect(waiting(config)).toEqual(SEARCH_IDS);
-            expect(waiting(withSearches(config))).toEqual([]);
+            // Small batches, where no planned count holds, is a fallback: it waits either way
+            expect(waiting(config)).toEqual([...SEARCH_IDS, "primitive-grouped"]);
+            expect(waiting(withSearches(config))).toEqual(["primitive-grouped"]);
         });
     });
 });
