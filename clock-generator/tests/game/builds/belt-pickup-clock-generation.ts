@@ -5,9 +5,9 @@ import {backpressureLossOf, simulateClockOnly} from "../../../src/crafting/trial
 import {OpenRange} from "../../../src/data-types";
 import {alwaysOnReasonProblemsOf, RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
-import {FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {clockHash, readControls} from "./clock-controls";
 import {expectColdStartRunsOnSelection} from "./pickup-clock-cold-start-runs";
+import {BELT_PICKUP_GENERATED} from "./belt-pickup-clock-cases";
 
 const controls = readControls("pickup-clock-controls.json").cases;
 
@@ -28,10 +28,10 @@ const {moving_phase: movingPhases, recovery_phase: recoveryPhases} = readControl
 // The native controls witness the selected default, including its failures. A different default must be
 // rechecked in the game; matching the requested rate in the simulator alone does not replace that evidence.
 
-/** The generation tests of the belt pickup clocks on one belt tier, each beside the in-game recording of its clock */
-export function beltPickupClockTestsAt(tier: FixtureBeltSpeed["name"]) {
+/** The generation tests of the belt pickup clocks that no other test generates (belt-pickup-clock-cases.ts), each beside the in-game recording of its clock */
+export function beltPickupClockTests() {
     for (const family of ["electromagnetic", "same-item"] as const) describe(`native-checked ${family} defaults`, () => {
-        for (const variant of pickupClockSpeedCases(family).filter(it => it.speed.name === tier)) test(variant.name, async () => {
+        for (const variant of pickupClockSpeedCases(family).filter(it => BELT_PICKUP_GENERATED.has(it.name))) test(variant.name, async () => {
             const native = controls[variant.name]?.native;
             const pin = controls[variant.name]?.generation;
             expect(native, "every ordinary speed/layout/supply combination has a native control").toBeDefined();
