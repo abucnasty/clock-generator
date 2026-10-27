@@ -19,7 +19,8 @@ A process is
                  the watching client with --mp-connect and --config. A game the harness did not start has neither and never matches.
   vite           the node executable running node_modules/.bin/vite or vite/bin/vite.js (a dev server or preview)
   esbuild        node_modules/@esbuild/*/bin/esbuild --service (vite's helper)
-The executable (ps comm) decides first: a shell whose command line only mentions one of these never matches.
+The executable decides first (on Linux the /proc/<pid>/exe link, since ps comm is the thread name there, `MainThread` for
+node; elsewhere ps comm, which is the executable's path): a shell whose command line only mentions one of these never matches.
 """
 import json, os, re, subprocess, sys
 
@@ -31,7 +32,7 @@ KINDS = ['vitest', 'vitest-worker', 'factorio', 'vite', 'esbuild']
 
 
 def kind_of(exe, cmd):
-    """The kind of a process from its executable (ps comm) and command line; None for anything else. The executable
+    """The kind of a process from its executable and command line; None for anything else. The executable
     decides first, so a shell whose command line only mentions vitest or factorio never matches."""
     name = os.path.basename(exe)
     if name == 'node':
@@ -98,6 +99,13 @@ def processes(extra_trees=()):
         parts = line.strip().split(None, 1)
         if len(parts) == 2:
             exes[int(parts[0])] = parts[1]
+    # On Linux ps comm is the thread name (`MainThread` for node), so read the real executable where /proc has it;
+    # elsewhere (macOS) comm is already the executable's path.
+    for pid in exes:
+        try:
+            exes[pid] = os.readlink(f'/proc/{pid}/exe').removesuffix(' (deleted)')
+        except OSError:
+            pass
     out = subprocess.run(['ps', '-axo', 'pid=,ppid=,etime=,pcpu=,command='], capture_output=True, text=True).stdout
     rows, alive = [], set()
     for line in out.splitlines():
