@@ -21,7 +21,7 @@ import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, Sign
 import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
 import { ModePlugin } from "../../control-logic/mode";
-import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
+import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { neverBlockingBranchesOf, type TerminalBranch } from "../terminal-rate";
@@ -264,11 +264,12 @@ export interface BlueprintGenerationResult {
     /** For observed windows (`observedWindowsClock`, and `config.overrides.derive_clock_windows`) */
     derived_clock_windows?: DerivedClockWindowsReport;
     /**
-     * Present when the exported clock has windows for the inserters that take out of a loop of machines, which the plan
-     * leaves always enabled (see `loopInserterWindows`): their ids, and how many windows they had without. These windows
-     * only reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
+     * Present when the exported clock has windows for the inserters of a loop of machines or that take out of one, which
+     * the plan leaves always enabled (see `trialWithLoopWindows`): their ids, how many windows they had without, and
+     * which of them are the loop's own inserters (`inLoopInserterWindows`), absent where none is. These windows only
+     * reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
      */
-    loop_windows?: { inserter_ids: string[]; window_count_without_loop_windows: number };
+    loop_windows?: { inserter_ids: string[]; window_count_without_loop_windows: number; in_loop_ids?: string[] };
     /**
      * Each drill that drops into a chest: the windows the clock gives it, from the windows of the inserters that take
      * from the chest (see chestDrillWindows), or why it stays always enabled. Absent when the build has none.
@@ -344,11 +345,12 @@ export interface GenerateClockOptions {
      */
     shared_windows?: boolean;
     /**
-     * False leaves the inserters that take out of a loop always enabled, as every clock did before they were given
-     * windows where the clock holds with them (see `trialWithLoopWindows`): the clock is made so again where the one with
-     * them does not get back from a loss.
+     * False leaves the inserters of a loop and those that take out of one always enabled, as every clock did before they
+     * were given windows where the clock holds with them (see `trialWithLoopWindows`); "out-of-loop" gives windows only
+     * to those that take out of it. The clock is made so again where the one with them does not get back from a loss:
+     * first without the windows of the loop's own inserters, then without any.
      */
-    loop_windows?: boolean;
+    loop_windows?: boolean | "out-of-loop";
 }
 
 /** What a machine holds when a run starts: see GenerateClockOptions.start_stock */
@@ -590,20 +592,27 @@ interface RecordedBuild {
     relative_tick_provider: TickProvider;
     inventory_transfer_history: InventoryTransferHistory;
     state_transition_history: StateTransitionHistory;
-    /** The plugins that only feed the two histories */
-    history_plugins: ReadonlySet<ModePlugin<any>>;
+    /** The plugins and machine and drill observers that only feed the two histories */
+    history_plugins: ReadonlySet<object>;
 }
 
-/** Every plugin on the state machines of a simulation */
-function pluginsOf(context: SimulationContext): ModePlugin<any>[] {
-    return [...context.inserters, ...context.machines, ...context.drills].flatMap((it): ModePlugin<any>[] => it.getPlugins());
+/** Every plugin on the inserters' state machines of a simulation, and every observer on its machines and drills */
+function pluginsOf(context: SimulationContext): object[] {
+    return [...context.inserters.flatMap((it): ModePlugin<any>[] => it.getPlugins()),
+        ...context.machines.flatMap(it => it.getObservers()), ...context.drills.flatMap(it => it.getObservers())];
 }
 
-/** Takes the plugins that only feed the two histories off every state machine of these contexts */
+/** Takes the plugins and observers that only feed the two histories off every entity of these contexts */
 function detachHistoryPlugins(build: RecordedBuild, ...contexts: SimulationContext[]): void {
     for (const context of contexts) {
-        for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
+        for (const state_machine of context.inserters) {
             state_machine.removePlugins(build.history_plugins);
+        }
+        for (const machine of context.machines) {
+            machine.removeObservers(build.history_plugins);
+        }
+        for (const drill of context.drills) {
+            drill.removeObservers(build.history_plugins);
         }
     }
 }
@@ -688,7 +697,7 @@ function prepareBuild(build: RecordedBuild, debug: MutableDebugSettingsProvider,
 /** Empties the output machines (unless kept) and puts in what the machines hold at the start, when one is given */
 function setUpTheStart(
     simulation_context: SimulationContext,
-    output_machine_state_machines: MachineStateMachine[],
+    output_machine_state_machines: CraftingMachineArchetype[],
     options: RunOptions,
     logger: Logger,
 ): void {
@@ -713,7 +722,7 @@ function setUpTheStart(
                 continue;
             }
             for (const [item_name, quantity] of Object.entries(start.items)) {
-                MachineState.ingredientInventory(machine_state, item_name).setQuantity(item_name, quantity);
+                machine_state.ingress.ingredientInventory(item_name).setQuantity(item_name, quantity);
             }
             machine_state.craftingProgress.progress = start.crafting_progress ?? machine_state.craftingProgress.progress;
             machine_state.bonusProgress.progress = start.bonus_progress ?? machine_state.bonusProgress.progress;
@@ -1668,7 +1677,8 @@ export function checkedClock(
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);
         let kept_run = as_built_run;
         if (as_built_run.check.holds && options.loop_windows !== false) {
-            const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail);
+            const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail,
+                false, options.loop_windows !== "out-of-loop");
             if (looped !== null) {
                 kept_run = looped;
                 windows = looped.windows;
@@ -1687,7 +1697,7 @@ export function checkedClock(
 /** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */
 interface PlannedCraftingCycle {
     target_production_rate: TargetProductionRate;
-    output_machine_state_machines: MachineStateMachine[];
+    output_machine_state_machines: CraftingMachineArchetype[];
     /** One output inserter per output machine, which the swings of a cycle are counted by */
     output_inserters: InserterState[];
     /** Every inserter that takes the target item out of the build */
@@ -2423,7 +2433,7 @@ function configureInventoryTransferPlugins(
         if (!Entity.isMachine(sink_machine)) {
             return;
         }
-        it.addPlugin(new DrillInventoryTransferPlugin(
+        it.addObserver(new DrillInventoryTransferPlugin(
             it.drill_state.drill,
             sink_machine,
             relative_tick_provider,
@@ -2457,18 +2467,18 @@ function configureStateTransitionPlugins(
     // Add machine state transition plugins
     simulation_context.machines.forEach(it => {
         const recorder = state_transition_history.recorderFor(it.machine_state.entity_id, "machine");
-        it.addPlugin(new MachineStateTransitionTrackerPlugin(relative_tick_provider, recorder));
+        it.addObserver(new MachineStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioMachineState(it.machine_state), recorder));
+            it.addObserver(new FactorioStatePlugin(relative_tick_provider, () => factorioMachineState(it.machine_state), recorder));
         }
     });
 
     // Add drill state transition plugins
     simulation_context.drills.forEach(it => {
         const recorder = state_transition_history.recorderFor(it.drill_state.entity_id, "drill");
-        it.addPlugin(new DrillStateTransitionTrackerPlugin(relative_tick_provider, recorder));
+        it.addObserver(new DrillStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioDrillState(it.drill_state), recorder));
+            it.addObserver(new FactorioStatePlugin(relative_tick_provider, () => factorioDrillState(it.drill_state), recorder));
         }
     });
 

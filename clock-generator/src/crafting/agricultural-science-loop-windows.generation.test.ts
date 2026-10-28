@@ -12,10 +12,11 @@ describe("generateClockForConfig", () => {
     // The inserters that take out of the egg loop (9 and 10, into the science biochamber) get windows where the machine
     // they put into was under its output block in the clock's long run, as long as it takes to draw their hands under
     // its insertion limit, kept only when the clock passes the as-built check with them as it did without
-    // (trialWithLoopWindows). The inserters of the loop itself (5 and 8) stay always enabled. The test that ranks the
-    // alternatives with and without them takes minutes, so it is in a file of its own:
+    // (trialWithLoopWindows). The inserters of the loop itself (5 and 8) take turns after them (inLoopInserterWindows),
+    // kept only where the check passes with them as without and with each set of the loop's windows moved a tick. The
+    // test that ranks the alternatives with and without them takes minutes, so it is in a file of its own:
     // agricultural-science-loop-windows-ranking.generation.test.ts.
-    describe("agricultural science: windows for the inserters that take out of the egg loop", async () => {
+    describe("agricultural science: windows for the inserters of the egg loop and those that take out of it", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
         const out_of_the_loop = ["inserter:10", "inserter:9"];
@@ -56,17 +57,25 @@ describe("generateClockForConfig", () => {
 
         // The planning run lets the loop run free and makes 432 of the 400 a period; the windows go by the clock-only
         // check alone, which holds. Until they did, they were never tried on the sample.
-        it("gives 9 and 10 windows on the 5-swing clock of the sample, where its planning run does not hold, and leaves 5 and 8 always on", () => {
+        it("gives 9 and 10 windows on the 5-swing clock of the sample, where its planning run does not hold, and 5 and 8 too", () => {
             expect(looped.stability_check.actual_output_items).toBe(432);
             expect(looped.stability_check.as_built?.holds).toBe(true);
-            expect(looped.loop_windows?.inserter_ids.slice().sort()).toEqual(out_of_the_loop);
-            for (const id of out_of_the_loop) {
+            expect(looped.loop_windows?.inserter_ids.slice().sort()).toEqual([...out_of_the_loop, ...of_the_loop].sort());
+            expect(looped.loop_windows?.in_loop_ids?.slice().sort()).toEqual(of_the_loop);
+            for (const id of [...out_of_the_loop, ...of_the_loop]) {
                 expect(Object.keys(looped.clock_windows)).toContain(id);
+                expect(looped.always_on_reasons?.[id]).toBeUndefined();
             }
-            for (const id of of_the_loop) {
-                expect(Object.keys(looped.clock_windows)).not.toContain(id);
-                expect(looped.always_on_reasons?.[id]).toEqual({ kind: "loop" });
-            }
+        });
+
+        // An egg biochamber takes no eggs while its output is at its block of 14 (under a stack of 20) and takes them under
+        // a limit of 7 (under a hand of 16), so it takes a hand just after 9 or 10 took its output under the block: the two
+        // loop inserters take turns in each slot of 96 ticks the windows of 9 and 10 make, each a swing (8) after the
+        // window opens and half a slot after the other, for half a slot and 2 ticks
+        it("gives 5 and 8 turns of 50 ticks a swing after each window of 9 and 10 opens, half a slot of 96 apart", () => {
+            expect(looped.clock_windows["inserter:5"]).toEqual([0, 96, 192, 288, 384].map(at => ({ start: at + 31, end: at + 80 })));
+            expect(looped.clock_windows["inserter:8"]).toEqual([{ start: 0, end: 32 }, ...[96, 192, 288, 384].map(at => ({ start: at - 17, end: at + 32 })),
+                { start: 463, end: 479 }]);
         });
 
         // The science biochamber's output is taken in 5 windows of 37 ticks (ticks 0 to 36 of every 96), and is under its
@@ -103,11 +112,22 @@ describe("generateClockForConfig", () => {
             }
         });
 
-        it("does not clock them when the windows out of the loop are turned off", () => {
+        it("does not clock them when the windows of the loop are turned off", () => {
             const result = generateClockForConfig(five_swings(sample), { verify_as_built: true, loop_windows: false, logger: quiet });
             expect(result.loop_windows).toBeUndefined();
-            for (const id of out_of_the_loop) {
+            for (const id of [...out_of_the_loop, ...of_the_loop]) {
                 expect(Object.keys(result.clock_windows)).not.toContain(id);
+            }
+        });
+
+        // the clock a loss trial that fails with the loop's own windows is made again as
+        it("clocks only 9 and 10 when only the windows out of the loop are asked for", () => {
+            const result = generateClockForConfig(five_swings(sample), { verify_as_built: true, loop_windows: "out-of-loop", logger: quiet });
+            expect(result.loop_windows?.inserter_ids.slice().sort()).toEqual(out_of_the_loop);
+            expect(result.loop_windows?.in_loop_ids).toBeUndefined();
+            for (const id of of_the_loop) {
+                expect(Object.keys(result.clock_windows)).not.toContain(id);
+                expect(result.always_on_reasons?.[id]).toEqual({ kind: "loop" });
             }
         });
 

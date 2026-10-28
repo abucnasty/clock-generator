@@ -1,7 +1,9 @@
 import { describe, test, expect, vi } from "vitest"
 import { mock } from 'vitest-mock-extended';
 import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator"
-import { BeltState, ChestState, EntityState, InserterState, MachineState, SupplyGate } from "../../../state"
+import { EntityState, InserterState, MachineState } from "../../../state"
+import { TransportBelt } from "../../../simulation/archetypes/transport-belt"
+import { BeltStrategy } from "../../../common/entity-types"
 import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineSpec, RecipeMetadata } from "../../../entities"
 import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
@@ -11,15 +13,19 @@ import { InserterDisabledMode } from "../modes/disabled-mode"
 import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";
 import { MutableTickProvider } from "../../current-tick-provider";
-import { BeltSpeed } from "../../../entities/belt";
+import { BeltSpeed, Lane } from "../../../entities/belt";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
+import { bindHandPorts } from "../../../simulation/components/hand-ports";
 
 
-/** A belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
-function withSupplyGate(belt: BeltState): BeltState {
-    // assigned after the mock is made, which would wrap the sets of the gate otherwise
-    belt.supply = new SupplyGate();
-    belt.pickup_lanes = new Map();
-    return belt;
+/** A turbo belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
+function beltOf(lanes: Lane[] = [{ ingredient_name: "iron-plate", stack_size: 4 }]): TransportBelt {
+    return TransportBelt.create({ entity_id: EntityId.forBelt(-1), belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT, strategy: BeltStrategy.NORMAL, lanes });
+}
+
+/** The sink's drop port as the inserter's hand reaches it, bound as its state machine binds it */
+function sinkPortOf(inserter_state: InserterState, source_state: EntityState, sink_state: EntityState) {
+    return bindHandPorts({ inserterState: inserter_state, sourceState: source_state, sinkState: sink_state, tick_provider: new MutableTickProvider() }).drop;
 }
 
 describe("transitions (belt to machine)", () => {
@@ -78,9 +84,7 @@ describe("transitions (belt to machine)", () => {
     }
 
     const createTestContext = (): TestContext => {
-        const mockSource: BeltState = withSupplyGate(mock<BeltState>({
-            entity_id: EntityId.forBelt(-1),
-        }));
+        const mockSource: TransportBelt = beltOf();
 
         const mockSink: MachineState = MachineState.forMachine(
             createMachine("iron-gear-wheel")
@@ -113,6 +117,7 @@ describe("transitions (belt to machine)", () => {
                 inserter_state: testContext.inserterState,
                 source_state: testContext.sourceState,
                 sink_state: testContext.sinkState,
+                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
                 enable_control: AlwaysEnabledControl,
@@ -132,6 +137,7 @@ describe("transitions (belt to machine)", () => {
                 inserter_state: testContext.inserterState,
                 source_state: testContext.sourceState,
                 sink_state: testContext.sinkState,
+                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
                 enable_control: AlwaysEnabledControl,
@@ -154,6 +160,7 @@ describe("transitions (belt to machine)", () => {
                 inserter_state: testContext.inserterState,
                 source_state: testContext.sourceState,
                 sink_state: testContext.sinkState,
+                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
                 enable_control: AlwaysEnabledControl
@@ -197,7 +204,7 @@ describe("transitions (belt to machine)", () => {
                 isEnabledIn: (ticks: number) => tick + ticks >= window_opens_at,
             };
             const evaluator = IdleModeTransitionEvaluator.create({
-                inserter_state, source_state, sink_state: sink, pickup_mode,
+                inserter_state, source_state, sink_state: sink, sink_port: sinkPortOf(inserter_state, source_state, sink), pickup_mode,
                 disabled_mode,
                 enable_control: window_control,
             });
@@ -331,7 +338,7 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("leaves an inserter that takes from a belt to its pickup mode, which lands the first stack a tick later", () => {
-            const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
+            const belt: TransportBelt = beltOf();
             const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(belt);
             endTickAtTheBlock(false);
             expect(look()).toBe(ModeTransition.NONE);
@@ -344,7 +351,7 @@ describe("transitions (belt to machine)", () => {
         // inserter takes down from the block, grabs 2 ticks after its enable (waiting for space, waiting for items, then
         // the hand grows); the simulator took 1.
         test("takes its first items from a belt 2 ticks after its window opens on a machine at its output block, where a hand not started by a window takes 1", () => {
-            const belt = () => withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
+            const belt = () => beltOf();
             /** Looks after the products are taken: the index of the first look that starts the pickup */
             const firstPickupLook = (window_opens_at?: number) => {
                 const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(belt(), window_opens_at);
@@ -367,7 +374,7 @@ describe("transitions (belt to machine)", () => {
         // into a machine or a chest), each was the order the generator builds the deciders in; built the other way,
         // the same windows flip, onto a belt and into a machine alike (chemical science: 82 and 166 swap sides).
         test("takes its first items from a belt in the tick the products are taken when the inserter that takes them, its window opening in that tick too, has its decider built after this one's", () => {
-            const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
+            const belt: TransportBelt = beltOf();
             const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(belt, 2, 0);
             endTickAtTheBlock(false);
             expect(look()?.toMode).toBe(disabled_mode);
@@ -377,7 +384,7 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("takes its first items from a belt a tick later when the inserter that takes them, its window opening in that tick too, has its decider built before this one's", () => {
-            const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
+            const belt: TransportBelt = beltOf();
             const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(belt, 2, 1);
             endTickAtTheBlock(false);
             expect(look()?.toMode).toBe(disabled_mode);
@@ -392,15 +399,9 @@ describe("transitions (belt to machine)", () => {
     describe("InserterPickupMode (belt to machine)", () => {
 
         test("stops picking up from belt once stack size is reached", () => {
-            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
-                entity_id: EntityId.forBelt(-1),
-                belt: {
-                    belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
-                    lanes: [
-                        { ingredient_name: "iron-plate", stack_size: 4 }
-                    ]
-                }
-            }));
+            const mockSource: TransportBelt = beltOf([
+                { ingredient_name: "iron-plate", stack_size: 4 }
+            ]);
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("iron-gear-wheel")
@@ -451,15 +452,9 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("holds a partly filled hand while the machine's output is at the block, and goes on once it is under", () => {
-            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
-                entity_id: EntityId.forBelt(-1),
-                belt: {
-                    belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
-                    lanes: [
-                        { ingredient_name: "iron-plate", stack_size: 4 }
-                    ]
-                }
-            }));
+            const mockSource: TransportBelt = beltOf([
+                { ingredient_name: "iron-plate", stack_size: 4 }
+            ]);
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("iron-gear-wheel")
@@ -553,15 +548,9 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("caps pickup quantity when remaining capacity is less than lane stack size", () => {
-            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
-                entity_id: EntityId.forBelt(-1),
-                belt: {
-                    belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
-                    lanes: [
-                        { ingredient_name: "iron-plate", stack_size: 4 }
-                    ]
-                }
-            }));
+            const mockSource: TransportBelt = beltOf([
+                { ingredient_name: "iron-plate", stack_size: 4 }
+            ]);
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("iron-gear-wheel")
@@ -607,17 +596,10 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("skips blocked belt item and picks next available unblocked item", () => {
-            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
-                entity_id: EntityId.forBelt(-1),
-                inventoryState: mock<any>(),
-                belt: {
-                    belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
-                    lanes: [
-                        { ingredient_name: "iron-plate", stack_size: 4 },
-                        { ingredient_name: "copper-cable", stack_size: 4 },
-                    ]
-                }
-            }));
+            const mockSource: TransportBelt = beltOf([
+                { ingredient_name: "iron-plate", stack_size: 4 },
+                { ingredient_name: "copper-cable", stack_size: 4 },
+            ]);
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("electronic-circuit")
@@ -657,20 +639,13 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("skips blocked chest item and picks next available unblocked item", () => {
-            const mockSource: ChestState = mock<ChestState>({
+            const quantity = (itemName?: string) => itemName === "iron-plate" || itemName === "copper-cable" ? 100 : 0;
+            const take = vi.fn();
+            const mockSource: ContainerStorage = mock<ContainerStorage>({
                 entity_id: EntityId.forChest(-1),
-                inventoryState: {
-                    removeQuantity: vi.fn(),
-                } as any,
-                getCurrentQuantity: (itemName?: string) => {
-                    if (itemName === "iron-plate") {
-                        return 100;
-                    }
-                    if (itemName === "copper-cable") {
-                        return 100;
-                    }
-                    return 0;
-                },
+                getCurrentQuantity: quantity,
+                has: (itemName: string) => quantity(itemName) >= 1,
+                take,
                 getItemFilters: () => ["iron-plate", "copper-cable"],
             });
 
@@ -706,6 +681,8 @@ describe("transitions (belt to machine)", () => {
 
             expect(inserterState.held_item?.item_name).toBe("copper-cable");
             expect(inserterState.held_item?.quantity).toBeGreaterThan(0);
+            // taken through the chest's pickup port
+            expect(take).toHaveBeenCalledWith("copper-cable", inserterState.held_item?.quantity);
         })
     })
 })

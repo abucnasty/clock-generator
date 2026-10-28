@@ -231,7 +231,7 @@ From `clock-generator/`, with the [game setup](../../../../README.md#setup):
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance.game.test.ts
 # Same-item supply controls: both mirroring states, moving and backed up.
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-entrance-fallback.game.test.ts
-npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts -t 'front underground entrance'
+npm test -- src/simulation/components/belt-hand-pickup.test.ts -t 'front underground entrance'
 npm run screenshots -- --case=front-underground-entrance
 ```
 

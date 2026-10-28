@@ -5,7 +5,7 @@ import { laneCapacity } from "../../config/lane-capacity-validator";
 import { parseConfig } from "../../config/loader";
 import { Config } from "../../config/schema";
 import { InserterPickupMode } from "../../control-logic/inserter/modes";
-import { BeltPickupLogic } from "../../control-logic/inserter/modes/pickup/belt-pickup-logic";
+import { BeltHandPickup } from "../../simulation/components/belt-hand-pickup";
 import { PickupModeTransitionEvaluator } from "../../control-logic/inserter/transitions/pickup-mode-transition-evaluator";
 import { lossLimitOf } from "../../crafting/backpressure-loss";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
@@ -67,7 +67,7 @@ const BEFORE = {
     belt_speed: new Map([["transport-belt", 15], ["fast-transport-belt", 30], ["express-transport-belt", 45], ["turbo-transport-belt", 60]]),
     /** isBulkInserter (inserter-spec.ts): the prototypes that waited for a full hand at a machine that places its results */
     bulk: new Set(["bulk-inserter", "stack-inserter"]),
-    /** The arm gate (belt-pickup-logic.ts) and the scope check (inserter-scope.ts isLegendaryStackInserter) */
+    /** The arm gate (belt-hand-pickup.ts) and the scope check (inserter-scope.ts isLegendaryStackInserter) */
     belt_arm: (prototype: string, quality: string) => prototype === "stack-inserter" && quality === "legendary",
 };
 
@@ -195,7 +195,7 @@ function checkDrills(registry: ReadableEntityRegistry, traits: ConfigTraits): vo
 
 /**
  * What the simulator's control logic of each inserter decided at construction: whether it swings a part hand at its
- * source (pickup-mode-transition-evaluator.ts) and whether its belt pickup runs the calibrated arm (belt-pickup-logic.ts)
+ * source (pickup-mode-transition-evaluator.ts) and whether its belt pickup runs the calibrated arm (belt-hand-pickup.ts)
  */
 function controlLogicOf(context: SimulationContext): Map<string, { swings_part_hands: boolean; belt_arm: boolean | null }> {
     const decided = new Map<string, { swings_part_hands: boolean; belt_arm: boolean | null }>();
@@ -205,8 +205,8 @@ function controlLogicOf(context: SimulationContext): Map<string, { swings_part_h
             if (evaluator instanceof PickupModeTransitionEvaluator) {
                 found.swings_part_hands = (evaluator as unknown as { swings_part_hands: boolean }).swings_part_hands;
             }
-            if (mode instanceof InserterPickupMode && mode.logic instanceof BeltPickupLogic) {
-                found.belt_arm = (mode.logic as unknown as { arm?: object }).arm !== undefined;
+            if (mode instanceof InserterPickupMode && mode.port instanceof BeltHandPickup) {
+                found.belt_arm = (mode.port as unknown as { arm?: object }).arm !== undefined;
             }
         }
         decided.set(state_machine.entity_id.id, found);
@@ -242,7 +242,7 @@ function checkInserters(context: SimulationContext, traits: ConfigTraits): void 
             pickup: inserter.animation.pickup.ticks, drop: inserter.animation.drop.ticks,
             cycle: inserter.animation.total.ticks, pickup_to_drop: inserter.animation.pickup_to_drop.ticks,
         }, `${id} planned timing`);
-        // the calibration row gives what the arm gate (belt-pickup-logic.ts) and the scope check gave by name
+        // the calibration row gives what the arm gate (belt-hand-pickup.ts) and the scope check gave by name
         const belt_arm = decided.get(id)!.belt_arm;
         if (belt_arm !== null) {
             checked.belt_pickups += 1;

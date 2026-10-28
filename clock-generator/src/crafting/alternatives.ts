@@ -12,7 +12,7 @@ import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, sideLoadedDropInsights, startDependenceInsight } from "./insights";
+import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons } from "./always-on-reasons";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
@@ -29,7 +29,8 @@ import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityChe
 import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
-import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, roundedClockTrial, startDependenceVerdictOf, withSettledOutput } from "./trial";
+import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
+import { WakeUpsFromStarts } from "./wake-ups-from-starts";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
@@ -177,11 +178,17 @@ interface AlternativeDefinition {
      */
     shared_windows?: () => AlternativeDefinition | undefined;
     /**
-     * The same alternative with the inserters that take out of a loop always enabled (`loop_windows` of
+     * The same alternative with the inserters of a loop and those that take out of it always enabled (`loop_windows` of
      * GenerateClockOptions false): made when its clock has windows for them (`loop_windows` of the result) and does not
-     * hold, or does not get back from a loss, with them.
+     * hold, or does not get back from a loss, with them, or with only those out of the loop.
      */
     without_loop_windows?: () => AlternativeDefinition | undefined;
+    /**
+     * The same alternative with the loop's own inserters always enabled and windows only for those that take out of it
+     * (`loop_windows` "out-of-loop"): made first when its clock has windows for the loop's own inserters
+     * (`loop_windows.in_loop_ids` of the result) and does not hold, or does not get back from a loss, with them.
+     */
+    without_in_loop_windows?: () => AlternativeDefinition | undefined;
 }
 
 /** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
@@ -350,12 +357,16 @@ function alternativeDefinitions(
     // with the inserters that take out of a loop always enabled, made when a clock with windows for them does not meet goal 1
     let shared: AlternativeDefinition[] | undefined;
     let without_loop: AlternativeDefinition[] | undefined;
+    let without_in_loop: AlternativeDefinition[] | undefined;
     return definitions.map(definition => ({ ...definition, shared_windows: () => {
         shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
         return shared.find(it => it.id === definition.id);
     }, without_loop_windows: () => {
         without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false }, known_stable);
         return without_loop.find(it => it.id === definition.id);
+    }, without_in_loop_windows: () => {
+        without_in_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: "out-of-loop" }, known_stable);
+        return without_in_loop.find(it => it.id === definition.id);
     } }));
 }
 
@@ -617,7 +628,25 @@ function itemsPerSecondOverCopies(items_per_period: number, period_ticks: number
     return fraction(copies).multiply(items_per_period * 60).divide(period_ticks).toDecimal();
 }
 
-type VerificationAssessment = BackpressureLossAssessment & Pick<ClockAssessment, "start_dependence">;
+type VerificationAssessment = BackpressureLossAssessment & Pick<ClockAssessment, "start_dependence"> & {
+    /** The wake-ups of the clock from the starts, once tried: null where its build has no loop */
+    wake_ups_from_starts?: WakeUpsFromStarts | null;
+};
+
+/**
+ * A sentence for an alternative's description about its wake-ups from more than one start, on a build with a loop, whose
+ * wake-ups depend on the start: the mean it is ranked by, the cold start's figure and the range.
+ */
+function wakeUpsFromStartsNote(from_starts: WakeUpsFromStarts | undefined, cold: number | null): string {
+    if (from_starts === undefined) {
+        return "";
+    }
+    const figures = from_starts.wake_ups_per_minute;
+    const round = (figure: number) => Math.round(figure).toLocaleString("en-US");
+    return ` With a loop in the build, its wake-ups depend on where its clock is when the build starts: from ${figures.length} start points,`
+        + ` ${round(Math.min(...figures))} to ${round(Math.max(...figures))} a minute, ${round(from_starts.mean)} on average, which it is ranked by`
+        + (cold === null ? "." : ` (${round(cold)} from a cold start).`);
+}
 
 /** Whether a clock has windows the generator made for a drill into a chest */
 function plannedChestDrillWindows(result: BlueprintGenerationResult): boolean {
@@ -716,21 +745,31 @@ function runAlternativeOf(
         ? { backpressure_loss: cached.backpressure_loss, backpressure_loss_not_tried: cached.backpressure_loss_not_tried }
         : held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
     let used = definition;
-    // the inserters that take out of a loop on windows: a clock that does not meet goal 1 with them is made again with
-    // them always enabled, as every clock was before they had windows (see trialWithLoopWindows)
-    if (cached === undefined && result.loop_windows !== undefined && !(held && loss.backpressure_loss?.survives !== false)) {
-        const without = definition.without_loop_windows?.();
+    // the inserters of a loop on windows: a clock that does not meet goal 1 with them is made again with the loop's own
+    // inserters always enabled, then with those out of the loop always enabled too, as every clock was before they had
+    // windows (see trialWithLoopWindows), until one does
+    const remakes = [
+        { made: definition.without_in_loop_windows, applies: (it: BlueprintGenerationResult) => (it.loop_windows?.in_loop_ids?.length ?? 0) > 0,
+            what: "the windows of its loop's own inserters", left: "the loop's own inserters always enabled" },
+        { made: definition.without_loop_windows, applies: (it: BlueprintGenerationResult) => it.loop_windows !== undefined,
+            what: "the windows out of its loop", left: "always enabled" },
+    ];
+    for (const remake of remakes) {
+        if (cached !== undefined || !remake.applies(result) || (held && loss.backpressure_loss?.survives !== false)) {
+            continue;
+        }
+        const without = remake.made?.();
         try {
             if (without !== undefined) {
                 result = without.run();
                 used = without;
                 held = holds(result);
                 loss = held ? backpressureLossVerdictOf(without.planned_on ?? config, result, logger, report) : { backpressure_loss: null };
-                logger.log(`Clock alternative "${definition.label}": the windows out of its loop did not meet goal 1; always enabled: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
+                logger.log(`Clock alternative "${definition.label}": ${remake.what} did not meet goal 1; ${remake.left}: holds=${held} survives=${loss.backpressure_loss?.survives ?? "not tried"}`);
             }
         } catch (error) {
             if (error instanceof SecondaryPlanningInvariantError) throw error;
-            logger.log(`Clock alternative "${definition.label}" with the inserters out of its loop always enabled could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+            logger.log(`Clock alternative "${definition.label}" with ${remake.left === "always enabled" ? "the inserters out of its loop always enabled" : remake.left} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     // the drills into chests on their fewest windows: a clock that does not meet goal 1 with them is made again with
@@ -809,8 +848,33 @@ function runAlternativeOf(
         }
         return by_period.get(trial.clock_period)!;
     };
+    /**
+     * The wake-ups of a trial's clock from the starts (see wake-ups-from-starts.ts), made once per trial: of the exact clock as its
+     * long run was made (with the windows out of a loop, twice as long), of a clock rounded down on its own period
+     */
+    const from_starts_of = new Map<Trial, WakeUpsFromStarts | null>();
+    const fromStarts = (trial: Trial, exact: boolean): WakeUpsFromStarts | null => {
+        if (!from_starts_of.has(trial)) {
+            const remembered = exact ? cached?.wake_ups_from_starts : undefined;
+            let made: WakeUpsFromStarts | null;
+            try {
+                made = remembered !== undefined ? remembered : wakeUpsFromStartsOf(
+                    { ...(used.planned_on ?? config), overrides: { ...(used.planned_on ?? config).overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                    trial.result.clock_windows, trial.clock_period, expected_output_items,
+                    exact && trial.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS, logger);
+            } catch (error) {
+                logger.log(`Clock alternative "${label}" could not be started from other places: ${error instanceof Error ? error.message : String(error)}`);
+                made = null;
+            }
+            from_starts_of.set(trial, made);
+            const entry = exact && used === definition ? verification_cache?.get(signature) : undefined;
+            if (entry !== undefined) entry.wake_ups_from_starts = made;
+        }
+        return from_starts_of.get(trial)!;
+    };
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
     const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock }): ClockAlternative => {
+        const tried_as = trial;
         // a clock that fails its first check is listed by the mean of its long run, not the one period measured
         const settled = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
         trial = { ...trial, result: { ...trial.result, stability_check: settled } };
@@ -841,7 +905,19 @@ function runAlternativeOf(
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null, start_dependence: trial.start_dependence };
         const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
-        return { ...clock, ranking: rankingOf(clock, config) };
+        const ranking = rankingOf(clock, config);
+        // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
+        // over the starts; the clock of a trial that is neither the exact one nor the rounded one tried meets no target
+        const is_exact = tried_as === exact_trial;
+        const from_starts = ranking.meets_target_rate && assessment.wake_ups_per_minute !== null && (is_exact || tried_as === rounded_trial)
+            ? fromStarts(tried_as, is_exact) : null;
+        if (from_starts === null) {
+            return { ...clock, ranking };
+        }
+        const with_mean = { ...clock, description: clock.description + wakeUpsFromStartsNote(from_starts, assessment.wake_ups_per_minute),
+            assessment: { ...assessment, wake_ups_per_minute: from_starts.mean, wake_ups_from_starts: from_starts },
+            insights: withWakeUpsFromStarts(clock.insights, from_starts) };
+        return { ...with_mean, ranking: rankingOf(with_mean, config) };
     };
     const exact_trial: Trial = { result, held, loss, start_dependence, clock_period: period };
     const exact = alternativeOf(exact_trial, { id, label, description_suffix: "", result });
@@ -957,6 +1033,7 @@ function planPrimaryAndTasks(
             fallback_config => [primaryDefinition(fallback_config, options, options.on_progress_detail)])[0],
         shared_windows: () => primaryDefinition(config, { ...options, shared_windows: true }, options.on_progress_detail),
         without_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: false }, options.on_progress_detail),
+        without_in_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: "out-of-loop" }, options.on_progress_detail),
     };
     const context: ClockAlternativeContext = {
         ...(result.primitive_grouped === undefined ? {} : { secondary_planning: {

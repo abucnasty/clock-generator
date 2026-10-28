@@ -12,7 +12,7 @@ import { applyPaste } from './pastePreview';
 import {
     countOf, createUndoEntry, describeBulkEdit, describeChestSwitch, describePaste, describeRemoval, describeReorder, exampleUndoMessage,
     removalMessage, removedDeleteLabel, reorderMessage, settleUndoEntry, undoMessageInput, undoOutcome, UNDO_IMPORT_MESSAGE, UNDO_KEY_HINT,
-    UNDO_RESET_MESSAGE,
+    UNDO_RESET_MESSAGE, type UndoEntry,
 } from './undoSnapshot';
 
 /** Three machines, a belt, two chests, two drills, inserters between them, one with a rule and one forced on */
@@ -38,18 +38,16 @@ function form(): ConfigFormData {
     };
 }
 
+type Edit = (config: ConfigFormData) => ConfigFormData;
+
 /** What the page does: an entry made just before the action, then settled with the form the action made */
-function act(before: ConfigFormData, action: (form: ConfigFormData) => ConfigFormData) {
+function act(before: ConfigFormData, action: Edit) {
     const after = action(before);
     const entry = settleUndoEntry(createUndoEntry(1, 'x', before, true), after);
     return { after, entry: entry! };
 }
 
 const withoutUuids = (config: ConfigFormData) => JSON.parse(serializeConfig(config));
-
-const REMOVE: Record<EntityKind, (form: ConfigFormData, index: number) => ConfigFormData> = {
-    machines: edits.removeMachine, inserters: edits.removeInserter, belts: edits.removeBelt, chests: edits.removeChest, drills: edits.removeDrill,
-};
 
 /** Freezes the object and everything in it */
 function deepFreeze<T>(value: T): T {
@@ -64,15 +62,22 @@ describe('Undo', () => {
     /** A gear wheel build, as a file or a paste brings one */
     const otherConfig = build() as unknown as Config;
 
-    it.each<[EntityKind, number]>([['machines', 2], ['inserters', 1], ['belts', 0], ['chests', 1], ['drills', 0]])('puts back the form from before deleting from %s', (kind, index) => {
+    it.each<{ action: string; edit: Edit }>([
+        { action: 'deleting Machine 3', edit: (c) => edits.removeMachine(c, 2) },
+        { action: 'deleting Inserter 2', edit: (c) => edits.removeInserter(c, 1) },
+        { action: 'deleting Belt 1', edit: (c) => edits.removeBelt(c, 0) },
+        { action: 'deleting Chest 2', edit: (c) => edits.removeChest(c, 1) },
+        { action: 'deleting Drill 1', edit: (c) => edits.removeDrill(c, 0) },
+        { action: 'Reset', edit: () => createDefaultConfig() },
+        { action: 'Import', edit: () => configToFormData(otherConfig) },
+    ])('puts back the form from before $action, unchanged, with no notice after it: the clocks come back with the build', ({ edit }) => {
         const original = form();
         const copy = structuredClone(original);
-        const { after, entry } = act(original, (config) => REMOVE[kind](config, index));
+        const { after, entry } = act(original, edit);
         expect(after).not.toEqual(original);
         const outcome = undoOutcome(entry)!;
         expect(outcome.form).toBe(original);
-        expect(outcome.form).toEqual(copy);
-        expect(outcome.next).toBeNull();
+        expect(outcome).toEqual({ form: copy, next: null });
     });
 
     it('brings back the inserter ends and the drill that pointed at a deleted machine', () => {
@@ -83,16 +88,6 @@ describe('Undo', () => {
         expect(restored.inserters[0].sink).toEqual({ type: 'machine', id: 3 });
         expect(restored.inserters[1].source).toEqual({ type: 'machine', id: 3 });
         expect(restored.drills!.configs[1].target).toEqual({ type: 'machine', id: 3 });
-    });
-
-    it.each<[string, (config: ConfigFormData) => ConfigFormData]>([
-        ['Reset', () => createDefaultConfig()],
-        ['Import', () => configToFormData(otherConfig)],
-    ])('puts back the form from before %s, with no notice after it: the clocks come back with the build', (_, action) => {
-        const original = form();
-        const outcome = undoOutcome(act(original, action).entry)!;
-        expect(outcome.form).toBe(original);
-        expect(outcome).toEqual({ form: original, next: null });
     });
 
     it('puts back the form from before an atomic paste, including retained categories', () => {
@@ -172,78 +167,61 @@ describe('Undo', () => {
     });
 
     it('has nothing to put back for an entry without Undo', () => {
-        expect(undoOutcome(createUndoEntry(1, 'x', form(), false))).toBeNull();
+        const entry = createUndoEntry(1, 'x', form(), false);
+        expect(entry.snapshot).toBeNull();
+        expect(undoOutcome(entry)).toBeNull();
     });
 });
 
 describe('settleUndoEntry', () => {
-    const entry = (canUndo = true) => createUndoEntry(1, 'x', form(), canUndo);
+    // entries made before an action, with and without Undo, and each settled with the form its action made
+    const unsettled = createUndoEntry(1, 'x', form(), true);
+    const settled = settleUndoEntry(unsettled, edits.removeInserter(unsettled.before, 0))!;
+    const unsettledWithoutUndo = createUndoEntry(1, 'x', form(), false);
+    const settledWithoutUndo = settleUndoEntry(unsettledWithoutUndo, createDefaultConfig())!;
 
-    it('keeps an entry whose action has not shown yet as it is', () => {
-        const unsettled = entry();
-        expect(settleUndoEntry(unsettled, unsettled.before)).toBe(unsettled);
-        expect(settleUndoEntry(unsettled, structuredClone(unsettled.before))).toBe(unsettled);
+    it.each<{ why: string; entry: UndoEntry | null; now: ConfigFormData; kept: UndoEntry | null }>([
+        { why: 'keeps an entry whose action has not shown yet as it is', entry: unsettled, now: unsettled.before, kept: unsettled },
+        { why: 'keeps it as it is for an equal copy of the form', entry: unsettled, now: structuredClone(unsettled.before), kept: unsettled },
+        { why: 'keeps a settled entry while the form stays equal to what the action made', entry: settled, now: structuredClone(settled.after!), kept: settled },
+        { why: 'withdraws it once the form is edited after the action', entry: settled, now: edits.updateTargetOutput(settled.after!, 'items_per_second', 9), kept: null },
+        { why: 'keeps no entry as none', entry: null, now: form(), kept: null },
+        { why: 'keeps an entry without Undo whose action has not shown yet as it is', entry: unsettledWithoutUndo, now: unsettledWithoutUndo.before, kept: unsettledWithoutUndo },
+        { why: 'withdraws an entry without Undo once the form is edited after its action', entry: settledWithoutUndo, now: edits.addMachine(settledWithoutUndo.after!), kept: null },
+    ])('$why', ({ entry, now, kept }) => {
+        expect(settleUndoEntry(entry, now)).toBe(kept);
     });
 
-    it('learns the form the action made', () => {
-        const unsettled = entry();
-        const after = edits.removeInserter(unsettled.before, 0);
-        expect(settleUndoEntry(unsettled, after)).toEqual({ ...unsettled, after });
-    });
-
-    it('keeps a settled entry while the form stays equal to what the action made', () => {
-        const settled = settleUndoEntry(entry(), edits.removeInserter(form(), 0))!;
-        expect(settleUndoEntry(settled, structuredClone(settled.after!))).toBe(settled);
-    });
-
-    it('withdraws it once the form is edited after the action', () => {
-        const settled = settleUndoEntry(entry(), edits.removeInserter(form(), 0))!;
-        expect(settleUndoEntry(settled, edits.updateTargetOutput(settled.after!, 'items_per_second', 9))).toBeNull();
-    });
-
-    it('keeps no entry as none', () => {
-        expect(settleUndoEntry(null, form())).toBeNull();
-    });
-
-    it('settles and withdraws an entry without Undo in the same way', () => {
-        const unsettled = entry(false);
-        expect(unsettled.snapshot).toBeNull();
-        expect(settleUndoEntry(unsettled, unsettled.before)).toBe(unsettled);
-        const settled = settleUndoEntry(unsettled, createDefaultConfig())!;
-        expect(settled.after).toBeDefined();
-        expect(settleUndoEntry(settled, edits.addMachine(settled.after!))).toBeNull();
+    it.each([{ why: 'with Undo', entry: unsettled }, { why: 'without Undo', entry: unsettledWithoutUndo }])('learns the form the action made, $why', ({ entry }) => {
+        const after = edits.removeInserter(entry.before, 0);
+        expect(settleUndoEntry(entry, after)).toEqual({ ...entry, after });
     });
 });
 
 describe('the messages', () => {
-    it.each<[EntityKind, number, string]>([
-        ['machines', 0, 'Deleted Machine 1. Machines 2–3 are now 1–2. Inserter 3 has no Source now. Drill 1 has no Target now.'],
-        ['machines', 1, 'Deleted Machine 2. Machine 3 is now 2. Inserter 3 has no Destination now.'],
-        ['machines', 2, 'Deleted Machine 3. Inserter 2 has no Source and Inserter 1 has no Destination now. Drill 2 has no Target now.'],
-        ['inserters', 0, 'Deleted Inserter 1. Inserters 2–3 are now 1–2.'],
-        ['belts', 0, 'Deleted Belt 1. Inserter 1 has no Source now.'],
-        ['chests', 1, 'Deleted Chest 2. Inserter 2 has no Destination now.'],
-        ['drills', 0, 'Deleted Drill 1. Drill 2 is now 1.'],
-        ['drills', 1, 'Deleted Drill 2.'],
-    ])('say what deleting %s %i did by stored ids, in the form\'s words, one sentence per kind', (kind, index, message) => {
-        expect(removalMessage(form(), kind, index)).toBe(message);
-    });
+    /** The form with Inserter 1 taking from Machine 3 too, so that two inserters lose the same end */
+    const twoFromMachine3 = edits.updateInserter(form(), 0, { source: { type: 'machine', id: 3 }, sink: { type: 'belt', id: 1 } });
 
-    it('name the inserters that lost the same end together', () => {
-        const twoFromMachine3 = edits.updateInserter(form(), 0, { source: { type: 'machine', id: 3 }, sink: { type: 'belt', id: 1 } });
-        expect(removalMessage(twoFromMachine3, 'machines', 2))
-            .toBe('Deleted Machine 3. Inserters 1–2 have no Source now. Drill 2 has no Target now.');
-    });
-
-    it('name the last row by its stored id after the middle of three is deleted', () => {
-        const after = edits.removeInserter(form(), 1);
-        expect(removalMessage(after, 'inserters', 1)).toMatch(new RegExp(`^Deleted Inserter ${after.inserters[1].id}\\.`));
-    });
-
-    it('are null when there is nothing to delete', () => {
-        expect(removalMessage(form(), 'inserters', 3)).toBeNull();
-        expect(removalMessage(form(), 'machines', -1)).toBeNull();
-        expect(removalMessage({ ...form(), drills: undefined }, 'drills', 0)).toBeNull();
+    it.each<{ deleting: string; config: ConfigFormData; kind: EntityKind; index: number; message: string | null }>([
+        { deleting: 'Machine 1', config: form(), kind: 'machines', index: 0,
+            message: 'Deleted Machine 1. Machines 2–3 are now 1–2. Inserter 3 has no Source now. Drill 1 has no Target now.' },
+        { deleting: 'Machine 2', config: form(), kind: 'machines', index: 1, message: 'Deleted Machine 2. Machine 3 is now 2. Inserter 3 has no Destination now.' },
+        { deleting: 'Machine 3', config: form(), kind: 'machines', index: 2,
+            message: 'Deleted Machine 3. Inserter 2 has no Source and Inserter 1 has no Destination now. Drill 2 has no Target now.' },
+        { deleting: 'Machine 3, naming the inserters that lost the same end together', config: twoFromMachine3, kind: 'machines', index: 2,
+            message: 'Deleted Machine 3. Inserters 1–2 have no Source now. Drill 2 has no Target now.' },
+        { deleting: 'Inserter 1', config: form(), kind: 'inserters', index: 0, message: 'Deleted Inserter 1. Inserters 2–3 are now 1–2.' },
+        { deleting: 'the last row after the middle of three is deleted, by its stored id', config: edits.removeInserter(form(), 1), kind: 'inserters', index: 1,
+            message: 'Deleted Inserter 2.' },
+        { deleting: 'Belt 1', config: form(), kind: 'belts', index: 0, message: 'Deleted Belt 1. Inserter 1 has no Source now.' },
+        { deleting: 'Chest 2', config: form(), kind: 'chests', index: 1, message: 'Deleted Chest 2. Inserter 2 has no Destination now.' },
+        { deleting: 'Drill 1', config: form(), kind: 'drills', index: 0, message: 'Deleted Drill 1. Drill 2 is now 1.' },
+        { deleting: 'Drill 2', config: form(), kind: 'drills', index: 1, message: 'Deleted Drill 2.' },
+        { deleting: 'a row past the last: nothing', config: form(), kind: 'inserters', index: 3, message: null },
+        { deleting: 'row -1: nothing', config: form(), kind: 'machines', index: -1, message: null },
+        { deleting: 'a drill of a build without drills: nothing', config: { ...form(), drills: undefined }, kind: 'drills', index: 0, message: null },
+    ])('say what deleting $deleting did, by stored ids, in the form\'s words, one sentence per kind', ({ config, kind, index, message }) => {
+        expect(removalMessage(config, kind, index)).toBe(message);
     });
 
     it('say which of the kind were renumbered', () => {
@@ -304,19 +282,15 @@ describe('the messages', () => {
 describe('undoMessageInput', () => {
     const extras = { hint: UNDO_KEY_HINT.other, onUndo: () => {}, onClose: () => {}, returnFocus: () => null };
 
-    it('has no timer while it offers Undo: it stays until an edit, another action, Close or Escape', () => {
-        const input = undoMessageInput(createUndoEntry(1, UNDO_RESET_MESSAGE, form(), true), extras);
-        expect(input.durationMs).toBeNull();
-        expect(input).toMatchObject({ severity: 'info', text: UNDO_RESET_MESSAGE, hint: extras.hint });
-        expect(input.action).toMatchObject({ label: 'Undo', onClick: extras.onUndo, keyShortcuts: 'Control+Z Meta+Z' });
-        expect(input.onClose).toBe(extras.onClose);
-        expect(input.returnFocus).toBe(extras.returnFocus);
-    });
-
-    it('is a notice for 8 seconds, without Undo or its key, when it does not offer Undo', () => {
-        const input = undoMessageInput(createUndoEntry(1, UNDO_RESET_MESSAGE, form(), false), extras);
-        expect(input.durationMs).toBe(8000);
-        expect(input.action).toBeUndefined();
-        expect(input.hint).toBeUndefined();
+    it.each([
+        { why: 'has no timer while it offers Undo: it stays until an edit, another action, Close or Escape', canUndo: true,
+            durationMs: null, hint: extras.hint, action: { label: 'Undo', onClick: extras.onUndo, keyShortcuts: 'Control+Z Meta+Z' } },
+        { why: 'is a notice for 8 seconds, without Undo or its key, when it does not offer Undo', canUndo: false, durationMs: 8000, hint: undefined, action: undefined },
+    ])('$why', ({ canUndo, durationMs, hint, action }) => {
+        const input = undoMessageInput(createUndoEntry(1, UNDO_RESET_MESSAGE, form(), canUndo), extras);
+        expect(input).toMatchObject({ severity: 'info', text: UNDO_RESET_MESSAGE, onClose: extras.onClose, returnFocus: extras.returnFocus });
+        expect(input.durationMs).toBe(durationMs);
+        expect(input.hint).toBe(hint);
+        expect(input.action).toEqual(action);
     });
 });

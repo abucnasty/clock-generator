@@ -1,14 +1,13 @@
 import { Config } from "../../config";
 import { orderByMachineDependencies } from "../../common/order-by-machine-dependencies";
 import { AlwaysEnabledControl, EnableControl, MutableTickProvider } from "../../control-logic";
-import { DrillStateMachine } from "../../control-logic/drill/drill-state-machine";
 import { InserterStateMachine } from "../../control-logic/inserter/inserter-state-machine";
-import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
+import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
-import { DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
+import { DrillState, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
 import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
@@ -17,6 +16,8 @@ import assert from "../../common/assert";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
 import { pickupLaneLength } from "../../common/belt-pickup-layout";
 import { itemsPutInto, PutIntoView } from "../../entities/chest/items-put-into";
+import { ContainerStorage } from "../../simulation/components/container-storage";
+import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
@@ -29,9 +30,9 @@ export class SimulationContext {
         public readonly tick_provider: MutableTickProvider,
         public readonly entity_registry: WritableEntityRegistry,
         public readonly state_registry: WritableEntityStateRegistry,
-        public readonly machines: MachineStateMachine[],
+        public readonly machines: CraftingMachineArchetype[],
         public readonly inserters: InserterStateMachine[],
-        public readonly drills: DrillStateMachine[],
+        public readonly drills: MiningDrillArchetype[],
         public readonly target_production_rate: TargetProductionRate,
         /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide */
         public competing_takers_order: TakerOrder = DEFAULT_TAKER_ORDER,
@@ -60,10 +61,9 @@ export class SimulationContext {
             assert(length !== undefined, `Pickup phases need pickup geometry: ${id}`);
             assert(lane_phases.every(phase => Number.isInteger(phase) && phase >= 0 && phase < 8),
                 "Pickup phases must be integers from 0 through 7 (1/32-tile units)");
-            const lanes = source.pickup_lanes.get(id);
-            assert(lanes !== undefined, `Pickup lanes have not been initialized for ${id}`);
-            // Transfer logic already holds this array. Keep its identity when seeding the trial.
-            lanes.splice(0, lanes.length, ...source.belt.lanes.map((lane, index) => new BeltPickupLane(
+            assert(source.pickupsOf(id) !== undefined, `Pickup lanes have not been initialized for ${id}`);
+            // The hand's belt pickup port already holds the lanes' slots: the seed replaces the stock in them.
+            source.seedPickups(id, source.belt.lanes.map((lane, index) => new BeltPickupLane(
                 source.belt.belt_speed, pickupLaneLength(inserter.pickup_layout ?? "side-straight", index + 1, length), lane.stack_size, lane_phases[index])));
         }
     }
@@ -95,12 +95,12 @@ export class SimulationContext {
         });
 
         this.drills.forEach(it => {
-            it.addPlugin(debug_plugin_factory.drillModeChangePlugin(it.drill_state))
+            it.addObserver(debug_plugin_factory.drillModeChangePlugin(it.drill_state))
         })
     }
 }
 
-type MachineStateMachineInterceptor = (entity_state: EntityState) => MachineStateMachine | null
+type MachineInterceptor = (entity_state: EntityState) => CraftingMachineArchetype | null
 type InserterStateMachineInterceptor = (entity_state: EntityState) => InserterStateMachine | null
 
 /** The entities of a config: belts, machines, chests, inserters and drills, without any state */
@@ -171,7 +171,7 @@ function registryPutIntoView(entity_registry: EntityRegistry): PutIntoView {
 function createSimulationContextFromConfig(
     config: Config,
     interceptors: {
-        machine_interceptor?: MachineStateMachineInterceptor,
+        machine_interceptor?: MachineInterceptor,
         inserter_interceptor?: InserterStateMachineInterceptor,
     } = {}
 ): SimulationContext {
@@ -184,7 +184,7 @@ function createSimulationContextFromConfig(
 
     const tick_provider = new MutableTickProvider();
 
-    const machine_state_machines: MachineStateMachine[] = entity_state_registry
+    const machine_state_machines: CraftingMachineArchetype[] = entity_state_registry
         .getAllStates()
         .filter(EntityState.isMachine)
         .map(machine_state => {
@@ -194,9 +194,9 @@ function createSimulationContextFromConfig(
             }
             const result_target = machine_state.machine.result_target;
             const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
-            assert(result_target_state === undefined || EntityState.isChest(result_target_state) || EntityState.isMachine(result_target_state),
+            assert(result_target_state === undefined || ContainerStorage.is(result_target_state) || EntityState.isMachine(result_target_state),
                 `${machine_state.machine} places its results into ${result_target}, which is neither a machine nor a chest`);
-            return MachineStateMachine.create({
+            return CraftingMachineArchetype.create({
                 machine_state: machine_state,
                 ...(result_target_state !== undefined && { result_target_state }),
             });
@@ -220,13 +220,12 @@ function createSimulationContextFromConfig(
         })
 
 
-    const drill_state_machines: DrillStateMachine[] = entity_state_registry
+    const drill_state_machines: MiningDrillArchetype[] = entity_state_registry
         .getAllStates()
         .filter(EntityState.isDrill)
         .map(drill_state => {
-            return DrillStateMachine.create({
+            return MiningDrillArchetype.create({
                 drill_state: drill_state,
-                initial_mode_status: DrillStatus.WORKING,
                 enable_control: AlwaysEnabledControl,
                 sink_state: entity_state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id),
             })
@@ -267,7 +266,7 @@ export function cloneSimulationContextWithInterceptors(
     const entity_state_registry = context.state_registry;
 
     let new_inserters: InserterStateMachine[] | null = null
-    let new_drills: DrillStateMachine[] | null = null
+    let new_drills: MiningDrillArchetype[] | null = null
 
     if (interceptors.inserter) {
         new_inserters = context.inserters.map(inserter_state_machine => {
@@ -291,12 +290,12 @@ export function cloneSimulationContextWithInterceptors(
         new_drills = context.drills.map(drill_state_machine => {
             const sink_state = entity_state_registry.getStateByEntityIdOrThrow(drill_state_machine.drill_state.drill.sink_id);
             const enable_control = interceptors.drill!(drill_state_machine.drill_state, sink_state);
-            return DrillStateMachine.create({
+            // a new drill over the same state: WORKING, fresh bars, the old one's observers (same-tick rule 12)
+            return MiningDrillArchetype.create({
                 drill_state: drill_state_machine.drill_state,
-                initial_mode_status: DrillStatus.WORKING,
                 enable_control: enable_control,
                 sink_state: sink_state,
-                plugins: drill_state_machine.getPlugins()
+                observers: drill_state_machine.getObservers()
             })
         })
     }

@@ -1,6 +1,7 @@
-import { BeltState, DrillState, EntityState, InserterState, MachineState } from "../../state";
+import { DrillState, EntityState, InserterState, MachineState } from "../../state";
 import { SupplyGate } from "../../state/supply-gate";
 import { SimulationContext } from "../sequence";
+import { ContainerStorage } from "../../simulation/components/container-storage";
 
 function entityStateKey(state: EntityState, tick: number): string {
     const inventory = Object.entries(state.inventoryState.export()).sort(([a], [b]) => a.localeCompare(b));
@@ -31,9 +32,9 @@ function ownStateKey(state: EntityState, tick: number): string {
         return DrillState.stateKey(state);
     }
     if (EntityState.isBelt(state)) {
-        return BeltState.stateKey(state, tick);
+        return state.stateKey(tick);
     }
-    if (EntityState.isSlotContainer(state) || EntityState.isRocketSilo(state)) {
+    if (ContainerStorage.isMixed(state)) {
         return state.slotKey();
     }
     return "";
@@ -44,8 +45,8 @@ export function simulationStateKey(context: SimulationContext): string {
     const tick = context.tick_provider.getCurrentTick();
     return [
         ...context.state_registry.getAllStates().map(it => entityStateKey(it, tick)),
-        ...context.machines.map(it => it.stateKey(tick)),
+        ...context.machines.map(it => it.stateKey()),
         ...context.inserters.map(it => it.stateKey(tick)),
-        ...context.drills.map(it => it.stateKey(tick)),
+        ...context.drills.map(it => it.stateKey()),
     ].join("\n");
 }

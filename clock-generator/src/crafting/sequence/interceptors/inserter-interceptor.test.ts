@@ -4,8 +4,8 @@ import { AlwaysEnabledControl } from "../../../control-logic";
 import { 
     InserterState, 
     MachineState,
-    InfinityChestState,
 } from "../../../state";
+import { ConstantStorage } from "../../../simulation/components/constant-storage";
 import { 
     Machine, 
     InfinityChest,
@@ -25,7 +25,7 @@ describe("InserterInterceptor", () => {
                 );
                 
                 // Create chest state
-                const infinityChestState = InfinityChestState.forChest(infinityChest);
+                const infinityChestStorage = ConstantStorage.forChest(infinityChest);
                 
                 // Create a machine that needs holmium-plate (lithium recipe)
                 const machine = Machine.fromConfig({
@@ -42,7 +42,7 @@ describe("InserterInterceptor", () => {
                 // so we can pass null and cast it
                 const result = InserterInterceptor.wait_until_source_is_output_blocked(
                     null as unknown as InserterState,
-                    infinityChestState,
+                    infinityChestStorage,
                     machineState
                 );
                 
@@ -55,7 +55,7 @@ describe("InserterInterceptor", () => {
                     EntityId.forChest(1),
                     [{ item_name: "holmium-plate", request_count: 128 }]
                 );
-                const infinityChestState = InfinityChestState.forChest(infinityChest);
+                const infinityChestStorage = ConstantStorage.forChest(infinityChest);
                 
                 const machine = Machine.fromConfig({
                     id: 1,
@@ -70,7 +70,7 @@ describe("InserterInterceptor", () => {
                 
                 const result = InserterInterceptor.wait_until_source_is_output_blocked(
                     null as unknown as InserterState,
-                    infinityChestState,
+                    infinityChestStorage,
                     machineState
                 );
                 
@@ -87,7 +87,7 @@ describe("InserterInterceptor", () => {
                         { item_name: "iron-plate", request_count: 64 },
                     ]
                 );
-                const infinityChestState = InfinityChestState.forChest(infinityChest);
+                const infinityChestStorage = ConstantStorage.forChest(infinityChest);
                 
                 const machine = Machine.fromConfig({
                     id: 1,
@@ -99,7 +99,7 @@ describe("InserterInterceptor", () => {
                 
                 const result = InserterInterceptor.wait_until_source_is_output_blocked(
                     null as unknown as InserterState,
-                    infinityChestState,
+                    infinityChestStorage,
                     machineState
                 );
                 

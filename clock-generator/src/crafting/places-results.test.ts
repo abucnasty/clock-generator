@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { loadConfigFromFile, parseConfig } from '../config/loader';
 import { ConfigSchema, type Config } from '../config/schema';
 import { CompositeControlLogic, TickControlLogic } from '../control-logic';
-import { EntityState, MachineState, MachineStatus, SlotContainerState } from '../state';
+import { EntityState, MachineStatus } from '../state';
+import { SlotStorage } from '../simulation/components/slot-storage';
 import { SimulationContext, createEntityRegistryFromConfig } from './sequence/simulation-context';
 import { CraftingCyclePlan } from './sequence/cycle/crafting-cycle';
 import { TargetProductionRate } from './target-production-rate';
 import { fraction } from '../data-types/fraction';
 import { ConfigPaths } from '../config/config-paths';
+import { ContainerStorage } from '../simulation/components/container-storage';
 
 // The exact-speed recycler cell of the ore voider benchmark (save F): a recycler at crafting speed 16.875 voids iron ore,
 // fed by four stack inserters from the ore supply, and places what it gives back into a car, which two stack inserters
@@ -21,8 +23,8 @@ function run(context: SimulationContext, ticks: number): void {
     for (let i = 0; i < ticks; i++) tick.executeForTick();
 }
 
-function carOf(context: SimulationContext): SlotContainerState {
-    return context.state_registry.getAllStates().find(EntityState.isSlotContainer)!;
+function carOf(context: SimulationContext): SlotStorage {
+    return context.state_registry.getAllStates().find(ContainerStorage.isSlots)!;
 }
 
 describe('a machine that places its results itself', () => {
@@ -137,7 +139,7 @@ describe('a machine that places its results itself, with no result target', () =
         run(context, 30 * 60);
         expect(machine.inventoryState.getQuantity('iron-plate')).toBe(100);
         expect(machine.status).toBe(MachineStatus.OUTPUT_FULL);
-        expect(MachineState.machineIsOutputBlocked(machine)).toBe(true);
+        expect(machine.ingress.outputBlocked()).toBe(true);
         // emptied of circuits, it is given none while the plates wait
         machine.inventoryState.removeQuantity('electronic-circuit', machine.inventoryState.getQuantity('electronic-circuit'));
         const crafts = machine.craftCount;

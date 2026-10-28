@@ -4,9 +4,9 @@ import {loadConfigFromFile} from "../../config/loader";
 import {SimulationContext} from "./simulation-context";
 import {SimulationTick} from "../runner/simulation-tick";
 import {simulationStateKey} from "../runner/steady-state";
-import {BeltState, EntityState, InserterState, InserterStatus} from "../../state";
+import {EntityState, InserterState, InserterStatus} from "../../state";
 import {InserterPickupMode} from "../../control-logic/inserter/modes/pickup/pickup-mode";
-import {BeltDropLogic} from "../../control-logic/inserter/modes/drop/belt-drop-logic";
+import {BeltHandDrop} from "../../simulation/components/belt-hand-drop";
 import {GameFixturePaths} from "../../../tests/game/helpers/fixture-paths";
 
 let config: Config;
@@ -98,19 +98,19 @@ test("output diagnostics distinguish a refused outlet from a wait for output spa
     const {context, state, source} = setup();
     state.held_item = {item_name: "iron-plate", quantity: 16};
     state.inventoryState.setQuantity("iron-plate", 16);
-    const drop = new BeltDropLogic(state, source, context.tick_provider);
+    const drop = new BeltHandDrop(state, source, context.tick_provider);
     const trace = context.traceInserter(2);
     source.supply.refused.add("iron-plate");
-    drop.executeForTick();
+    drop.drop();
     source.supply.refused.clear();
     for (let tick = 1; tick <= 4; tick++) {
         context.tick_provider.setCurrentTick(tick);
-        drop.executeForTick();
+        drop.drop();
     }
     expect(trace.events.filter(event => event.type === "wait").map(event => [event.tick, event.reason]))
         .toEqual([[0, "supply_refused"], [4, "output_space"]]);
     expect(trace.events.filter(event => event.type === "drop").map(event => event.quantity)).toEqual([4, 4, 4]);
-    expect(BeltState.stateKey(source, 4)).toBeDefined();
+    expect(source.stateKey(4)).toBeDefined();
 });
 
 test("replacing a drop control preserves output stock through a partial hand and the next hand", () => {
@@ -122,9 +122,9 @@ test("replacing a drop control preserves output stock through a partial hand and
             state.inventoryState.setQuantity("iron-plate", 16);
         }
         context.tick_provider.setCurrentTick(tick);
-        const replacement = new BeltDropLogic(state, source, context.tick_provider);
-        replacement.onEnter();
-        if (state.held_item) replacement.executeForTick();
+        const replacement = new BeltHandDrop(state, source, context.tick_provider);
+        replacement.enter();
+        if (state.held_item) replacement.drop();
     }
     expect(trace.events.filter(event => event.type === "drop").map(event => event.tick))
         .toEqual([0, 1, 2, 4, 6, 8, 10, 12]);

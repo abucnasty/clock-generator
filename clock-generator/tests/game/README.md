@@ -29,7 +29,7 @@ npm run test:typecheck
 npx vitest list --config vitest.game.config.ts --filesOnly
 
 # Simulator regression only; does not collect fresh measurements.
-npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts
+npm test -- src/simulation/components/belt-hand-pickup.test.ts
 
 # Individual mechanic checks; .env is loaded automatically.
 npm run test:game -- tests/game/mechanics/belt-pickup/backed-up-pickup.game.test.ts

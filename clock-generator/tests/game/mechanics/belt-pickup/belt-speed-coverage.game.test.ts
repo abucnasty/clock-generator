@@ -27,7 +27,7 @@ function simulatorPatterns(config: Config) {
         const input = context.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
         const source = context.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id);
         if (!EntityState.isBelt(source)) throw new Error("Expected input belt");
-        if (!backed) source.pickup_lanes.set(input.entity_id.id, source.belt.lanes.map(lane =>
+        if (!backed) source.seedPickups(input.entity_id.id, source.belt.lanes.map(lane =>
             new BeltPickupLane(source.belt.belt_speed, input.inserter.pickup_length!, lane.stack_size, phase)));
         const mode = InserterPickupMode.create({inserterState: input, sourceState: source,
             sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id), tick_provider: context.tick_provider});

@@ -52,7 +52,7 @@ BELT_SPEED_REPLAY_DIR=.scratch/belt-speed-coverage/new-run \
 
 # Portable native clips, simulator unit regression and generation regression.
 npm test -- tests/game/mechanics/belt-pickup/jammed-pickup-replay.test.ts
-npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts
+npm test -- src/simulation/components/belt-hand-pickup.test.ts
 npm run test:generation -- src/crafting/moving-belt-pickup.generation.test.ts
 ```
 

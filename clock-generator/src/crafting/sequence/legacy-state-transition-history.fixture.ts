@@ -12,6 +12,8 @@ import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine
 import { FactorioStatePlugin } from "../../control-logic/plugins/factorio-state-plugin";
 import { Mode, Transition } from "../../control-logic/mode";
 import { TickProvider } from "../../control-logic/current-tick-provider";
+import { reasonText } from "../../control-logic/mode/reason-table";
+import { CraftingStatus, DrillStatusCode, drillStatusOf, machineStatusOf } from "../../simulation/status-codes";
 import { EntityStatus, EntityTransitionRecorder, StateTransitionEntityType, StateTransitionHistory } from "./state-transition-history";
 import type {
     CompactStateTransitionHistory,
@@ -262,7 +264,7 @@ export function recordBothWays(seen: (recorded: RecordedBothWays) => void): { re
         restores.push(() => { target[key] = original; });
     };
 
-    for (const tracker of [InserterStateTransitionTrackerPlugin, MachineStateTransitionTrackerPlugin, DrillStateTransitionTrackerPlugin]) {
+    for (const tracker of [InserterStateTransitionTrackerPlugin]) {
         const prototype = tracker.prototype as unknown as { onTransition(fromMode: Mode, transition: Transition<Mode>): void };
         patch(prototype, "onTransition", original => function (this: TrackerInternals, fromMode: Mode, transition: Transition<Mode>) {
             const { recorder } = this;
@@ -275,6 +277,30 @@ export function recordBothWays(seen: (recorded: RecordedBothWays) => void): { re
             original.call(this, fromMode, transition);
         });
     }
+    // a machine tells its observers of a change by its status codes and the number of its reason
+    const machine_tracker = MachineStateTransitionTrackerPlugin.prototype as unknown as { onStatusChange(from: CraftingStatus, to: CraftingStatus, reason_id: number): void };
+    patch(machine_tracker, "onStatusChange", original => function (this: TrackerInternals, from: CraftingStatus, to: CraftingStatus, reason_id: number) {
+        const { recorder } = this;
+        legacyOf(recorder.history).recordTransition(recorder.entity_id, recorder.entity_type, {
+            tick: this.tick_provider.getCurrentTick(),
+            from_status: machineStatusOf(from),
+            to_status: machineStatusOf(to),
+            reason: reasonText(reason_id),
+        });
+        original.call(this, from, to, reason_id);
+    });
+    // a drill tells its observers of a change by its status codes and the number of its reason
+    const drill_tracker = DrillStateTransitionTrackerPlugin.prototype as unknown as { onStatusChange(from: DrillStatusCode, to: DrillStatusCode, reason_id: number): void };
+    patch(drill_tracker, "onStatusChange", original => function (this: TrackerInternals, from: DrillStatusCode, to: DrillStatusCode, reason_id: number) {
+        const { recorder } = this;
+        legacyOf(recorder.history).recordTransition(recorder.entity_id, recorder.entity_type, {
+            tick: this.tick_provider.getCurrentTick(),
+            from_status: drillStatusOf(from),
+            to_status: drillStatusOf(to),
+            reason: reasonText(reason_id),
+        });
+        original.call(this, from, to, reason_id);
+    });
     const factorio_state = FactorioStatePlugin.prototype as unknown as { executeForTick(): void };
     patch(factorio_state, "executeForTick", original => function (this: FactorioStateInternals) {
         const before = this.last_state;
