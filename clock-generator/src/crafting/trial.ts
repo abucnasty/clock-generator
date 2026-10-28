@@ -16,7 +16,7 @@ import { currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
-import { loopInserterWindows } from "./candidates/loop-windows";
+import { inLoopInserterWindows, loopInserterWindows } from "./candidates/loop-windows";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 import { canonicalVerificationJson } from "./verification-signature";
@@ -1058,12 +1058,16 @@ function heldUnderOtherTakerOrders(
 }
 
 /**
- * The windows of the inserters that take out of a loop are an optimisation, kept when the build passes the same check
- * with them as it did without: the long run of the check just made (`run`) gives the output of every machine, so no
- * other run is needed to make them. Returns the check with them, the windows with theirs in, their ids and item names
+ * The windows of the inserters of a loop are an optimisation, kept when the build passes the same check with them as it
+ * did without: the long run of the check just made (`run`) gives the output of every machine and the hands of every
+ * inserter, so no other run is needed to make them. First the windows of the inserters that take out of a loop
+ * (`loopInserterWindows`), kept where the check passes with them; then, unless `in_loop` is false, those of the
+ * inserters of the loop itself (`inLoopInserterWindows`), kept where the check passes with them and still passes with
+ * each set of identical windows of the loop's inserters and of those out of it moved a tick either way
+ * (`loopWindowsMargin`). Returns the check with what was kept, the windows with theirs in, their ids and item names
  * (identical windows and items share one combinator, as the nutrient inserters of the egg biochambers do), or null when
- * there are none or the check with them does not pass as without (see `loopInserterWindows`). Whether the clock with
- * them gets back from a loss is judged where the clock is assessed (see `runAlternativeOf`).
+ * there are none or none passes. Whether the clock with them gets back from a loss is judged where the clock is
+ * assessed (see `runAlternativeOf`).
  */
 export function trialWithLoopWindows(
     config: Config,
@@ -1075,6 +1079,8 @@ export function trialWithLoopWindows(
     report?: (detail: string) => void,
     /** Judge each lane-phase start over its repeating cycle (see runAsBuiltCheck) */
     pickup_phase_cycles: boolean = false,
+    /** Whether the inserters of the loop itself are given windows too */
+    in_loop: boolean = true,
 ): {
     result: TrialRun;
     check: AsBuiltStabilityCheck;
@@ -1086,31 +1092,102 @@ export function trialWithLoopWindows(
     if (run.stock === undefined) {
         return null;
     }
-    const loop = loopInserterWindows(config, period, run.stock, logger);
-    if (loop.size === 0) {
+    const passesAsBefore = (check: AsBuiltStabilityCheck) => check.holds && check.failed_start_offset === undefined
+        && check.start_phases_checked === run.check.start_phases_checked;
+    const checkOf = (candidate: Map<string, OpenRange[]>, what: string) => runAsBuiltCheck(config, candidate, period, logger, start_phases,
+        (n, total) => report?.(`Checking the windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles);
+    let kept: (AsBuiltRun & { windows: Map<string, OpenRange[]>; item_names: Map<string, string>; in_loop_ids: string[] }) | null = null;
+    const out_of_loop = loopInserterWindows(config, period, run.stock, logger);
+    if (out_of_loop.size > 0) {
+        const looped_windows = new Map(windows);
+        for (const [inserter_id, it] of out_of_loop) {
+            looped_windows.set(inserter_id, it.windows);
+        }
+        const looped_run = checkOf(looped_windows, "out of the loop");
+        const passes = passesAsBefore(looped_run.check);
+        logger.log(`Loop windows: ${passes ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
+        if (passes) {
+            kept = { ...looped_run, windows: looped_windows, in_loop_ids: [],
+                item_names: new Map(Array.from(out_of_loop, ([inserter_id, it]) => [inserter_id, it.item_name])) };
+        }
+    }
+    if (in_loop) {
+        const base = kept?.windows ?? windows;
+        const own = inLoopInserterWindows(config, period, base, new Set(kept?.item_names.keys() ?? []), run.stock, logger);
+        if (own.size > 0) {
+            const with_own = new Map(base);
+            for (const [inserter_id, it] of own) {
+                with_own.set(inserter_id, it.windows);
+            }
+            const own_run = checkOf(with_own, "of the loop");
+            const why = !passesAsBefore(own_run.check) ? "the as-built check with them does not pass as without"
+                : loopWindowsMargin(config, with_own, [...own.keys(), ...(kept?.item_names.keys() ?? [])], period, logger, pickup_phase_cycles);
+            logger.log(`Loop windows of the loop's own inserters: ${why === null ? "kept" : `dropped, ${why}`}`);
+            if (why === null) {
+                kept = { ...own_run, windows: with_own, in_loop_ids: Array.from(own.keys()),
+                    item_names: new Map([...(kept?.item_names ?? []), ...Array.from(own, ([inserter_id, it]) => [inserter_id, it.item_name] as const)]) };
+            }
+        }
+    }
+    if (kept === null) {
         return null;
     }
-    const looped_windows = new Map(windows);
-    for (const [inserter_id, it] of loop) {
-        looped_windows.set(inserter_id, it.windows);
-    }
-    const looped_run = runAsBuiltCheck(config, looped_windows, period, logger, start_phases,
-        (n, total) => report?.(`Checking the windows out of the loop, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles);
-    const passes_as_before = looped_run.check.holds && looped_run.check.failed_start_offset === undefined
-        && looped_run.check.start_phases_checked === run.check.start_phases_checked;
-    logger.log(`Loop windows: ${passes_as_before ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
-    if (!passes_as_before) {
-        return null;
-    }
+    const inserter_ids = Array.from(kept.item_names.keys());
     return {
-        ...looped_run,
-        windows: looped_windows,
+        result: kept.result,
+        check: kept.check,
+        stock: kept.stock,
+        windows: kept.windows,
         loop_windows: {
-            inserter_ids: Array.from(loop.keys()),
-            window_count_without_loop_windows: Array.from(loop.keys()).reduce((sum, id) => sum + (windows.get(id)?.length ?? 0), 0),
+            inserter_ids,
+            window_count_without_loop_windows: inserter_ids.reduce((sum, id) => sum + (windows.get(id)?.length ?? 0), 0),
+            ...(kept.in_loop_ids.length > 0 && { in_loop_ids: kept.in_loop_ids }),
         },
-        item_names: new Map(Array.from(loop, ([inserter_id, it]) => [inserter_id, it.item_name])),
+        item_names: kept.item_names,
     };
+}
+
+/**
+ * The one-tick margin of the windows of a loop (`inserter_ids`, those of the loop's own inserters and of those out of
+ * it): each set of identical windows among them is moved a tick earlier and a tick later, the others where they are,
+ * and the build has to hold with it in the as-built check from AS_BUILT_START_PHASES start phases and its standard long
+ * run. A window that is on all the period is not moved. Null where every move holds; else the first that does not.
+ */
+export function loopWindowsMargin(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    inserter_ids: readonly string[],
+    period: number,
+    logger: Logger,
+    pickup_phase_cycles: boolean = false,
+): string | null {
+    const span = Number.isInteger(period) ? period : Math.ceil(period);
+    const groups = new Map<string, string[]>();
+    for (const id of inserter_ids) {
+        const ranges = windows.get(id);
+        if (ranges === undefined || ranges.reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0) >= Math.floor(period)) {
+            continue;
+        }
+        const key = ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(",");
+        groups.set(key, [...(groups.get(key) ?? []), id]);
+    }
+    for (const ids of groups.values()) {
+        for (const ticks of [-1, 1]) {
+            const moved = new Map(windows);
+            for (const id of ids) {
+                moved.set(id, OpenRange.reduceRanges(windows.get(id)!.flatMap(range => {
+                    const first = ((range.start_inclusive + ticks) % span + span) % span;
+                    const last = first + range.end_inclusive - range.start_inclusive;
+                    return last < span ? [OpenRange.from(first, last)] : [OpenRange.from(first, span - 1), OpenRange.from(0, last - span)];
+                })));
+            }
+            const check = runAsBuiltCheck(config, moved, period, logger, AS_BUILT_START_PHASES, undefined, FREE_RUNNING_CHECK_TICKS, undefined, pickup_phase_cycles).check;
+            if (!check.holds || check.failed_start_offset !== undefined) {
+                return `the windows of ${ids.join(", ")} do not hold moved ${ticks > 0 ? "+" : ""}${ticks} tick`;
+            }
+        }
+    }
+    return null;
 }
 
 /** What runAsBuiltCheck yields */

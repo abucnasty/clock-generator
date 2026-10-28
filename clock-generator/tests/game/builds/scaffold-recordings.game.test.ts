@@ -65,7 +65,19 @@ const WAKE_UPS_TOLERANCE = 0.25;
  */
 const AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN = "the game counts a wake of the inserters that bring nutrients to the egg biochambers in the tick after "
     + "their window opens, where the nutrient biochamber puts out the products it holds as they take, and the simulator does not: "
-    + "134.3 a minute each in the game against 36.6 in the simulator, 1,791.4 in all against 1,257.8 (1,821.3 with belts backed up; 2026-10-24)";
+    + "134.3 a minute each in the game against 34.5 to 36.4 in the simulator, 1,361.9 in all against 880.8 (1,383.2 with belts backed up; 2026-10-24; "
+    + "1,791.4 against 1,257.8 on the clock before, whose loop inserters were always on)";
+/**
+ * Iron bacteria: since its two loop inserters have windows the game counts about three times the simulator's wake-ups on
+ * every inserter of the build, where the two agreed within the tolerance while they were always on. The series' method
+ * is a known miss on biochambers (GOALS.md, goal 2), the harness seeds the loop with 50 bacteria where the simulator's
+ * cold start gives it 200, and the loop's steady state depends on the start in the simulator and in the game alike. The
+ * clock moves its output in every period all the same, and the game's figure is still far under the simulator's
+ * 3,534.7 a minute with the loop always on, which the game was within the tolerance of.
+ */
+const IRON_BACTERIA_WAKE_UPS_OPEN = "with windows on the loop's two inserters the game counts about three times the simulator's wake-ups "
+    + "on every inserter: 1,499.8 a minute in all against 516.4 (each output inserter 116.7 against 39.6, each loop inserter 79.0 against "
+    + "36.8, each bioflux inserter 437.6 against 142.2; 2026-10-24), where the two agreed while the loop was always on";
 /**
  * Places in the period the simulator starts the clock at to find the steady state the game settled into, when the
  * wake-ups of its own run are not the game's. Batched swings on utility science makes 192 a period at 10.7, 26.8 or
@@ -121,11 +133,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 300,
         settle_ticks: 4800,
         // Recorded 2026-10-24 on batched swings (5 output swings per cycle) with windows on the two inserters that take eggs
-        // out of the loop into the science biochamber (ticks 23 to 46 of every 96): 400 in every one of 74 periods after the
-        // staged start, and the simulator moves what the game moved through every inserter and machine; the same clock with
-        // them always on made the same that day, and so did the family cuts on the new one (64 periods, then back at 400
-        // from the second period after each cut). The 2-swing clock selected before (recorded 2026-10-16) was one hand short
-        // in periods 8 and 9 of the settling after the staged start.
+        // out of the loop into the science biochamber (ticks 23 to 46 of every 96) and on the two of the loop itself (31 to 80
+        // and 79 to 128 of every 96): 400 in every one of 74 periods after the staged start, and the simulator moves what the
+        // game moved through every inserter and machine; so did the family cuts (64 periods, then back at 400 from the
+        // first or second period after each cut). The same that day with only the first two on windows, and with all four
+        // always on. The 2-swing clock selected before (recorded 2026-10-16) was one hand short in periods 8 and 9 of the
+        // settling after the staged start.
         staged_start: {
             dips: [],
             open_issues: [],
@@ -383,6 +396,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }],
         warmup_ticks: 300,
         settle_ticks: 3600,
+        // recorded 2026-10-24 on 6 output swings per cycle (subtick) with windows on the loop's two inserters (ticks 15 to 23
+        // and 60 to 68 of every 90.95): 10,944 in every one of the 20 repeats of 1,728 ticks after the first
+        wake_ups_open: IRON_BACTERIA_WAKE_UPS_OPEN,
     },
 };
 
