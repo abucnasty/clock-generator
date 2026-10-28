@@ -23,6 +23,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 - Only inserters that wait for a full hand in the game, such as the stack inserter, wait for one in the simulation.
 - Stone and steel furnaces, burner mining drills and captive biter spawners now use up fuel in the simulation, as in the game.
 - A mining drill's state shows when it is switched off by its circuit condition or waits to drop, as in the game.
+- A refused build lists each problem on its own, without internal field names, and Generate waits until the build is changed.
 
 ## [0.24.0] - 2026-10-27
 
