@@ -83,3 +83,15 @@ export type {
     StorageFacts,
     YieldFacts,
 } from "./data-types/planner-facts";
+
+export type {
+    GraphComponent,
+    GraphEdge,
+    GraphEdgeVia,
+    GraphNode,
+    GraphNodeKind,
+    GraphShared,
+    PlannerGraph,
+    SharedVertex,
+    TerminalKind,
+} from "./data-types/planner-graph";
