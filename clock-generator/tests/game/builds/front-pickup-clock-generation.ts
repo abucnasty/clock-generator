@@ -5,7 +5,7 @@ import {clockIdentity} from "../../../src/crafting/clock-identity";
 import {alwaysOnReasonProblemsOf} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {FRONT_GENERATED} from "./front-clock-cases";
 import {frontClockConfig, frontEntranceClockCases, frontExitClockCases} from "./front-clock-fixtures";
-import {clockHash, readControls} from "./clock-controls";
+import {readControls} from "./clock-controls";
 
 // each selection pinned beside the in-game recording of its clock
 const controls = readControls("front-clock-controls.json");
