@@ -10,7 +10,6 @@ export function useMenuAnchor() {
     const open = anchor !== null;
     const close = () => setAnchor(null);
     return {
-        open,
         button: {
             onClick: (event: MouseEvent<HTMLElement>) => setAnchor(event.currentTarget),
             'aria-haspopup': 'menu' as const,

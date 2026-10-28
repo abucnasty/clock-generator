@@ -836,7 +836,10 @@ export function ConfigImportExport({
             {examplesOpen && <ExamplesDialog onPick={handlePickExample} onClose={handleCloseExamples} />}
 
             {/* the browser did not let the page copy: the link to copy by hand */}
-            <AppDialog open={fallbackLink !== null} onClose={() => setFallbackLink(null)} title="Share link" description={SHARE_FALLBACK_TEXT} cancel="Close">
+            <AppDialog open={fallbackLink !== null} onClose={() => setFallbackLink(null)} title="Share link" describedBy="share-link-fallback-text" cancel="Close">
+                <Typography id="share-link-fallback-text" variant="body2" sx={{ mb: 1 }}>
+                    {SHARE_FALLBACK_TEXT}
+                </Typography>
                 <TextField
                     value={fallbackLink ?? ''}
                     label="Share link"

@@ -67,12 +67,15 @@ export function MachineSettingsFields({ machine, onChange, onPatch, dialog = fal
 export function BeltStrategyField({ belt, onChange, dialog = false }: {
     belt: BeltFormData; onChange: (update: Partial<BeltFormData>) => void; dialog?: boolean;
 }) {
-    const strategyOf = (value: BeltStrategyFormValue) => BELT_STRATEGIES.find(strategy => strategy.value === value)!;
+    // the field shows the chosen strategy as the list does: with what it does under it in the dialog, on hover in a row
+    const shown = (value: BeltStrategyFormValue) => {
+        const strategy = BELT_STRATEGIES.find(strategy => strategy.value === value) ?? { label: value, description: '' };
+        return dialog ? <OptionWithNote label={strategy.label} note={strategy.description} />
+            : <Tooltip title={strategy.description} placement="right" describeChild><span>{strategy.label}</span></Tooltip>;
+    };
     return <SelectField label="Strategy" fullWidth value={belt.strategy ?? 'normal'} options={BELT_STRATEGIES.map(strategy => strategy.value)}
-        render={value => strategyOf(value).label} onChange={value => onChange(beltStrategyUpdate(belt, value))}
+        render={shown} onChange={value => onChange(beltStrategyUpdate(belt, value))}
         inputAriaLabel={dialog ? SELECT_NAMES.beltStrategy : `${SELECT_NAMES.beltStrategy}, ${entityLabel('belt', belt.id)}`}
-        renderOption={value => dialog ? <OptionWithNote label={strategyOf(value).label} note={strategyOf(value).description} />
-            : <Tooltip title={strategyOf(value).description} placement="right" describeChild><span>{strategyOf(value).label}</span></Tooltip>}
         sx={dialog ? { '& .MuiSelect-select': { whiteSpace: 'normal', overflowWrap: 'anywhere' } } : undefined} />;
 }
 

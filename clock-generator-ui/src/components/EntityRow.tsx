@@ -52,17 +52,17 @@ export function EntityRow({ kind, row, label, icon, chip, chipTitle, sx, childre
  * A row's top line: its drag handle and chip, its main fields, its actions. Narrower than `stackBelow` pixels, the
  * fields go on a line of their own under the other two; without it they stay in line.
  */
-export function EntityRowTop({ dragHandle, actions, stackBelow, sx, children }: {
-    dragHandle: ReactNode; actions: ReactNode; stackBelow?: number; sx?: SxProps<Theme>; children: ReactNode;
+export function EntityRowTop({ dragHandle, actions, stackBelow, children }: {
+    dragHandle: ReactNode; actions: ReactNode; stackBelow?: number; children: ReactNode;
 }) {
     const stacked = stackBelow === undefined ? {} : { [`@container (max-width: ${stackBelow}px)`]: { gridColumn: '1 / -1', gridRow: 2 } };
-    return <Box sx={[{
+    return <Box sx={{
         display: 'grid',
         gridTemplateColumns: 'auto minmax(0, 1fr) auto',
         gap: 1.5,
         alignItems: 'center',
         ...(stackBelow !== undefined && { [`@container (max-width: ${stackBelow}px)`]: { gridTemplateColumns: 'minmax(0, 1fr) auto' } }),
-    }, ...(Array.isArray(sx) ? sx : [sx])]}>
+    }}>
         <Box sx={{ gridColumn: 1, gridRow: 1 }}>{dragHandle}</Box>
         <Box sx={{ minWidth: 0, gridColumn: 2, gridRow: 1, ...stacked }}>{children}</Box>
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gridColumn: 3, gridRow: 1,

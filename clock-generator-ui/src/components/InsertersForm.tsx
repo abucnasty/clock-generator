@@ -80,10 +80,11 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
     const selectedRow = selecting && checked;
     const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills) : value.filters?.filter(Boolean) ?? [];
     return <EntityRow kind="inserter" row={value} label={label} icon={<InserterIcon value={value} size={28} />} data-selected={selectedRow ? 'true' : undefined}
-        sx={selectedRow ? {
+        // its editor lays out its own lines, and the closed details after them take no room
+        sx={[{ rowGap: 0 }, selectedRow && {
             bgcolor: (theme: Theme) => themeTokens(theme).hover.row,
             boxShadow: (theme: Theme) => `inset 0 0 0 1px ${themeTokens(theme).control.border}, inset 4px 0 0 ${themeTokens(theme).text.secondary}`,
-        } : undefined}>
+        }]}>
         {dragHandle =>
             <InserterEditor {...editor} value={value} label={label} layout="workbench" onChange={onChange}
                 routeSummary={<Typography variant="caption">

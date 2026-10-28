@@ -134,7 +134,7 @@ export function ValueReferenceSelector({
     return (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             <SelectField label="Type" inputAriaLabel={SELECT_NAMES.valueType} value={value.type} sx={{ minWidth: typeSelectWidth }}
-                options={filteredTypes.map(vt => vt.value)} render={type => VALUE_TYPES.find(vt => vt.value === type)!.label} onChange={handleTypeChange} />
+                options={filteredTypes.map(vt => vt.value)} render={type => VALUE_TYPES.find(vt => vt.value === type)?.label ?? type} onChange={handleTypeChange} />
 
             {needsEntity(value.type) && 'entity' in value && (
                 <ToggleButtonGroup
