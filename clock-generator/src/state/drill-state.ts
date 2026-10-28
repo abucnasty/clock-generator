@@ -5,16 +5,17 @@ import { Placement } from "../simulation/components/placement";
 import { EntityState } from "./entity-state";
 import { WritableInventoryState } from "./inventory-state";
 import { DrillStatus } from "./entity-status";
+import { DrillStatusCode, drillStatusCodeOf, drillStatusOf } from "../simulation/status-codes";
 
 export class DrillState implements EntityState {
     public static fromEntity = fromMiningDrillEntity;
 
     public readonly entity_id: EntityId;
     /**
-     * Never written (a known quirk, kept: P4 D14): the game's state of the drill reads it, while the drill's status that
-     * its ticks go by is its archetype's (`MiningDrillArchetype.status`), which the drill's key holds
+     * The drill's status as its ticks go by it, WORKING or DISABLED, by its code: written by its archetype's control rule
+     * and read by the drill's key and by its state in the game (`factorioDrillState`)
      */
-    public status: DrillStatus = DrillStatus.WORKING;
+    public status_code: DrillStatusCode = DrillStatusCode.WORKING;
     /** What it has mined and not yet dropped */
     public readonly held: HeldStorage;
     /** Drops what it holds into its target before it mines, bound to the target by `placeDrillInto` */
@@ -27,6 +28,15 @@ export class DrillState implements EntityState {
         this.held = HeldStorage.forItem(drill.production_rate.item);
         this.placement = new Placement(this.held, [drill.item.name], false);
         this.energy = Energy.ofDrill(drill);
+    }
+
+    /** The status by the name the histories record (a view of the code) */
+    public get status(): DrillStatus {
+        return drillStatusOf(this.status_code);
+    }
+
+    public set status(value: DrillStatus) {
+        this.status_code = drillStatusCodeOf(value);
     }
 
     /** What it holds, as every entity's state shows it: its held Storage's inventory */

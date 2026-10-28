@@ -33,6 +33,8 @@ While a drill still holds anything after dropping, it waits, and its bars stand 
 
 A drill disabled by its circuit neither drops nor mines, and keeps what it holds and both bars, also while an inserter takes from the chest it waits on. Its circuit reaches it in the same tick as an inserter's: a constant combinator wired to both, they act in the same tick after it changes, the drill built first or last.
 
+The state the game shows for a drill is recorded tick by tick (`tests/game/mechanics/drill-status/`): `disabled_by_control_behavior` from the last tick it mines before its circuit switches it off to the last tick it is off, and `waiting_for_space_in_destination` while it holds an item its destination has no room for (a full chest, a machine at its stop). The simulator's drill state follows both; a drill disabled by script (`disabled_by_script`) is not modelled.
+
 A drill that reads its resources (Read resources, on by default on a wired drill) puts the ore under it on its own circuit wire, so "Anything > 0" is always true there and the drill is never disabled. A clock's drill is set to Enable if Anything > 0 with Read resources off, as the clock's wiring line says.
 
 ## A drill into a chest on a clock

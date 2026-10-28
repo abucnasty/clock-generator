@@ -92,8 +92,8 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
         references: ["fuel_quantity", "placer_stops"],
     },
     CraftingMachineArchetype: { keyed: [], excluded: {}, references: ["result_target"] },
-    MiningDrillArchetype: { keyed: ["status"], excluded: {} },
-    DrillState: { keyed: [], excluded: { status: "never written (P4 D14): the drill's status is its archetype's, in the key; the game's state of the drill reads this one" } },
+    // the drill's status, which its archetype's key holds and the game's state of the drill reads
+    DrillState: { keyed: ["status_code"], excluded: {} },
     // its bonus bar is in a record of its own: changed in the test of what is no plain field
     Mining: { keyed: ["progress"], excluded: { mining_time: BUILD, step: BUILD, bonus_step: BUILD, item: BUILD } },
     BeltLane: { keyed: [], excluded: { item: BUILD, stack_size: BUILD, belt_speed: BUILD } },
