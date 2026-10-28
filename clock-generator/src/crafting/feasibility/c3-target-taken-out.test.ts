@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FeasibilityError } from "../../config/errors";
 import { Config } from "../../config/schema";
 import type { InserterEdge } from "../../data-types/planner-facts";
 import { toPlannerFacts } from "../facts/to-planner-facts";
@@ -35,6 +36,11 @@ describe("C3: the target leaves the build at most as fast as its output inserter
         expect(rules).toEqual(["C3"]);
         expect(issues[0]).toMatchObject({ edges: ["inserter:3/iron-gear-wheel"], need: 88 });
         expect(texts[0]).toMatchInlineSnapshot(`"Inserter 3 can take at most 87.27 a second of iron gear wheel out of the build (1 hand of 16 every 11 ticks), and the target is 88 a second. Lower the target, or give the output more inserters or bigger hands."`);
+    });
+
+    it("968 over 11 copies is 88 a copy: the opening says the figures are for one copy, and the target's figure says it no more", () => {
+        const { issues } = feasibilityOfConfig(withTarget(gears, 968, 11));
+        expect(new FeasibilityError([...issues], { items_per_second: 968, copies: 11 }).message).toMatchInlineSnapshot(`"No clock can hold this build's target of 968 a second over 11 copies (every figure here is for one copy): Inserter 3 can take at most 87.27 a second of iron gear wheel out of the build (1 hand of 16 every 11 ticks), and the target is 88 a second. Lower the target, or give the output more inserters or bigger hands."`);
     });
 
     it("the planned swing of 12 ticks onto a belt moves 16 x 60 / 12 = 80 a second and would refuse 85; the floor of 11 does not", () => {

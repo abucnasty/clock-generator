@@ -12,6 +12,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ### Changed
 - A build that cannot reach its target rate is refused at once, before any clock is tried, naming the machines, inserters or belts that limit it.
+- An inserter refused for taking several of a recycler's results out of its container: the message names the items and the container as the game does.
 
 ## [0.24.0] - 2026-10-27
 

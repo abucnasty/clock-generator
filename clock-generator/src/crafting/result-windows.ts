@@ -266,7 +266,8 @@ export function sharedHandRefusal(machine: Machine, registry: Pick<ReadableEntit
     for (const inserter of registry.getAll().filter(Entity.isInserter).filter(it => it.source.entity_id.id === target.id)) {
         const taken = results.filter(item => inserter.filtered_items.has(item));
         if (taken.length > 1) {
-            return sharedHandText(inserter.entity_id.number, taken, target.id);
+            return sharedHandText(inserter.entity_id.number, taken.map(item => FactorioDataService.itemNameInSentence(item)),
+                { type: target.type === "machine" ? "machine" : "chest", number: target.number });
         }
     }
     return null;

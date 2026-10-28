@@ -149,7 +149,12 @@ export function sharedHandIssues(demand: DemandResult): FeasibilityIssue[] {
                 edges: own.filter(edge => taken.includes(edge.item)).map(edge => edge.key),
                 need: null,
                 capacity: null,
-                terms: { rule: "S2", inserter: numberOf(inserter), items: taken, target },
+                terms: {
+                    rule: "S2",
+                    inserter: numberOf(inserter),
+                    items: taken.map(item => FactorioDataService.itemNameInSentence(item)),
+                    target: { type: view.node.get(target)?.kind === "machine" ? "machine" : "chest", number: numberOf(target) },
+                },
             });
         }
     }

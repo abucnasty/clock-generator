@@ -40,7 +40,7 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
         const config = { ...sample, inserters: sample.inserters.map(inserter => ({ ...inserter, stack_size: 2 })) };
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(FeasibilityError);
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow("Inserter 2 can take at most 15 a second of logistic science "
-            + "pack out of the build (1 hand of 2 every 8 ticks), and the target is 21.82 a second a copy.");
+            + "pack out of the build (1 hand of 2 every 8 ticks), and the target is 21.82 a second.");
     });
 
     it("is the output chest filling up on issue #100's config, whose buffer chest nothing empties", async () => {

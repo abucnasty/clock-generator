@@ -28,7 +28,7 @@ describe("S2: an inserter that takes two of a placer's results out of its target
         const { rules, issues, texts } = feasibilityOfConfig(shared());
         expect(rules).toEqual(["S2"]);
         expect(issues[0]).toMatchObject({ nodes: ["machine:1", "chest:14"], edges: ["inserter:10/processing-unit", "inserter:10/low-density-structure"] });
-        expect(texts[0]).toMatchInlineSnapshot(`"Inserter 10 takes processing-unit and low-density-structure out of chest:14. An inserter that holds part of a hand of one of them takes only more of that one, so the others pile up in chest:14, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an inserter of its own. An inserter whose filters the clock sets by signal would not wait; such a clock is not planned yet."`);
+        expect(texts[0]).toMatchInlineSnapshot(`"Inserter 10 takes processing unit and low density structure out of chest 14. An inserter that holds part of a hand of one of them takes only more of that one, so the others pile up in chest 14, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an inserter of its own. An inserter whose filters the clock sets by signal would not wait; such a clock is not planned yet."`);
     });
 
     it("the same condition and text as sharedHandRefusal, which refuses it during planning", () => {

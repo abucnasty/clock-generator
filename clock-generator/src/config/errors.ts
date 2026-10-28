@@ -444,7 +444,7 @@ export type FeasibilityTerms =
         /** The rest of the recipe's machines, where it has more: what they craft at most, against the target's need */
         others: { ids: number[]; crafts_per_second: number; need_crafts_per_second: number } | null;
     }
-    | { rule: 'S2'; inserter: number; items: string[]; target: string }
+    | { rule: 'S2'; inserter: number; items: string[]; target: SharedHandTarget }
     | { rule: 'S3'; producer: FeasibilityProducerKind; ids: number[]; rows: { item: string; gives: number; takes: number }[] };
 
 /** One cut a build cannot carry, or one trap it falls into */
@@ -461,11 +461,21 @@ export interface FeasibilityIssue {
     terms: FeasibilityTerms;
 }
 
-/** The text of an inserter that takes several of a placer's results out of its target (sharedHandRefusal) */
-export function sharedHandText(inserter: number, items: readonly string[], target: string): string {
-    return `Inserter ${inserter} takes ${items.slice(0, -1).join(", ")} and ${items[items.length - 1]} out of ${target}. `
+/** Where a placer places its results: a chest (a rocket silo's too) or a machine */
+export interface SharedHandTarget {
+    type: 'chest' | 'machine';
+    number: number;
+}
+
+/**
+ * The text of an inserter that takes several of a placer's results out of its target (sharedHandRefusal): `items` are
+ * the game's names, as a sentence has them
+ */
+export function sharedHandText(inserter: number, items: readonly string[], target: SharedHandTarget): string {
+    const where = `${target.type} ${target.number}`;
+    return `Inserter ${inserter} takes ${items.slice(0, -1).join(", ")} and ${items[items.length - 1]} out of ${where}. `
         + "An inserter that holds part of a hand of one of them takes only more of that one, so the others pile up in "
-        + `${target}, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an `
+        + `${where}, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an `
         + "inserter of its own. An inserter whose filters the clock sets by signal would not wait; such a clock is not planned yet.";
 }
 
@@ -502,8 +512,8 @@ function portsNamed(ports: readonly { container: number; input_slots: boolean }[
     return listed([...chests.length === 0 ? [] : [named('chest', chests)], ...ports.filter(port => port.input_slots).map(portNamed)]);
 }
 
-const targetText = (per_second: number, copies: number, against: number): string =>
-    `${formatRate(per_second, against)} a second${copies === 1 ? '' : ' a copy'}`;
+/** A target's figure: for one copy, as the message's opening says where the build has several */
+const targetText = (per_second: number, against: number): string => `${formatRate(per_second, against)} a second`;
 
 function limitText(limit: FeasibilityLimit): string {
     const machines = named('machine', limit.machines);
@@ -546,7 +556,7 @@ export function describeFeasibilityIssue(issue: FeasibilityIssue): string {
             const capped = terms.capped.map(cap => `belt ${cap.belt} carries at most ${formatRate(cap.per_second)} a second`);
             return `${capitalized(named('inserter', terms.carriers.inserters))} can take at most ${formatRate(terms.per_second, terms.target_per_second)} `
                 + `a second of ${terms.item} out of the build${withHands(terms.carriers)}${capped.length === 0 ? '' : `, and ${capped.join(' and ')}`}, `
-                + `and the target is ${targetText(terms.target_per_second, terms.copies, terms.per_second)}. Lower the target, or give the output `
+                + `and the target is ${targetText(terms.target_per_second, terms.per_second)}. Lower the target, or give the output `
                 + 'more inserters or bigger hands.';
         }
         case 'C4': {
@@ -571,7 +581,7 @@ export function describeFeasibilityIssue(issue: FeasibilityIssue): string {
                 + "Lower the belt's consumption, or give it more inserters.";
         }
         case 'C7': {
-            const target = targetText(terms.target_per_second, terms.copies, terms.per_second);
+            const target = targetText(terms.target_per_second, terms.per_second);
             if (terms.by.kind === 'inserters') {
                 return `${capitalized(named('inserter', terms.by.carriers.inserters))} can bring at most ${formatRate(terms.per_second, terms.target_per_second)} `
                     + `a second of ${terms.item} into the build${withHands(terms.by.carriers)}, and the target is ${target}. Lower the target, or give `
