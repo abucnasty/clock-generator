@@ -638,18 +638,26 @@ export function describeFeasibilityIssue(issue: FeasibilityIssue): string {
  */
 export class FeasibilityError extends Error {
     public readonly issues: FeasibilityIssue[];
+    /** The sentence the message opens with, up to its colon: where the build has copies it says every figure is for one copy */
+    public readonly opening: string;
+    /** The text of each issue, in order: the message is `opening`, then these, each as the player reads it */
+    public readonly problems: string[];
 
     /** `target` is the config's, in all: where it is shared by copies, the message says its figures are for one copy */
     constructor(issues: FeasibilityIssue[], target: { items_per_second: number; copies: number } | null = null) {
-        super(FeasibilityError.formatMessage(issues, target));
+        const opening = FeasibilityError.openingOf(target);
+        const problems = issues.map(describeFeasibilityIssue);
+        super(`${opening} ${problems.join(' ')}`);
         this.name = 'FeasibilityError';
         this.issues = issues;
+        this.opening = opening;
+        this.problems = problems;
     }
 
-    private static formatMessage(issues: FeasibilityIssue[], target: { items_per_second: number; copies: number } | null): string {
+    private static openingOf(target: { items_per_second: number; copies: number } | null): string {
         // copies as configured: a short decimal (copies-value.ts), never rounded the way a rate is
         const copies = target === null || target.copies === 1 ? ''
             : ` of ${formatRate(target.items_per_second)} a second over ${target.copies} copies (every figure here is for one copy)`;
-        return `No clock can hold this build's target${copies}: ${issues.map(describeFeasibilityIssue).join(' ')}`;
+        return `No clock can hold this build's target${copies}:`;
     }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
-import { FeasibilityError, InserterCoverageError } from "../../config/errors";
+import { describeFeasibilityIssue, FeasibilityError, InserterCoverageError } from "../../config/errors";
 import { loadConfigFromFile } from "../../config/loader";
 import { Config } from "../../config/schema";
 import { generateClockForConfig, validateConfig } from "../generate-blueprint";
@@ -37,6 +37,29 @@ describe("the feasibility pass runs after the coverage check (D10)", async () =>
         expect(first).toBeInstanceOf(FeasibilityError);
         expect(second!.issues).toEqual(first!.issues);
         expect(second!.message).toBe(first!.message);
+    });
+});
+
+describe("a refusal hands over its opening and each problem as the message is made of them", async () => {
+    const over = withTarget(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME) as Config, 1600);
+    const refusal = (() => { try { assertFeasible(over); } catch (error) { return error as FeasibilityError; } })()!;
+
+    it("lists one text per issue, each the issue's own description", () => {
+        expect(refusal.problems).toEqual(refusal.issues.map(describeFeasibilityIssue));
+        expect(refusal.problems.length).toBeGreaterThan(0);
+    });
+
+    it("makes the message of the opening and the problems, with no change to its words", () => {
+        expect(refusal.message).toBe(`${refusal.opening} ${refusal.problems.join(" ")}`);
+        expect(refusal.opening).toMatch(/^No clock can hold this build's target.*:$/);
+    });
+
+    it("says that every figure is for one copy when the build has copies", () => {
+        const shared = new FeasibilityError(refusal.issues, { items_per_second: 1600, copies: 24 });
+        expect(shared.opening).toBe(`No clock can hold this build's target of 1600 a second over 24 copies (every figure here is for one copy):`);
+        expect(shared.message).toBe(`${shared.opening} ${refusal.problems.join(" ")}`);
+        expect(new FeasibilityError(refusal.issues, { items_per_second: 1600, copies: 1 }).opening).toBe(`No clock can hold this build's target:`);
+        expect(new FeasibilityError(refusal.issues).opening).toBe(`No clock can hold this build's target:`);
     });
 });
 
