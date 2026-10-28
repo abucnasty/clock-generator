@@ -374,7 +374,7 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             return lookups();
         case 'machine-facts':
             try {
-                return clockGenerator.Machine.computeMachineFacts(query.params);
+                return clockGenerator.computeMachineFacts(query.params);
             } catch {
                 return null;
             }

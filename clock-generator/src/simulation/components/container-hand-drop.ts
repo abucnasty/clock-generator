@@ -1,3 +1,4 @@
+import { ItemName } from "../../data";
 import type { InserterState } from "../../state/inserter-state";
 import type { ContainerStorage } from "./container-storage";
 import { CarriedItems, dropFromHand, HandDropPort, HandScratch } from "./hand";
@@ -32,7 +33,7 @@ export class ContainerHandDrop implements HandDropPort {
             const amount = this.sink.accepts(held.item_name, held.quantity, DropBy.HAND);
             if (amount > 0) {
                 this.sink.insert(held.item_name, amount);
-                dropFromHand(state, amount);
+                dropFromHand(state, this.scratch, amount);
             }
         }
         this.scratch.drop_ticks += 1;
@@ -50,5 +51,10 @@ export class ContainerHandDrop implements HandDropPort {
 
     public takes(): boolean {
         return true;
+    }
+
+    /** No room for the item: the hand waits at the container in its target-full phase */
+    public fullFor(item: ItemName): boolean {
+        return this.sink.isFull(item);
     }
 }

@@ -18,10 +18,6 @@ export class ConstantInventoryState implements WritableInventoryState {
         return new ConstantInventoryState(InventoryState.fromMap(items));
     }
 
-    public static fromRecord(items: Record<ItemName, number>): ConstantInventoryState {
-        return new ConstantInventoryState(InventoryState.fromRecord(items));
-    }
-
     constructor(
         private readonly readable_inventory_state: ReadableInventoryState
     ) {}

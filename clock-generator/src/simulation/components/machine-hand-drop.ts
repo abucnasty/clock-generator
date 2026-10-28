@@ -44,7 +44,7 @@ export class MachineHandDrop implements HandDropPort {
         const amount = this.ingress.accepts(held.item_name, held.quantity, DropBy.HAND);
         const index = this.items.indexOf(held.item_name);
         this.ingress.insertAt(index >= 0 ? this.slots[index] : this.ingress.slotOf(held.item_name), held.item_name, amount);
-        dropFromHand(state, amount);
+        dropFromHand(state, this.scratch, amount);
         this.scratch.drop_ticks += 1;
     }
 
@@ -66,5 +66,10 @@ export class MachineHandDrop implements HandDropPort {
     public takes(item: ItemName): boolean {
         const index = this.items.indexOf(item);
         return index >= 0 ? !this.ingress.blockedAt(this.slots[index]) : !this.ingress.blocked(item);
+    }
+
+    /** A machine is never full for a hand: it takes the whole hand (D14) */
+    public fullFor(): boolean {
+        return false;
     }
 }

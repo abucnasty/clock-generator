@@ -1,7 +1,7 @@
 import { ItemName } from "../../data";
 import { EntityId, InfinityChest } from "../../entities";
 import { ConstantInventoryState } from "../../state/constant-inventory-state";
-import { WritableInventoryState } from "../../state/inventory-state";
+import { inventoryKey, WritableInventoryState } from "../../state/inventory-state";
 import { SupplyGate } from "../../state/supply-gate";
 import type { ContainerStorage } from "./container-storage";
 import type { DropBy } from "./ports";
@@ -82,6 +82,11 @@ export class ConstantStorage implements ContainerStorage {
     /** Nothing changes: its quantities stay */
     public take(item: ItemName, amount: number): void {
         this.inventoryState.removeQuantity(item, amount);
+    }
+
+    /** Its configured quantities, the same in every tick, and what its supply gate withholds and refuses */
+    public key(): string {
+        return `${inventoryKey(this.inventoryState)};${this.supply.key()};`;
     }
 
     public toString(): string {

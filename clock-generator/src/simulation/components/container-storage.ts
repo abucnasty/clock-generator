@@ -36,14 +36,17 @@ export interface ContainerStorage extends EntityState, DropPort, PickupPort {
      * by its room alone; one of mixed items by its room for the item in the hand, else for any item the hand carries.
      */
     acceptsHand(held: ItemName | null, carried: readonly ItemName[]): boolean;
+    /**
+     * The container's key (see simulationStateKey): what it holds by item, what its supply gate withholds and refuses,
+     * and for a container of mixed items where its items are, which decides what an inserter takes next
+     */
+    key(): string;
 }
 
 /** The Storage of a container of mixed items, whose slots decide what an inserter takes next (slots and weight) */
 export interface MixedStorage extends ContainerStorage {
     /** The item an inserter takes next, of those `allowed` lets through: the last slot's that holds one */
     nextPickupItem(allowed: (item: ItemName) => boolean): ItemName | null;
-    /** Where its items are, beyond the totals, for the simulation's state key */
-    slotKey(): string;
 }
 
 /** The Storage variant of a container of the config, by its class */

@@ -1,52 +1,23 @@
-import { DrillState, EntityState, InserterState, MachineState } from "../../state";
-import { SupplyGate } from "../../state/supply-gate";
+import { EntityState } from "../../state";
 import { SimulationContext } from "../sequence";
 import { ContainerStorage } from "../../simulation/components/container-storage";
 
-function entityStateKey(state: EntityState, tick: number): string {
-    const inventory = Object.entries(state.inventoryState.export()).sort(([a], [b]) => a.localeCompare(b));
-    return `${JSON.stringify(inventory)};${supplyKey(state)};${ownStateKey(state, tick)}`;
-}
-
 /**
- * What a belt or chest withholds or refuses during a backpressure loss. Every key today is taken with the gates open
- * (losses key only after the supply is restored), so this guards against a key ever being read mid-loss.
+ * Everything that drives the next ticks of the simulation; equal keys one period apart mean it repeats from here on.
+ * One line for each entity, by archetype in a fixed order: the belts and then the containers in the order of the state
+ * registry (config order), then the machines, the inserters and the drills in the order of the context's lists. Each
+ * archetype writes its line from its components' keys (simulation/archetypes, simulation/components); what changes no
+ * later tick (running totals, caches, what is bound at build) is in none of them. Belts are keyed first: their lanes
+ * bring their traffic and stock up to the tick as they are keyed.
  */
-function supplyKey(state: EntityState): string {
-    const supply = (state as { supply?: SupplyGate }).supply;
-    if (supply === undefined || supply.isOpen()) {
-        return "";
-    }
-    return `W:${Array.from(supply.withheld).sort().join(",")};R:${Array.from(supply.refused).sort().join(",")}`;
-}
-
-/** What drives the entity besides its inventory; a chest has nothing else, a belt only the stacks on its lanes */
-function ownStateKey(state: EntityState, tick: number): string {
-    if (EntityState.isMachine(state)) {
-        return MachineState.stateKey(state);
-    }
-    if (EntityState.isInserter(state)) {
-        return InserterState.stateKey(state, tick);
-    }
-    if (EntityState.isDrill(state)) {
-        return DrillState.stateKey(state);
-    }
-    if (EntityState.isBelt(state)) {
-        return state.stateKey(tick);
-    }
-    if (ContainerStorage.isMixed(state)) {
-        return state.slotKey();
-    }
-    return "";
-}
-
-/** Everything that drives the next ticks of the simulation; equal keys one period apart mean it repeats from here on */
 export function simulationStateKey(context: SimulationContext): string {
     const tick = context.tick_provider.getCurrentTick();
+    const states = context.state_registry.getAllStates();
     return [
-        ...context.state_registry.getAllStates().map(it => entityStateKey(it, tick)),
-        ...context.machines.map(it => it.stateKey()),
-        ...context.inserters.map(it => it.stateKey(tick)),
-        ...context.drills.map(it => it.stateKey()),
+        ...states.filter(EntityState.isBelt).map(belt => belt.stateKey(tick)),
+        ...states.filter(ContainerStorage.is).map(container => container.key()),
+        ...context.machines.map(machine => machine.stateKey()),
+        ...context.inserters.map(inserter => inserter.stateKey(tick)),
+        ...context.drills.map(drill => drill.stateKey()),
     ].join("\n");
 }

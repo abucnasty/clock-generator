@@ -9,6 +9,8 @@ import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { decimalOf } from "../entities/traits/ratio";
+import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
@@ -993,12 +995,15 @@ function fastPercent(share: number): string {
     return percent < 0.005 ? "under 0.01%" : `${Number(percent.toFixed(2))}%`;
 }
 
-/** Items a second the machines that make the target item can make together, over all copies */
-function outputCapacityPerSecond(config: Config): number {
+/**
+ * Items a second the machines that make the target item can make together, over all copies: each one's main product
+ * rate as its Yield trait gives it, as a decimal, added up in the order the entity registry holds the machines
+ */
+export function outputCapacityPerSecond(config: Config): number {
     const item = TargetProductionRate.fromConfig(config.target_output).machine_production_rate.item;
-    return createEntityRegistryFromConfig(config).getAll().filter(Entity.isMachine)
-        .filter(machine => machine.output.item_name === item)
-        .reduce((sum, machine) => sum + machine.output.production_rate.amount_per_second.toDecimal(), 0) * (config.target_output.copies ?? 1);
+    return machinesInOrder(config, traitsOf(config)).map(machine => machine.yield.results[0])
+        .filter(main => main.item === item)
+        .reduce((sum, main) => sum + decimalOf(main.per_second), 0) * (config.target_output.copies ?? 1);
 }
 
 /** Runs the primary (batched swings) alternative and lists the rest as independent tasks */

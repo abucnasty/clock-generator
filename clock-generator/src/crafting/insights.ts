@@ -343,7 +343,8 @@ export function withWakeUpsFromStarts(insights: readonly ClockInsight[], from_st
 function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
     const check = result.stability_check;
     const as_built = check.as_built;
-    const actual = as_built?.actual_output_items ?? check.actual_output_items;
+    // a long-run mean is not a whole number of items: shown to two decimals
+    const actual = round(as_built?.actual_output_items ?? check.actual_output_items, 2);
     const repeats = as_built?.repeat_periods !== undefined && as_built.repeat_output_items !== undefined
         ? ` The build repeats every ${as_built.repeat_periods} periods and moves ${as_built.repeat_output_items} of `
             + `${check.expected_output_items * as_built.repeat_periods} items over them.`

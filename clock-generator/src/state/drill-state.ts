@@ -7,9 +7,12 @@ import { DrillStatus } from "./entity-status";
 
 export class DrillState implements EntityState {
     public static fromEntity = fromMiningDrillEntity;
-    public static stateKey = stateKey;
 
     public readonly entity_id: EntityId;
+    /**
+     * Never written (a known quirk, kept: P4 D14): the game's state of the drill reads it, while the drill's status that
+     * its ticks go by is its archetype's (`MiningDrillArchetype.status`), which the drill's key holds
+     */
     public status: DrillStatus = DrillStatus.WORKING;
     /** What it has mined and not yet dropped */
     public readonly held: HeldStorage;
@@ -30,9 +33,4 @@ export class DrillState implements EntityState {
 
 function fromMiningDrillEntity(drill: MiningDrill): DrillState {
     return new DrillState(drill);
-}
-
-/** What drives the drill's next ticks besides its inventory (see simulationStateKey) */
-function stateKey(state: DrillState): string {
-    return state.status;
 }

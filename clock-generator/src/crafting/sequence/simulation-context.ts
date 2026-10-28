@@ -1,15 +1,14 @@
 import { Config } from "../../config";
 import { orderByMachineDependencies } from "../../common/order-by-machine-dependencies";
-import { AlwaysEnabledControl, EnableControl, MutableTickProvider } from "../../control-logic";
-import { InserterStateMachine } from "../../control-logic/inserter/inserter-state-machine";
+import { AlwaysEnabledControl, EnableControl } from "../../simulation/controls/enable-control";
+import { MutableTickProvider } from "../../simulation/current-tick-provider";
 import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
-import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
-import { ControlLogic } from "../../control-logic";
+import { InserterArchetype } from "../../simulation/archetypes/inserter";
+import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-takers";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { DrillState, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
-import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
 import { InserterTrace, InserterTraceOptions } from "../../state/inserter-trace";
 import assert from "../../common/assert";
@@ -22,6 +21,16 @@ import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
 
+/**
+ * What a control swap puts the inserters and drills on: the planner's policy for each kind (`interceptors/`), which
+ * gives each entity its enable control from its state and the states it takes from and puts into. A kind the policy has
+ * no entry for keeps its controls.
+ */
+export interface ControlPolicy {
+    inserter?: InserterInterceptor;
+    drill?: (drill_state: DrillState, sink_state: EntityState) => EnableControl;
+}
+
 export class SimulationContext {
 
     static fromConfig = createSimulationContextFromConfig;
@@ -31,7 +40,7 @@ export class SimulationContext {
         public readonly entity_registry: WritableEntityRegistry,
         public readonly state_registry: WritableEntityStateRegistry,
         public readonly machines: CraftingMachineArchetype[],
-        public readonly inserters: InserterStateMachine[],
+        public readonly inserters: InserterArchetype[],
         public readonly drills: MiningDrillArchetype[],
         public readonly target_production_rate: TargetProductionRate,
         /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide */
@@ -68,40 +77,35 @@ export class SimulationContext {
         }
     }
 
-    /** The update of every inserter in a tick, in the order of the list and of `competing_takers_order` */
-    public inserterUpdates(): ControlLogic {
-        return new InserterUpdates(this.inserters, this.state_registry, this.competing_takers_order);
-    }
-
-    public clone(args: Partial<SimulationContext> = {}): SimulationContext {
-        return new SimulationContext(
-            args.tick_provider ?? this.tick_provider,
-            args.entity_registry ?? this.entity_registry,
-            args.state_registry ?? this.state_registry,
-            args.machines ?? [...this.machines],
-            args.inserters ?? [...this.inserters],
-            args.drills ?? [...this.drills],
-            args.target_production_rate ?? this.target_production_rate,
-            args.competing_takers_order ?? this.competing_takers_order,
-        );
-    }
-
-    public addDebuggerPlugins(debug_plugin_factory: DebugPluginFactory): void {
-        this.machines.forEach(it => debug_plugin_factory.forMachine(it));
-
-        this.inserters.forEach(it => {
-            it.addPlugin(debug_plugin_factory.inserterModeChangePlugin(it));
-            it.addPlugin(debug_plugin_factory.inserterHandContentsChangePlugin(it));
-        });
-
-        this.drills.forEach(it => {
-            it.addObserver(debug_plugin_factory.drillModeChangePlugin(it.drill_state))
-        })
+    /**
+     * A control swap, in place, between runs and never in a tick: every inserter and then every drill, each in the
+     * order of its list, is put on the control the policy gives it (`useControl`), where the policy has an entry for
+     * its kind. An inserter starts at IDLE with its Hand's scratch set back, while its status, its hand, the pickup arm
+     * and the belt lanes are kept; a drill starts WORKING with both bars at 0, while what it holds is kept (same-tick
+     * rule 12). Machines, ports, observers and the lists stay as they are, so a World built from this context
+     * (`SimulationTick`) runs the new controls.
+     */
+    public useControls(policy: ControlPolicy): void {
+        const states = this.state_registry;
+        const inserter_policy = policy.inserter;
+        if (inserter_policy !== undefined) {
+            for (const inserter of this.inserters) {
+                const inserter_state = inserter.inserter_state;
+                const source_state = states.getStateByEntityIdOrThrow(inserter_state.inserter.source.entity_id);
+                const sink_state = states.getStateByEntityIdOrThrow(inserter_state.inserter.sink.entity_id);
+                inserter.useControl(inserter_policy(inserter_state, source_state, sink_state));
+            }
+        }
+        const drill_policy = policy.drill;
+        if (drill_policy !== undefined) {
+            for (const drill of this.drills) {
+                const drill_state = drill.drill_state;
+                const sink_state = states.getStateByEntityIdOrThrow(drill_state.drill.sink_id);
+                drill.useControl(drill_policy(drill_state, sink_state));
+            }
+        }
     }
 }
-
-type MachineInterceptor = (entity_state: EntityState) => CraftingMachineArchetype | null
-type InserterStateMachineInterceptor = (entity_state: EntityState) => InserterStateMachine | null
 
 /** The entities of a config: belts, machines, chests, inserters and drills, without any state */
 export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
@@ -168,13 +172,7 @@ function registryPutIntoView(entity_registry: EntityRegistry): PutIntoView {
     };
 }
 
-function createSimulationContextFromConfig(
-    config: Config,
-    interceptors: {
-        machine_interceptor?: MachineInterceptor,
-        inserter_interceptor?: InserterStateMachineInterceptor,
-    } = {}
-): SimulationContext {
+function createSimulationContextFromConfig(config: Config): SimulationContext {
     const entity_registry = createEntityRegistryFromConfig(config);
 
     const state_factory = new EntityStateFactory(entity_registry);
@@ -188,10 +186,6 @@ function createSimulationContextFromConfig(
         .getAllStates()
         .filter(EntityState.isMachine)
         .map(machine_state => {
-            const possible_state_machine = interceptors.machine_interceptor && interceptors.machine_interceptor(machine_state);
-            if (possible_state_machine) {
-                return possible_state_machine;
-            }
             const result_target = machine_state.machine.result_target;
             const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
             assert(result_target_state === undefined || ContainerStorage.is(result_target_state) || EntityState.isMachine(result_target_state),
@@ -202,15 +196,11 @@ function createSimulationContextFromConfig(
             });
         })
 
-    const inserter_state_machines: InserterStateMachine[] = orderInsertersDownstreamFirst(
+    const inserter_archetypes: InserterArchetype[] = orderInsertersDownstreamFirst(
         entity_state_registry.getAllStates().filter(EntityState.isInserter)
     )
         .map(inserter_state => {
-            const possible_state_machine = interceptors.inserter_interceptor && interceptors.inserter_interceptor(inserter_state);
-            if (possible_state_machine) {
-                return possible_state_machine;
-            }
-            return InserterStateMachine.create({
+            return InserterArchetype.create({
                 inserter_state: inserter_state,
                 source_state: entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.source.entity_id),
                 sink_state: entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.sink.entity_id),
@@ -238,7 +228,7 @@ function createSimulationContextFromConfig(
         entity_registry,
         entity_state_registry,
         machine_state_machines,
-        inserter_state_machines,
+        inserter_archetypes,
         drill_state_machines,
         target_production_rate
     )
@@ -253,55 +243,4 @@ function orderInsertersDownstreamFirst(inserters: InserterState[]): InserterStat
     return orderByMachineDependencies(inserters,
         inserter => EntityId.isMachine(inserter.inserter.source.entity_id) ? inserter.inserter.source.entity_id.id : undefined,
         inserter => inserter.inserter.sink.entity_id.id);
-}
-
-export function cloneSimulationContextWithInterceptors(
-    context: SimulationContext,
-    interceptors: {
-        inserter?: InserterInterceptor,
-        drill?: (drill_state: DrillState, sink_state: EntityState) => EnableControl,
-    } = {}
-): SimulationContext {
-
-    const entity_state_registry = context.state_registry;
-
-    let new_inserters: InserterStateMachine[] | null = null
-    let new_drills: MiningDrillArchetype[] | null = null
-
-    if (interceptors.inserter) {
-        new_inserters = context.inserters.map(inserter_state_machine => {
-            const inserter_state = inserter_state_machine.inserter_state;
-            const source_state = entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.source.entity_id)
-            const sink_state = entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.sink.entity_id)
-            const enable_control = interceptors.inserter!(inserter_state_machine.inserter_state, source_state, sink_state);
-
-            return InserterStateMachine.create({
-                inserter_state: inserter_state_machine.inserter_state,
-                source_state: source_state,
-                sink_state: sink_state,
-                enable_control: enable_control,
-                tick_provider: context.tick_provider,
-                plugins: inserter_state_machine.getPlugins()
-            })
-        })
-    }
-
-    if (interceptors.drill) {
-        new_drills = context.drills.map(drill_state_machine => {
-            const sink_state = entity_state_registry.getStateByEntityIdOrThrow(drill_state_machine.drill_state.drill.sink_id);
-            const enable_control = interceptors.drill!(drill_state_machine.drill_state, sink_state);
-            // a new drill over the same state: WORKING, fresh bars, the old one's observers (same-tick rule 12)
-            return MiningDrillArchetype.create({
-                drill_state: drill_state_machine.drill_state,
-                enable_control: enable_control,
-                sink_state: sink_state,
-                observers: drill_state_machine.getObservers()
-            })
-        })
-    }
-
-    return context.clone({
-        inserters: new_inserters ?? context.inserters,
-        drills: new_drills ?? context.drills,
-    });
 }

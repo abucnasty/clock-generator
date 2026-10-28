@@ -1,6 +1,6 @@
 import { ItemName } from "../../data";
 import { BufferChest, EntityId } from "../../entities";
-import { InventoryState, WritableInventoryState } from "../../state/inventory-state";
+import { InventoryState, inventoryKey, WritableInventoryState } from "../../state/inventory-state";
 import { SupplyGate } from "../../state/supply-gate";
 import type { ContainerStorage } from "./container-storage";
 import type { DropBy } from "./ports";
@@ -73,6 +73,11 @@ export class SingleItemStorage implements ContainerStorage {
 
     public take(item: ItemName, amount: number): void {
         this.inventoryState.removeQuantity(item, amount);
+    }
+
+    /** What it holds and what its supply gate withholds and refuses; it has no slots that matter apart from its total */
+    public key(): string {
+        return `${inventoryKey(this.inventoryState)};${this.supply.key()};`;
     }
 
     public toString(): string {

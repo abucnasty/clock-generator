@@ -1,4 +1,4 @@
-import { DEFAULT_TAKER_ORDER, TakerOrder } from "../control-logic/inserter/competing-takers";
+import { DEFAULT_TAKER_ORDER, TakerOrder } from "../simulation/competing-takers";
 import { DeciderOrder } from "./decider-order";
 
 /**

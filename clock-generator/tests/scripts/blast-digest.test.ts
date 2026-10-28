@@ -1,6 +1,6 @@
 // The results digest of a blast job (scripts/blast/blast.digest.ts): the canonical walk, and the lazy expansion of a sealed history.
 import { describe, expect, it } from 'vitest';
-import { reasonId } from '../../src/control-logic/mode/reason-table';
+import { reasonId } from '../../src/state/reason-table';
 import { factorioStateCode, statusCode } from '../../src/state/status-codes';
 import { type CompactStateTransitionHistory, expandStateTransitionHistory } from '../../src/crafting/sequence/compact-history';
 import { EntityTransitionColumns } from '../../src/crafting/sequence/transition-columns';

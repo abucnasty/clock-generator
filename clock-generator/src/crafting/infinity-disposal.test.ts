@@ -2,7 +2,6 @@ import { expect, it } from 'vitest';
 import { Config, ConfigSchema } from '../config/schema';
 import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
-import { CompositeControlLogic, TickControlLogic } from '../control-logic';
 import { Entity, EntityId } from '../entities';
 import { MachineStatus } from '../state';
 import { SimulationContext } from './sequence/simulation-context';
@@ -10,6 +9,7 @@ import { TimelineRecorder } from './timeline-recording';
 import { createInserterCoverageValidator, validateInserterCoverage } from '../config/inserter-coverage-validator';
 import { validateConfig } from './plan/validate-config';
 import { ContainerStorage } from '../simulation/components/container-storage';
+import { TickByHand } from './runner/tick-by-hand.fixture';
 
 const item = 'automation-science-pack';
 async function disposalConfig(explicit = false): Promise<Config> {
@@ -29,7 +29,7 @@ it.each([false, true])('accepts output with explicit filters=%s, records deliver
     const output = context.inserters.find(inserter => inserter.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id)!.inserter_state;
     expect([...output.inserter.filtered_items]).toEqual([item]);
     const recorder = new TimelineRecorder(context, { period_ticks: 6_000 });
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const tick = new TickByHand(context);
     const advance = () => { for (let i = 0; i < 1_000; i++) { tick.executeForTick(); recorder.record(); } };
     advance();
     const delivered = output.items_dropped;

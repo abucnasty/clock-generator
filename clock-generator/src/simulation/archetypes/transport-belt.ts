@@ -3,6 +3,7 @@ import { Belt, EntityId } from "../../entities";
 import { BeltInventoryState } from "../../state/belt-inventory-state";
 import { BeltPickupStock } from "../../state/belt-pickup-stock";
 import type { EntityState } from "../../state/entity-state";
+import { inventoryKey } from "../../state/inventory-state";
 import { LaneTraffic } from "../../state/lane-traffic";
 import { SupplyGate } from "../../state/supply-gate";
 import { BeltLane } from "../components/belt-lane";
@@ -52,15 +53,19 @@ export class TransportBelt implements EntityState {
         return this.lanes.map(lane => lane.dropOf(inserter_id)!);
     }
 
-    /** What the lanes carry besides the belt's inventory, for the key that tells whether a simulation repeats */
+    /**
+     * The belt's key (see simulationStateKey): its inventory, what its supply gate withholds and refuses, and what its
+     * lanes hold: the stacks put down at the spots of each lane, then each hand's own local tiles and each hand's reach,
+     * by hand in the order the hands were built and by lane in the belt's order
+     */
     public stateKey(tick: number): string {
         const lanes = this.lanes;
         const traffic = lanes.map(lane => lane.trafficKey(tick)).join("|");
         const ids = (of: (lane: BeltLane) => IterableIterator<string>) => lanes.length === 0 ? [] : [...of(lanes[0])];
         const drops = ids(lane => lane.dropIds())
-            .map(id => `${id}:${lanes.map(lane => lane.dropOf(id)!.stateKey(tick)).join("|")}`);
+            .map(id => `${id}:${lanes.map(lane => lane.dropKey(id, tick)).join("|")}`);
         const pickups = ids(lane => lane.pickupIds())
-            .map(id => `${id}:${lanes.map(lane => lane.pickupOf(id)!.stock.stateKey(tick)).join("|")}`);
-        return traffic + ";" + drops.join(";") + ";" + pickups.join(";");
+            .map(id => `${id}:${lanes.map(lane => lane.pickupKey(id, tick)).join("|")}`);
+        return `${inventoryKey(this.inventoryState)};${this.supply.key()};` + traffic + ";" + drops.join(";") + ";" + pickups.join(";");
     }
 }

@@ -2,12 +2,13 @@ import { ItemName } from "../../data";
 import { InserterStatus } from "../../state/entity-status";
 import type { InserterState } from "../../state/inserter-state";
 import { ContainerStorage, MixedStorage } from "./container-storage";
-import { CarriedItems, HandDropPort, HandPickupPort, HandScratch, takeIntoHand } from "./hand";
+import { CarriedItems, HandDropPort, HandPickupPort, HandReason, HandScratch, takeIntoHand } from "./hand";
 
 /**
  * A Container's pickup port, its storage, as one hand reaches it: a container of one item or of endless room gives the
  * hand's items in the hand's order (a container of mixed items is `MixedContainerHandPickup`). A pickup that finds
- * nothing to take sets the inserter idle itself, with no event (same-tick rule 11).
+ * nothing to take sets the inserter idle itself, with no event (same-tick rule 11). The idle rule starts a pickup where
+ * the container has any of the items the hand carries, whatever the hand holds.
  */
 export class ContainerHandPickup implements HandPickupPort {
 
@@ -32,6 +33,22 @@ export class ContainerHandPickup implements HandPickupPort {
 
     public key(): string {
         return String(this.scratch.pickup_ticks);
+    }
+
+    /** The first item the hand carries that the container has, its reason written for the change */
+    public startsPickup(): boolean {
+        const names = this.items.names;
+        for (let index = 0; index < names.length; index++) {
+            const quantity = this.source.getCurrentQuantity(names[index]);
+            if (quantity >= 1) {
+                const scratch = this.scratch;
+                scratch.reason = HandReason.CHEST_HAS;
+                scratch.reason_item = names[index];
+                scratch.reason_quantity = quantity;
+                return true;
+            }
+        }
+        return false;
     }
 
     public pickup(): void {
@@ -74,7 +91,7 @@ export class ContainerHandPickup implements HandPickupPort {
             return;
         }
 
-        takeIntoHand(state, item, pickup_quantity);
+        takeIntoHand(state, this.scratch, item, pickup_quantity);
         source.take(item, pickup_quantity);
     }
 

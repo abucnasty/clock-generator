@@ -77,7 +77,7 @@ export function effectiveHandSize(inserter_stack_size: number, item_name: ItemNa
  * what is on both lanes, and from the far lane only when the sink takes nothing more of the near one. The order of its
  * filters has no say in it. Recorded on the utility science scaffold in Factorio 2.1.21: the inserter that brings
  * processing units and low density structures took the low density structures first while they were on its near lane,
- * and the processing units first once the two lanes were swapped, with the same filters both times. The pickup mode
+ * and the processing units first once the two lanes were swapped, with the same filters both times. The pickup phase
  * takes the first item of this order its sink still takes.
  */
 export function nearestLaneFirst(items: Set<ItemName>, lanes: readonly Lane[], near_lane: 1 | 2): Set<ItemName> {

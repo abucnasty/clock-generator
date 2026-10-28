@@ -10,7 +10,7 @@ import {composeProbeSource} from "../../helpers/probe-source";
 import {BELT_SPEEDS, blueprintAtSpeed, configAtSpeed} from "../../helpers/belt-speed-fixtures";
 import {verifySplitterSpeedReport} from "./splitter-speed-research";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../../../../src/simulation/components/hand-ports";
 import {EntityState} from "../../../../src/state";
 
 interface Stack {id: number; at: number; count: number; item: string}
@@ -252,8 +252,8 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightM
             const machine = simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id);
             expect(EntityState.isMachine(machine)).toBe(true);
             if (!EntityState.isMachine(machine)) throw new Error("Expected machine sink");
-            const mode = InserterPickupMode.create({inserterState: input, tick_provider: simulation.tick_provider,
-                sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id), sinkState: machine});
+            const pickup = bindHandPorts({inserterState: input, tick_provider: simulation.tick_provider,
+                sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id), sinkState: machine}).pickup;
             const counts: number[] = [];
             for (let tick = 13; tick <= 18; tick++) {
                 const previous = report.samples[tick - 2];
@@ -263,7 +263,7 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightM
                 }
                 expect(machine.ingress.blocked("copper-cable")).toBe(false);
                 simulation.tick_provider.setCurrentTick(tick);
-                mode.executeForTick();
+                pickup.pickup();
                 counts.push(input.held_item!.quantity);
             }
             expect(counts).toEqual([4, 8, 12, 16, 16, 16]);

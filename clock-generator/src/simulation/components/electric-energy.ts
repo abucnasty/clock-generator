@@ -30,8 +30,8 @@ export class ElectricEnergy {
         return this;
     }
 
-    /** The key of a burner that holds no energy, the slot of the machine's state key it fills */
-    public stateKey(): string {
-        return "0;0";
+    /** Nothing: it owns nothing that could drive the machine's next ticks */
+    public key(): string {
+        return "";
     }
 }

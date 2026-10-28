@@ -1,11 +1,12 @@
 import { describe, test, expect } from "vitest"
-import { CraftingMachineArchetype, CraftingMachineObserver } from "./crafting-machine";
+import type { CraftingMachineObserver } from "../observers/observer";
+import { CraftingMachineArchetype } from "./crafting-machine";
 import { MachineState, MachineStatus } from "../../state";
 import { Machine, MachineSpec, RecipeMetadata } from "../../entities";
 import { Config, ConfigSchema } from "../../config/schema";
-import { AlwaysEnabledControl } from "../../control-logic";
-import { reasonText } from "../../control-logic/mode/reason-table";
-import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../crafting/sequence/simulation-context";
+import { AlwaysEnabledControl } from "../controls/enable-control";
+import { reasonText } from "../../state/reason-table";
+import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { BurnerEnergy } from "../components/burner-energy";
 import { CraftingStatus, machineStatusOf } from "../status-codes";
 
@@ -236,24 +237,24 @@ describe("Crafting machine at the output block", () => {
     test("a machine tells the inserters that wait on it whether it finished a craft in its last tick, and whether its output was at the block then", () => {
         const { machine_state, machine } = createRocketFuel(11, 2)
         executeForTicks(machine, 1)
-        expect(machine_state.outputBlockedAfterLastTick).toBe(true)
-        expect(machine_state.finishedCraftInLastTick).toBe(false)
+        expect(machine_state.wakes.outputBlockedAfterLastTick).toBe(true)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(false)
         // 7.09 ticks a craft: only the tick the first craft finishes in says so
         let ticks = 1
         while (machine_state.craftCount === 0 && ticks < 20) {
-            expect(machine_state.finishedCraftInLastTick).toBe(false)
+            expect(machine_state.wakes.finishedCraftInLastTick).toBe(false)
             executeForTicks(machine, 1)
             ticks += 1
         }
         expect(machine_state.craftCount).toBe(1)
-        expect(machine_state.finishedCraftInLastTick).toBe(true)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(true)
         executeForTicks(machine, 1)
-        expect(machine_state.finishedCraftInLastTick).toBe(false)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(false)
         // an output inserter takes the products: the machine says so once its own tick is done
         machine_state.inventoryState.setQuantity("rocket-fuel", 0)
-        expect(machine_state.outputBlockedAfterLastTick).toBe(true)
+        expect(machine_state.wakes.outputBlockedAfterLastTick).toBe(true)
         executeForTicks(machine, 1)
-        expect(machine_state.outputBlockedAfterLastTick).toBe(false)
+        expect(machine_state.wakes.outputBlockedAfterLastTick).toBe(false)
     })
 
     // the lowest output the game showed full output at and the highest it showed ingredient shortage at, per recording
@@ -418,11 +419,11 @@ describe("Crafting machine with a fuel slot", () => {
 
     test("accepts fuel up to its insertion limit, even while the output is full", () => {
         const { machine_state } = createBiochamberState(0, 0)
-        expect(machine_state.ingress.takes("nutrients")).toBe(true)
+        expect(machine_state.ingress.slotOf("nutrients")).toBeGreaterThanOrEqual(0)
         expect(machine_state.ingress.blocked("nutrients")).toBe(false)
         machine_state.fuelInventory.addQuantity("nutrients", machine_state.machine.fuel_slot!.automated_insertion_limit)
         expect(machine_state.ingress.blocked("nutrients")).toBe(true)
-        expect(machine_state.ingress.takes("coal")).toBe(false)
+        expect(machine_state.ingress.slotOf("coal")).toBe(-1)
     })
 
     // a burner tops its buffer up only after a tick it keeps working, so a stopped one keeps the 1/15 of a tick its buffer
@@ -578,12 +579,12 @@ describe("Crafting machine: its steps and observers", () => {
         const changes: { from: string; to: string; reason: string; status_then: string; started_then: number }[] = []
         const ticks: { finished: boolean; decider: number | null }[] = []
         const observer: CraftingMachineObserver = {
-            onStatusChange(from, to, reason_id) {
-                changes.push({ from: machineStatusOf(from), to: machineStatusOf(to), reason: reasonText(reason_id),
+            onStatusChange(from, to, reason) {
+                changes.push({ from: machineStatusOf(from), to: machineStatusOf(to), reason: reasonText(reason.reasonId(from, to)),
                     status_then: machine_state.status, started_then: machine_state.craftsStarted })
             },
-            executeForTick() {
-                ticks.push({ finished: machine_state.finishedCraftInLastTick, decider: machine_state.windowOpeningTakeDecider })
+            onTick() {
+                ticks.push({ finished: machine_state.wakes.finishedCraftInLastTick, decider: machine_state.wakes.windowOpeningTakeDecider })
             },
         }
         return { observer, changes, ticks }
@@ -611,7 +612,7 @@ describe("Crafting machine: its steps and observers", () => {
     test("tells its observers of a change in the status rule, the status written first, before the machine crafts (same-tick rule 17)", () => {
         const { machine_state, machine } = gears(0)
         const { observer, changes } = watching(machine_state)
-        machine.addObserver(observer)
+        machine.observers.add(observer)
         machine.placeResults()
         machine.putHeldProductsInOutput()
         machine.statusRule()
@@ -633,14 +634,14 @@ describe("Crafting machine: its steps and observers", () => {
     test("writes its Wakes after its tick and before the observers of the tick, the decider cleared (same-tick rules 1 and 3)", () => {
         const { machine_state, machine } = gears(0)
         const { observer, ticks } = watching(machine_state)
-        machine.addObserver(observer)
+        machine.observers.add(observer)
         executeForTicks(machine, 1)
-        machine_state.windowOpeningTakeDecider = 3
+        machine_state.wakes.windowOpeningTakeDecider = 3
         executeForTicks(machine, 1)
         // the craft finished in the second tick: the observers see the flags of that tick, and the decider gone
         expect(ticks).toEqual([{ finished: false, decider: null }, { finished: true, decider: null }])
-        expect(machine_state.finishedCraftInLastTick).toBe(true)
-        expect(machine_state.windowOpeningTakeDecider).toBe(null)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(true)
+        expect(machine_state.wakes.windowOpeningTakeDecider).toBe(null)
     })
 
     test("counts the crafts its Wakes report from its build on", () => {
@@ -649,18 +650,18 @@ describe("Crafting machine: its steps and observers", () => {
         machine_state.craftsStarted = 5
         const machine = CraftingMachineArchetype.create({ machine_state })
         executeForTicks(machine, 1)
-        expect(machine_state.finishedCraftInLastTick).toBe(false)
-        expect(machine_state.startedCraftInLastTick).toBe(false)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(false)
+        expect(machine_state.wakes.startedCraftInLastTick).toBe(false)
     })
 
     test("tells observers taken off nothing more, and keeps the others", () => {
         const { machine_state, machine } = gears(0)
         const kept = watching(machine_state)
         const taken = watching(machine_state)
-        machine.addObserver(kept.observer)
-        machine.addObserver(taken.observer)
-        machine.removeObservers(new Set([taken.observer]))
-        expect(machine.getObservers()).toEqual([kept.observer])
+        machine.observers.add(kept.observer)
+        machine.observers.add(taken.observer)
+        machine.observers.remove(new Set([taken.observer]))
+        expect(machine.observers.list()).toEqual([kept.observer])
         executeForTicks(machine, 1)
         expect(kept.changes).toHaveLength(1)
         expect(kept.ticks).toHaveLength(1)
@@ -668,15 +669,16 @@ describe("Crafting machine: its steps and observers", () => {
         expect(taken.ticks).toHaveLength(0)
     })
 
-    // the texts the machine's mode state machine and its state gave the same build before (0.24.0, R11)
-    test("keys its status with the text of the mode state machine it replaces", () => {
+    // one key for the machine, its components' in a fixed order (P4 3.4): Storage, Crafting, Yield, Wakes, Energy
+    test("keys what its components keep: its inventories, status and craft, held products and bars, last tick's flags, energy", () => {
         const { machine_state, machine } = gears(0)
-        expect(machine.stateKey()).toBe("INGREDIENT_SHORTAGE||||||||")
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",2]];{};[]|${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0|0;0;[]|false;false;false|`)
         executeForTicks(machine, 1)
         expect(machine_state.crafting.status).toBe(CraftingStatus.WORKING)
-        expect(machine.stateKey()).toBe("WORKING||||||||")
-        // the status, the started craft its Wakes report and the half craft, in its state's key
-        expect(MachineState.stateKey(machine_state)).toBe("WORKING;0;false;false;true;{};0.5;0;0;0;[];[]")
+        // the plates taken, the half craft, the started craft its Wakes report; an electric machine's energy keys nothing
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",0]];{};[]|${CraftingStatus.WORKING};0.5|0;0;[]|false;false;true|`)
+        expect(machine.stateKey()).toBe([machine_state.storageKey(), machine_state.crafting.key(), machine_state.yield.key(),
+            machine_state.wakes.key(), machine_state.energy.key()].join("|"))
     })
 })
 
@@ -696,18 +698,19 @@ describe("Crafting machine in a control swap", () => {
         ],
     }) as Config;
 
-    // the inserters and drills are rebuilt on their new controls (same-tick rule 12); a machine is kept as it is
-    test("keeps every machine as it is: the same archetype, its status and its observers", () => {
+    // the inserters and drills are put on their new controls in place (same-tick rule 12); a machine is left as it is
+    test("leaves every machine as it is: the same archetype, its status and its observers", () => {
         const context = SimulationContext.fromConfig(BUILD);
         const [machine] = context.machines;
-        const observer: CraftingMachineObserver = { executeForTick() { } };
-        machine.addObserver(observer);
+        const observer: CraftingMachineObserver = { onTick() { } };
+        machine.observers.add(observer);
         machine.machine_state.status = MachineStatus.WORKING;
-        const swapped = cloneSimulationContextWithInterceptors(context, { inserter: () => AlwaysEnabledControl });
-        expect(swapped.machines).toHaveLength(1);
-        expect(swapped.machines[0]).toBe(machine);
-        expect(swapped.machines[0].getObservers()).toEqual([observer]);
-        expect(swapped.machines[0].machine_state.status).toBe(MachineStatus.WORKING);
-        expect(swapped.inserters[0]).not.toBe(context.inserters[0]);
+        const machines = context.machines;
+        context.useControls({ inserter: () => AlwaysEnabledControl });
+        expect(context.machines).toBe(machines);
+        expect(context.machines).toHaveLength(1);
+        expect(context.machines[0]).toBe(machine);
+        expect(context.machines[0].observers.list()).toEqual([observer]);
+        expect(context.machines[0].machine_state.status).toBe(MachineStatus.WORKING);
     })
 })

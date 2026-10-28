@@ -113,8 +113,23 @@ export class BeltLane {
         return this.pickups.keys();
     }
 
+    /**
+     * The keys of what the lane holds, for its belt's key (see TransportBelt.stateKey): the stacks hands put down at
+     * their spots, a hand's own local tile, and the stock a hand reaches. Each brings its traffic or its stock up to
+     * `tick` first.
+     */
     public trafficKey(tick: number): string {
         return this.shared.traffic.stateKey(tick);
+    }
+
+    /** The key of the inserter's own local tile of this lane, which it has from its first build */
+    public dropKey(inserter_id: string, tick: number): string {
+        return this.drops.get(inserter_id)!.traffic.stateKey(tick);
+    }
+
+    /** The key of the stock the inserter reaches on this lane, which it has from its first build */
+    public pickupKey(inserter_id: string, tick: number): string {
+        return this.pickups.get(inserter_id)!.stock.stateKey(tick);
     }
 
     public dropOf(inserter_id: string): LaneTraffic | undefined {
