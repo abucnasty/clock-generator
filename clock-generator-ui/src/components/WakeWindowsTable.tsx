@@ -1,4 +1,4 @@
-import { Box, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Box } from '@mui/material';
 import { formatNumberText } from '../utils/numberText';
 import { ticksToSeconds, type WakeWindowRow } from '../utils/wakeWindows';
 import {
@@ -17,6 +17,7 @@ import {
     windowEndText,
     windowOrdinalText,
 } from '../utils/wakeWindowCopy';
+import { DataTable } from './DataTable';
 import { WakeRowMoves } from './WakeRowMoves';
 
 interface WakeWindowsTableProps {
@@ -25,84 +26,32 @@ interface WakeWindowsTableProps {
     mostWakeUpsId: string | null;
 }
 
-/** The table's own styles put a caption below it; these put it above, as the table's title */
-const tableSx = {
-    minWidth: 720,
-    '& caption': { captionSide: 'top', textAlign: 'left', px: 0, pt: 0, pb: 1, color: 'text.primary', fontWeight: 600 },
-} as const;
-/** A table wider than the page scrolls inside this box, never the page */
-const scrollSx = { overflowX: 'auto', mb: 3, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } } as const;
 const num = (value: number) => formatNumberText(value);
+const NAME = { header: WINDOWS_TABLE_HEADERS.name, rowHeader: true, sx: { whiteSpace: 'nowrap' } } as const;
 
 /** The chart's numbers as two tables: one row per inserter and drill, and one row per wake window */
 export function WakeWindowsTable({ rows, periodTicks, mostWakeUpsId }: WakeWindowsTableProps) {
     const windowRows = rows.flatMap(row => row.windows.map((window, index) => ({ row, window, index })));
     return (
-        <Box data-wake-tables>
-            <Box tabIndex={0} role="region" aria-label={ROWS_TABLE_LABEL} sx={scrollSx}>
-                <Table size="small" sx={tableSx}>
-                    <caption>{ROWS_TABLE_CAPTION}</caption>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell scope="col">{ROWS_TABLE_HEADERS.name}</TableCell>
-                            <TableCell scope="col">{ROWS_TABLE_HEADERS.moves}</TableCell>
-                            <TableCell scope="col" align="right">{ROWS_TABLE_HEADERS.onFor}</TableCell>
-                            <TableCell scope="col" align="right">{ROWS_TABLE_HEADERS.windows}</TableCell>
-                            <TableCell scope="col" align="right">{ROWS_TABLE_WAKE_UPS_HEADER}</TableCell>
-                            <TableCell scope="col">{ROWS_TABLE_HEADERS.notes}</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {rows.map(row => (
-                            <TableRow key={row.id}>
-                                <TableCell component="th" scope="row" sx={{ whiteSpace: 'nowrap' }}>{row.label}</TableCell>
-                                <TableCell sx={{ minWidth: 200 }}><WakeRowMoves row={row} /></TableCell>
-                                <TableCell align="right">{onShareText(row.onShare)}</TableCell>
-                                <TableCell align="right">{windowCountText(row)}</TableCell>
-                                <TableCell align="right">{wakeUpsText(row)}</TableCell>
-                                <TableCell sx={{ minWidth: 280 }}>
-                                    {watchNotes(row, { periodTicks, mostWakeUpsId }).map(note => note.text).join(' ')}
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Box>
-
-            <Box tabIndex={0} role="region" aria-label={WINDOWS_TABLE_LABEL} sx={scrollSx}>
-                <Table size="small" sx={tableSx}>
-                    <caption>{WINDOWS_TABLE_CAPTION}</caption>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell scope="col">{WINDOWS_TABLE_HEADERS.name}</TableCell>
-                            <TableCell scope="col">{WINDOWS_TABLE_HEADERS.window}</TableCell>
-                            <TableCell scope="col" align="right">{WINDOWS_TABLE_HEADERS.starts}</TableCell>
-                            <TableCell scope="col" align="right">{WINDOWS_TABLE_HEADERS.ends}</TableCell>
-                            <TableCell scope="col" align="right">{WINDOWS_TABLE_HEADERS.lengthTicks}</TableCell>
-                            <TableCell scope="col" align="right">{WINDOWS_TABLE_HEADERS.lengthSeconds}</TableCell>
-                            <TableCell scope="col" align="right">{WINDOWS_TABLE_HEADERS.slack}</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {windowRows.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={7}>{NO_WINDOWS_TEXT}</TableCell>
-                            </TableRow>
-                        )}
-                        {windowRows.map(({ row, window, index }) => (
-                            <TableRow key={`${row.id}-${index}`}>
-                                <TableCell component="th" scope="row" sx={{ whiteSpace: 'nowrap' }}>{row.label}</TableCell>
-                                <TableCell>{windowOrdinalText(index, row.windows.length)}</TableCell>
-                                <TableCell align="right">{num(window.start)}</TableCell>
-                                <TableCell align="right">{windowEndText(window)}</TableCell>
-                                <TableCell align="right">{num(window.length)}</TableCell>
-                                <TableCell align="right">{num(ticksToSeconds(window.length))}</TableCell>
-                                <TableCell align="right">{num(window.slackTicks)}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Box>
+        <Box data-wake-tables sx={{ display: 'grid', gap: 3, mb: 3 }}>
+            <DataTable label={ROWS_TABLE_LABEL} caption={ROWS_TABLE_CAPTION} minWidth={720} rows={rows} rowKey={row => row.id} columns={[
+                { ...NAME, header: ROWS_TABLE_HEADERS.name, cell: row => row.label },
+                { header: ROWS_TABLE_HEADERS.moves, cell: row => <WakeRowMoves row={row} />, sx: { minWidth: 200 } },
+                { header: ROWS_TABLE_HEADERS.onFor, align: 'right', cell: row => onShareText(row.onShare) },
+                { header: ROWS_TABLE_HEADERS.windows, align: 'right', cell: windowCountText },
+                { header: ROWS_TABLE_WAKE_UPS_HEADER, align: 'right', cell: wakeUpsText },
+                { header: ROWS_TABLE_HEADERS.notes, sx: { minWidth: 280 }, cell: row => watchNotes(row, { periodTicks, mostWakeUpsId }).map(note => note.text).join(' ') },
+            ]} />
+            <DataTable label={WINDOWS_TABLE_LABEL} caption={WINDOWS_TABLE_CAPTION} minWidth={720} rows={windowRows} rowKey={({ row, index }) => `${row.id}-${index}`}
+                empty={NO_WINDOWS_TEXT} columns={[
+                    { ...NAME, cell: ({ row }) => row.label },
+                    { header: WINDOWS_TABLE_HEADERS.window, cell: ({ row, index }) => windowOrdinalText(index, row.windows.length) },
+                    { header: WINDOWS_TABLE_HEADERS.starts, align: 'right', cell: ({ window }) => num(window.start) },
+                    { header: WINDOWS_TABLE_HEADERS.ends, align: 'right', cell: ({ window }) => windowEndText(window) },
+                    { header: WINDOWS_TABLE_HEADERS.lengthTicks, align: 'right', cell: ({ window }) => num(window.length) },
+                    { header: WINDOWS_TABLE_HEADERS.lengthSeconds, align: 'right', cell: ({ window }) => num(ticksToSeconds(window.length)) },
+                    { header: WINDOWS_TABLE_HEADERS.slack, align: 'right', cell: ({ window }) => num(window.slackTicks) },
+                ]} />
         </Box>
     );
 }

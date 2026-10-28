@@ -1,6 +1,7 @@
-import { Box, Tab, Tabs, Typography } from '@mui/material';
+import { Tab, Tabs, Typography } from '@mui/material';
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import type { ClockTimelineWorkspaceProps } from './ClockTimelineWorkspace';
+import { Disclosure } from './Disclosure';
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import type { ResultDetail } from '../utils/resultsView';
 import { MODELED_START, START_LIMITS, modeledDetails, phaseChecksText, startCheckSummary } from '../utils/modelAssumptions';
@@ -41,8 +42,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
             <Typography variant="body2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{selected.description}</Typography>
             <Typography variant="body2">The clock repeats every {formatNumberText(selected.simulationDurationTicks, { maxDecimals: 3 })} ticks ({formatNumberText(selected.simulationDurationTicks / 60, { maxDecimals: 2 })} s). In each repeat, each inserter is switched on in its own wake windows: {selected.inserterWindowCount} in all. A wake window can hold several swings, and a swing can finish in a later window, so the number of wake windows and the number of swings need not match.</Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>{[recoversOf(selected).detail, lossLimitText(selected, itemLabel)].filter(Boolean).join(' ')}</Typography>
-            <Box component="details" open={assumptionsOpen} onToggle={event => { const open = (event.currentTarget as HTMLDetailsElement).open; if (open !== assumptionsOpen) setAssumptionsOpen(open); }} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions>
-                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Model and tested starts</Typography>
+            <Disclosure summary="Model and tested starts" open={assumptionsOpen} onToggle={setAssumptionsOpen} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions="">
                 <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START}</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{startCheckSummary([selected], generation)}</Typography>
                 {modeledDetails(selected, itemLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
@@ -52,7 +52,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
                 </Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{START_LIMITS}</Typography>
                 {assumptions}
-            </Box>
+            </Disclosure>
             {children}
         </TabBody>
         <TabBody prefix="result-context" tab="timeline" shown={detail === 'timeline'}>

@@ -1,16 +1,16 @@
 import { WarningAmber } from '@mui/icons-material';
-import { Box, ButtonBase, FormControl, InputLabel, MenuItem, Select, Tooltip, Typography } from '@mui/material';
+import { Box, ButtonBase, Tooltip, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData } from '../utils/configForm/formData';
-import { craftingMachineOf, craftingSpeedHint, MACHINE_QUALITIES, MACHINE_QUALITY_HELP, machineChoicePatch, machineSpeedText, prototypeSourceText, qualityLabel, recipeNotMadeText } from '../utils/machinePrototype';
+import { craftingMachineOf, craftingSpeedHint, MACHINE_QUALITY_HELP, machineChoicePatch, machineSpeedText, prototypeSourceText, recipeNotMadeText } from '../utils/machinePrototype';
 import { FilterItemPicker } from './FilterItemPicker';
 import { HelpButton } from './HelpButton';
 import { ItemPickerField } from './ItemPickerField';
 import { MachineIcon } from './MachineIcon';
-import { QualityPip } from './QualityBadge';
+import { QualityField } from './QualityBadge';
 
 type Patch = (patch: Partial<MachineFormData>) => void;
 
@@ -95,19 +95,8 @@ export function RecipeNotMadeNote({ machine, sx }: { machine: Pick<MachineFormDa
 export function MachineQualityField({ machine, onPatch, inputAriaLabel, sx }: {
     machine: MachineFormData; onPatch: Patch; inputAriaLabel: string; sx?: SxProps<Theme>;
 }) {
-    const shown = (quality: string) => <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <QualityPip quality={quality} size={16} />
-        {qualityLabel(quality as typeof MACHINE_QUALITIES[number])}
-    </Box>;
     return <Box sx={[{ display: 'flex', alignItems: 'center', gap: 0.5 }, ...(Array.isArray(sx) ? sx : [sx])]}>
-        <FormControl size="small" sx={{ flex: 1, minWidth: 0 }}>
-            <InputLabel shrink>Quality</InputLabel>
-            <Select value={machine.quality ?? 'normal'} label="Quality" notched renderValue={shown}
-                inputProps={{ 'aria-label': inputAriaLabel }}
-                onChange={event => onPatch({ quality: event.target.value as MachineFormData['quality'] })}>
-                {MACHINE_QUALITIES.map(quality => <MenuItem key={quality} value={quality}>{shown(quality)}</MenuItem>)}
-            </Select>
-        </FormControl>
+        <QualityField value={machine.quality} inputAriaLabel={inputAriaLabel} onChange={quality => onPatch({ quality })} sx={{ flex: 1, minWidth: 0 }} />
         <HelpButton label="About machine quality"><Typography variant="body2">{MACHINE_QUALITY_HELP}</Typography></HelpButton>
     </Box>;
 }

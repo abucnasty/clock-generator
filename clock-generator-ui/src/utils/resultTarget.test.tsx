@@ -1,10 +1,13 @@
+// @vitest-environment happy-dom
 import data from '../../../clock-generator/resources/data-filtered.json?raw';
-import { describe, expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ConfigSchema, FactorioDataService } from 'clock-generator/browser';
 import exact from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-exact-speed.json';
+import { show } from '../test/fixtures';
 import { configToFormData } from './configForm/configMapping';
 import { patchMachine, removeChest } from './configForm/edits';
+import type { ConfigFormData, MachineFormData } from './configForm/formData';
 import { machineChoicePatch, placesResults } from './machinePrototype';
 import { RESULT_TARGET_TEXT, resultTargetName, resultTargetOptions } from './resultTarget';
 import { ResultTargetField } from '../components/ResultTargetField';
@@ -53,7 +56,8 @@ describe('the machine a row is, and the container it puts its results into', () 
 
 describe('the direct output target picker', () => {
     const form = configToFormData(config);
-    const build = { machines: form.machines, belts: form.belts, chests: form.chests, inserters: form.inserters, drills: [] };
+    const buildOf = ({ machines, belts, chests, inserters }: ConfigFormData) => ({ machines, belts, chests, inserters, drills: [] });
+    const build = buildOf(form);
 
     it('offers the build\'s machines and containers with what they hold', () => {
         const options = resultTargetOptions(build, labels);
@@ -70,24 +74,39 @@ describe('the direct output target picker', () => {
         expect(resultTargetOptions(elsewhere, labels, getRecipeInfo)[1].sublabel).toBe('No items inferred');
     });
 
-    it('is a select of its own, with an explicit no-receiver ground choice', () => {
-        const html = renderToStaticMarkup(<ResultTargetField machine={form.machines[0]} machineLabel="Machine 1" build={build} onChange={() => { }} />);
-        expect(html).toContain('Direct output target');
-        expect(html).toContain('aria-label="Direct output target, Machine 1"');
-        expect(html).toContain('/icons/car.png');
-        expect(html).not.toContain('aria-invalid="true"');
-        expect(html).toContain('aria-label="About direct output targets"');
-        const none = renderToStaticMarkup(<ResultTargetField machine={{ id: 1 }} machineLabel="Machine 1" build={build} onChange={() => { }} />);
-        expect(none).toContain('No direct receiver (ground)');
-        expect(none).not.toContain('aria-invalid="true"');
+    const showField = (machine: Pick<MachineFormData, 'id' | 'result_target'>, of = build, onChange = vi.fn()) =>
+        ({ ...show(<ResultTargetField machine={machine} machineLabel="Machine 1" build={of} onChange={onChange} />), onChange });
+    const field = () => screen.getByRole('combobox', { name: resultTargetName('Machine 1') });
+
+    it('is a select of its own, with an explicit no-receiver ground choice', async () => {
+        const { user, onChange, unmount } = showField(form.machines[0]);
+        expect(screen.getAllByText(RESULT_TARGET_TEXT.label)).not.toHaveLength(0);
+        expect(within(field()).getByText('Car 1 - No items inferred')).toBeDefined();
+        // the icons are drawn for the eye; the field says what they show
+        expect(screen.queryAllByRole('presentation', { hidden: true }).map(picture => picture.getAttribute('src'))).toContain('/icons/car.png');
+        expect(field().getAttribute('aria-invalid')).toBeNull();
+        await user.click(field());
+        // the machine itself is no target of its own
+        expect(screen.queryByRole('option', { name: /^Machine 1/ })).toBeNull();
+        await user.click(screen.getByRole('option', { name: RESULT_TARGET_TEXT.none }));
+        expect(onChange).toHaveBeenCalledExactlyOnceWith(undefined);
+        await user.click(screen.getByRole('button', { name: RESULT_TARGET_TEXT.helpLabel }));
+        expect(screen.getByRole('dialog', { name: RESULT_TARGET_TEXT.helpLabel }).textContent).toContain(RESULT_TARGET_TEXT.help);
+        unmount();
+
+        const none = showField({ id: 1 });
+        expect(field().textContent).toBe(RESULT_TARGET_TEXT.none);
+        expect(field().getAttribute('aria-invalid')).toBeNull();
+        await none.user.click(field());
+        await none.user.click(screen.getByRole('option', { name: /^Car 1/ }));
+        expect(none.onChange).toHaveBeenCalledExactlyOnceWith({ type: 'chest', id: 1 });
     });
 
     it('is empty, and marked, once the container is deleted', () => {
         const unset = removeChest(form, 0);
-        const html = renderToStaticMarkup(<ResultTargetField machine={unset.machines[0]} machineLabel="Machine 1"
-            build={{ machines: unset.machines, belts: unset.belts, chests: unset.chests, inserters: unset.inserters, drills: [] }} onChange={() => { }} />);
-        expect(html).toMatch(/aria-invalid="true"/);
-        expect(html).not.toContain('No direct receiver (ground)');
+        showField(unset.machines[0], buildOf(unset));
+        expect(field().getAttribute('aria-invalid')).toBe('true');
+        expect(field().textContent).not.toMatch(/\w/);
     });
 
     it('says in the words it was given', () => {

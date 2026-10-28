@@ -11,6 +11,7 @@ import { DEFAULT_INSPECTION, validInspection, resolveTimelineEntity, timelineEnt
 import { formatNumberText } from '../utils/numberText';
 import { signalsForTimelinePause } from '../utils/timelinePresentation';
 import { TimelineSignals } from './TimelineSignals';
+import { Disclosure } from './Disclosure';
 import { TimelineTickInspector } from './TimelineTickInspector';
 import { TimelinePauses } from './TimelinePauses';
 import { EntitySelector } from './EntitySelector';
@@ -241,18 +242,16 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                 });
                 setRange({ start: wait.start - padding, end: wait.end + padding });
             }} />}
-            <Box component="details" sx={{ mt: 1 }}>
-                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Exact events · {events.length}</Typography>
+            <Disclosure summary={`Exact events · ${events.length}`} sx={{ mt: 1 }}>
                 {events.slice(eventStart, eventStart + 8).map((event, index) => <Button key={`${event.tick}-${event.entity_id}-${event.kind}-${index}`} color="inherit" size="small" sx={{ display: 'flex', textAlign: 'left' }} onClick={() => inspect(event.entity_id, event.tick)}>
                     {event.tick} t · {event.entity_id} · {event.kind.replaceAll('-', ' ')} · {number(event.amount)} {event.item ? itemLabel(event.item) : ''}
                 </Button>)}
                 {events.length > 8 && <Box><Button color="inherit" size="small" disabled={eventStart === 0} onClick={() => setEventPage(Math.max(0, eventPage - 1))}>Previous events</Button><Button color="inherit" size="small" disabled={eventStart + 8 >= events.length} onClick={() => setEventPage(eventPage + 1)}>Next events</Button></Box>}
-            </Box>
+            </Disclosure>
         </Box>}
-        <Box component="details" sx={{ mt: 1.5 }}>
-            <Typography component="summary" variant="caption" color="text.secondary" sx={{ cursor: 'pointer' }}>Original full histories & planning ranges</Typography>
+        <Disclosure summary="Original full histories & planning ranges" sx={{ mt: 1.5 }}>
             <LegacyHistories props={props} />
-        </Box>
+        </Disclosure>
     </Box>;
 }
 

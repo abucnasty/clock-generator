@@ -1,4 +1,4 @@
-import { Alert, Box, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Tooltip, Typography } from '@mui/material';
 import { memo, useId } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
@@ -11,6 +11,8 @@ import { InserterStatus, MachineStatus } from 'clock-generator/light';
 import { useChartColors } from '../hooks/useChartColors';
 import { Panel } from './Panel';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
+import { DataTable } from './DataTable';
+import { Disclosure } from './Disclosure';
 import { fuelEventRows, fuelTraceSummary, type FuelEventRow } from '../utils/fuelAccessibility';
 import { durationText } from '../utils/numberText';
 
@@ -67,120 +69,54 @@ function RanOutAlert({ run }: { run: FuelRunView }) {
 }
 
 function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: FuelRunView | null }) {
-    const levelsOf = (machineId: string) => run?.levels.find(levels => levels.machine_id === machineId);
-    return (
-        <ScrollX label={SCROLL_REGION_NAMES.fuelConsumption} minWidth={720}>
-            <Table size="small" sx={NOWRAP_CELLS}>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>Machine</TableCell>
-                        <TableCell>Fuel</TableCell>
-                        <TableCell align="right">Burn while crafting</TableCell>
-                        <TableCell align="right">Crafts</TableCell>
-                        <TableCell align="right">Effective burn</TableCell>
-                        <TableCell align="right">Per clock period</TableCell>
-                        <TableCell align="right">Limit of {machines[0]?.insertion_limit} lasts</TableCell>
-                        <TableCell align="right">Energy use</TableCell>
-                        {run && <TableCell align="right">Simulated burn</TableCell>}
-                        {run && <TableCell align="right">Lowest fuel</TableCell>}
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {machines.map(machine => {
-                        const levels = levelsOf(machine.machine_id);
-                        return (
-                            <TableRow key={machine.machine_id}>
-                                <TableCell sx={{ minWidth: 160 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <FactorioIcon name={machine.output_item} size={18} alt="" />
-                                        <Box>
-                                            {entityLabel('machine', machine.machine_number)}
-                                            <Typography variant="caption" color="text.secondary" component="div"><GameName id={machine.recipe} kind="recipe" /></Typography>
-                                        </Box>
-                                    </Box>
-                                </TableCell>
-                                <TableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <FactorioIcon name={machine.fuel_item} size={18} alt="" />
-                                        <GameName id={machine.fuel_item} />
-                                    </Box>
-                                </TableCell>
-                                <TableCell align="right">{machine.burn_rate_per_second.toFixed(3)}/s</TableCell>
-                                <TableCell align="right">{percent(machine.crafting_share)}</TableCell>
-                                <TableCell align="right">{machine.effective_burn_rate_per_second.toFixed(3)}/s</TableCell>
-                                <TableCell align="right">{machine.burned_per_period.toFixed(2)}</TableCell>
-                                <TableCell align="right">
-                                    {machine.insertion_limit_lasted_at_least_ticks === undefined
-                                        ? ticksAndSeconds(machine.insertion_limit_lasts_ticks)
-                                        : `at least ${ticksAndSeconds(machine.insertion_limit_lasted_at_least_ticks)}`}
-                                </TableCell>
-                                <TableCell align="right">
-                                    {machine.energy_consumption_bonus >= 0 ? '+' : ''}{machine.energy_consumption_bonus.toFixed(0)}%
-                                </TableCell>
-                                {run && (
-                                    <TableCell align="right">
-                                        {levels ? `${(levels.burned / run.durationTicks * 60).toFixed(3)}/s` : '-'}
-                                    </TableCell>
-                                )}
-                                {run && (
-                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.light' : undefined }}>
-                                        {levels ? levels.min_level.toFixed(2) : '-'}
-                                    </TableCell>
-                                )}
-                            </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
-        </ScrollX>
-    );
+    const levelsOf = (machine: FuelMachinePlan) => run?.levels.find(levels => levels.machine_id === machine.machine_id);
+    return <DataTable label={SCROLL_REGION_NAMES.fuelConsumption} minWidth={720} sx={NOWRAP_CELLS} rows={machines} rowKey={machine => machine.machine_id} columns={[
+        { header: 'Machine', sx: { minWidth: 160 }, cell: machine => <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <FactorioIcon name={machine.output_item} size={18} alt="" />
+            <Box>
+                {entityLabel('machine', machine.machine_number)}
+                <Typography variant="caption" color="text.secondary" component="div"><GameName id={machine.recipe} kind="recipe" /></Typography>
+            </Box>
+        </Box> },
+        { header: 'Fuel', cell: machine => <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <FactorioIcon name={machine.fuel_item} size={18} alt="" />
+            <GameName id={machine.fuel_item} />
+        </Box> },
+        { header: 'Burn while crafting', align: 'right', cell: machine => `${machine.burn_rate_per_second.toFixed(3)}/s` },
+        { header: 'Crafts', align: 'right', cell: machine => percent(machine.crafting_share) },
+        { header: 'Effective burn', align: 'right', cell: machine => `${machine.effective_burn_rate_per_second.toFixed(3)}/s` },
+        { header: 'Per clock period', align: 'right', cell: machine => machine.burned_per_period.toFixed(2) },
+        { header: `Limit of ${machines[0]?.insertion_limit} lasts`, align: 'right', cell: machine => machine.insertion_limit_lasted_at_least_ticks === undefined
+            ? ticksAndSeconds(machine.insertion_limit_lasts_ticks)
+            : `at least ${ticksAndSeconds(machine.insertion_limit_lasted_at_least_ticks)}` },
+        { header: 'Energy use', align: 'right', cell: machine => `${machine.energy_consumption_bonus >= 0 ? '+' : ''}${machine.energy_consumption_bonus.toFixed(0)}%` },
+        run !== null && { header: 'Simulated burn', align: 'right', cell: machine => {
+            const levels = levelsOf(machine);
+            return levels ? `${(levels.burned / run.durationTicks * 60).toFixed(3)}/s` : '-';
+        } },
+        run !== null && { header: 'Lowest fuel', align: 'right', cell: machine => {
+            const levels = levelsOf(machine);
+            return levels ? <Box component="span" sx={{ color: levels.empty_ticks > 0 ? 'error.light' : undefined }}>{levels.min_level.toFixed(2)}</Box> : '-';
+        } },
+    ]} />;
 }
 
 function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run: FuelRunView | null }) {
-    return (
-        <ScrollX label={SCROLL_REGION_NAMES.fuelClocks} minWidth={640}>
-            <Table size="small" sx={NOWRAP_CLOCK_CELLS}>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>Inserter</TableCell>
-                        <TableCell>Feeds</TableCell>
-                        <TableCell align="right">Switched on every</TableCell>
-                        <TableCell align="right">Wake window (ticks)</TableCell>
-                        <TableCell align="right">Wake windows</TableCell>
-                        <TableCell align="right">A hand lasts</TableCell>
-                        <TableCell align="right">Expected swings</TableCell>
-                        <TableCell align="right">Wake windows with a swing</TableCell>
-                        {run && <TableCell align="right">Simulated swings</TableCell>}
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {inserters.map(inserter => {
-                        const swings = run?.swings[inserter.inserter_id] ?? [];
-                        const enables = run ? Math.ceil(run.durationTicks / inserter.modulus) : 0;
-                        return (
-                            <TableRow key={inserter.inserter_id}>
-                                <TableCell>{entityLabel('inserter', inserter.inserter_number)}</TableCell>
-                                <TableCell>{entityLabel('machine', inserter.machine_number)}</TableCell>
-                                <TableCell align="right">{inserter.modulus} ticks</TableCell>
-                                <TableCell align="right">{inserter.window.start} to {inserter.window.end}</TableCell>
-                                <TableCell align="right">{inserter.enables_per_minute.toFixed(1)}/min</TableCell>
-                                <TableCell align="right">
-                                    {inserter.hand_size} for {ticksAndSeconds(inserter.hand_lasts_ticks)}
-                                </TableCell>
-                                <TableCell align="right">{inserter.expected_swings_per_minute.toFixed(1)}/min</TableCell>
-                                <TableCell align="right">{percent(inserter.swing_share)}</TableCell>
-                                {run && (
-                                    <TableCell align="right">
-                                        {swings.length} in {enables} wake windows ({(swings.length / run.durationTicks * 3600).toFixed(1)}/min)
-                                    </TableCell>
-                                )}
-                            </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
-        </ScrollX>
-    );
+    return <DataTable label={SCROLL_REGION_NAMES.fuelClocks} minWidth={640} sx={NOWRAP_CLOCK_CELLS} rows={inserters} rowKey={inserter => inserter.inserter_id} columns={[
+        { header: 'Inserter', cell: inserter => entityLabel('inserter', inserter.inserter_number) },
+        { header: 'Feeds', cell: inserter => entityLabel('machine', inserter.machine_number) },
+        { header: 'Switched on every', align: 'right', cell: inserter => `${inserter.modulus} ticks` },
+        { header: 'Wake window (ticks)', align: 'right', cell: inserter => `${inserter.window.start} to ${inserter.window.end}` },
+        { header: 'Wake windows', align: 'right', cell: inserter => `${inserter.enables_per_minute.toFixed(1)}/min` },
+        { header: 'A hand lasts', align: 'right', cell: inserter => `${inserter.hand_size} for ${ticksAndSeconds(inserter.hand_lasts_ticks)}` },
+        { header: 'Expected swings', align: 'right', cell: inserter => `${inserter.expected_swings_per_minute.toFixed(1)}/min` },
+        { header: 'Wake windows with a swing', align: 'right', cell: inserter => percent(inserter.swing_share) },
+        run !== null && { header: 'Simulated swings', align: 'right', cell: inserter => {
+            const swings = run.swings[inserter.inserter_id] ?? [];
+            const enables = Math.ceil(run.durationTicks / inserter.modulus);
+            return `${swings.length} in ${enables} wake windows (${(swings.length / run.durationTicks * 3600).toFixed(1)}/min)`;
+        } },
+    ]} />;
 }
 
 /** The fuel a machine held: the highest of each sample as an area, the lowest as a line, and the insertion limit dashed */
@@ -326,28 +262,17 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                     {' '}{(run.swings[inserter.inserter_id] ?? []).length} swings recorded over {durationTicks} ticks; Fuel events lists their start, end and items.
                 </Typography>
             ))}
-            <Box component="details" sx={{ mb: 2 }}>
-                <Typography component="summary" sx={{ cursor: 'pointer', py: 0.75 }}>Fuel events</Typography>
+            <Disclosure summary="Fuel events" sx={{ mb: 2 }}>
                 {events.length === 0 ? (
                     <Typography variant="body2">No fuel inserter swings were recorded in this run.</Typography>
-                ) : (
-                    <ScrollX label={SCROLL_REGION_NAMES.fuelEvents}>
-                        <Table size="small">
-                            <caption style={{ captionSide: 'top', textAlign: 'left' }}>Fuel inserter events</caption>
-                            <TableHead><TableRow>
-                                {['Inserter', 'Feeds', 'Start tick', 'End tick', 'Items'].map(header => <TableCell key={header}>{header}</TableCell>)}
-                            </TableRow></TableHead>
-                            <TableBody>{events.map((event, index) => <TableRow key={index}>
-                                <TableCell>Inserter {event.inserterNumber}</TableCell>
-                                <TableCell>Machine {event.machineNumber}</TableCell>
-                                <TableCell>{event.startTick}</TableCell>
-                                <TableCell>{event.endTick}</TableCell>
-                                <TableCell>{event.amount}</TableCell>
-                            </TableRow>)}</TableBody>
-                        </Table>
-                    </ScrollX>
-                )}
-            </Box>
+                ) : <DataTable label={SCROLL_REGION_NAMES.fuelEvents} caption="Fuel inserter events" rows={events} rowKey={(_, index) => index} columns={[
+                    { header: 'Inserter', cell: event => `Inserter ${event.inserterNumber}` },
+                    { header: 'Feeds', cell: event => `Machine ${event.machineNumber}` },
+                    { header: 'Start tick', cell: event => event.startTick },
+                    { header: 'End tick', cell: event => event.endTick },
+                    { header: 'Items', cell: event => event.amount },
+                ]} />}
+            </Disclosure>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                 <LegendItem color={LEVEL_COLOR} label="Fuel in the machine" />
                 <LegendItem color={WINDOW_COLOR} label="Fuel clock switches the inserter on" />

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Option } from 'clock-generator/light';
 import factorioData from '../../../clock-generator/resources/data-filtered.json';
 import type { CraftingMachineData } from '../worker/types';
+import { machine } from '../test/fixtures';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import { createDefaultConfig, type MachineFormData } from './configForm/formData';
 import { patchMachine } from './configForm/edits';
@@ -14,8 +15,8 @@ const data: CraftingMachineData = {
     machines: Object.values(factorioData.crafting_machine),
     recipeCategories: Object.fromEntries(Object.values(factorioData.recipe).map(recipe => [recipe.name, recipe.categories])),
 };
-const row = (fields: Partial<MachineFormData>): MachineFormData =>
-    ({ id: 3, _uuid: 'm', recipe: 'lithium-plate', productivity: 0, crafting_speed: 1, ...fields });
+const row = (fields: Partial<MachineFormData>) => machine(1, fields);
+const name = (id: string) => id.replace(/-/g, ' ').replace(/^./, letter => letter.toUpperCase());
 
 describe('a machine row and its machine', () => {
     it('burns nutrients when its machine does, from the machine data', () => {
@@ -44,7 +45,6 @@ describe('a machine row and its machine', () => {
     });
 
     it("names the machine, its quality and its source on the row icon", () => {
-        const name = (id: string) => ({ 'cryogenic-plant': 'Cryogenic plant' })[id] ?? id;
         expect(machineIconText(row({ prototype: 'cryogenic-plant', quality: 'legendary', _prototype_source: 'sidecar' }), name))
             .toBe('Cryogenic plant (Legendary), from Sidecar');
         expect(machineIconText(row({ prototype: 'cryogenic-plant', _prototype_source: 'hand' }), name)).toBe('Cryogenic plant, chosen by hand');
@@ -87,8 +87,6 @@ describe('where a machine came from', () => {
     });
 });
 
-const name = (id: string) => id.replace(/-/g, ' ').replace(/^./, letter => letter.toUpperCase());
-
 describe("a machine's crafting speed", () => {
     it('rises 30% of its base with each quality level, as the game data counts the levels', () => {
         expect(MACHINE_QUALITIES.map(quality => factorioData.quality[quality].level)).toEqual([0, 1, 2, 3, 5]);
@@ -107,34 +105,31 @@ describe("a machine's crafting speed", () => {
     });
 
     it('is hinted under the field as the machine alone, with modules and beacons said to change it', () => {
-        expect(craftingSpeedHint(row({ prototype: 'electric-furnace' }), data, name))
-            .toBe('Electric furnace: 2× before modules and beacons, which change it. The clock uses the speed in this field.');
-        expect(craftingSpeedHint(row({ prototype: 'electric-furnace', quality: 'legendary' }), data, name))
+        const hint = (fields: Partial<MachineFormData>) => craftingSpeedHint(row(fields), data, name);
+        expect(hint({ prototype: 'electric-furnace' })).toBe('Electric furnace: 2× before modules and beacons, which change it. The clock uses the speed in this field.');
+        expect(hint({ prototype: 'electric-furnace', quality: 'legendary' }))
             .toBe('Electric furnace (Legendary): 5× before modules and beacons, which change it. The clock uses the speed in this field.');
-        expect(craftingSpeedHint(row({ prototype: 'assembling-machine-3', quality: 'rare' }), data, name)).toMatch(/^Assembling machine 3 \(Rare\): 2× before/);
+        expect(hint({ prototype: 'assembling-machine-3', quality: 'rare' })).toMatch(/^Assembling machine 3 \(Rare\): 2× before/);
         // no machine, or one the data does not hold (a mod's): no number to give
         for (const prototype of [undefined, 'modded-machine']) {
-            expect(craftingSpeedHint(row({ prototype }), data, name))
-                .toBe("Modules, beacons and the machine's quality change a machine's speed. The clock uses the speed in this field.");
+            expect(hint({ prototype })).toBe("Modules, beacons and the machine's quality change a machine's speed. The clock uses the speed in this field.");
         }
     });
 });
 
 describe('a recipe the row\'s machine cannot make', () => {
-    const recipeName = (id: string) => id.replace(/-/g, ' ');
+    const notMade = (fields: Partial<MachineFormData>) => recipeNotMadeText(row(fields), data, name, id => id.replace(/-/g, ' '));
     it('is said on the row in the words of the game, with the machines that can', () => {
-        expect(recipeNotMadeText(row({ prototype: 'assembling-machine-1', recipe: 'lithium' }), data, name, recipeName))
-            .toBe("Assembling machine 1 can't craft lithium. Machines that can: Chemical plant, Cryogenic plant.");
-        expect(recipeNotMadeText(row({ prototype: 'cryogenic-plant', recipe: 'iron-gear-wheel' }), data, name, recipeName))
-            .toMatch(/^Cryogenic plant can't craft iron gear wheel\. Machines that can: Assembling machine 1, /);
+        expect(notMade({ prototype: 'assembling-machine-1', recipe: 'lithium' })).toBe("Assembling machine 1 can't craft lithium. Machines that can: Chemical plant, Cryogenic plant.");
+        expect(notMade({ prototype: 'cryogenic-plant', recipe: 'iron-gear-wheel' })).toMatch(/^Cryogenic plant can't craft iron gear wheel\. Machines that can: Assembling machine 1, /);
     });
 
     it('is not said when the machine can, or when the machine or the recipe is not in the data', () => {
-        expect(recipeNotMadeText(row({ prototype: 'cryogenic-plant', recipe: 'lithium' }), data, name, recipeName)).toBeUndefined();
-        expect(recipeNotMadeText(row({ recipe: 'lithium' }), data, name, recipeName)).toBeUndefined();
-        expect(recipeNotMadeText(row({ prototype: 'modded-machine', recipe: 'lithium' }), data, name, recipeName)).toBeUndefined();
-        expect(recipeNotMadeText(row({ prototype: 'cryogenic-plant', recipe: 'modded-recipe' }), data, name, recipeName)).toBeUndefined();
-        expect(recipeNotMadeText(row({ prototype: 'cryogenic-plant', recipe: '' }), data, name, recipeName)).toBeUndefined();
+        expect(notMade({ prototype: 'cryogenic-plant', recipe: 'lithium' })).toBeUndefined();
+        expect(notMade({ recipe: 'lithium' })).toBeUndefined();
+        expect(notMade({ prototype: 'modded-machine', recipe: 'lithium' })).toBeUndefined();
+        expect(notMade({ prototype: 'cryogenic-plant', recipe: 'modded-recipe' })).toBeUndefined();
+        expect(notMade({ prototype: 'cryogenic-plant', recipe: '' })).toBeUndefined();
     });
 });
 
@@ -158,20 +153,21 @@ describe('the Machine picker groups', () => {
 
 describe('the speed hint on the samples', () => {
     const samples = import.meta.glob('../../../clock-generator/resources/config-samples/**/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+    /** Every sample row that names its machine */
     const rows = Object.entries(samples).flatMap(([file, text]) => {
-        const config = JSON.parse(text) as { machines?: { id: number; prototype?: string; quality?: MachineFormData['quality']; crafting_speed: number }[] };
-        return (config.machines ?? []).filter(machine => machine.prototype !== undefined).map(machine => ({ file, ...machine }));
+        const config = JSON.parse(text) as { machines?: { id: number; prototype?: string; quality?: MachineFormData['quality']; recipe: string; crafting_speed: number }[] };
+        return (config.machines ?? []).filter(machine => machine.prototype !== undefined).map(machine => ({ where: `${file} machine ${machine.id}`, ...machine }));
     });
 
     it('names a machine of the data in every row that has one, and gives its speed alone at the quality', () => {
         expect(rows.length).toBeGreaterThan(100);
         for (const sample of rows) {
             const machine = craftingMachineOf(data, sample.prototype)!;
-            expect(machine, `${sample.file} machine ${sample.id}`).toBeDefined();
+            expect(machine, sample.where).toBeDefined();
             const alone = machineSpeedAtQuality(machine, sample.quality);
-            expect(craftingSpeedHint(sample, data, name), `${sample.file} machine ${sample.id}`).toContain(`: ${alone}× before modules and beacons`);
+            expect(craftingSpeedHint(sample, data, name), sample.where).toContain(`: ${alone}× before modules and beacons`);
             // what Sidecar exports counts modules and beacons on top of the machine: never below it in the samples
-            expect(sample.crafting_speed, `${sample.file} machine ${sample.id}`).toBeGreaterThanOrEqual(alone);
+            expect(sample.crafting_speed, sample.where).toBeGreaterThanOrEqual(alone);
         }
     });
 
@@ -181,12 +177,6 @@ describe('the speed hint on the samples', () => {
     });
 
     it('never makes a sample row a machine that cannot make its recipe (the samples are builds that work)', () => {
-        for (const [file, text] of Object.entries(samples)) {
-            const config = JSON.parse(text) as { machines?: { id: number; prototype?: string; recipe: string }[] };
-            for (const machine of config.machines ?? []) {
-                if (machine.prototype === undefined) continue;
-                expect(recipeNotMadeText(machine, data, name, name), `${file} machine ${machine.id}`).toBeUndefined();
-            }
-        }
+        for (const sample of rows) expect(recipeNotMadeText(sample, data, name, name), sample.where).toBeUndefined();
     });
 });

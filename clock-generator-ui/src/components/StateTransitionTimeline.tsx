@@ -28,7 +28,8 @@ import type {
 import { expandStateTransitionHistory, statusToCategory } from 'clock-generator/light';
 import { useGameNames } from '../hooks/useGameNames';
 import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
-import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from '../utils/timelineGeometry';
+import { MIN_MARK_PX, markSpan, paintableCanvas, paintLayer, snapSpan } from '../utils/timelineGeometry';
+import { useElementWidth } from '../hooks/useElementWidth';
 import { HistoricalTimelineRow } from './HistoricalTimelineRow';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import {
@@ -99,7 +100,7 @@ interface TimelineBarProps {
 function TimelineBar({ transitions, totalDuration, height, entityType, viewMode, isFiltered, label }: TimelineBarProps) {
     const { status: getStatusColor, categoryColor: getCategoryColor, clock: CLOCK_WINDOW_COLOR } = PLOT_COLORS;
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [width, setWidth] = useState(0);
+    const width = useElementWidth(canvasRef);
     const [hovered, setHovered] = useState<SerializableStateTransition | null>(null);
     const sorted = useMemo(() => [...transitions].sort((a, b) => a.tick - b.tick), [transitions]);
 
@@ -118,26 +119,9 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         : getCategoryColor(statusToCategory(entityType, transition.to_status)), [entityType, viewMode, getStatusColor, getCategoryColor]);
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) {
-            return;
-        }
-        const observer = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
-        observer.observe(canvas);
-        return () => observer.disconnect();
-    }, []);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const context = canvas?.getContext('2d');
-        if (!canvas || !context || width === 0) {
-            return;
-        }
-        const ratio = window.devicePixelRatio || 1;
-        canvas.width = width * ratio;
-        canvas.height = height * ratio;
-        context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        context.clearRect(0, 0, width, height);
+        const paintable = paintableCanvas(canvasRef.current, width, height);
+        if (!paintable) return;
+        const { context, ratio } = paintable;
         const fills = new Map<string, string | CanvasPattern>();
         for (const { transition, span } of marks) {
             context.globalAlpha = isFiltered(transition) ? 0.15 : 1;
@@ -233,7 +217,7 @@ interface FactorioStateStripProps {
 function FactorioStateStrip({ states, totalDuration, height, label }: FactorioStateStripProps) {
     const { factorio: getFactorioStateColor } = PLOT_COLORS;
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [width, setWidth] = useState(0);
+    const width = useElementWidth(canvasRef);
     const [hovered, setHovered] = useState<SerializableFactorioState | null>(null);
     const sorted = useMemo(() => [...states].sort((a, b) => a.tick - b.tick), [states]);
     // wide marks first, then the narrow ones, so a narrow mark is not buried under a wide neighbour
@@ -245,26 +229,9 @@ function FactorioStateStrip({ states, totalDuration, height, label }: FactorioSt
         .sort((a, b) => a.layer - b.layer), [sorted, totalDuration, width]);
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) {
-            return;
-        }
-        const observer = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
-        observer.observe(canvas);
-        return () => observer.disconnect();
-    }, []);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const context = canvas?.getContext('2d');
-        if (!canvas || !context || width === 0) {
-            return;
-        }
-        const ratio = window.devicePixelRatio || 1;
-        canvas.width = width * ratio;
-        canvas.height = height * ratio;
-        context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        context.clearRect(0, 0, width, height);
+        const paintable = paintableCanvas(canvasRef.current, width, height);
+        if (!paintable) return;
+        const { context, ratio } = paintable;
         for (const { state, span } of marks) {
             context.fillStyle = getFactorioStateColor(state.state);
             const snapped = snapSpan(span, ratio);

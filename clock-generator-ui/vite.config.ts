@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -21,6 +22,10 @@ export default defineConfig({
       include: [/clock-generator/, /node_modules/],
       transformMixedEsModules: true,
     },
+  },
+  test: {
+    // Node by default; a component or hook test asks for a DOM with `// @vitest-environment happy-dom`
+    setupFiles: ['src/test/setup.ts'],
   },
   worker: {
     // the simulation worker dynamically imports clock-generator, which needs code splitting

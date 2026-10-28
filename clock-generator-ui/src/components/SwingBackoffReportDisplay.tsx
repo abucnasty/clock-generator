@@ -1,24 +1,8 @@
 import { useState } from 'react';
-import {
-    Alert,
-    AlertTitle,
-    Box,
-    Button,
-    Chip,
-    Dialog,
-    DialogContent,
-    DialogTitle,
-    IconButton,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Typography,
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import { Alert, AlertTitle, Button, Chip, Typography } from '@mui/material';
 import type { SwingAttemptResult, SwingBackoffReport } from 'clock-generator/browser';
+import { AppDialog } from './AppDialog';
+import { DataTable } from './DataTable';
 
 interface SwingBackoffReportDisplayProps {
     report: SwingBackoffReport | null;
@@ -55,83 +39,39 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
                 <Typography variant="body2">{summaryText}</Typography>
             </Alert>
 
-            <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {isSuccess ? 'Output Swing Backoff Report' : 'Output Swing Backoff Failed'}
-                    <IconButton size="small" onClick={() => setOpen(false)} aria-label="close">
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </DialogTitle>
-
-                <DialogContent dividers>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                        {isSuccess ? (
-                            <>
-                                The initial swing count of{' '}
-                                <strong>{report.initial_terminal_swing_count}</strong> did not hold the
-                                rate. It held at{' '}
-                                <strong>{report.stable_terminal_swing_count}</strong> swings.
-                            </>
-                        ) : (
-                            <>
-                                The initial swing count of{' '}
-                                <strong>{report.initial_terminal_swing_count}</strong> did not hold the
-                                rate, and no swing count that holds it was found during backoff. The result from{' '}
-                                <strong>{report.initial_terminal_swing_count}</strong> swings was used.
-                                Consider adjusting your build or disabling swing backoff in
-                                Advanced.
-                            </>
-                        )}
-                    </Typography>
-
-                    <Box>
-                        <TableContainer>
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>Output Swings</TableCell>
-                                        <TableCell align="right">Actual Items</TableCell>
-                                        <TableCell align="right">Expected Items</TableCell>
-                                        <TableCell align="center">Result</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {allAttempts.map((attempt, index) => (
-                                        <TableRow
-                                            key={attempt.terminal_swing_count}
-                                            sx={attempt.holds ? { backgroundColor: 'action.selected' } : undefined}
-                                        >
-                                            <TableCell>
-                                                {attempt.terminal_swing_count}
-                                                {index === 0 && (
-                                                    <Typography
-                                                        component="span"
-                                                        variant="caption"
-                                                        color="text.secondary"
-                                                        sx={{ ml: 0.5 }}
-                                                    >
-                                                        (initial)
-                                                    </Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell align="right">{attempt.actual_output_items}</TableCell>
-                                            <TableCell align="right">{attempt.expected_output_items}</TableCell>
-                                            <TableCell align="center">
-                                                <Chip
-                                                    label={attempt.holds ? 'Holds the rate' : 'Does not hold it'}
-                                                    color={attempt.holds ? 'success' : 'error'}
-                                                    size="small"
-                                                    variant="outlined"
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    </Box>
-                </DialogContent>
-            </Dialog>
+            <AppDialog open={open} onClose={() => setOpen(false)} closeButton dividers
+                title={isSuccess ? 'Output Swing Backoff Report' : 'Output Swing Backoff Failed'}>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                    {isSuccess ? (
+                        <>
+                            The initial swing count of{' '}
+                            <strong>{report.initial_terminal_swing_count}</strong> did not hold the
+                            rate. It held at{' '}
+                            <strong>{report.stable_terminal_swing_count}</strong> swings.
+                        </>
+                    ) : (
+                        <>
+                            The initial swing count of{' '}
+                            <strong>{report.initial_terminal_swing_count}</strong> did not hold the
+                            rate, and no swing count that holds it was found during backoff. The result from{' '}
+                            <strong>{report.initial_terminal_swing_count}</strong> swings was used.
+                            Consider adjusting your build or disabling swing backoff in
+                            Advanced.
+                        </>
+                    )}
+                </Typography>
+                <DataTable label="Swing counts tried" rows={allAttempts} rowKey={attempt => attempt.terminal_swing_count}
+                    rowSx={attempt => attempt.holds ? { backgroundColor: 'action.selected' } : undefined} columns={[
+                        { header: 'Output Swings', cell: (attempt, index) => <>
+                            {attempt.terminal_swing_count}
+                            {index === 0 && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>(initial)</Typography>}
+                        </> },
+                        { header: 'Actual Items', align: 'right', cell: attempt => attempt.actual_output_items },
+                        { header: 'Expected Items', align: 'right', cell: attempt => attempt.expected_output_items },
+                        { header: 'Result', align: 'center', cell: attempt => <Chip label={attempt.holds ? 'Holds the rate' : 'Does not hold it'}
+                            color={attempt.holds ? 'success' : 'error'} size="small" variant="outlined" /> },
+                    ]} />
+            </AppDialog>
         </>
     );
 }

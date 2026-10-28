@@ -51,28 +51,19 @@ function fakeResults(key: string, { stopped = false, clocks = [fakeClock('a'), f
 const shown = (key: string, stopped = false): ShownResults => ({ results: fakeResults(key, { stopped }), pick: { id: 'b', label: 'B' } });
 
 describe('afterCancel', () => {
-    it('brings back complete results for the same build', () => {
-        const previous = shown('k');
-        expect(afterCancel({ runKey: 'k', clocksMade: 3, previous })).toEqual({ kind: 'previous', shown: previous });
-    });
+    const same = shown('k');
+    const other = shown('other');
+    const stopped = shown('k', true);
 
-    it('keeps the clocks made so far when what was on screen was for another build', () => {
-        expect(afterCancel({ runKey: 'k', clocksMade: 2, previous: shown('other') })).toEqual({ kind: 'partial' });
-    });
-
-    it('keeps the clocks made so far over a stopped run of the same build', () => {
-        expect(afterCancel({ runKey: 'k', clocksMade: 1, previous: shown('k', true) })).toEqual({ kind: 'partial' });
-    });
-
-    it('brings back what was on screen when no clock was made', () => {
-        const previous = shown('other');
-        expect(afterCancel({ runKey: 'k', clocksMade: 0, previous })).toEqual({ kind: 'previous', shown: previous });
-        const stopped = shown('k', true);
-        expect(afterCancel({ runKey: 'k', clocksMade: 0, previous: stopped })).toEqual({ kind: 'previous', shown: stopped });
-    });
-
-    it('leaves nothing when nothing was made and nothing was on screen', () => {
-        expect(afterCancel({ runKey: 'k', clocksMade: 0, previous: null })).toEqual({ kind: 'none' });
+    it.each([
+        ['brings back complete results for the same build', 3, same, { kind: 'previous', shown: same }],
+        ['keeps the clocks made so far when what was on screen was for another build', 2, other, { kind: 'partial' }],
+        ['keeps the clocks made so far over a stopped run of the same build', 1, stopped, { kind: 'partial' }],
+        ['brings back what was on screen for another build when no clock was made', 0, other, { kind: 'previous', shown: other }],
+        ['brings back a stopped run of the same build when no clock was made', 0, stopped, { kind: 'previous', shown: stopped }],
+        ['leaves nothing when nothing was made and nothing was on screen', 0, null, { kind: 'none' }],
+    ])('%s', (_, clocksMade, previous, left) => {
+        expect(afterCancel({ runKey: 'k', clocksMade, previous })).toEqual(left);
     });
 });
 
@@ -97,22 +88,15 @@ describe('evictionOrder', () => {
         { key: 'b', shownAt: 2, bytes: 10 },
     ];
 
-    it('removes nothing when both limits hold', () => {
-        expect(evictionOrder(entries, { keep: [], maxKept: 3, totalBytes: 30 })).toEqual([]);
-    });
-
-    it('removes the least recently shown beyond the count', () => {
-        expect(evictionOrder(entries, { keep: [], maxKept: 2, totalBytes: 1000 })).toEqual(['a']);
-        expect(evictionOrder(entries, { keep: [], maxKept: 1, totalBytes: 1000 })).toEqual(['a', 'b']);
-    });
-
-    it('removes the least recently shown until the sizes fit', () => {
-        expect(evictionOrder(entries, { keep: [], maxKept: 10, totalBytes: 15 })).toEqual(['a', 'b']);
-    });
-
-    it('never removes a kept key', () => {
-        expect(evictionOrder(entries, { keep: ['a'], maxKept: 2, totalBytes: 1000 })).toEqual(['b']);
-        expect(evictionOrder(entries, { keep: ['a', 'b', 'c'], maxKept: 0, totalBytes: 0 })).toEqual([]);
+    it.each<[string, string[], number, number, string[]]>([
+        ['removes nothing when both limits hold', [], 3, 30, []],
+        ['removes the least recently shown beyond the count', [], 2, 1000, ['a']],
+        ['removes the least recently shown beyond the count', [], 1, 1000, ['a', 'b']],
+        ['removes the least recently shown until the sizes fit', [], 10, 15, ['a', 'b']],
+        ['never removes a kept key', ['a'], 2, 1000, ['b']],
+        ['never removes a kept key', ['a', 'b', 'c'], 0, 0, []],
+    ])('%s: keep %j, at most %s and %s bytes', (_, keep, maxKept, totalBytes, removed) => {
+        expect(evictionOrder(entries, { keep, maxKept, totalBytes })).toEqual(removed);
     });
 });
 
@@ -151,43 +135,30 @@ describe('usableEntry', () => {
 describe('keyToShow', () => {
     const entries = [{ key: 'a', shownAt: 5 }, { key: 'b', shownAt: 9 }];
 
-    it('takes the results kept for the build over the ones set aside', () => {
-        expect(keyToShow({ currentKey: 'a', mode: 'replace', entries, dropped: { formKey: 'a' } })).toEqual({ from: 'kept', key: 'a' });
-    });
-
-    it('takes the ones set aside only for the build they were set aside from', () => {
-        expect(keyToShow({ currentKey: 'c', mode: 'replace', entries, dropped: { formKey: 'c' } })).toEqual({ from: 'dropped' });
-        expect(keyToShow({ currentKey: 'c', mode: 'replace', entries, dropped: { formKey: 'd' } })).toBeNull();
-    });
-
-    it('falls back on load to the ones on screen when the page was left', () => {
-        expect(keyToShow({ currentKey: 'c', mode: 'load', entries, dropped: null, shownKey: 'a' })).toEqual({ from: 'kept', key: 'a' });
-        expect(keyToShow({ currentKey: 'c', mode: 'load', entries: [], dropped: null, shownKey: 'a' })).toBeNull();
-    });
-
-    it('shows nothing on load when nothing was on screen (after Reset, New build, or a build never generated)', () => {
-        expect(keyToShow({ currentKey: 'c', mode: 'load', entries, dropped: null, shownKey: null })).toBeNull();
-        expect(keyToShow({ currentKey: 'c', mode: 'load', entries, dropped: null })).toBeNull();
-    });
-
-    it('does not fall back when replacing', () => {
-        expect(keyToShow({ currentKey: 'c', mode: 'replace', entries, dropped: null, shownKey: 'a' })).toBeNull();
+    // build 'c', replacing, with nothing set aside, unless the row says otherwise
+    it.each<[string, Partial<Parameters<typeof keyToShow>[0]>, ReturnType<typeof keyToShow>]>([
+        ['takes the results kept for the build over the ones set aside', { currentKey: 'a', dropped: { formKey: 'a' } }, { from: 'kept', key: 'a' }],
+        ['takes the ones set aside for the build they were set aside from', { dropped: { formKey: 'c' } }, { from: 'dropped' }],
+        ['takes the ones set aside only for the build they were set aside from', { dropped: { formKey: 'd' } }, null],
+        ['falls back on load to the ones on screen when the page was left', { mode: 'load', shownKey: 'a' }, { from: 'kept', key: 'a' }],
+        ['falls back on load only to the ones still kept', { mode: 'load', entries: [], shownKey: 'a' }, null],
+        ['shows nothing on load when nothing was on screen (after Reset, New build, or a build never generated)', { mode: 'load', shownKey: null }, null],
+        ['shows nothing on load when nothing was on screen, by default', { mode: 'load' }, null],
+        ['does not fall back when replacing', { shownKey: 'a' }, null],
+    ])('%s', (_, args, shown) => {
+        expect(keyToShow({ currentKey: 'c', mode: 'replace', entries, dropped: null, ...args })).toEqual(shown);
     });
 });
 
 describe('selectionAfterRun', () => {
     const clocks = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
 
-    it('selects the pick when it was made', () => {
-        expect(selectionAfterRun(clocks, { id: 'c', label: 'C' }, 0)).toEqual({ index: 2, pickGone: false });
-    });
-
-    it('selects the recommended clock and says the pick is gone when it was not made', () => {
-        expect(selectionAfterRun(clocks, { id: 'z', label: 'Z' }, 1)).toEqual({ index: 1, pickGone: true });
-    });
-
-    it('selects the recommended clock without a pick', () => {
-        expect(selectionAfterRun(clocks, null, 1)).toEqual({ index: 1, pickGone: false });
-        expect(selectionAfterRun([], null, null)).toEqual({ index: 0, pickGone: false });
+    it.each([
+        ['selects the pick when it was made', clocks, { id: 'c', label: 'C' }, 0, { index: 2, pickGone: false }],
+        ['selects the recommended clock and says the pick is gone when it was not made', clocks, { id: 'z', label: 'Z' }, 1, { index: 1, pickGone: true }],
+        ['selects the recommended clock without a pick', clocks, null, 1, { index: 1, pickGone: false }],
+        ['selects the first clock without a pick or a recommended one', [], null, null, { index: 0, pickGone: false }],
+    ])('%s', (_, alternatives, pick, recommended, selection) => {
+        expect(selectionAfterRun(alternatives, pick, recommended)).toEqual(selection);
     });
 });

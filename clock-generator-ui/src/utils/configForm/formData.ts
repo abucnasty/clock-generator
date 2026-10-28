@@ -214,15 +214,6 @@ export type SlotContentFormData = NonNullable<SlotContainerFormData['contents']>
 export type ItemCountFormData = NonNullable<RocketSiloFormData['contents']>[number];
 export type QualityName = NonNullable<RocketSiloFormData['recipe_quality']>;
 
-/** The qualities of the game, lowest first, with the names the player sees */
-export const QUALITIES: readonly { value: QualityName; label: string }[] = [
-    { value: 'normal', label: 'Normal' },
-    { value: 'uncommon', label: 'Uncommon' },
-    { value: 'rare', label: 'Rare' },
-    { value: 'epic', label: 'Epic' },
-    { value: 'legendary', label: 'Legendary' },
-];
-
 /** Every chest type, in the order the form offers them, with the name the player sees */
 export const CHEST_TYPE_LABELS: Record<ChestType, string> = {
     [ChestType.BUFFER_CHEST]: 'Buffer chest',

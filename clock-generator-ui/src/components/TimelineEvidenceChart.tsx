@@ -7,7 +7,9 @@ import { timelineStateLabel, timelineStateStyle, timelineSignalVisible } from '.
 import { BeltChartSurface, ChartSwatch } from './BeltChart';
 import { FactorioIcon } from './FactorioIcon';
 import { formatNumberText } from '../utils/numberText';
+import { useElementWidth } from '../hooks/useElementWidth';
 import { useGameNames } from '../hooks/useGameNames';
+import { paintableCanvas } from '../utils/timelineGeometry';
 import { axisTicks } from '../utils/wakeWindows';
 
 interface EvidenceLane {
@@ -101,25 +103,17 @@ const EvidenceCanvas = memo(function EvidenceCanvas({ lane, range, end, height, 
     onTick(tick: number): void; onRange(range: TimelineRange): void; onZoom(factor: number, tick: number): void;
 }) {
     const canvas = useRef<HTMLCanvasElement>(null);
-    const [width, setWidth] = useState(0);
+    const width = useElementWidth(canvas);
     const gesture = useRef<{ x: number; tick: number; shift: boolean } | null>(null);
     const ticksAt = (x: number, element: HTMLElement) => range.start + Math.max(0, Math.min(1, (x - element.getBoundingClientRect().left) / element.getBoundingClientRect().width)) * (range.end - range.start);
-    useEffect(() => {
-        const node = canvas.current;
-        if (!node) return;
-        const observer = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width)));
-        observer.observe(node);
-        return () => observer.disconnect();
-    }, []);
     useEffect(() => {
         const node = canvas.current;
         if (!node || width <= 0) return;
         const forced = matchMedia('(forced-colors: active)');
         const paint = () => {
-            const ratio = Math.min(2, window.devicePixelRatio || 1);
-            node.width = width * ratio; node.height = height * ratio;
-            const context = node.getContext('2d'); if (!context) return;
-            context.scale(ratio, ratio); context.clearRect(0, 0, width, height);
+            const paintable = paintableCanvas(node, width, height, 2);
+            if (!paintable) return;
+            const { context } = paintable;
             context.strokeStyle = forced.matches ? 'GrayText' : BELT_CHART.grid; context.lineWidth = 1;
             for (const tick of axisTicks(range.end - range.start, width < 450 ? 4 : 7)) {
                 const x = tick / (range.end - range.start) * width;

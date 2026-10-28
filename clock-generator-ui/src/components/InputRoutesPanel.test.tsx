@@ -1,128 +1,118 @@
-import { expect, it } from 'vitest';
-import type { ComponentProps } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment happy-dom
+import { screen, within } from '@testing-library/react';
 import type { OutputTransferSummary } from 'clock-generator/browser';
-import { GameNamesContext } from '../hooks/useGameNames';
+import type { ComponentProps } from 'react';
+import { expect, it, vi } from 'vitest';
+import { belt, drill, inserter, machine, names, show } from '../test/fixtures';
+import type { InserterFormData } from '../utils/configForm/formData';
 import type { ResultTargetBuild } from '../utils/resultTarget';
 import { InputRoutesPanel } from './InputRoutesPanel';
 
-const names = { item: { iron: 'Iron', copper: 'Copper', fuel: 'Fuel' }, recipe: {} };
-const build = (overrides: Partial<ResultTargetBuild> = {}): ResultTargetBuild => ({
-    machines: [{ id: 1, recipe: 'smelt', fuel: 'fuel' } as unknown as ResultTargetBuild['machines'][number]],
-    belts: [{ id: 2, lanes: [{ ingredient: 'iron' }, { ingredient: 'copper' }] } as unknown as ResultTargetBuild['belts'][number]],
-    chests: [], inserters: [], drills: [], ...overrides,
+type Endpoint = InserterFormData['source'];
+const BELT_2 = { type: 'belt', id: 2 } as const, MACHINE_9 = { type: 'machine', id: 9 } as const;
+const lane = (ingredient: string) => ({ ingredient, stack_size: 4 });
+/** An inserter into machine 1 */
+const into = (id: number, source: Endpoint, fields: Partial<InserterFormData> = {}) => inserter(id, { source, sink: { type: 'machine', id: 1 }, ...fields });
+/** Machine 1 smelts with fuel, next to belt 2 of iron and copper */
+const build = (fields: Partial<ResultTargetBuild> = {}): ResultTargetBuild => ({
+    machines: [machine(1, { recipe: 'smelt', fuel: 'fuel' })], belts: [belt(2, { lanes: [lane('iron'), lane('copper')] })], chests: [], inserters: [], drills: [], ...fields,
 });
-const summary = (source: OutputTransferSummary['source'], target: OutputTransferSummary['physical_target'], item: string, direct: OutputTransferSummary['results'][number]['direct'], mechanism: OutputTransferSummary['mechanism'] = 'result-placement'): OutputTransferSummary => ({
-    source, physical_target: target, mechanism, status: 'known', results: [{ item_name: item, direct, inserters: [], coverage: direct === 'accepted' ? 'covered' : 'unknown' }],
+/** What the engine says came of one item a source made: placed straight into machine 1, unless told otherwise */
+const summary = (source: OutputTransferSummary['source'], item: string, direct: OutputTransferSummary['results'][number]['direct'], fields: Partial<OutputTransferSummary> = {}): OutputTransferSummary => ({
+    source, physical_target: { type: 'machine', id: 1 }, mechanism: 'result-placement', status: 'known',
+    results: [{ item_name: item, direct, inserters: [], coverage: direct === 'accepted' ? 'covered' : 'unknown' }], ...fields,
 });
-const render = (props: Partial<ComponentProps<typeof InputRoutesPanel>> = {}) => renderToStaticMarkup(<GameNamesContext.Provider value={names}>
-    <InputRoutesPanel machineId={1} build={build()} inputs={['iron', 'fuel']} transfers={[]} {...props} />
-</GameNamesContext.Provider>);
 
-it('shows configured belt routes only for recipe/fuel inputs and preserves source filtering', () => {
-    const html = render({ build: build({ inserters: [
-        { id: 4, source: { type: 'belt', id: 2 }, sink: { type: 'machine', id: 1 }, filters: ['iron'] } as unknown as ResultTargetBuild['inserters'][number],
-    ] }), onEditInserter: () => {} });
-    expect(html).toContain('Iron');
-    expect(html).toContain('From Belt 2');
-    expect(html).toContain('Edit Inserter 4');
-    expect(html).not.toContain('Copper');
+function showRoutes(props: Partial<ComponentProps<typeof InputRoutesPanel>> = {}) {
+    const onEditInserter = vi.fn();
+    const view = show(<InputRoutesPanel machineId={1} build={build()} inputs={['iron', 'fuel']} transfers={[]} onEditInserter={onEditInserter} {...props} />,
+        { names: names({ iron: 'Iron', copper: 'Copper', fuel: 'Fuel' }) });
+    return { ...view, onEditInserter };
+}
+const input = (name: string) => within(screen.getByRole('group', { name }));
+const NONE = 'No known incoming route', UNAVAILABLE = 'Input routes unavailable';
+/** What the Iron and Fuel rows say in place of a route, null where one reaches them */
+const noRoutes = () => ['Iron', 'Fuel'].map(name => input(name).queryByText(new RegExp(`^(${NONE}|${UNAVAILABLE})$`))?.textContent ?? null);
+
+it('shows configured belt routes only for recipe/fuel inputs and preserves source filtering', async () => {
+    const { user, onEditInserter } = showRoutes({ build: build({ inserters: [into(4, BELT_2, { filters: ['iron'] })] }) });
+    expect(screen.getAllByRole('group').map(group => group.getAttribute('aria-label'))).toEqual(['Iron', 'Fuel']);
+    expect(input('Iron').getByText('From Belt 2')).toBeDefined();
+    expect(noRoutes()).toEqual([null, NONE]);
+    expect(screen.queryByText(/Copper/)).toBeNull();
+    await user.click(input('Iron').getByRole('button', { name: 'Edit Inserter 4' }));
+    expect(onEditInserter).toHaveBeenCalledExactlyOnceWith(4);
 });
 
 it('omits blacklisted source items and shows accepted direct and drill-drop routes only', () => {
-    const direct = summary({ type: 'machine', id: 8 }, { type: 'machine', id: 1 }, 'iron', 'accepted');
-    const rejected = summary({ type: 'machine', id: 9 }, { type: 'machine', id: 1 }, 'fuel', 'rejected');
-    const unknown = summary({ type: 'machine', id: 10 }, { type: 'machine', id: 1 }, 'fuel', 'unknown');
-    const drill = summary({ type: 'drill', id: 3 }, { type: 'machine', id: 1 }, 'fuel', 'accepted', 'mining-drop');
-    const html = render({
-        build: build({ inserters: [{ id: 5, source: { type: 'belt', id: 2 }, sink: { type: 'machine', id: 1 }, filters: ['copper'], filter_mode: 'blacklist' } as unknown as ResultTargetBuild['inserters'][number]] }),
-        transfers: [direct, rejected, unknown, drill],
-    });
-    expect(html).toContain('Direct machine output: Machine 8');
-    expect(html).toContain('Drill drop: Drill 3');
-    expect(html).not.toContain('Direct machine output: Machine 9');
-    expect(html).not.toContain('Direct machine output: Machine 10');
-    expect(html).not.toContain('Copper');
+    showRoutes({ build: build({ inserters: [into(5, BELT_2, { filters: ['copper'], filter_mode: 'blacklist' })] }), transfers: [
+        summary({ type: 'machine', id: 8 }, 'iron', 'accepted'),
+        summary({ type: 'machine', id: 9 }, 'fuel', 'rejected'),
+        summary({ type: 'machine', id: 10 }, 'fuel', 'unknown'),
+        summary({ type: 'drill', id: 3 }, 'fuel', 'accepted', { mechanism: 'mining-drop' }),
+    ] });
+    expect(input('Iron').getByText('Direct machine output: Machine 8')).toBeDefined();
+    expect(input('Iron').getByText('From Belt 2')).toBeDefined();
+    expect(input('Fuel').getByText('Drill drop: Drill 3')).toBeDefined();
+    expect(screen.queryByText(/Machine (9|10)/)).toBeNull();
+    expect(screen.queryByText(/Copper/)).toBeNull();
 });
 
-it('keeps unavailable metadata distinct from a known empty input and exposes unknown source connections', () => {
-    const missing = render({ transfers: null });
-    expect(missing).toContain('Input route details unavailable');
-    expect(missing).toContain('Input routes unavailable');
-    const unavailable = render({ transfers: [{ ...summary({ type: 'machine', id: 8 }, { type: 'machine', id: 1 }, 'iron', 'unknown'), status: 'unavailable' }] });
-    expect(unavailable).toContain('Some input route details unavailable');
-    expect(unavailable).toContain('Input routes unavailable');
-    const extra = render({ build: build({ inserters: [{ id: 6, source: { type: 'belt', id: 2 }, sink: { type: 'machine', id: 1 } } as unknown as ResultTargetBuild['inserters'][number]] }) });
-    expect(extra).toContain('Unassigned configured connections');
-    expect(extra).toContain('Copper');
-    expect(extra).toContain('item not in known inputs');
+const NOTICES = ['Input route details unavailable', 'Some input route details unavailable'];
+it.each([
+    { why: 'no route evidence was given', transfers: null, notice: NOTICES[0], fallback: UNAVAILABLE },
+    { why: 'a summary into the machine is unavailable', transfers: [summary({ type: 'machine', id: 8 }, 'iron', 'unknown', { status: 'unavailable' })],
+        notice: NOTICES[1], fallback: UNAVAILABLE },
+    // the known empty input: no route, and nothing missing that could have one
+    { why: 'only an unrelated summary is unavailable', transfers: [summary({ type: 'machine', id: 77 }, 'iron', 'unknown', { physical_target: null, status: 'unavailable' })],
+        notice: undefined, fallback: NONE },
+])('keeps unavailable route metadata distinct from a known empty input when $why', ({ transfers, notice, fallback }) => {
+    showRoutes({ transfers });
+    expect(NOTICES.filter(text => screen.queryByText(text))).toEqual(notice ? [notice] : []);
+    expect(noRoutes()).toEqual([fallback, fallback]);
+});
+
+it.each([
+    { why: 'its source is gone', build: build({ belts: [], inserters: [into(8, { type: 'belt', id: 99 })] }), id: 8,
+        line: 'Configured source connection: Belt 99 → Machine 1 · source items unavailable or none inferred', fallbacks: [NONE, NONE] },
+    { why: 'its filters exclude every source item', build: build({ inserters: [into(12, BELT_2, { filters: ['not-on-belt'] })] }), id: 12,
+        line: 'Configured source connection: Belt 2 → Machine 1 · all inferred items excluded by inserter filters', fallbacks: [NONE, NONE] },
+    { why: 'it moves an item the machine does not take', build: build({ inserters: [into(6, BELT_2)] }), id: 6,
+        line: 'Copper · Configured source connection: Belt 2 → Machine 1 · item not in known inputs', fallbacks: [null, NONE] },
+    // the engine reports routes out of a machine; without its summary no input can be said to have none
+    { why: 'its source machine has no transfer summary', build: build({ inserters: [into(11, MACHINE_9)] }), id: 11,
+        line: 'Configured machine inserter: Machine 9 → Machine 1 · item route unavailable', fallbacks: [UNAVAILABLE, UNAVAILABLE] },
+])('keeps an inserter visible and editable when $why', async ({ build, id, line, fallbacks }) => {
+    const { user, onEditInserter } = showRoutes({ build });
+    expect(screen.getByText('Unassigned configured connections')).toBeDefined();
+    expect(screen.getByText(line)).toBeDefined();
+    expect(noRoutes()).toEqual(fallbacks);
+    // the unassigned list comes after the inputs
+    await user.click(screen.getAllByRole('button', { name: `Edit Inserter ${id}` }).at(-1)!);
+    expect(onEditInserter).toHaveBeenCalledExactlyOnceWith(id);
 });
 
 it('retains a configured fuel input from source facts even when the machine form has no fuel field', () => {
-    const html = render({ build: build({
-        machines: [{ id: 1, recipe: 'smelt' } as unknown as ResultTargetBuild['machines'][number]],
-        belts: [{ id: 2, lanes: [{ ingredient: 'fuel' }] } as unknown as ResultTargetBuild['belts'][number]],
-        inserters: [{ id: 7, source: { type: 'belt', id: 2 }, sink: { type: 'machine', id: 1 } } as unknown as ResultTargetBuild['inserters'][number]],
-    }) });
-    expect(html).toContain('Fuel');
-    expect(html).toContain('From Belt 2');
-});
-
-it('shows configured routes with missing source items and scopes unavailable transfer data to relevant routes', () => {
-    const missingSource = render({ build: build({
-        belts: [], inserters: [{ id: 8, source: { type: 'belt', id: 99 }, sink: { type: 'machine', id: 1 } } as unknown as ResultTargetBuild['inserters'][number]],
-    }), onEditInserter: () => {} });
-    expect(missingSource).toContain('source items unavailable or none inferred');
-    expect(missingSource).toContain('Edit Inserter 8');
-
-    const unrelatedUnavailable = summary({ type: 'machine', id: 77 }, null, 'iron', 'unknown');
-    unrelatedUnavailable.status = 'unavailable';
-    const scoped = render({ transfers: [unrelatedUnavailable] });
-    expect(scoped).not.toContain('Some input route details unavailable');
-    expect(scoped).toContain('No known incoming route');
+    showRoutes({ build: build({ machines: [machine(1, { recipe: 'smelt' })], belts: [belt(2, { lanes: [lane('fuel')] })], inserters: [into(7, BELT_2)] }) });
+    expect(input('Fuel').getByText('From Belt 2')).toBeDefined();
 });
 
 it('keeps explicit inserter route facts when a machine transfer summary is otherwise unavailable', () => {
-    const knownRoute = summary({ type: 'machine', id: 9 }, null, 'iron', 'unknown');
-    knownRoute.status = 'unavailable';
-    knownRoute.results[0].inserters = [{ inserter_id: 10, target: { type: 'machine', id: 1 } }];
-    const html = render({
-        build: build({ inserters: [{ id: 10, source: { type: 'machine', id: 9 }, sink: { type: 'machine', id: 1 } } as unknown as ResultTargetBuild['inserters'][number]] }),
-        transfers: [knownRoute],
-    });
-    expect(html).toContain('Configured machine inserter: Machine 9 → Machine 1');
-    expect(html).toContain('Some input route details unavailable');
-});
-
-it('marks per-input fallback unavailable when an incoming machine source has no transfer DTO', () => {
-    const html = render({ build: build({
-        inserters: [{ id: 11, source: { type: 'machine', id: 9 }, sink: { type: 'machine', id: 1 } } as unknown as ResultTargetBuild['inserters'][number]],
-    }), transfers: [] });
-    expect(html).toContain('Input routes unavailable');
-    expect(html).toContain('item route unavailable');
-    expect(html).not.toContain('No known incoming route');
-});
-
-it('keeps an inserter visible when its filters exclude every source item', () => {
-    const html = render({ build: build({
-        inserters: [{ id: 12, source: { type: 'belt', id: 2 }, sink: { type: 'machine', id: 1 }, filters: ['not-on-belt'] } as unknown as ResultTargetBuild['inserters'][number]],
-    }), onEditInserter: () => {} });
-    expect(html).toContain('all inferred items excluded by inserter filters');
-    expect(html).toContain('Edit Inserter 12');
+    showRoutes({ build: build({ inserters: [into(10, MACHINE_9)] }), transfers: [summary(MACHINE_9, 'iron', 'unknown', {
+        physical_target: null, status: 'unavailable',
+        results: [{ item_name: 'iron', direct: 'unknown', inserters: [{ inserter_id: 10, target: { type: 'machine', id: 1 } }], coverage: 'unknown' }],
+    })] });
+    expect(input('Iron').getByText('Configured machine inserter: Machine 9 → Machine 1')).toBeDefined();
+    expect(screen.getByText(NOTICES[1])).toBeDefined();
 });
 
 it('shows configured direct and drill targets as unassigned when their transfer DTOs are absent', () => {
-    const html = render({ build: build({
-        machines: [
-            { id: 1, recipe: 'smelt' },
-            { id: 13, recipe: 'ore', result_target: { type: 'machine', id: 1 } },
-        ] as unknown as ResultTargetBuild['machines'],
-        drills: [{ id: 14, target: { type: 'machine', id: 1 }, mined_item_name: 'iron' } as unknown as ResultTargetBuild['drills'][number]],
-    }), transfers: [] });
-    expect(html).toContain('Configured direct output: Machine 13 → Machine 1 · acceptance unavailable');
-    expect(html).toContain('Configured drill drop: Drill 14 → Machine 1 · acceptance unavailable');
-    expect(html).toContain('Input routes unavailable');
-    expect(html).not.toContain('No known incoming route');
-    expect(html).not.toContain('Direct machine output: Machine 13');
-    expect(html).not.toContain('Drill drop: Drill 14');
+    showRoutes({ build: build({
+        machines: [machine(1, { recipe: 'smelt' }), machine(13, { recipe: 'ore', result_target: { type: 'machine', id: 1 } })],
+        drills: [drill(14, { mined_item_name: 'iron' })],
+    }) });
+    expect(screen.getByText('Configured direct output: Machine 13 → Machine 1 · acceptance unavailable')).toBeDefined();
+    expect(screen.getByText('Configured drill drop: Drill 14 → Machine 1 · acceptance unavailable')).toBeDefined();
+    expect(noRoutes()).toEqual([UNAVAILABLE, UNAVAILABLE]);
+    expect(screen.queryByText(/^(Direct machine output|Drill drop):/)).toBeNull();
 });

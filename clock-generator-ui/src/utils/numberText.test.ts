@@ -19,49 +19,32 @@ import {
 const locale = 'en-US';
 
 describe('formatNumberText', () => {
-    it('rounds to the decimals asked for and drops trailing zeros', () => {
-        expect(formatNumberText(22.96874920527133, { locale })).toBe('22.97');
-        expect(formatNumberText(68.906247615814, { maxDecimals: 3, locale })).toBe('68.906');
-        expect(formatNumberText(62.999999523163, { locale })).toBe('63');
-        expect(formatNumberText(240, { locale })).toBe('240');
-        expect(formatNumberText(5.2, { locale })).toBe('5.2');
-        expect(formatNumberText(0.9996, { maxDecimals: 3, locale })).toBe('1');
-        expect(formatNumberText(-68.906247615814, { maxDecimals: 3, locale })).toBe('-68.906');
+    it.each<[string, number, number | undefined, string]>([
+        ['rounds to 2 decimals by default', 22.96874920527133, undefined, '22.97'],
+        ['rounds to the decimals asked for', 68.906247615814, 3, '68.906'],
+        ['rounds a negative value the same', -68.906247615814, 3, '-68.906'],
+        ['drops trailing zeros', 62.999999523163, undefined, '63'],
+        ['drops trailing zeros', 240, undefined, '240'],
+        ['drops trailing zeros', 5.2, undefined, '5.2'],
+        ['drops trailing zeros', 0.9996, 3, '1'],
+        ['rounds half up at the last decimal', 0.0005, 3, '0.001'],
+        ['keeps a value just under the half', 0.00049999, 3, '0.0005'],
+        ['does not group thousands', 12345.678, undefined, '12345.68'],
+        ['gives a whole number with no decimals', 22.96874920527133, 0, '23'],
+        ['gives 0 for 0', 0, undefined, '0'],
+        ['gives 0 for -0', -0, undefined, '0'],
+        ['gives non-finite values as they are', NaN, undefined, 'NaN'],
+        ['gives non-finite values as they are', Infinity, undefined, 'Infinity'],
+    ])('%s: %s', (_, value, maxDecimals, text) => {
+        expect(formatNumberText(value, { locale, ...(maxDecimals !== undefined && { maxDecimals }) })).toBe(text);
     });
 
-    it('rounds half up at the last decimal, and keeps a value just under the half', () => {
-        expect(formatNumberText(0.0005, { maxDecimals: 3, locale })).toBe('0.001');
-        expect(formatNumberText(0.00049999, { maxDecimals: 3, locale })).toBe('0.0005');
-    });
-
-    it('does not group thousands', () => {
-        expect(formatNumberText(12345.678, { locale })).toBe('12345.68');
-    });
-
-    it('gives a whole number with no decimals', () => {
-        expect(formatNumberText(22.96874920527133, { maxDecimals: 0, locale })).toBe('23');
-    });
-
-    it('gives 0 for 0 and -0', () => {
-        expect(formatNumberText(0, { locale })).toBe('0');
-        expect(formatNumberText(-0, { locale })).toBe('0');
-    });
-
-    it('never shows a tiny value as zero', () => {
-        expect(formatNumberText(0.0004, { maxDecimals: 3, locale })).toBe('0.0004');
-        expect(formatNumberText(0.00004, { maxDecimals: 3, locale })).toBe('0.00004');
-        expect(formatNumberText(1e-7, { maxDecimals: 3, locale })).toBe('0.0000001');
-        expect(formatNumberText(-0.0001, { maxDecimals: 3, locale })).toBe('-0.0001');
-        for (const tiny of [0.0004, 0.00004, 1e-7, -0.0001, 0.004]) {
-            expect(['0', '-0']).not.toContain(formatNumberText(tiny, { maxDecimals: 3, locale }));
-            expect(['0', '-0']).not.toContain(formatNumberText(tiny, { locale }));
-        }
-    });
-
-    it('gives non-finite values as they are', () => {
-        expect(formatNumberText(NaN, { locale })).toBe('NaN');
-        expect(formatNumberText(Infinity, { locale })).toBe('Infinity');
-    });
+    it.each([[0.0004, '0.0004'], [0.00004, '0.00004'], [1e-7, '0.0000001'], [-0.0001, '-0.0001'], [0.004, '0.004']])(
+        'never shows the tiny %s as zero, at 3 decimals or the default 2', (value, text) => {
+            expect(formatNumberText(value, { maxDecimals: 3, locale })).toBe(text);
+            expect(formatNumberText(value, { locale })).toBe(text);
+        },
+    );
 
     it('uses the locale\'s decimal separator', () => {
         expect(formatNumberText(22.9687, { locale: 'de-DE' })).toBe('22,97');
@@ -69,28 +52,24 @@ describe('formatNumberText', () => {
 });
 
 describe('shownNumberText', () => {
-    const field = { inputValue: '68.906247615814', value: 68.906247615814, maxDecimals: 3, locale };
+    const field = { inputValue: '68.906247615814', value: 68.906247615814, maxDecimals: 3, locale, focused: false };
 
-    it('shows what is typed while focused', () => {
-        expect(shownNumberText({ ...field, focused: true })).toBe('68.906247615814');
-    });
-
-    it('shows the rounded value while not focused', () => {
-        expect(shownNumberText({ ...field, focused: false })).toBe('68.906');
+    it.each([
+        ['what is typed while focused', { focused: true }, '68.906247615814'],
+        ['the rounded value while not focused', {}, '68.906'],
+        ['what is typed when the field is cleared', { value: null, inputValue: '' }, ''],
+        ['what is typed when the field holds no number', { value: NaN, inputValue: 'abc' }, 'abc'],
+        ['what is typed when the field holds no finite number', { value: Infinity, inputValue: '1e400' }, '1e400'],
+    ])('shows %s', (_, change, text) => {
+        expect(shownNumberText({ ...field, ...change })).toBe(text);
     });
 
     it('keeps invalid input full when requested, retaining valid blurred rounding by default', () => {
-        const third = { ...field, value: 0.3333333333333333, inputValue: '0.3333333333333333', focused: false };
+        const third = { ...field, value: 0.3333333333333333, inputValue: '0.3333333333333333' };
         expect(shownNumberText({ ...third, preserveInputOnBlur: true })).toBe('0.3333333333333333');
         expect(shownNumberText({ ...third, preserveInputOnBlur: false })).toBe('0.333');
         expect(shownNumberText(third)).toBe('0.333');
         expect(third.value).toBe(0.3333333333333333);
-    });
-
-    it('shows what is typed when the field holds no number', () => {
-        expect(shownNumberText({ ...field, focused: false, value: null, inputValue: '' })).toBe('');
-        expect(shownNumberText({ ...field, focused: false, value: NaN, inputValue: 'abc' })).toBe('abc');
-        expect(shownNumberText({ ...field, focused: false, value: Infinity, inputValue: '1e400' })).toBe('1e400');
     });
 });
 
@@ -114,52 +93,42 @@ describe('itemsPerSecondHelper', () => {
     });
 });
 
-describe('rateHeader', () => {
-    it('names the copies the rate is the total of', () => {
-        expect(rateHeader(11)).toBe('Rate (items/s,\u00a0all\u00a011\u00a0copies)');
-        expect(rateHeader(1)).toBe('Rate (items/s)');
-        expect(rateHeader(0.5)).toBe('Rate (items/s, all 0.5 copies)');
-    });
-});
-
-describe('makesHeader', () => {
-    it('says what the clock makes, for every copy', () => {
-        expect(makesHeader(11)).toBe('Makes (items/s, all 11 copies)');
-        expect(makesHeader(1)).toBe('Makes (items/s)');
-        expect(makesHeader(0.5)).toBe('Makes (items/s, all 0.5 copies)');
-    });
-});
-
-describe('durationText', () => {
-    it('gives the ticks and the seconds in one form', () => {
-        expect(durationText(240, locale)).toBe('240 ticks (4 s)');
-        expect(durationText(1234.5678, locale)).toBe('1234.568 ticks (20.58 s)');
-        expect(durationText(1.5, locale)).toBe('1.5 ticks (0.03 s)');
-    });
-});
-
-describe('machineNodeCraftLine', () => {
-    it('gives the craft ticks and the insertion limit', () => {
-        expect(machineNodeCraftLine(5.2, 15, locale)).toBe('5.2t craft · insertion limit ×15');
-    });
-
-    it('rounds the ticks to the decimals Machine Facts shows them with', () => {
-        expect(machineNodeCraftLine(5.25, 15.5, locale)).toBe('5.25t craft · insertion limit ×15.5');
-        expect(machineNodeCraftLine(5.2244897959, 15, locale)).toBe(`${formatNumberText(5.2244897959, { maxDecimals: TICK_DECIMALS, locale })}t craft · insertion limit ×15`);
-        expect(machineNodeCraftLine(5.2244897959, 15, locale)).toBe('5.224t craft · insertion limit ×15');
-    });
-});
-
 describe('the clocks table headers', () => {
     it('are the plan\'s words, with non-breaking spaces inside the brackets', () => {
         expect(WAKE_UPS_HEADER).toBe('Wake-ups/min (1\u00a0copy)');
         expect(OUTPUT_PER_PERIOD_HEADER).toBe('Output per clock period (1\u00a0copy)');
+    });
+
+    it.each([
+        [11, '(items/s,\u00a0all\u00a011\u00a0copies)'],
+        [1, '(items/s)'],
+        [0.5, '(items/s,\u00a0all\u00a00.5\u00a0copies)'],
+    ])('name the copies the rate and what the clock makes are the total of: %s', (copies, unit) => {
+        expect(rateHeader(copies)).toBe(`Rate ${unit}`);
+        expect(makesHeader(copies)).toBe(`Makes ${unit}`);
     });
 });
 
 describe('COPIES_HELPER', () => {
     it('says what a copy is and what the clock is made for', () => {
         expect(COPIES_HELPER).toBe("Describe one identical unit. Copies may include a partial unit, such as 0.5 or 2.25.");
+    });
+});
+
+describe('durationText', () => {
+    it('gives the ticks and the seconds in one form', () => {
+        expect(durationText(240, locale)).toBe('240 ticks (4\u00a0s)');
+        expect(durationText(1234.5678, locale)).toBe('1234.568 ticks (20.58\u00a0s)');
+        expect(durationText(1.5, locale)).toBe('1.5 ticks (0.03\u00a0s)');
+    });
+});
+
+describe('machineNodeCraftLine', () => {
+    it('gives the craft ticks, rounded to the decimals Machine Facts shows them with, and the insertion limit', () => {
+        expect(machineNodeCraftLine(5.2, 15, locale)).toBe('5.2t craft · insertion limit ×15');
+        expect(machineNodeCraftLine(5.25, 15.5, locale)).toBe('5.25t craft · insertion limit ×15.5');
+        expect(machineNodeCraftLine(5.2244897959, 15, locale)).toBe(`${formatNumberText(5.2244897959, { maxDecimals: TICK_DECIMALS, locale })}t craft · insertion limit ×15`);
+        expect(machineNodeCraftLine(5.2244897959, 15, locale)).toBe('5.224t craft · insertion limit ×15');
     });
 });
 
@@ -187,9 +156,8 @@ describe('controlled NumberField precision', () => {
     });
 
     it('does not mistake min/max clamping for precision rounding', () => {
-        expect(isUneditedPrecisionLoss({ ...blur, value: -1e-23, min: 0 })).toBe(false);
-        expect(isUneditedPrecisionLoss({ ...blur, max: 0 })).toBe(false);
-        expect(isUneditedPrecisionLoss({ ...blur, value: -1, min: 0 })).toBe(false);
-        expect(isUneditedPrecisionLoss({ ...blur, value: 17, nextValue: 16, max: 16 })).toBe(false);
+        for (const change of [{ value: -1e-23, min: 0 }, { max: 0 }, { value: -1, min: 0 }, { value: 17, nextValue: 16, max: 16 }]) {
+            expect(isUneditedPrecisionLoss({ ...blur, ...change })).toBe(false);
+        }
     });
 });

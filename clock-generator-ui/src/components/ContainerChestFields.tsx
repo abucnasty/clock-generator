@@ -1,10 +1,10 @@
 import { Add, Delete } from '@mui/icons-material';
-import { Box, Button, FormControl, IconButton, InputLabel, MenuItem, Select, Typography } from '@mui/material';
+import { Box, Button, IconButton, Typography } from '@mui/material';
 import { ChestType } from 'clock-generator/light';
 import type { ReactNode } from 'react';
 import {
-    QUALITIES, isRocketSilo,
-    type ChestFormData, type ContainerChestFormData, type ItemCountFormData, type QualityName, type RocketSiloFormData,
+    isRocketSilo,
+    type ChestFormData, type ContainerChestFormData, type ItemCountFormData, type RocketSiloFormData,
     type SlotContainerFormData, type SlotContentFormData,
 } from '../utils/configForm/formData';
 import { containerSlotCount, slotCounts, slotCountsText } from '../utils/containerSlotFilters';
@@ -12,6 +12,8 @@ import { chestLabel } from '../utils/entityLabel';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { ContainerFilterGrid } from './ContainerFilterGrid';
+import { QualityField } from './QualityBadge';
+import { qualityLabel } from '../utils/machinePrototype';
 
 interface Props {
     chest: ContainerChestFormData;
@@ -22,14 +24,13 @@ interface Props {
 
 /** The settings worth keeping visible while the editor is closed. */
 export function ContainerChestSummary({ chest }: { chest: ContainerChestFormData }) {
-    const qualityLabel = (value: QualityName | undefined) => QUALITIES.find(quality => quality.value === (value ?? 'normal'))!.label;
     const contents = (chest.contents ?? []).filter(row => row.item.trim() !== '');
     const items = contents.reduce((total, row) => total + row.count, 0);
     const stock = items === 0 ? 'Starts empty' : `Starts with ${items} ${items === 1 ? 'item' : 'items'}`;
     const details = isRocketSilo(chest)
-        ? [`Speed ${chest.crafting_speed ?? 1}×`, `Productivity ${chest.productivity ?? 0}%`, `Recipe quality: ${qualityLabel(chest.recipe_quality)}`, stock]
+        ? [`Speed ${chest.crafting_speed ?? 1}×`, `Productivity ${chest.productivity ?? 0}%`, `Recipe quality: ${qualityLabel(chest.recipe_quality ?? 'normal')}`, stock]
         : [
-            ...(chest.type === ChestType.CARGO_WAGON ? [`${qualityLabel(chest.quality)} quality`] : []),
+            ...(chest.type === ChestType.CARGO_WAGON ? [`${qualityLabel(chest.quality ?? 'normal')} quality`] : []),
             // the same count as the grid's
             slotCountsText(slotCounts(chest.slot_filters ?? [], containerSlotCount(chest))),
             stock,
@@ -51,18 +52,6 @@ export function ContainerChestFields({ chest, itemNames, onChange, dialog = fals
     </Box>;
 }
 
-function QualityField({ label, value, onChange, ariaLabel, sx }: {
-    label: string; value: QualityName | undefined; onChange: (value: QualityName) => void; ariaLabel: string; sx: object;
-}) {
-    return <FormControl size="small" sx={sx}>
-        <InputLabel>{label}</InputLabel>
-        <Select value={value ?? 'normal'} label={label} onChange={event => onChange(event.target.value as QualityName)}
-            inputProps={{ 'aria-label': ariaLabel }}>
-            {QUALITIES.map(quality => <MenuItem key={quality.value} value={quality.value}>{quality.label}</MenuItem>)}
-        </Select>
-    </FormControl>;
-}
-
 function SlotFields({ chest, itemNames, onChange, name, fieldSx }: {
     chest: SlotContainerFormData; itemNames: string[]; onChange: Props['onChange']; name: string; fieldSx: object;
 }) {
@@ -71,7 +60,7 @@ function SlotFields({ chest, itemNames, onChange, name, fieldSx }: {
     const setContents = (rows: SlotContentFormData[]) => onChange({ contents: rows } as Partial<ChestFormData>);
     return <>
         {chest.type === ChestType.CARGO_WAGON && <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-            <QualityField label="Quality" value={chest.quality} ariaLabel={`Quality, ${name}`} sx={fieldSx}
+            <QualityField value={chest.quality} inputAriaLabel={`Quality, ${name}`} sx={fieldSx}
                 onChange={quality => onChange({ quality } as Partial<ChestFormData>)} />
         </Box>}
         <ContainerFilterGrid chest={chest} itemNames={itemNames} onChange={slot_filters => onChange({ slot_filters } as Partial<ChestFormData>)} />
@@ -99,7 +88,7 @@ function SiloFields({ chest, itemNames, onChange, name, fieldSx }: {
     const setContents = (rows: ItemCountFormData[]) => set({ contents: rows });
     return <>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-            <QualityField label="Recipe quality" value={chest.recipe_quality} ariaLabel={`Recipe quality, ${name}`} sx={fieldSx}
+            <QualityField label="Recipe quality" value={chest.recipe_quality} inputAriaLabel={`Recipe quality, ${name}`} sx={fieldSx}
                 onChange={recipe_quality => set({ recipe_quality })} />
             <NumberField label="Crafting Speed" value={chest.crafting_speed ?? null} min={0.01} step={0.1} size="small" placeholder="1"
                 onValueChange={value => set({ crafting_speed: value ?? undefined })} sx={fieldSx} />

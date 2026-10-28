@@ -1,5 +1,5 @@
 import { Close, Delete } from '@mui/icons-material';
-import { Box, Button, FormControl, IconButton, InputAdornment, InputLabel, MenuItem, Select, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, InputAdornment, TextField, Tooltip, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import type { ReactNode } from 'react';
 import type { ChestType } from 'clock-generator/light';
@@ -15,6 +15,7 @@ import { HelpButton } from './HelpButton';
 import { InfinityChestSettings } from './InfinityChestSettings';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
+import { OptionWithNote, SelectField } from './SelectField';
 import { CraftingSpeedHint, MachinePrototypeField, MachineQualityField } from './MachineFields';
 import { CHEST_TYPES, CHEST_TYPE_LABELS, chestTypeIcon } from '../utils/configForm/formData';
 
@@ -29,13 +30,8 @@ export function EntityTypeField<T extends string>({ label, value, options, nameO
     const display = (value: T) => icons ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <FactorioIcon name={iconOf(value)} size={20} alt="" />{nameOf(value)}
     </Box> : nameOf(value);
-    return <FormControl data-row-first={first ? '' : undefined} size="small" sx={sx}>
-        <InputLabel>{label}</InputLabel>
-        <Select value={value} label={label} readOnly={readOnly} onChange={event => onChange(event.target.value as T)}
-            inputProps={{ 'aria-label': inputAriaLabel, 'aria-describedby': describedBy }} renderValue={display}>
-            {options.map(option => <MenuItem key={option.value} value={option.value}>{display(option.value)}</MenuItem>)}
-        </Select>
-    </FormControl>;
+    return <SelectField label={label} value={value} options={options.map(option => option.value)} render={display} onChange={onChange}
+        inputAriaLabel={inputAriaLabel} describedBy={describedBy} readOnly={readOnly} first={first} sx={sx} />;
 }
 
 export function MachineSettingsFields({ machine, onChange, onPatch, dialog = false, nutrients = false }: {
@@ -71,19 +67,16 @@ export function MachineSettingsFields({ machine, onChange, onPatch, dialog = fal
 export function BeltStrategyField({ belt, onChange, dialog = false }: {
     belt: BeltFormData; onChange: (update: Partial<BeltFormData>) => void; dialog?: boolean;
 }) {
-    return <FormControl size="small" fullWidth sx={dialog ? {
-        '& .MuiSelect-select': { whiteSpace: 'normal', overflowWrap: 'anywhere' }, '& .MuiTypography-caption': { display: 'block' },
-    } : undefined}>
-        <InputLabel>Strategy</InputLabel>
-        <Select value={belt.strategy ?? 'normal'} label="Strategy" onChange={event => onChange(beltStrategyUpdate(belt, event.target.value as BeltStrategyFormValue))}
-            inputProps={{ 'aria-label': dialog ? SELECT_NAMES.beltStrategy : `${SELECT_NAMES.beltStrategy}, ${entityLabel('belt', belt.id)}` }}>
-            {BELT_STRATEGIES.map(strategy => <MenuItem key={strategy.value} value={strategy.value}>
-                {dialog ? <Box><Typography variant="body2">{strategy.label}</Typography>
-                    <Typography variant="caption" color="text.secondary">{strategy.description}</Typography></Box>
-                    : <Tooltip title={strategy.description} placement="right" describeChild><span>{strategy.label}</span></Tooltip>}
-            </MenuItem>)}
-        </Select>
-    </FormControl>;
+    // the field shows the chosen strategy as the list does: with what it does under it in the dialog, on hover in a row
+    const shown = (value: BeltStrategyFormValue) => {
+        const strategy = BELT_STRATEGIES.find(strategy => strategy.value === value) ?? { label: value, description: '' };
+        return dialog ? <OptionWithNote label={strategy.label} note={strategy.description} />
+            : <Tooltip title={strategy.description} placement="right" describeChild><span>{strategy.label}</span></Tooltip>;
+    };
+    return <SelectField label="Strategy" fullWidth value={belt.strategy ?? 'normal'} options={BELT_STRATEGIES.map(strategy => strategy.value)}
+        render={shown} onChange={value => onChange(beltStrategyUpdate(belt, value))}
+        inputAriaLabel={dialog ? SELECT_NAMES.beltStrategy : `${SELECT_NAMES.beltStrategy}, ${entityLabel('belt', belt.id)}`}
+        sx={dialog ? { '& .MuiSelect-select': { whiteSpace: 'normal', overflowWrap: 'anywhere' } } : undefined} />;
 }
 
 export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = false }: {

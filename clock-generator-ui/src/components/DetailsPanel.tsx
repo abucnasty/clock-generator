@@ -1,7 +1,8 @@
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import type { ClockInsight, SwingBackoffReport } from 'clock-generator/browser';
 import type { FuelViewData, ShiftOptionsView } from '../worker/types';
 import { FuelPanel } from './FuelPanel';
+import { Disclosure } from './Disclosure';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
 import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
@@ -20,9 +21,8 @@ export function DetailsPanel(props: DetailsPanelProps) {
         <InsightsPanel insights={props.insights}>
             {props.shiftOptions && <ShiftRangePanel options={props.shiftOptions} />}
         </InsightsPanel>
-        {props.fuelView && <Box component="details" sx={{ mt: 2 }}>
-            <Typography component="summary" sx={{ cursor: 'pointer' }}>Fuel use</Typography>
+        {props.fuelView && <Disclosure summary="Fuel use" sx={{ mt: 2 }}>
             <FuelPanel fuel={props.fuelView} />
-        </Box>}
+        </Disclosure>}
     </Box>;
 }

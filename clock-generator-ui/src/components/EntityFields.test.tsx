@@ -1,77 +1,86 @@
-import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
+// @vitest-environment happy-dom
+import { screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { ChestType } from 'clock-generator/light';
-import { BeltLaneFields, BeltStrategyField, ChestFields, EntityTypeField, MachineSettingsFields } from './EntityFields';
-import { ChestFilterSlotSelector } from './ChestFilterSlotSelector';
-import { NumberField } from './NumberField';
-import { Button, Select, TextField } from '@mui/material';
-import type { BeltFormData, ChestFormData, MachineFormData } from '../hooks/useConfigForm';
+import { belt as beltRow, bufferChest, infinityChest, machine as machineRow, show } from '../test/fixtures';
+import { SELECT_NAMES } from '../utils/a11yLabels';
+import { BeltLaneFields, BeltStrategyField, ChestFields, MachineSettingsFields } from './EntityFields';
 
-vi.mock('../hooks/useGameNames', () => ({ useGameNames: () => ({ itemLabel: (value: string) => value }) }));
+const belt = beltRow(3, { strategy: 'export', lanes: [{ ingredient: 'iron-plate', stack_size: 8, consumption_per_second: 2 }] });
+const field = (name: string) => screen.getByRole('textbox', { name });
 
-function fields(node: ReactNode): ReactElement<Record<string, unknown>>[] {
-    return Children.toArray(node).flatMap(child => isValidElement<Record<string, unknown>>(child)
-        ? [child, ...fields(child.props.children as ReactNode)] : []);
-}
-const belt: BeltFormData = { id: 3, _uuid: 'belt', type: 'turbo-transport-belt', strategy: 'export',
-    lanes: [{ ingredient: 'iron-plate', stack_size: 8, consumption_per_second: 2 }] };
-
-it('keeps dialog machine edits within the draft whitelist and preserves numeric clear defaults', () => {
-    const machine: MachineFormData = { id: 1, _uuid: 'machine', recipe: 'iron-plate', productivity: 25, crafting_speed: 3, prototype: 'biochamber' };
+it('keeps dialog machine edits within the draft whitelist and preserves numeric clear defaults', async () => {
+    const machine = machineRow(1, { recipe: 'iron-plate', productivity: 25, crafting_speed: 3, prototype: 'biochamber' });
     const onChange = vi.fn();
-    const dialog = fields(MachineSettingsFields({ machine, dialog: true, onChange, onPatch: vi.fn() }));
-    const numbers = dialog.filter(field => field.type === NumberField);
-    expect(numbers.map(field => field.props.label)).toEqual(['Productivity (%)', 'Crafting Speed']);
-    for (const field of numbers) (field.props.onValueChange as (value: null) => void)(null);
-    expect(onChange.mock.calls).toEqual([['productivity', 0], ['crafting_speed', 1]]);
-    const energy = fields(MachineSettingsFields({ machine, onChange, onPatch: vi.fn(), nutrients: true })).find(field => field.props.label === 'Energy Consumption (%)')!;
-    expect(energy.props.min).toBe(-80);
-    (energy.props.onValueChange as (value: number) => void)(-40);
+    const { user, unmount } = show(<MachineSettingsFields machine={machine} dialog onChange={onChange} onPatch={vi.fn()} />);
+    expect(screen.queryByRole('textbox', { name: 'Energy Consumption (%)' })).toBeNull();
+    for (const name of ['Productivity (%)', 'Crafting Speed']) {
+        await user.clear(field(name));
+        await user.tab();
+    }
+    // a cleared field commits its default, and the dialog edits nothing else
+    expect(new Set(onChange.mock.calls.map(call => call.join(' ')))).toEqual(new Set(['productivity 0', 'crafting_speed 1']));
+    unmount();
+
+    show(<MachineSettingsFields machine={machine} onChange={onChange} onPatch={vi.fn()} nutrients />);
+    await user.clear(field('Energy Consumption (%)'));
+    await user.click(field('Energy Consumption (%)'));
+    await user.paste('-40');
+    await user.tab();
     expect(onChange).toHaveBeenLastCalledWith('energy_consumption_bonus', -40);
+    // no lower than the game allows
+    await user.clear(field('Energy Consumption (%)'));
+    await user.paste('-95');
+    await user.tab();
+    expect(onChange).toHaveBeenLastCalledWith('energy_consumption_bonus', -80);
     expect(machine.energy_consumption_bonus).toBeUndefined();
 });
 
-it('switches normal belts by removing external consumption without mutating the original lanes', () => {
+it('switches normal belts by removing external consumption without mutating the original lanes', async () => {
     const onChange = vi.fn();
-    const select = fields(BeltStrategyField({ belt, onChange })).find(field => field.type === Select)!;
-    (select.props.onChange as (event: unknown) => void)({ target: { value: 'normal' } });
+    const { user } = show(<BeltStrategyField belt={belt} onChange={onChange} />);
+    await user.click(screen.getByRole('combobox', { name: `${SELECT_NAMES.beltStrategy}, Belt 3` }));
+    await user.click(screen.getByRole('option', { name: 'Normal' }));
     expect(onChange).toHaveBeenCalledWith({ strategy: undefined, lanes: [{ ingredient: 'iron-plate', stack_size: 8 }] });
     expect(belt.lanes[0].consumption_per_second).toBe(2);
 });
 
-it.each([false, true])('keeps imported lane geometry read-only while external consumption stays editable (dialog: %s)', dialog => {
+it.each([false, true])('keeps imported lane geometry read-only while external consumption stays editable (dialog: %s)', async dialog => {
     const onChange = vi.fn();
-    const locked = fields(BeltLaneFields({ belt, itemNames: [], readOnly: true, dialog, onChange }));
-    const numbers = locked.filter(field => field.type === NumberField);
-    expect(numbers.map(field => field.props.label)).toEqual(['Consumed /s']);
-    expect(locked.some(field => field.type === Button)).toBe(false);
-    (numbers[0].props.onValueChange as (value: null) => void)(null);
+    const { user } = show(<BeltLaneFields belt={belt} itemNames={[]} readOnly dialog={dialog} onChange={onChange} />);
+    expect(screen.getAllByRole('textbox')).toEqual([field('Consumed /s')]);
+    expect(screen.queryByRole('button', { name: /lane/i })).toBeNull();
+    await user.clear(field('Consumed /s'));
+    await user.tab();
     expect(onChange).toHaveBeenCalledWith({ lanes: [{ ingredient: 'iron-plate', stack_size: 8, consumption_per_second: undefined }] });
     expect(belt.lanes[0].consumption_per_second).toBe(2);
 });
 
-it.each([false, true])('preserves infinity stock zero and delegates type conversion to the caller (dialog: %s)', dialog => {
-    const chest: ChestFormData = { id: 2, _uuid: 'chest', type: ChestType.INFINITY_CHEST,
-        item_filter: [{ item_name: 'iron-plate', request_count: 100 }], remove_unfiltered_items: true };
+it.each([false, true])('preserves infinity stock zero and delegates type conversion to the caller (dialog: %s)', async dialog => {
+    const chest = infinityChest(2, { item_filter: [{ item_name: 'iron-plate', request_count: 100 }] });
     const onChange = vi.fn(), onSwitchType = vi.fn();
-    const controls = fields(ChestFields({ chest, itemNames: [], dialog, onChange, onSwitchType }));
-    const type = controls.find(field => field.type === EntityTypeField)!;
-    (type.props.onChange as (value: ChestType) => void)(ChestType.BUFFER_CHEST);
+    const { user } = show(<ChestFields chest={chest} itemNames={['iron-plate']} dialog={dialog} onChange={onChange} onSwitchType={onSwitchType} />);
+    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('option', { name: 'Buffer chest' }));
     expect(onSwitchType).toHaveBeenCalledWith(ChestType.BUFFER_CHEST);
     expect(onChange).not.toHaveBeenCalled();
-    const slots = controls.find(field => field.type === ChestFilterSlotSelector)!;
-    expect(slots.props.filters).toEqual([{ item_name: 'iron-plate', quantity: 100 }]);
-    (slots.props.onFilterChange as (index: number, filter: unknown) => void)(0, { item_name: 'iron-plate', quantity: 0 });
+
+    await user.click(within(screen.getByRole('group', { name: 'Chest filters' })).getByRole('button', { name: /^Filter 1: iron-plate \(100\)/ }));
+    const picker = screen.getByRole('dialog');
+    const quantity = within(picker).getByRole('spinbutton');
+    await user.clear(quantity);
+    await user.type(quantity, '0');
+    await user.click(within(picker).getByRole('button', { name: 'Apply' }));
     expect(onChange).toHaveBeenCalledWith({ item_filter: [{ item_name: 'iron-plate', request_count: 0 }] });
     expect(chest.item_filter[0].request_count).toBe(100);
     expect(chest.remove_unfiltered_items).toBe(true);
 });
 
-it('keeps buffer storage clear fallback and filter edits independent', () => {
-    const chest: ChestFormData = { id: 2, _uuid: 'chest', type: ChestType.BUFFER_CHEST, item_filter: 'iron-plate', storage_size: 8 };
+it('keeps buffer storage clear fallback and filter edits independent', async () => {
+    const chest = bufferChest(2, { item_filter: 'iron-plate', storage_size: 8 });
     const onChange = vi.fn();
-    const size = fields(ChestFields({ chest, itemNames: [], onChange, onSwitchType: vi.fn() })).find(field => field.type === TextField)!;
-    (size.props.onChange as (event: unknown) => void)({ target: { value: '' } });
+    const { user } = show(<ChestFields chest={chest} itemNames={[]} onChange={onChange} onSwitchType={vi.fn()} />);
+    await user.clear(screen.getByRole('spinbutton'));
     expect(onChange).toHaveBeenCalledWith({ storage_size: 1 });
     expect(chest.item_filter).toBe('iron-plate');
 });

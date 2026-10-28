@@ -1,13 +1,5 @@
-import {
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-} from '@mui/material';
-import { useId, useRef } from 'react';
-
+import { Button } from '@mui/material';
+import { AppDialog } from './AppDialog';
 
 interface DiscardChangesDialogProps {
     open: boolean;
@@ -19,37 +11,6 @@ interface DiscardChangesDialogProps {
 
 /** Asks before an editor with unsaved changes is closed. Esc and a click outside it mean Keep editing. */
 export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: DiscardChangesDialogProps) {
-    const id = useId();
-    const keepEditingRef = useRef<HTMLButtonElement>(null);
-    return (
-        <Dialog
-            open={open}
-            onClose={onKeepEditing}
-            maxWidth="xs"
-            aria-labelledby={`${id}-title`}
-            aria-describedby={`${id}-description`}
-            // the theme draws every dialog flat, in the card colour, with an edge that stands it out from the dimmed
-            // dialog behind it
-            slotProps={{
-                // opened over another dialog, autoFocus alone loses the focus to the dialogs' focus traps
-                transition: { onEntered: () => keepEditingRef.current?.focus() },
-            }}
-        >
-            <DialogTitle id={`${id}-title`}>{title}</DialogTitle>
-            <DialogContent>
-                <DialogContentText id={`${id}-description`}>
-                    Your changes have not been saved.
-                </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-                {/* the theme's focus ring marks focus; the focus ripple would lower the text's contrast */}
-                <Button ref={keepEditingRef} onClick={onKeepEditing} color="inherit" autoFocus disableFocusRipple>
-                    Keep editing
-                </Button>
-                <Button onClick={onDiscard} color="error" disableFocusRipple>
-                    Discard
-                </Button>
-            </DialogActions>
-        </Dialog>
-    );
+    return <AppDialog open={open} onClose={onKeepEditing} maxWidth="xs" title={title} description="Your changes have not been saved."
+        cancel="Keep editing" focusCancel actions={<Button onClick={onDiscard} color="error">Discard</Button>} />;
 }

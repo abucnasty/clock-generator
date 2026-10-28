@@ -1,7 +1,9 @@
-import { expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment happy-dom
+import { screen } from '@testing-library/react';
 import { ConfigSchema, type Config } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
+import { expect, it, vi } from 'vitest';
+import { bufferChest, infinityChest, show } from '../test/fixtures';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { parseFormConfig } from '../worker/formConfig';
@@ -57,20 +59,24 @@ it('remembers the removal switch through chest type changes without losing the p
     const buffer = switchedChest(form.chests[0], ChestType.BUFFER_CHEST);
     const restored = switchedChest(buffer, ChestType.INFINITY_CHEST);
     expect(restored).toMatchObject({ item_filter: [], remove_unfiltered_items: true });
-    const oldBuffer = { id: 2, _uuid: 'chest-2', type: ChestType.BUFFER_CHEST, item_filter: 'iron-plate', storage_size: 48 } as const;
+    const oldBuffer = bufferChest(2, { item_filter: 'iron-plate' });
     expect(switchedChest(switchedChest(oldBuffer, ChestType.INFINITY_CHEST, true), ChestType.BUFFER_CHEST)).toMatchObject(oldBuffer);
 });
 
-it('keeps the shared editor focused on controls without repeating the category explanation', () => {
-    const form = configToFormData(config), chest = form.chests[0];
-    if (chest.type !== ChestType.INFINITY_CHEST) throw new Error('not an infinity chest');
-    const render = (filters: typeof chest.item_filter, remove = true) => renderToStaticMarkup(
-        <InfinityChestSettings chest={{ ...chest, item_filter: filters, remove_unfiltered_items: remove }} onChange={() => {}} />);
-    expect(render([])).toContain('Also remove unfiltered items');
-    const filters = [{ item_name: 'iron-plate', request_count: 100 }];
-    expect(render(filters, false)).not.toContain('Maintains configured stock');
-    expect(render(filters, false)).not.toContain('aria-haspopup="dialog"');
-    expect(render(filters)).toContain('Also remove unfiltered items');
+const stock = [{ item_name: 'iron-plate', request_count: 100 }];
+it.each([
+    { why: 'without filters', filters: [], remove: true },
+    { why: 'with a filter, removal off', filters: stock, remove: false },
+    { why: 'with a filter, removal on', filters: stock, remove: true },
+])('keeps the shared editor focused on controls without repeating the category explanation, $why', async ({ filters, remove }) => {
+    const onChange = vi.fn();
+    const { user } = show(<InfinityChestSettings chest={infinityChest(1, { item_filter: filters, remove_unfiltered_items: remove })} onChange={onChange} />);
+    const removal = screen.getByRole<HTMLInputElement>('checkbox', { name: 'Also remove unfiltered items' });
+    expect(removal.checked).toBe(remove);
+    expect(screen.queryByText(/Maintains configured stock/)).toBeNull();
+    expect(screen.queryAllByRole('button').filter(button => button.getAttribute('aria-haspopup') === 'dialog')).toEqual([]);
+    await user.click(removal);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(!remove);
 });
 
 it('normalizes omitted filters and strips empty UI slots without losing the disposal switch', () => {
