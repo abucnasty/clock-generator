@@ -1,0 +1,284 @@
+{
+  "$comment": [
+    "What the engine reads from the game's prototypes: the one hand-written list. Keys are the prototype API's own names",
+    "(prototypes as the spec names them, with their Prototype suffix: CraftingMachinePrototype, ResourceEntityPrototype;",
+    "the two roots PrototypeBase and Prototype have none), so each looks up in the spec as written.",
+    "prototypes: each class with its spec parent (null for the root) and the properties it OWNS in the spec that the",
+    "engine reads; a property inherited from an ancestor is listed on the ancestor. Every class of a chain is listed, an",
+    "empty one with [], so the chain is explicit; the generator fails when a parent or a property disagrees with the spec.",
+    "types: the struct and union types the generated code spells out, with the properties kept. A parent is named only",
+    "when properties are kept from it. Aliases of a primitive (Energy, Weight, *ID) and unions of literals resolve inline.",
+    "A property whose meaning hangs on another is listed with it: its gate (module_slots_quality_bonus does nothing",
+    "without quality_affects_module_slots) and the property its default falls back to (\"Value of `ignored_by_stats`\"),",
+    "on the quality too (crafting_speed_quality_multiplier falls back to QualityPrototype.crafting_machine_speed_multiplier).",
+    "The generator warns about a default that names a property not listed. Kept although the engine does not read them",
+    "yet: RecipePrototype's overload_multiplier and allow_inserter_overload (it computes the overload itself), and the",
+    "quality multipliers it hard-codes (inserter_speed_multiplier); InputLimits, Timing and the rest read them from here.",
+    "Not here, hand-written in resources/filter-raw.js: what it derives rather than reads off one class, namely",
+    "TechnologyPrototype effects (the inserter research totals), UtilityConstants default_rocket_lift_weight (the silo's",
+    "lift_weight when unset), and which raw sections hold items (ItemPrototype's subclasses: module, tool, ammo, capsule;",
+    "the manifest names no typename, the generated file gives each class's in a comment).",
+    "$comment entries name the traits that read the class (P4 composition design, 2.4). After an edit, rerun",
+    "scripts/prototype-types/generate.mjs (its header says how)."
+  ],
+  "prototypes": {
+    "PrototypeBase": {
+      "parent": null,
+      "properties": ["name", "type", "hidden"]
+    },
+    "Prototype": {
+      "parent": "PrototypeBase",
+      "properties": []
+    },
+    "EntityPrototype": {
+      "$comment": "Production (resource): a resource's minable",
+      "parent": "Prototype",
+      "properties": ["minable"]
+    },
+    "EntityWithHealthPrototype": {
+      "parent": "EntityPrototype",
+      "properties": []
+    },
+    "EntityWithOwnerPrototype": {
+      "parent": "EntityWithHealthPrototype",
+      "properties": []
+    },
+    "CraftingMachinePrototype": {
+      "$comment": "Production (recipe), Energy, Placement",
+      "parent": "EntityWithOwnerPrototype",
+      "properties": [
+        "crafting_speed",
+        "crafting_speed_quality_multiplier",
+        "crafting_categories",
+        "effect_receiver",
+        "allowed_effects",
+        "module_slots",
+        "quality_affects_module_slots",
+        "module_slots_quality_bonus",
+        "energy_source",
+        "energy_usage",
+        "energy_usage_quality_multiplier",
+        "quality_affects_energy_usage",
+        "vector_to_place_result"
+      ]
+    },
+    "AssemblingMachinePrototype": {
+      "$comment": "InputLimits: a silo's fixed recipe",
+      "parent": "CraftingMachinePrototype",
+      "properties": ["fixed_recipe"]
+    },
+    "FurnacePrototype": {
+      "$comment": "OutputBlock: the class itself (recipe chosen by input)",
+      "parent": "CraftingMachinePrototype",
+      "properties": []
+    },
+    "RocketSiloPrototype": {
+      "$comment": "InputLimits, Storage",
+      "parent": "AssemblingMachinePrototype",
+      "properties": ["rocket_parts_required", "to_be_inserted_to_rocket_inventory_size", "lift_weight"]
+    },
+    "MiningDrillPrototype": {
+      "$comment": "Production (resource), Energy, Placement",
+      "parent": "EntityWithOwnerPrototype",
+      "properties": [
+        "mining_speed",
+        "resource_drain_rate_percent",
+        "uses_force_mining_productivity_bonus",
+        "drops_full_belt_stacks",
+        "effect_receiver",
+        "allowed_effects",
+        "module_slots",
+        "quality_affects_module_slots",
+        "energy_source",
+        "energy_usage",
+        "vector_to_place_result"
+      ]
+    },
+    "InserterPrototype": {
+      "$comment": "Hand, Timing",
+      "parent": "EntityWithOwnerPrototype",
+      "properties": [
+        "stack_size_bonus",
+        "bulk",
+        "uses_inserter_stack_size_bonus",
+        "wait_for_full_hand",
+        "grab_less_to_match_belt_stack",
+        "max_belt_stack_size",
+        "filter_count",
+        "enter_drop_mode_if_held_stack_spoiled",
+        "rotation_speed",
+        "extension_speed",
+        "pickup_position",
+        "insert_position",
+        "chases_belt_items"
+      ]
+    },
+    "TransportBeltConnectablePrototype": {
+      "$comment": "Lane",
+      "parent": "EntityWithOwnerPrototype",
+      "properties": ["speed"]
+    },
+    "TransportBeltPrototype": {
+      "parent": "TransportBeltConnectablePrototype",
+      "properties": []
+    },
+    "LoaderPrototype": {
+      "$comment": "not modelled; for the planner",
+      "parent": "TransportBeltConnectablePrototype",
+      "properties": ["max_belt_stack_size", "wait_for_full_stack", "respect_insert_limits", "per_lane_filters", "belt_length"]
+    },
+    "ContainerPrototype": {
+      "$comment": "Storage",
+      "parent": "EntityWithOwnerPrototype",
+      "properties": ["inventory_size", "inventory_type", "inventory_weight_limit", "quality_affects_inventory_size"]
+    },
+    "LogisticContainerPrototype": {
+      "parent": "ContainerPrototype",
+      "properties": []
+    },
+    "InfinityContainerPrototype": {
+      "parent": "LogisticContainerPrototype",
+      "properties": []
+    },
+    "VehiclePrototype": {
+      "parent": "EntityWithOwnerPrototype",
+      "properties": []
+    },
+    "CarPrototype": {
+      "$comment": "Storage",
+      "parent": "VehiclePrototype",
+      "properties": ["inventory_size"]
+    },
+    "RollingStockPrototype": {
+      "parent": "VehiclePrototype",
+      "properties": []
+    },
+    "CargoWagonPrototype": {
+      "$comment": "Storage",
+      "parent": "RollingStockPrototype",
+      "properties": ["inventory_size", "quality_affects_inventory_size"]
+    },
+    "ResourceEntityPrototype": {
+      "$comment": "Production (resource): minable is the entity's",
+      "parent": "EntityPrototype",
+      "properties": []
+    },
+    "ItemPrototype": {
+      "$comment": "Storage, Energy (fuel), Spoilage",
+      "parent": "Prototype",
+      "properties": [
+        "stack_size",
+        "weight",
+        "fuel_value",
+        "fuel_categories",
+        "spoil_ticks",
+        "spoil_result",
+        "quality_affects_spoil_ticks"
+      ]
+    },
+    "RecipePrototype": {
+      "$comment": "Production (recipe), Yield, InputLimits",
+      "parent": "Prototype",
+      "properties": [
+        "ingredients",
+        "results",
+        "energy_required",
+        "categories",
+        "allow_productivity",
+        "maximum_productivity",
+        "main_product",
+        "overload_multiplier",
+        "allow_inserter_overload"
+      ]
+    },
+    "QualityPrototype": {
+      "$comment": "Storage, Timing, Production, Energy, Spoilage: what each listed machine or item property falls back to; most default to default_multiplier or level",
+      "parent": "Prototype",
+      "properties": [
+        "level",
+        "cargo_wagon_inventory_size_multiplier",
+        "inventory_size_multiplier",
+        "default_multiplier",
+        "crafting_machine_speed_multiplier",
+        "crafting_machine_energy_usage_multiplier",
+        "crafting_machine_module_slots_bonus",
+        "mining_drill_module_slots_bonus",
+        "mining_drill_resource_drain_multiplier",
+        "inserter_speed_multiplier",
+        "spoil_ticks_multiplier"
+      ]
+    }
+  },
+  "types": {
+    "Vector": {
+      "properties": ["x", "y"]
+    },
+    "EnergySource": {
+      "properties": []
+    },
+    "ElectricEnergySource": {
+      "properties": ["type", "usage_priority", "drain"]
+    },
+    "BurnerEnergySource": {
+      "properties": ["type", "fuel_categories", "effectivity", "fuel_inventory_size", "burnt_inventory_size"]
+    },
+    "HeatEnergySource": {
+      "$comment": "not modelled: the discriminant only",
+      "properties": ["type"]
+    },
+    "FluidEnergySource": {
+      "$comment": "not modelled: the discriminant only",
+      "properties": ["type"]
+    },
+    "VoidEnergySource": {
+      "properties": ["type"]
+    },
+    "EffectReceiver": {
+      "properties": ["base_effect", "uses_module_effects", "uses_beacon_effects"]
+    },
+    "Effect": {
+      "properties": ["speed", "productivity", "consumption", "pollution", "quality"]
+    },
+    "MinableProperties": {
+      "properties": ["mining_time", "result", "results", "count"]
+    },
+    "IngredientPrototype": {
+      "properties": []
+    },
+    "ItemIngredientPrototype": {
+      "properties": ["type", "name", "amount"]
+    },
+    "FluidIngredientPrototype": {
+      "$comment": "not modelled: what tells it apart",
+      "properties": ["type", "name"]
+    },
+    "ProductPrototype": {
+      "properties": []
+    },
+    "ProductPrototypeBase": {
+      "properties": ["independent_probability", "shared_probability"]
+    },
+    "SharedProbabilityDefinition": {
+      "properties": ["min", "max"]
+    },
+    "ItemProductPrototype": {
+      "$comment": "Yield: ignored_by_productivity defaults to ignored_by_stats, so read ignored_by_productivity ?? ignored_by_stats ?? 0",
+      "parent": "ProductPrototypeBase",
+      "properties": [
+        "type",
+        "name",
+        "amount",
+        "amount_min",
+        "amount_max",
+        "extra_count_fraction",
+        "ignored_by_stats",
+        "ignored_by_productivity"
+      ]
+    },
+    "FluidProductPrototype": {
+      "$comment": "not modelled: what tells it apart",
+      "parent": "ProductPrototypeBase",
+      "properties": ["type", "name"]
+    }
+  }
+}

@@ -8,8 +8,10 @@
     "src/verify-recording.ts",
     "src/rule-calls.ts",
     "src/rules-of-the-game.ts",
+    "src/data/generated/prototype-types.ts",
     "src/**/*.test.ts",
     "scripts/**/*.js",
+    "scripts/prototype-types/generate.mjs",
     "resources/filter-raw.js",
     "resources/dump-item-weights.js",
     "tests/**/*.test.ts"
