@@ -200,9 +200,9 @@ export const TRAIT_BASIS: Readonly<Record<TraitFieldPath, Basis>> = {
         note: "rounded to belt stacks on a drop for every prototype, though only the stack inserter's data sets grab_less_to_match_belt_stack" },
     "hand.items": { standing: "measured", rule: "R6" },
     "hand.full_hand.at_placing_source": { standing: "measured", rule: "R18", audit: "A22",
-        note: "filled from `bulk` as today (decision 9e, D7, would read wait_for_full_hand)" },
-    "hand.full_hand.elsewhere": { standing: "assumed", audit: "A22", note: "every kind waits for a full hand" },
-    "hand.wait_for_full_hand": { standing: "game-data", note: "recorded, read by nothing until decision 9e" },
+        note: "the prototype's wait_for_full_hand" },
+    "hand.full_hand.elsewhere": { standing: "measured", audit: "A22", note: "the prototype's wait_for_full_hand; recorded at an assembling machine's output (2.1.21), not yet at a chest or a belt" },
+    "hand.wait_for_full_hand": { standing: "game-data", note: "read by full_hand" },
     "hand.grab_less_to_match_belt_stack": { standing: "game-data", note: "recorded, read by nothing yet" },
     "hand.max_belt_stack_size": { standing: "game-data", note: "recorded, read by nothing yet" },
 

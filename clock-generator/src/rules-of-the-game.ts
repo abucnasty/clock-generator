@@ -154,8 +154,8 @@ export { Mining } from "./simulation/components/mining";
  * mining drill's stop (3, the shared `Placement` through `MachinePlacementPort`), into a container as far as it has
  * room, what the tick's crafts gave included. The machine's archetype binds its Placement to the target at build
  * (`CraftingMachineArchetype.create`); `Crafting.countPlacedInOutput` counts what a craft puts in its own output. At its
- * output a bulk inserter waits for a full hand, and any other swings what it holds. A result that comes by chance is made
- * at its expected amount, the fraction carried to the next craft (`expectedAmount`: the chance times the amount and its
+ * output an inserter that waits for a full hand (its prototype's `wait_for_full_hand`: the stack inserter) waits, and any
+ * other swings what it holds. A result that comes by chance is made at its expected amount, the fraction carried to the next craft (`expectedAmount`: the chance times the amount and its
  * extra count fraction). Cases: `crafting/places-results.test.ts`. Recorded in the game (2.1.21, a lab on the ore voider
  * benchmark's saves): 4 crafts a tick at crafting speed 7.5, iron ore back at 0.2511 a craft over 47,992, gears at 0.4978,
  * returns a tick a binomial of its crafts, and 50 ore waiting in its output when its car was full, its 12 result slots
