@@ -30,7 +30,7 @@ function simulatedHand(config: Config, start: number, item: string) {
         inserterState: state, sourceState: source, tick_provider: simulation.tick_provider,
         sinkState: simulation.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
     });
-    const lanes = source.pickup_lanes.get(state.entity_id.id);
+    const lanes = source.pickupsOf(state.entity_id.id);
     const counts: number[] = [], selected: number[] = [];
     for (let tick = start; tick < start + 40; tick++) {
         simulation.tick_provider.setCurrentTick(tick);

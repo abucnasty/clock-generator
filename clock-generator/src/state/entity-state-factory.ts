@@ -1,6 +1,6 @@
 import { Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { ContainerStorage } from "../simulation/components/container-storage";
-import { BeltState } from "./belt-state";
+import { TransportBelt } from "../simulation/archetypes/transport-belt";
 import { DrillState } from "./drill-state";
 import { EntityState } from "./entity-state";
 import { InserterState } from "./inserter-state";
@@ -17,7 +17,7 @@ export class EntityStateFactory {
         const entity = this.entityRegistry.getEntityByIdOrThrow(entityId);
 
         if(Entity.isBelt(entity)) {
-            return BeltState.create(entity)
+            return TransportBelt.create(entity)
         }
 
         if(Entity.isMachine(entity)) {

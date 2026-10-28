@@ -4,7 +4,7 @@ import {loadConfigFromFile} from "../../config/loader";
 import {SimulationContext} from "./simulation-context";
 import {SimulationTick} from "../runner/simulation-tick";
 import {simulationStateKey} from "../runner/steady-state";
-import {BeltState, EntityState, InserterState, InserterStatus} from "../../state";
+import {EntityState, InserterState, InserterStatus} from "../../state";
 import {InserterPickupMode} from "../../control-logic/inserter/modes/pickup/pickup-mode";
 import {BeltDropLogic} from "../../control-logic/inserter/modes/drop/belt-drop-logic";
 import {GameFixturePaths} from "../../../tests/game/helpers/fixture-paths";
@@ -110,7 +110,7 @@ test("output diagnostics distinguish a refused outlet from a wait for output spa
     expect(trace.events.filter(event => event.type === "wait").map(event => [event.tick, event.reason]))
         .toEqual([[0, "supply_refused"], [4, "output_space"]]);
     expect(trace.events.filter(event => event.type === "drop").map(event => event.quantity)).toEqual([4, 4, 4]);
-    expect(BeltState.stateKey(source, 4)).toBeDefined();
+    expect(source.stateKey(4)).toBeDefined();
 });
 
 test("replacing a drop control preserves output stock through a partial hand and the next hand", () => {

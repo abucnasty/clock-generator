@@ -1,4 +1,3 @@
-export * from "./belt-state";
 export * from "./constant-inventory-state";
 export * from "./entity-state";
 export * from "./entity-status";

@@ -20,7 +20,7 @@ function pickup(config: Config) {
         sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
         tick_provider: context.tick_provider,
     });
-    return { state, source, lanes: source.pickup_lanes.get(state.entity_id.id)!, take(tick: number) {
+    return { state, source, lanes: source.pickupsOf(state.entity_id.id)!, take(tick: number) {
         context.tick_provider.setCurrentTick(tick);
         const before = state.held_item?.quantity ?? 0;
         mode.executeForTick();
@@ -51,7 +51,7 @@ describe("physical belt lane fallback", () => {
         const input = pickup(config);
         expect(input.state.inserter.belt_supply).toBe("backed_up");
         expect(input.state.inserter.pickup_length).toBe(0.5);
-        expect(input.source.pickup_lanes.size).toBe(1);
+        expect([...input.source.lanes[0].pickupIds()].length).toBe(1);
         expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
         expect(input.state.held_item).toEqual({ item_name: "accumulator", quantity: 16 });
     });
@@ -174,7 +174,7 @@ describe("physical belt lane fallback", () => {
         const input = pickup(config);
         expect(input.state.inserter.pickup_length).toBe(1);
         expect(input.state.inserter.belt_supply).toBe("moving");
-        expect(input.source.pickup_lanes.size).toBe(1);
+        expect([...input.source.lanes[0].pickupIds()].length).toBe(1);
         expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
     });
 
@@ -186,7 +186,7 @@ describe("physical belt lane fallback", () => {
             const input = pickup(config);
             expect(input.state.inserter.pickup_length).toBe(length);
             expect(input.state.inserter.belt_supply).toBe("backed_up");
-            expect(input.source.pickup_lanes.size).toBe(1);
+            expect([...input.source.lanes[0].pickupIds()].length).toBe(1);
             expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
         }
     });

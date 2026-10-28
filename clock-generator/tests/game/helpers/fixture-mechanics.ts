@@ -60,7 +60,7 @@ export function firstHandPatterns(config: Config, handSize = 16): Set<string> {
         const input = context.inserters.find(inserter => inserter.inserter_state.inserter.source.entity_id.type === "belt")!.inserter_state;
         const source = context.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id);
         if (!EntityState.isBelt(source)) throw new Error("expected a belt input");
-        if (!backed) source.pickup_lanes.set(input.entity_id.id, source.belt.lanes.map(lane =>
+        if (!backed) source.seedPickups(input.entity_id.id, source.belt.lanes.map(lane =>
             new BeltPickupLane(source.belt.belt_speed, input.inserter.pickup_length!, lane.stack_size, phase)));
         const mode = InserterPickupMode.create({inserterState: input, sourceState: source, tick_provider: context.tick_provider,
             sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id)});

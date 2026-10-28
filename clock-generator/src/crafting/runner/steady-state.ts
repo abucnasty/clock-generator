@@ -1,4 +1,4 @@
-import { BeltState, DrillState, EntityState, InserterState, MachineState } from "../../state";
+import { DrillState, EntityState, InserterState, MachineState } from "../../state";
 import { SupplyGate } from "../../state/supply-gate";
 import { SimulationContext } from "../sequence";
 import { ContainerStorage } from "../../simulation/components/container-storage";
@@ -32,7 +32,7 @@ function ownStateKey(state: EntityState, tick: number): string {
         return DrillState.stateKey(state);
     }
     if (EntityState.isBelt(state)) {
-        return BeltState.stateKey(state, tick);
+        return state.stateKey(tick);
     }
     if (ContainerStorage.isMixed(state)) {
         return state.slotKey();

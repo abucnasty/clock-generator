@@ -17,7 +17,7 @@ export function compareContinuousSimulator(config: Config, report: SameItemPicku
     const source = context.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw new Error("Expected belt source");
     if (!config.overrides?.backed_up_belts) {
-        source.pickup_lanes.set(input.entity_id.id, initial.lanes.map(lane => {
+        source.seedPickups(input.entity_id.id, initial.lanes.map(lane => {
             const stacks = Object.values(lane.stacks);
             expect(stacks.length).toBe(initial.lanes[0].length * 4);
             const phase = ((Math.round(stacks[0].at * 32) + initial.tick * speed.units) % 8 + 8) % 8;
@@ -42,7 +42,7 @@ export function compareContinuousSimulator(config: Config, report: SameItemPicku
         mode.executeForTick();
         const predicted = input.held_item?.quantity ?? 0;
         let lane_mismatches = 0;
-        const lanes = source.pickup_lanes.get(input.entity_id.id)!;
+        const lanes = source.pickupsOf(input.entity_id.id)!;
         for (const [index, lane] of sample.lanes.entries()) {
             const actual = Object.values(lane.stacks).map(stack => [Math.round(stack.at * 256), stack.count, stack.item]);
             const expected = lanes[index].snapshot(sample.tick).map(([position, count]) => [position, count, source.belt.lanes[index].ingredient_name]);

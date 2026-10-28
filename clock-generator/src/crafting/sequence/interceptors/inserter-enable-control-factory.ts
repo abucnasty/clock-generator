@@ -4,7 +4,8 @@ import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
 import { resultWindowRanges, takesResultOf } from "../../result-windows";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
-import { assertIsInserterState, assertIsMachineState, BeltState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
+import { assertIsInserterState, assertIsMachineState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
+import { TransportBelt } from "../../../simulation/archetypes/transport-belt";
 import { ItemName } from "../../../data";
 import { computeSimulationMode, SimulationMode, simulationModeForInput } from "../simulation-mode";
 import { CraftingCyclePlan } from "../cycle/crafting-cycle";
@@ -199,7 +200,7 @@ export class EnableControlFactory {
 
     public fromBeltToMachine(
         inserter: Inserter,
-        source_state: BeltState,
+        source_state: TransportBelt,
         sink_state: MachineState,
     ): EnableControl {
         const inserter_filtered_items = inserter.filtered_items;

@@ -20,6 +20,8 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     MachineWorkingMode: ["result_target"],
     MachineDropLogic: ["current_tick"],
     ChestDropLogic: ["current_tick"],
+    // where on the lane the hand puts its stacks down, the same in every tick
+    BeltDropLogic: ["spot_ticks"],
     // Belt position is in the source state; pickup age no longer drives any decision.
     BeltPickupLogic: ["belt_grab_decided"],
     // what marks a take in the first tick of a window counts only within that tick; the order of its decider is the

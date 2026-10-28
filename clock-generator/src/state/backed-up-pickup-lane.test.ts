@@ -41,7 +41,7 @@ for (const clip of fixture.clips) test(`production backed-up stock matches nativ
         sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
         tick_provider: context.tick_provider});
     let mode = createMode();
-    const lanes = source.pickup_lanes.get(state.entity_id.id)!;
+    const lanes = source.pickupsOf(state.entity_id.id)!;
     let collecting = false;
     for (let index = 0; index < clip.frames.length; index++) {
         const tick = fixture.seed_tick + index;

@@ -1,5 +1,5 @@
 import { EntityId } from "../entities/entity-id";
-import { BeltState } from "./belt-state";
+import type { TransportBelt } from "../simulation/archetypes/transport-belt";
 import { DrillState } from "./drill-state";
 import { InserterState } from "./inserter-state";
 import { WritableInventoryState } from "./inventory-state";
@@ -11,7 +11,7 @@ export interface EntityState {
 }
 
 
-function isBelt(state: EntityState): state is BeltState {
+function isBelt(state: EntityState): state is TransportBelt {
     return EntityId.isBelt(state.entity_id);
 }
 

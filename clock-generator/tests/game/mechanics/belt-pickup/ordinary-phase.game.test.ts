@@ -31,7 +31,7 @@ function compareFirstHand(config: Config, report: Report, speed: FixtureBeltSpee
     const input = context.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
     const source = context.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw new Error("Expected belt pickup");
-    source.pickup_lanes.set(input.entity_id.id, seed.lanes.map((lane, index) => {
+    source.seedPickups(input.entity_id.id, seed.lanes.map((lane, index) => {
         const phase = modulo(phaseOf(seed, index) / 8 + seed.tick * speed.units, 8);
         return new BeltPickupLane(source.belt.belt_speed, input.inserter.pickup_length!, 4, phase);
     }));

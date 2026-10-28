@@ -3,7 +3,7 @@ import { mock } from "vitest-mock-extended";
 import { InserterAnimationOverrideConfig } from "../config/schema";
 import { EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, RecipeMetadata } from "../entities";
 import { InserterAnimation } from "../entities/inserter/inserter-animation";
-import { BeltState } from "./belt-state";
+import { TransportBelt } from "../simulation/archetypes/transport-belt";
 import { EntityState } from "./entity-state";
 import { factorioInserterState, FactorioInserterState } from "./factorio-entity-state";
 import { InserterStatus } from "./entity-status";
@@ -125,7 +125,7 @@ describe("factorioInserterState", () => {
 
     test("a hand going onto a belt a stack at a time waits for space between the stacks", () => {
         const source = machineState("iron-gear-wheel");
-        const sink: EntityState = mock<BeltState>({ entity_id: belt });
+        const sink: EntityState = mock<TransportBelt>({ entity_id: belt });
         const inserter = inserterState(source.entity_id, belt, "iron-gear-wheel");
         inserter.status = InserterStatus.DROP_OFF;
         inserter.held_item = { item_name: "iron-gear-wheel", quantity: 16 };

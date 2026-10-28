@@ -40,7 +40,7 @@ for (const clip of fixture.clips) test(`production pickup and stock match the no
         const phase = (((stock as Frame[4])[0][1] / 8 + seed[0]) % 8 + 8) % 8;
         return new BeltPickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4, phase);
     });
-    source.pickup_lanes.set(state.entity_id.id, lanes);
+    source.seedPickups(state.entity_id.id, lanes);
     const createMode = () => InserterPickupMode.create({inserterState: state, sourceState: source,
         sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider});
     let mode = createMode();

@@ -37,7 +37,7 @@ export function simulatedHand(config: Config): string {
     expect(input.inserter.pickup_length).toBe(configured.source.type === "belt" ? configured.source.pickup_length : undefined);
     expect(input.inserter.belt_supply).toBe("backed_up");
     // creating the mode registers the inserter's pickup lanes on the belt
-    expect(source.pickup_lanes.size).toBe(1);
+    expect([...source.lanes[0].pickupIds()].length).toBe(1);
     const grabs: number[] = [];
     for (let tick = 0; tick < 20 && (input.held_item?.quantity ?? 0) < 16; tick++) {
         context.tick_provider.setCurrentTick(tick);

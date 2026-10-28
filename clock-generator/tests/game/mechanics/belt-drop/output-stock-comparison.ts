@@ -41,13 +41,14 @@ export function compareOutputStock(clip: OutputClip) {
         const at = index + 1;
         if ((state.held_item?.quantity ?? 0) !== held) differences.push({tick: at, field: "held", expected: held, actual: state.held_item?.quantity ?? 0});
         if (source.getCurrentQuantity() !== remaining) differences.push({tick: at, field: "source", expected: remaining, actual: source.getCurrentQuantity()});
-        const traffic = output.drop_lanes.get(state.entity_id.id)!;
+        const traffic = output.dropsOf(state.entity_id.id)!;
         const actual = traffic[0].snapshot(at);
         if (JSON.stringify(actual) !== JSON.stringify(positions)) differences.push({tick: at, field: "stock", expected: positions, actual});
         if (clip.seed?.tick === at) {
-            traffic[0] = new LaneTraffic(speeds[clip.speed], {tick: at, positions: clip.seed.positions});
-            // Controls keep their traffic array, so replacement of its lane is visible without resetting a hand.
-            traffic[0].registerSpot(128 / (speeds[clip.speed] / 15 * 8));
+            const seeded = new LaneTraffic(speeds[clip.speed], {tick: at, positions: clip.seed.positions});
+            seeded.registerSpot(128 / (speeds[clip.speed] / 15 * 8));
+            // Controls keep the lane's slot, so replacement of its traffic is visible without resetting a hand.
+            output.lanes[0].seedDrop(state.entity_id.id, seeded);
         }
     }
     return differences;
