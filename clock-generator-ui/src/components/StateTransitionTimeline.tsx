@@ -18,14 +18,14 @@ import {
 } from '@mui/material';
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react';
 import type {
+    PortableStateTransitionHistory,
     SerializableClockWindows,
-    SerializableStateTransitionHistory,
     SerializableEntityStateTransitions,
     SerializableFactorioState,
     SerializableStateTransition,
     StatusCategory,
 } from 'clock-generator/browser';
-import { statusToCategory } from 'clock-generator/light';
+import { expandStateTransitionHistory, statusToCategory } from 'clock-generator/light';
 import { useGameNames } from '../hooks/useGameNames';
 import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from '../utils/timelineGeometry';
@@ -48,7 +48,8 @@ const PLOT_COLORS = chartColorsFor('dark');
 interface StateTransitionTimelineProps {
     options: TimelineViewContext;
     onOptionsChange(options: TimelineViewContext): void;
-    stateTransitionHistory: SerializableStateTransitionHistory;
+    /** The history in columns, read into a transition object each when the timeline opens */
+    stateTransitionHistory: PortableStateTransitionHistory;
     /** Decider windows in the blueprint per entity id, drawn as a band along the top of each row */
     clockWindows?: SerializableClockWindows;
     fullscreen?: boolean;
@@ -485,7 +486,8 @@ function Legend({ viewMode, entities, statusFilters, showClockWindows, factorioS
     );
 }
 
-function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows, options, onOptionsChange, fullscreen = false }: StateTransitionTimelineProps) {
+function StateTransitionTimelineComponent({ stateTransitionHistory: columns, clockWindows, options, onOptionsChange, fullscreen = false }: StateTransitionTimelineProps) {
+    const stateTransitionHistory = useMemo(() => expandStateTransitionHistory(columns), [columns]);
     const { categoryColor: getCategoryColor, status: getStatusColor } = PLOT_COLORS;
     const factorioStates = useMemo(
         () => factorioStatesIn(stateTransitionHistory.entities.flatMap(entity => (entity.factorio_states ?? []).map(state => state.state))),

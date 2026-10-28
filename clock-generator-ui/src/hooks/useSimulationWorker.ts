@@ -1,6 +1,6 @@
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
+import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, PortableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask, NotMadeClock } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, CraftingMachineData, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
@@ -50,10 +50,7 @@ interface UseSimulationWorkerResult {
     logs: LogMessage[];
     blueprintString: string | null;
     transferHistory: SerializableTransferHistory | null;
-    stateTransitionHistory: SerializableStateTransitionHistory | null;
-    /** The selected clock driven only by its exported windows; null when the histories above already are that run */
-    clockOnlyTransferHistory: SerializableTransferHistory | null;
-    clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    stateTransitionHistory: PortableStateTransitionHistory | null;
     /** The selected clock's fuel use and exported fuel clocks; null when no inserter only fills a fuel slot */
     fuelView: FuelViewData | null;
     clockWindows: SerializableClockWindows | null;
@@ -869,8 +866,6 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         blueprintString: selected?.blueprintString ?? null,
         transferHistory: selected?.transferHistory ?? null,
         stateTransitionHistory: selected?.stateTransitionHistory ?? null,
-        clockOnlyTransferHistory: selected?.clockOnlyTransferHistory ?? null,
-        clockOnlyStateTransitionHistory: selected?.clockOnlyStateTransitionHistory ?? null,
         fuelView: selected?.fuelView ?? null,
         clockWindows: selected?.clockWindows ?? null,
         shiftOptions: selected?.shiftOptions ?? null,

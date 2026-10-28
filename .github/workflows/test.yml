@@ -2,7 +2,7 @@ name: Test
 
 # Pull requests run the unit tests, build the UI and generate a clock in it in a browser. Pull requests to master, which
 # are what gets released, and to an integration branch (feature/...), run the generation tests as well: they generate the clock alternatives of whole samples and
-# take minutes, except when the pull request changes documentation only (see the `changes` job). "Run workflow" (or
+# take minutes. Those pull requests run none of the test jobs when they change documentation only (see the `changes` job). "Run workflow" (or
 # `gh workflow run test.yml --ref <branch>`) runs them all on any branch.
 # release.yml and publish-sidecar.yml call this workflow and do nothing unless it passes; a release runs the generation
 # tests too, publishing the sidecar does not.
@@ -34,6 +34,9 @@ concurrency:
 jobs:
   unit:
     name: Unit tests
+    needs: changes
+    # skipped (which satisfies a required check) when the pull request changes documentation only; run when `changes` did not run or failed
+    if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -66,8 +69,9 @@ jobs:
       - name: Unit tests
         run: npm test -- --reporter=default
 
-  # Whether the generation tests have anything to test: not when a pull request to master or to a feature/ branch
-  # changes documentation only.
+  # Whether the tests have anything to test: not when a pull request to master or to a feature/ branch changes
+  # documentation only. The output is called `generation` for the generation tests it first decided; the unit and UI jobs
+  # follow it too, and only a `false` skips them.
   # Decided by the files the pull request changes, never by its branch name. A run asked for the generation tests (by
   # hand, or a release) runs them whatever it changes. Anything this cannot tell, such as a checkout that is not a merge
   # commit, runs them.
@@ -121,22 +125,27 @@ jobs:
             echo "The generation tests are skipped: the pull request changes documentation only ($(wc -l < changed.txt) file(s))." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # The generation tests, in shards: vitest gives each shard the same share of the files by the hash of their paths, and
-  # the job's wall time is that of the slowest shard. Each shard is a runner of its own (4 vCPUs) and tests with all of
-  # it. The check that is named "Generation tests" is the job after the shards.
+  # The generation tests, in shards: the sequencer of clock-generator/ci/duration-sequencer.ts (set in vitest.config.ts)
+  # deals the files out to the shards by their measured durations (ci/generation-durations.json), longest first, and
+  # the job's wall time is that of the slowest shard. Plain `--shard` would give them out by the hash of their paths,
+  # which put the two slowest files in one shard. Every shard computes the whole split and takes its part, so no file
+  # is missed or run twice, and a new or renamed file still runs, counted as the median file. Refresh the durations with
+  # clock-generator/scripts/ci/update-generation-durations.js from the reports of a run. Each shard is a runner of its
+  # own (4 vCPUs) and tests with all of it. The check that is named "Generation tests" is the job after the shards.
   generation-shards:
     name: Generation tests (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
     needs: changes
     if: needs.changes.outputs.generation == 'true'
     runs-on: ubuntu-latest
     # the whole suite took 1,302 s on an Intel Xeon 8573C runner and 1,490 s on an AMD EPYC 7763 on 2026-10-24 (one
-    # runner, 3 workers); a shard has about a quarter of it, and a single file takes up to 6.5 minutes
+    # runner, 3 workers); a shard has about an eighth of it, and no single file takes more than about 2 minutes (the
+    # slowest clock families are one file for each belt tier), bar the one test of container-output
     timeout-minutes: 25
     strategy:
       # every shard finishes, so that a pull request shows all its failures at once
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
         working-directory: clock-generator
@@ -152,9 +161,9 @@ jobs:
       - run: npm ci
 
       # Vitest starts the files that took longest in the run before; without its results it starts the largest files,
-      # and over-hood-clock, a short file and one of the slowest, started last and ran alone for minutes. The results
-      # are saved at the end of every run (one cache entry each, one series for each shard) and the newest of the shard
-      # is restored, after `npm ci`, which empties node_modules.
+      # and a short file that is one of the slowest, started last, runs alone for minutes. The results are saved at
+      # the end of every run (one cache entry each, one series for each shard count and shard: a change of the number
+      # of shards starts new series) and the newest of the shard is restored, after `npm ci`, which empties node_modules.
       - name: Durations of the last generation tests
         uses: actions/cache@v4
         with:
@@ -218,6 +227,8 @@ jobs:
 
   ui:
     name: UI build
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -250,8 +261,41 @@ jobs:
       - name: Icons
         run: npm run check:icons
 
+      # all but the tests that generate the clock of every sample, which are the job after this one
       - name: Unit tests
-        run: npm test -- --reporter=default
+        run: npm run test:fast -- --reporter=default
+
+  # The UI tests that generate the clock of every sample (about a minute for the original pink science sample alone),
+  # beside the UI build instead of in it: they need the engine built and the UI's modules, nothing of the UI build.
+  ui-samples:
+    name: UI tests of every sample
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            clock-generator/package-lock.json
+            clock-generator-ui/package-lock.json
+
+      # the tests load the built engine (clock-generator/dist), and the UI links to it
+      - name: Build the engine
+        working-directory: clock-generator
+        run: npm ci && npm run build
+
+      - name: Install the UI
+        working-directory: clock-generator-ui
+        run: npm ci
+
+      - name: Sample tests
+        working-directory: clock-generator-ui
+        run: npm run test:samples -- --reporter=default
 
   # Generate in the UI in headless Chromium, on the dev server and on the production build, failing on any error the
   # page or a worker reports. The UI's unit tests run under Node and the UI build runs nothing, so neither saw #258 read
@@ -259,6 +303,8 @@ jobs:
   # "process is not defined" while every check passed.
   browser:
     name: UI generate in a browser
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:

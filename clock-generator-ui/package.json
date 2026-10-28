@@ -1,7 +1,7 @@
 {
   "name": "clock-generator-ui",
   "private": true,
-  "version": "0.23.0",
+  "version": "0.24.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -14,6 +14,8 @@
     "lint:fix": "eslint . --fix",
     "check:icons": "node scripts/check-icons.mjs",
     "test": "vitest run",
+    "test:fast": "vitest run --exclude \"**/*.samples.test.*\"",
+    "test:samples": "vitest run samples",
     "test:browser": "node scripts/generate-in-browser.mjs",
     "preview": "vite preview",
     "knip": "knip"

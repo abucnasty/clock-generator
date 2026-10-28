@@ -106,10 +106,9 @@ describe("a clock for a fractional number of copies", () => {
     } as unknown as Config);
 
     for (const [copies, items_per_second] of [[5.5, 5.5], [2.25, 2.25], [2, 2]]) {
-        it(`reports the target over all of ${copies} copies for the planned clock and the one selected`, () => {
+        it(`reports the target over all of ${copies} copies for the first clock and the one selected`, () => {
             const { alternatives, selected_index } = generateClockAlternatives(build(copies, items_per_second), { logger: quiet });
-            const planned = alternatives.find(alternative => alternative.id === "planned")!;
-            expect(planned.assessment.items_per_second).toBeCloseTo(items_per_second, 9);
+            expect(alternatives[0].assessment.items_per_second).toBeCloseTo(items_per_second, 9);
             expect(alternatives[selected_index].assessment.items_per_second).toBeCloseTo(items_per_second, 9);
         });
     }

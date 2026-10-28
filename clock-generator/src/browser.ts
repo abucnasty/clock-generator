@@ -260,8 +260,15 @@ export {
     SerializableEntityStateTransitions,
     SerializableFactorioState,
     SerializableStateTransition,
-    serializeStateTransitionHistory,
-} from './crafting/sequence/state-transition-serializer';
+    CompactEntityStateTransitions,
+    CompactStateTransitionHistory,
+    PortableStateTransitionHistory,
+    expandStateTransitionHistory,
+    factorioStatesOf,
+    portableFromSerializable,
+    toPortable,
+    transitionsOf,
+} from './crafting/sequence/compact-history';
 
 export {
     StateTransitionEntityType,

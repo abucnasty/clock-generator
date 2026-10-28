@@ -26,6 +26,13 @@ export type { CraftingMachineRuleFacts, NamedCraftingMachine } from "./entities/
 
 export { InserterStatus, MachineStatus, DrillStatus } from "./state/entity-status";
 
+export { expandStateTransitionHistory, factorioStatesOf, portableFromSerializable, toPortable, transitionsOf } from "./crafting/sequence/compact-history";
+export type {
+    CompactEntityStateTransitions,
+    CompactStateTransitionHistory,
+    PortableStateTransitionHistory,
+} from "./crafting/sequence/compact-history";
+
 export { StatusCategory, statusToCategory } from "./state/status-category";
 
 export { combineClockAlternativeRuns, searchesAreNeeded } from "./crafting/rank";

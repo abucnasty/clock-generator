@@ -17,7 +17,7 @@ describe("generateClockForConfig", () => {
     // clock, hold the target rate on the moving belts and get back from every loss. Judged exactly in every period, the
     // observed windows of 3 output swings held instead and did not get back from a loss of tungsten ore; by the rate
     // more of their paddings pass the quick check from a dozen starts, the confirmations go to paddings that fail a
-    // later start, and the observed windows back off to 2 output swings. With the belts backed up, the same clock.
+    // later start, and the observed windows back off to 2 output swings.
     // The game disagrees about the moving belts. Recorded on the scaffold on 2026-10-21, with the ore belt drained: back
     // to 240 a period after the ore was cut for two periods, and after the output was blocked and the coal cut. In the
     // game the science foundry also runs at its full speed under either clock, where the simulator holds it to the
@@ -32,7 +32,6 @@ describe("generateClockForConfig", () => {
         let observed_rounded: ClockAlternative;
         let one_swing: ClockAlternative;
         let two_swings: ClockAlternative;
-        let backed_up: ClockAlternative;
 
         beforeAll(() => {
             const generated = generateClockAlternatives(config);
@@ -42,8 +41,6 @@ describe("generateClockForConfig", () => {
             observed_rounded = alternatives.find(a => a.id === "derived")!;
             one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
             two_swings = alternatives.find(a => a.label === "2 output swings per cycle, subtick clock")!;
-            const backed = generateClockAlternatives({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
-            backed_up = backed.alternatives[backed.selected_index];
         });
 
         it("names why every inserter and drill a clock leaves always on is", () => {
@@ -71,13 +68,6 @@ describe("generateClockForConfig", () => {
             }
             // listed by the mean of its long run: the one period the first check measures moved 36 a second
             expect(one_swing.assessment.items_per_second).toBeCloseTo(34.875, 6);
-        });
-
-        it("with the belts backed up, selects the observed windows of 2 output swings, which are stable", () => {
-            expect(backed_up.label).toBe("Observed windows: 2 output swings per cycle, subtick clock");
-            expect(backed_up.verdict).toBe("stable");
-            expect(backed_up.assessment.items_per_second).toBeCloseTo(45, 6);
-            expect(backed_up.result.subtick?.clock.period_ticks).toBe(640);
         });
     });
 });

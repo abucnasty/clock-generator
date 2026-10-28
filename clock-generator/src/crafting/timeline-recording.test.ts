@@ -7,6 +7,7 @@ import { TimelineRecorder } from './timeline-recording';
 import { runBuild, trialRunOf } from './plan/plan-run';
 import { recordSimulationTimeline } from './record-timeline';
 import { quiet } from './generate-blueprint-test-helpers';
+import { expandStateTransitionHistory } from './sequence/compact-history';
 
 let config: Config;
 beforeAll(async () => { config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE); });
@@ -66,7 +67,8 @@ describe('optional timeline observer', () => {
         const detailed = runBuild(config, { logger: quiet, timeline_recording: { period_ticks: plain.duration.ticks } });
         expect(plain.timeline_recording).toBeUndefined();
         expect(trialRunOf(detailed).serializable_transfer_history).toEqual(trialRunOf(plain).serializable_transfer_history);
-        expect(trialRunOf(detailed).serializable_state_transition_history).toEqual(trialRunOf(plain).serializable_state_transition_history);
+        expect(expandStateTransitionHistory(trialRunOf(detailed).serializable_state_transition_history))
+            .toEqual(expandStateTransitionHistory(trialRunOf(plain).serializable_state_transition_history));
         const before = JSON.stringify(config);
         const request = { config, mode: 'clock' as const, period_ticks: plain.duration.ticks,
             terminal_swing_count: 2, windows: {} };

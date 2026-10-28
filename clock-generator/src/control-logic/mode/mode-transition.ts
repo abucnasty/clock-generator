@@ -1,30 +1,22 @@
 import { Mode } from "./mode";
+import { reasonId, reasonText } from "./reason-table";
 
 export type ModeTransition<M extends Mode = Mode> = Transition<M> | null;
 
 const NoTransition: ModeTransition<any> = null;
 
-/**
- * One copy of each reason text: a reason made from a template ("machine has 12 of iron-plate to pickup") is a new string
- * on every transition, and the histories keep one per transition they record (hundreds of MB on a long run)
- */
-const REASONS = new Map<string, string>();
-
-function shared(reason: string): string {
-    const kept = REASONS.get(reason);
-    if (kept !== undefined) return kept;
-    REASONS.set(reason, reason);
-    return reason;
-}
-
 export class Transition<M extends Mode> {
+    /** The text of the reason, one copy for every transition that gives it (see reason-table.ts) */
     public readonly reason: string;
+    /** The number the histories record for the reason */
+    public readonly reason_id: number;
 
     constructor(
         public readonly toMode: M,
         reason: string,
     ) {
-        this.reason = shared(reason);
+        this.reason_id = reasonId(reason);
+        this.reason = reasonText(this.reason_id);
     }
 }
 

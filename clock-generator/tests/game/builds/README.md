@@ -118,9 +118,10 @@ electromagnetic configuration again after a belt-fed window's first stack was ti
 (#267, `7950f77c`: the only clock of the 48 whose exported blueprint and schedule changed, one output swing per cycle
 at 704 ticks again, in place of planned belt slack at 3520); the two express moving underground configurations on
 their first clock made for moving supply (#269, `959c08d5`: observed windows at 3 output swings, in place of a clock
-for backed-up belts); and the two normal backed-up underground configurations on the clock the generator now makes for
-them last, when no other clock can be selected as stable (#275, `6588a59b`: planned with the belts moving, given belt
-pickup slack and checked on the backed-up belts, in place of a fractional clock that missed), each with 63 untouched
+for backed-up belts); and the two normal backed-up underground configurations on the stable clock for backed-up belts #456 selects for
+them, every belt-fed window as long as a hand takes from the lanes at rest (#479, `99fb9812`: swings-1, in place of the
+clock planned with the belts moving that #275 recorded and the generator no longer makes; the #275 recording is in the
+history file), each with 63 untouched
 baseline periods and three effective disturbances. The two normal moving underground entries keep their #265
 recording with the generator's "unstable" verdict for the same clock (#266). The recordings these replaced, and the
 #253 recapture on engine `4f2d4e35` before them, stay in
@@ -129,7 +130,7 @@ recorded.
 
 | Result | Cases | Interpretation |
 | --- | --- | --- |
-| Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early periods from the coverage protocol's calibration state; the clock since #266 runs exact from the first period. It also includes the normal backed-up underground entrance/exit (#275): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the fractional clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock planned with the belts moving and checked on the backed-up belts holds; the cold-start controls below still check the simulator against the measured starts with fixed windows |
+| Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early periods from the coverage protocol's calibration state; the clock since #266 runs exact from the first period. It also includes the normal backed-up underground entrance/exit (#275): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the fractional clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock for backed-up belts whose belt-fed windows last as long as a hand takes from the lanes at rest holds (#456, #479); the cold-start controls below still check the simulator against the measured starts with fixed windows |
 | Exact baseline and recovery in these warm recordings, generator says unstable | 2 | Normal moving underground entrance/exit: the generator finds the clock failing from cold lane phase [3,0], and the game never settles from it either, nor from four other phases, among them the exit's natural one, where it cycles at 143 a period against 176 ("Normal underground lane phases" below). The warm runs started at a phase that holds |
 | Exact baseline and recovery, generator says no recovery | 2 | Express moving underground entrance/exit (#269): every loss the generator tries fails from lane phase [1,5] alone, which the capture cannot set up ([lane-phase-controls.json](lane-phase-controls.json), `recovery_phase`). Their clocks before, made for backed-up belts, moved 352 a period against 528 under moving supply; with every inserter always enabled the game moves 704 to 716 through this pickup |
 
@@ -141,7 +142,9 @@ the generator's verifier fails the two normal moving underground clocks from, [3
 that start.
 
 The portable `belt-pickup-clock.generation.test.ts` checks the selected periods, verdicts and supply against
-these native controls. A build whose warm recording holds while the generator finds a failing cold lane phase has
+these native controls for the nine fixtures of `belt-pickup-clock-cases.ts`, each the only one to take its path through
+the generator; `belt-pickup-clock-mechanics.test.ts` checks the recorded figures of all 48 against the simulator without
+generating. A build whose warm recording holds while the generator finds a failing cold lane phase has
 to fail at the pinned phase, and one whose recording holds and recovers while the generator says "no recovery" has to
 fail every loss it fails from its pinned lane phase. A measured shortfall on any build still fails, and where a clock was recorded under
 its own supply, a baseline miss has to make the generator's own holds verdict false. Fresh generation also
@@ -199,8 +202,9 @@ would be held only on its last eight periods.
 [pickup-clock-start-controls.json](pickup-clock-start-controls.json) (`cold_start`) records 57 clocked cold starts in
 Factorio 2.1.21 (#273, 2026-10-20, frozen head `98f362ce`), each 16 periods from the harness's staged start, with nothing written to a
 belt: the game's own lane phase at placement, read off the pickup tile. The four normal backed-up side underground runs (entrance and
-exit, near lanes 1 and 2) were recorded again on the clock #275 selects for them, planned with the belts moving; the
-game follows the simulator tick for tick from placement on it, as it did on the fractional clock before.
+exit, near lanes 1 and 2) were recorded again on the clock #456 selects for them (#479, frozen head `99fb9812`: swings-1,
+every belt-fed window as long as a hand takes from the lanes at rest); the game follows the simulator tick for tick from
+placement on it, as it did on the two clocks before (the fractional clock, then the one planned with the belts moving).
 
 - **The matrix, 48:** every electromagnetic side pickup fixture at 4 tiers × straight belt, underground entrance and
   exit × moving and backed-up supply, on the generator's selected clock, at near lane 1 and at near lane 2. Near lane 2
@@ -220,11 +224,17 @@ probe, every period on the placement lattice, and both series as kept. Its probe
 (`pickup-clock-cold-start-probe.lua`) only observes. The raw runs, the scratch fixture they came from and their
 analyses were not kept in the repository.
 
-`pickup-clock-cold-start.generation.test.ts` runs the simulator from each cold start and holds both clocked inserters'
+`pickup-clock-cold-start-mechanics.test.ts` runs the simulator from each cold start and holds both clocked inserters'
 counts in every tick and their items in every period: 57 of 57, the input of one held only by its output (a hand back
 from its swing as the output block is lifted, a tick early in the simulator, once). On the engine before the clock's
 start rule the 11 runs where a window the latency carries over the period's end reaches ticks 0-1 fail, and the
 other 46 pass.
+
+The same test builds each run's clock from its stored windows and requires the hash the run was recorded on (the four
+fractional-clock runs of the fast tier cannot be rebuilt from windows, and the test says so). `pickup-clock-cold-start.generation.test.ts`
+generates only the seven runs of `pickup-clock-cold-start-cases.ts`, each the one of a path through the generator
+(near lane 2, an underground exit, a cautious verdict, a backed-up clock, an over-the-hood clock) that the nine belt
+pickup fixtures do not take.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
@@ -250,7 +260,9 @@ the family's `*.generation.test.ts` (pull requests to master).
 - A game test checks the hash of the clock it generated against the recorded one before it starts Factorio
   (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
 - The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
-  `clock_sha256` (checked by `pickup-clock-cold-start.generation.test.ts` against the selection or the pinned windows)
+  `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
+  pin, and for the seven runs of `pickup-clock-cold-start-cases.ts` and those of the nine belt pickup fixtures by the generation tests
+  against the selection)
   and `recorded_clock_sha256` (checked by the game test).
 - Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
   difference after its staged start, agricultural science with backed-up belts having no difference, and the moved
@@ -328,7 +340,10 @@ than a 63-period recording fits under the harness's 72,000-tick cap, and moved 6
 false. Its observed windows at 800 ticks hold 80 a period, in the game too.
 The portable `over-hood-clock.generation.test.ts` checks these selections, exact clock hashes and the final
 untouched final native recovery windows for clocks marked stable (at least eight periods for moving supply,
-five for backed-up supply, whose assessment starts later).
+five for backed-up supply, whose assessment starts later), for the nine fixtures of `over-hood-clock-cases.ts`, each the
+only one to take its path through the generator. `over-hood-clock-mechanics.test.ts` checks the recorded first hands and
+the controls of all 32 against the simulator and the fixture configs without generating (the recovery windows
+included).
 
 The raw recordings of #254 and of the bounded shorter-loss trace were not kept in the repository; their summaries
 above are the record. Earlier short-outage pilots are separate; an outage hidden by buffers does not add recovery
@@ -381,19 +396,22 @@ and after each restoration; it does not feed observations into the simulator.
 
 [front-clock-controls.json](front-clock-controls.json) holds the 48 native summaries, recorded on Factorio 2.1.21
 from clocks generated on `5cb7c83b` (#274), each with 63 untouched baseline periods and three disturbances that cut
-output; the two normal backed-up exits were recorded again on #275's clock (`6588a59b`). **All 48 meet exact baseline and
+output; the two normal backed-up exits were recorded again on #456's clock (#479, `99fb9812`). **All 48 meet exact baseline and
 recovery output.** All 32 entrance clocks are stable and exact. All eight backed-up exit clocks are stable and exact.
 At normal, in both mirroring states, every clock planned for backed-up supply fails (the fractional clock selected
 before, holds false at 5.45 of 7.5/s, missed natively, 128, 128, 96 repeating against 176, the generator's own
-as-built repeat); the selection is the clock planned with the belts moving and checked on the backed-up belts, which
-the generator makes last, only when no other clock can be selected as stable (#275), the same clock as the
-moving config's. All eight moving-config exit clocks hold and recover exactly on the backed-up exit, including
+as-built repeat); the selection since #456 is a stable clock for backed-up belts, every belt-fed window as long as a hand
+takes from the lanes at rest, which moves 176 in every period (the clock planned with the belts moving, which #275 recorded, is no
+longer made; it is the moving config's). All eight moving-config exit clocks hold and recover exactly on the backed-up exit, including
 the express ones the generator calls "no recovery" and the normal ones it calls "unstable": both verdicts come
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
 
 The portable `front-pickup-clock.generation.test.ts` pins each selection and its exact exported clock (each entry's
-`generation`), and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false; a stable clock, or a moving-config
-clock on the backed-up exit, needs an exact baseline and its last recovery periods at target. 29 of the 32
+`generation`) for the nine fixtures of `front-clock-cases.ts`, each the only one to take its path through the generator,
+and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false;
+a stable clock needs an exact baseline and its last recovery periods at target. `front-clock-mechanics.test.ts` checks the
+recorded figures of all 48 against the simulator without generating: the first hands of each tier, and the controls
+(exact baseline and recovery, the verdicts of the moving-config exits, the rate over the pinned period). 29 of the 32
 entrance clocks are byte-identical to the over-the-hood pins of the same speed, mirroring, supply and family;
 the builds differ in the game, so each has its own control.
 
@@ -420,8 +438,11 @@ Factorio 2.1.21 on `b9fd341b` (#277); express stack 3 again on `6367fc83`, for t
 now. **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery output (33 periods).** Output stops one to ten periods into the block, once the belt behind the drop is full (about 39
 stacks), where the simulator holds the output inserter at once; the periods judged after the release are the same in
 both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-and-drops)). The portable
-`blocked-output-clock.generation.test.ts` pins each selection and its exported clock (each entry's `generation`) and
-checks it against its native summary beside it.
+`blocked-output-clock-mechanics.test.ts` checks all 16 controls against the fixture config, the documentation and the
+belt-drop calibration's drop figures, and runs a plain clock built from those figures through the block and release in
+the simulator, without generating a clock. `blocked-output-clock.generation.test.ts` pins the selection and exported clock
+(each entry's `generation`) of the three cases in [blocked-output-clock-cases.ts](blocked-output-clock-cases.ts) (the even-hands
+and shifted-swings paths, and the longest drop), and checks it against its native summary beside it.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/blocked-output-new \
@@ -447,8 +468,11 @@ lasts 4 periods (the disposal chest is filled), and recovery is judged over 40 p
 
 [container-clock-controls.json](container-clock-controls.json) holds the 6 native summaries, recorded on Factorio 2.1.21
 at commit `000ad913`. **All 6 selected clocks are stable, meet exact baseline output (63 periods), drop to 0 in every
-disturbance and are exact in all 33 judged periods after each.** `container-clock.generation.test.ts` pins each
-selection and its exported clock and checks it against its native summary.
+disturbance and are exact in all 33 judged periods after each.** `container-clock-mechanics.test.ts` checks all 6 without
+generating: each container's slots and stock in the simulator, the cut lengths against the stock, the periods the game
+took to run dry under each cut, and the controls against the fixture configs. `container-clock.generation.test.ts` pins
+the selection and exported clock of the 2 cases in [container-clock-cases.ts](container-clock-cases.ts) (one a recipe: the
+clock depends on the recipe, and the 3 fixtures of each recipe record one clock hash) and checks each against its native summary.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \

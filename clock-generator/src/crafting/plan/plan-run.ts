@@ -51,7 +51,7 @@ import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpres
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
-import { SerializableStateTransitionHistory, serializeStateTransitionHistory } from "../sequence/state-transition-serializer";
+import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { InserterStateTransitionTrackerPlugin } from "../../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
 import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
 import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plugins/drill-state-transition-tracker-plugin";
@@ -59,7 +59,7 @@ import { FactorioStatePlugin } from "../../control-logic/plugins/factorio-state-
 import { factorioDrillState, factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
-import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
+import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
@@ -120,13 +120,13 @@ export interface FuelConsumptionView {
     /** A burner machine had no fuel at all at some tick of the view */
     ran_out_of_fuel: boolean;
     transfer_history: SerializableTransferHistory;
-    state_transition_history: SerializableStateTransitionHistory;
+    state_transition_history: CompactStateTransitionHistory;
 }
 
 /** What the build does when only the exported clock windows drive it, from the unshifted clock start */
 export interface ClockOnlyRun {
     transfer_history: SerializableTransferHistory;
-    state_transition_history: SerializableStateTransitionHistory;
+    state_transition_history: CompactStateTransitionHistory;
 }
 
 
@@ -219,8 +219,8 @@ export interface BlueprintGenerationResult {
     transfer_history: InventoryTransferHistory;
     /** Serializable transfer history for UI visualization */
     serializable_transfer_history: SerializableTransferHistory;
-    /** Serializable state transition history for UI visualization */
-    serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** The state transitions of the run, sealed (read them with transitionsOf or expandStateTransitionHistory) */
+    serializable_state_transition_history: CompactStateTransitionHistory;
     /** Insertion limits, crafting time and output per craft of every machine */
     machine_facts: MachineFactsEntry[];
     /**
@@ -450,8 +450,6 @@ export interface RunOptions {
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
 export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     simulation_context: SimulationContext;
-    /** The build as it runs: every inserter and drill on its enable control */
-    new_simulation_context: SimulationContext;
     output_inserter_ids: Set<string>;
     swing_counts: EntityTransferCountMap;
     crafting_shares: Map<string, number>;
@@ -468,7 +466,8 @@ export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     state_repeat?: StateRepeat;
     /** The transfers of the recorded run, as the windows of the plan are read off them */
     final_history: InventoryTransferHistory;
-    state_transition_history: StateTransitionHistory;
+    /** The state transitions of the recorded run, sealed when it ended */
+    state_transition_history: CompactStateTransitionHistory;
     fuel_levels: FuelLevelSeries[] | undefined;
     machine_stock: StockRecording | undefined;
     timeline_recording?: TimelineRecording;
@@ -517,7 +516,6 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const transfer_plan = planTransfers(config, crafting_cycle_plan, simulation_context, logger);
     // a staged scaffold starts with nothing in its machines: the plan stands, the build is made anew and seeded
     const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
-    const { state_transition_history } = build;
     const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger);
     const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger, period => {
         // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
@@ -537,15 +535,19 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const repeat_periods = warmUp(config, controlled, duration, warmup_period, debug, debug_steps, logger);
     const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
+    // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
+    const state_transition_history = build.state_transition_history.seal(build.simulation_context.entity_registry, simulated.recorded_duration.ticks);
     const final_history = finalHistoryOf(build, crafting_cycle_plan, all_output_inserters, duration, logger);
     const output = checkOutput(build, controlled, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
     const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, crafting_cycle_plan.entity_transfer_map,
         transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
     const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger, terminal_branches);
+    // the run is over: the contexts it hands back keep their machines' states, and no longer the plugins that fed the
+    // histories (which would keep the raw transfers and transitions of the run alive for as long as the run is kept)
+    detachHistoryPlugins(build, simulation_context, controlled.new_simulation_context);
 
     return {
         simulation_context: build.simulation_context,
-        new_simulation_context: controlled.new_simulation_context,
         target_production_rate: planned_cycle.target_production_rate,
         output_machine_state_machines: planned_cycle.output_machine_state_machines,
         output_inserters: planned_cycle.output_inserters,
@@ -594,6 +596,15 @@ interface RecordedBuild {
 /** Every plugin on the state machines of a simulation */
 function pluginsOf(context: SimulationContext): ModePlugin<any>[] {
     return [...context.inserters, ...context.machines, ...context.drills].flatMap((it): ModePlugin<any>[] => it.getPlugins());
+}
+
+/** Takes the plugins that only feed the two histories off every state machine of these contexts */
+function detachHistoryPlugins(build: RecordedBuild, ...contexts: SimulationContext[]): void {
+    for (const context of contexts) {
+        for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
+            state_machine.removePlugins(build.history_plugins);
+        }
+    }
 }
 
 /** The simulation of a config, with the debug, transfer and state plugins on every entity; nothing is recorded yet */
@@ -898,9 +909,7 @@ export function coldControlledTrialBuild(
     const build = coldBuildOf(config, options, DebugSettingsProvider.mutable(), logger);
     const controlled = withEnableControls(config, build, crafting_cycle_plan, recipe_lcm, logger);
     const context = controlled.new_simulation_context;
-    for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
-        state_machine.removePlugins(build.history_plugins);
-    }
+    detachHistoryPlugins(build, context);
     controlled.resettable_registry.resetAll(true);
     return context;
 }
@@ -974,8 +983,11 @@ function simulate(
         .map(it => it.inserter_state)
         .filter(state => all_output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
     const dropped_before_run = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0);
+    // a run that is watched for a repeat may end long before the periods it was asked for, so it grows its series
+    const may_end_early = repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks;
     const stock_recorder = options.machine_stock
-        ? new StockRecorder(new_simulation_context.machines.map(it => it.machine_state), new_simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })))
+        ? new StockRecorder(new_simulation_context.machines.map(it => it.machine_state), new_simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })),
+            may_end_early ? undefined : recorded_duration.ticks)
         : undefined;
     const timeline_recorder = options.timeline_recording
         ? new TimelineRecorder(new_simulation_context, options.timeline_recording)
@@ -1180,9 +1192,7 @@ function backpressureLossOf(
     build.state_transition_history.recording = false;
     // so the plugins that feed them have nothing to do: a trial ticks a few hundred thousand times
     const trial_context = controlled.new_simulation_context;
-    for (const state_machine of [...trial_context.inserters, ...trial_context.machines, ...trial_context.drills]) {
-        state_machine.removePlugins(build.history_plugins);
-    }
+    detachHistoryPlugins(build, trial_context);
     const loss_period = options.backpressure_loss.period_ticks;
     const repeat = subtickClockForPeriod(loss_period);
     const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
@@ -1214,7 +1224,8 @@ export interface TrialRun {
     simulation_duration: Duration;
     transfer_history: InventoryTransferHistory;
     serializable_transfer_history: SerializableTransferHistory;
-    serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** The state transitions of the run, sealed: the same object for every trial of the run */
+    serializable_state_transition_history: CompactStateTransitionHistory;
     /** Insertion limits, crafting time and output per craft of every machine */
     machine_facts: MachineFactsEntry[];
     /** With the fuel_levels option: the fuel each burner machine held over the run */
@@ -1235,7 +1246,7 @@ export function trialRunOf(run: BuildRun): TrialRun {
         simulation_duration: run.duration,
         transfer_history: run.final_history,
         serializable_transfer_history: serializeTransferHistory(run.final_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
-        serializable_state_transition_history: serializeStateTransitionHistory(run.state_transition_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
+        serializable_state_transition_history: run.state_transition_history,
         machine_facts: run.simulation_context.machines.map(it => ({
             entity_id: it.machine_state.machine.entity_id.id,
             facts: Machine.getMachineFacts(it.machine_state.machine),
@@ -1353,8 +1364,11 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
     // the slack decision already checked the slacked windows: hand its run over, with the exact map it ran on
     // (with the slack in use the fuel hand room is empty, so these are the windows the clock gets)
     const verified = use_belt_pickup_slack ? slack_trial?.verified ?? null : null;
+    // on backed-up belts every belt-fed window lasts as long as a hand takes from the lanes at rest at the belt's speed
+    const backed_up_hand_ticks = backed_up_belts ? backedUpHandTicks(simulation_context.entity_registry) : new Map<string, number>();
     const windows = verified !== null ? verified.windows
-        : withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
+        : withWindowsAtLeast(withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks),
+            backed_up_hand_ticks, duration.ticks);
     // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
     const room = withRoomForRandomAmounts(plan, windows);
     return { windows: room.windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room,
@@ -1493,7 +1507,7 @@ export function exportClock(
             simulation_duration: duration,
             transfer_history: final_history,
             serializable_transfer_history: serializeTransferHistory(final_history, simulation_context.entity_registry, recorded_duration.ticks),
-            serializable_state_transition_history: serializeStateTransitionHistory(state_transition_history, simulation_context.entity_registry, recorded_duration.ticks),
+            serializable_state_transition_history: state_transition_history,
             machine_facts: simulation_context.machines.map(it => ({
                 entity_id: it.machine_state.machine.entity_id.id,
                 facts: Machine.getMachineFacts(it.machine_state.machine),
@@ -2427,58 +2441,31 @@ function configureStateTransitionPlugins(
     factorio_states: boolean,
 ): StateTransitionHistory {
     const state_transition_history = new StateTransitionHistory();
-    const inserter_transition_callback = state_transition_history.createInserterCallback();
-    const machine_transition_callback = state_transition_history.createMachineCallback();
-    const drill_transition_callback = state_transition_history.createDrillCallback();
 
     // Add inserter state transition plugins
     simulation_context.inserters.forEach(it => {
-        it.addPlugin(new InserterStateTransitionTrackerPlugin(
-            it.inserter_state.entity_id,
-            relative_tick_provider,
-            inserter_transition_callback
-        ));
+        const recorder = state_transition_history.recorderFor(it.inserter_state.entity_id, "inserter");
+        it.addPlugin(new InserterStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(
-                it.inserter_state.entity_id,
-                relative_tick_provider,
-                () => factorioInserterState(it.inserter_state, it.sink_state),
-                state_transition_history.createFactorioStateCallback("inserter"),
-            ));
+            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioInserterState(it.inserter_state, it.sink_state), recorder));
         }
     });
 
     // Add machine state transition plugins
     simulation_context.machines.forEach(it => {
-        it.addPlugin(new MachineStateTransitionTrackerPlugin(
-            it.machine_state.entity_id,
-            relative_tick_provider,
-            machine_transition_callback
-        ));
+        const recorder = state_transition_history.recorderFor(it.machine_state.entity_id, "machine");
+        it.addPlugin(new MachineStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(
-                it.machine_state.entity_id,
-                relative_tick_provider,
-                () => factorioMachineState(it.machine_state),
-                state_transition_history.createFactorioStateCallback("machine"),
-            ));
+            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioMachineState(it.machine_state), recorder));
         }
     });
 
     // Add drill state transition plugins
     simulation_context.drills.forEach(it => {
-        it.addPlugin(new DrillStateTransitionTrackerPlugin(
-            it.drill_state.entity_id,
-            relative_tick_provider,
-            drill_transition_callback
-        ));
+        const recorder = state_transition_history.recorderFor(it.drill_state.entity_id, "drill");
+        it.addPlugin(new DrillStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(
-                it.drill_state.entity_id,
-                relative_tick_provider,
-                () => factorioDrillState(it.drill_state),
-                state_transition_history.createFactorioStateCallback("drill"),
-            ));
+            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioDrillState(it.drill_state), recorder));
         }
     });
 

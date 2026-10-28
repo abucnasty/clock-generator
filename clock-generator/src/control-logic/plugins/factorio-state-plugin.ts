@@ -1,11 +1,9 @@
-import { EntityId } from "../../entities";
 import { TickProvider } from "../current-tick-provider";
 import { Mode, ModePlugin, Transition } from "../mode";
 
-interface FactorioStateChange {
-    entity_id: EntityId;
-    tick: number;
-    state: string;
+/** Where the states of an entity are recorded (a recorder of the state transition history) */
+interface FactorioStateRecorder {
+    recordFactorioState(tick: number, state: string): void;
 }
 
 /**
@@ -17,10 +15,9 @@ export class FactorioStatePlugin<M extends Mode> implements ModePlugin<M> {
     private last_state: string | null = null;
 
     constructor(
-        private readonly entity_id: EntityId,
         private readonly tick_provider: TickProvider,
         private readonly derive: () => string,
-        private readonly callback: (change: FactorioStateChange) => void,
+        private readonly recorder: FactorioStateRecorder,
     ) {}
 
     onTransition(fromMode: M, transition: Transition<M>): void {}
@@ -31,6 +28,6 @@ export class FactorioStatePlugin<M extends Mode> implements ModePlugin<M> {
             return;
         }
         this.last_state = state;
-        this.callback({ entity_id: this.entity_id, tick: this.tick_provider.getCurrentTick(), state });
+        this.recorder.recordFactorioState(this.tick_provider.getCurrentTick(), state);
     }
 }

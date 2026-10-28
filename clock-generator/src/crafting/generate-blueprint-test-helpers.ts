@@ -40,14 +40,14 @@ export const rocketFuelSample = async (path: string): Promise<RocketFuelSample> 
     // with the searches, whose clocks the tests of these samples read as well: batched swings is stable on both
     const { alternatives } = generateClockAlternatives(withSearches(config));
     const alternative = (id: string) => alternatives.find(a => a.id === id)!;
-    const moved = (inserter_id: string): number => alternative("planned").result.serializable_transfer_history.entities
+    const moved = (inserter_id: string): number => alternative("planned-belt-slack").result.serializable_transfer_history.entities
         .find(entity => entity.entity_id === inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
     return {
         config,
         alternatives,
         alternative,
         moved,
-        period: alternative("planned").result.simulation_duration.ticks,
+        period: alternative("planned-belt-slack").result.simulation_duration.ticks,
         jelly_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "machine"),
         output_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "belt" && it.source.id !== 2),
         // belt 1 carries bioflux and jellynut: machine 2 takes the jellynut, the rocket fuel machines the bioflux

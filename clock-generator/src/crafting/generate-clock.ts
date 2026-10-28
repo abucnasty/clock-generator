@@ -62,23 +62,6 @@ export function generateClockForConfig(
 }
 
 /**
- * A clock made for a moving belt, for a config whose belts are backed up: the build is planned on a copy of the config
- * whose belts move, so a belt-fed hand is planned at the pace moving stacks come into reach, and every belt-fed window
- * gets the belt pickup slack. The clock-only check runs on the config itself, with its belts backed up, and the clock
- * holds when that check holds: the planning run moved its items on belts the config does not have, so the swing
- * backoff goes by the check alone. A backed-up belt refills a pickup at its own speed: where that is slower than a
- * stack a tick, windows planned for a stack a tick close before the hand is full, and these wait for it.
- */
-export function movingBeltClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
-    const plan = planRun({ ...config, overrides: { ...config.overrides, backed_up_belts: false } }, options);
-    const clock = clockOfPlan(plan, { ...options, belt_pickup_slack: "always" });
-    // checked on the belts the config describes, not the ones the plan was made on
-    const result = checkedClock({ ...plan, config }, clock, clock.windows, options);
-    const { as_built } = result.stability_check;
-    return as_built === undefined ? result : { ...result, stability_check: { ...result.stability_check, holds: as_built.holds } };
-}
-
-/**
  * Generates a blueprint from a configuration with automatic output swing stability backoff.
  *
  * If the first simulation attempt produces unstable output — i.e. the items transferred

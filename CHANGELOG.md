@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
-## [0.23.0] - Unreleased
+## [0.24.0] - 2026-10-27
+
+### Changed
+- Large builds take less memory and generate faster.
+- Clocks are made only for the belts the build is set to: moving or backed up.
+- Backed-up belts at normal speed: clocks give each input window time for the belt to bring a whole hand, so pickups from an underground end get a stable clock.
+
+## [0.23.0] - 2026-10-27
 
 ### Added
 - Recyclers: builds with a recycler now get a clock when its results go into a container (such as an ore voider; Target Output counts items made or destroyed), straight into another machine, or come by small chances (scrap into a rocket silo). Sidecar 0.15.0 exports where a recycler's results go.

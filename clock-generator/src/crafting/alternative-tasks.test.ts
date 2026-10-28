@@ -8,58 +8,44 @@ import {quiet} from "./generate-blueprint-test-helpers";
 
 const options = {logger: quiet, factorio_states: false, fuel_consumption_view: false};
 
-describe("backed-up belt alternative tasks", () => {
-    it("omits the duplicate task when belts only receive output", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
-        expect(config.belts.length).toBeGreaterThan(0);
-        const plan = planClockAlternatives(config, options);
-        expect(plan.primary?.alternatives[0].verdict).toBe("stable");
-        expect(plan.tasks.some(task => task.id === "planned")).toBe(false);
-    });
+describe("belt supply alternative tasks", () => {
+    // clocks are made for the supply the config names: no task is the same build with the other supply
+    const otherSupply = (plan: ReturnType<typeof planClockAlternatives>) =>
+        plan.tasks.filter(task => task.id === "planned" || task.id === "planned-moving-belt");
 
-    it("keeps the task for always-enabled pickups even without belt windows", async () => {
+    it("offers no clock for another supply to a config whose belts move, with or without belt windows", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
-        config.inserters = config.inserters.map(inserter => inserter.source.type === "belt"
+        expect(config.inserters.some(inserter => inserter.source.type === "belt")).toBe(true);
+        expect(otherSupply(planClockAlternatives(config, options))).toEqual([]);
+        const always_enabled = {...config, inserters: config.inserters.map(inserter => inserter.source.type === "belt"
             ? {...inserter, overrides: {...inserter.overrides, enable_control: {mode: EnableControlMode.ALWAYS}}}
-            : inserter);
-        const plan = planClockAlternatives(config, options);
-        expect(plan.primary?.alternatives[0].belt).toBeNull();
-        expect(plan.tasks.some(task => task.id === "planned")).toBe(true);
+            : inserter)};
+        expect(otherSupply(planClockAlternatives(always_enabled, options))).toEqual([]);
     });
 
-    it("keeps the task when the only belt pickup supplies fuel", async () => {
+    it("offers no clock for another supply where the only belt pickup supplies fuel", async () => {
         const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
         config.chests = [{type: ChestType.INFINITY_CHEST, id: 1,
             item_filter: [{item_name: "yumako-mash", request_count: 32}]}];
         config.inserters[0].source = {type: "chest", id: 1};
         const plan = planClockAlternatives(config, options);
         expect(plan.primary?.alternatives[0].result.unplanned_inserter_clocks?.["inserter:3"]?.kind).toBe("fuel");
-        expect(plan.tasks.some(task => task.id === "planned")).toBe(true);
+        expect(otherSupply(plan)).toEqual([]);
     });
 
-    it("does not offer a second backed-up choice when that supply is configured", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
-        const plan = planClockAlternatives({...config, overrides: {...config.overrides, backed_up_belts: true}}, options);
-        expect(plan.tasks.some(task => task.id === "planned")).toBe(false);
-    });
-});
-
-describe("moving belt fallback task", () => {
-    it("is a fallback of a config whose belts are backed up: it waits, also for searches the config runs on every build", async () => {
+    it("offers no clock for another supply to a config whose belts are backed up, not even as a fallback", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
         const plan = planClockAlternatives({...config,
             overrides: {...config.overrides, backed_up_belts: true, search_for_fewer_wake_ups: true}}, options);
-        expect(plan.tasks.filter(task => task.only_when_needed)).toEqual([
-            {id: "planned-moving-belt", label: "Batched swings, moving belt", only_when_needed: true, fallback: true},
-        ]);
+        expect(otherSupply(plan)).toEqual([]);
+        expect(plan.tasks.filter(task => task.only_when_needed && task.fallback === true).map(task => task.id)).not.toContain("planned-moving-belt");
     });
 
-    it("is not offered where the belts move, or where no inserter picks up from a belt", async () => {
-        const moving = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
-        expect(planClockAlternatives(moving, options).tasks.some(task => task.id === "planned-moving-belt")).toBe(false);
+    it("has the same tasks whichever supply a config without a belt pickup names", async () => {
         const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS);
-        const plan = planClockAlternatives({...config, overrides: {...config.overrides, backed_up_belts: true}}, options);
-        expect(plan.tasks.some(task => task.id === "planned-moving-belt")).toBe(false);
+        const ids = (backed_up_belts: boolean) => planClockAlternatives({...config, overrides: {...config.overrides, backed_up_belts}}, options)
+            .tasks.map(task => task.id);
+        expect(ids(true)).toEqual(ids(false));
     });
 });
 

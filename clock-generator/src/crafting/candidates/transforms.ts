@@ -2,6 +2,7 @@ import { OpenRange } from "../../data-types";
 import { InserterStatus } from "../../state";
 import { CIRCUIT_LATENCY_TICKS, rotateRanges } from "../clock";
 import { TrialRun } from "../plan/plan-run";
+import { transitionsOf } from "../sequence/compact-history";
 
 /**
  * The transforms of a clock's windows: pure functions from windows to windows. Each candidate of a search is one of
@@ -139,7 +140,7 @@ export function outputSwingCountsOf(run: TrialRun, output_ids: ReadonlySet<strin
         if (!output_ids.has(entity.entity_id)) {
             continue;
         }
-        const sorted = [...entity.transitions].sort((a, b) => a.tick - b.tick);
+        const sorted = transitionsOf(run.serializable_state_transition_history, entity).sort((a, b) => a.tick - b.tick);
         let status = entity.initial_status;
         let swings = 0;
         for (const transition of sorted) {

@@ -1,6 +1,7 @@
 #!/bin/bash
-# blast.sh: the blast radius of an engine change (every sample config as it is and backed up, every pickup and over-hood
-# fixture; every alternative's exported clock hashed), from any worktree, with a cache keyed by the engine's content.
+# blast.sh: the blast radius of an engine change (every sample config as it is, with the belts it names; BLAST_GROUPS adds the
+# pickup, over-hood, front, blocked-output and container fixtures, which have generation tests of their own; every
+# alternative's exported clock hashed), from any worktree, with a cache keyed by the engine's content.
 #
 #   blast.sh key <worktree>                 the cache key of the worktree as it is (engine from git, job list from a
 #                                           config-only pass, ~10 s) and whether it is cached
@@ -17,11 +18,12 @@
 #   blast.sh store <worktree> <jobs-dir> --note <text>
 #                                           stores finished jobs (made elsewhere, on the same engine and job list) as
 #                                           the worktree's entry; jobs not in its list are left out and named
-#   blast.sh compare <before> <after> [--json f]   compare.py (folders or cache entries)
+#   blast.sh compare <before> <after> [--json f]   compare.py (folders or cache entries): the clocks, and the results digest
+#                                           (every job file's results_sha256: what the clock hash leaves out) per job and component
 #   blast.sh same <a> <b>                   whether two jobs folders (or cache entries) hold the same results, job by job
 #   blast.sh list                           the cache's entries
 #
-# The worktree may be another checkout than this script's: blast.blastrun.ts, blast.recorder.ts and the two vitest configs beside this
+# The worktree may be another checkout than this script's: blast.blastrun.ts, blast.digest.ts, blast.recorder.ts and the two vitest configs beside this
 # script are copied into its tests/game/builds/.scratch/ (gitignored) and run there, so a worktree from before these
 # scripts can be measured too. The key's engine half is key.py's; its jobs half the job list's hash.
 #
@@ -48,24 +50,24 @@
 # the main path (generateClockForConfig, the grouped hands) reruns nearly every job: the footprints say which jobs run a
 # function, not which jobs a change of it alters. BLAST_SETUP and BLAST_ONLY runs, and runs of a worktree with uncommitted
 # changes outside src/, are never selective. --full turns selection off; --base K
-# names the cache entry to carry from (blast.sh list); `select` says what a run would rerun and why; BLAST_FUNCTIONS=0
-# records nothing (the entry then cannot be a base); recording makes a full generation about 1.5 times as long in CPU time.
+# names the cache entry to carry from (blast.sh list); `select` says what a run would rerun and why; the functions
+# are recorded only with BLAST_FUNCTIONS=1 (by default nothing is, and the entry then cannot be a base: set it for the run that
+# stores a base meant for later selective runs, e.g. after an engine merge); recording makes a full generation about 1.5
+# times as long in CPU time.
 #
-# Env: BLAST_GROUPS, BLAST_SKIP (default REAL_THAELN_CELL09: Thaeln's cell 09 is out of scope for 0.19.0, decided
-# 2026-10-20; it is in no cache entry), BLAST_ONLY (run only; never cached), BLAST_SETUP (comma list of setup files from
+# Env: BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only these jobs, by ConfigPaths name; never cached; the run is complete, and exits 0, when every listed job is done), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
-# that lets one blast generate at a time on the machine, default <main checkout>/work/blast-cache/.generate.lock where
-# that folder exists, else <cache>/.generate.lock: a copy of this tool kept outside the repository takes the first).
+# that lets one blast generate at a time on the machine, default <cache>/.generate.lock).
 # Needs the worktree's own node_modules (scripts/worktree/setup.sh). N defaults to 4: each process is one vitest run
-# and one fork worker on one core; keep the machine's total in mind when other sessions run.
+# and one fork worker on one core, and the 53 jobs of the default groups peak at about 2.8 GiB with 4 (0.24.0), inside the
+# 4.5 GiB at which a 5 GiB guard cap throttles; keep the machine's total in mind when other sessions run.
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd -P)
 # the main checkout: the parent of the repository's common git folder, the same from every worktree
 MAIN=$(cd "$(git -C "$HERE" rev-parse --path-format=absolute --git-common-dir)/.." && pwd -P)
 CACHE=${BLAST_CACHE:-$MAIN/clock-generator/.scratch/blast-cache}
 if [ -n "${BLAST_LOCK:-}" ]; then LOCK=$BLAST_LOCK
-elif [ -d "$MAIN/work/blast-cache" ]; then LOCK=$MAIN/work/blast-cache/.generate.lock
 else LOCK=$CACHE/.generate.lock; fi
 SCRATCH=tests/game/builds/.scratch
 TEST=$SCRATCH/blast.blastrun.ts
@@ -80,6 +82,7 @@ worktree() {
   git -C "$W" check-ignore -q "$E/$SCRATCH/x.ts" || die "$E/$SCRATCH is not gitignored in this worktree; refusing to write there"
   mkdir -p "$E/$SCRATCH"
   cp "$HERE/blast.blastrun.ts" "$E/$TEST" && cp "$HERE/blast.recorder.ts" "$E/$SCRATCH/blast.recorder.ts" \
+    && cp "$HERE/blast.digest.ts" "$E/$SCRATCH/blast.digest.ts" \
     && cp "$HERE/vitest.src.config.ts" "$E/$SCRATCH/vitest.scratch-src.config.ts" \
     && cp "$HERE/vitest.dist.config.ts" "$E/$SCRATCH/vitest.scratch-dist.config.ts" || die "could not copy the blast test into $E/$SCRATCH"
 }
@@ -149,9 +152,14 @@ generate() {
   for c in "$out"/.claims/*; do [ -d "$c" ] && [ ! -f "$out/$(basename "$c").json" ] && rmdir "$c"; done
   if [ "$build" = 1 ]; then say "npm run build ($E)"; (cd "$E" && npm run --silent build) || { rm -rf "$out/.lock"; die "npm run build failed"; }; fi
   [ -f "$out/.seed.json" ] || seed "$out" || { rm -rf "$out/.lock"; exit 1; }
-  # the job list as the built engine makes it, for the processes below and for the check that dist/ is not stale
+  # the job list as the built engine makes it, for the processes below and for the check that dist/ is not stale. It is the
+  # list of BLAST_ONLY (and BLAST_GROUPS, BLAST_SKIP) when one is set: a deliberate subset is complete when its jobs are done.
+  # A list made under another BLAST_ONLY is made again
+  if [ -f "$out/_jobs.json" ] && [ "$(python3 -c "import json,sys; print(','.join(json.load(open(sys.argv[1])).get('only') or []))" "$out/_jobs.json")" != "${BLAST_ONLY:-}" ]; then
+    rm -f "$out/_jobs.json"
+  fi
   if [ ! -f "$out/_jobs.json" ]; then
-    (cd "$E" && env -u CLOCK_PROOF_PHASES -u BLAST_ONLY BLAST_FUNCTIONS=0 NO_COLOR=1 SCRATCH_INCLUDE=$TEST SCRATCH_SETUP="${BLAST_SETUP:-}" BLAST_MODE=jobs BLAST_OUT="$out" \
+    (cd "$E" && env -u CLOCK_PROOF_PHASES BLAST_FUNCTIONS=0 NO_COLOR=1 SCRATCH_INCLUDE=$TEST SCRATCH_SETUP="${BLAST_SETUP:-}" BLAST_MODE=jobs BLAST_OUT="$out" \
       ./node_modules/.bin/vitest run --config $SCRATCH/vitest.scratch-dist.config.ts > "$out/.logs/jobs-pass.log" 2>&1) \
       && [ -f "$out/_jobs.json" ] || { rm -rf "$out/.lock"; die "the job-list pass of the built engine failed ($out/.logs/jobs-pass.log)"; }
   fi
@@ -185,7 +193,7 @@ generate() {
   set +m; trap - INT TERM
   rm -rf "$out/.lock"
   [ "$failed" = 0 ] || echo "blast.sh: $failed of $n processes failed (see $out/.logs/)" >&2
-  if [ -z "${BLAST_ONLY:-}" ] && [ -z "${BLAST_SETUP:-}" ] && { [ "${BLAST_FUNCTIONS:-}" != 0 ] || [ -f "$out/.seed.json" ]; }; then
+  if [ -z "${BLAST_ONLY:-}" ] && [ -z "${BLAST_SETUP:-}" ] && { [ "${BLAST_FUNCTIONS:-}" = 1 ] || [ -f "$out/.seed.json" ]; }; then
     node "$HERE/functions.js" collect --dist "$E/dist" --raw "$out/.functions" --out "$out/functions" --carry "$out/.seed.json" \
       || echo "blast.sh: could not write the footprints; the entry will not be a base" >&2
   fi

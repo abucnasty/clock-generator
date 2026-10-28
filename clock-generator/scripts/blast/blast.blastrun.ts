@@ -1,19 +1,22 @@
-// The blast radius: generate every sample config (as it is and with backed-up belts) and every pickup, over-hood, front
-// and blocked-output fixture and every container config, and hash every alternative's exported clock as over-hood-clock.generation.test.ts does
+// The blast radius: generate every sample config as it is (its belts moving or backed up as the config says; nothing makes
+// a copy with the other supply) and, when BLAST_GROUPS asks for them, every pickup, over-hood, front and blocked-output
+// fixture and every container config (each has a generation test of its own that runs in CI), and hash every alternative's
+// exported clock as over-hood-clock-<tier>.generation.test.ts do
 // (clock_sha256: sha256 of its identity, clockIdentity of subtick ?? result: the blueprint without its text or metadata,
-// and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description); the samples that exist to be refused (ExpectedRefusals in
+// and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description;
+// results_sha256 and results: the digest of what the clock hash leaves out, see blast.digest.ts); the samples that exist to be refused (ExpectedRefusals in
 // src/config/config-paths.ts) are checked instead: each must fail with its error, as it is and backed up. Run by
 // scripts/blast/blast.sh, which installs it into the worktree's tests/game/builds/.scratch/ (gitignored), where its
 // imports resolve, with vitest.scratch-dist.config.ts (the engine from dist/); it is not run from scripts/.
 // Env: BLAST_OUT (folder; one JSON per job, and _jobs.json, the job list with each config's sha256), BLAST_CLAIMS
 // (folder shared by parallel processes, default <BLAST_OUT>/.claims: a job is claimed by creating <claims>/<job>),
 // BLAST_MODE (generate, the default, or jobs: write _jobs.json only), BLAST_ONLY (comma list of job names),
-// BLAST_GROUPS (default config,config-backed,pickup,overhood,front,blocked,containers,refusal), BLAST_SKIP (default
-// REAL_THAELN_CELL09; "" runs it), BLAST_FUNCTIONS (0: do not record the functions each job runs; see below), BLAST_ONE (1:
+// BLAST_GROUPS (default config,refusal; also pickup,overhood,front,blocked,containers), BLAST_SKIP (comma list of
+// jobs to leave out; none by default), BLAST_FUNCTIONS (1: record the functions each job runs; off by default; see below), BLAST_ONE (1:
 // the process runs the first job nobody has claimed and stops, and leaves <BLAST_OUT>/.drained when none is left: blast.sh
 // starts a process for every job, so that no job meets what an earlier one left in the engine's memory, a memo for one).
 //
-// In generate mode every job also leaves <BLAST_OUT>/.functions/<job>.json: the byte ranges of the functions of the engine's
+// With BLAST_FUNCTIONS=1, in generate mode every job also leaves <BLAST_OUT>/.functions/<job>.json: the byte ranges of the functions of the engine's
 // build (dist/) that ran during the job, and the files of dist/ loaded so far in this process (V8 binary precise coverage,
 // stopped and started again around every job, so that a job's record holds what it ran and not what an earlier job did),
 // and <BLAST_OUT>/.functions/.startup.json: what ran before the first job (blast.recorder.ts starts the coverage before
@@ -30,26 +33,29 @@ import { loadConfigFromFile } from '../../../../src/config/loader';
 import * as configPaths from '../../../../src/config/config-paths';
 import { pickupClockConfig, pickupClockSpeedCases } from '../pickup-clock-speed-coverage';
 import { overHoodClockCases, overHoodClockConfig } from '../over-hood-clock-fixtures';
+import { digestAlternative, digestJob, type ExpandHistory } from './blast.digest';
 
 /** The job file format; blast.sh puts it in the cache key, so a change here never hits an older cache entry. 2: clock_sha256
- * is the hash of the clock's identity, without its text (1 hashed the text too) */
-const FORMAT = 't1-blast-2';
+ * is the hash of the clock's identity, without its text (1 hashed the text too). 3: results_sha256 and results, the digest
+ * of what the clock hash leaves out, for each alternative and for the job */
+const FORMAT = 't1-blast-3';
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const OUT = process.env.BLAST_OUT;
 const CLAIMS = process.env.BLAST_CLAIMS || (OUT && path.join(OUT, '.claims'));
 const MODE = process.env.BLAST_MODE ?? 'generate';
 const ONE = process.env.BLAST_ONE === '1';
 const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefined;
-// Thaeln's cell 09 is out of scope for 0.19.0 (decided 2026-10-20) and takes ~1,000 s alone: skipped unless BLAST_SKIP
-// is set ("" runs it)
-const SKIP = (process.env.BLAST_SKIP ?? 'REAL_THAELN_CELL09').split(',').filter(Boolean);
-const GROUPS = (process.env.BLAST_GROUPS || 'config,config-backed,pickup,overhood,front,blocked,containers,refusal').split(',');
+const SKIP = (process.env.BLAST_SKIP ?? '').split(',').filter(Boolean);
+const GROUPS = (process.env.BLAST_GROUPS || 'config,refusal').split(',');
 const { ConfigPaths } = configPaths;
 // the samples that exist to be refused, by ConfigPaths key, with the error each must fail with; a worktree from before
 // the list has none, and its config groups keep every sample
 const REFUSALS: Record<string, { error: string }> = (configPaths as any).ExpectedRefusals ?? {};
-// the slowest first, so the parallel processes finish together
-const SLOW = ['AGRICULTURAL_SCIENCE', 'REAL_THAELN_CELL09', 'UTILITY_SCIENCE', 'METALLURGIC_SCIENCE_PACK', 'JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS'];
+// the slowest first, in this order, so the parallel processes finish together (the heaviest samples of 0.24.0, after the
+// memory work; Thaeln's cell 09 is skipped by default and takes ~1,000 s when it runs)
+const SLOW = ['REAL_THAELN_CELL09', 'CHEMICAL_SCIENCE_SHARED_FOUNDRY', 'PROCESSING_UNITS_BELT_EXPORT', 'STEEL_CARGO_WAGON',
+    'REAL_STUPIDFATHOBBIT_CELL02', 'AGRICULTURAL_SCIENCE', 'REAL_OWNER_PINK_SCIENCE_ORIGINAL',
+    'UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON', 'REAL_COMPOSITE04_CELL07'];
 
 interface Job { group: string; name: string; config: () => Promise<any>; refusal?: { error: string } }
 /** The front entrance (32) and front exit, backed up and on a moving config (16; #274); a worktree from before master
@@ -79,12 +85,11 @@ async function containerJobs(): Promise<Job[]> {
     return containers.containerClockCases()
         .map((variant: any) => ({ group: 'containers', name: variant.name, config: async () => containers.containerClockConfig(variant) }));
 }
-// as the scaffold recordings generate a backed-up variant: overrides.backed_up_belts
+// the refusal checks make the backed-up variant of the refused sample too
 const backedUp = (config: any) => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
 const samples = Object.entries(ConfigPaths).filter(([name]) => !(name in REFUSALS));
 const baseJobs: Job[] = [
     ...samples.map(([name, file]) => ({ group: 'config', name, config: () => loadConfigFromFile(file as string) })),
-    ...samples.map(([name, file]) => ({ group: 'config-backed', name, config: async () => backedUp(await loadConfigFromFile(file as string)) })),
     ...Object.entries(REFUSALS).map(([name, refusal]) => ({ group: 'refusal', name, refusal,
         config: () => loadConfigFromFile((ConfigPaths as Record<string, string>)[name]) })),
     ...(['electromagnetic', 'same-item'] as const).flatMap(family => pickupClockSpeedCases(family).map(variant =>
@@ -94,16 +99,16 @@ const baseJobs: Job[] = [
 ];
 async function loadJobs(): Promise<Job[]> {
     return [...baseJobs, ...await frontJobs(), ...await blockedJobs(), ...await containerJobs()]
-        .sort((a, b) => (SLOW.includes(b.name) ? 1 : 0) - (SLOW.includes(a.name) ? 1 : 0))
+        .sort((a, b) => (SLOW.indexOf(a.name) < 0 ? SLOW.length : SLOW.indexOf(a.name)) - (SLOW.indexOf(b.name) < 0 ? SLOW.length : SLOW.indexOf(b.name)))
         .filter(job => GROUPS.includes(job.group) && !SKIP.includes(job.name) && (!ONLY || ONLY.includes(job.name)));
 }
 const keyOf = (job: Job) => `${job.group}-${job.name}`;
 
 /** Records the functions of dist/ that run between two takes (V8 coverage that blast.recorder.ts started before the engine
- * loaded; none if BLAST_FUNCTIONS is 0 or the inspector is not there) */
+ * loaded; none unless BLAST_FUNCTIONS is 1 and the inspector is there) */
 function functionRecorder() {
     const coverage = (globalThis as any).__blastCoverage as { post: (method: string, params?: object) => Promise<any> } | undefined;
-    if (process.env.BLAST_FUNCTIONS === '0' || !coverage) return undefined;
+    if (process.env.BLAST_FUNCTIONS !== '1' || !coverage) return undefined;
     const { post } = coverage;
     const dist = path.resolve(__dirname, '../../../..', 'dist') + path.sep;
     const loaded = new Set<string>();
@@ -170,8 +175,16 @@ function descriptionsCut(result: any): number | null {
             .filter((entity: any) => wasCut(entity.player_description ?? '')).length;
 }
 
+/** expandStateTransitionHistory, where the build has it (a worktree from before the sealed histories has not, and its histories are plain) */
+async function historyExpander(): Promise<ExpandHistory | undefined> {
+    const file = path.resolve(__dirname, '../../../..', 'src', 'crafting', 'sequence', 'compact-history.ts');
+    if (!fs.existsSync(file)) return undefined;
+    // a path, not a literal, so that a worktree without the file neither resolves nor typechecks the import
+    return (await import(file)).expandStateTransitionHistory;
+}
+
 /** Every alternative of a config, each exported clock hashed, and the selected one */
-function clocksOf(config: any) {
+function clocksOf(config: any, expand: ExpandHistory | undefined) {
     const generated = generateClockAlternatives(config, { logger: quiet });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
@@ -181,11 +194,16 @@ function clocksOf(config: any) {
             supply: a.belt?.kind ?? null, period: a.result.subtick?.clock.period_ticks ?? a.result.simulation_duration.ticks,
             wake_ups: a.assessment.wake_ups?.wake_ups_per_minute ?? a.result.stability_check?.as_built?.wake_ups?.wake_ups_per_minute ?? null,
             clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), descriptions_cut: descriptionsCut(a.result), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
+            ...digestAlternative(a, expand),
         };
     };
+    const alternatives = generated.alternatives.map(summary);
+    const job_results = digestJob(generated);
+    // the job's own digest: why_not_stable, the selected index and the ids, then every alternative's, in order
+    const results_sha256 = sha([job_results.results_sha256, ...alternatives.map(a => a.results_sha256)]);
     return {
-        selected_index: generated.selected_index,
-        selected: summary(generated.alternatives[generated.selected_index]), alternatives: generated.alternatives.map(summary),
+        selected_index: generated.selected_index, results_sha256, job_results,
+        selected: alternatives[generated.selected_index], alternatives,
     };
 }
 
@@ -207,6 +225,7 @@ test.skipIf(!OUT)('blast', async () => {
     // one job per process: blast.sh writes the job list first, and each process would build every config again
     if (!ONE || MODE === 'jobs' || !fs.existsSync(path.join(OUT!, '_jobs.json'))) await writeJobList(jobs);
     if (MODE === 'jobs') return;
+    const expand = await historyExpander();
     const recorder = functionRecorder();
     if (recorder) {
         // what ran before the first job: the engine loading and the job list. Every job depends on it, so it is a record of its own
@@ -223,7 +242,7 @@ test.skipIf(!OUT)('blast', async () => {
         let body: any;
         try {
             const config = await job.config();
-            body = { group: job.group, name: job.name, ...(job.refusal ? refusalCheck(config, job.refusal) : clocksOf(config)) };
+            body = { group: job.group, name: job.name, ...(job.refusal ? refusalCheck(config, job.refusal) : clocksOf(config, expand)) };
         } catch (error: any) {
             body = { group: job.group, name: job.name, error: `${error?.name}: ${error?.message}` };
         }

@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Checkbox, CircularProgress, FormControlLabel, IconButton, MenuItem, Slider, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import { ChevronLeft, ChevronRight, RestartAlt, ZoomIn, ZoomOut } from '@mui/icons-material';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Config, SerializableClockWindows, SerializableStateTransitionHistory, SerializableTransferHistory, TimelineEntity } from 'clock-generator/browser';
+import type { Config, PortableStateTransitionHistory, SerializableClockWindows, SerializableTransferHistory, TimelineEntity } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import type { TimelineViewContext } from '../utils/buildViewContext';
 import { settledPeriodLabel, timelineRequestFor } from '../utils/timelineRequest';
@@ -36,9 +36,7 @@ export interface ClockTimelineWorkspaceProps {
     wakeAsTable: boolean;
     onWakeAsTableChange(asTable: boolean): void;
     transferHistory: SerializableTransferHistory | null;
-    stateTransitionHistory: SerializableStateTransitionHistory | null;
-    clockOnlyTransferHistory: SerializableTransferHistory | null;
-    clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    stateTransitionHistory: PortableStateTransitionHistory | null;
     clockWindows: SerializableClockWindows | null;
     /** The immutable config captured with the generated results, not the live form. */
     config?: Config | null;

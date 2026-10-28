@@ -31,7 +31,7 @@ import type {
     MachineTargetRate,
     OutputTransferSummary,
     OutputTransferGenerationIssue,
-    SerializableStateTransitionHistory,
+    PortableStateTransitionHistory,
     SerializableTransferHistory,
     SuggestedTarget,
     SwingBackoffReport,
@@ -154,13 +154,8 @@ export interface ClockAlternativeView {
     /** What installing the blueprint takes: whether it is a book, and which inserters each combinator is wired to */
     install: ClockInstallFacts;
     transferHistory: SerializableTransferHistory;
-    stateTransitionHistory: SerializableStateTransitionHistory;
-    /**
-     * The build driven only by the exported clock windows. Null when the histories above already are that run
-     * (observed windows) or no clock-only check ran.
-     */
-    clockOnlyTransferHistory: SerializableTransferHistory | null;
-    clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    /** The state transitions in columns, with a table of their reasons; read them with expandStateTransitionHistory */
+    stateTransitionHistory: PortableStateTransitionHistory;
     /** Fuel use and the exported fuel clocks; null when no inserter only fills a fuel slot */
     fuelView: FuelViewData | null;
     /** Decider windows in the blueprint, per entity id */
