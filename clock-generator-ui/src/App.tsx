@@ -48,7 +48,7 @@ import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
-import { buildValidationIssues, navigateToOutputRouteRepair } from './utils/buildValidation';
+import { buildValidationIssues, isRefused, navigateToOutputRouteRepair } from './utils/buildValidation';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -538,14 +538,16 @@ function App() {
                     target: { kind: 'machine-result-target', machineId: issue.machine_id } as FocusTarget }))),
         coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
         sideLoadedDrop: checkedCoverage?.sideLoadedDrop, lanesExactlyFull: checkedCoverage?.lanesExactlyFull, copyGapNeeded: checkedCoverage?.copyGapNeeded,
-        machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, chestIssues,
+        machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, belts: config.belts, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
             ? { message: validation.message, diagnostics: validation.diagnostics }
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
-    }), [config.target_output, config.machines, config.chests, config.inserters, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
+    }), [config.target_output, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
+    // the engine's refusal is for the build as the last check saw it: any change to the build takes it away
+    const refused = isRefused(problems);
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
@@ -1181,6 +1183,7 @@ function App() {
                                     copied={copy.copied}
                                     onCopy={() => { cancelRestore(); copy.request(); }}
                                     problems={problems}
+                                    refused={refused}
                                     note={note}
                                     startHere={blankBuild && problems.length > 0}
                                     onGoToProblem={handleGoToProblem}

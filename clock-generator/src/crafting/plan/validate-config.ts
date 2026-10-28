@@ -3,6 +3,7 @@ import { Config } from "../../config";
 import type { TargetCounts } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
+import { assertFeasible } from "../feasibility/assert-feasible";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { SimulationContext } from "../sequence/simulation-context";
 import { SerializableTransferPlan } from "../sequence/cycle/swing-counts";
@@ -43,6 +44,7 @@ export function validateConfig(config: Config, options: { logger?: Logger } = {}
     assertOutputTransferGenerationSupported(config);
     assertInserterCoverage(config);
     validateCopies(config);
+    assertFeasible(config);
 
     const simulation_context = SimulationContext.fromConfig(config);
     // a target that counts an item destroyed is planned by arithmetic: nothing is counted from a run that fills the build

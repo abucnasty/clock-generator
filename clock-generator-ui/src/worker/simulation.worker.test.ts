@@ -190,7 +190,7 @@ describe('repeated units: the real engine separates Check and generation recover
         { why: 'gives 4 copies of one unit', config: source, response: { type: 'answer', answer: { kind: 'available',
             plan: { copies: 4, candidate: { machines: [source.machines[0]], target_output: { ...source.target_output, copies: 4 } } } } } },
         { why: 'is refused at Check for a high target', config: excessive, response: { type: 'answer', answer: { kind: 'unavailable',
-            stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining('cannot meet the target') } } } },
+            stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining("No clock can hold this build's target") } } } },
         { why: 'is refused at the proof for lane drops', config: unsupported, response: { type: 'answer',
             answer: { kind: 'unavailable', stage: 'proof', repeatedGroups: 8, reason: { code: 'unsupported-boundary' } } } },
         // The engine uses untyped errors for an unknown recipe; the worker must not misdiagnose one as a proved candidate refusal.
@@ -200,6 +200,18 @@ describe('repeated units: the real engine separates Check and generation recover
         const before = structuredClone(config);
         expect(await send({ type: 'query', requestId: 2, query: { kind: 'repeated-unit-conversion', config } })).toMatchObject({ requestId: 2, ...response });
         expect(config).toEqual(before);
+    });
+
+    // a target no clock can hold is a refusal of the build: the engine's opening once and each problem in its own words
+    it('Check hands over the opening and each problem when no clock can hold the target', async () => {
+        const unheld: Config = { ...source, target_output: { ...source.target_output, items_per_second: 100, copies: 1 }, machines: [source.machines[0]], inserters: source.inserters.slice(0, 2) };
+        const noClock = expect.stringContaining("No clock can hold this build's target");
+        const response = await send({ type: 'validate', requestId: 9, config: unheld });
+        expect(response).toMatchObject({ type: 'validation-failed', message: noClock,
+            diagnostics: [{ kind: 'refusal', opening: "No clock can hold this build's target:", problems: expect.any(Array) }] });
+        const [refusal] = (response as { diagnostics: { opening: string; problems: string[] }[] }).diagnostics;
+        expect(refusal.problems.length).toBeGreaterThan(0);
+        expect((response as { message: string }).message).toBe(`${refusal.opening} ${refusal.problems.join(' ')}`);
     });
 });
 
