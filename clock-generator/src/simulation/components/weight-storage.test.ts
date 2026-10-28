@@ -1,23 +1,26 @@
 import { describe, expect, it } from "vitest";
-import "../data/factorio-data-file";
-import { RocketSiloChest } from "../entities";
-import { RocketSiloState } from "./rocket-silo-state";
+import "../../data/factorio-data-file";
+import { RocketSiloChest } from "../../entities";
+import { DropBy } from "./ports";
+import { WeightStorage } from "./weight-storage";
 
 const silo = (config: Partial<Parameters<typeof RocketSiloChest.fromConfig>[0]> = {}, put_in: string[] = []) =>
-    RocketSiloState.forChest(RocketSiloChest.fromConfig({ type: "rocket-silo", id: 1, ...config }, put_in));
+    WeightStorage.forChest(RocketSiloChest.fromConfig({ type: "rocket-silo", id: 1, ...config }, put_in));
 
-describe("a rocket silo as a chest, as seen in Factorio 2.1.21 with no rocket built and no craft run", () => {
+describe("a rocket silo's Storage (weight), as seen in Factorio 2.1.21 with no rocket built and no craft run", () => {
     it("takes its recipe's ingredients into its input slots, a whole hand while it holds less than the insertion limit", () => {
         const state = silo();
         // rocket part: 3 s at speed 1, overload multiplier 2, limit 2 of each ingredient
         expect(state.chest.input_limits.get("processing-unit")?.quantity).toBe(2);
-        expect(state.getAvailableSpace("processing-unit")).toBeGreaterThanOrEqual(16);
-        state.inventoryState.addQuantity("processing-unit", 16);
+        expect(state.accepts("processing-unit", 16, DropBy.HAND)).toBe(16);
+        state.insert("processing-unit", 16);
         // the game: 16 in the slot, and the inserter brought no more
+        expect(state.accepts("processing-unit", 16, DropBy.HAND)).toBe(0);
         expect(state.getAvailableSpace("processing-unit")).toBe(0);
         expect(state.isFull("processing-unit")).toBe(true);
         // the input slots give nothing
         expect(state.getCurrentQuantity("processing-unit")).toBe(0);
+        expect(state.has("processing-unit")).toBe(false);
         expect(state.inventoryState.getQuantity("processing-unit")).toBe(16);
     });
 
@@ -28,10 +31,12 @@ describe("a rocket silo as a chest, as seen in Factorio 2.1.21 with no rocket bu
 
     it("takes any other item into its rocket inventory up to the weight the rocket lifts, in part when a hand does not fit", () => {
         const state = silo({}, ["iron-plate"]);
-        for (let hand = 0; hand < 62; hand++) state.inventoryState.addQuantity("iron-plate", 16);
+        for (let hand = 0; hand < 62; hand++) state.insert("iron-plate", 16);
         // the game: 992 in, then 8 of the next hand, then the inserter waits holding 8
+        expect(state.accepts("iron-plate", 16, DropBy.HAND)).toBe(8);
+        expect(state.accepts("iron-plate", 16, DropBy.PLACER)).toBe(8);
         expect(state.getAvailableSpace("iron-plate")).toBe(8);
-        state.inventoryState.addQuantity("iron-plate", 8);
+        state.insert("iron-plate", 8);
         expect(state.isFull("iron-plate")).toBe(true);
         expect(state.isFull()).toBe(true);
         expect(state.getCurrentQuantity("iron-plate")).toBe(1000);
@@ -62,8 +67,8 @@ describe("a rocket silo as a chest, as seen in Factorio 2.1.21 with no rocket bu
         expect(state.nextPickupItem(() => true)).toBe("iron-gear-wheel");
         expect(state.nextPickupItem(item => item === "processing-unit")).toBeNull();
         expect(state.getItemFilters()).toEqual(["iron-plate", "copper-plate", "iron-gear-wheel"]);
-        state.inventoryState.removeQuantity("iron-gear-wheel", 20);
+        state.take("iron-gear-wheel", 20);
         expect(state.nextPickupItem(() => true)).toBe("copper-plate");
-        expect(() => state.inventoryState.removeQuantity("processing-unit", 1)).toThrow();
+        expect(() => state.take("processing-unit", 1)).toThrow();
     });
 });

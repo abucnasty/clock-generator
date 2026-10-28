@@ -10,6 +10,7 @@ import {BeltPickupLane} from "../../../src/state/belt-pickup-lane";
 import {EntityState} from "../../../src/state";
 import {GameFixturePaths} from "./fixture-paths";
 import {configAtSpeed, FixtureBeltSpeed} from "./belt-speed-fixtures";
+import {ContainerStorage} from "../../../src/simulation/components/container-storage";
 
 /**
  * Helpers for the unit tests of the fixture families: the documented mechanic of a family, run in the simulator on the
@@ -100,7 +101,7 @@ export function unclockedContainerStock(config: Config, items: string[], ticks =
     slots: number; peak: Record<string, number>; capacity: Record<string, number>;
 } {
     const context = SimulationContext.fromConfig(config);
-    const container = context.state_registry.getAllStates().find(EntityState.isSlotContainer);
+    const container = context.state_registry.getAllStates().find(ContainerStorage.isSlots);
     if (!container) throw new Error("expected a slot container");
     const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
     const peak = Object.fromEntries(items.map(item => [item, 0]));

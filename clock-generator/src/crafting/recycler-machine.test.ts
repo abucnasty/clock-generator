@@ -3,7 +3,7 @@ import {ConfigSchema, type Config} from '../config/schema';
 import {assertInserterCoverage, validateInserterCoverage} from '../config/inserter-coverage-validator';
 import {CompositeControlLogic, TickControlLogic} from '../control-logic';
 import {directMachineInsertionLimit} from '../entities/drill/mining-drill-ext';
-import {EntityState, MachineState, MachineStatus} from '../state';
+import {MachineState, MachineStatus} from '../state';
 import {SimulationContext} from './sequence/simulation-context';
 import {CraftingCyclePlan} from './sequence/cycle/crafting-cycle';
 import {TargetProductionRate} from './target-production-rate';
@@ -11,6 +11,7 @@ import {fraction} from '../data-types/fraction';
 import {PrepareStep} from './runner/steps/prepare-step';
 import {computeMachineTargetRates} from './machine-target-rates';
 import {assertOutputTransferGenerationSupported} from '../config/output-transfer-generation';
+import {ContainerStorage} from '../simulation/components/container-storage';
 
 function cell(): Config {
     return ConfigSchema.parse({
@@ -105,8 +106,8 @@ describe('a recycler placing results into a machine', () => {
         expect(() => assertOutputTransferGenerationSupported(config)).toThrow('takes none');
         const context = SimulationContext.fromConfig(config);
         const source = context.machines[0].machine_state, target = context.machines[1].machine_state;
-        const chest = context.state_registry.getAllStates().find(state => EntityState.isSlotContainer(state) && state.entity_id.number === 4)!;
-        if (!EntityState.isSlotContainer(chest)) throw new Error('expected car');
+        const chest = context.state_registry.getAllStates().find(state => ContainerStorage.isSlots(state) && state.entity_id.number === 4)!;
+        if (!ContainerStorage.isSlots(chest)) throw new Error('expected car');
         const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
         const run = (ticks: number) => {for (let i = 0; i < ticks; i++) tick.executeForTick();};
         run(10_000);

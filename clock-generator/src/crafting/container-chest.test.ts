@@ -3,8 +3,9 @@ import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
 import { ConfigSchema } from '../config/schema';
 import { CompositeControlLogic, TickControlLogic } from '../control-logic';
-import { EntityState, InserterStatus, MachineStatus } from '../state';
+import { InserterStatus, MachineStatus } from '../state';
 import { SimulationContext } from './sequence/simulation-context';
+import { ContainerStorage } from '../simulation/components/container-storage';
 
 const item = 'automation-science-pack';
 
@@ -16,7 +17,7 @@ it('fills a cargo wagon at the end of the line to its last free slot, then holds
         chests: [{ id: 1, type: 'cargo-wagon', contents }],
         inserters: sample.inserters.map(inserter => inserter.source.type === 'machine' ? { ...inserter, sink: { type: 'chest', id: 1 } } : inserter),
     }));
-    const wagon = context.state_registry.getAllStates().find(EntityState.isSlotContainer)!;
+    const wagon = context.state_registry.getAllStates().find(ContainerStorage.isSlots)!;
     expect(wagon.chest.slot_count).toBe(40);
     const output = context.inserters.find(inserter => inserter.inserter_state.inserter.sink.entity_id.id === wagon.entity_id.id)!.inserter_state;
     const machine = context.machines[0].machine_state;
@@ -53,7 +54,7 @@ it('gives a mixed car the item of its last slot first, across stacks, and waits 
             { id: 3, type: 'infinity-chest', item_filter: [{ item_name: 'iron-plate', request_count: 100 }] },
         ],
     }));
-    const car = context.state_registry.getAllStates().find(EntityState.isSlotContainer)!;
+    const car = context.state_registry.getAllStates().find(ContainerStorage.isSlots)!;
     const taker = context.inserters.find(inserter => inserter.inserter_state.inserter.source.entity_id.id === car.entity_id.id)!.inserter_state;
     const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), context.inserterUpdates()]);
     const hands: string[] = [];

@@ -2,6 +2,7 @@ import { Entity, handSizeFor } from "../entities";
 import { EntityState, MachineState } from "../state";
 import { factorioInserterState, factorioMachineState } from "../state/factorio-entity-state";
 import type { SimulationContext } from "./sequence/simulation-context";
+import { ContainerStorage } from "../simulation/components/container-storage";
 
 export type TimelineValue = number | string;
 /** Step changes, including the initial value at tick 0. Values hold until the next change. */
@@ -138,11 +139,11 @@ export class TimelineRecorder {
             add({ id: "state", label: "Drill state", group: "state", unit: "state" }, () => state.status);
             add({ id: "buffer", label: "Mined items in buffer", group: "inventory", unit: "items", item: state.drill.item.name }, () => state.inventoryState.getQuantity(state.drill.item.name));
             entity.note = "The drill model does not simulate a mining-progress bar. Inspect its target inventory and enable windows.";
-        } else if (EntityState.isChest(state)) {
+        } else if (ContainerStorage.is(state)) {
             entity.items = state.chest.getItemFilters();
-            const constant = EntityState.isInfinityChest(state);
+            const constant = ContainerStorage.isConstant(state);
             for (const item of entity.items) add({ id: `stock:${item}`, label: constant ? "Configured supply" : "Contents", group: "inventory", unit: "items", item, ...(constant ? {} : { limit: state.getCapacity(item) }) }, () => state.getCurrentQuantity(item));
-            if (EntityState.isInfinityChest(state)) entity.note = state.chest.remove_unfiltered_items
+            if (ContainerStorage.isConstant(state)) entity.note = state.chest.remove_unfiltered_items
                 ? (entity.items.length ? "Configured items are a constant supply. Unfiltered incoming items are removed." : "All incoming items are removed. This chest supplies no items.")
                 : "Infinity chest contents are a configured supply, not a finite inventory.";
         } else if (Entity.isBelt(model)) {

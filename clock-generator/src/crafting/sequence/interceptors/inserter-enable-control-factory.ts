@@ -4,7 +4,7 @@ import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
 import { resultWindowRanges, takesResultOf } from "../../result-windows";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
-import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
+import { assertIsInserterState, assertIsMachineState, BeltState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { ItemName } from "../../../data";
 import { computeSimulationMode, SimulationMode, simulationModeForInput } from "../simulation-mode";
 import { CraftingCyclePlan } from "../cycle/crafting-cycle";
@@ -12,6 +12,7 @@ import { Duration, OpenRange } from "../../../data-types";
 import { SwingDistribution } from "../cycle/swing-distribution";
 import { InserterClock, alwaysEnabledInserters } from "../unplanned-inserter-clock";
 import { Logger } from "../../../common/logger";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 export class EnableControlFactory {
 
@@ -36,7 +37,7 @@ export class EnableControlFactory {
                 this.entities.push(state.inserter);
             } else if (EntityState.isMachine(state)) {
                 this.entities.push(state.machine);
-            } else if (EntityState.isChest(state)) {
+            } else if (ContainerStorage.is(state)) {
                 this.chests.push(state.chest);
             }
         }
@@ -52,7 +53,7 @@ export class EnableControlFactory {
     private readonly chests: Entity[] = [];
 
     /** Each output inserter's terminal machine, and the container it takes the product from when there is one */
-    private readonly output_sources = new Map<string, { machine: MachineState; container: ChestState | null }>();
+    private readonly output_sources = new Map<string, { machine: MachineState; container: ContainerStorage | null }>();
 
     private readonly always_enabled_ids: ReadonlySet<string>;
 
@@ -170,7 +171,7 @@ export class EnableControlFactory {
         }
 
         // Machine → Chest: Enable when chest has space and source machine has output
-        if (EntityState.isMachine(source_state) && EntityState.isChest(sink_state)) {
+        if (EntityState.isMachine(source_state) && ContainerStorage.is(sink_state)) {
             return this.fromMachineToChest(entity_state.inserter, source_state, sink_state);
         }
 
@@ -181,14 +182,14 @@ export class EnableControlFactory {
         }
 
         // Chest → Machine: Enable when chest has items and machine needs them
-        if (EntityState.isChest(source_state) && EntityState.isMachine(sink_state)) {
+        if (ContainerStorage.is(source_state) && EntityState.isMachine(sink_state)) {
             return EnableControl.all([
                 ...additional_enable_controls,
                 this.fromChestToMachine(entity_state.inserter, source_state, sink_state)
             ]);
         }
 
-        if (EntityState.isChest(source_state) && EntityState.isChest(sink_state)) {
+        if (ContainerStorage.is(source_state) && ContainerStorage.is(sink_state)) {
             return this.fromChestToChest(entity_state.inserter, source_state, sink_state);
         }
 
@@ -282,7 +283,7 @@ export class EnableControlFactory {
     public fromMachineToChest(
         inserter: Inserter,
         source_state: MachineState,
-        sink_state: ChestState,
+        sink_state: ContainerStorage,
     ): EnableControl {
         const source_item_name = source_state.machine.output.item_name;
         const stack_size = handSizeFor(inserter, source_item_name);
@@ -303,8 +304,8 @@ export class EnableControlFactory {
 
     public fromChestToChest(
         inserter: Inserter,
-        source_state: ChestState,
-        sink_state: ChestState,
+        source_state: ContainerStorage,
+        sink_state: ContainerStorage,
     ): EnableControl {
         // Find all inserters pulling from this source chest
         const inserters_from_source = this.entity_state_registry
@@ -326,7 +327,7 @@ export class EnableControlFactory {
      */
     private fromChestToChestSingleInserter(
         inserter: Inserter,
-        source_state: ChestState,
+        source_state: ContainerStorage,
     ): EnableControl {
         const stack_size = inserter.metadata.stack_size;
         return EnableControl.lambda(() => {
@@ -341,7 +342,7 @@ export class EnableControlFactory {
      */
     private fromChestToChestMultipleInserters(
         inserters_from_source: InserterState[],
-        source_state: ChestState,
+        source_state: ContainerStorage,
     ): EnableControl {
         const total_stack_size = inserters_from_source.reduce(
             (sum, i) => sum + i.inserter.metadata.stack_size,
@@ -366,7 +367,7 @@ export class EnableControlFactory {
 
     public fromChestToMachine(
         inserter: Inserter,
-        source_state: ChestState,
+        source_state: ContainerStorage,
         sink_state: MachineState,
     ): EnableControl {
         // Find all item types from the chest that the machine needs
@@ -394,7 +395,7 @@ export class EnableControlFactory {
     }
 
     private fromChestToMachineForItem(
-        source_state: ChestState,
+        source_state: ContainerStorage,
         sink_state: MachineState,
         item_name: ItemName,
     ): EnableControl {
@@ -653,7 +654,7 @@ export class EnableControlFactory {
     private transferCountFromMachine(
         inserter_state: InserterState,
         source_state: MachineState,
-        container: ChestState | null = null,
+        container: ContainerStorage | null = null,
     ): EnableControl {
 
         const mode = computeSimulationMode(
@@ -1308,7 +1309,7 @@ export class EnableControlFactory {
                 final_inserters.add(inserter);
                 if (!this.output_sources.has(inserter.entity_id.id)) {
                     this.output_sources.set(inserter.entity_id.id, { machine: terminal_machine,
-                        container: container !== null && EntityState.isChest(container) ? container : null });
+                        container: container !== null && ContainerStorage.is(container) ? container : null });
                 }
             }
         }
@@ -1319,7 +1320,7 @@ export class EnableControlFactory {
     private allEntities(): Entity[] {
         return this.entity_state_registry.getAllStates().flatMap((state): Entity[] =>
             EntityState.isInserter(state) ? [state.inserter] : EntityState.isMachine(state) ? [state.machine]
-                : EntityState.isChest(state) ? [state.chest] : EntityState.isDrill(state) ? [state.drill]
+                : ContainerStorage.is(state) ? [state.chest] : EntityState.isDrill(state) ? [state.drill]
                 : EntityState.isBelt(state) ? [state.belt] : []);
     }
 

@@ -1,7 +1,9 @@
 import assert from "../../../common/assert";
-import { ChestState, DrillState, DrillStatus, EntityState } from "../../../state";
+import { DrillState, DrillStatus } from "../../../state";
 import { DrillMode } from "./drill-mode";
 import { MiningProgress } from "./mining-progress";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
+import { DropBy } from "../../../simulation/components/ports";
 
 /**
  * A drill working into a chest of any type. Each tick it first drops what it holds as far as the chest has room, by
@@ -19,9 +21,9 @@ export class DrillChestWorkingMode implements DrillMode {
 
     constructor(
         private readonly state: DrillState,
-        private readonly sink_state: ChestState,
+        private readonly sink_state: ContainerStorage,
     ) {
-        if (EntityState.isBufferChest(sink_state)) {
+        if (ContainerStorage.isSingleItem(sink_state)) {
             assert(sink_state.chest.item_filter === state.drill.item.name,
                 `Drill ${state.drill.entity_id.id} mines ${state.drill.item.name} into buffer chest ${sink_state.entity_id.id}, which holds ${sink_state.chest.item_filter}`);
         }
@@ -43,19 +45,19 @@ export class DrillChestWorkingMode implements DrillMode {
         }
         const mined = this.progress.mine();
         if (mined > 0) {
-            this.state.inventoryState.addQuantity(this.state.drill.item.name, mined);
+            this.state.held.insert(this.state.drill.item.name, mined);
         }
     }
 
-    /** Drops what the drill holds as far as the chest has room; returns what is still held */
+    /** Drops what the drill holds through the chest's drop port, as far as it has room; returns what is still held */
     private drop(): number {
         const item_name = this.state.drill.item.name;
-        const drill_inventory = this.state.inventoryState;
-        const held = drill_inventory.getItemOrThrow(item_name).quantity;
-        const amount = Math.min(held, Math.max(0, this.sink_state.getAvailableSpace(item_name)));
+        const held_storage = this.state.held;
+        const held = held_storage.getCurrentQuantity(item_name);
+        const amount = this.sink_state.accepts(item_name, held, DropBy.PLACER);
         if (amount > 0) {
-            drill_inventory.removeQuantity(item_name, amount);
-            this.sink_state.inventoryState.addQuantity(item_name, amount);
+            held_storage.take(item_name, amount);
+            this.sink_state.insert(item_name, amount);
         }
         return held - amount;
     }

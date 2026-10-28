@@ -1,16 +1,17 @@
-import { ItemName } from "../data";
-import { EntityId, SlotContainer } from "../entities";
-import { MixedChestState } from "./chest-state";
-import { SlotInventoryState } from "./slot-inventory";
-import { SupplyGate } from "./supply-gate";
+import { ItemName } from "../../data";
+import { EntityId, SlotContainer } from "../../entities";
+import { SlotInventoryState } from "../../state/slot-inventory";
+import { SupplyGate } from "../../state/supply-gate";
+import type { MixedStorage } from "./container-storage";
+import type { DropBy } from "./ports";
 
 /**
- * The state of a car, a tank or a cargo wagon taken as a chest: its slots and what they hold. It fills up or runs dry as
- * a buffer chest does; a container swapped when full (a train that leaves) is not modelled.
+ * The Storage of a car, a tank or a cargo wagon taken as a chest: its slots and what they hold. It fills up or runs dry
+ * as a buffer chest does; a container swapped when full (a train that leaves) is not modelled.
  */
-export class SlotContainerState implements MixedChestState {
+export class SlotStorage implements MixedStorage {
 
-    public static forChest(chest: SlotContainer): SlotContainerState {
+    public static forChest(chest: SlotContainer): SlotStorage {
         const inventory = new SlotInventoryState({ slot_filters: chest.slot_filters });
         for (const content of chest.contents) {
             inventory.placeInSlot(content.slot - 1, content.item, content.count);
@@ -18,7 +19,7 @@ export class SlotContainerState implements MixedChestState {
         for (const item of chest.getItemFilters()) {
             inventory.addQuantity(item, 0);
         }
-        return new SlotContainerState(chest.entity_id, chest, inventory);
+        return new SlotStorage(chest.entity_id, chest, inventory);
     }
 
     /** Refuses its items on a chest the build's output ends in, for a run in which the output is not taken away */
@@ -60,6 +61,23 @@ export class SlotContainerState implements MixedChestState {
         return this.chest.getItemFilters();
     }
 
+    /** As much of what is held as its slots have room for, from a hand or a placer alike */
+    public accepts(item: ItemName, held: number, by: DropBy): number {
+        return Math.min(held, Math.max(0, this.getAvailableSpace(item)));
+    }
+
+    public insert(item: ItemName, amount: number): void {
+        this.inventoryState.addQuantity(item, amount);
+    }
+
+    public has(item: ItemName): boolean {
+        return this.getCurrentQuantity(item) >= 1;
+    }
+
+    public take(item: ItemName, amount: number): void {
+        this.inventoryState.removeQuantity(item, amount);
+    }
+
     public nextPickupItem(allowed: (item: ItemName) => boolean): ItemName | null {
         return this.inventoryState.lastItemAmong(allowed);
     }
@@ -74,6 +92,6 @@ export class SlotContainerState implements MixedChestState {
     }
 
     public toString(): string {
-        return `SlotContainerState(${this.entity_id}, ${JSON.stringify(this.inventoryState.export())})`;
+        return `SlotStorage(${this.entity_id}, ${JSON.stringify(this.inventoryState.export())})`;
     }
 }

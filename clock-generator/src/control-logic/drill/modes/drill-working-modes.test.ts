@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "../../../config";
 import { SimulationContext } from "../../../crafting/sequence/simulation-context";
 import { MiningDrill, miningDrillMaxInsertion } from "../../../entities";
-import { EntityState, MachineState } from "../../../state";
+import { MachineState } from "../../../state";
 import { EnableControl } from "../../enable-control";
 import { DrillStateMachine } from "../drill-state-machine";
 import { DrillChestWorkingMode } from "./chest-working-mode";
 import { MiningProgress } from "./mining-progress";
 import { DrillWorkingMode } from "./working-mode";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 /**
  * A drill's progress model against the game, its cases from recordings in Factorio 2.1.21 of a big mining drill (4
@@ -27,10 +28,10 @@ function carBuild(productivity: number, speed_bonus: number, filtered: number) {
     const context = SimulationContext.fromConfig(config);
     const drill = context.drills[0];
     const car = context.state_registry.getStateByEntityIdOrThrow(drill.drill_state.drill.sink_id);
-    if (!EntityState.isChest(car)) throw new Error("no car");
+    if (!ContainerStorage.is(car)) throw new Error("no car");
     const mode = drill.current_mode;
     if (!(mode instanceof DrillChestWorkingMode)) throw new Error("not a drill into a chest");
-    return { drill, car, progress: mode.progress, held: () => drill.drill_state.inventoryState.getQuantity("iron-ore") };
+    return { drill, car, progress: mode.progress, held: () => drill.drill_state.held.getCurrentQuantity("iron-ore") };
 }
 
 /** A drill on stone into an assembling machine on rail (which never crafts here: nothing else feeds it) */
@@ -45,7 +46,7 @@ function machineBuild(productivity: number, enable_control?: EnableControl) {
     const mode = Array.from(drill.modes).find(it => it instanceof DrillWorkingMode);
     if (!mode) throw new Error("not a drill into a machine");
     return { drill, machine, progress: mode.progress, stop: miningDrillMaxInsertion(drill_state.drill, machine.machine),
-        count: () => machine.inventoryState.getItemOrThrow("stone").quantity, held: () => drill_state.inventoryState.getQuantity("stone") };
+        count: () => machine.inventoryState.getItemOrThrow("stone").quantity, held: () => drill_state.held.getCurrentQuantity("stone") };
 }
 
 describe("a drill's progress bars", () => {

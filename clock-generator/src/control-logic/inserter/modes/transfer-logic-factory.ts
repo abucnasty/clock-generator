@@ -7,6 +7,7 @@ import { ChestPickupLogic } from "./pickup/chest-pickup-logic";
 import { BeltDropLogic } from "./drop/belt-drop-logic";
 import { MachineDropLogic } from "./drop/machine-drop-logic";
 import { ChestDropLogic } from "./drop/chest-drop-logic";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 export interface InserterPickupLogicArgs {
     inserterState: InserterState;
@@ -26,7 +27,7 @@ function createPickup(args: InserterPickupLogicArgs): InserterTransferLogic {
     if (EntityState.isMachine(sourceState)) {
         return new MachinePickupLogic(inserterState, sourceState, sinkState, decider_build_order);
     }
-    if (EntityState.isChest(sourceState)) {
+    if (ContainerStorage.is(sourceState)) {
         return new ChestPickupLogic(inserterState, sourceState, sinkState);
     }
     throw new Error(`Unsupported inserter pickup source: ${sourceState.entity_id.type}`);
@@ -44,7 +45,7 @@ function createDrop(args: {
     if (EntityState.isMachine(sinkState)) {
         return new MachineDropLogic(inserterState, sinkState);
     }
-    if (EntityState.isChest(sinkState)) {
+    if (ContainerStorage.is(sinkState)) {
         return new ChestDropLogic(inserterState, sinkState);
     }
     throw new Error(`Unsupported inserter drop sink: ${sinkState.entity_id.type}`);

@@ -5,6 +5,7 @@ import {EntityState} from "../../../../src/state";
 import {InserterStateMachine} from "../../../../src/control-logic/inserter/inserter-state-machine";
 import {EnableControl} from "../../../../src/control-logic/enable-control";
 import {LaneTraffic} from "../../../../src/state/lane-traffic";
+import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
 
 export interface OutputClip {
     name: string; speed: "normal" | "fast" | "express" | "turbo"; stack_size: 1 | 2 | 3 | 4;
@@ -25,7 +26,7 @@ export function compareOutputStock(clip: OutputClip) {
         inserters: [{id: 1, source: {id: 1, type: "chest"}, sink: {id: 1, type: "belt"}, stack_size: 16}],
     });
     const context = SimulationContext.fromConfig(config);
-    const source = context.state_registry.getAllStates().find(EntityState.isChest)!;
+    const source = context.state_registry.getAllStates().find(ContainerStorage.is)!;
     const output = context.state_registry.getAllStates().find(EntityState.isBelt)!;
     const state = context.inserters[0].inserter_state;
     // The fixture is disabled before release. Ordinary re-enabling spends its first tick returning to idle.

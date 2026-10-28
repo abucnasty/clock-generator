@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import "../../data/factorio-data-file";
 import { SlotContainer } from "./slot-container";
-import { SlotContainerState } from "../../state/slot-container-state";
+import { SlotStorage } from "../../simulation/components/slot-storage";
 import { chestAcceptsItem } from "../../config/inserter-coverage-validator";
 import { CargoWagonConfigSchema } from "../../config/schema";
 import { BLOCKED_SLOT } from "../../common/slot-filter";
@@ -11,7 +11,7 @@ describe("a car, a tank or a cargo wagon from its config", () => {
         const count = type === 'cargo-wagon' ? 40 : 80;
         const slot_filters = Array.from({ length: count - 1 }, (_, i) => ({ slot: i + 2, blocked: true as const }));
         const chest = SlotContainer.fromConfig({ type, id: 1, slot_filters }, ['iron-plate']);
-        const state = SlotContainerState.forChest(chest);
+        const state = SlotStorage.forChest(chest);
         expect(chest.getCapacity('iron-plate')).toBe(100);
         expect(chest.getItemFilters()).toEqual(['iron-plate']);
         expect(state.inventoryState.roomFor('iron-plate')).toBe(100);

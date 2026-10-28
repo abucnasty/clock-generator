@@ -1,10 +1,11 @@
-import { ChestState, EntityState, InserterState, LiveQuantity, MachineState } from "../../../state";
+import { EntityState, InserterState, LiveQuantity, MachineState } from "../../../state";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterMode } from "../modes/inserter-mode";
 import { InserterPickupMode } from "../modes/pickup/pickup-mode";
 import { EnableControl } from "../../enable-control";
 import { InserterDisabledMode } from "../modes/disabled-mode";
 import { actsInTheTickTheBlockIsLifted } from "../waiting-inserter";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<InserterMode> {
 
@@ -89,7 +90,7 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
             return ModeTransition.transition(this.pickup_mode, "pickup from belt");
         }
 
-        if (EntityState.isChest(this.source_state)) {
+        if (ContainerStorage.is(this.source_state)) {
             return this.chestPickupTransition(this.inserter_state, this.source_state);
         }
         
@@ -168,11 +169,11 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
             }
         }
 
-        if (EntityState.isChest(this.sink_state)) {
+        if (ContainerStorage.is(this.sink_state)) {
             // Chest accepts items if it has available space: for a chest of mixed items, for the item in the hand or one
             // the inserter moves
             const sink = this.sink_state;
-            if (!EntityState.isSlotContainer(sink) && !EntityState.isRocketSilo(sink)) {
+            if (!ContainerStorage.isMixed(sink)) {
                 return !sink.isFull();
             }
             const held = this.inserter_state.held_item;
@@ -211,7 +212,7 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         return ModeTransition.NONE;
     }
 
-    private chestPickupTransition(state: InserterState, source: ChestState): ModeTransition<InserterMode> {
+    private chestPickupTransition(state: InserterState, source: ContainerStorage): ModeTransition<InserterMode> {
         const pickup_amount_condition = 1;
         
         // Check all item types in the chest

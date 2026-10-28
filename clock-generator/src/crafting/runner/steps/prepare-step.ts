@@ -5,6 +5,7 @@ import { EntityState, MachineState, MachineStatus } from "../../../state";
 import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../sequence";
 import { InserterInterceptor } from "../../sequence/interceptors/inserter-interceptor";
 import { RunnerStep, RunnerStepType } from "./runner-step";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 /**
  * PrepareStep simulates the crafting process until all machines are output blocked
@@ -43,7 +44,7 @@ export class PrepareStep implements RunnerStep {
         // Only check for full buffer chests that have both an input and output inserter
         const buffer_chests = context.state_registry
             .getAllStates()
-            .filter(EntityState.isFiniteChest)
+            .filter(ContainerStorage.isFinite)
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.source.entity_id.id === chest.entity_id.id))
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id))
         

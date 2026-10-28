@@ -1,6 +1,6 @@
 import assert from "../../common/assert"
 import { EntityId } from "../../entities";
-import { ChestState, EntityState, MachineState, MachineStatus, ReadableEntityStateRegistry } from "../../state";
+import { EntityState, MachineState, MachineStatus, ReadableEntityStateRegistry } from "../../state";
 import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator, Transition } from "../mode";
 import { MachineIngredientShortageMode, MachineMode, MachineNoFuelMode, MachineOutputFullMode, MachineWorkingMode } from "./modes";
 import { MachineStatusPlugin } from "./plugins";
@@ -8,6 +8,7 @@ import { IngredientShortageModeTransitionEvaluator } from "./transitions/ingredi
 import { NoFuelModeTransitionEvaluator } from "./transitions/no-fuel-mode-evaluator";
 import { OutputFullModeTransitionEvaluator } from "./transitions/output-full-mode-evaluator";
 import { WorkingModeTransitionEvaluator } from "./transitions/working-mode-evaluator";
+import { ContainerStorage } from "../../simulation/components/container-storage";
 
 export class MachineStateMachine extends ModeStateMachine<MachineMode> {
 
@@ -79,7 +80,7 @@ function create(args: {
     initial_mode_status?: MachineStatus
     plugins?: ModePlugin<MachineMode>[],
     /** The container the machine places its results into, where it has a result target */
-    result_target_state?: ChestState | MachineState,
+    result_target_state?: ContainerStorage | MachineState,
 }): MachineStateMachine {
 
 
@@ -140,7 +141,7 @@ function createFromId(machine_entity_id: EntityId, entity_state_registry: Readab
     return MachineStateMachine.create({
         machine_state: machine_state,
         initial_mode_status: machine_state.status,
-        ...(result_target_state !== undefined && (EntityState.isChest(result_target_state) || EntityState.isMachine(result_target_state)) && { result_target_state }),
+        ...(result_target_state !== undefined && (ContainerStorage.is(result_target_state) || EntityState.isMachine(result_target_state)) && { result_target_state }),
     });
 }
 

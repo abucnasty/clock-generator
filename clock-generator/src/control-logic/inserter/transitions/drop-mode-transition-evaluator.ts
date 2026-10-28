@@ -3,6 +3,7 @@ import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterMode } from "../modes";
 import { InserterSwingMode } from "../modes/swing-mode";
 import { InserterTargetFullMode } from "../modes/target-full-mode";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 export class DropModeTransitionEvaluator implements ModeTransitionEvaluator<InserterMode> {
 
@@ -24,7 +25,7 @@ export class DropModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         }
 
         // If sink is a chest and it's full, transition to target_full mode
-        if (EntityState.isChest(this.sink_entity_state)) {
+        if (ContainerStorage.is(this.sink_entity_state)) {
             if (this.sink_entity_state.isFull(this.inserter_state.held_item.item_name)) {
                 return ModeTransition.transition(this.target_full_mode, "chest is full, waiting for space");
             }

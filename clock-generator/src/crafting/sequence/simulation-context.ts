@@ -17,6 +17,7 @@ import assert from "../../common/assert";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
 import { pickupLaneLength } from "../../common/belt-pickup-layout";
 import { itemsPutInto, PutIntoView } from "../../entities/chest/items-put-into";
+import { ContainerStorage } from "../../simulation/components/container-storage";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
@@ -194,7 +195,7 @@ function createSimulationContextFromConfig(
             }
             const result_target = machine_state.machine.result_target;
             const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
-            assert(result_target_state === undefined || EntityState.isChest(result_target_state) || EntityState.isMachine(result_target_state),
+            assert(result_target_state === undefined || ContainerStorage.is(result_target_state) || EntityState.isMachine(result_target_state),
                 `${machine_state.machine} places its results into ${result_target}, which is neither a machine nor a chest`);
             return MachineStateMachine.create({
                 machine_state: machine_state,

@@ -14,6 +14,7 @@ import {miningDrillMaxInsertion} from "../../../../src/entities";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {EntityState, MachineState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
+import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
 
 /**
  * Mining drills at a low research level, set by script, against the simulator tick by tick: a big mining drill at 0.25
@@ -146,7 +147,7 @@ export function replayDrill(config: Config, log: Row[]): {ticks: Tick[]; machine
     const mode = Array.from(drill.modes).find(it => it instanceof DrillWorkingMode || it instanceof DrillChestWorkingMode)!;
     const machine = EntityState.isMachine(sink) ? sink.machine : undefined;
     const input = machine?.inputs.getOrThrow(item.name);
-    const count = () => EntityState.isChest(sink) ? sink.getCurrentQuantity(item.name) : (sink as MachineState).inventoryState.getItemOrThrow(item.name).quantity;
+    const count = () => ContainerStorage.is(sink) ? sink.getCurrentQuantity(item.name) : (sink as MachineState).inventoryState.getItemOrThrow(item.name).quantity;
     const ticks: Tick[] = [{t: 0, n: count(), p: 0, b: 0}];
     for (let k = 1; k < log.length; k++) {
         const taken = input ? (log[k].n < log[k - 1].n ? input.consumption_rate.amount_per_craft : 0) : Math.max(0, (log[k].h ?? 0) - (log[k - 1].h ?? 0));
@@ -165,7 +166,7 @@ export function simulateDrillBuild(config: Config, ticks: number): Tick[] {
     const drill_state = context.drills[0].drill_state;
     const item = drill_state.drill.item.name;
     const sink = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id);
-    const count = () => EntityState.isChest(sink) ? sink.getCurrentQuantity(item) : (sink as MachineState).inventoryState.getItemOrThrow(item).quantity;
+    const count = () => ContainerStorage.is(sink) ? sink.getCurrentQuantity(item) : (sink as MachineState).inventoryState.getItemOrThrow(item).quantity;
     const out: Tick[] = [{t: 0, n: count()}];
     for (let k = 1; k <= ticks; k++) {
         tick.executeForTick();

@@ -116,7 +116,7 @@ export { SlotInventoryState } from "./state/slot-inventory";
  * 15. A rocket silo as a chest (the same section): its fixed recipe's ingredients, of that recipe's quality, go into its
  * input slots, a whole hand while under the automated insertion limit (rule 2); everything else goes into its rocket
  * inventory while the rocket lifts its weight (in the game's 1/65536 parts), and only that inventory gives. No craft is
- * run. Cases: `state/rocket-silo-state.test.ts`; against the game, `tests/game/mechanics/containers`.
+ * run. Cases: `simulation/components/weight-storage.test.ts`; against the game, `tests/game/mechanics/containers`.
  */
 export { RocketSiloInventoryState } from "./state/rocket-silo-inventory";
 

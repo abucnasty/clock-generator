@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from "vitest"
 import { mock } from 'vitest-mock-extended';
 import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator"
-import { BeltState, ChestState, EntityState, InserterState, MachineState, SupplyGate } from "../../../state"
+import { BeltState, EntityState, InserterState, MachineState, SupplyGate } from "../../../state"
 import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineSpec, RecipeMetadata } from "../../../entities"
 import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
@@ -12,6 +12,7 @@ import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";
 import { MutableTickProvider } from "../../current-tick-provider";
 import { BeltSpeed } from "../../../entities/belt";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 
 /** A belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
@@ -657,20 +658,13 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("skips blocked chest item and picks next available unblocked item", () => {
-            const mockSource: ChestState = mock<ChestState>({
+            const quantity = (itemName?: string) => itemName === "iron-plate" || itemName === "copper-cable" ? 100 : 0;
+            const take = vi.fn();
+            const mockSource: ContainerStorage = mock<ContainerStorage>({
                 entity_id: EntityId.forChest(-1),
-                inventoryState: {
-                    removeQuantity: vi.fn(),
-                } as any,
-                getCurrentQuantity: (itemName?: string) => {
-                    if (itemName === "iron-plate") {
-                        return 100;
-                    }
-                    if (itemName === "copper-cable") {
-                        return 100;
-                    }
-                    return 0;
-                },
+                getCurrentQuantity: quantity,
+                has: (itemName: string) => quantity(itemName) >= 1,
+                take,
                 getItemFilters: () => ["iron-plate", "copper-cable"],
             });
 
@@ -706,6 +700,8 @@ describe("transitions (belt to machine)", () => {
 
             expect(inserterState.held_item?.item_name).toBe("copper-cable");
             expect(inserterState.held_item?.quantity).toBeGreaterThan(0);
+            // taken through the chest's pickup port
+            expect(take).toHaveBeenCalledWith("copper-cable", inserterState.held_item?.quantity);
         })
     })
 })

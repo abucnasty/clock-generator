@@ -1,7 +1,9 @@
-import { ChestState, EntityState, InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
+import { EntityState, InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
 import { ENERGY_BUFFER_TICKS, MachineOutput, amountIgnoredByProductivity, expectedAmount } from "../../../entities";
 import { placeIntoMachine } from "../../place-into-machine";
 import { MachineMode } from "./machine-mode";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
+import { DropBy } from "../../../simulation/components/ports";
 
 // absorbs floating point drift when summing fractional per-tick progress
 const PROGRESS_EPSILON = 1e-9;
@@ -57,7 +59,7 @@ export class MachineWorkingMode implements MachineMode {
     constructor(
         private readonly state: MachineState,
         /** The container the machine puts its results into, where it places them itself and has a result target */
-        private readonly result_target: ChestState | MachineState | null = null,
+        private readonly result_target: ContainerStorage | MachineState | null = null,
     ) {
         const machine = state.machine;
         const output = machine.output.ingredient;
@@ -176,10 +178,10 @@ export class MachineWorkingMode implements MachineMode {
                 this.state.resultsPlaced += placeIntoMachine(this.inventory_state, target, output.ingredient.item);
                 continue;
             }
-            const amount = Math.min(waiting, Math.max(0, target.getAvailableSpace(output.item_name)));
+            const amount = target.accepts(output.item_name, waiting, DropBy.PLACER);
             if (amount > 0) {
                 this.inventory_state.removeQuantity(output.item_name, amount);
-                target.inventoryState.addQuantity(output.item_name, amount);
+                target.insert(output.item_name, amount);
                 this.state.resultsPlaced += amount;
             }
         }

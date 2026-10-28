@@ -4,9 +4,9 @@ import { TakerOrder } from "../control-logic/inserter/competing-takers";
 import { SimulateStep } from "../crafting/runner/steps/simulate-step";
 import { SimulationContext } from "../crafting/sequence/simulation-context";
 import { Duration } from "../data-types/duration";
-import { EntityState } from "../state";
 import { RULES_OUTSIDE_THE_TICK, SAME_TICK_RULES, SameTickRule, TICK_PHASES, TickPhaseRow, TickTracer } from "./tick-phases";
 import { World } from "./world";
+import { ContainerStorage } from "./components/container-storage";
 
 /**
  * The order of a tick as this test knows it: a change of the phase table changes this copy in the same commit. Each
@@ -189,7 +189,7 @@ describe.each(ORDERS)("a traced run with the takers $taker_order", ({ taker_orde
 
     it("is a run in which every kind of step does something: mining, both takers, placing, a status change", () => {
         const states = run.context.state_registry.getAllStates();
-        const car = (id: string) => states.filter(EntityState.isChest).find(it => it.entity_id.id === id)!;
+        const car = (id: string) => states.filter(ContainerStorage.is).find(it => it.entity_id.id === id)!;
         expect(car("chest:3").getCurrentQuantity("iron-ore")).toBeGreaterThan(0);
         expect(car("chest:2").getCurrentQuantity("iron-plate")).toBeGreaterThan(0);
         for (const taker of run.world.inserters.slice(0, 2)) {

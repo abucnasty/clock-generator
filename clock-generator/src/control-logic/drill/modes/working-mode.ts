@@ -37,16 +37,16 @@ export class DrillWorkingMode implements DrillMode {
 
     public executeForTick(): void {
         const item_name = this.mined_item.name;
-        const drill_inventory = this.state.inventoryState;
-        const held = drill_inventory.getItemOrThrow(item_name).quantity;
-        const drop = placeIntoMachine(drill_inventory, this.sink_state, this.mined_item);
+        const held_storage = this.state.held;
+        const held = held_storage.getCurrentQuantity(item_name);
+        const drop = placeIntoMachine(held_storage.inventoryState, this.sink_state, this.mined_item);
         if (held - drop > 0) {
             // what it mined before is still in the drill: the machine is at the drill's stop, so it mines nothing
             return;
         }
         const mined = this.progress.mine();
         if (mined > 0) {
-            drill_inventory.addQuantity(item_name, mined);
+            held_storage.insert(item_name, mined);
         }
     }
 

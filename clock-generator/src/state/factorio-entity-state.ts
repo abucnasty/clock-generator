@@ -5,6 +5,7 @@ import { MachineState } from "./machine-state";
 import { DrillState } from "./drill-state";
 import { DrillStatus, InserterStatus, MachineStatus } from "./entity-status";
 import { FactorioDrillState, FactorioInserterState, FactorioMachineState } from "./factorio-state-names";
+import { ContainerStorage } from "../simulation/components/container-storage";
 
 export { FactorioInserterState, FactorioMachineState, FactorioDrillState } from "./factorio-state-names";
 
@@ -13,7 +14,7 @@ function sinkTakesNothing(sink: EntityState): boolean {
     if (EntityState.isMachine(sink)) {
         return MachineState.takesNothing(sink);
     }
-    if (EntityState.isChest(sink)) {
+    if (ContainerStorage.is(sink)) {
         return sink.isFull();
     }
     return false;

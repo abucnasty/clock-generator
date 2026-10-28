@@ -1,6 +1,7 @@
 import { BeltState, DrillState, EntityState, InserterState, MachineState } from "../../state";
 import { SupplyGate } from "../../state/supply-gate";
 import { SimulationContext } from "../sequence";
+import { ContainerStorage } from "../../simulation/components/container-storage";
 
 function entityStateKey(state: EntityState, tick: number): string {
     const inventory = Object.entries(state.inventoryState.export()).sort(([a], [b]) => a.localeCompare(b));
@@ -33,7 +34,7 @@ function ownStateKey(state: EntityState, tick: number): string {
     if (EntityState.isBelt(state)) {
         return BeltState.stateKey(state, tick);
     }
-    if (EntityState.isSlotContainer(state) || EntityState.isRocketSilo(state)) {
+    if (ContainerStorage.isMixed(state)) {
         return state.slotKey();
     }
     return "";

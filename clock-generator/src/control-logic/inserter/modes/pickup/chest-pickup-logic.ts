@@ -1,13 +1,14 @@
 import { handSizeFor } from "../../../../entities";
-import { ChestState, EntityState, InserterState, InserterStatus } from "../../../../state";
+import { EntityState, InserterState, InserterStatus } from "../../../../state";
 import { InserterTransferLogic } from "../transfer-logic";
 import { canPickupItem, canPickupItemForSink, recordPickup } from "../transfer-helpers";
+import { ContainerStorage } from "../../../../simulation/components/container-storage";
 
 export class ChestPickupLogic implements InserterTransferLogic {
     private current_tick = 0;
     constructor(
         private readonly inserterState: InserterState,
-        private readonly sourceEntityState: ChestState,
+        private readonly sourceEntityState: ContainerStorage,
         private readonly sinkEntityState: EntityState,
     ) {}
 
@@ -30,14 +31,14 @@ export class ChestPickupLogic implements InserterTransferLogic {
 
     private canPickupFromChest(): boolean {
         return this.sourceEntityState.getItemFilters().some(item_name =>
-            this.sourceEntityState.getCurrentQuantity(item_name) >= 1 && canPickupItem(this.inserterState, item_name)
+            this.sourceEntityState.has(item_name) && canPickupItem(this.inserterState, item_name)
         );
     }
 
     /**
      * Order of filtered items matters for inserter pickups from a chest, at least for the simulation.
      */
-    private pickupFromChest(state: InserterState, source: ChestState): void {
+    private pickupFromChest(state: InserterState, source: ContainerStorage): void {
         const takes = (it: string) => source.getCurrentQuantity(it) > 0
             && canPickupItem(this.inserterState, it)
             && canPickupItemForSink(this.sinkEntityState, it);
@@ -45,7 +46,7 @@ export class ChestPickupLogic implements InserterTransferLogic {
         // only more of that item (the game: a hand of 5 iron waited for iron beside a stack of copper); the others leave
         // the order to the inserter's items
         const held = state.held_item;
-        const first_available_item = EntityState.isSlotContainer(source) || EntityState.isRocketSilo(source)
+        const first_available_item = ContainerStorage.isMixed(source)
             ? source.nextPickupItem(it => state.inserter.filtered_items.has(it) && takes(it) && (held === null || held.item_name === it))
             : Array.from(state.inserter.filtered_items).find(takes);
 
@@ -66,6 +67,6 @@ export class ChestPickupLogic implements InserterTransferLogic {
 
         state.held_item = { item_name: held_item.item_name, quantity: held_item.quantity + pickup_quantity };
         recordPickup(this.inserterState, first_available_item, pickup_quantity);
-        source.inventoryState.removeQuantity(first_available_item, pickup_quantity);
+        source.take(first_available_item, pickup_quantity);
     }
 }

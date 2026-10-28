@@ -1,14 +1,18 @@
-import { ItemName } from "../data";
-import { EntityId, RocketSiloChest } from "../entities";
-import { MixedChestState } from "./chest-state";
-import { RocketSiloInventoryState } from "./rocket-silo-inventory";
-import { weightUnits } from "./slot-inventory";
-import { SupplyGate } from "./supply-gate";
+import { ItemName } from "../../data";
+import { EntityId, RocketSiloChest } from "../../entities";
+import { RocketSiloInventoryState } from "../../state/rocket-silo-inventory";
+import { weightUnits } from "../../state/slot-inventory";
+import { SupplyGate } from "../../state/supply-gate";
+import type { MixedStorage } from "./container-storage";
+import type { DropBy } from "./ports";
 
-/** The state of a rocket silo taken as a chest: its input slots and its rocket inventory (see RocketSiloInventoryState) */
-export class RocketSiloState implements MixedChestState {
+/**
+ * The Storage of a rocket silo taken as a chest: its input slots and its rocket inventory, filled up to the weight the
+ * rocket lifts (see RocketSiloInventoryState). It gives only from its rocket inventory.
+ */
+export class WeightStorage implements MixedStorage {
 
-    public static forChest(chest: RocketSiloChest): RocketSiloState {
+    public static forChest(chest: RocketSiloChest): WeightStorage {
         const inventory = new RocketSiloInventoryState({
             toInput: item => chest.toInput(item),
             insertionLimit: item => chest.input_limits.get(item)?.quantity ?? 0,
@@ -20,7 +24,7 @@ export class RocketSiloState implements MixedChestState {
         for (const item of chest.getItemFilters()) {
             inventory.addQuantity(item, 0);
         }
-        return new RocketSiloState(chest.entity_id, chest, inventory);
+        return new WeightStorage(chest.entity_id, chest, inventory);
     }
 
     public readonly supply = new SupplyGate();
@@ -63,6 +67,24 @@ export class RocketSiloState implements MixedChestState {
         return this.chest.getItemFilters();
     }
 
+    /** As much of what is held as its input slots or its rocket inventory have room for, from a hand or a placer alike */
+    public accepts(item: ItemName, held: number, by: DropBy): number {
+        return Math.min(held, Math.max(0, this.getAvailableSpace(item)));
+    }
+
+    /** Into its input slots or its rocket inventory, as the item goes */
+    public insert(item: ItemName, amount: number): void {
+        this.inventoryState.addQuantity(item, amount);
+    }
+
+    public has(item: ItemName): boolean {
+        return this.getCurrentQuantity(item) >= 1;
+    }
+
+    public take(item: ItemName, amount: number): void {
+        this.inventoryState.removeQuantity(item, amount);
+    }
+
     public nextPickupItem(allowed: (item: ItemName) => boolean): ItemName | null {
         return this.inventoryState.rocket.lastItemAmong(allowed);
     }
@@ -72,6 +94,6 @@ export class RocketSiloState implements MixedChestState {
     }
 
     public toString(): string {
-        return `RocketSiloState(${this.entity_id}, ${JSON.stringify(this.inventoryState.export())})`;
+        return `WeightStorage(${this.entity_id}, ${JSON.stringify(this.inventoryState.export())})`;
     }
 }

@@ -4,7 +4,8 @@ import { inserterUpdateOrder } from "../control-logic/inserter/competing-takers"
 import { InserterStateMachine } from "../control-logic/inserter/inserter-state-machine";
 import { MachineStateMachine } from "../control-logic/machine/machine-state-machine";
 import { SimulationContext } from "../crafting/sequence/simulation-context";
-import { BeltState, ChestState, EntityState } from "../state";
+import { BeltState, EntityState } from "../state";
+import { ContainerStorage } from "./components/container-storage";
 
 /**
  * The entities a tick runs, one array for each archetype, each in the order the phase table runs it
@@ -31,7 +32,7 @@ export class World {
         /** In config order; a belt has no step of its own in a tick yet */
         public readonly belts: readonly BeltState[],
         /** In config order; a container has no step of its own in a tick yet */
-        public readonly containers: readonly ChestState[],
+        public readonly containers: readonly ContainerStorage[],
     ) {}
 
     public static of(context: SimulationContext): World {
@@ -42,7 +43,7 @@ export class World {
             inserterUpdateOrder(context.inserters, context.state_registry, context.competing_takers_order),
             [...context.machines],
             states.filter(EntityState.isBelt),
-            states.filter(EntityState.isChest),
+            states.filter(ContainerStorage.is),
         );
     }
 }

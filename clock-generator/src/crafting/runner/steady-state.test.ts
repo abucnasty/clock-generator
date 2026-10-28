@@ -15,7 +15,7 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "craftsStarted", "resultsPlaced", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick", "windowOpeningTakeDecider"],
     // `tick` and the counts of items are left out of its key
     inserter: ["status", "tick", "held_item", "items_picked_up", "items_dropped", "waits_for_sink", "enabled"],
-    drill: ["status"],
+    DrillState: ["status"],
     // the container a machine places its results into (null where it has none), the same in every tick
     MachineWorkingMode: ["result_target"],
     MachineDropLogic: ["current_tick"],
