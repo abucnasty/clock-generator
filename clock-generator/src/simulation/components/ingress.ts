@@ -55,7 +55,7 @@ interface AskSlot {
 
 /**
  * A crafting machine's Ingress component: what it takes from an inserter's hand or a placer, and where it puts it. Its
- * passive asks (whether it takes an item, whether that is blocked now, whether it takes nothing at all, whether its
+ * passive asks (the slot of an item it takes, whether that is blocked now, whether it takes nothing at all, whether its
  * output is at the block) read the machine's inventories through views bound at build, which stay the machine's.
  *
  * An answer worked out from the inventories stands until one of them is written (`mutation_generation`): the same idea
@@ -150,14 +150,6 @@ export class Ingress implements DropPort {
         }
         this.slots = slots;
         this.slot_of = slot_of;
-    }
-
-    /**
-     * Whether the machine takes the item at all: an ingredient of its recipe, or its fuel. The design's passive
-     * `accepts(item)` (P4 section 2); only tests ask it for now, the simulation's readers bind `slotOf` once instead.
-     */
-    public takes(item: ItemName): boolean {
-        return this.slot_of.has(item);
     }
 
     /** The slot a reader binds once for an item it asks about every tick (`blockedAt`); -1 for an item it never takes */
@@ -331,12 +323,16 @@ export class Ingress implements DropPort {
         return this.ingredientInventory(item).getQuantity(item);
     }
 
-    /** How many of an item inserters have put into the machine: the ingredient, or the fuel in the fuel slot when it is only fuel */
-    public quantityPutIn(item: ItemName): number {
+    /**
+     * How many of an item inserters have put into the machine, as a view bound once for a reader that asks every tick (an
+     * enable control): the ingredient where the machine keeps it, or the fuel in the fuel slot when it is only fuel.
+     * Which inventory it reads is fixed by the machine, so the view reads what asking anew each time would.
+     */
+    public quantityPutInOf(item: ItemName): LiveQuantity {
         if (item === this.fuel_item && !this.input_of.has(item)) {
-            return this.fuel_inventory.getQuantity(item);
+            return new LiveQuantity(this.fuel_inventory, item);
         }
-        return this.ingredientQuantity(item);
+        return new LiveQuantity(this.ingredientInventory(item), item);
     }
 
     private fuelIsBelowLimit(): boolean {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AlwaysEnabledControl, EnableControl } from "../../control-logic/enable-control";
+import { AlwaysEnabledControl, EnableControl } from "../controls/enable-control";
 import { Control } from "./control";
 
 describe("an entity's Control", () => {

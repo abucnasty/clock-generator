@@ -5,12 +5,12 @@ import {expect, test} from "vitest";
 import {CargoWagonConfigSchema, Config, ConfigSchema} from "../../../../src/config";
 import {FactorioBlueprintFile} from "../../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../../src/blueprints/serde";
-import {CompositeControlLogic, TickControlLogic} from "../../../../src/control-logic";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {drillResourceOf, recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {SlotContainer} from "../../../../src/entities/chest/slot-container";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
+import { TickByHand } from "../../../../src/crafting/runner/tick-by-hand.fixture";
 
 /**
  * Containers as chests in the game against the simulator, inserter by inserter: the hands each inserter carried, what
@@ -173,7 +173,7 @@ interface Observed {hands: string[][]; held: string[]; slots?: string[]; rocket?
 /** The simulator's run of the same build, every inserter enabled, for as many ticks */
 export function simulateContainerMechanic(config: Config, ticks: number, fill_ticks = 0): Observed {
     const context = SimulationContext.fromConfig(config);
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates(), ...context.drills]);
+    const tick = new TickByHand(context, { drills: true });
     const drill_target = context.drills[0]?.drill_state.drill.sink_id;
     const drill_fed = drill_target === undefined ? undefined : context.state_registry.getStateByEntityIdOrThrow(drill_target);
     const fill: number[] = [];

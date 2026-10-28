@@ -1,4 +1,4 @@
-import { TickProvider } from "../../../control-logic";
+import { TickProvider } from "../../../simulation/current-tick-provider";
 import { Entity } from "../../../entities";
 import { DebugMessageBuilder } from "./debug-message-builder";
 import { DebugSettingsProvider } from "./debug-settings-provider";

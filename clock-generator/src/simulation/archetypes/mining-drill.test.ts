@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "../../config";
-import { EnableControl } from "../../control-logic/enable-control";
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { EnableControl } from "../controls/enable-control";
+import { reasonText } from "../../state/reason-table";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { MiningDrill, miningDrillMaxInsertion } from "../../entities";
 import { DrillState, DrillStatus, MachineState } from "../../state";
 import { ContainerStorage } from "../components/container-storage";
 import { Mining } from "../components/mining";
 import { DrillStatusCode } from "../status-codes";
-import { DrillObserver, MiningDrillArchetype } from "./mining-drill";
+import type { DrillObserver } from "../observers/observer";
+import { MiningDrillArchetype } from "./mining-drill";
 
 /**
  * A drill's progress model against the game, its cases from recordings in Factorio 2.1.21 of a big mining drill (4
@@ -180,7 +181,7 @@ describe("a drill's control rule", () => {
         let asked = 0;
         const { drill } = machineBuild(440, { isEnabled: () => answers[asked++] });
         const seen: string[] = [];
-        drill.addObserver({ onStatusChange: (from, to, reason_id) => seen.push(`${from}>${to} ${reasonText(reason_id)} now ${drill.status}`) });
+        drill.observers.add({ onStatusChange: (from, to, reason) => seen.push(`${from}>${to} ${reasonText(reason.reasonId(from, to))} now ${drill.status}`) });
         for (let tick = 0; tick < answers.length; tick++) drill.executeForTick();
         expect(asked).toBe(answers.length);
         expect(seen).toEqual([
@@ -193,40 +194,35 @@ describe("a drill's control rule", () => {
     it("runs the observers of the tick after its step, in the order added, and takes off those it is told to", () => {
         const { drill, held } = machineBuild(440);
         const order: string[] = [];
-        const first = { executeForTick: () => order.push(`first ${held()}`) };
-        const second = { executeForTick: () => order.push("second") };
-        drill.addObserver(first);
-        drill.addObserver({ onStatusChange: () => order.push("change") });
-        drill.addObserver(second);
+        const first = { onTick: () => order.push(`first ${held()}`) };
+        const second = { onTick: () => order.push("second") };
+        drill.observers.add(first);
+        drill.observers.add({ onStatusChange: () => order.push("change") });
+        drill.observers.add(second);
         drill.executeForTick();
         // after the step: the first tick's 1.35 ore a tick is held already
         expect(order).toEqual(["first 1", "second"]);
-        drill.removeObservers(new Set([first]));
+        drill.observers.remove(new Set([first]));
         drill.executeForTick();
         expect(order.slice(2)).toEqual(["second"]);
-        expect(drill.getObservers()).toHaveLength(2);
+        expect(drill.observers.list()).toHaveLength(2);
     });
 
-    it("keys its status and bars with the text of the drill's mode state machine before it", () => {
+    // one key for the drill, its components' in a fixed order (P4 3.4); every field of its components, in the key or
+    // out of it, is pinned with every component's (crafting/runner/steady-state.test.ts)
+    it("keys what it holds, its status as its code and both bars", () => {
         let enabled = true;
-        const { drill, progress } = machineBuild(440, { isEnabled: () => enabled });
-        expect(drill.stateKey()).toBe(`${DrillStatus.WORKING}|0;0|||`);
+        const { drill, progress, held } = machineBuild(440, { isEnabled: () => enabled });
+        expect(drill.stateKey()).toBe(`[["stone",0]]|${DrillStatusCode.WORKING}|0;0`);
         drill.executeForTick();
-        expect(drill.stateKey()).toBe(`${DrillStatus.WORKING}|${progress.mining_progress};${progress.bonus_progress}|||`);
+        const bars = `${progress.mining_progress};${progress.bonus_progress}`;
+        expect(drill.stateKey()).toBe(`[["stone",${held()}]]|${DrillStatusCode.WORKING}|${bars}`);
         enabled = false;
         drill.executeForTick();
-        expect(drill.stateKey()).toBe(`${DrillStatus.DISABLED}|${progress.mining_progress};${progress.bonus_progress}|||`);
-        // the state's own status is never written (a known quirk, kept)
+        expect(drill.stateKey()).toBe(`[["stone",${held()}]]|${DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR}|${bars}`);
+        // the state's own status is never written (a known quirk, kept), and no part of the key
         expect(drill.drill_state.status).toBe(DrillStatus.WORKING);
-    });
-
-    it("holds as a plain value only its status, which its key holds; its Control only what kind of control it is", () => {
-        const { drill } = machineBuild(440);
-        const plainOf = (subject: object) => Object.entries(subject)
-            .filter(([, value]) => value === null || typeof value !== "object").map(([key]) => key);
-        expect(plainOf(drill)).toEqual(["status"]);
-        // read once at build, the same in every tick (a drill asks its control `enabled` only)
-        expect(plainOf(drill.control)).toEqual(["is_game_clock", "looks_ahead", "decider_build_order"]);
+        expect(drill.stateKey()).toBe(`${drill.drill_state.held.key()}|${drill.status}|${drill.mining.key()}`);
     });
 });
 
@@ -236,7 +232,7 @@ describe("a control swap", () => {
         const { context, drill, car, held } = carBuild(70, 5, 78);
         const changes: string[] = [];
         const observer: DrillObserver = { onStatusChange: (from, to) => changes.push(`${from}>${to}`) };
-        drill.addObserver(observer);
+        drill.observers.add(observer);
         let on = true;
         context.useControls({ drill: () => ({ isEnabled: () => on }) });
         for (let tick = 0; tick < 6; tick++) drill.executeForTick();
@@ -254,9 +250,9 @@ describe("a control swap", () => {
         expect(context.drills[0]).toBe(drill);
         expect(drill.mining).toBe(mining);
         expect(drill.control).toBe(control);
-        expect(drill.getObservers()).toEqual([observer]);
+        expect(drill.observers.list()).toEqual([observer]);
         // as a drill built anew over the same state, and nobody told of it
-        expect([drill.status, drill.stateKey()]).toEqual([DrillStatusCode.WORKING, `${DrillStatus.WORKING}|0;0|||`]);
+        expect([drill.status, drill.stateKey()]).toEqual([DrillStatusCode.WORKING, `${drill.drill_state.held.key()}|${DrillStatusCode.WORKING}|0;0`]);
         expect(changes).toHaveLength(1);
         drill.executeForTick();
         expect(drill.status).toBe(DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR);

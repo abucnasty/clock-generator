@@ -1,4 +1,4 @@
-import type { EnableControl } from "../../control-logic/enable-control";
+import type { EnableControl } from "../controls/enable-control";
 
 /**
  * The Control of an entity a circuit enables: a reference to its current enable control, the clock's decider for it.

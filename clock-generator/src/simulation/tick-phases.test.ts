@@ -1,27 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { Config, ConfigSchema } from "../config/schema";
-import { TakerOrder } from "../control-logic/inserter/competing-takers";
+import { TakerOrder } from "./competing-takers";
 import { SimulateStep } from "../crafting/runner/steps/simulate-step";
 import { SimulationContext } from "../crafting/sequence/simulation-context";
 import { Duration } from "../data-types/duration";
-import { RULES_OUTSIDE_THE_TICK, SAME_TICK_RULES, SameTickRule, TICK_PHASES, TickPhaseRow, TickTracer } from "./tick-phases";
+import { ObserverEvent, RULES_OUTSIDE_THE_TICK, SAME_TICK_RULES, SameTickRule, TICK_PHASES, TickPhaseRow, TickTracer } from "./tick-phases";
 import { World } from "./world";
 import { ContainerStorage } from "./components/container-storage";
 
 /**
  * The order of a tick as this test knows it: a change of the phase table changes this copy in the same commit. Each
- * step with the method of the archetype that runs it.
+ * step with the method of the archetype that runs it and the observer event it tells, if any.
  */
-const EXPECTED: readonly { name: string; entities: TickPhaseRow["entities"]; run_by: TickPhaseRow["run_by"]; steps: [string, string][] }[] = [
-    { name: "tick", entities: null, run_by: "loop", steps: [["increment", "incrementTick"]] },
+const EXPECTED: readonly { name: string; entities: TickPhaseRow["entities"]; run_by: TickPhaseRow["run_by"]; steps: [string, string, ObserverEvent | null][] }[] = [
+    { name: "tick", entities: null, run_by: "loop", steps: [["increment", "incrementTick", null]] },
     { name: "drills", entities: "drills", run_by: "loop",
-        steps: [["control_rule", "controlRule"], ["mining", "miningStep"], ["tick_observers", "tickObservers"]] },
+        steps: [["control_rule", "controlRule", "status_change"], ["mining", "miningStep", null], ["tick_observers", "tickObservers", "tick"]] },
     { name: "inserters", entities: "inserters", run_by: "loop",
-        steps: [["phase_rule", "phaseRule"], ["phase_step", "phaseStep"], ["tick_observers", "tickObservers"], ["shown_enabled", "endOfTick"]] },
+        steps: [["phase_rule", "phaseRule", "status_change"], ["phase_step", "phaseStep", null], ["tick_observers", "tickObservers", "tick"],
+            ["shown_enabled", "endOfTick", null]] },
     { name: "machines", entities: "machines", run_by: "loop",
-        steps: [["place_before", "placeResults"], ["held_to_output", "putHeldProductsInOutput"], ["status_rule", "statusRule"],
-            ["status_step", "statusStep"], ["place_after", "placeResults"], ["end_of_tick", "endOfTick"]] },
-    { name: "after_tick", entities: null, run_by: "caller", steps: [["recorders", "after_tick"], ["stop_early", "stop_early"]] },
+        steps: [["place_before", "placeResults", null], ["held_to_output", "putHeldProductsInOutput", null], ["status_rule", "statusRule", "status_change"],
+            ["status_step", "statusStep", null], ["place_after", "placeResults", null], ["end_of_tick", "endOfTick", "tick"]] },
+    { name: "after_tick", entities: null, run_by: "caller", steps: [["recorders", "record", "record"], ["stop_early", "stop_early", null]] },
 ];
 
 /**
@@ -99,10 +100,14 @@ function firstDifference(actual: readonly string[], expected: readonly string[])
     return { at, actual: actual.slice(from, from + 8), expected: expected.slice(from, from + 8) };
 }
 
+/** An observer's event in a traced run, beside the steps: what `told` holds besides them */
+const EVENT = "event:";
+
 /**
  * A run of the build with a tracer, and with every step method of every archetype recording its calls. The tracer is
  * told an index into the run's own World, which this names through a second World built the same way; the calls name
- * the archetype that was called, so they show the run's order whatever World it ran.
+ * the archetype that was called, so they show the run's order whatever World it ran. Every archetype has an observer
+ * of both its events and the run a recorder: `told` holds the tracer's steps with the events told between them.
  */
 function tracedRun(taker_order: TakerOrder) {
     const context = SimulationContext.fromConfig(BUILD);
@@ -110,16 +115,24 @@ function tracedRun(taker_order: TakerOrder) {
     const world = World.of(context);
     const traced: string[] = [];
     const called: string[] = [];
+    const told: string[] = [];
     const now = () => context.tick_provider.getCurrentTick();
     const tracer: TickTracer = {
         step(phase, entity, step) {
             const row = TICK_PHASES[phase];
-            traced.push(`${now()} ${row.name} ${idOf(world, row.entities, entity)} ${row.steps.find(it => it.step === step)?.name}`);
+            const line = `${now()} ${row.name} ${idOf(world, row.entities, entity)} ${row.steps.find(it => it.step === step)?.name}`;
+            traced.push(line);
+            told.push(line);
         },
     };
     for (const row of EXPECTED) {
         if (row.entities === null) continue;
         world[row.entities].forEach((archetype, index) => {
+            const at = `${row.name} ${idOf(world, row.entities, index)}`;
+            archetype.observers.add({
+                onStatusChange: () => { told.push(`${now()} ${at} ${EVENT}${ObserverEvent.STATUS_CHANGE}`); },
+                onTick: () => { told.push(`${now()} ${at} ${EVENT}${ObserverEvent.TICK}`); },
+            });
             const methods = archetype as unknown as Record<string, () => void>;
             for (const name of new Set(row.steps.map(([, method]) => method))) {
                 const original = methods[name].bind(archetype);
@@ -136,17 +149,17 @@ function tracedRun(taker_order: TakerOrder) {
         called.push(`${now()} tick - incrementTick`);
     };
     new SimulateStep(context, Duration.ofTicks(TICKS),
-        () => { called.push(`${now()} after_tick - after_tick`); },
+        [{ record() { called.push(`${now()} after_tick - record`); told.push(`${now()} after_tick - ${EVENT}${ObserverEvent.RECORD}`); } }],
         () => { called.push(`${now()} after_tick - stop_early`); return false; },
         tracer,
     ).execute();
-    return { context, world, traced, called };
+    return { context, world, traced, called, told };
 }
 
 describe("the phase table", () => {
     it("has the phases and steps of its copy in this test, each step's code its place in its phase", () => {
-        expect(TICK_PHASES.map(row => ({ name: row.name, entities: row.entities, run_by: row.run_by, steps: row.steps.map(step => step.name) })))
-            .toEqual(EXPECTED.map(row => ({ name: row.name, entities: row.entities, run_by: row.run_by, steps: row.steps.map(([name]) => name) })));
+        expect(TICK_PHASES.map(row => ({ name: row.name, entities: row.entities, run_by: row.run_by, steps: row.steps.map(step => [step.name, step.tells]) })))
+            .toEqual(EXPECTED.map(row => ({ name: row.name, entities: row.entities, run_by: row.run_by, steps: row.steps.map(([name, , tells]) => [name, tells]) })));
         TICK_PHASES.forEach((row, phase) => {
             expect(row.phase).toBe(phase);
             expect(row.steps.map(step => step.step)).toEqual(row.steps.map((_, index) => index));
@@ -184,6 +197,34 @@ describe.each(ORDERS)("a traced run with the takers $taker_order", ({ taker_orde
 
     it("runs every step of every entity in the order of the table, as the archetypes are called", () => {
         expect(firstDifference(run.called, expectedSteps(order, TICKS, true))).toBeNull();
+    });
+
+    it("tells observers only inside the steps that name their event: each entity's tick once a tick, a change in its status rule", () => {
+        const misplaced: string[] = [];
+        const counts = new Map<string, number>();
+        let step = "";
+        for (const line of run.told) {
+            if (!line.includes(EVENT)) {
+                step = line;
+                continue;
+            }
+            const [tick, phase, entity, told] = line.split(" ");
+            const event = told.slice(EVENT.length);
+            const [step_tick, step_phase, step_entity, step_name] = step.split(" ");
+            const row = TICK_PHASES.find(it => it.name === step_phase);
+            if (tick !== step_tick || phase !== step_phase || entity !== step_entity || row?.steps.find(it => it.name === step_name)?.tells !== event) {
+                misplaced.push(`${line} after ${step}`);
+            }
+            counts.set(`${phase} ${event}`, (counts.get(`${phase} ${event}`) ?? 0) + 1);
+        }
+        expect(misplaced).toEqual([]);
+        for (const phase of ["drills", "inserters", "machines"] as const) {
+            expect(counts.get(`${phase} ${ObserverEvent.TICK}`)).toBe(TICKS * order[phase].length);
+        }
+        expect(counts.get(`after_tick ${ObserverEvent.RECORD}`)).toBe(TICKS);
+        // the drill is always enabled: only the inserters and the machines change status in this build
+        expect(counts.get(`inserters ${ObserverEvent.STATUS_CHANGE}`)).toBeGreaterThan(0);
+        expect(counts.get(`machines ${ObserverEvent.STATUS_CHANGE}`)).toBeGreaterThan(0);
     });
 
     it("is a run in which every kind of step does something: mining, both takers, placing, a status change", () => {

@@ -17,6 +17,11 @@ export class InserterWakes {
         this.state.enabled = this.shownEnabled();
     }
 
+    /** Whether the game shows the inserter enabled after its last tick, for the inserter's key (see InserterArchetype.stateKey) */
+    public key(): string {
+        return `${this.state.enabled}`;
+    }
+
     /**
      * Whether the game would show the inserter as enabled after this tick. The game shows it a tick ahead of what
      * the inserter does. Recorded on seven runs of five builds in Factorio 2.1.21: a hand never grows in the first

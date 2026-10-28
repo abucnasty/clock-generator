@@ -14,4 +14,16 @@ export class SupplyGate {
     public isOpen(): boolean {
         return this.withheld.size === 0 && this.refused.size === 0;
     }
+
+    /**
+     * What it withholds and refuses, for the key of the belt or container it belongs to (see simulationStateKey); empty
+     * while it is open. Every key is taken with the gates open (a loss keys only after the supply is restored), so this
+     * guards against a key ever being read mid-loss.
+     */
+    public key(): string {
+        if (this.isOpen()) {
+            return "";
+        }
+        return `W:${Array.from(this.withheld).sort().join(",")};R:${Array.from(this.refused).sort().join(",")}`;
+    }
 }

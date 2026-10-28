@@ -1,6 +1,6 @@
-import { ControlLogic } from "../../../control-logic";
 import { SimulationTick } from "../simulation-tick";
 import { AfterTickStep, NO_ENTITY, TickPhase, TickTracer } from "../../../simulation/tick-phases";
+import type { TickRecorder } from "../../../simulation/observers/observer";
 import { Duration } from "../../../data-types";
 import { SimulationContext } from "../../sequence";
 import { RunnerStep, RunnerStepType } from "./runner-step";
@@ -8,19 +8,19 @@ import { RunnerStep, RunnerStepType } from "./runner-step";
 export class SimulateStep implements RunnerStep {
     public readonly type: RunnerStepType = RunnerStepType.SIMULATE
 
-    private readonly control_logic: ControlLogic;
+    private readonly simulation_tick: SimulationTick;
 
     constructor(
         private readonly simulation_context: SimulationContext,
         private readonly duration: Duration,
-        /** Called after every simulated tick */
-        private readonly after_tick?: () => void,
-        /** Asked after every simulated tick (after `after_tick`); the step stops early when it answers true */
+        /** The after-tick phase's recorders, told after every simulated tick in this order */
+        private readonly recorders: readonly TickRecorder[] = [],
+        /** Asked after every simulated tick (after the recorders); the step stops early when it answers true */
         private readonly stop_early?: () => boolean,
         /** Told of every step of every tick, the after-tick phase's included (a test of the phase table) */
         private readonly tracer: TickTracer | null = null,
     ) {
-        this.control_logic = this.build()
+        this.simulation_tick = this.build()
     }
 
     /** Ticks actually simulated by the last execute(): the duration, or less when `stop_early` ended the run */
@@ -28,7 +28,8 @@ export class SimulateStep implements RunnerStep {
 
     public execute(): void {
         const context = this.simulation_context
-        const control_logic = this.control_logic;
+        const simulation_tick = this.simulation_tick;
+        const recorders = this.recorders;
         const tracer = this.tracer;
 
         const start_tick = context.tick_provider.getCurrentTick();
@@ -39,10 +40,12 @@ export class SimulateStep implements RunnerStep {
             if (current_tick >= end_tick) {
                 break;
             }
-            control_logic.executeForTick();
+            simulation_tick.executeForTick();
             // the phase table's after-tick phase (simulation/tick-phases.ts)
             if (tracer !== null) tracer.step(TickPhase.AFTER_TICK, NO_ENTITY, AfterTickStep.RECORDERS);
-            this.after_tick?.();
+            for (let index = 0; index < recorders.length; index++) {
+                recorders[index].record();
+            }
             if (tracer !== null) tracer.step(TickPhase.AFTER_TICK, NO_ENTITY, AfterTickStep.STOP_EARLY);
             if (this.stop_early?.() === true) {
                 break;
@@ -51,7 +54,7 @@ export class SimulateStep implements RunnerStep {
         this.ticks_run = context.tick_provider.getCurrentTick() - start_tick;
     }
 
-    private build(): ControlLogic {
+    private build(): SimulationTick {
         return new SimulationTick(this.simulation_context, this.tracer);
     }
 }

@@ -1,6 +1,6 @@
 import type { EntityId } from "../../entities/entity-id";
 import type { Machine } from "../../entities/machine/machine";
-import { reasonId } from "../../control-logic/mode/reason-table";
+import { reasonId } from "../../state/reason-table";
 import { LiveQuantity, WritableInventoryState } from "../../state/inventory-state";
 import { ProgressState } from "../../state/progress-state";
 import { CraftingStatus } from "../status-codes";
@@ -115,10 +115,11 @@ export class Crafting implements EnergyUser, YieldUser {
     }
 
     /**
-     * The number of the reason a history records for a change of status the rule just gave, from `from` to `to`. Its
-     * text is made here only for the two reasons read off the output (a full output's, naming the result target where a
-     * stack waits for room in it, and the drop under the block), from the state the rule read: nothing is written
-     * between the rule and the change.
+     * The number of the reason a history records for a change of status the rule just gave, from `from` to `to`, asked
+     * by an observer of the change that records it (`CraftingMachineArchetype.reasonId`). Its text is made here only for
+     * the two reasons read off the output (a full output's, naming the result target where a stack waits for room in
+     * it, and the drop under the block), from the state the rule read: nothing it reads is written between the rule and
+     * the observers (the status, written before them, is not read here).
      */
     public reasonOf(from: CraftingStatus, to: CraftingStatus, result_target: { readonly entity_id: EntityId } | null): number {
         switch (to) {
@@ -194,6 +195,14 @@ export class Crafting implements EnergyUser, YieldUser {
     /** Results a machine that places its results itself puts in its own output, where it has no result target to place them into */
     public countPlacedInOutput(amount: number): void {
         this.placement.countPlacedInOwnOutput(amount);
+    }
+
+    /**
+     * What of it drives the machine's next ticks, for the machine's key (see simulationStateKey): the status as its code
+     * and the craft underway. The crafts counted and the main product made are running totals: they never repeat.
+     */
+    public key(): string {
+        return `${this.status};${this.craftingProgress.progress}`;
     }
 
     /** A snapshot's copy of what `other` holds: the craft underway, the counts and the status */

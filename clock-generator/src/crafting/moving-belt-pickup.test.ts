@@ -5,7 +5,7 @@ import { Config } from "../config";
 import { simulateRecording } from "../verification/simulated-recording";
 import { outputPerPeriod, recipesMaking } from "../harness/recording-output";
 import { SimulationContext } from "./sequence/simulation-context";
-import { AlwaysEnabledControl } from "../control-logic";
+import { AlwaysEnabledControl } from "../simulation/controls/enable-control";
 import { EntityState } from "../state";
 
 const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS_CONFIG;

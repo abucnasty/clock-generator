@@ -4,7 +4,7 @@ import {loadConfigFromFile} from "../../config/loader";
 import {SimulationContext} from "./simulation-context";
 import {SimulationTick} from "../runner/simulation-tick";
 import {simulationStateKey} from "../runner/steady-state";
-import {EntityState, InserterState, InserterStatus} from "../../state";
+import {EntityState, InserterStatus} from "../../state";
 import {BeltHandDrop} from "../../simulation/components/belt-hand-drop";
 import {HandScratch} from "../../simulation/components/hand";
 import {bindHandPorts} from "../../simulation/components/hand-ports";
@@ -59,8 +59,8 @@ test("records the actual empty pickup-window waits instead of inventing a fixed 
     ]);
 });
 
-test("records physical fallback and stays attached across pickup-control replacement, not state cloning", () => {
-    const {context, state, createPickup} = setup();
+test("records physical fallback and stays attached across pickup-control replacement", () => {
+    const {context, createPickup} = setup();
     let pickup = createPickup();
     const trace = context.traceInserter(2);
     for (let tick = 0; tick < 4; tick++) {
@@ -70,7 +70,6 @@ test("records physical fallback and stays attached across pickup-control replace
     }
     const lanes = trace.events.filter(event => event.type === "pickup_lane");
     expect(lanes.map(event => [event.lane, event.fallback])).toEqual([[1, false], [1, false], [2, true], [1, false]]);
-    expect(InserterState.clone(state).trace).toBeUndefined();
     expect(() => context.traceInserter(999)).toThrow("unknown inserter");
 });
 

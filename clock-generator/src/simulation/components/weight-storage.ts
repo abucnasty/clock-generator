@@ -1,5 +1,6 @@
 import { ItemName } from "../../data";
 import { EntityId, RocketSiloChest } from "../../entities";
+import { inventoryKey } from "../../state/inventory-state";
 import { RocketSiloInventoryState } from "../../state/rocket-silo-inventory";
 import { weightUnits } from "../../state/slot-inventory";
 import { SupplyGate } from "../../state/supply-gate";
@@ -102,8 +103,12 @@ export class WeightStorage implements MixedStorage {
         return this.inventoryState.rocket.lastItemAmong(allowed);
     }
 
-    public slotKey(): string {
-        return this.inventoryState.slotKey();
+    /**
+     * What it holds, what its supply gate withholds and refuses, and where its items are: the rocket inventory's slots,
+     * which decide what is taken next, and the input slots
+     */
+    public key(): string {
+        return `${inventoryKey(this.inventoryState)};${this.supply.key()};${this.inventoryState.slotKey()}`;
     }
 
     public toString(): string {

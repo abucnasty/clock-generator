@@ -206,23 +206,17 @@ describe("a drill's Mining", () => {
         return SimulationContext.fromConfig(config).drills[0].mining;
     }
 
+    // its fields in the simulation's key and out of it are pinned with every component's (crafting/runner/steady-state.test.ts)
     it("keys its two bars as the drill's working mode did, each bar changing the key", () => {
         const mining = miningOf(70);
-        expect(mining.stateKey()).toBe("0;0");
+        expect(mining.key()).toBe("0;0");
         mining.mine();
-        expect(mining.stateKey()).toBe(`0.25;${mining.bonus_progress}`);
+        expect(mining.key()).toBe(`0.25;${mining.bonus_progress}`);
         expect(mining.bonus_progress).toBeCloseTo(0.175, 12);
         // the mining bar alone moves where the drill has no productivity
         const plain = miningOf(0);
         plain.mine();
-        expect(plain.stateKey()).toBe("0.25;0");
-    });
-
-    it("holds as plain values only its mining bar and the figures bound at build; the bonus bar in a record of its own", () => {
-        const mining = miningOf(70);
-        const plain = Object.entries(mining).filter(([, value]) => value === null || typeof value !== "object").map(([key]) => key);
-        expect(plain).toEqual(["progress", "mining_time", "step", "bonus_step", "item"]);
-        expect((mining as unknown as { bonus: object }).bonus).toEqual({ bar: 0 });
+        expect(plain.key()).toBe("0.25;0");
     });
 
     // same-tick rule 12
@@ -230,10 +224,10 @@ describe("a drill's Mining", () => {
         const mining = miningOf(70);
         const fresh = miningOf(70);
         for (let tick = 0; tick < 5; tick++) mining.mine();
-        expect(mining.stateKey()).not.toBe("0;0");
+        expect(mining.key()).not.toBe("0;0");
         mining.resetForSwap();
         expect(mining).toEqual(fresh);
-        expect(mining.stateKey()).toBe("0;0");
+        expect(mining.key()).toBe("0;0");
         expect(Array.from({ length: 9 }, () => mining.mine())).toEqual(Array.from({ length: 9 }, () => fresh.mine()));
     });
 });

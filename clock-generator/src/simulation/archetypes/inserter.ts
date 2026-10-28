@@ -1,27 +1,16 @@
-import type { ControlLogic } from "../../control-logic/control-logic";
-import type { TickProvider } from "../../control-logic/current-tick-provider";
-import type { EnableControl } from "../../control-logic/enable-control";
+import type { TickProvider } from "../current-tick-provider";
+import type { EnableControl } from "../controls/enable-control";
 import type { EntityId } from "../../entities";
 import { fullHandOf } from "../../entities/traits/hand";
 import { EntityState } from "../../state/entity-state";
 import type { InserterState } from "../../state/inserter-state";
+import { inventoryKey } from "../../state/inventory-state";
 import { Control } from "../components/control";
 import { Hand, STAY } from "../components/hand";
 import { bindHandPorts } from "../components/hand-ports";
 import { InserterWakes } from "../components/inserter-wakes";
+import { Observers } from "../observers/observer";
 import type { InserterPhase } from "../status-codes";
-
-/**
- * What watches an inserter (histories, the Factorio state, the transfers, debug output): told of each change of its
- * phase in its phase rule, after its status is written and before the exit and enter steps (same-tick rule 17), and
- * after the inserter's step in every tick, before its Wakes. It owns nothing a later tick of the inserter reads.
- */
-export interface InserterObserver {
-    /** A change of phase, with the number of its reason in the reason table (`reasonText` gives its text) */
-    onStatusChange?(from: InserterPhase, to: InserterPhase, reason_id: number): void;
-    /** After the inserter's phase step, every tick, in the order the observers were added */
-    executeForTick?(): void;
-}
 
 /**
  * An inserter in a run: its Hand (phase, scratch, and the source's pickup port and the sink's drop port as it reaches
@@ -30,11 +19,15 @@ export interface InserterObserver {
  * (simulation/tick-phases.ts): the phase rule (on a change: the status written, the observers told, the exit and enter
  * steps), the phase's step, the tick's observers, then the Wakes.
  *
+ * What watches it is told at the phase table's two event points of an inserter: a change of phase in its phase rule,
+ * after its status is written and before the exit and enter steps (same-tick rule 17), with its Hand to answer the
+ * reason; and its tick after its phase step, before its Wakes. Observers own nothing a later tick of it reads.
+ *
  * A control swap keeps it (`useControl`, through `SimulationContext.useControls`): its Control asks the new control
  * and its Hand starts at IDLE with its scratch set back, while its status, its hand, the pickup arm, the belt lanes,
  * its ports and its observers are kept (same-tick rule 12).
  */
-export class InserterArchetype implements ControlLogic {
+export class InserterArchetype {
 
     /**
      * The inserter with its hand bound to its source's pickup port and its sink's drop port, and to what it reads of its
@@ -73,9 +66,8 @@ export class InserterArchetype implements ControlLogic {
     }
 
     public readonly entity_id: EntityId;
-    private readonly observers: InserterObserver[] = [];
-    /** The observers that do something every tick; most only watch changes of phase */
-    private readonly tick_observers: InserterObserver[] = [];
+    /** What watches it (histories, the Factorio state, the transfers, debug output), by event in the order added */
+    public readonly observers = new Observers<InserterPhase>();
 
     private constructor(
         public readonly inserter_state: InserterState,
@@ -100,7 +92,8 @@ export class InserterArchetype implements ControlLogic {
 
     /**
      * The Hand's phase rule; on a change, the status written first, then the observers told in the order added, then
-     * the exit and enter steps (same-tick rule 17). The reason's number is made only for a change someone watches.
+     * the exit and enter steps (same-tick rule 17). The Hand answers the reason: its number, and a template's text, are
+     * made only for an observer that asks, while it records.
      */
     public phaseRule(): void {
         const hand = this.hand;
@@ -110,13 +103,7 @@ export class InserterArchetype implements ControlLogic {
             return;
         }
         hand.writeStatus(from, to);
-        const observers = this.observers;
-        if (observers.length > 0) {
-            const reason_id = hand.reasonId();
-            for (let index = 0; index < observers.length; index++) {
-                observers[index].onStatusChange?.(from, to, reason_id);
-            }
-        }
+        this.observers.tellStatusChange(from, to, hand);
         hand.exitAndEnter(from, to);
     }
 
@@ -125,12 +112,9 @@ export class InserterArchetype implements ControlLogic {
         this.hand.step();
     }
 
-    /** The observers that do something every tick, in the order they were added */
+    /** The observers of its tick, in the order they were added */
     public tickObservers(): void {
-        const tick_observers = this.tick_observers;
-        for (let index = 0; index < tick_observers.length; index++) {
-            tick_observers[index].executeForTick!();
-        }
+        this.observers.tellTick();
     }
 
     /** The Wakes after the inserter's tick: whether the game shows it enabled, for its game status and the next tick */
@@ -146,34 +130,14 @@ export class InserterArchetype implements ControlLogic {
         this.endOfTick();
     }
 
-    public addObserver(observer: InserterObserver): void {
-        this.observers.push(observer);
-        if (observer.executeForTick) {
-            this.tick_observers.push(observer);
-        }
-    }
-
-    /** Takes these observers off, for a run whose observations nobody reads any more */
-    public removeObservers(observers: ReadonlySet<object>): void {
-        for (const list of [this.observers, this.tick_observers]) {
-            const kept = list.filter(observer => !observers.has(observer));
-            list.length = 0;
-            for (const observer of kept) {
-                list.push(observer);
-            }
-        }
-    }
-
-    public getObservers(): InserterObserver[] {
-        return [...this.observers];
-    }
-
     /**
-     * Its phase and what its Hand keeps from one tick to the next, with the text the inserter's mode state machine gave
-     * them before (`Hand.key`); with its state's key (`InserterState.stateKey`), two equal keys one clock period apart
-     * mean the inserter repeats. Observers only watch.
+     * The inserter's key (see simulationStateKey): its components' keys in a fixed order, "|" between them: what its hand
+     * has carried by item (its Storage), its Hand (`Hand.key`: phase, scratch, ports and what it holds) and its Wakes
+     * (whether it shows enabled); ticks relative to `tick`. Two equal keys one clock period apart mean the inserter
+     * repeats. Its Control is the same in every tick of a run (a swap comes between runs) and the counts of items only
+     * grow, so neither is keyed; observers only watch.
      */
     public stateKey(tick: number): string {
-        return this.hand.key(tick);
+        return `${inventoryKey(this.inserter_state.inventoryState)}|${this.hand.key(tick)}|${this.wakes.key()}`;
     }
 }

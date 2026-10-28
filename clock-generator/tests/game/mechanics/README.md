@@ -9,6 +9,10 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Clock wiring](clock-wiring/README.md): replacing inserter conditions inherited from a real build.
 - [Containers](containers/README.md): cars, wagons and rocket silos as chests, against the simulator inserter by inserter.
 - [Drills](drills/README.md): mining drills at a low research level, their progress bars against the simulator tick by tick.
+- [Burner fuel](fuel/README.md): furnaces, a burner drill and a captive biter spawner against a biochamber, tick by tick: the energy buffer, the top-up, stops and restarts, running out of fuel, an inserter filling the slot.
+- [Insertion limit](insertion-limit/README.md): inserters dropping into assembling machines and furnaces near the automated insertion limit: where they stop, how much goes in, against the simulator's rule.
+- [Drill status](drill-status/README.md): the status of burner, electric and big mining drills that are switched off, blocked by a full chest or at a machine's stop.
+- [Belt drop lane](belt-drop-lane/README.md): the lane an inserter drops on, from each side and each end of a belt running in each direction, against the simulator's two lane choices.
 - [Drop spacing](drop-spacing/README.md): the hands of several copies on one belt lane, why a pitch and an offset make them fit or collide.
 
 The [screenshot catalog](screenshots.json) references 14 local fixture blueprints and 3 shared sample

@@ -1,6 +1,6 @@
 /**
  * The state transitions one entity records over a run, column by column: a tick, the status it left and the one it
- * entered (codes of state/status-codes.ts), and the reason's number (control-logic/mode/reason-table.ts); and each
+ * entered (codes of state/status-codes.ts), and the reason's number (state/reason-table.ts); and each
  * change of the state the game would show, a tick and the state's code. No object is made per transition: a long run
  * records millions of them.
  */
