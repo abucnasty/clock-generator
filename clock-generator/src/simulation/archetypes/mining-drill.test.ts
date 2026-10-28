@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { ConfigSchema } from "../../../config";
-import { SimulationContext } from "../../../crafting/sequence/simulation-context";
-import { MiningDrill, miningDrillMaxInsertion } from "../../../entities";
-import { MachineState } from "../../../state";
-import { EnableControl } from "../../enable-control";
-import { DrillStateMachine } from "../drill-state-machine";
-import { DrillChestWorkingMode } from "./chest-working-mode";
-import { MiningProgress } from "./mining-progress";
-import { DrillWorkingMode } from "./working-mode";
-import { ContainerStorage } from "../../../simulation/components/container-storage";
+import { ConfigSchema } from "../../config";
+import { EnableControl } from "../../control-logic/enable-control";
+import { reasonText } from "../../control-logic/mode/reason-table";
+import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../crafting/sequence/simulation-context";
+import { MiningDrill, miningDrillMaxInsertion } from "../../entities";
+import { DrillState, DrillStatus, MachineState } from "../../state";
+import { ContainerStorage } from "../components/container-storage";
+import { Mining } from "../components/mining";
+import { DrillStatusCode } from "../status-codes";
+import { MiningDrillArchetype } from "./mining-drill";
 
 /**
  * A drill's progress model against the game, its cases from recordings in Factorio 2.1.21 of a big mining drill (4
@@ -29,9 +29,7 @@ function carBuild(productivity: number, speed_bonus: number, filtered: number) {
     const drill = context.drills[0];
     const car = context.state_registry.getStateByEntityIdOrThrow(drill.drill_state.drill.sink_id);
     if (!ContainerStorage.is(car)) throw new Error("no car");
-    const mode = drill.current_mode;
-    if (!(mode instanceof DrillChestWorkingMode)) throw new Error("not a drill into a chest");
-    return { drill, car, progress: mode.progress, held: () => drill.drill_state.held.getCurrentQuantity("iron-ore") };
+    return { context, drill, car, progress: drill.mining, held: () => drill.drill_state.held.getCurrentQuantity("iron-ore") };
 }
 
 /** A drill on stone into an assembling machine on rail (which never crafts here: nothing else feeds it) */
@@ -42,18 +40,15 @@ function machineBuild(productivity: number, enable_control?: EnableControl) {
     const context = SimulationContext.fromConfig(config);
     const drill_state = context.drills[0].drill_state;
     const machine = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id) as MachineState;
-    const drill = enable_control ? DrillStateMachine.create({ drill_state, sink_state: machine, enable_control }) : context.drills[0];
-    const mode = Array.from(drill.modes).find(it => it instanceof DrillWorkingMode);
-    if (!mode) throw new Error("not a drill into a machine");
-    return { drill, machine, progress: mode.progress, stop: miningDrillMaxInsertion(drill_state.drill, machine.machine),
+    const drill = enable_control ? MiningDrillArchetype.create({ drill_state, sink_state: machine, enable_control }) : context.drills[0];
+    return { drill, machine, progress: drill.mining, stop: miningDrillMaxInsertion(drill_state.drill, machine.machine),
         count: () => machine.inventoryState.getItemOrThrow("stone").quantity, held: () => drill_state.held.getCurrentQuantity("stone") };
 }
 
 describe("a drill's progress bars", () => {
     it("move by the drill's crafting rate a tick and by that times its productivity; a wrap is an item", () => {
         // the recording's research: mining productivity 3 at level 8, 7 levels, +70%
-        const drill = carBuild(70, 5, 78).drill.drill_state.drill;
-        const progress = new MiningProgress(drill);
+        const progress = Mining.forDrill(DrillState.fromEntity(carBuild(70, 5, 78).drill.drill_state.drill));
         const items = Array.from({ length: 8 }, () => progress.mine());
         // bars of 0.25 and 0.175 a tick: the mining bar wraps at the 4th and 8th tick, the bonus bar at the 6th
         expect(items).toEqual([0, 0, 0, 1, 0, 1, 0, 1]);
@@ -66,7 +61,7 @@ describe("a drill's progress bars", () => {
         // after its 96th tick and wraps in its 97th (car-l8-3m)
         const drill = MiningDrill.fromConfig(
             { id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 3.75, productivity: 0, target: { type: "chest", id: 1 } });
-        const progress = new MiningProgress(drill);
+        const progress = Mining.forDrill(DrillState.fromEntity(drill));
         let mined = 0;
         for (let tick = 1; tick <= 96; tick++) mined += progress.mine();
         expect(mined).toBe(18);
@@ -176,5 +171,89 @@ describe("a drill into a machine", () => {
         drill.executeForTick();
         expect(count()).toBe(dropped + holding);
         expect(progress.mining_progress).toBe(mining + 0.25);
+    });
+});
+
+describe("a drill's control rule", () => {
+    it("asks its control once a tick and tells its observers of each change, before the status is written", () => {
+        const answers = [true, false, false, true, true];
+        let asked = 0;
+        const { drill } = machineBuild(440, { isEnabled: () => answers[asked++] });
+        const seen: string[] = [];
+        drill.addObserver({ onStatusChange: (from, to, reason_id) => seen.push(`${from}>${to} ${reasonText(reason_id)} now ${drill.status}`) });
+        for (let tick = 0; tick < answers.length; tick++) drill.executeForTick();
+        expect(asked).toBe(answers.length);
+        expect(seen).toEqual([
+            `${DrillStatusCode.WORKING}>${DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR} drill disabled now ${DrillStatusCode.WORKING}`,
+            `${DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR}>${DrillStatusCode.WORKING} drill enabled now ${DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR}`,
+        ]);
+        expect(drill.status).toBe(DrillStatusCode.WORKING);
+    });
+
+    it("runs the observers of the tick after its step, in the order added, and takes off those it is told to", () => {
+        const { drill, held } = machineBuild(440);
+        const order: string[] = [];
+        const first = { executeForTick: () => order.push(`first ${held()}`) };
+        const second = { executeForTick: () => order.push("second") };
+        drill.addObserver(first);
+        drill.addObserver({ onStatusChange: () => order.push("change") });
+        drill.addObserver(second);
+        drill.executeForTick();
+        // after the step: the first tick's 1.35 ore a tick is held already
+        expect(order).toEqual(["first 1", "second"]);
+        drill.removeObservers(new Set([first]));
+        drill.executeForTick();
+        expect(order.slice(2)).toEqual(["second"]);
+        expect(drill.getObservers()).toHaveLength(2);
+    });
+
+    it("keys its status and bars with the text of the drill's mode state machine before it", () => {
+        let enabled = true;
+        const { drill, progress } = machineBuild(440, { isEnabled: () => enabled });
+        expect(drill.stateKey()).toBe(`${DrillStatus.WORKING}|0;0|||`);
+        drill.executeForTick();
+        expect(drill.stateKey()).toBe(`${DrillStatus.WORKING}|${progress.mining_progress};${progress.bonus_progress}|||`);
+        enabled = false;
+        drill.executeForTick();
+        expect(drill.stateKey()).toBe(`${DrillStatus.DISABLED}|${progress.mining_progress};${progress.bonus_progress}|||`);
+        // the state's own status is never written (a known quirk, kept)
+        expect(drill.drill_state.status).toBe(DrillStatus.WORKING);
+    });
+
+    it("holds as a plain value only its status, which its key holds; its Control holds no plain value", () => {
+        const { drill } = machineBuild(440);
+        const plainOf = (subject: object) => Object.entries(subject)
+            .filter(([, value]) => value === null || typeof value !== "object").map(([key]) => key);
+        expect(plainOf(drill)).toEqual(["status"]);
+        expect(plainOf(drill.control)).toEqual([]);
+    });
+});
+
+describe("a control swap", () => {
+    it("starts a new drill WORKING with fresh bars and the old one's observers, over the same state and what it holds", () => {
+        const { context, drill, car, held } = carBuild(70, 5, 78);
+        const observer = { onStatusChange() { } };
+        drill.addObserver(observer);
+        let enabled = true;
+        const swapped = cloneSimulationContextWithInterceptors(context, { drill: () => ({ isEnabled: () => enabled }) });
+        for (let tick = 0; tick < 6; tick++) drill.executeForTick();
+        enabled = false;
+        drill.controlRule();
+        expect(drill.status).toBe(DrillStatusCode.WORKING);
+        const before = [held(), car.getCurrentQuantity("iron-ore")];
+        expect(drill.mining.mining_progress).not.toBe(0);
+
+        const next = swapped.drills[0];
+        expect(next).not.toBe(drill);
+        expect(next.drill_state).toBe(drill.drill_state);
+        expect(next.getObservers()).toEqual([observer]);
+        expect([next.status, next.stateKey()]).toEqual([DrillStatusCode.WORKING, `${DrillStatus.WORKING}|0;0|||`]);
+        next.executeForTick();
+        expect(next.status).toBe(DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR);
+        expect([held(), car.getCurrentQuantity("iron-ore")]).toEqual(before);
+        enabled = true;
+        next.executeForTick();
+        // the old drill's bars are its own: the new one's start at 0
+        expect(next.mining.mining_progress).toBe(0.25);
     });
 });

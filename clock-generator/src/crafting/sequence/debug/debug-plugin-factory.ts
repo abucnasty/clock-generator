@@ -9,9 +9,9 @@ import { reasonText } from "../../../control-logic/mode/reason-table";
 import { DrillState, MachineState } from "../../../state";
 import { DebugLoggerFactory } from "./debug-logger-factory";
 import { DebugSettingsProvider } from "./debug-settings-provider";
-import { DrillMode } from "../../../control-logic/drill/modes/drill-mode";
 import type { CraftingMachineArchetype, CraftingMachineObserver } from "../../../simulation/archetypes/crafting-machine";
-import { machineStatusOf } from "../../../simulation/status-codes";
+import type { DrillObserver } from "../../../simulation/archetypes/mining-drill";
+import { drillStatusOf, machineStatusOf } from "../../../simulation/status-codes";
 import { CraftEventPluginSettings } from "./debug-settings";
 
 export class DebugPluginFactory {
@@ -104,16 +104,15 @@ export class DebugPluginFactory {
         })
     }
 
-    public drillModeChangePlugin(drill_state: DrillState): ModePlugin<DrillMode> {
+    public drillModeChangePlugin(drill_state: DrillState): DrillObserver {
         const debugLog = this.log_factory.forEntity(drill_state.drill);
         const enabled = () => this.enabled();
         return {
-            onTransition(fromMode, transition) {
+            onStatusChange(from, to, reason_id) {
                 if (!enabled()) {
                     return;
                 }
-                const new_status = transition.toMode.status;
-                debugLog(chalk.yellow(`${fromMode.status} -> ${new_status} reason=${transition.reason}`));
+                debugLog(chalk.yellow(`${drillStatusOf(from)} -> ${drillStatusOf(to)} reason=${reasonText(reason_id)}`));
             }
         }
     }

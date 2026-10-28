@@ -53,11 +53,12 @@ describe("simulationStateKey", () => {
                 add(state.constructor === Object ? state.entity_id.type : state.constructor.name, plainFields(state));
             }
             // a machine has no modes: its archetype keys its status alone (crafting-machine.test.ts) and holds references
-            // only (its result target null for none), so a plain field added to it shows up here
+            // only (its result target null for none), so a plain field added to it shows up here; a drill has no modes
+            // either: its Mining pins its own fields (simulation/components/mining.test.ts)
             for (const machine of context.machines) {
                 add(machine.constructor.name, plainFields(machine, ["result_target"]));
             }
-            for (const state_machine of [...context.inserters, ...context.drills]) {
+            for (const state_machine of [...context.inserters]) {
                 for (const [mode, evaluator] of (state_machine as unknown as { graph: Map<object, object> }).graph) {
                     add(mode.constructor.name, plainFields(mode, ["status"]));
                     if (mode instanceof InserterPickupMode || mode instanceof InserterDropMode) {

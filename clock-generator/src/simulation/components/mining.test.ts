@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ConfigSchema } from "../../../config";
-import { SimulationContext } from "../../../crafting/sequence/simulation-context";
-import { bonusBarTick, MiningProgress } from "./mining-progress";
+import { ConfigSchema } from "../../config";
+import { SimulationContext } from "../../crafting/sequence/simulation-context";
+import { bonusBarTick } from "./mining";
 
 /**
  * The bonus bar near a whole item, against the game (Factorio 2.1.21). A probe set a big mining drill's bars by script so
@@ -175,7 +175,7 @@ describe("a drill's bars in the game's units", () => {
             machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [],
             drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: resource, speed_bonus: 5, productivity, target: { type: "chest", id: 1 } }] },
             chests: [{ type: "car", id: 1 }] });
-        return new MiningProgress(SimulationContext.fromConfig(config).drills[0].drill_state.drill);
+        return SimulationContext.fromConfig(config).drills[0].mining;
     }
 
     it("run from 0 to the resource's mining time: scrap (0.5) wraps every 2 ticks", () => {
@@ -194,5 +194,34 @@ describe("a drill's bars in the game's units", () => {
         // one more item and 0.4 left, where 2.9 mining times would keep 0.45
         expect(progress.mine()).toBe(1 + 3);
         expect(progress.bonus_progress).toBeCloseTo(0.4, 12);
+    });
+});
+
+describe("a drill's Mining", () => {
+    function miningOf(productivity: number) {
+        const config = ConfigSchema.parse({ target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+            machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [],
+            drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 5, productivity, target: { type: "chest", id: 1 } }] },
+            chests: [{ type: "car", id: 1 }] });
+        return SimulationContext.fromConfig(config).drills[0].mining;
+    }
+
+    it("keys its two bars as the drill's working mode did, each bar changing the key", () => {
+        const mining = miningOf(70);
+        expect(mining.stateKey()).toBe("0;0");
+        mining.mine();
+        expect(mining.stateKey()).toBe(`0.25;${mining.bonus_progress}`);
+        expect(mining.bonus_progress).toBeCloseTo(0.175, 12);
+        // the mining bar alone moves where the drill has no productivity
+        const plain = miningOf(0);
+        plain.mine();
+        expect(plain.stateKey()).toBe("0.25;0");
+    });
+
+    it("holds as plain values only its mining bar and the figures bound at build; the bonus bar in a record of its own", () => {
+        const mining = miningOf(70);
+        const plain = Object.entries(mining).filter(([, value]) => value === null || typeof value !== "object").map(([key]) => key);
+        expect(plain).toEqual(["progress", "mining_time", "step", "bonus_step", "item"]);
+        expect((mining as unknown as { bonus: object }).bonus).toEqual({ bar: 0 });
     });
 });

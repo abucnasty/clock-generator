@@ -3,10 +3,8 @@ import { ConfigSchema } from '../../../config/schema';
 import { createEntityRegistryFromConfig } from '../../../crafting/sequence/simulation-context';
 import { InventoryTransferHistory } from '../../../crafting/sequence/inventory-transfer-history';
 import { EntityId, Machine, MiningDrill } from '../../../entities';
-import { DrillStatus } from '../../../state';
+import { DrillStatusCode } from '../../../simulation/status-codes';
 import { MutableTickProvider } from '../../current-tick-provider';
-import { Transition } from '../../mode';
-import { DrillMode } from '../modes/drill-mode';
 import { DrillInventoryTransferPlugin } from './drill-inventory-transfer-plugin';
 
 /** A drill into a machine, as the stone brick samples have it, with the plugin that records its enabled runs */
@@ -24,11 +22,10 @@ function recorder() {
     const history = new InventoryTransferHistory();
     const drill = registry.getEntityByIdOrThrow(EntityId.forDrill(1)) as MiningDrill;
     const plugin = new DrillInventoryTransferPlugin(drill, registry.getEntityByIdOrThrow(EntityId.forMachine(1)) as Machine, ticks, history);
-    const mode = (status: DrillStatus) => ({ status, onEnter() { }, onExit() { }, executeForTick() { } }) as DrillMode;
-    const [disabled, working] = [mode(DrillStatus.DISABLED), mode(DrillStatus.WORKING)];
-    const at = (tick: number, from: DrillMode, to: DrillMode) => {
+    const [disabled, working] = [DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR, DrillStatusCode.WORKING];
+    const at = (tick: number, from: DrillStatusCode, to: DrillStatusCode) => {
         ticks.setCurrentTick(tick);
-        plugin.onTransition(from, new Transition(to, 'test'));
+        plugin.onStatusChange(from, to);
     };
     const ranges = () => (history.getAllTransfers().get(drill.entity_id) ?? []).map(it => [it.tick_range.start_inclusive, it.tick_range.end_inclusive]);
     return { at, disabled, working, ranges };

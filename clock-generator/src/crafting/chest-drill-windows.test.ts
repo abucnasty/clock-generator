@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { Config, ConfigSchema } from '../config/schema';
-import { DrillChestWorkingMode } from '../control-logic/drill/modes/chest-working-mode';
 import { OpenRange } from '../data-types';
 import { EntityId, MiningDrill } from '../entities';
 import { DrillState, EntityStateFactory } from '../state';
 import { createEntityRegistryFromConfig } from './sequence/simulation-context';
 import { chestDrillBecause, chestDrillFallbackConfig, chestDrillWindows, chestDrillWindowsKeepUp, hasPlannedChestDrill } from './chest-drill-windows';
 import { ContainerStorage } from '../simulation/components/container-storage';
+import { placeDrillInto } from '../simulation/archetypes/mining-drill';
+import { Mining } from '../simulation/components/mining';
 
 const stack = (source: object, sink: object) => ({ source, sink, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 });
 
@@ -159,10 +160,11 @@ describe('the drill into a chest that the windows are replayed with (the recordi
         chest.inventoryState.addQuantity('iron-ore', 6000 - take);
         const drill = DrillState.fromEntity(registry.getEntityByIdOrThrow(EntityId.forDrill(1)) as MiningDrill);
         drill.held.insert('iron-ore', hold);
-        const mode = new DrillChestWorkingMode(drill, chest);
+        placeDrillInto(drill, chest);
+        const mining = Mining.forDrill(drill);
         let ticks = 0;
         while (chest.getCurrentQuantity('iron-ore') < 6000) {
-            mode.executeForTick();
+            mining.tick();
             ticks++;
         }
         return ticks;

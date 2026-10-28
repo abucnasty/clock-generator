@@ -1,5 +1,4 @@
 import { MutableTickProvider } from "../control-logic";
-import { DrillStateMachine } from "../control-logic/drill/drill-state-machine";
 import { inserterUpdateOrder } from "../control-logic/inserter/competing-takers";
 import { InserterStateMachine } from "../control-logic/inserter/inserter-state-machine";
 import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
@@ -7,6 +6,7 @@ import { SimulationContext } from "../crafting/sequence/simulation-context";
 import { EntityState } from "../state";
 import { ContainerStorage } from "./components/container-storage";
 import { TransportBelt } from "./archetypes/transport-belt";
+import { MiningDrillArchetype } from "./archetypes/mining-drill";
 
 /**
  * The entities a tick runs, one array for each archetype, each in the order the phase table runs it
@@ -25,7 +25,7 @@ export class World {
     private constructor(
         public readonly tick_provider: MutableTickProvider,
         /** In the order of the state registry, which is the config's */
-        public readonly drills: readonly DrillStateMachine[],
+        public readonly drills: readonly MiningDrillArchetype[],
         /** Takers before feeders, the takers of one machine in the context's taker order (`inserterUpdateOrder`) */
         public readonly inserters: readonly InserterStateMachine[],
         /** In config order */

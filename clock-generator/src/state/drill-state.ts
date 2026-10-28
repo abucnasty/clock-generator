@@ -13,7 +13,7 @@ export class DrillState implements EntityState {
     public status: DrillStatus = DrillStatus.WORKING;
     /** What it has mined and not yet dropped */
     public readonly held: HeldStorage;
-    /** Drops what it holds into its target before it mines, bound to the target by its working mode */
+    /** Drops what it holds into its target before it mines, bound to the target by `placeDrillInto` */
     public readonly placement: Placement;
 
     constructor(public readonly drill: MiningDrill) {

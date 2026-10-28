@@ -1,6 +1,6 @@
-import { DrillStateMachine } from "../control-logic/drill/drill-state-machine";
 import { InserterStateMachine } from "../control-logic/inserter/inserter-state-machine";
 import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
+import { MiningDrillArchetype } from "./archetypes/mining-drill";
 import { World } from "./world";
 
 /**
@@ -39,7 +39,7 @@ export const TickPhase = { TICK: 0, DRILLS: 1, INSERTERS: 2, MACHINES: 3, AFTER_
 export type TickPhase = typeof TickPhase[keyof typeof TickPhase];
 
 export const TickStep = { INCREMENT: 0 } as const;
-export const DrillStep = { CONTROL_RULE: 0, MODE: 1, TICK_OBSERVERS: 2 } as const;
+export const DrillStep = { CONTROL_RULE: 0, MINING: 1, TICK_OBSERVERS: 2 } as const;
 export const InserterStep = { CONTROL_TICK: 0, PHASE_RULE: 1, PHASE_STEP: 2, TICK_OBSERVERS: 3, SHOWN_ENABLED: 4 } as const;
 export const MachineStep = { PLACE_BEFORE: 0, HELD_TO_OUTPUT: 1, STATUS_RULE: 2, STATUS_STEP: 3, PLACE_AFTER: 4, END_OF_TICK: 5 } as const;
 export const AfterTickStep = { RECORDERS: 0, STOP_EARLY: 1 } as const;
@@ -78,10 +78,10 @@ export const TICK_PHASES: readonly TickPhaseRow[] = [
         phase: TickPhase.DRILLS, name: "drills", entities: "drills", order: "state registry order (config order)",
         order_upholds: [], run_by: "loop",
         steps: [
-            { step: DrillStep.CONTROL_RULE, name: "control_rule", does: "the control asked: working or disabled; on a change, observers, then exit and enter",
+            { step: DrillStep.CONTROL_RULE, name: "control_rule", does: "the control asked: working or disabled; on a change, observers, then the status written",
                 upholds: [17] },
-            { step: DrillStep.MODE, name: "mode", does: "working: drop what the drill holds, and only when nothing is left mine", upholds: [7] },
-            { step: DrillStep.TICK_OBSERVERS, name: "tick_observers", does: "tick plugins in the order added", upholds: [] },
+            { step: DrillStep.MINING, name: "mining", does: "working: drop what the drill holds, and only when nothing is left mine", upholds: [7] },
+            { step: DrillStep.TICK_OBSERVERS, name: "tick_observers", does: "tick observers in the order added", upholds: [] },
         ],
     },
     {
@@ -140,13 +140,13 @@ export function runTick(world: World, tracer: TickTracer | null): void {
     runMachines(world.machines, tracer);
 }
 
-function runDrills(drills: readonly DrillStateMachine[], tracer: TickTracer | null): void {
+function runDrills(drills: readonly MiningDrillArchetype[], tracer: TickTracer | null): void {
     for (let index = 0; index < drills.length; index++) {
         const drill = drills[index];
         if (tracer !== null) tracer.step(TickPhase.DRILLS, index, DrillStep.CONTROL_RULE);
-        drill.ruleStep();
-        if (tracer !== null) tracer.step(TickPhase.DRILLS, index, DrillStep.MODE);
-        drill.modeStep();
+        drill.controlRule();
+        if (tracer !== null) tracer.step(TickPhase.DRILLS, index, DrillStep.MINING);
+        drill.miningStep();
         if (tracer !== null) tracer.step(TickPhase.DRILLS, index, DrillStep.TICK_OBSERVERS);
         drill.tickObservers();
     }

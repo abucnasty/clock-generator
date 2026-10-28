@@ -589,24 +589,27 @@ interface RecordedBuild {
     relative_tick_provider: TickProvider;
     inventory_transfer_history: InventoryTransferHistory;
     state_transition_history: StateTransitionHistory;
-    /** The plugins and machine observers that only feed the two histories */
+    /** The plugins and machine and drill observers that only feed the two histories */
     history_plugins: ReadonlySet<object>;
 }
 
-/** Every plugin on the state machines of a simulation, and every observer on its machines */
+/** Every plugin on the inserters' state machines of a simulation, and every observer on its machines and drills */
 function pluginsOf(context: SimulationContext): object[] {
-    return [...[...context.inserters, ...context.drills].flatMap((it): ModePlugin<any>[] => it.getPlugins()),
-        ...context.machines.flatMap(it => it.getObservers())];
+    return [...context.inserters.flatMap((it): ModePlugin<any>[] => it.getPlugins()),
+        ...context.machines.flatMap(it => it.getObservers()), ...context.drills.flatMap(it => it.getObservers())];
 }
 
 /** Takes the plugins and observers that only feed the two histories off every entity of these contexts */
 function detachHistoryPlugins(build: RecordedBuild, ...contexts: SimulationContext[]): void {
     for (const context of contexts) {
-        for (const state_machine of [...context.inserters, ...context.drills]) {
+        for (const state_machine of context.inserters) {
             state_machine.removePlugins(build.history_plugins);
         }
         for (const machine of context.machines) {
             machine.removeObservers(build.history_plugins);
+        }
+        for (const drill of context.drills) {
+            drill.removeObservers(build.history_plugins);
         }
     }
 }
@@ -2424,7 +2427,7 @@ function configureInventoryTransferPlugins(
         if (!Entity.isMachine(sink_machine)) {
             return;
         }
-        it.addPlugin(new DrillInventoryTransferPlugin(
+        it.addObserver(new DrillInventoryTransferPlugin(
             it.drill_state.drill,
             sink_machine,
             relative_tick_provider,
@@ -2467,9 +2470,9 @@ function configureStateTransitionPlugins(
     // Add drill state transition plugins
     simulation_context.drills.forEach(it => {
         const recorder = state_transition_history.recorderFor(it.drill_state.entity_id, "drill");
-        it.addPlugin(new DrillStateTransitionTrackerPlugin(relative_tick_provider, recorder));
+        it.addObserver(new DrillStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioDrillState(it.drill_state), recorder));
+            it.addObserver(new FactorioStatePlugin(relative_tick_provider, () => factorioDrillState(it.drill_state), recorder));
         }
     });
 

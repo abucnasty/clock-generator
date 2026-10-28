@@ -15,7 +15,7 @@ import { ContainerStorage } from "./components/container-storage";
 const EXPECTED: readonly { name: string; entities: TickPhaseRow["entities"]; run_by: TickPhaseRow["run_by"]; steps: [string, string][] }[] = [
     { name: "tick", entities: null, run_by: "loop", steps: [["increment", "incrementTick"]] },
     { name: "drills", entities: "drills", run_by: "loop",
-        steps: [["control_rule", "ruleStep"], ["mode", "modeStep"], ["tick_observers", "tickObservers"]] },
+        steps: [["control_rule", "controlRule"], ["mining", "miningStep"], ["tick_observers", "tickObservers"]] },
     { name: "inserters", entities: "inserters", run_by: "loop",
         steps: [["control_tick", "tickControl"], ["phase_rule", "ruleStep"], ["phase_step", "modeStep"], ["tick_observers", "tickObservers"],
             ["shown_enabled", "writeShownEnabled"]] },

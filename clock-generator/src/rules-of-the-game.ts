@@ -127,7 +127,7 @@ export { RocketSiloInventoryState } from "./state/rocket-silo-inventory";
  * stops it. A clock gives it windows made from the takes out of the chest (`crafting/chest-drill-windows.ts`). Cases: `crafting/drill-into-chest.test.ts`; against the game,
  * `tests/game/mechanics/containers` (a car, a car with filtered slots, a steel chest and a rocket silo, at two places).
  */
-export { DrillChestWorkingMode } from "./control-logic/drill/modes/chest-working-mode";
+export { placeDrillInto } from "./simulation/archetypes/mining-drill";
 
 /**
  * 17. A mining drill's progress (docs/drills.md): each tick an enabled drill first drops what it
@@ -139,12 +139,12 @@ export { DrillChestWorkingMode } from "./control-logic/drill/modes/chest-working
  * are doubles summed tick by tick, as in the game, in the game's units (0 to the resource's mining time). Near a whole
  * item the bonus bar has the game's tolerance (`bonusBarTick`): within 0.0001 below it makes the item, and after an
  * item a remainder under 0.001 is dropped; from 2 mining times it keeps the fraction of a mining time in its own units.
- * Cases: `control-logic/drill/modes/drill-working-modes.test.ts`, `mining-progress.test.ts`; against the game,
+ * Cases: `simulation/archetypes/mining-drill.test.ts`, `simulation/components/mining.test.ts`; against the game,
  * `tests/game/mechanics/drills` (0.0167 to 1.35 items a tick into a car and into a machine, built last, moved and
  * circuit-disabled, one with productivity modules; the bonus bar set near a whole item on iron ore, scrap and tungsten
  * ore) and the containers family's drill fills (200 a tick).
  */
-export { MiningProgress } from "./control-logic/drill/modes/mining-progress";
+export { Mining } from "./simulation/components/mining";
 
 /**
  * 18. A machine that places its results itself (the recycler, by its prototype's `vector_to_place_result`; docs/simulator.md

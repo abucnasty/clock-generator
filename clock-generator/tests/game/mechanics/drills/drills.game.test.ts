@@ -6,15 +6,13 @@ import {Config, ConfigSchema} from "../../../../src/config";
 import {FactorioBlueprintFile} from "../../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../../src/blueprints/serde";
 import {CompositeControlLogic, TickControlLogic} from "../../../../src/control-logic";
-import {DrillStateMachine} from "../../../../src/control-logic/drill/drill-state-machine";
-import {DrillChestWorkingMode} from "../../../../src/control-logic/drill/modes/chest-working-mode";
-import {DrillWorkingMode} from "../../../../src/control-logic/drill/modes/working-mode";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {miningDrillMaxInsertion} from "../../../../src/entities";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {EntityState, MachineState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
+import {MiningDrillArchetype} from "../../../../src/simulation/archetypes/mining-drill";
 
 /**
  * Mining drills at a low research level, set by script, against the simulator tick by tick: a big mining drill at 0.25
@@ -143,8 +141,7 @@ export function replayDrill(config: Config, log: Row[]): {ticks: Tick[]; machine
     const item = drill_state.drill.item;
     const sink = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id);
     let enabled = true;
-    const drill = DrillStateMachine.create({drill_state, sink_state: sink, enable_control: {isEnabled: () => enabled}});
-    const mode = Array.from(drill.modes).find(it => it instanceof DrillWorkingMode || it instanceof DrillChestWorkingMode)!;
+    const drill = MiningDrillArchetype.create({drill_state, sink_state: sink, enable_control: {isEnabled: () => enabled}});
     const machine = EntityState.isMachine(sink) ? sink.machine : undefined;
     const input = machine?.inputs.getOrThrow(item.name);
     const count = () => ContainerStorage.is(sink) ? sink.getCurrentQuantity(item.name) : (sink as MachineState).inventoryState.getItemOrThrow(item.name).quantity;
@@ -154,7 +151,7 @@ export function replayDrill(config: Config, log: Row[]): {ticks: Tick[]; machine
         if (taken > 0) sink.inventoryState.removeQuantity(item.name, taken);
         enabled = !log[k - 1].d;
         drill.executeForTick();
-        ticks.push({t: k, n: count(), p: mode.progress.mining_progress, b: mode.progress.bonus_progress});
+        ticks.push({t: k, n: count(), p: drill.mining.mining_progress, b: drill.mining.bonus_progress});
     }
     return {ticks, ...(machine && {machine_stop: miningDrillMaxInsertion(drill_state.drill, machine)})};
 }
