@@ -344,3 +344,301 @@ export class LaneCapacityError extends Error {
             + 'another lane or belt.';
     }
 }
+
+// ============================================================================
+// Feasibility (crafting/feasibility/): a build no clock can carry
+// ============================================================================
+
+/**
+ * The rules of the feasibility pass (P3 design 3.2, 3.3): C1 a recipe's machines, C2 supply from outside, C3 the target
+ * taken out, C4 one inserter's swings, C5 a belt lane, C6 an export belt, C7 the target destroyed; S1 a result with no
+ * way out, S2 a shared hand at a placer's target, S3 a loop that uses up all it makes
+ */
+export type FeasibilityRule = 'C1' | 'C2' | 'C3' | 'C4' | 'C5' | 'C6' | 'C7' | 'S1' | 'S2' | 'S3';
+
+/** Inserters as a text names them: the most they move of an item a second together, and their hand and swing where alike */
+export interface FeasibilityCarriers {
+    inserters: number[];
+    per_second: number;
+    /** The hand of every one of them, where they have the same; else null */
+    hand: number | null;
+    /** The fewest ticks a swing of every one of them takes, where they take the same; else null */
+    ticks: number | null;
+}
+
+/** A side of a belt, as the config numbers it */
+export interface FeasibilityLane {
+    belt: number;
+    lane: number;
+}
+
+/** A belt that carries less than the inserters dropping onto it can put there: the ceilings of its two sides */
+export interface FeasibilityBeltCap {
+    belt: number;
+    per_second: number;
+}
+
+/** "machine", "drill": what a producer is called */
+export type FeasibilityProducerKind = 'machine' | 'drill';
+
+/** What holds a recipe's machines back (C1): their speed, what their inserters bring in, or what they take out */
+export type FeasibilityLimit =
+    | { kind: 'crafts'; machines: number[]; crafts_per_second: number }
+    | { kind: 'input' | 'output'; machines: number[]; item: string; carriers: FeasibilityCarriers; per_craft: number; crafts_per_second: number };
+
+/** Where a supply comes from (C2): a lane from outside, or a recipe's machines */
+export type FeasibilitySource =
+    | { kind: 'lane'; lane: FeasibilityLane; per_second: number }
+    | { kind: 'producers'; producer: FeasibilityProducerKind; ids: number[]; recipe: string; per_second: number };
+
+/** Who must take an item (C2, C5): the target, an export belt, or a recipe's machines */
+export type FeasibilityTaker =
+    | { kind: 'target' }
+    | { kind: 'export'; belt: number }
+    | { kind: 'producers'; producer: FeasibilityProducerKind; ids: number[] };
+
+/** Every figure and name a refusal shows, by rule; item and recipe names are the game's, in a sentence */
+export type FeasibilityTerms =
+    | {
+        rule: 'C1'; producer: FeasibilityProducerKind; ids: number[]; recipe: string; crafts_per_second: number; limits: FeasibilityLimit[];
+        need_crafts_per_second: number;
+        /** Why the target needs so many crafts: so much of an item a second at so much a craft */
+        need: { item: string; per_second: number; per_craft: number; how: 'made' | 'loop' | 'destroyed' };
+    }
+    | { rule: 'C2'; item: string; sources: FeasibilitySource[]; takers: FeasibilityTaker[]; supply_per_second: number; need_per_second: number }
+    | { rule: 'C3'; item: string; carriers: FeasibilityCarriers; capped: FeasibilityBeltCap[]; per_second: number; target_per_second: number; copies: number }
+    | {
+        rule: 'C4'; inserter: number;
+        /** Every item it carries */
+        carries: string[];
+        /** The items that take a share of its swings: those it must carry and whose fewest ticks a swing are known */
+        items: { item: string; at_least_per_second: number; hand: number; ticks: number; share: number }[];
+        share: number;
+    }
+    | {
+        rule: 'C5'; belt: number;
+        /** The side of the belt, where the cut is one side; null where it is the belt (the build drops the item onto it too) */
+        lane: number | null;
+        item: string; fillers: FeasibilityCarriers | null; per_second: number; takers: number[]; need_per_second: number;
+    }
+    | { rule: 'C6'; belt: number; item: string; carriers: FeasibilityCarriers; capped: FeasibilityBeltCap[]; per_second: number; consumed_per_second: number }
+    | {
+        rule: 'C7'; item: string; target_per_second: number; copies: number; per_second: number;
+        /** The machines that destroy it, or the inserters that bring it in from outside */
+        by: {
+            kind: 'machines'; ids: number[]; recipe: string; crafts_per_second: number;
+            /** What a craft uses and gives back, where every machine's craft uses and gives back the same; else null */
+            uses: number | null; gives_back: number | null;
+        }
+            | { kind: 'inserters'; carriers: FeasibilityCarriers };
+    }
+    | {
+        rule: 'S1'; machine: number; item: string;
+        /** Where it is trapped: a container (its input slots or not), or the machine's own output */
+        into: { container: number; input_slots: boolean; inserters: number[] } | null;
+        /**
+         * Where inserters move it on from there: the containers it stops in (their input slots or not), or, where they move
+         * it round between containers (`loop`), every container they reach; null where it stops where it is first put
+         */
+        then: { inserters: number[]; ends: { container: number; input_slots: boolean }[]; loop: boolean } | null;
+        /** The rest of the recipe's machines, where it has more: what they craft at most, against the target's need */
+        others: { ids: number[]; crafts_per_second: number; need_crafts_per_second: number } | null;
+    }
+    | { rule: 'S2'; inserter: number; items: string[]; target: string }
+    | { rule: 'S3'; producer: FeasibilityProducerKind; ids: number[]; rows: { item: string; gives: number; takes: number }[] };
+
+/** One cut a build cannot carry, or one trap it falls into */
+export interface FeasibilityIssue {
+    rule: FeasibilityRule;
+    /** The graph's nodes and ports it names */
+    nodes: string[];
+    /** The graph's edges it names */
+    edges: string[];
+    /** What the cut must carry a second (crafts for C1, swings shared for C4); null for a trap */
+    need: number | null;
+    /** The most it carries a second; null for a trap */
+    capacity: number | null;
+    terms: FeasibilityTerms;
+}
+
+/** The text of an inserter that takes several of a placer's results out of its target (sharedHandRefusal) */
+export function sharedHandText(inserter: number, items: readonly string[], target: string): string {
+    return `Inserter ${inserter} takes ${items.slice(0, -1).join(", ")} and ${items[items.length - 1]} out of ${target}. `
+        + "An inserter that holds part of a hand of one of them takes only more of that one, so the others pile up in "
+        + `${target}, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an `
+        + "inserter of its own. An inserter whose filters the clock sets by signal would not wait; such a clock is not planned yet.";
+}
+
+const capitalized = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
+const named = (noun: string, ids: readonly number[]): string => `${noun}${ids.length === 1 ? '' : 's'} ${listed(ids)}`;
+const producersNamed = (kind: FeasibilityProducerKind, ids: readonly number[]): string => named(kind, ids);
+const laneNamed = (lane: FeasibilityLane): string => `lane ${lane.lane} of belt ${lane.belt}`;
+const verb = (ids: readonly unknown[], one: string, many: string): string => ids.length === 1 ? one : many;
+
+/** "4 hands of 15 every 8 ticks", where the inserters have one hand and one swing */
+function handsOf(carriers: FeasibilityCarriers): string | null {
+    if (carriers.hand === null || carriers.ticks === null) return null;
+    const count = carriers.inserters.length;
+    return `${count} hand${count === 1 ? '' : 's'} of ${carriers.hand} every ${carriers.ticks} ticks`;
+}
+
+const withHands = (carriers: FeasibilityCarriers): string => {
+    const hands = handsOf(carriers);
+    return hands === null ? '' : ` (${hands})`;
+};
+
+function takerNamed(taker: FeasibilityTaker): string {
+    if (taker.kind === 'target') return 'the target';
+    if (taker.kind === 'export') return `the consumers of belt ${taker.belt}`;
+    return producersNamed(taker.producer, taker.ids);
+}
+
+/** Where S1's item is put: a chest, or a rocket silo's input slots (the only container with input slots) */
+const portNamed = (port: { container: number; input_slots: boolean }): string =>
+    port.input_slots ? `the input slots of rocket silo ${port.container}` : `chest ${port.container}`;
+
+function portsNamed(ports: readonly { container: number; input_slots: boolean }[]): string {
+    const chests = ports.filter(port => !port.input_slots).map(port => port.container);
+    return listed([...chests.length === 0 ? [] : [named('chest', chests)], ...ports.filter(port => port.input_slots).map(portNamed)]);
+}
+
+const targetText = (per_second: number, copies: number, against: number): string =>
+    `${formatRate(per_second, against)} a second${copies === 1 ? '' : ' a copy'}`;
+
+function limitText(limit: FeasibilityLimit): string {
+    const machines = named('machine', limit.machines);
+    if (limit.kind === 'crafts') {
+        return `${machines} craft${verb(limit.machines, 's', '')} at most ${formatRate(limit.crafts_per_second)} a second`;
+    }
+    const inserters = named('inserter', limit.carriers.inserters);
+    const move = limit.kind === 'input'
+        ? `${verb(limit.carriers.inserters, 'brings', 'bring')} at most ${formatRate(limit.carriers.per_second)} a second of ${limit.item} into ${machines}`
+        : `${verb(limit.carriers.inserters, 'takes', 'take')} at most ${formatRate(limit.carriers.per_second)} a second of ${limit.item} out of ${machines}`;
+    return `${inserters} ${move}${withHands(limit.carriers)}, and a craft ${limit.kind === 'input' ? 'takes' : 'makes'} ${formatRate(limit.per_craft)}`;
+}
+
+/** The text of one issue, as a player reads it */
+export function describeFeasibilityIssue(issue: FeasibilityIssue): string {
+    const terms = issue.terms;
+    switch (terms.rule) {
+        case 'C1': {
+            const who = capitalized(producersNamed(terms.producer, terms.ids));
+            const how = terms.need.how === 'destroyed' ? `destroying ${formatRate(terms.need.per_second)} a second of ${terms.need.item} at ${formatRate(terms.need.per_craft)} a craft`
+                : `${formatRate(terms.need.per_second)} a second of ${terms.need.item} at ${formatRate(terms.need.per_craft)} a craft`
+                    + (terms.need.how === 'loop' ? ', some of which goes back into the loop' : '');
+            const advice = terms.limits.some(limit => limit.kind !== 'crafts') ? 'give them more inserters or bigger hands' : `add ${terms.producer}s or make them faster`;
+            const most = formatRate(terms.crafts_per_second, terms.need_crafts_per_second);
+            const can = terms.limits.length === 1 && terms.limits[0].kind === 'crafts'
+                ? `${who} (${terms.recipe}) craft${verb(terms.ids, 's', '')} at most ${most} a second${terms.ids.length === 1 ? '' : ' together'}`
+                : `${who} (${terms.recipe}) can make at most ${most} crafts a second: ${terms.limits.map(limitText).join('; ')}`;
+            return `${can}. The target needs ${formatRate(terms.need_crafts_per_second, terms.crafts_per_second)} crafts a second of `
+                + `${terms.ids.length === 1 ? 'it' : 'them'} (${how}). Lower the target, or ${advice}.`;
+        }
+        case 'C2': {
+            const sources = terms.sources.map(source => source.kind === 'lane'
+                ? `${laneNamed(source.lane)} brings at most ${formatRate(source.per_second)} a second from outside the build`
+                : `${producersNamed(source.producer, source.ids)} (${source.recipe}) make${verb(source.ids, 's', '')} at most ${formatRate(source.per_second)} a second`);
+            return `At most ${formatRate(terms.supply_per_second, terms.need_per_second)} a second of ${terms.item} reaches the machines that need it `
+                + `(${sources.join('; ')}), and ${listed(terms.takers.map(takerNamed))} must take ${formatRate(terms.need_per_second, terms.supply_per_second)} `
+                + `a second of it. Lower the target, or bring in more ${terms.item}.`;
+        }
+        case 'C3': {
+            const capped = terms.capped.map(cap => `belt ${cap.belt} carries at most ${formatRate(cap.per_second)} a second`);
+            return `${capitalized(named('inserter', terms.carriers.inserters))} can take at most ${formatRate(terms.per_second, terms.target_per_second)} `
+                + `a second of ${terms.item} out of the build${withHands(terms.carriers)}${capped.length === 0 ? '' : `, and ${capped.join(' and ')}`}, `
+                + `and the target is ${targetText(terms.target_per_second, terms.copies, terms.per_second)}. Lower the target, or give the output `
+                + 'more inserters or bigger hands.';
+        }
+        case 'C4': {
+            const parts = terms.items.map(item => `at least ${formatRate(item.at_least_per_second)} a second of ${item.item}, in hands of `
+                + `${item.hand} at ${item.ticks} ticks a swing, takes ${formatRate(item.share)} of its swings`);
+            return `Inserter ${terms.inserter} carries ${listed(terms.carries)}, one item a swing: ${parts.join(', and ')}; `
+                + `${formatRate(terms.share, 1)} of its swings in all, more than it has. Lower the target, or give each item an inserter of its own.`;
+        }
+        case 'C5': {
+            const fill = terms.fillers === null ? '' : `, as ${named('inserter', terms.fillers.inserters)} put${verb(terms.fillers.inserters, 's', '')} `
+                + `at most ${formatRate(terms.fillers.per_second)} a second onto it${withHands(terms.fillers)}`;
+            const where = terms.lane === null ? `belt ${terms.belt}` : laneNamed({ belt: terms.belt, lane: terms.lane });
+            return `${capitalized(where)} carries at most ${formatRate(terms.per_second, terms.need_per_second)} a second of ${terms.item}${fill}, `
+                + `and ${named('inserter', terms.takers)} must take ${formatRate(terms.need_per_second, terms.per_second)} a second off it. `
+                + 'Lower the target, or take the item from more lanes.';
+        }
+        case 'C6': {
+            const capped = terms.capped.map(cap => `belt ${cap.belt} carries at most ${formatRate(cap.per_second)} a second`);
+            return `${capitalized(named('inserter', terms.carriers.inserters))} can put at most ${formatRate(terms.per_second, terms.consumed_per_second)} `
+                + `a second of ${terms.item} onto belt ${terms.belt}${withHands(terms.carriers)}${capped.length === 0 ? '' : `, and ${capped.join(' and ')}`}, `
+                + `and the consumers outside the build take ${formatRate(terms.consumed_per_second, terms.per_second)} a second off it. `
+                + "Lower the belt's consumption, or give it more inserters.";
+        }
+        case 'C7': {
+            const target = targetText(terms.target_per_second, terms.copies, terms.per_second);
+            if (terms.by.kind === 'inserters') {
+                return `${capitalized(named('inserter', terms.by.carriers.inserters))} can bring at most ${formatRate(terms.per_second, terms.target_per_second)} `
+                    + `a second of ${terms.item} into the build${withHands(terms.by.carriers)}, and the target is ${target}. Lower the target, or give `
+                    + 'the machines more inserters or bigger hands.';
+            }
+            const by = terms.by;
+            const back = by.gives_back === null || by.gives_back === 0 ? '' : ` and gives back ${formatRate(by.gives_back)}`;
+            const none = by.uses !== null && by.gives_back !== null && by.gives_back >= by.uses ? ', so it destroys none' : '';
+            const craft = by.uses === null ? '' : `, and a craft uses ${formatRate(by.uses)}${back}${none}`;
+            return `${capitalized(named('machine', by.ids))} (${by.recipe}) can destroy at most ${formatRate(terms.per_second, terms.target_per_second)} `
+                + `a second of ${terms.item}: ${verb(by.ids, 'it crafts', 'they craft')} at most ${formatRate(by.crafts_per_second)} a second`
+                + `${craft}. The target is ${target}. Lower the target, or add machines or make them faster.`;
+        }
+        case 'S1': {
+            const others = terms.others === null ? '' : ` The other ${named('machine', terms.others.ids)} of the recipe craft${verb(terms.others.ids, 's', '')} `
+                + `at most ${formatRate(terms.others.crafts_per_second, terms.others.need_crafts_per_second)} a second, and the target needs `
+                + `${formatRate(terms.others.need_crafts_per_second, terms.others.crafts_per_second)}.`;
+            if (terms.into === null) {
+                return `Machine ${terms.machine} makes ${terms.item}, and nothing takes it out: once its output is full, the machine stops for good.${others}`;
+            }
+            const how = terms.into.inserters.length === 0 ? `Machine ${terms.machine} places ${terms.item} into ${portNamed(terms.into)}`
+                : `${capitalized(named('inserter', terms.into.inserters))} put${verb(terms.into.inserters, 's', '')} ${terms.item} from machine ${terms.machine} `
+                    + `into ${portNamed(terms.into)}`;
+            const then = terms.then;
+            if (then === null) {
+                return `${how}, and nothing takes it out: once ${terms.into.input_slots ? 'they are' : 'the chest is'} full, the machine stops for good.${others}`;
+            }
+            const movers = `${named('inserter', then.inserters)} move${verb(then.inserters, 's', '')} it`;
+            if (then.loop) {
+                return `${how}, ${movers} round between ${portsNamed(then.ends)}, and nothing else takes it out: once they are full, the machine stops `
+                    + `for good.${others}`;
+            }
+            const one = then.ends.length === 1 && !then.ends[0].input_slots;
+            return `${how}, ${movers} on into ${portsNamed(then.ends)}, and nothing takes it out of ${one ? 'there' : 'them'}: once `
+                + `${one ? `chest ${then.ends[0].container} is` : 'they are'} full, the machine stops for good.${others}`;
+        }
+        case 'S2':
+            return sharedHandText(terms.inserter, terms.items, terms.target);
+        case 'S3': {
+            const all = terms.rows.every(row => row.gives === row.takes);
+            const rows = terms.rows.map(row => `${terms.rows.length === 1 ? '' : `${row.item}: `}a craft gives ${formatRate(row.gives)} and takes ${formatRate(row.takes)}`);
+            const what = terms.rows.length === 1
+                ? (all ? `all the ${terms.rows[0].item} they make` : `more ${terms.rows[0].item} than they make`)
+                : `${all ? 'all' : 'more than'} they make of ${listed(terms.rows.map(row => row.item))} in a loop`;
+            const who = capitalized(producersNamed(terms.producer, terms.ids));
+            return `${who} use${verb(terms.ids, 's', '')} up ${what} (${rows.join('; ')}): no amount of crafting meets the target.`;
+        }
+    }
+}
+
+/**
+ * No clock can carry the build's target: a cut of it carries less than the target asks of it, or it falls into a trap
+ * that stops it for good. Thrown before any simulation (crafting/feasibility/assert-feasible.ts).
+ */
+export class FeasibilityError extends Error {
+    public readonly issues: FeasibilityIssue[];
+
+    /** `target` is the config's, in all: where it is shared by copies, the message says its figures are for one copy */
+    constructor(issues: FeasibilityIssue[], target: { items_per_second: number; copies: number } | null = null) {
+        super(FeasibilityError.formatMessage(issues, target));
+        this.name = 'FeasibilityError';
+        this.issues = issues;
+    }
+
+    private static formatMessage(issues: FeasibilityIssue[], target: { items_per_second: number; copies: number } | null): string {
+        const copies = target === null || target.copies === 1 ? ''
+            : ` of ${formatRate(target.items_per_second)} a second over ${formatRate(target.copies)} copies (every figure here is for one copy)`;
+        return `No clock can hold this build's target${copies}: ${issues.map(describeFeasibilityIssue).join(' ')}`;
+    }
+}

@@ -3,6 +3,7 @@ import assert from "../common/assert";
 import { Config } from "../config";
 import { assertInserterCoverage } from "../config/inserter-coverage-validator";
 import { validateCopies } from "../config/copies-validator";
+import { assertFeasible } from "./feasibility/assert-feasible";
 import { fraction } from "../data-types/fraction";
 import { Entity, handSizeFor } from "../entities";
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
@@ -31,6 +32,7 @@ export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
     assert(Number.isFinite(config.target_output.items_per_second) && config.target_output.items_per_second > 0,
         "Set a positive target output rate to see at-target rates.");
     assertInserterCoverage(config);
+    assertFeasible(config);
     const registry = createEntityRegistryFromConfig(config);
     const target = TargetProductionRate.fromConfig(config.target_output);
     const cycle = CraftingCyclePlan.create(target, registry, fraction(1));

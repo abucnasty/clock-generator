@@ -3,6 +3,9 @@ import { generateClockForConfig, generateClockAlternatives, validateConfig, type
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
+import { FeasibilityError } from "../config/errors";
+import { planCraftingCycle } from "./plan/plan-run";
+import { SimulationContext } from "./sequence/simulation-context";
 import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, withSearches } from "./generate-blueprint-test-helpers";
 
 /** The transfers recorded for an inserter, as [start, end] tick ranges in the order they were recorded */
@@ -271,10 +274,16 @@ describe("generateClockForConfig", () => {
             expect(() => validateConfig(config)).toThrow("Missing inserter coverage");
         });
 
-        it("throws when the machines cannot reach the target rate", async () => {
+        it("throws when the machines cannot reach the target rate: the feasibility pass first, the planner's assert behind it", async () => {
             const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
-            expect(() => validateConfig({ ...config, target_output: { ...config.target_output, items_per_second: 1600 } }))
-                .toThrow("cannot meet the target production rate");
+            const over = { ...config, target_output: { ...config.target_output, items_per_second: 1600 } };
+            expect(() => validateConfig(over)).toThrow(FeasibilityError);
+            // the figures are for one of the 24 copies, and the message says so: 1600 / 24 = 66.67 frames a second a copy
+            expect(() => validateConfig(over)).toThrow("No clock can hold this build's target of 1600 a second over 24 copies (every figure here is "
+                + "for one copy): Machine 1 (flying robot frame) crafts at most 3.44 a second. The target needs 33.33 crafts a second of it (66.67 a "
+                + "second of flying robot frame at 2 a craft).");
+            const quiet = { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
+            expect(() => planCraftingCycle(over, SimulationContext.fromConfig(over), quiet)).toThrow("cannot meet the target production rate");
         });
     });
 

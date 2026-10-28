@@ -6,6 +6,7 @@ import { Config } from "../../config";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
+import { assertFeasible } from "../feasibility/assert-feasible";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { DebugPluginFactory } from "../sequence/debug/debug-plugin-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
@@ -615,6 +616,8 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     assertInserterCoverage(config);
     // Throws CopiesError if the config holds several identical units where it should describe one and set copies.
     validateCopies(config);
+    // Throws FeasibilityError if no clock can carry the target (crafting/feasibility/), before any simulation.
+    assertFeasible(config);
 
     // Initialize simulation context
     const simulation_context = SimulationContext.fromConfig(config);

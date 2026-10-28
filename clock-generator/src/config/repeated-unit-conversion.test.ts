@@ -3,6 +3,7 @@ import { Config, ConfigSchema } from './schema';
 import { findRepeatedUnits } from './copies-validator';
 import { planRepeatedUnitConversion } from './repeated-unit-conversion';
 import { validateConfig } from '../crafting/plan/validate-config';
+import { FeasibilityError } from './errors';
 
 /** Actual free-lane gear build: four total items/s requires the multiplied Copies after extraction. */
 function eightUnits(): Config {
@@ -34,7 +35,7 @@ describe('complete repeated-unit conversion', () => {
         expect(plan.candidate.belts).toEqual(source.belts);
         expect(plan.candidate.inserters).toEqual(source.inserters.slice(0, 2));
         expect(() => validateConfig(plan.candidate)).not.toThrow();
-        expect(() => validateConfig({ ...plan.candidate, target_output: { ...plan.candidate.target_output, copies: 0.5 } })).toThrow('cannot meet the target');
+        expect(() => validateConfig({ ...plan.candidate, target_output: { ...plan.candidate.target_output, copies: 0.5 } })).toThrow(FeasibilityError);
         expect(source).toEqual(before);
         plan.candidate.belts[0].lanes[0].stack_size = 2;
         expect(source).toEqual(before);
