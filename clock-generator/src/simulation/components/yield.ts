@@ -64,6 +64,10 @@ interface ResultStack {
  * item, the main product as the by-products. A machine that places its results itself (a recycler, `places_results`)
  * puts them in its output whatever it holds, any number of stacks, and starts no craft while a stack of one of them
  * waits there (recorded on the recycler: it stops with 50 ore waiting, not with its 12 result slots full).
+ *
+ * A machine whose recipe takes no ingredient at all (the captive biter spawner's) never stops for a full output: what
+ * does not fit under the stack size is lost (recorded: with 100 eggs in its output it went on making crafts, and none
+ * of the extra eggs were kept; docs/burner-fuel.md).
  */
 export class Yield {
     /** The productivity bar: a full bar pays out at the start of the next tick or after a finished craft */
@@ -89,6 +93,8 @@ export class Yield {
 
     /** Whether the machine places its results itself: no stack size caps its output, a stack waiting stops it */
     public readonly places_results: boolean;
+    /** Whether the recipe takes no ingredient, so the machine never waits for room: it loses what does not fit */
+    public readonly discards_overflow: boolean;
     /** The main product */
     public readonly output_name: string;
     /** The most of the main product a craft yields: its amount, one more where it has an extra count fraction */
@@ -121,6 +127,7 @@ export class Yield {
     ) {
         if (bound !== null) {
             this.places_results = bound.places_results;
+            this.discards_overflow = bound.discards_overflow;
             this.output_name = bound.output_name;
             this.output_amount = bound.output_amount;
             this.output_by_chance = bound.output_by_chance;
@@ -151,6 +158,8 @@ export class Yield {
         const extra_count = (output as { extra_count_fraction?: number }).extra_count_fraction ?? 0;
         const expected = expectedAmount(output);
         this.places_results = machine.metadata.places_results === true;
+        const recipe = machine.metadata.recipe.raw;
+        this.discards_overflow = recipe.ingredients.length === 0 && recipe.fluid_ingredients.length === 0;
         this.output_name = output.name;
         this.output_amount = output.amount + (extra_count > 0 ? 1 : 0);
         this.output_by_chance = expected === output.amount ? null : expected;
@@ -374,8 +383,9 @@ export class Yield {
     }
 
     private hasOutputSpaceFor(amount: number): boolean {
-        if (this.places_results) {
-            // its output takes any number of stacks; a stack waiting stops the next craft instead (roomForNextCraft)
+        if (this.places_results || this.discards_overflow) {
+            // its output takes any number of stacks; a stack waiting stops the next craft instead (roomForNextCraft). A
+            // machine that discards what does not fit never waits for room
             return true;
         }
         return this.output_quantity.get() + amount <= this.output_stack_size;
@@ -387,7 +397,10 @@ export class Yield {
     }
 
     private addOutput(amount: number, user: YieldUser): void {
-        this.inventory.addQuantity(this.output_name, amount);
+        const kept = this.discards_overflow ? Math.min(amount, Math.max(0, this.output_stack_size - this.output_quantity.get())) : amount;
+        if (kept > 0) {
+            this.inventory.addQuantity(this.output_name, kept);
+        }
         user.countCrafted(amount);
         user.countPlacedInOutput(amount);
     }

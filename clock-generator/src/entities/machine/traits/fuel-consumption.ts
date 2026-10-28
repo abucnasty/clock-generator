@@ -3,7 +3,7 @@ import { TICKS_PER_SECOND } from "../../../data-types";
 import { BurnerEnergySource, Fuel } from "../fuel";
 
 /** Factorio clamps the energy consumption effect at -80%. */
-const MIN_ENERGY_CONSUMPTION_BONUS_PERCENT = -80;
+export const MIN_ENERGY_CONSUMPTION_BONUS_PERCENT = -80;
 
 export interface FuelConsumption {
     readonly item: ItemName;
@@ -17,7 +17,8 @@ export interface FuelConsumption {
 /**
  * Burner machines burn fuel only while crafting. Energy usage scales with the
  * energy consumption bonus (speed modules raise it, efficiency modules lower it)
- * and is independent of productivity.
+ * and is independent of productivity and crafting speed. A burner whose effectivity
+ * is below 1 burns the usage over it in fuel (the game's: 2.1.21 has none below 1).
  *
  * @param source the machine's energy source
  * @param fuel the fuel being burned
@@ -34,7 +35,7 @@ function fromCraftingSpeed(
 ): FuelConsumption {
     const bonus = Math.max(energyConsumptionBonusPercent, MIN_ENERGY_CONSUMPTION_BONUS_PERCENT);
     // plain numbers: decimal crafting speeds and bonuses make fractions with numerators and denominators too big to keep exact
-    const kw = source.energy_usage_kw * (100 + bonus) / 100;
+    const kw = source.energy_usage_kw * (100 + bonus) / 100 / source.effectivity;
     const itemsPerSecond = kw / (fuel.fuel_value_mj * 1000);
     const secondsPerCraft = craftingTime / craftingSpeed;
     return {

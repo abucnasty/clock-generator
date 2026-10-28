@@ -248,3 +248,30 @@ describe("Yield: what the machine's state keeps of it", () => {
         expect(made.bonusProgress.progress).toBe(0.5);
     });
 });
+
+describe("Yield: a recipe that takes no ingredient never waits for room (the captive biter spawner's eggs)", () => {
+    const spawner = () => {
+        const state = MachineState.forMachine(Machine.createMachine(1, {
+            crafting_speed: 1, productivity: 0, recipe: RecipeMetadata.fromRecipeName("biter-egg"), prototype: "captive-biter-spawner",
+        }));
+        return { made: state.yield, inventory: state.inventoryState };
+    };
+
+    it("keeps the eggs up to the stack of 100 and loses the rest, holding nothing", () => {
+        const { made, inventory } = spawner();
+        const user = crafting();
+        expect(made.discards_overflow).toBe(true);
+        for (let craft = 0; craft < 25; craft++) made.finishCraft(user);
+        expect(inventory.getQuantity("biter-egg")).toBe(100);
+        expect(made.pendingOutput).toBe(0);
+        expect(made.holdsProducts()).toBe(false);
+        expect(made.roomForNextCraft()).toBe(true);
+        // what was made counts, kept or not
+        expect(user.crafted).toBe(125);
+    });
+
+    it("is no rule of a recipe with ingredients, nor of one with only a fluid ingredient (casting): they wait for room", () => {
+        expect(yieldOf("iron-gear-wheel", 0).made.discards_overflow).toBe(false);
+        expect(yieldOf("casting-iron-gear-wheel", 0).made.discards_overflow).toBe(false);
+    });
+});
