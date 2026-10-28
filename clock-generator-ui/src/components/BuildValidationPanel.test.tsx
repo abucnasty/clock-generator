@@ -90,3 +90,33 @@ it('does not navigate to a chest cause that has no visible validation row', () =
     expect(exitFullscreen).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
 });
+
+const opening = "No clock can hold this build's target:";
+const machineLimit = 'Machine 1 (iron ore recycling) can make at most 720 crafts a second. Lower the target, or add machines or make them faster.';
+const inserterLimit = 'Inserters 3, 4, 5 and 6 can bring at most 480 a second of iron ore into the build. Lower the target, or give the machines more inserters.';
+
+it('shows a refusal of two problems as two errors, opened once and with no config path', () => {
+    const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 1 }], chestIssues: [],
+        coverageText: () => '', failure: { message: `${opening} ${machineLimit} ${inserterLimit}`,
+            diagnostics: [{ kind: 'refusal', opening, problems: [machineLimit, inserterLimit] }] } });
+    show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
+        onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={vi.fn()} />);
+    const panel = screen.getByRole('region', { name: 'Build validation' });
+    expect(within(panel).getByText('2 errors')).toBeDefined();
+    expect(within(panel).getAllByText(opening)).toHaveLength(1);
+    const items = within(panel).getAllByRole('group');
+    expect(items.map(item => item.textContent)).toEqual([machineLimit, inserterLimit]);
+    expect(panel.textContent).not.toMatch(/target output|items per second:/i);
+    expect(within(panel).queryByRole('button')).toBeNull();
+});
+
+it('names a schema error by the field the player sees and keeps its button to the field', async () => {
+    const onReview = vi.fn();
+    const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 1 }], chestIssues: [],
+        coverageText: () => '', failure: { message: 'x', diagnostics: [{ kind: 'field', path: ['target_output', 'items_per_second'], message: 'Too small' }] } });
+    const { user } = show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
+        onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={onReview} />);
+    expect(screen.getByText('Items per Second: Too small')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Review setting' }));
+    expect(onReview).toHaveBeenCalledExactlyOnceWith({ kind: 'target-rate' });
+});

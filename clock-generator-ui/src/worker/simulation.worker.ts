@@ -231,10 +231,12 @@ function handleValidate(requestId: number, config: Config): void {
                 ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
                 : error instanceof clockGenerator.ConfigValidationError
                     ? error.zodError.issues.map(issue => ({ kind: 'field' as const, path: issue.path as (string | number)[], message: issue.message }))
+                    // a build no clock can hold: its opening once, and each problem the engine found on its own
                     : error instanceof clockGenerator.FeasibilityError
-                        || (error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.'))
-                        ? [{ kind: 'field', path: ['target_output', 'items_per_second'], message: error.message }]
-                        : undefined,
+                        ? [{ kind: 'refusal' as const, opening: error.opening, problems: error.problems }]
+                        : error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.')
+                            ? [{ kind: 'refusal' as const, problems: [error.message] }]
+                            : undefined,
         });
     }
 }

@@ -1,12 +1,15 @@
 import type { InserterCoverageIssue, MachinePrototypeIssue } from 'clock-generator/browser';
 import type { ChestFormData, InserterFormData } from './configForm/formData';
+import { entityLabel, entityLabelIn } from './entityLabel';
 import { coverageIssueElementId, focusIdOf, type FocusTarget, type Problem } from './firstProblem';
 import { coverageHandledByChestIssue, outputChestIssueTitle, type OutputChestIssue } from './outputChestIssues';
 
 /** Structured check failures retain their identity when they cross the worker boundary. */
 export type ValidationDiagnostic =
     | { kind: 'coverage'; issue: InserterCoverageIssue }
-    | { kind: 'field'; path: (string | number)[]; message: string };
+    | { kind: 'field'; path: (string | number)[]; message: string }
+    /** The engine refuses the build as a whole: its opening sentence, once, and each problem it found in its own words */
+    | { kind: 'refusal'; opening?: string; problems: string[] };
 
 export interface BuildValidationIssue extends Problem {
     id: string;
@@ -16,13 +19,18 @@ export interface BuildValidationIssue extends Problem {
      * 'calibration': the engine's warning that a belt pickup's timing is not tested; 'lanes': its warning that the copies
      * summed would ask a lane for more than it carries; 'machine': its warning that a machine's prototype disagrees with its
      * type or cannot make its recipe; 'drop': its note that a drop side-loads onto another belt. All shown as plain text.
+     * 'refusal': one problem of the refusal of a build no clock can hold, which is a refusal of the build as a whole.
      */
-    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes' | 'drop' | 'machine';
+    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes' | 'drop' | 'machine' | 'refusal';
     fieldTarget?: FocusTarget;
+    /** The sentence that opens the problems of one refusal, shown once above them */
+    lead?: string;
     coverage?: InserterCoverageIssue;
     chest?: OutputChestIssue;
 }
 
+/** Whether the engine refuses the build as it stands: the issues come from the last check only while it is for this build */
+export const isRefused = (issues: readonly Pick<BuildValidationIssue, 'source'>[]) => issues.some(issue => issue.source === 'refusal');
 export const validationIssueElementId = (id: string) => `validation-issue-${id}`;
 export const validationCountLabel = (count: number) => `${count} validation ${count === 1 ? 'error' : 'errors'}`;
 
@@ -56,12 +64,40 @@ export function navigateToOutputRouteRepair(issue: Pick<InserterCoverageIssue, '
     return true;
 }
 
+/** The words of a config key as a player reads them: the form's labels where it has one, else the key with spaces */
+const FIELD_LABELS: Record<string, string> = {
+    target_output: 'Target Output', items_per_second: 'Items per Second', recipe: 'Recipe', copies: 'Copies',
+    overrides: 'Advanced settings',
+};
+const label = (key: string | number) => typeof key === 'number' ? String(key + 1) : FIELD_LABELS[key] ?? words(key);
+/** A key in running text: "item filter"; a place in a list, from 1 */
+const words = (key: string | number) => typeof key === 'number' ? String(key + 1) : key.replaceAll('_', ' ');
+
+/**
+ * Where a schema error is, in the names the page shows: "Machine 3 recipe", "Items per Second", "Chest 4 item filter".
+ * An entity is named by its id, as everywhere on the page, not by its place in the config's list.
+ */
+function fieldLocation(path: (string | number)[], input: Pick<Input, 'machines' | 'chests' | 'inserters' | 'belts'>): string {
+    if (!path.length) return 'Build';
+    const [group, index, ...rest] = path;
+    if (group === 'target_output' && typeof index === 'string' && rest.length === 0) return label(index);
+    const entity = typeof index === 'number' ? ({
+        machines: () => entityLabel('machine', input.machines[index]?.id ?? index + 1),
+        inserters: () => entityLabel('inserter', input.inserters[index]?.id ?? index + 1),
+        belts: () => entityLabel('belt', input.belts?.[index]?.id ?? index + 1),
+        chests: () => entityLabelIn(input.chests, 'chest', input.chests[index]?.id ?? index + 1),
+    } as Record<string, (() => string) | undefined>)[String(group)]?.() : undefined;
+    return (entity ? [entity, ...rest.map(words)] : [label(group), ...path.slice(1).map(words)]).join(' ');
+}
+
 interface Input {
     fieldProblems: Problem[];
     coverage: InserterCoverageIssue[];
     chests: ChestFormData[];
     inserters: InserterFormData[];
     machines: { id: number }[];
+    /** Named by id in the location of a schema error; left out, a belt is named by its place in the list */
+    belts?: { id: number }[];
     chestIssues: OutputChestIssue[];
     coverageText: (issue: InserterCoverageIssue) => string;
     /** The live refusal of an inserter that is out of scope, shown in place of its coverage */
@@ -106,6 +142,15 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
     input.coverage.forEach(addCoverage);
     for (const diagnostic of input.failure?.diagnostics ?? []) {
         if (diagnostic.kind === 'coverage') { addCoverage(diagnostic.issue); continue; }
+        if (diagnostic.kind === 'refusal') {
+            // each problem counts and is listed on its own; none has a field of its own to point at
+            diagnostic.problems.forEach((text, position) => {
+                const id = `refusal:${position}`;
+                add({ id, text, severity: 'error', blocksGeneration: true, source: 'refusal', lead: diagnostic.opening,
+                    target: { kind: 'validation-issue', id } });
+            });
+            continue;
+        }
         const [group, index, key] = diagnostic.path;
         let fieldTarget: FocusTarget | undefined;
         if (group === 'target_output') {
@@ -120,8 +165,7 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
         if (chest && key === 'item_filter' && input.chestIssues.some(issue => issue.chest.id === chest.id && issue.kind === 'removal-disabled')) continue;
         const stablePath = diagnostic.path.map((part, position) => position === 1 && typeof part === 'number'
             ? group === 'chests' ? input.chests[part]?.id ?? part : group === 'machines' ? input.machines[part]?.id ?? part : part : part);
-        const location = stablePath.length ? stablePath.join('.').replaceAll('_', ' ') : 'Build';
-        add(field(fieldTarget ? focusIdOf(fieldTarget) : `field:${stablePath.join('.')}`, `${location}: ${diagnostic.message}`, fieldTarget));
+        add(field(fieldTarget ? focusIdOf(fieldTarget) : `field:${stablePath.join('.')}`, `${fieldLocation(diagnostic.path, input)}: ${diagnostic.message}`, fieldTarget));
     }
     // a Check that stopped at the refusal shown live says the same: one issue per cause
     if (input.failure && !input.failure.diagnostics?.length && input.failure.message !== input.scopeRefusal) {
