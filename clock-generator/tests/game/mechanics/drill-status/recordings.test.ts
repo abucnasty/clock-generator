@@ -1,9 +1,10 @@
 import {describe, expect, test} from "vitest";
 import {ConfigSchema} from "../../../../src/config";
-import {DrillStateMachine} from "../../../../src/control-logic/drill/drill-state-machine";
 import {DrillStatus, factorioDrillState, MachineState} from "../../../../src/state";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {EnableControl} from "../../../../src/control-logic/enable-control";
+import {MiningDrillArchetype} from "../../../../src/simulation/archetypes/mining-drill";
+import {EnableControl} from "../../../../src/simulation/controls/enable-control";
+import {drillStatusOf} from "../../../../src/simulation/status-codes";
 import {DRILL_RUNS} from "./cases";
 import {loadRecording, rowsOf, statusChanges, statusName} from "./recording";
 
@@ -118,7 +119,7 @@ function simulatedDrill(windows: number[][], at: {tick: number}) {
     const drill_state = context.drills[0].drill_state;
     const sink = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id) as MachineState;
     const enable_control: EnableControl = {isEnabled: () => !inside(at.tick, windows)};
-    return {drill: DrillStateMachine.create({drill_state, sink_state: sink, enable_control}), drill_state};
+    return {drill: MiningDrillArchetype.create({drill_state, sink_state: sink, enable_control}), drill_state};
 }
 
 describe("the state the simulator records for a drill", () => {
@@ -128,10 +129,10 @@ describe("the state the simulator records for a drill", () => {
         const modes = new Set<string>(), states = new Set<string>();
         for (at.tick = 1; at.tick <= 600; at.tick++) {
             drill.executeForTick();
-            modes.add(drill.current_mode.status);
+            modes.add(drillStatusOf(drill.status));
             states.add(factorioDrillState(drill_state));
         }
-        // the machine's own disabled mode was entered, and DrillState.status stayed at its default
+        // the drill's own disabled status was entered, and DrillState.status stayed at its default
         expect(modes).toEqual(new Set([DrillStatus.WORKING, DrillStatus.DISABLED]));
         expect(drill_state.status).toBe(DrillStatus.WORKING);
         expect(states).toEqual(new Set(["working"]));

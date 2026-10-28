@@ -14,7 +14,7 @@ the ore that came out. The mining productivity research is put at 0.
 | `machine` | 5,000 | a big drill into a stone furnace that cannot craft: it stops at its own limit |
 
 `recordings/` keeps the logs as gzip. `recordings.test.ts` reads them without Factorio and asserts the statuses and the
-ticks they change at, then runs a drill through the simulator's state machine with the same windows and shows what its
+ticks they change at, then runs a drill through the simulator's drill (its mining drill archetype) with the same windows and shows what its
 Factorio state is (`factorioDrillState`). A game run writes a new log with `DRILL_STATUS_CAPTURE_DIR`, an empty directory:
 
 ```bash
