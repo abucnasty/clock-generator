@@ -266,8 +266,9 @@ describe("an inserter's changes of phase", () => {
         source_state.inventoryState.setQuantity("iron-gear-wheel", 0);
         archetype.phaseStep();
         expect([archetype.hand.phase, inserter_state.status, changes.length]).toEqual([InserterPhase.PICKUP, InserterStatus.IDLE, 1]);
-        expect(archetype.stateKey(1).startsWith("PICKUP|")).toBe(true);
-        expect(InserterState.stateKey(inserter_state, 1).startsWith("IDLE;")).toBe(true);
+        // both in the key: the phase first in the Hand's, the status as written after its rules' and ports' fields
+        const [phase, , , , , , , status] = archetype.hand.key(1).split(";");
+        expect([phase, status]).toEqual([`${InserterPhase.PICKUP}`, InserterStatus.IDLE]);
         // the pickup rule runs on, and the status stays idle while the hand fills, until the next change
         source_state.inventoryState.setQuantity("iron-gear-wheel", 16);
         tick_provider.incrementTick();
@@ -307,10 +308,12 @@ describe("an inserter's changes of phase", () => {
     });
 });
 
+// one key for the inserter, its components' in a fixed order (P4 3.4): what its hand has carried (its Storage), its Hand
+// (phase, what its rules and ports keep, then what it owns of the inserter's state: status as written, wait flag, hand,
+// arm), its Wakes (whether it shows enabled). Every field of its components, in the key or out of it, is pinned with
+// every component's, and each is changed in turn there (crafting/runner/steady-state.test.ts).
 describe("an inserter's state key", () => {
-    // the text the inserter's mode state machine gave: its status, then every mode's and evaluator's key in the order of
-    // its graph (idle, swing, drop, pickup, disabled, target-full, wait-for-sink), only four of which had any
-    test("is the text the mode state machine gave, from a belt into a machine and from a machine onto a belt", () => {
+    test("keys what it has carried, its Hand and whether it shows enabled, from a belt into a machine and from a machine onto a belt", () => {
         const belt = TransportBelt.create(Belt.fromConfig({ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 4 }] }));
         const machine = MachineState.forMachine(gearMachine());
         const tick_provider = MutableTickProvider.create(0);
@@ -318,40 +321,21 @@ describe("an inserter's state key", () => {
             inserter_state: InserterState.createIdle(inserterOf(source, sink, item)), source_state: source, sink_state: sink, tick_provider,
             enable_control: AlwaysEnabledControl,
         });
-        expect(of(belt, machine, "iron-plate").stateKey(0)).toBe("IDLE||false,false||null,null|0||true|||||||");
+        // the drop port of a machine keys its ticks, the pickup port of a belt its decision
+        expect(of(belt, machine, "iron-plate").stateKey(0)).toBe(`[]|${InserterPhase.IDLE};false;false;null;null;0;true;IDLE;false;null;|true`);
+        // the drop port of a belt keys nothing, the pickup port of a machine its ticks
         expect(of(machine, TransportBelt.create(Belt.fromConfig({ id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 4 }, { ingredient: "iron-gear-wheel", stack_size: 4 }] })), "iron-gear-wheel")
-            .stateKey(0)).toBe("IDLE||false,false||null,null|||0|||||||");
+            .stateKey(0)).toBe(`[]|${InserterPhase.IDLE};false;false;null;null;;0;IDLE;false;null;|true`);
     });
 
-    test("keys a swing by its ticks relative to the tick asked and where it came from, a pickup's and a drop's ticks by their ports", () => {
+    test("keys a swing by its ticks relative to the tick asked and the phase it came from, a pickup's and a drop's ticks by their ports", () => {
         const { archetype, tick } = gearsToChest(100);
         tick();
         tick();
-        expect(archetype.stateKey(5)).toBe("SWING||false,false||-3,PICKUP|0||1|||||||");
-        expect(archetype.stateKey(2)).toBe("SWING||false,false||0,PICKUP|0||1|||||||");
-    });
-
-    test("changes with every field of the Hand's that drives its next ticks, and with none of the others", () => {
-        const { archetype } = gearsToChest(100);
-        const hand = archetype.hand;
-        const key = () => archetype.stateKey(10);
-        const base = key();
-        const keyed: [keyof HandScratch, unknown][] = [["saw_sink_blocked", true], ["window_opens", true], ["swing_entered_tick", 4],
-            ["swing_from", InserterPhase.DROP], ["pickup_ticks", 3], ["drop_ticks", 2]];
-        for (const [field, value] of keyed) {
-            const before = hand.scratch[field];
-            (hand.scratch as unknown as Record<string, unknown>)[field] = value;
-            expect(key(), field).not.toBe(base);
-            (hand.scratch as unknown as Record<string, unknown>)[field] = before;
-        }
-        const unkeyed: [keyof HandScratch, unknown][] = [["window_opened", true], ["ticks_in_pickup", 5], ["reason", 3], ["reason_item", "coal"],
-            ["reason_quantity", 7], ["spare_hand", { item_name: "coal", quantity: 0 }]];
-        for (const [field, value] of unkeyed) {
-            (hand.scratch as unknown as Record<string, unknown>)[field] = value;
-            expect(key(), field).toBe(base);
-        }
-        hand.phase = InserterPhase.DISABLED;
-        expect(key()).toBe(base.replace(/^IDLE/, "DISABLED"));
+        const hand = `{"item_name":"iron-gear-wheel","quantity":16}`;
+        expect(archetype.stateKey(5)).toBe(`[["iron-gear-wheel",16]]|${InserterPhase.SWING};false;false;-3;${InserterPhase.PICKUP};0;1;SWING;false;${hand};|true`);
+        expect(archetype.stateKey(2)).toBe(`[["iron-gear-wheel",16]]|${InserterPhase.SWING};false;false;0;${InserterPhase.PICKUP};0;1;SWING;false;${hand};|true`);
+        expect(archetype.stateKey(5)).toBe(`${JSON.stringify([["iron-gear-wheel", 16]])}|${archetype.hand.key(5)}|${archetype.wakes.key()}`);
     });
 });
 

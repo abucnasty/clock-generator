@@ -1,4 +1,4 @@
-import { InventoryState, WritableInventoryState } from "./inventory-state";
+import { InventoryState, inventoryKey, WritableInventoryState } from "./inventory-state";
 import { ProgressState } from "./progress-state";
 import { EntityId, Machine } from "../entities";
 import { EntityState } from "./entity-state";
@@ -23,7 +23,6 @@ export class MachineState implements EntityState {
     public static forMachine = forMachine
     public static clone = clone
     public static print = printMachineState
-    public static stateKey = stateKey
 
     /**
      * What the machine's crafts and productivity bar make, the products it holds, the carried fractions of results by
@@ -180,6 +179,14 @@ export class MachineState implements EntityState {
         this.wakes.windowOpeningTakeDecider = value;
     }
 
+    /**
+     * What the machine's Storage holds, for the machine's key (see CraftingMachineArchetype.stateKey): its ingredients
+     * and output by item, the ingredients it keeps apart from its products, and its fuel slot by item
+     */
+    public storageKey(): string {
+        return `${inventoryKey(this.inventoryState)};${JSON.stringify(this.selfIngredients.export())};${inventoryKey(this.fuelInventory)}`;
+    }
+
     public toString(): string {
         return `MachineState(${this.entity_id},recipe=${this.machine.metadata.recipe.name},status=${this.status})`;
     }
@@ -228,31 +235,6 @@ function clone(machineState: MachineState): MachineState {
     cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.startedCraftInLastTick = machineState.startedCraftInLastTick;
     return cloned;
-}
-
-/**
- * What drives the machine's next ticks besides its inventory (see simulationStateKey). The running totals only grow,
- * so they never repeat.
- */
-function stateKey(machineState: MachineState): string {
-    const crafting = machineState.crafting;
-    const wakes = machineState.wakes;
-    return [
-        machineStatusOf(crafting.status),
-        machineState.yield.pendingOutput,
-        wakes.outputBlockedAfterLastTick,
-        wakes.finishedCraftInLastTick,
-        wakes.startedCraftInLastTick,
-        JSON.stringify(machineState.selfIngredients.export()),
-        crafting.craftingProgress.progress,
-        machineState.yield.bonusProgress.progress,
-        // a burner's future hangs on what is burning and what the fuel slot holds, which no other key carries: the
-        // energy left in the burning item and the energy held, "0;0" for a machine that burns nothing
-        machineState.energy.stateKey(),
-        JSON.stringify(Object.entries(machineState.fuelInventory.export()).sort(([a], [b]) => a.localeCompare(b))),
-        // fractions of a result by chance carried toward the next whole item
-        machineState.yield.carryKey(),
-    ].join(";");
 }
 
 function printMachineState(machineState: MachineState, logger: Logger = defaultLogger): void {

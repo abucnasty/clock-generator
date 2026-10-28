@@ -55,6 +55,15 @@ export class MachineWakes {
         this.starts_seen = crafting.craftsStarted;
     }
 
+    /**
+     * What the inserters that wait on the machine go by in its next tick, for the machine's key (see
+     * simulationStateKey): the three flags of its last tick. The decider is cleared at the end of every tick of the
+     * machine, so a key, which is taken between ticks, always finds it null; the seen counts are running totals.
+     */
+    public key(): string {
+        return `${this.outputBlockedAfterLastTick};${this.finishedCraftInLastTick};${this.startedCraftInLastTick}`;
+    }
+
     /** After the machine's tick: what the inserters that wait on it go by in the next one, and the decider cleared */
     public endOfTick(crafting: Crafting, ingress: Ingress): void {
         this.finishedCraftInLastTick = crafting.craftCount !== this.crafts_seen;

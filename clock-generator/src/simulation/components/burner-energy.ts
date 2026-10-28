@@ -89,8 +89,11 @@ export class BurnerEnergy {
         return cloned;
     }
 
-    /** What drives the burner's next ticks: what is burning and what it holds (the fuel slot is in the machine's key) */
-    public stateKey(): string {
+    /**
+     * What drives the burner's next ticks, for the machine's key (see simulationStateKey): what is left of the burning
+     * item and what it holds to work with. The fuel slot is the machine's Storage, and keyed there.
+     */
+    public key(): string {
         return `${this.energy_remaining_mj};${this.energy_buffer_mj}`;
     }
 

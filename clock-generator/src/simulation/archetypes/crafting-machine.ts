@@ -9,7 +9,7 @@ import { MachinePlacementPort } from "../components/machine-placement-port";
 import type { Placement } from "../components/placement";
 import type { Yield } from "../components/yield";
 import { Observers, StatusChangeReason } from "../observers/observer";
-import { CraftingStatus, machineStatusOf } from "../status-codes";
+import { CraftingStatus } from "../status-codes";
 
 /**
  * A crafting machine in a run: its state (`MachineState`: Storage, Ingress, Energy, Crafting, Yield, Placement and
@@ -131,12 +131,14 @@ export class CraftingMachineArchetype implements ControlLogic, StatusChangeReaso
     }
 
     /**
-     * Its status, with the text the machine's mode state machine gave it before (the status, then the empty keys of its
-     * four modes and their evaluators); with its state's key (MachineState.stateKey), two equal keys one clock period
-     * apart mean the machine repeats. Observers only watch.
+     * The machine's key (see simulationStateKey): its components' keys in a fixed order, "|" between them: what its
+     * Storage holds, its Crafting (status and craft underway), its Yield (held products, productivity bar, carry), its
+     * Wakes (the flags of its last tick) and its Energy (a burner's; nothing for an electric machine). Two equal keys
+     * one clock period apart mean the machine repeats. Its Ingress holds caches of its inventories and its Placement a
+     * running total, so neither has a key; observers only watch.
      */
     public stateKey(): string {
-        return `${machineStatusOf(this.crafting.status)}||||||||`;
+        return `${this.machine_state.storageKey()}|${this.crafting.key()}|${this.made.key()}|${this.wakes.key()}|${this.machine_state.energy.key()}`;
     }
 
     /**

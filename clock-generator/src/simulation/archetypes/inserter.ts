@@ -5,6 +5,7 @@ import type { EntityId } from "../../entities";
 import { fullHandOf } from "../../entities/traits/hand";
 import { EntityState } from "../../state/entity-state";
 import type { InserterState } from "../../state/inserter-state";
+import { inventoryKey } from "../../state/inventory-state";
 import { Control } from "../components/control";
 import { Hand, STAY } from "../components/hand";
 import { bindHandPorts } from "../components/hand-ports";
@@ -131,11 +132,13 @@ export class InserterArchetype implements ControlLogic {
     }
 
     /**
-     * Its phase and what its Hand keeps from one tick to the next, with the text the inserter's mode state machine gave
-     * them before (`Hand.key`); with its state's key (`InserterState.stateKey`), two equal keys one clock period apart
-     * mean the inserter repeats. Observers only watch.
+     * The inserter's key (see simulationStateKey): its components' keys in a fixed order, "|" between them: what its hand
+     * has carried by item (its Storage), its Hand (`Hand.key`: phase, scratch, ports and what it holds) and its Wakes
+     * (whether it shows enabled); ticks relative to `tick`. Two equal keys one clock period apart mean the inserter
+     * repeats. Its Control is the same in every tick of a run (a swap comes between runs) and the counts of items only
+     * grow, so neither is keyed; observers only watch.
      */
     public stateKey(tick: number): string {
-        return this.hand.key(tick);
+        return `${inventoryKey(this.inserter_state.inventoryState)}|${this.hand.key(tick)}|${this.wakes.key()}`;
     }
 }

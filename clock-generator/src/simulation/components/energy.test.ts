@@ -60,9 +60,9 @@ describe("ElectricEnergy", () => {
         expect(user.asked).toBe(0);
     });
 
-    it("fills the key's slot as a burner holding nothing, and its copy is itself", () => {
+    it("keys nothing, as it owns nothing, and its copy is itself", () => {
         const energy = new ElectricEnergy();
-        expect(energy.stateKey()).toBe("0;0");
+        expect(energy.key()).toBe("");
         expect(energy.clone(InventoryState.empty())).toBe(energy);
     });
 });
@@ -156,19 +156,17 @@ describe("BurnerEnergy", () => {
         expect(user.asked).toBe(0);
     });
 
+    // its fields in the simulation's key and out of it are pinned with every component's (crafting/runner/steady-state.test.ts)
     it("keys what it holds, each field apart", () => {
         const { energy } = burner(0);
-        expect(energy.stateKey()).toBe("0;0");
-        const keys = new Set([energy.stateKey()]);
+        expect(energy.key()).toBe("0;0");
+        const keys = new Set([energy.key()]);
         for (const field of ["energy_remaining_mj", "energy_buffer_mj"] as const) {
             energy[field] = 0.25;
-            keys.add(energy.stateKey());
+            keys.add(energy.key());
             energy[field] = 0;
         }
         expect(keys.size).toBe(3);
-        // every plain field it owns is in the key above, but the energy a tick of work takes, the build's in every tick
-        const plain = Object.entries(energy).filter(([, value]) => typeof value !== "object").map(([key]) => key);
-        expect(plain.sort()).toEqual(["energy_buffer_mj", "energy_per_tick", "energy_remaining_mj"]);
     });
 
     it("copies what it holds onto the copy of the fuel inventory", () => {
@@ -176,7 +174,7 @@ describe("BurnerEnergy", () => {
         energy.spend(false, crafting());
         const fuel_copy = fuel.clone();
         const copy = energy.clone(fuel_copy);
-        expect(copy.stateKey()).toBe(energy.stateKey());
+        expect(copy.key()).toBe(energy.key());
         // the copy lights its next item from its own fuel inventory
         copy.energy_remaining_mj = PER_TICK / 3;
         copy.spend(true, crafting());

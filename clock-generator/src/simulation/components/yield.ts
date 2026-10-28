@@ -297,6 +297,14 @@ export class Yield {
         }
     }
 
+    /**
+     * What of it drives the machine's next ticks, for the machine's key (see simulationStateKey): the main product it
+     * holds, the productivity bar and the carried fractions (carryKey). The products finished are a running total.
+     */
+    public key(): string {
+        return `${this.pendingOutput};${this.bonusProgress.progress};${this.carryKey()}`;
+    }
+
     /** What drives the carry's next crafts: each carried fraction by its item, in the order of the item names */
     public carryKey(): string {
         const carried: [string, number][] = [];

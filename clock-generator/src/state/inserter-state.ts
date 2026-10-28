@@ -1,5 +1,5 @@
 import { ItemName } from "../data";
-import { handSizeFor, Inserter } from "../entities";
+import { Inserter } from "../entities";
 import { EntityState } from "./entity-state";
 import { InventoryState } from "./inventory-state";
 import { InserterStatus } from "./entity-status";
@@ -85,20 +85,7 @@ function clone(state: InserterState): InserterState {
     };
 }
 
-/**
- * What drives the inserter's next ticks besides its inventory (see simulationStateKey). The counts of items only grow,
- * and `tick` is never updated, so relative to the current tick it would never repeat either.
- */
-function stateKey(state: InserterState, tick: number): string {
-    // A new hand initializes its own collection reach. Old reach cannot affect an empty/full hand's future,
-    // and retaining it here would delay repeat detection despite identical physical outcomes.
-    const held = state.held_item;
-    const arm = held && held.quantity < handSizeFor(state.inserter, held.item_name) ? state.pickup_arm?.stateKey(tick) : undefined;
-    return [state.status, state.waits_for_sink, state.enabled, JSON.stringify(held), arm].join(";");
-}
-
 export const InserterState = {
     createIdle: createIdleInserterState,
     clone: clone,
-    stateKey: stateKey,
 };

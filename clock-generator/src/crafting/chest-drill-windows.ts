@@ -279,7 +279,7 @@ function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: r
             period_index = index;
             // the first period's takes may come up short, so a cycle that holds is one of the periods after it
             if (index >= 1) {
-                const key = `${position};${stock()};${hold()};${mining.stateKey()}`;
+                const key = `${position};${stock()};${hold()};${mining.key()}`;
                 if (seen.has(key)) {
                     return { passes: true, proven: true };
                 }

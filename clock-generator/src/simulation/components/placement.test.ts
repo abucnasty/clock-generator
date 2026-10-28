@@ -160,10 +160,6 @@ describe("Placement", () => {
         expect(snapshot.results_placed).toBe(5);
     });
 
-    it("holds a running total and fields fixed at build only: none of them goes into a state key", () => {
-        const placement = new Placement(held("stone", 0), ["stone"], true);
-        placement.placeInto(ContainerStorage.forChest(Chest.fromConfig({ type: "car", id: 1 }, ["stone"])), false);
-        const plain = Object.entries(placement).filter(([, value]) => value === null || typeof value !== "object").map(([key]) => key);
-        expect(plain.sort()).toEqual(["counts_own_output", "places_results_itself", "results_placed"]);
-    });
+    // a running total and fields fixed at build only, none of them in a key: pinned with every component's fields
+    // (crafting/runner/steady-state.test.ts)
 });

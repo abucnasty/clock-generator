@@ -109,8 +109,8 @@ export class Mining {
         return this.bonus.bar;
     }
 
-    /** Both bars, which drive the drill's next ticks */
-    public stateKey(): string {
+    /** Both bars, which drive the drill's next ticks: for the drill's key (see simulationStateKey) and the chest drill replay's */
+    public key(): string {
         return `${this.progress};${this.bonus.bar}`;
     }
 

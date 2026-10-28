@@ -669,15 +669,16 @@ describe("Crafting machine: its steps and observers", () => {
         expect(taken.ticks).toHaveLength(0)
     })
 
-    // the texts the machine's mode state machine and its state gave the same build before (0.24.0, R11)
-    test("keys its status with the text of the mode state machine it replaces", () => {
+    // one key for the machine, its components' in a fixed order (P4 3.4): Storage, Crafting, Yield, Wakes, Energy
+    test("keys what its components keep: its inventories, status and craft, held products and bars, last tick's flags, energy", () => {
         const { machine_state, machine } = gears(0)
-        expect(machine.stateKey()).toBe("INGREDIENT_SHORTAGE||||||||")
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",2]];{};[]|${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0|0;0;[]|false;false;false|`)
         executeForTicks(machine, 1)
         expect(machine_state.crafting.status).toBe(CraftingStatus.WORKING)
-        expect(machine.stateKey()).toBe("WORKING||||||||")
-        // the status, the started craft its Wakes report and the half craft, in its state's key
-        expect(MachineState.stateKey(machine_state)).toBe("WORKING;0;false;false;true;{};0.5;0;0;0;[];[]")
+        // the plates taken, the half craft, the started craft its Wakes report; an electric machine's energy keys nothing
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",0]];{};[]|${CraftingStatus.WORKING};0.5|0;0;[]|false;false;true|`)
+        expect(machine.stateKey()).toBe([machine_state.storageKey(), machine_state.crafting.key(), machine_state.yield.key(),
+            machine_state.wakes.key(), machine_state.energy.key()].join("|"))
     })
 })
 

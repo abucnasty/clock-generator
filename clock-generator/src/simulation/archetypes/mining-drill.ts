@@ -9,7 +9,7 @@ import { Control } from "../components/control";
 import { MachinePlacementPort } from "../components/machine-placement-port";
 import { Mining } from "../components/mining";
 import { Observers, StatusChangeReason } from "../observers/observer";
-import { DrillStatusCode, drillStatusOf } from "../status-codes";
+import { DrillStatusCode } from "../status-codes";
 
 /** The reasons of a drill's two changes of status, numbered once */
 const DRILL_ENABLED = reasonId("drill enabled");
@@ -124,11 +124,12 @@ export class MiningDrillArchetype implements ControlLogic, StatusChangeReason<Dr
     }
 
     /**
-     * Its status and both bars, with the text the drill's mode state machine gave them before (the status, the working
-     * mode's bars, then the empty keys of its evaluators and its disabled mode); two equal keys one clock period apart
-     * mean the drill repeats. Observers only watch.
+     * The drill's key (see simulationStateKey): its components' keys in a fixed order, "|" between them: what it holds
+     * (its held Storage), its status as its code, and both bars (its Mining). Two equal keys one clock period apart mean
+     * the drill repeats. Its Placement holds a running total and its Control is the same in every tick of a run, so
+     * neither is keyed, nor is `DrillState.status`, never written; observers only watch.
      */
     public stateKey(): string {
-        return `${drillStatusOf(this.status)}|${this.mining.stateKey()}|||`;
+        return `${this.drill_state.held.key()}|${this.status}|${this.mining.key()}`;
     }
 }

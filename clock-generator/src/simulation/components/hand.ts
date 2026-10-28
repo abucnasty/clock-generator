@@ -415,19 +415,23 @@ export class Hand {
     }
 
     /**
-     * Its phase and what its rules and ports keep from one tick to the next, with the text the inserter's mode state
-     * machine gave them before: the phase, then each mode's and evaluator's key in the order of its graph (idle, swing,
-     * drop, pickup, disabled, target-full, wait-for-sink), of which only the idle rule's, the swing's, the drop port's
-     * and the pickup port's had any; ticks relative to `tick`. With `InserterState.stateKey`, two equal keys one clock
-     * period apart mean the inserter repeats.
+     * What drives the hand's next ticks, for the inserter's key (see InserterArchetype.stateKey), ";" between the fields:
+     * its phase as its code; what its rules keep (the idle rule's two flags, the tick the swing started relative to
+     * `tick` and the phase it started from, as its code); what its ports keep (the drop's ticks of a machine or a
+     * container, the pickup's ticks of a machine or a container or a belt's decision); and what it owns of the
+     * inserter's state: the status as written, the wait flag, what it holds, and the pickup arm's reach while a part
+     * hand fills (the next hand starts its own reach, so an empty or full hand's is no part of it). The scratch's other
+     * fields count only within the tick they are written in, and the record of the hand last emptied holds nothing.
      */
     public key(tick: number): string {
         const scratch = this.scratch;
+        const state = this.state;
         const entered = scratch.swing_entered_tick;
-        const from = scratch.swing_from;
-        return `${inserterStatusOf(this.phase)}||${scratch.saw_sink_blocked},${scratch.window_opens}`
-            + `||${entered === null ? null : entered - tick},${from === null ? null : inserterStatusOf(from)}`
-            + `|${this.drop.key()}||${this.pickup.key()}|||||||`;
+        const held = state.held_item;
+        const arm = held !== null && held.quantity < this.items.handSizeOf(held.item_name) ? state.pickup_arm?.stateKey(tick) : undefined;
+        return `${this.phase};${scratch.saw_sink_blocked};${scratch.window_opens};${entered === null ? null : entered - tick}`
+            + `;${scratch.swing_from};${this.drop.key()};${this.pickup.key()}`
+            + `;${state.status};${state.waits_for_sink};${JSON.stringify(held)};${arm ?? ""}`;
     }
 
     /**

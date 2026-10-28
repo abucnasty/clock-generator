@@ -197,6 +197,14 @@ export class Crafting implements EnergyUser, YieldUser {
         this.placement.countPlacedInOwnOutput(amount);
     }
 
+    /**
+     * What of it drives the machine's next ticks, for the machine's key (see simulationStateKey): the status as its code
+     * and the craft underway. The crafts counted and the main product made are running totals: they never repeat.
+     */
+    public key(): string {
+        return `${this.status};${this.craftingProgress.progress}`;
+    }
+
     /** A snapshot's copy of what `other` holds: the craft underway, the counts and the status */
     public copyFrom(other: Crafting): void {
         this.craftingProgress.progress = other.craftingProgress.progress;
