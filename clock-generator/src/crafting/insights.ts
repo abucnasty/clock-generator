@@ -6,6 +6,7 @@ import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { CompactEntityStateTransitions, CompactStateTransitionHistory, transitionsOf } from "./sequence/compact-history";
 import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
+import type { WakeUpsFromStarts } from "./wake-ups-from-starts";
 import { notTriedSentence, type SpareTime } from "./why-not-stable";
 import { FactorioDataService } from "../data";
 import { BELT_PICKUP_CALIBRATION, describeUncalibratedPickup, uncalibratedBeltPickups } from "../config/pickup-calibration";
@@ -318,6 +319,24 @@ function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEnti
                 percent(it.enabled_share), percent(it.waiting_share)]),
         },
     };
+}
+
+/**
+ * The wake-ups insight of a clock of a build with a loop, whose wake-ups depend on how it starts (see wake-ups-from-starts.ts): its title is the mean it is
+ * ranked by, and it says the range over the starts before what the long run from the cold start found, which its table
+ * stays of. The other insights are returned as they are.
+ */
+export function withWakeUpsFromStarts(insights: readonly ClockInsight[], from_starts: WakeUpsFromStarts): ClockInsight[] {
+    const figures = from_starts.wake_ups_per_minute;
+    return insights.map(insight => insight.id !== "wake-ups" ? insight : {
+        ...insight,
+        title: `Machines wake the inserters ${round(from_starts.mean)} times a minute on average`,
+        what: `With a loop in the build, how often depends on where the clock is when the build starts: ${round(Math.min(...figures))} to `
+            + `${round(Math.max(...figures))} times a minute from ${figures.length} start points, ${round(from_starts.mean)} on average. `
+            + insight.what.replace("In a long run of this clock the machines", "In a long run of this clock from the cold start the machines"),
+        explanation: `${insight.explanation} A build with a loop can settle into more than one steady state, and which one depends `
+            + "on how it starts; each wakes the inserters a different number of times, so a clock is compared by their average.",
+    });
 }
 
 /** Why a clock that misses the expected output is listed as unstable */
