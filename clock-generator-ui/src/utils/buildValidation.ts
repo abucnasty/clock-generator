@@ -72,6 +72,14 @@ const FIELD_LABELS: Record<string, string> = {
 const label = (key: string | number) => typeof key === 'number' ? String(key + 1) : FIELD_LABELS[key] ?? words(key);
 /** A key in running text: "item filter"; a place in a list, from 1 */
 const words = (key: string | number) => typeof key === 'number' ? String(key + 1) : key.replaceAll('_', ' ');
+/** The rest of a path in running text; a place in a list is named by what the list holds, from 1: "lanes", 1 is "lane 2" */
+function wordsOf(path: (string | number)[]): string[] {
+    return path.flatMap((key, position) => {
+        if (typeof key === 'number') return position > 0 && typeof path[position - 1] === 'string' ? [] : [words(key)];
+        const next = path[position + 1];
+        return [typeof next === 'number' ? `${words(key).replace(/(?<=[^s])s$/, '')} ${next + 1}` : words(key)];
+    });
+}
 
 /**
  * Where a schema error is, in the names the page shows: "Machine 3 recipe", "Items per Second", "Chest 4 item filter".
@@ -87,7 +95,7 @@ function fieldLocation(path: (string | number)[], input: Pick<Input, 'machines' 
         belts: () => entityLabel('belt', input.belts?.[index]?.id ?? index + 1),
         chests: () => entityLabelIn(input.chests, 'chest', input.chests[index]?.id ?? index + 1),
     } as Record<string, (() => string) | undefined>)[String(group)]?.() : undefined;
-    return (entity ? [entity, ...rest.map(words)] : [label(group), ...path.slice(1).map(words)]).join(' ');
+    return (entity ? [entity, ...wordsOf(rest)] : [label(group), ...wordsOf(path.slice(1))]).join(' ');
 }
 
 interface Input {
