@@ -1,7 +1,6 @@
 import { Config, BeltConfig, ChestConfig, InserterConfig, MachineConfiguration, MiningDrillConfig } from './schema';
 import { FactorioDataService } from '../data/factorio-data-service';
-import { BurnerEnergySource } from '../entities';
-import { machinePlacesResults, machineRuleOf } from './machine-prototype';
+import { machineFuelOf, machinePlacesResults } from './machine-prototype';
 import { InserterCoverageError, InserterCoverageIssue, InserterFixOption } from './errors';
 import { assertInsertersInScope } from './inserter-scope';
 import { chestAcceptsItem, filtersExclude, deriveOutputTransfers, outputInserterAcceptsItem } from './output-transfer';
@@ -145,9 +144,8 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
         // ── Input ingredients ────────────────────────────────────────────────
         const drills = config.drills?.configs ?? [];
         // A burner machine also needs its fuel inserted
-        const burner = BurnerEnergySource.forMachineType(machineRuleOf(machine));
         const inputItemNames = recipe.ingredients.map((ingredient) => ingredient.name);
-        const fuelItem = burner ? BurnerEnergySource.selectFuel(burner, machine.fuel).item_name : undefined;
+        const fuelItem = machineFuelOf(machine);
         if (fuelItem) inputItemNames.push(fuelItem);
         for (const itemName of new Set(inputItemNames)) {
             const covered =
@@ -252,8 +250,7 @@ function coverageForMachines(config: Config, checkedMachines: MachineConfigurati
                     if (other.id === machine.id || alreadyConnected('machine', other.id)) continue;
                     try {
                         const needs = FactorioDataService.findRecipeOrThrow(other.recipe).ingredients.some(item => item.name === itemName);
-                        const energy = BurnerEnergySource.forMachineType(machineRuleOf(other));
-                        if (needs || (energy && BurnerEnergySource.selectFuel(energy, other.fuel).item_name === itemName))
+                        if (needs || machineFuelOf(other) === itemName)
                             fixOptions.push({ type: 'existing_connection', endpoint_type: 'machine', endpoint_id: other.id, item_name: itemName });
                     } catch { /* Unknown recipes cannot be offered as destinations. */ }
                 }

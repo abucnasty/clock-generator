@@ -133,7 +133,7 @@ describe("generateClockForConfig", () => {
     // landed before the output inserter cleared the machine; the derived windows ran stable.
     //
     // That recording was of one start of the clock. An inserter that waits for a machine at its output block takes
-    // its items a tick after the output inserter has cleared it (see IdleModeTransitionEvaluator), and with that tick
+    // its items a tick after the output inserter has cleared it (see the Hand's idle rule), and with that tick
     // the simulator found a start of the clock from which the derived windows with 2 ticks of padding make 92 of 96 a
     // period: they passed from 12 starts and failed the check of them all, and the search of the padding then needed two
     // paddings in a row to pass, so it found nothing. The search since 2026-10-11 confirms a padding without a passing

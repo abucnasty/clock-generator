@@ -1,5 +1,5 @@
 import { BeltConfig } from "../../config";
-import { ItemName } from "../../data";
+import { FactorioDataService, ItemName } from "../../data";
 import assert from "../../common/assert";
 import { BeltStackSize, isValidBeltStackSize } from "./belt-stack-size";
 import { EntityId } from "../entity-id";
@@ -23,6 +23,11 @@ export interface Belt extends Entity{
     readonly prototype?: string
 }
 
+/**
+ * The engine's belt speeds (items a second on both lanes) of the game's four belts, for the code that compares a speed
+ * with one of them or counts in the transport belt's (lane speeds, tiles a second). A belt's own speed comes from its
+ * prototype's `speed` in the game data (beltSpeedOf).
+ */
 export const BeltSpeed = {
     TRANSPORT_BELT: 15,
     FAST_TRANSPORT_BELT: 30,
@@ -31,6 +36,19 @@ export const BeltSpeed = {
 } as const;
 
 export type BeltSpeed = typeof BeltSpeed[keyof typeof BeltSpeed];
+
+/** The engine's belt speed (items a second on both lanes) of a speed in tiles a tick: 60 ticks a second, 8 items a tile */
+const BELT_SPEED_PER_TILE_A_TICK = 480;
+
+/** The engine's belt speed of a speed in tiles a tick, as the game data gives a belt prototype's (turbo: 0.125, 60) */
+function beltSpeedOfTilesPerTick(tiles_per_tick: number): BeltSpeed {
+    return tiles_per_tick * BELT_SPEED_PER_TILE_A_TICK as BeltSpeed;
+}
+
+/** The engine's speed of a belt prototype, from its `speed` in the game data; an unknown prototype is refused */
+export function beltSpeedOf(prototype: string): BeltSpeed {
+    return beltSpeedOfTilesPerTick(FactorioDataService.findTransportBeltOrThrow(prototype).speed);
+}
 
 
 function tilesPerSecond(belt_speed: BeltSpeed): Fraction {
@@ -207,26 +225,41 @@ export class BeltBuilder {
 function fromConfig(config: BeltConfig): Belt {
     const builder = new BeltBuilder().setId(config.id).setStrategy(config.strategy ?? BeltStrategy.NORMAL).setPrototype(config.type)
 
-    switch(config.type) {
-        case "express-transport-belt":
-            builder.setBeltSpeed(BeltSpeed.EXPRESS_TRANSPORT_BELT);
-            break;
-        case "fast-transport-belt":
-            builder.setBeltSpeed(BeltSpeed.FAST_TRANSPORT_BELT);
-            break;
-        case "turbo-transport-belt":
-            builder.setBeltSpeed(BeltSpeed.TURBO_TRANSPORT_BELT);
-            break;
-        case "transport-belt":
-            builder.setBeltSpeed(BeltSpeed.TRANSPORT_BELT);
-            break;
+    // its speed from its prototype in the game data (the Lane trait's, entities/traits/lane.ts); a belt the data does
+    // not hold has none, and is refused for that when it is built
+    const prototype = FactorioDataService.findTransportBelt(config.type);
+    if (prototype !== null) {
+        builder.setBeltSpeed(beltSpeedOfTilesPerTick(prototype.speed));
     }
 
-    for (const lane of config.lanes) {
-        assert(isValidBeltStackSize(lane.stack_size), `Invalid stack size: ${lane.stack_size}`);
-        builder.addLane(lane.ingredient, lane.stack_size as BeltStackSize, "consumption_per_second" in lane ? lane.consumption_per_second : undefined);
+    for (const lane of lanesOf(config)) {
+        builder.addLane(lane.ingredient_name, lane.stack_size, lane.consumption_per_second);
     }
     return builder.build();
+}
+
+/** Items a second a lane carries: half the belt's speed times the lane's stack size (turbo, stack 4: 120) */
+export function laneItemsPerSecond(belt_speed: number, stack_size: number): Fraction {
+    return fraction(belt_speed).divide(2).multiply(stack_size);
+}
+
+/**
+ * The stack size of a lane of a belt of the config, 1 or 2: a belt that lists one lane has the second at the same stack
+ * size, for the drops that land on it
+ */
+export function laneStackFor(config: BeltConfig, lane: number): number {
+    return config.lanes[Math.min(lane, config.lanes.length) - 1].stack_size;
+}
+
+/** The lanes of a belt of the config, each with its item, belt stack size and, on an export belt, what is taken off it */
+export function lanesOf(config: BeltConfig): Lane[] {
+    return config.lanes.map(lane => {
+        assert(isValidBeltStackSize(lane.stack_size), `Invalid stack size: ${lane.stack_size}`);
+        const consumption_per_second = "consumption_per_second" in lane ? lane.consumption_per_second : undefined;
+        return consumption_per_second === undefined
+            ? { ingredient_name: lane.ingredient, stack_size: lane.stack_size as BeltStackSize }
+            : { ingredient_name: lane.ingredient, stack_size: lane.stack_size as BeltStackSize, consumption_per_second };
+    });
 }
 
 function createSingleLaneBelt(beltSpeed: BeltSpeed, ingredient: ItemName, stackSize: BeltStackSize): BeltBuilder {

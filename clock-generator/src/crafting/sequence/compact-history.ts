@@ -1,6 +1,6 @@
 // Reading a recorded history needs no simulation, so the browser can take it from the light entry (see light.ts)
 
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { reasonText } from "../../state/reason-table";
 import type { EntityType } from "../../entities/entity-type";
 import { FACTORIO_STATE_NAMES, STATUS_NAMES, factorioStateCode, statusCode } from "../../state/status-codes";
 import type { StateTransitionEntityType } from "./state-transition-history";
@@ -78,7 +78,7 @@ export interface CompactEntityStateTransitions extends HistoryEntity {
 
 /**
  * The state transitions of a run, as it recorded them: one sealed copy, which the run, the memo of runs and every
- * result that reads it share. The reasons are numbers of this module's reason table (control-logic/mode/reason-table.ts).
+ * result that reads it share. The reasons are numbers of this module's reason table (state/reason-table.ts).
  */
 export interface CompactStateTransitionHistory {
     /** Total simulation duration in ticks */

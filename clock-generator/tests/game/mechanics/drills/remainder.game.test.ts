@@ -4,7 +4,7 @@ import path from "path";
 import {expect, test} from "vitest";
 import {FactorioBlueprintFile} from "../../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../../src/blueprints/serde";
-import {bonusBarTick} from "../../../../src/control-logic/drill/modes/mining-progress";
+import {bonusBarTick} from "../../../../src/simulation/components/mining";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {composeProbeSource} from "../../helpers/probe-source";
 

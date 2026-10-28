@@ -1,9 +1,10 @@
 import { chestName, ChestType } from "../common/entity-types";
 import { FactorioDataService, ItemName } from "../data";
 import { Chest, Entity } from "../entities";
-import { EntityState, InserterState } from "../state";
+import { InserterState } from "../state";
 import { isEmptiedByTheBuild, itemsCarried } from "./backpressure-loss";
 import type { SimulationContext } from "./sequence/simulation-context";
+import { ContainerStorage } from "../simulation/components/container-storage";
 
 /**
  * A chest the build puts its output into that nothing takes from and that has no room for it any more, where a run
@@ -36,7 +37,7 @@ export function fullOutputChestsOf(context: SimulationContext, output_inserters:
     const full = new Map<string, FullOutputChest>();
     for (const state of output_inserters) {
         const sink = context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id);
-        if (!EntityState.isFiniteChest(sink) || isEmptiedByTheBuild(inserters, sink.entity_id)) {
+        if (!ContainerStorage.isFinite(sink) || isEmptiedByTheBuild(inserters, sink.entity_id)) {
             continue;
         }
         const item = itemsCarried(registry, state.inserter).find(it => sink.isFull(it));

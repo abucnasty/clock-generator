@@ -4,7 +4,6 @@ import type { Config } from "../../config/schema";
 import { loadConfigFromFile } from "../../config/loader";
 import { FactorioDataService } from "../../data";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
-import { TickControlLogic } from "../../control-logic/tick-control-logic";
 import { EntityState, InserterStatus } from "../../state";
 import { Entity } from "../entity";
 import { EntityId } from "../entity-id";
@@ -156,10 +155,9 @@ describe("an inserter in the simulation takes the hand size it is limited to", (
         // more seeds than any hand takes
         machine_state.inventoryState.setQuantity("jellynut-seed", 30);
 
-        const tick_control_logic = new TickControlLogic(context.tick_provider);
         const inserter = context.inserters[0];
         for (let tick = 0; tick < 300; tick++) {
-            tick_control_logic.executeForTick();
+            context.tick_provider.incrementTick();
             inserter.executeForTick();
             if (inserter.inserter_state.status === InserterStatus.SWING) {
                 return inserter.inserter_state.held_item?.quantity;

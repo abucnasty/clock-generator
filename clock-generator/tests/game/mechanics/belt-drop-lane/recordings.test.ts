@@ -1,9 +1,10 @@
 import {describe, expect, test} from "vitest";
 import {ConfigSchema} from "../../../../src/config";
-import {BeltDropLogic} from "../../../../src/control-logic/inserter/modes/drop/belt-drop-logic";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {handSizeFor} from "../../../../src/entities";
-import {BeltState, EntityState} from "../../../../src/state";
+import {BeltHandDrop} from "../../../../src/simulation/components/belt-hand-drop";
+import {HandScratch} from "../../../../src/simulation/components/hand";
+import {EntityState} from "../../../../src/state";
 import {LANE_RUNS} from "./cases";
 import {LaneRecording, LaneScenarioInfo, loadRecording, rowsOf} from "./recording";
 
@@ -106,11 +107,11 @@ describe("the two lane choices of the simulator", () => {
         const {context, inserter, belt} = build(lanes, stack_sizes);
         inserter.held_item = {item_name: "iron-gear-wheel", quantity: 16};
         inserter.inventoryState.setQuantity("iron-gear-wheel", 16);
-        const drop = new BeltDropLogic(inserter, belt as BeltState, context.tick_provider);
+        const drop = new BeltHandDrop(inserter, new HandScratch(), belt, context.tick_provider);
         context.tick_provider.setCurrentTick(0);
-        drop.executeForTick();
-        const traffic = (belt as BeltState).drop_lanes.get(inserter.entity_id.id)!;
-        return traffic.flatMap((lane, index) => lane.snapshot(0).length > 0 ? [index + 1] : []);
+        drop.drop();
+        // the inserter's own local tile of each lane
+        return belt.lanes.flatMap((lane, index) => lane.dropOf(inserter.entity_id.id)!.snapshot(0).length > 0 ? [index + 1] : []);
     }
 
     test("the item named on a lane goes on that lane, the geometry of the inserter not asked", () => {

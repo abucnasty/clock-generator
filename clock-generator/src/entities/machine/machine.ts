@@ -1,19 +1,22 @@
-import { fraction } from "../../data-types/fraction"
+import Fraction, { fraction } from "../../data-types/fraction"
 import { MachineConfiguration } from "../../config";
 import { machinePlacesResults, machineRuleOf } from "../../config/machine-prototype";
 import { AutomatedInsertionLimit, ConsumptionRate } from "./input";
-import { BurnerEnergySource, FuelSlot } from "./fuel";
+import { FuelSlot } from "./fuel";
 import { MachineMetadata } from "./machine-metadata";
 import { MachineOutput, OutputBlock, OverloadMultiplier, ProductionRate } from "./output";
-import { RecipeMetadata, expectedAmount, amountIgnoredByProductivity, yieldOf } from "./recipe";
-import { EnrichedIngredient } from "../../data";
+import { RecipeMetadata, expectedAmount, amountIgnoredByProductivity } from "./recipe";
+import { CraftingMachinePrototype, EnrichedIngredient, FactorioDataService, Ingredient } from "../../data";
 import { BonusProductivityRate, CraftingRate, InsertionDuration, FuelConsumption } from "./traits";
 import { Entity } from "../entity";
 import { EntityId } from "../entity-id";
-import { Percentage, SerializableMachineFacts, SerializableMachineInput } from "../../data-types";
+import { Percentage } from "../../data-types";
 import { MachineInputs } from "./input/machine-inputs";
 import { MachineInput } from "./input/machine-input";
 import { defaultLogger, Logger } from "../../common/logger";
+import { EnergyTrait, machineEnergy } from "../traits/energy";
+import { mainOutputBlock } from "../traits/output-block";
+import { recipeSelectionOf, RecipeSelectionTrait } from "../traits/recipe-selection";
 
 
 export class Machine implements Entity {
@@ -21,8 +24,6 @@ export class Machine implements Entity {
     public static fromConfig = fromConfig
     public static createMachine = createMachine
     public static printMachineFacts = printMachineFacts
-    public static getMachineFacts = getMachineFacts
-    public static computeMachineFacts = computeMachineFacts
 
     constructor(
         public readonly entity_id: EntityId,
@@ -43,11 +44,12 @@ export class Machine implements Entity {
          */
         public readonly result_target?: EntityId,
     ) {
-        this.self_ingredients = new Set(outputs.map(it => it.item_name).filter(it => inputs.has(it)));
-        this.looping_ingredients = new Set(outputs
-            .filter(it => this.self_ingredients.has(it.item_name)
-                && it.amount_per_craft.toDecimal() >= inputs.getOrThrow(it.item_name).ingredient.amount)
-            .map(it => it.item_name));
+        const loop = recipeLoopOf(
+            outputs.map(it => ({ item_name: it.item_name, amount_per_craft: it.amount_per_craft.toDecimal() })),
+            it => inputs.get(it)?.ingredient.amount,
+        );
+        this.self_ingredients = loop.self_ingredients;
+        this.looping_ingredients = loop.looping_ingredients;
     }
 
     /** Ingredients the recipe also makes, like the pentapod egg: the machine keeps those it is given apart from those it makes */
@@ -122,7 +124,6 @@ function fromConfig(config: MachineConfiguration): Machine {
         recipe: RecipeMetadata.fromRecipeName(config.recipe),
         productivity: config.productivity,
         crafting_speed: config.crafting_speed,
-        type: machineRuleOf(config),
         energy_consumption_bonus: config.energy_consumption_bonus,
         fuel: config.fuel,
         ...(config.prototype !== undefined ? { prototype: config.prototype } : {}),
@@ -130,52 +131,39 @@ function fromConfig(config: MachineConfiguration): Machine {
     }, config.result_target === undefined ? undefined : config.result_target.type === "machine" ? EntityId.forMachine(config.result_target.id) : EntityId.forChest(config.result_target.id));
 }
 
+/** What a machine is built from: its metadata but the rule, which follows from its prototype (MachineMetadata.type) */
+export type MachineSpec = Omit<MachineMetadata, "type">;
+
+/**
+ * A machine from its recipe, speed, productivity and prototype: what it does by its prototype's kind (its output block
+ * rule, its fuel) it reads from its traits (entities/traits), built from the prototype's game data
+ */
 function createMachine(
     id: number,
-    metadata: MachineMetadata,
+    spec: MachineSpec,
     result_target?: EntityId,
 ): Machine {
-    const recipe = metadata.recipe;
+    const prototype = prototypeOf(spec);
+    // the rule is a label (copies, debug output, facts): the traits below decide what the machine does. A rule passed in
+    // (a full MachineMetadata through a variable) is dropped, so the one derived from the prototype always stands
+    const { recipe, productivity, crafting_speed, type: _passed_rule, ...rest } = spec as MachineSpec & Partial<Pick<MachineMetadata, "type">>;
+    const metadata: MachineMetadata = { recipe, productivity, crafting_speed, type: machineRuleOf(spec), ...rest };
+    const recipe_selection = recipeSelectionOf(prototype?.type ?? null);
     const overload_multiplier = OverloadMultiplier.fromCraftingSpeed(metadata.crafting_speed, recipe.energy_required)
 
     const machineInputs = new MachineInputs(
-        recipe.raw.ingredients.map(ingredient => {
-            return [ingredient.name, {
-                item_name: ingredient.name,
-                consumption_rate: ConsumptionRate.fromCraftingSpeed(
-                    ingredient.name,
-                    metadata.crafting_speed,
-                    recipe.energy_required,
-                    ingredient.amount
-                ),
-                automated_insertion_limit: AutomatedInsertionLimit.fromIngredient(ingredient, overload_multiplier),
-                ingredient: ingredient
-            }];
-        })
+        recipe.raw.ingredients.map(ingredient => [ingredient.name, machineInputOf(ingredient, metadata.crafting_speed, recipe.energy_required, overload_multiplier)])
     );
 
-    // a main product that comes by chance (recycled iron ore comes back at 0.25 a craft) is made at its expected amount
-    const output_per_craft = expectedAmount(recipe.output);
-    const craftingRate = CraftingRate.fromCraftingSpeed(
-        fraction(output_per_craft),
-        metadata.crafting_speed,
-        recipe.energy_required
-    );
-
-    // productivity multiplies the amount except for the part the recipe ignores for it: 1 of the 2 pentapod eggs
-    const ignored_by_productivity = amountIgnoredByProductivity(recipe.output);
-    const amount_per_craft = fraction(output_per_craft - ignored_by_productivity)
-        .multiply(fraction(1).add(fraction(metadata.productivity).divide(100)))
-        .add(fraction(ignored_by_productivity));
+    const craftingRate = machineCraftingRate(recipe, metadata.crafting_speed);
+    const { amount_per_craft, production_rate } = mainProductOf(recipe, craftingRate, metadata.productivity);
 
     const machineOutput: MachineOutput = {
         item_name: recipe.output.name,
         amount_per_craft,
-        production_rate: ignored_by_productivity === 0
-            ? ProductionRate.fromCraftingRate(recipe.output.name, craftingRate, new Percentage(metadata.productivity))
-            : ProductionRate.perTick(recipe.output.name, amount_per_craft.multiply(fraction(craftingRate.crafts_per_tick))),
+        production_rate,
         ingredient: recipe.output,
-        outputBlock: OutputBlock.fromRecipe(metadata.type, recipe, overload_multiplier)
+        outputBlock: mainOutputBlock(recipe_selection, recipe, overload_multiplier)
     };
 
     const byProducts = recipe.outputs.slice(1).map(result =>
@@ -187,6 +175,8 @@ function createMachine(
     const insertionDurationPeriod = InsertionDuration.create(machineOutput.production_rate, overload_multiplier)
 
     const bonusProductivityRate = BonusProductivityRate.fromCraftingRate(craftingRate, new Percentage(metadata.productivity));
+    // last, as the burner's fuel was before the traits: an unsupported fuel is refused after every other check above
+    const energy = machineEnergy(prototype, metadata, recipe.energy_required);
     return new Machine(
         EntityId.forMachine(id),
         metadata,
@@ -197,49 +187,126 @@ function createMachine(
         craftingRate,
         bonusProductivityRate,
         insertionDurationPeriod,
-        ...fuelOf(metadata),
+        ...fuelOf(energy),
         result_target,
     );
 }
 
-/** The fuel consumption and fuel slot of a burner, or neither */
-function fuelOf(metadata: MachineMetadata): [FuelConsumption | undefined, FuelSlot | undefined] {
-    const [consumption, slot] = createFuel(metadata);
-    return [consumption, slot];
+/** The crafting machine prototype a machine names, from the game data; null for none, or one the data does not hold */
+function prototypeOf(metadata: Pick<MachineMetadata, "prototype">): CraftingMachinePrototype | null {
+    return metadata.prototype === undefined ? null : FactorioDataService.findCraftingMachine(metadata.prototype);
 }
 
 /**
- * A by-product's rate is its expected amount per craft, a probable result counted by its probability.
- * Productivity multiplies it except for the part of the amount the recipe ignores for productivity.
+ * How a machine comes to its recipe (its RecipeSelection trait), by its prototype's class: a furnace or a recycler picks
+ * it from what it is brought; any other machine, and one without a prototype, is set to it
  */
-function createByProductOutput(result: EnrichedIngredient, crafts_per_tick: number, productivity: number): MachineOutput {
-    const productive_amount = fraction(expectedAmount(result) - amountIgnoredByProductivity(result));
-    const amount_per_craft = productive_amount
-        .multiply(fraction(1).add(fraction(productivity).divide(100)))
-        .add(fraction(amountIgnoredByProductivity(result)));
+export function machineRecipeSelection(machine: Machine): RecipeSelectionTrait {
+    return recipeSelectionOf(prototypeOf(machine.metadata)?.type ?? null);
+}
+
+/**
+ * The ingredients a recipe also makes (Machine.self_ingredients), and those of them it makes at least as much of a craft
+ * as a craft uses (Machine.looping_ingredients), from its results' amounts a craft and the amount a craft takes of each
+ * ingredient (undefined for an item it does not take)
+ */
+export function recipeLoopOf(
+    outputs: readonly { readonly item_name: string; readonly amount_per_craft: number }[],
+    ingredientAmountOf: (item_name: string) => number | undefined,
+): { self_ingredients: ReadonlySet<string>; looping_ingredients: ReadonlySet<string> } {
+    const self_ingredients = new Set(outputs.map(it => it.item_name).filter(it => ingredientAmountOf(it) !== undefined));
+    const looping_ingredients = new Set(outputs
+        .filter(it => self_ingredients.has(it.item_name) && it.amount_per_craft >= ingredientAmountOf(it.item_name)!)
+        .map(it => it.item_name));
+    return { self_ingredients, looping_ingredients };
+}
+
+/** An ingredient of a machine: what it takes of it a second at its speed, and its automated insertion limit */
+export function machineInputOf(ingredient: Ingredient, crafting_speed: number, energy_required: number, overload_multiplier: OverloadMultiplier): MachineInput {
     return {
-        item_name: result.name,
-        amount_per_craft,
-        production_rate: ProductionRate.perTick(result.name, amount_per_craft.multiply(fraction(crafts_per_tick))),
-        ingredient: result,
-        outputBlock: OutputBlock.forByProduct(result),
+        item_name: ingredient.name,
+        consumption_rate: ConsumptionRate.fromCraftingSpeed(
+            ingredient.name,
+            crafting_speed,
+            energy_required,
+            ingredient.amount
+        ),
+        automated_insertion_limit: AutomatedInsertionLimit.fromIngredient(ingredient, overload_multiplier),
+        ingredient: ingredient
     };
 }
 
-function createFuel(metadata: MachineMetadata): [FuelConsumption?, FuelSlot?] {
-    const source = BurnerEnergySource.forMachineType(metadata.type);
-    if (!source) {
-        return [];
-    }
-    const fuel = BurnerEnergySource.selectFuel(source, metadata.fuel);
-    const consumption = FuelConsumption.fromCraftingSpeed(
-        source,
-        fuel,
-        metadata.crafting_speed,
-        metadata.recipe.energy_required,
-        metadata.energy_consumption_bonus ?? 0,
+/** The crafting rate of a machine on the recipe at its speed */
+export function machineCraftingRate(recipe: RecipeMetadata, crafting_speed: number): CraftingRate {
+    // a main product that comes by chance (recycled iron ore comes back at 0.25 a craft) is made at its expected amount
+    const output_per_craft = expectedAmount(recipe.output);
+    return CraftingRate.fromCraftingSpeed(
+        fraction(output_per_craft),
+        crafting_speed,
+        recipe.energy_required
     );
-    return [consumption, FuelSlot.create(fuel, consumption)];
+}
+
+/**
+ * What a craft makes of a result with productivity: productivity multiplies its expected amount except for the part
+ * the recipe ignores for it (1 of the 2 pentapod eggs)
+ */
+export function amountPerCraftOf(result: Ingredient, productivity: number): Fraction {
+    const ignored_by_productivity = amountIgnoredByProductivity(result);
+    return fraction(expectedAmount(result) - ignored_by_productivity)
+        .multiply(fraction(1).add(fraction(productivity).divide(100)))
+        .add(fraction(ignored_by_productivity));
+}
+
+/** The main product's amount per craft with productivity, and the rate a machine makes it at on its crafting rate */
+export function mainProductOf(recipe: RecipeMetadata, crafting_rate: CraftingRate, productivity: number): { amount_per_craft: Fraction; production_rate: ProductionRate } {
+    const amount_per_craft = amountPerCraftOf(recipe.output, productivity);
+    return {
+        amount_per_craft,
+        production_rate: amountIgnoredByProductivity(recipe.output) === 0
+            ? ProductionRate.fromCraftingRate(recipe.output.name, crafting_rate, new Percentage(productivity))
+            : ProductionRate.perTick(recipe.output.name, amount_per_craft.multiply(fraction(crafting_rate.crafts_per_tick))),
+    };
+}
+
+/**
+ * A by-product's amount per craft and rate: its expected amount per craft, a probable result counted by its
+ * probability, which productivity multiplies except for the part of the amount the recipe ignores for productivity
+ */
+export function byProductOf(result: Ingredient, crafts_per_tick: number, productivity: number): { amount_per_craft: Fraction; production_rate: ProductionRate } {
+    const amount_per_craft = amountPerCraftOf(result, productivity);
+    return {
+        amount_per_craft,
+        production_rate: ProductionRate.perTick(result.name, amount_per_craft.multiply(fraction(crafts_per_tick))),
+    };
+}
+
+/** The fuel consumption and fuel slot of a machine whose fuel is modelled, as its Energy trait gives them, or neither */
+function fuelOf(energy: EnergyTrait): [FuelConsumption | undefined, FuelSlot | undefined] {
+    const fuel = energy.fuel;
+    if (fuel === null) {
+        return [undefined, undefined];
+    }
+    return [
+        { item: fuel.item, rate_per_second: fuel.per_second, rate_per_tick: fuel.per_tick, amount_per_craft: fuel.per_craft },
+        {
+            fuel: { item_name: fuel.item, fuel_value_mj: fuel.fuel_value_mj },
+            automated_insertion_limit: fuel.slot_limit,
+            energy_per_craft_mj: fuel.energy_per_craft_mj,
+        },
+    ];
+}
+
+/** A by-product's output: its amount and rate as byProductOf gives them, blocked once its stack is full */
+function createByProductOutput(result: EnrichedIngredient, crafts_per_tick: number, productivity: number): MachineOutput {
+    const { amount_per_craft, production_rate } = byProductOf(result, crafts_per_tick, productivity);
+    return {
+        item_name: result.name,
+        amount_per_craft,
+        production_rate,
+        ingredient: result,
+        outputBlock: OutputBlock.forByProduct(result),
+    };
 }
 
 function printMachineFacts(machine: Machine, logger: Logger = defaultLogger): void {
@@ -271,81 +338,4 @@ function printMachineFacts(machine: Machine, logger: Logger = defaultLogger): vo
     for (const input of machine.inputs.values()) {
         logger.log(`  - ${input.item_name}: ${input.automated_insertion_limit.quantity}`);
     }
-}
-
-/**
- * Extracts serializable facts from a Machine instance.
- */
-function getMachineFacts(machine: Machine): SerializableMachineFacts {
-    const inputs: SerializableMachineInput[] = [];
-    for (const input of machine.inputs.values()) {
-        inputs.push({
-            item_name: input.item_name,
-            consumption_rate_per_second: input.consumption_rate.rate_per_second,
-            automated_insertion_limit: input.automated_insertion_limit.quantity,
-            amount_per_craft: input.ingredient.amount,
-        });
-    }
-
-    return {
-        recipe: machine.metadata.recipe.name,
-        crafting_speed: machine.metadata.crafting_speed,
-        productivity: machine.metadata.productivity,
-        type: machine.metadata.type,
-        outputs: machine.outputs.map(output => {
-            const yield_ = yieldOf(output.ingredient);
-            const rate = output.production_rate.amount_per_second;
-            return {
-                item_name: output.item_name, amount_per_craft: output.amount_per_craft.toDecimal(),
-                rate_per_second: rate.toDecimal(), rate_ratio: { numerator: rate.getNumerator, denominator: rate.getDenominator },
-                output_block_size: output.outputBlock.ingredients_blocked_at,
-                stochastic: yield_.chance < 1 || yield_.extra > 0,
-            };
-        }),
-        output_item: machine.output.item_name,
-        output_per_craft: machine.output.amount_per_craft.toDecimal(),
-        output_rate_per_second: machine.output.production_rate.amount_per_second.toDecimal(),
-        output_rate_ratio: {
-            numerator: machine.output.production_rate.amount_per_second.getNumerator,
-            denominator: machine.output.production_rate.amount_per_second.getDenominator,
-        },
-        output_block_size: machine.output.outputBlock.ingredients_blocked_at,
-        overload_multiplier: machine.overload_multiplier.overload_multiplier,
-        ticks_per_craft: machine.crafting_rate.ticks_per_craft,
-        ticks_per_bonus_craft: machine.bonus_productivity_rate.ticks_per_bonus,
-        insertion_duration_ticks: machine.insertion_duration.tick_duration.toDecimal(),
-        inputs,
-        fuel: machine.fuel_consumption && {
-            item_name: machine.fuel_consumption.item,
-            energy_consumption_bonus: machine.metadata.energy_consumption_bonus ?? 0,
-            consumption_rate_per_second: machine.fuel_consumption.rate_per_second,
-            amount_per_craft: machine.fuel_consumption.amount_per_craft,
-        },
-    };
-}
-
-/**
- * Computes machine facts from configuration parameters.
- * This is useful for computing facts on-the-fly in the UI without running a full simulation.
- */
-export interface ComputeMachineFactsParams {
-    recipe: string;
-    productivity: number;
-    crafting_speed: number;
-    /** The machine's prototype, whose game data gives its rule; without it the crafting rule */
-    prototype?: string;
-    energy_consumption_bonus?: number;
-    fuel?: string;
-}
-
-function computeMachineFacts(params: ComputeMachineFactsParams): SerializableMachineFacts {
-    const machine = createMachine(1, {
-        recipe: RecipeMetadata.fromRecipeName(params.recipe),
-        productivity: params.productivity,
-        crafting_speed: params.crafting_speed,
-        type: machineRuleOf(params),
-        energy_consumption_bonus: params.energy_consumption_bonus,
-        fuel: params.fuel,
-    });
-    return getMachineFacts(machine);
 }

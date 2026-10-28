@@ -1,6 +1,7 @@
 import {describe, expect, test} from "vitest";
-import {Machine, MachineType, RecipeMetadata} from "../../../../src/entities";
-import {MachineDropLogic} from "../../../../src/control-logic/inserter/modes/drop/machine-drop-logic";
+import {Inserter, Machine, RecipeMetadata} from "../../../../src/entities";
+import {CarriedItems, HandScratch} from "../../../../src/simulation/components/hand";
+import {MachineHandDrop} from "../../../../src/simulation/components/machine-hand-drop";
 import {InserterState, MachineState} from "../../../../src/state";
 import {SIMULATOR_LIMITS} from "./cases";
 import {LimitRecording, LimitScenarioInfo, loadRecording, Trial} from "./recording";
@@ -24,14 +25,17 @@ function capacityOf(recording: LimitRecording, scenario: LimitScenarioInfo): num
         : 1 + recording.info.force.inserter_stack_size_bonus;
 }
 
-/** The machine as the simulator makes it from what the game says of it: its crafting speed, its recipe */
+/**
+ * The machine as the simulator makes it from what the game says of it: its crafting speed, its recipe, its prototype
+ * (whose class makes a furnace a furnace)
+ */
 function simulatorMachine(scenario: LimitScenarioInfo): Machine {
     const furnace = scenario.entity.endsWith("furnace");
     return Machine.createMachine(-1, {
         crafting_speed: scenario.crafting_speed,
         productivity: 0,
         recipe: RecipeMetadata.fromRecipeName(furnace ? FURNACE_RECIPE[scenario.ingredient] : scenario.recipe!),
-        type: furnace ? MachineType.FURNACE : MachineType.MACHINE,
+        prototype: scenario.entity,
     });
 }
 
@@ -100,16 +104,18 @@ for (const run of RUNS) describe(`${run}: ${(() => { const f = recordings[run].i
             const machine = simulatorMachine(scenario);
             for (const stock of [0, limit - 1, limit, limit + 1].filter(it => it >= 0)) {
                 const state = MachineState.forMachine(machine);
-                MachineState.insertItem(state, scenario.ingredient, stock);
-                expect(MachineState.machineInputIsBlocked(state, scenario.ingredient), `stock ${stock}`).toBe(stock >= limit);
+                state.ingress.insert(scenario.ingredient, stock);
+                expect(state.ingress.blocked(scenario.ingredient), `stock ${stock}`).toBe(stock >= limit);
             }
             const state = MachineState.forMachine(machine);
-            MachineState.insertItem(state, scenario.ingredient, limit - 1);
-            const inserter = {...InserterState.createIdle({entity_id: {id: "inserter:1", type: "inserter"}} as never),
+            state.ingress.insert(scenario.ingredient, limit - 1);
+            // an inserter with no filter, which carries any item
+            const unfiltered = {entity_id: {id: "inserter:1", type: "inserter"}, filtered_items: new Set<string>()} as unknown as Inserter;
+            const inserter = {...InserterState.createIdle(unfiltered),
                 held_item: {item_name: scenario.ingredient, quantity: capacity}};
             inserter.inventoryState.addQuantity(scenario.ingredient, capacity);
-            new MachineDropLogic(inserter, state).executeForTick();
-            expect(MachineState.ingredientQuantity(state, scenario.ingredient)).toBe(limit - 1 + capacity);
+            new MachineHandDrop(inserter, new HandScratch(), new CarriedItems(unfiltered), state.ingress).drop();
+            expect(state.ingress.ingredientQuantity(scenario.ingredient)).toBe(limit - 1 + capacity);
             expect(inserter.held_item).toBeNull();
         });
     });

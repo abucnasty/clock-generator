@@ -14,8 +14,26 @@ the ore that came out. The mining productivity research is put at 0.
 | `machine` | 5,000 | a big drill into a stone furnace that cannot craft: it stops at its own limit |
 
 `recordings/` keeps the logs as gzip. `recordings.test.ts` reads them without Factorio and asserts the statuses and the
-ticks they change at, then runs a drill through the simulator's state machine with the same windows and shows what its
-Factorio state is (`factorioDrillState`). A game run writes a new log with `DRILL_STATUS_CAPTURE_DIR`, an empty directory:
+ticks they change at, then runs a drill through the simulator with the same windows, takes and chest, and compares the state
+it records (`DrillStateTracker`) with the game's row by row. The game's first update of every drill moves no bar; the
+simulator's electric and big drill move it in their first tick, so their tick j is the recording's row j + 1, while its
+burner drill fills its empty buffer in its first tick of mining and moves no bar, as that row shows, so its tick j is row j.
+The windows, the fill and the take are given to each simulated drill in its own ticks, and every drill is compared with the
+same rows of the game.
+
+What the recordings show, and the simulator does the same:
+
+- Switched off by a circuit condition a drill mines until two ticks after the condition and shows `disabled_by_control_behavior`
+  from the row of its last mining tick, until the row of the last tick it is off. The simulator's control carries the two
+  ticks; its state is recorded one tick before the drill stops, which is the row the game shows it in.
+- A drill shows `waiting_for_space_in_destination` while it holds an item its destination has no room for: a full chest, a
+  machine at its stop. An item it has just mined and drops in the next tick is not waiting.
+
+Left out of the comparison, each in one row: the first ore of a drill's life shows `waiting_for_space_in_destination` once
+with room in the chest (the simulator does not); row 800 of the full-chest run, which the probe reads after taking the ore
+out; and the big drill's blocked span, which starts a row after the ore it cannot drop is mined where the burner's and the
+electric drill's start in that row. A drill disabled by script shows `disabled_by_script`, which the simulator has no
+control for: its mining and its disabled rows are compared as a circuit's. A game run writes a new log with `DRILL_STATUS_CAPTURE_DIR`, an empty directory:
 
 ```bash
 DRILL_STATUS_CAPTURE_DIR=.scratch/drill-status-run \

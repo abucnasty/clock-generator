@@ -1,6 +1,6 @@
 import { QualityIdType } from "../../../blueprints/components";
 import { inserterSpecFor } from "./inserter-spec";
-import { InserterType } from "./inserter-type";
+import { DEFAULT_INSERTER_QUALITY, InserterType } from "./inserter-type";
 import { InserterStackSize } from "./stack-size";
 import { ItemName } from "../../../data";
 import { BeltDropMetadata, InserterAnimationMetadata } from "./animation";
@@ -35,7 +35,7 @@ function create(
     // assert(Object.values<number>(InserterStackSize).includes(stackSize), `Inserter has an invalid stack size of ${stackSize}`)
 
     // a config that names no prototype or quality runs the legendary stack inserter, as before
-    const qualityIdType: QualityIdType = kind.quality ?? "legendary";
+    const qualityIdType: QualityIdType = kind.quality ?? DEFAULT_INSERTER_QUALITY;
     const inserterType: InserterType = kind.prototype ?? InserterType.STACK_INSERTER;
 
     const definition = inserterSpecFor(inserterType, qualityIdType);

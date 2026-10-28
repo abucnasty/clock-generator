@@ -1,7 +1,7 @@
 import { MachineType } from "./machine-type";
 
-/** The fuel category the biochamber rule burns: a burner on it crafts under that rule */
-export const NUTRIENTS_FUEL_CATEGORY = "nutrients";
+/** The game's class of the prototypes that pick their recipe from what they are brought (FurnacePrototype, the recycler too) */
+export const FURNACE_CLASS = "furnace";
 
 /** What the rule of a machine and its recipes follow from, of a crafting machine prototype of the game data */
 export interface CraftingMachineRuleFacts {
@@ -13,13 +13,14 @@ export interface CraftingMachineRuleFacts {
 
 /**
  * The simulation rule of a crafting machine prototype, from its data alone: a furnace prototype (the recycler too) the
- * furnace rule; a burner on nutrients the biochamber rule; any other the crafting rule. No machine name decides it.
+ * furnace rule; any other burner the biochamber rule (a label for a burner that is no furnace); any other the crafting
+ * rule. No machine name decides it.
  */
 export function machineRuleOfPrototype(prototype: CraftingMachineRuleFacts): MachineType {
-    if (prototype.type === "furnace") {
+    if (prototype.type === FURNACE_CLASS) {
         return MachineType.FURNACE;
     }
-    if (prototype.burner_fuel_categories.includes(NUTRIENTS_FUEL_CATEGORY)) {
+    if (prototype.burner_fuel_categories.length > 0) {
         return MachineType.BIOCHAMBER;
     }
     return MachineType.MACHINE;

@@ -1,6 +1,8 @@
 import assert from "../../../common/assert";
 import { EntityId, Inserter } from "../../../entities";
-import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
+import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
+import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
+import { TickProvider } from "../../../simulation/current-tick-provider";
 import { EnableControlOverrideConfig } from "../../../config/schema";
 import { CraftingCyclePlan } from "../cycle/crafting-cycle";
 import { Duration, OpenRange } from "../../../data-types";

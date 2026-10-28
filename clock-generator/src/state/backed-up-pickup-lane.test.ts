@@ -6,7 +6,7 @@ import {BeltSpeed} from "../entities/belt";
 import {Config} from "../config";
 import {loadConfigFromFile} from "../config/loader";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
-import {InserterPickupMode} from "../control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../simulation/components/hand-ports";
 import {EntityState} from "./entity-state";
 import {GameFixturePaths} from "../../tests/game/helpers/fixture-paths";
 
@@ -37,11 +37,11 @@ for (const clip of fixture.clips) test(`production backed-up stock matches nativ
     const state = context.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
     const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw Error("Expected a belt");
-    const createMode = () => InserterPickupMode.create({inserterState: state, sourceState: source,
+    const createPickup = () => bindHandPorts({inserterState: state, sourceState: source,
         sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
-        tick_provider: context.tick_provider});
-    let mode = createMode();
-    const lanes = source.pickup_lanes.get(state.entity_id.id)!;
+        tick_provider: context.tick_provider}).pickup;
+    let pickup = createPickup();
+    const lanes = source.pickupsOf(state.entity_id.id)!;
     let collecting = false;
     for (let index = 0; index < clip.frames.length; index++) {
         const tick = fixture.seed_tick + index;
@@ -54,9 +54,9 @@ for (const clip of fixture.clips) test(`production backed-up stock matches nativ
         }
         if (actual > previous && previous === 0) {
             collecting = true;
-            mode = createMode(); // Replacing a control must not refill its source.
+            pickup = createPickup(); // Replacing a control must not refill its source.
         }
-        if (collecting && (state.held_item?.quantity ?? 0) < clip.stack_size) mode.executeForTick();
+        if (collecting && (state.held_item?.quantity ?? 0) < clip.stack_size) pickup.pickup();
         expect(state.held_item?.quantity ?? 0, `held at ${tick}`).toBe(actual);
         lanes.forEach((lane, laneIndex) => {
             expect(lane).toBeInstanceOf(BackedUpPickupLane);

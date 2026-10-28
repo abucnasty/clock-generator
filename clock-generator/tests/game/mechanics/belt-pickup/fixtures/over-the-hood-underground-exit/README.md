@@ -75,7 +75,7 @@ absolute approach timing. The production finite-refill model now matches these c
 
 New Sidecar captures export **supported / belt model 2**, `pickup_layout: "over-hood-exit"`, half-tile reach and
 lane 1 unmirrored / lane 2 mirrored. Old captures keep their original **unsupported / inline** marker and require
-recapture. Production pickup-mode comparisons now match held items, quantities and both exposed lanes in all
+recapture. Production pickup-port comparisons now match held items, quantities and both exposed lanes in all
 258 retained first hands; later observations are never fed back into the model.
 The [base expectations](expectations.json) and [shifted-phase expectations](phase-expectations.json) keep native
 timing, physical lane selection and replay results separate from that support boundary. Portable tests assert
@@ -116,7 +116,7 @@ from observed full stock at tick 64 and supply only the native first-arrival bou
 later held items/quantities and exposed stock through the shared ordinary-pickup comparator.
 
 ```bash
-npm test -- src/control-logic/inserter/modes/pickup/over-hood-exit.test.ts
+npm test -- src/simulation/components/belt-hand-pickup-over-hood.test.ts
 ```
 
 Fresh capture validation additionally checks Sidecar model format 2 and its explicit layout; replaying older

@@ -23,6 +23,8 @@ export class RocketSiloChest implements Chest {
         public readonly recipe_quality: string,
         public readonly crafting_speed: number,
         public readonly productivity: number,
+        /** Its fixed recipe's at its crafting speed, which its input slots' limits are worked out with */
+        public readonly overload_multiplier: OverloadMultiplier,
         /** The automated insertion limit of each ingredient, empty when the ingredients go into the rocket inventory */
         public readonly input_limits: ReadonlyMap<ItemName, AutomatedInsertionLimit>,
         public readonly contents: readonly { item: ItemName; count: number }[],
@@ -76,5 +78,5 @@ function fromConfig(config: RocketSiloConfig, items_put_in: readonly ItemName[] 
         FactorioDataService.findItemOrThrow(content.item);
     }
     return new RocketSiloChest(EntityId.forChest(config.id), prototype, recipe, recipe_quality, crafting_speed,
-        config.productivity ?? 0, input_limits, config.contents ?? [], items_put_in);
+        config.productivity ?? 0, overload, input_limits, config.contents ?? [], items_put_in);
 }

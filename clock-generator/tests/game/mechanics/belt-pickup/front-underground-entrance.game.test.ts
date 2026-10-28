@@ -6,7 +6,7 @@ import { assessSameItemPickups } from "./same-item-pickup-probe";
 import { expect, test } from "vitest";
 import { Config } from "../../../../src/config";
 import { loadConfigFromFile } from "../../../../src/config/loader";
-import { InserterPickupMode } from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
@@ -22,15 +22,15 @@ interface Sample {
 function simulatedHand(config: Config, start: number, item: string) {
     const simulation = SimulationContext.fromConfig(config);
     const input = simulation.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
-    const mode = InserterPickupMode.create({
+    const pickup = bindHandPorts({
         inserterState: input, tick_provider: simulation.tick_provider,
         sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id),
         sinkState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id),
-    });
+    }).pickup;
     const counts: number[] = [];
     for (let tick = start; tick < start + 40; tick++) {
         simulation.tick_provider.setCurrentTick(tick);
-        mode.executeForTick();
+        pickup.pickup();
         expect(input.held_item?.item_name).toBe(item);
         counts.push(input.held_item!.quantity);
         if (input.held_item!.quantity === 16) return counts;

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { mock } from "vitest-mock-extended";
 import { InserterAnimationOverrideConfig } from "../config/schema";
-import { EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, MachineType, RecipeMetadata } from "../entities";
+import { EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, RecipeMetadata } from "../entities";
 import { InserterAnimation } from "../entities/inserter/inserter-animation";
-import { BeltState } from "./belt-state";
+import { TransportBelt } from "../simulation/archetypes/transport-belt";
 import { EntityState } from "./entity-state";
 import { factorioInserterState, FactorioInserterState } from "./factorio-entity-state";
 import { InserterStatus } from "./entity-status";
@@ -15,7 +15,6 @@ function machineState(recipe: string): MachineState {
         crafting_speed: 1,
         productivity: 0,
         recipe: RecipeMetadata.fromRecipeName(recipe),
-        type: MachineType.MACHINE,
     }));
 }
 
@@ -39,30 +38,30 @@ function fillToLimit(state: MachineState, item: string): void {
     state.inventoryState.addQuantity(item, limit - state.inventoryState.getQuantity(item));
 }
 
-describe("MachineState.takesNothing", () => {
+describe("Ingress.takesNothing", () => {
     test("a machine below an insertion limit takes something", () => {
-        expect(MachineState.takesNothing(machineState("iron-gear-wheel"))).toBe(false);
+        expect(machineState("iron-gear-wheel").ingress.takesNothing()).toBe(false);
     });
 
     test("with every ingredient at its insertion limit it takes nothing", () => {
         const state = machineState("iron-gear-wheel");
         fillToLimit(state, "iron-plate");
-        expect(MachineState.takesNothing(state)).toBe(true);
+        expect(state.ingress.takesNothing()).toBe(true);
     });
 
     test("with one of two ingredients at its limit it still takes the other", () => {
         const state = machineState("electronic-circuit");
         fillToLimit(state, "iron-plate");
-        expect(MachineState.takesNothing(state)).toBe(false);
+        expect(state.ingress.takesNothing()).toBe(false);
         fillToLimit(state, "copper-cable");
-        expect(MachineState.takesNothing(state)).toBe(true);
+        expect(state.ingress.takesNothing()).toBe(true);
     });
 
     test("with its output at the block it takes nothing, whatever its ingredients hold", () => {
         const state = machineState("iron-gear-wheel");
         const block = state.machine.output.outputBlock;
         state.inventoryState.addQuantity(block.item_name, block.ingredients_blocked_at);
-        expect(MachineState.takesNothing(state)).toBe(true);
+        expect(state.ingress.takesNothing()).toBe(true);
     });
 });
 
@@ -126,7 +125,7 @@ describe("factorioInserterState", () => {
 
     test("a hand going onto a belt a stack at a time waits for space between the stacks", () => {
         const source = machineState("iron-gear-wheel");
-        const sink: EntityState = mock<BeltState>({ entity_id: belt });
+        const sink: EntityState = mock<TransportBelt>({ entity_id: belt });
         const inserter = inserterState(source.entity_id, belt, "iron-gear-wheel");
         inserter.status = InserterStatus.DROP_OFF;
         inserter.held_item = { item_name: "iron-gear-wheel", quantity: 16 };

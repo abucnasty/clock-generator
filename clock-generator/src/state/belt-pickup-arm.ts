@@ -30,11 +30,4 @@ export class BeltPickupArm {
     public stateKey(tick: number): string {
         return `${this.radius ?? ""};${this.last_move_tick === tick}`;
     }
-
-    public clone(): BeltPickupArm {
-        const copy = new BeltPickupArm(this.extension_per_tick);
-        copy.radius = this.radius;
-        copy.last_move_tick = this.last_move_tick;
-        return copy;
-    }
 }

@@ -6,12 +6,11 @@
 import { MapExtended } from "../../data-types";
 import { Entity, EntityId, ReadableEntityRegistry } from "../../entities";
 import { chestName } from "../../common/entity-types";
-import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plugins/drill-state-transition-tracker-plugin";
-import { InserterStateTransitionTrackerPlugin } from "../../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
-import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
-import { FactorioStatePlugin } from "../../control-logic/plugins/factorio-state-plugin";
-import { Mode, Transition } from "../../control-logic/mode";
-import { TickProvider } from "../../control-logic/current-tick-provider";
+import { TickProvider } from "../../simulation/current-tick-provider";
+import { reasonText } from "../../state/reason-table";
+import { DrillStateTracker, FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
+import type { StatusChangeReason } from "../../simulation/observers/observer";
+import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
 import { EntityStatus, EntityTransitionRecorder, StateTransitionEntityType, StateTransitionHistory } from "./state-transition-history";
 import type {
     CompactStateTransitionHistory,
@@ -229,19 +228,26 @@ export interface RecordedBothWays {
     legacy: SerializableStateTransitionHistory;
 }
 
-/** The parts of the tracker plugins the mirror reads */
+/** The parts of the trackers the mirror reads */
 interface TrackerInternals {
     tick_provider: TickProvider;
     recorder: EntityTransitionRecorder;
 }
+interface StateTransitionInternals extends TrackerInternals {
+    status_of: (code: number) => EntityStatus;
+}
 interface FactorioStateInternals extends TrackerInternals {
     last_state: string | null;
+}
+/** A drill's tracker records a tick when the next one ends: the tick it records is the one before */
+interface DrillStateInternals extends FactorioStateInternals {
+    previous_tick: number;
 }
 
 /**
  * Until `restore` is called, every state transition history also records into an object-per-transition history, from
- * the same plugin calls, with the same recording switch and clears; each time a history is sealed, `seen` is called
- * with the sealed history and the other one serialized as it used to be. The plugins and the history are patched on
+ * the same tracker calls, with the same recording switch and clears; each time a history is sealed, `seen` is called
+ * with the sealed history and the other one serialized as it used to be. The trackers and the history are patched on
  * their prototypes, so it reaches every run however it is started.
  */
 export function recordBothWays(seen: (recorded: RecordedBothWays) => void): { restore: () => void } {
@@ -262,27 +268,39 @@ export function recordBothWays(seen: (recorded: RecordedBothWays) => void): { re
         restores.push(() => { target[key] = original; });
     };
 
-    for (const tracker of [InserterStateTransitionTrackerPlugin, MachineStateTransitionTrackerPlugin, DrillStateTransitionTrackerPlugin]) {
-        const prototype = tracker.prototype as unknown as { onTransition(fromMode: Mode, transition: Transition<Mode>): void };
-        patch(prototype, "onTransition", original => function (this: TrackerInternals, fromMode: Mode, transition: Transition<Mode>) {
-            const { recorder } = this;
+    // an inserter, a machine or a drill tells its observers of a change by its status codes and what answers its reason;
+    // the tracker names the statuses with its kind's function and asks for the reason while its history records
+    const tracker = StateTransitionTracker.prototype as unknown as { onStatusChange(from: number, to: number, reason: StatusChangeReason<number>): void };
+    patch(tracker, "onStatusChange", original => function (this: StateTransitionInternals, from: number, to: number, reason: StatusChangeReason<number>) {
+        const { recorder } = this;
+        if (recorder.history.recording) {
             legacyOf(recorder.history).recordTransition(recorder.entity_id, recorder.entity_type, {
                 tick: this.tick_provider.getCurrentTick(),
-                from_status: fromMode.status as EntityStatus,
-                to_status: transition.toMode.status as EntityStatus,
-                reason: transition.reason,
+                from_status: this.status_of(from),
+                to_status: this.status_of(to),
+                reason: reasonText(reason.reasonId(from, to)),
             });
-            original.call(this, fromMode, transition);
-        });
-    }
-    const factorio_state = FactorioStatePlugin.prototype as unknown as { executeForTick(): void };
-    patch(factorio_state, "executeForTick", original => function (this: FactorioStateInternals) {
+        }
+        original.call(this, from, to, reason);
+    });
+    const factorio_state = FactorioStateTracker.prototype as unknown as { onTick(): void };
+    patch(factorio_state, "onTick", original => function (this: FactorioStateInternals) {
         const before = this.last_state;
         original.call(this);
         if (this.last_state !== before && this.last_state !== null) {
             const { recorder } = this;
             legacyOf(recorder.history).recordFactorioState(recorder.entity_id, recorder.entity_type,
                 { tick: this.tick_provider.getCurrentTick(), state: this.last_state });
+        }
+    });
+    const drill_state = DrillStateTracker.prototype as unknown as { onTick(): void };
+    patch(drill_state, "onTick", original => function (this: DrillStateInternals) {
+        const before = this.last_state;
+        const tick = this.previous_tick;
+        original.call(this);
+        if (this.last_state !== before && this.last_state !== null) {
+            const { recorder } = this;
+            legacyOf(recorder.history).recordFactorioState(recorder.entity_id, recorder.entity_type, { tick, state: this.last_state });
         }
     });
     patch(StateTransitionHistory.prototype, "clear", original => function (this: StateTransitionHistory) {

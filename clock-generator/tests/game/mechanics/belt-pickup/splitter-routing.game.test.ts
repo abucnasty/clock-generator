@@ -7,7 +7,7 @@ import {loadConfigFromFile} from "../../../../src/config/loader";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {EntityState, MachineState} from "../../../../src/state";
+import {EntityState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {BELT_SPEEDS, blueprintAtSpeed, configAtSpeed} from "../../helpers/belt-speed-fixtures";
 import {verifySplitterSpeedReport} from "./splitter-speed-research";
@@ -116,7 +116,7 @@ for (const speed of BELT_SPEEDS) for (const variant of [
             const machine = simulation.state_registry.getAllStates().find(EntityState.isMachine)!;
             const final = report.samples.at(-1)!;
             for (const item of Object.values(final.inputs)) machine.inventoryState.setQuantity(item.name, item.count);
-            expect(MachineState.machineInputIsBlocked(machine, variant.filter)).toBe(true);
+            expect(machine.ingress.blocked(variant.filter)).toBe(true);
             expect(final.held).toBe(0);
             expect(final.lines.slice(6).flatMap(stacks).some(s => s.item === variant.filter)).toBe(true);
         }

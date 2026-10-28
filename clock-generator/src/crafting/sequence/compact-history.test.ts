@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reasonId } from "../../control-logic/mode/reason-table";
+import { reasonId } from "../../state/reason-table";
 import { factorioStateCode, statusCode } from "../../state/status-codes";
 import { CompactStateTransitionHistory, expandStateTransitionHistory, factorioStatesOf, portableFromSerializable, toPortable, transitionsOf } from "./compact-history";
 import { EntityTransitionColumns } from "./transition-columns";

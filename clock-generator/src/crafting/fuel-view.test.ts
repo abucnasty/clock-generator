@@ -2,8 +2,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { Machine, MachineType, RecipeMetadata } from "../entities";
+import { Machine, RecipeMetadata } from "../entities";
 import { MachineState } from "../state";
+import { BurnerEnergy } from "../simulation/components/burner-energy";
 import { fewestTicksToBurn, FuelLevelRecorder, fuelPlan, type FuelPlan } from "./fuel-view";
 import { generateClockForConfig, type BlueprintGenerationResult, type FuelConsumptionView } from "./generate-blueprint";
 import { quiet } from "./generate-blueprint-test-helpers";
@@ -147,7 +148,7 @@ describe("FuelLevelRecorder", () => {
             crafting_speed: 2,
             productivity: 0,
             recipe: RecipeMetadata.fromRecipeName("nutrients-from-yumako-mash"),
-            type: MachineType.BIOCHAMBER,
+            prototype: "biochamber",
         }));
         state.fuelInventory.addQuantity("nutrients", nutrients);
         return state;
@@ -155,7 +156,7 @@ describe("FuelLevelRecorder", () => {
 
     it("counts the item being burned as the part of it that is left", () => {
         const state = biochamberState(2);
-        state.fuelProgress.energy_remaining_mj = 0.5;
+        (state.energy as BurnerEnergy).energy_remaining_mj = 0.5;
         const recorder = new FuelLevelRecorder([state]);
         expect(recorder.series()[0].start_level).toBe(2.25);
     });
@@ -165,20 +166,20 @@ describe("FuelLevelRecorder", () => {
             crafting_speed: 1,
             productivity: 0,
             recipe: RecipeMetadata.fromRecipeName("iron-gear-wheel"),
-            type: "machine",
         }));
         expect(new FuelLevelRecorder([assembler]).series()).toEqual([]);
     });
 
     it("reports the ticks a machine had no fuel at all, and the hands dropped in", () => {
         const state = biochamberState(1);
+        const energy = state.energy as BurnerEnergy;
         const recorder = new FuelLevelRecorder([state]);
         const burn = (mj: number) => {
-            if (state.fuelProgress.energy_remaining_mj <= 0 && state.fuelInventory.getQuantity("nutrients") > 0) {
+            if (energy.energy_remaining_mj <= 0 && state.fuelInventory.getQuantity("nutrients") > 0) {
                 state.fuelInventory.removeQuantity("nutrients", 1);
-                state.fuelProgress.energy_remaining_mj = 2;
+                energy.energy_remaining_mj = 2;
             }
-            state.fuelProgress.energy_remaining_mj = Math.max(0, state.fuelProgress.energy_remaining_mj - mj);
+            energy.energy_remaining_mj = Math.max(0, energy.energy_remaining_mj - mj);
             recorder.record();
         };
         // one nutrient lasts 4 ticks at 0.5 MJ a tick, then two ticks with nothing, then a hand of 4

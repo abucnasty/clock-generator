@@ -66,7 +66,7 @@ describe("a run's sealed state transition history, read back", () => {
         expect(expandStateTransitionHistory(recorded[1].sealed).entities.every(it => it.factorio_states.length === 0)).toBe(true);
     });
 
-    // (a state machine makes one transition a tick: two in one tick are read in compact-history.test.ts)
+    // (an entity changes its status once a tick at most: two in one tick are read in compact-history.test.ts)
     it("has read back an entity with the game's states only, its status unknown, and drills", () => {
         expect(read_back.some(it => it.initial_status === "UNKNOWN" && it.transitions.length === 0 && it.factorio_states.length > 0)).toBe(true);
         expect(read_back.some(it => it.entity_type === "drill" && it.transitions.length > 0)).toBe(true);

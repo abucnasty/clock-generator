@@ -14,13 +14,15 @@ describe("the simulation rule of a crafting machine prototype", () => {
         }
     });
 
-    it("is the biochamber rule for a burner on nutrients", () => {
-        expect(ruleOf("biochamber")).toBe(MachineType.BIOCHAMBER);
+    it("is the biochamber rule for a burner that is no furnace: on nutrients or on food", () => {
+        for (const name of ["biochamber", "captive-biter-spawner"]) {
+            expect(ruleOf(name), name).toBe(MachineType.BIOCHAMBER);
+        }
     });
 
-    it("is the crafting rule for any other crafting machine, a burner on food included", () => {
+    it("is the crafting rule for any other crafting machine", () => {
         for (const name of ["assembling-machine-1", "assembling-machine-2", "assembling-machine-3", "oil-refinery", "chemical-plant",
-            "centrifuge", "crusher", "foundry", "captive-biter-spawner", "electromagnetic-plant", "cryogenic-plant"]) {
+            "centrifuge", "crusher", "foundry", "electromagnetic-plant", "cryogenic-plant"]) {
             expect(ruleOf(name), name).toBe(MachineType.MACHINE);
         }
     });
@@ -32,10 +34,11 @@ describe("the simulation rule of a crafting machine prototype", () => {
         expect(names).not.toContain("character");
     });
 
-    it("follows the data, not the name: a furnace prototype of any name is a furnace, a burner on nutrients a biochamber", () => {
+    it("follows the data, not the name: a furnace prototype of any name is a furnace, any other burner a biochamber", () => {
         expect(machineRuleOfPrototype({ type: "furnace", crafting_categories: ["smelting"], burner_fuel_categories: ["nutrients"] })).toBe(MachineType.FURNACE);
         expect(machineRuleOfPrototype({ type: "assembling-machine", crafting_categories: [], burner_fuel_categories: ["chemical", "nutrients"] })).toBe(MachineType.BIOCHAMBER);
-        expect(machineRuleOfPrototype({ type: "assembling-machine", crafting_categories: [], burner_fuel_categories: ["chemical"] })).toBe(MachineType.MACHINE);
+        expect(machineRuleOfPrototype({ type: "assembling-machine", crafting_categories: [], burner_fuel_categories: ["chemical"] })).toBe(MachineType.BIOCHAMBER);
+        expect(machineRuleOfPrototype({ type: "assembling-machine", crafting_categories: [], burner_fuel_categories: [] })).toBe(MachineType.MACHINE);
     });
 });
 

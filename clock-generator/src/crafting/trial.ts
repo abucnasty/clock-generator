@@ -11,7 +11,7 @@ import { StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
-import { CIRCUIT_LATENCY_TICKS, SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
+import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
@@ -26,8 +26,9 @@ import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
 import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
-import { TakerOrder, takerOrderName, takerOrdersToCheck } from "../control-logic/inserter/competing-takers";
+import { TakerOrder, takerOrderName, takerOrdersToCheck } from "../simulation/competing-takers";
 import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./primitive-grouped-policy";
+import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
 
 /**
@@ -801,7 +802,7 @@ export function exhaustiveStartPhases(
             const delivered = counts.slice(1).map((count, index) => count - counts[index]);
             return delivered.length > 0 && exportShortfallOfBins(it, delivered, proof_bin.ticks, proven) !== null;
         });
-        const control_logic = new SimulationTick(context);
+        const simulation_tick = new SimulationTick(context);
         const now = () => context.tick_provider.getCurrentTick();
 
         // the rotated windows enable at tick t what the unrotated enable at t - offset, so the unrotated clock's
@@ -815,7 +816,7 @@ export function exhaustiveStartPhases(
         for (let crossing = 0; run_holds === null; crossing++) {
             const until = offset + crossing * proof_bin.ticks;
             while (now() < until) {
-                control_logic.executeForTick();
+                simulation_tick.executeForTick();
             }
             const key = exhaustiveCrossingKey(simulationStateKey(context), now());
             const earlier = own_crossing.get(key);

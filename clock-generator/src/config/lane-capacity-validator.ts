@@ -1,5 +1,7 @@
 import Fraction, { fraction } from '../data-types/fraction';
-import { Belt, Entity, handSizeFor } from '../entities';
+import { Entity, handSizeFor } from '../entities';
+import { beltLanes, LaneTrait } from '../entities/traits/lane';
+import { fractionOf } from '../entities/traits/ratio';
 import type { Logger } from '../common/logger';
 import { CraftingCyclePlan } from '../crafting/sequence/cycle/crafting-cycle';
 import { createEntityRegistryFromConfig } from '../crafting/sequence/simulation-context';
@@ -11,7 +13,8 @@ import { Config } from './schema';
 // Belt lane capacity
 // ============================================================================
 //
-// A belt lane carries its belt's items a second per lane (half the belt's speed) times the lane's stack size. What the
+// A belt lane carries its belt's items a second per lane (half the belt's speed) times the lane's stack size: its Lane
+// trait's ceiling (entities/traits/lane.ts), read here as the exact fraction it is. What the
 // inserters of one unit take from a lane, or drop onto it, at the target is read off the planner's own transfer plan:
 // each inserter's hands a cycle of an item times its hand for the item, over the cycle's seconds. Those hands are the
 // target's demand cut into hands, so the swing count cancels: the rate is what the target asks, not a clock's windows.
@@ -44,14 +47,6 @@ export interface LaneLoad {
     inserter_ids: number[];
     items_per_second: Fraction;
     capacity_per_second: Fraction;
-}
-
-/**
- * Items a second one lane of the belt carries: half the belt's speed times the lane's stack size. A belt that lists one
- * lane has the second at the same stack size, for the drops that land on it.
- */
-export function laneCapacity(belt: Config['belts'][number], lane: number): Fraction {
-    return fraction(Belt.fromConfig(belt).belt_speed).divide(2).multiply(belt.lanes[Math.min(lane, belt.lanes.length) - 1].stack_size);
 }
 
 const above = (a: Fraction, b: Fraction): boolean => a.subtract(b).getNumerator > 0;
@@ -101,9 +96,13 @@ export function laneLoads(config: Config): LaneLoad[] {
         const key = `${flow.belt_id}|${flow.kind}`;
         groups.set(key, [...(groups.get(key) ?? []), flow]);
     }
+    const supply = config.overrides?.backed_up_belts === true ? 'backed_up' : 'moving';
     for (const group of groups.values()) {
         const { belt_id, kind } = group[0];
         const belt = config.belts.find(it => it.id === belt_id)!;
+        // what each lane carries, by the Lane traits of this belt of the config (a belt that lists one lane has the second
+        // at the same stack size, for the drops that land on it)
+        const lanes_of_belt: readonly LaneTrait[] = beltLanes(belt, supply);
         const sets = new Map(group.map(flow => [flow.lanes.join(','), flow.lanes] as const));
         const all = [...new Set(group.flatMap(flow => flow.lanes))].sort((a, b) => a - b);
         sets.set(all.join(','), all);
@@ -113,7 +112,7 @@ export function laneLoads(config: Config): LaneLoad[] {
                 kind, belt_id, lanes,
                 inserter_ids: [...new Set(held.map(flow => flow.inserter_id))].sort((a, b) => a - b),
                 items_per_second: held.reduce((sum, flow) => sum.add(flow.items_per_second), fraction(0)),
-                capacity_per_second: lanes.reduce((sum, lane) => sum.add(laneCapacity(belt, lane)), fraction(0)),
+                capacity_per_second: lanes.reduce((sum, lane) => sum.add(fractionOf(lanes_of_belt[lane - 1].items_per_second_ceiling)), fraction(0)),
             });
         }
     }

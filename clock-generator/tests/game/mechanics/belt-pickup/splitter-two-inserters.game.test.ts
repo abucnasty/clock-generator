@@ -10,8 +10,8 @@ import {composeProbeSource} from "../../helpers/probe-source";
 import {BELT_SPEEDS, blueprintAtSpeed, configAtSpeed} from "../../helpers/belt-speed-fixtures";
 import {verifySplitterSpeedReport} from "./splitter-speed-research";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
-import {EntityState, MachineState} from "../../../../src/state";
+import {bindHandPorts} from "../../../../src/simulation/components/hand-ports";
+import {EntityState} from "../../../../src/state";
 
 interface Stack {id: number; at: number; count: number; item: string}
 interface Line {length: number; stacks: Stack[] | Record<string, never>}
@@ -252,8 +252,8 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightM
             const machine = simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id);
             expect(EntityState.isMachine(machine)).toBe(true);
             if (!EntityState.isMachine(machine)) throw new Error("Expected machine sink");
-            const mode = InserterPickupMode.create({inserterState: input, tick_provider: simulation.tick_provider,
-                sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id), sinkState: machine});
+            const pickup = bindHandPorts({inserterState: input, tick_provider: simulation.tick_provider,
+                sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id), sinkState: machine}).pickup;
             const counts: number[] = [];
             for (let tick = 13; tick <= 18; tick++) {
                 const previous = report.samples[tick - 2];
@@ -261,9 +261,9 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightM
                 for (const item of [...Object.values(previous.inputs), ...Object.values(previous.output)]) {
                     machine.inventoryState.setQuantity(item.name, item.count);
                 }
-                expect(MachineState.machineInputIsBlocked(machine, "copper-cable")).toBe(false);
+                expect(machine.ingress.blocked("copper-cable")).toBe(false);
                 simulation.tick_provider.setCurrentTick(tick);
-                mode.executeForTick();
+                pickup.pickup();
                 counts.push(input.held_item!.quantity);
             }
             expect(counts).toEqual([4, 8, 12, 16, 16, 16]);
@@ -278,13 +278,13 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightM
                 const previous = report.samples[sample.tick - 2];
                 const cable = Object.values(previous.inputs).find(item => item.name === "copper-cable")!.count;
                 machine.inventoryState.setQuantity("copper-cable", cable);
-                expect(MachineState.machineInputIsBlocked(machine, "copper-cable")).toBe(true);
+                expect(machine.ingress.blocked("copper-cable")).toBe(true);
                 expect(sample.hands[1].held).toBe(12);
                 expect(stacks(sample.hands[1].lanes[6]).filter(s => s.item === "copper-cable")).toHaveLength(2);
             }
             const beforeResume = report.samples[86];
             machine.inventoryState.setQuantity("copper-cable", Object.values(beforeResume.inputs).find(item => item.name === "copper-cable")!.count);
-            expect(MachineState.machineInputIsBlocked(machine, "copper-cable")).toBe(false);
+            expect(machine.ingress.blocked("copper-cable")).toBe(false);
             expect(report.samples[87].hands[1].held).toBe(16);
         }
         const captures = result.recording.config.inserters.flatMap((inserter, index) =>

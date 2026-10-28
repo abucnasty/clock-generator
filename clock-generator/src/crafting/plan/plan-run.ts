@@ -7,10 +7,10 @@ import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
-import { DebugPluginFactory } from "../sequence/debug/debug-plugin-factory";
+import { DebugObserverFactory } from "../sequence/debug/debug-observer-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
 import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
-import { cloneSimulationContextWithInterceptors, createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
+import { createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
 import { Duration, OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { TargetProductionRate } from "../target-production-rate";
@@ -18,24 +18,25 @@ import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
-import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
-import { ModePlugin } from "../../control-logic/mode";
-import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
+import { RelativeTickProvider, TickProvider } from "../../simulation/current-tick-provider";
+import { ResettableRegistry } from "../../simulation/controls/resettable-registry";
+import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { neverBlockingBranchesOf, type TerminalBranch } from "../terminal-rate";
+import { mainProductRateOf, traitsOf } from "../../entities/traits/traits-of";
 import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
 import { carriedItemsOf, RESULT_WINDOWS_CHECK_PERIODS, ResultWindowsPlan } from "../result-windows";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
-import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
-import { DrillInventoryTransferPlugin } from "../../control-logic/drill/plugins/drill-inventory-transfer-plugin";
+import { InserterTransferTracker } from "../../simulation/observers/inserter-transfer-tracker";
+import { DrillTransferTracker } from "../../simulation/observers/drill-transfer-tracker";
 import { EnableControlFactory } from "../sequence/interceptors/inserter-enable-control-factory";
 import { ConfigurableEnableControlFactory, EntityEnableControlOverrideMap } from "../sequence/interceptors/configurable-enable-control-factory";
 import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
-import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../control-logic/inserter/competing-takers";
+import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-takers";
 import { DeciderOrder } from "../decider-order";
 import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
@@ -51,12 +52,13 @@ import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpres
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
+import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
-import { InserterStateTransitionTrackerPlugin } from "../../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
-import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
-import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plugins/drill-state-transition-tracker-plugin";
-import { FactorioStatePlugin } from "../../control-logic/plugins/factorio-state-plugin";
-import { factorioDrillState, factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
+import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
+import { DrillStateTracker, FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
+import type { EntityObserver, Observers, TickRecorder } from "../../simulation/observers/observer";
+import { drillStatusOf, inserterStatusOf, machineStatusOf } from "../../simulation/status-codes";
+import { factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
@@ -451,6 +453,10 @@ export interface RunOptions {
 
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
 export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
+    /**
+     * The context the run ticked, still on the enable controls it ran with (a kept run keeps them and what they close
+     * over: the plan, its factories and the tick provider), without the observers that fed the histories
+     */
     simulation_context: SimulationContext;
     output_inserter_ids: Set<string>;
     swing_counts: EntityTransferCountMap;
@@ -534,19 +540,20 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
             ? { config_json: JSON.stringify(config), terminal_swing_count } : undefined);
     });
 
-    const repeat_periods = warmUp(config, controlled, duration, warmup_period, debug, debug_steps, logger);
+    const repeat_periods = warmUp(config, build, controlled, duration, warmup_period, debug, debug_steps, logger);
     const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
     // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
     const state_transition_history = build.state_transition_history.seal(build.simulation_context.entity_registry, simulated.recorded_duration.ticks);
     const final_history = finalHistoryOf(build, crafting_cycle_plan, all_output_inserters, duration, logger);
-    const output = checkOutput(build, controlled, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
-    const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, crafting_cycle_plan.entity_transfer_map,
+    const output = checkOutput(build, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
+    const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, traitsOf(config), crafting_cycle_plan.entity_transfer_map,
         transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
     const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger, terminal_branches);
-    // the run is over: the contexts it hands back keep their machines' states, and no longer the plugins that fed the
+    // the run is over: the contexts it hands back keep their machines' states, and no longer the observers that fed the
     // histories (which would keep the raw transfers and transitions of the run alive for as long as the run is kept)
-    detachHistoryPlugins(build, simulation_context, controlled.new_simulation_context);
+    // (the planned build's context is the run's own, except on a cold start, which runs a build made anew)
+    detachHistoryObservers(build, ...new Set([simulation_context, build.simulation_context]));
 
     return {
         simulation_context: build.simulation_context,
@@ -591,25 +598,26 @@ interface RecordedBuild {
     relative_tick_provider: TickProvider;
     inventory_transfer_history: InventoryTransferHistory;
     state_transition_history: StateTransitionHistory;
-    /** The plugins that only feed the two histories */
-    history_plugins: ReadonlySet<ModePlugin<any>>;
+    /** The observers of inserters, machines and drills that only feed the two histories */
+    history_observers: ReadonlySet<object>;
 }
 
-/** Every plugin on the state machines of a simulation */
-function pluginsOf(context: SimulationContext): ModePlugin<any>[] {
-    return [...context.inserters, ...context.machines, ...context.drills].flatMap((it): ModePlugin<any>[] => it.getPlugins());
-}
-
-/** Takes the plugins that only feed the two histories off every state machine of these contexts */
-function detachHistoryPlugins(build: RecordedBuild, ...contexts: SimulationContext[]): void {
+/** Takes the observers that only feed the two histories off every entity of these contexts */
+function detachHistoryObservers(build: RecordedBuild, ...contexts: SimulationContext[]): void {
     for (const context of contexts) {
-        for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
-            state_machine.removePlugins(build.history_plugins);
+        for (const inserter of context.inserters) {
+            inserter.observers.remove(build.history_observers);
+        }
+        for (const machine of context.machines) {
+            machine.observers.remove(build.history_observers);
+        }
+        for (const drill of context.drills) {
+            drill.observers.remove(build.history_observers);
         }
     }
 }
 
-/** The simulation of a config, with the debug, transfer and state plugins on every entity; nothing is recorded yet */
+/** The simulation of a config, with the debug, transfer and state observers on every entity; nothing is recorded yet */
 function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
     // Validate inserter coverage before building the entity graph.
     // Throws InserterCoverageError if any machine ingredient or output lacks an inserter.
@@ -630,21 +638,19 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     const relative_tick_provider = new RelativeTickProvider(simulation_context.tick_provider);
     const relative_tick = relative_tick_provider;
 
-    // Configure plugins. Debugging is only switched on for the steps debug_steps names (see withDebugFor): without
-    // any, the debug plugins would log nothing and only cost time every tick.
+    // The observers, debug output first. Debugging is only switched on for the steps debug_steps names (see
+    // withDebugFor): without any, the debug observers would log nothing and only cost time every tick.
     if (Object.values(options.debug_steps ?? {}).some(Boolean)) {
-        configureDebugPlugins(simulation_context, relative_tick_provider, debug);
+        new DebugObserverFactory(relative_tick_provider, debug).attachTo(simulation_context);
     }
-    const plugins_before_histories = new Set(pluginsOf(simulation_context));
-    const inventory_transfer_history = configureInventoryTransferPlugins(simulation_context, relative_tick_provider);
-    const state_transition_history = configureStateTransitionPlugins(simulation_context, relative_tick_provider, options.factorio_states ?? true);
-    const history_plugins = new Set(pluginsOf(simulation_context).filter(plugin => !plugins_before_histories.has(plugin)));
+    const { inventory_transfer_history, state_transition_history, history_observers } =
+        attachHistoryObservers(simulation_context, relative_tick_provider, options.factorio_states ?? true);
     inventory_transfer_history.recording = false;
     state_transition_history.recording = false;
 
     logger.log(`Created simulation context with ${simulation_context.machines.length} machines and ${simulation_context.inserters.length} inserters.`);
 
-    return { simulation_context, relative_tick, relative_tick_provider, inventory_transfer_history, state_transition_history, history_plugins };
+    return { simulation_context, relative_tick, relative_tick_provider, inventory_transfer_history, state_transition_history, history_observers };
 }
 
 /**
@@ -687,7 +693,7 @@ function prepareBuild(build: RecordedBuild, debug: MutableDebugSettingsProvider,
 /** Empties the output machines (unless kept) and puts in what the machines hold at the start, when one is given */
 function setUpTheStart(
     simulation_context: SimulationContext,
-    output_machine_state_machines: MachineStateMachine[],
+    output_machine_state_machines: CraftingMachineArchetype[],
     options: RunOptions,
     logger: Logger,
 ): void {
@@ -712,7 +718,7 @@ function setUpTheStart(
                 continue;
             }
             for (const [item_name, quantity] of Object.entries(start.items)) {
-                MachineState.ingredientInventory(machine_state, item_name).setQuantity(item_name, quantity);
+                machine_state.ingress.ingredientInventory(item_name).setQuantity(item_name, quantity);
             }
             machine_state.craftingProgress.progress = start.crafting_progress ?? machine_state.craftingProgress.progress;
             machine_state.bonusProgress.progress = start.bonus_progress ?? machine_state.bonusProgress.progress;
@@ -751,9 +757,11 @@ function planTransfers(config: Config, crafting_cycle_plan: CraftingCyclePlan, s
     return transfer_plan;
 }
 
-/** The build with every inserter and drill on its enable control, and the clocks of the inserters outside the plan */
+/**
+ * What putting a build's inserters and drills on their enable controls adds to it (its own context is swapped in place,
+ * `withEnableControls`): what resets the controls, and the clocks of the inserters outside the plan
+ */
 interface ControlledBuild {
-    new_simulation_context: SimulationContext;
     /** Resets every enable control as a step starts */
     resettable_registry: ResettableRegistry;
     crafting_shares: Map<string, number>;
@@ -762,8 +770,8 @@ interface ControlledBuild {
 }
 
 /**
- * Puts every inserter and drill on its enable control: the config's override where it has one, the one the plan
- * makes for it otherwise.
+ * Puts every inserter and drill of the build's context on its enable control, in place (same-tick rule 12): the
+ * config's override where it has one, the one the plan makes for it otherwise.
  */
 function withEnableControls(
     config: Config,
@@ -812,9 +820,9 @@ function withEnableControls(
         inserter_clocks,
     );
 
-    // Clone simulation context with interceptors
+    // Swap the controls of the build's context, in place
     // Route to configurable factory if override mode is not AUTO, otherwise use automatic factory
-    const new_simulation_context = cloneSimulationContextWithInterceptors(simulation_context, {
+    simulation_context.useControls({
         drill: (drill_state) => {
             if (configurable_enable_control_factory.hasOverride(drill_state.entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(drill_state.entity_id).mode;
@@ -833,7 +841,7 @@ function withEnableControls(
         }
     });
 
-    return { new_simulation_context, resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
+    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
 }
 
 /** How long a build runs: the period of the clock, and the warmup before it */
@@ -869,6 +877,7 @@ function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number
  */
 function warmUp(
     config: Config,
+    build: RecordedBuild,
     controlled: ControlledBuild,
     duration: Duration,
     warmup_period: Duration,
@@ -876,15 +885,16 @@ function warmUp(
     debug_steps: DebugSteps,
     logger: Logger,
 ): number | undefined {
-    const { new_simulation_context, resettable_registry } = controlled;
+    const { simulation_context } = build;
+    const { resettable_registry } = controlled;
     logger.log("Warming up simulation...");
     logger.log("Executing Warmup Step");
     // the clocks start here, on a cold build at its tick 0
     resettable_registry.resetAll(true);
     return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
-        const warmup_step = new WarmupStep(new_simulation_context, warmup_period,
+        const warmup_step = new WarmupStep(simulation_context, warmup_period,
             isPurelyClocked(config, duration.ticks)
-                ? { period_ticks: duration.ticks, key: () => simulationStateKey(new_simulation_context) }
+                ? { period_ticks: duration.ticks, key: () => simulationStateKey(simulation_context) }
                 : undefined);
         warmup_step.execute();
         if (warmup_step.ticks_run < warmup_period.ticks) {
@@ -897,7 +907,7 @@ function warmUp(
 /**
  * A cold controlled build of a config for a trial that reads nothing but entity states: the staged scaffold's start
  * (nothing in the machines, the loop seeds given once), every inserter and drill on its enable control, and the
- * history plugins stripped, since nothing of such a run is recorded. The crafting cycle plan and its LCM come from a
+ * history observers stripped, since nothing of such a run is recorded. The crafting cycle plan and its LCM come from a
  * run of the same build (rotating clock windows changes neither), so the prepare and planning steps are not run
  * again. The enable controls are reset before the build is handed over; its clock starts at tick 0.
  */
@@ -910,8 +920,8 @@ export function coldControlledTrialBuild(
 ): SimulationContext {
     const build = coldBuildOf(config, options, DebugSettingsProvider.mutable(), logger);
     const controlled = withEnableControls(config, build, crafting_cycle_plan, recipe_lcm, logger);
-    const context = controlled.new_simulation_context;
-    detachHistoryPlugins(build, context);
+    const context = build.simulation_context;
+    detachHistoryObservers(build, context);
     controlled.resettable_registry.resetAll(true);
     return context;
 }
@@ -961,7 +971,7 @@ function simulate(
     repeat_bin: { ticks: number; periods: number } | null = null,
 ): SimulatedRun {
     const { simulation_context, inventory_transfer_history, state_transition_history } = build;
-    const { new_simulation_context, resettable_registry } = controlled;
+    const { resettable_registry } = controlled;
     logger.log(`Starting simulation for ${duration.ticks} ticks`);
     logger.log("Executing Simulate Step");
     inventory_transfer_history.clear();
@@ -977,36 +987,36 @@ function simulate(
     const simulate_periods = options.simulate_periods ?? 1;
     const recorded_duration = Duration.ofTicks(duration.ticks * simulate_periods);
     const fuel_level_recorder = options.fuel_levels
-        ? new FuelLevelRecorder(new_simulation_context.machines.map(it => it.machine_state))
+        ? new FuelLevelRecorder(simulation_context.machines.map(it => it.machine_state))
         : undefined;
     // What the output inserters drop in the recorded run is counted as they drop it. Their transfers are no measure
     // of it: a hand is recorded when the inserter is back, so one dropped in the last ticks of the run is missing.
-    const output_inserter_states = new_simulation_context.inserters
+    const output_inserter_states = simulation_context.inserters
         .map(it => it.inserter_state)
         .filter(state => all_output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
     const dropped_before_run = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0);
     // a run that is watched for a repeat may end long before the periods it was asked for, so it grows its series
     const may_end_early = repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks;
     const stock_recorder = options.machine_stock
-        ? new StockRecorder(new_simulation_context.machines.map(it => it.machine_state), new_simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })),
+        ? new StockRecorder(simulation_context.machines.map(it => it.machine_state), simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })),
             may_end_early ? undefined : recorded_duration.ticks)
         : undefined;
     const timeline_recorder = options.timeline_recording
-        ? new TimelineRecorder(new_simulation_context, options.timeline_recording)
+        ? new TimelineRecorder(simulation_context, options.timeline_recording)
         : undefined;
     let state_repeat: StateRepeat | undefined;
     let stop_early: (() => boolean) | undefined;
     if (repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks) {
         const boundary_by_key = new Map<string, number>();
-        const first_tick = new_simulation_context.tick_provider.getCurrentTick();
-        boundary_by_key.set(simulationStateKey(new_simulation_context), 0);
+        const first_tick = simulation_context.tick_provider.getCurrentTick();
+        boundary_by_key.set(simulationStateKey(simulation_context), 0);
         stop_early = () => {
-            const ticks = new_simulation_context.tick_provider.getCurrentTick() - first_tick;
+            const ticks = simulation_context.tick_provider.getCurrentTick() - first_tick;
             if (ticks % repeat_bin.ticks !== 0) {
                 return false;
             }
             const boundary = ticks / repeat_bin.ticks;
-            const key = simulationStateKey(new_simulation_context);
+            const key = simulationStateKey(simulation_context);
             const earlier = boundary_by_key.get(key);
             if (earlier !== undefined) {
                 state_repeat = { bin_ticks: repeat_bin.ticks, periods_per_bin: repeat_bin.periods, from_bin: earlier, cycle_bins: boundary - earlier };
@@ -1016,9 +1026,10 @@ function simulate(
             return false;
         };
     }
-    const simulate_step = new SimulateStep(new_simulation_context, recorded_duration,
-        (fuel_level_recorder || stock_recorder || timeline_recorder) && (() => { fuel_level_recorder?.record(); stock_recorder?.record(); timeline_recorder?.record(); }),
-        stop_early);
+    // the after-tick phase's recorders, in this order
+    const recorders: TickRecorder[] = [fuel_level_recorder, stock_recorder, timeline_recorder]
+        .filter(recorder => recorder !== undefined);
+    const simulate_step = new SimulateStep(simulation_context, recorded_duration, recorders, stop_early);
     withDebugFor(debug, debug_steps, RunnerStepType.SIMULATE, () => simulate_step.execute());
 
     const actual_duration = simulate_step.ticks_run < recorded_duration.ticks ? Duration.ofTicks(simulate_step.ticks_run) : recorded_duration;
@@ -1035,7 +1046,7 @@ function simulate(
         fuel_levels: fuel_level_recorder?.series(),
         machine_stock: stock_recorder?.recording(),
         timeline_recording: timeline_recorder?.recording("clock", actual_duration.ticks,
-            inventory_transfer_history.ticks_before_run, new_simulation_context.target_production_rate.copies),
+            inventory_transfer_history.ticks_before_run, simulation_context.target_production_rate.copies),
     };
 }
 
@@ -1106,7 +1117,6 @@ interface OutputCheck {
  */
 function checkOutput(
     build: RecordedBuild,
-    controlled: ControlledBuild,
     planned_cycle: PlannedCraftingCycle,
     recipe_lcm: number,
     duration: Duration,
@@ -1138,13 +1148,13 @@ function checkOutput(
         logger.log(`Stability check: belt ${lane.belt_id} ${lane.item} exported ${Number(lane.delivered_per_second.toFixed(2))} a second, consumers take ${lane.expected_per_second}`);
     }
 
-    const full_output_chests = fullOutputChestsOf(controlled.new_simulation_context, output_inserter_states);
+    const full_output_chests = fullOutputChestsOf(simulation_context, output_inserter_states);
 
     // the simulated period can hit the expected output while the periods it alternates with fall short
     let repeat_output_items: number | undefined;
     if (repeat_periods !== undefined && repeat_periods > 1 && duration.ticks * repeat_periods < MAX_SIMULATION_TICKS) {
         state_transition_history.recording = false;
-        new SimulateStep(controlled.new_simulation_context, Duration.ofTicks(duration.ticks * (repeat_periods - 1))).execute();
+        new SimulateStep(simulation_context, Duration.ofTicks(duration.ticks * (repeat_periods - 1))).execute();
         repeat_output_items = 0;
         for (const [entity_id, transfers] of inventory_transfer_history.entries()) {
             if (output_inserter_ids.has(entity_id.id)) {
@@ -1192,9 +1202,9 @@ function backpressureLossOf(
     // the run above is over: the trials go on from where it ended, and nothing of them goes into its histories
     build.inventory_transfer_history.recording = false;
     build.state_transition_history.recording = false;
-    // so the plugins that feed them have nothing to do: a trial ticks a few hundred thousand times
-    const trial_context = controlled.new_simulation_context;
-    detachHistoryPlugins(build, trial_context);
+    // so the observers that feed them have nothing to do: a trial ticks a few hundred thousand times
+    const trial_context = build.simulation_context;
+    detachHistoryObservers(build, trial_context);
     const loss_period = options.backpressure_loss.period_ticks;
     const repeat = subtickClockForPeriod(loss_period);
     const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
@@ -1240,6 +1250,14 @@ export interface TrialRun {
     state_repeat?: StateRepeat;
 }
 
+/** The facts of every machine of a context, in its order: each machine's traits are built once, from the configuration it keeps, and projected */
+function machineFactsOfContext(simulation_context: SimulationContext): MachineFactsEntry[] {
+    return simulation_context.machines.map(it => ({
+        entity_id: it.machine_state.machine.entity_id.id,
+        facts: machineFactsOfEntity(it.machine_state.machine),
+    }));
+}
+
 export function trialRunOf(run: BuildRun): TrialRun {
     return {
         timeline_recording: run.timeline_recording,
@@ -1249,10 +1267,7 @@ export function trialRunOf(run: BuildRun): TrialRun {
         transfer_history: run.final_history,
         serializable_transfer_history: serializeTransferHistory(run.final_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
         serializable_state_transition_history: run.state_transition_history,
-        machine_facts: run.simulation_context.machines.map(it => ({
-            entity_id: it.machine_state.machine.entity_id.id,
-            facts: Machine.getMachineFacts(it.machine_state.machine),
-        })),
+        machine_facts: machineFactsOfContext(run.simulation_context),
         fuel_levels: run.fuel_levels,
         machine_stock: run.machine_stock,
         backpressure_loss: run.backpressure_loss,
@@ -1510,10 +1525,7 @@ export function exportClock(
             transfer_history: final_history,
             serializable_transfer_history: serializeTransferHistory(final_history, simulation_context.entity_registry, recorded_duration.ticks),
             serializable_state_transition_history: state_transition_history,
-            machine_facts: simulation_context.machines.map(it => ({
-                entity_id: it.machine_state.machine.entity_id.id,
-                facts: Machine.getMachineFacts(it.machine_state.machine),
-            })),
+            machine_facts: machineFactsOfContext(simulation_context),
         };
     return {
         ...histories,
@@ -1687,7 +1699,7 @@ export function checkedClock(
 /** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */
 interface PlannedCraftingCycle {
     target_production_rate: TargetProductionRate;
-    output_machine_state_machines: MachineStateMachine[];
+    output_machine_state_machines: CraftingMachineArchetype[];
     /** One output inserter per output machine, which the swings of a cycle are counted by */
     output_inserters: InserterState[];
     /** Every inserter that takes the target item out of the build */
@@ -1720,7 +1732,7 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
 
     // validate target production rate can be met
     const total_output_capacity_per_second = output_machine_state_machines
-        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, simulation_context.entity_registry))
+        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, config, simulation_context.entity_registry))
         .reduce((a, b) => a.add(b), fraction(0))
         .multiply(fraction(config.target_output.copies));
     assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
@@ -2328,12 +2340,14 @@ function computeCraftingCyclePlan(
 }
 
 /**
- * The most of the target a machine can make or destroy a second: what it makes of the item, or, for a target that
- * counts the item destroyed, its crafts a second times what a craft uses of the item less what comes back into it
+ * The most of the target a machine can make or destroy a second: what it makes of the item (its main product's rate, as
+ * its Yield trait gives it), or, for a target that counts the item destroyed, its crafts a second times what a craft uses
+ * of the item less what comes back into it. What comes back is the exact amount a craft gives of it, which the machine
+ * holds and its Yield trait only as a decimal, so that one is read off the machine.
  */
-function targetCapacityPerSecond(machine: Machine, target: TargetItem, registry: ReadableEntityRegistry): Fraction {
+function targetCapacityPerSecond(machine: Machine, target: TargetItem, config: Config, registry: ReadableEntityRegistry): Fraction {
     if (target.counts === "made") {
-        return machine.output.production_rate.amount_per_second;
+        return mainProductRateOf(traitsOf(config), machine.entity_id.id);
     }
     const used = fraction(machine.inputs.getOrThrow(target.item).ingredient.amount);
     const result_target = machine.result_target;
@@ -2377,100 +2391,57 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
 }
 
 // ============================================================================
-// Plugin Configuration Functions
+// History observers
 // ============================================================================
 
 /**
- * Configures debug plugins for all entities in the simulation context.
+ * The observers that feed a run's two histories, onto every entity of its context: per inserter its transfer tracker,
+ * its state transition tracker and, with `factorio_states`, the tracker of the state the game shows; per machine the
+ * last two; per drill the transfer tracker where it mines into a machine, then the last two. Each history is made
+ * here, and the observers are collected as they are added, to be taken off together when the run is over.
  */
-function configureDebugPlugins(
-    simulation_context: SimulationContext,
-    relative_tick_provider: TickProvider,
-    debug: MutableDebugSettingsProvider
-): void {
-    const debug_plugin_factory = new DebugPluginFactory(
-        relative_tick_provider,
-        debug
-    );
-    simulation_context.addDebuggerPlugins(debug_plugin_factory);
-}
-
-/**
- * Configures inventory transfer tracking plugins for inserters and drills.
- * Returns the InventoryTransferHistory that will collect transfer events.
- */
-function configureInventoryTransferPlugins(
-    simulation_context: SimulationContext,
-    relative_tick_provider: TickProvider
-): InventoryTransferHistory {
-    const inventory_transfer_history = new InventoryTransferHistory();
-
-    // Add inserter inventory transfer plugins
-    simulation_context.inserters.forEach(it => {
-        it.addPlugin(new InserterInventoryHistoryPlugin(
-            relative_tick_provider,
-            it.inserter_state,
-            inventory_transfer_history
-        ));
-    });
-
-    // Add drill inventory transfer plugins
-    simulation_context.drills.forEach(it => {
-        const sink_machine = simulation_context.entity_registry.getEntityByIdOrThrow(
-            it.drill_state.drill.sink_id
-        );
-        // a drill into a chest has no transfers to record: its windows are made from its takers' (see chestDrillWindows)
-        if (!Entity.isMachine(sink_machine)) {
-            return;
-        }
-        it.addPlugin(new DrillInventoryTransferPlugin(
-            it.drill_state.drill,
-            sink_machine,
-            relative_tick_provider,
-            inventory_transfer_history
-        ));
-    });
-
-    return inventory_transfer_history;
-}
-
-/**
- * Configures state transition tracking plugins for all entity types.
- * Returns the StateTransitionHistory that will collect transition events.
- */
-function configureStateTransitionPlugins(
+function attachHistoryObservers(
     simulation_context: SimulationContext,
     relative_tick_provider: TickProvider,
     factorio_states: boolean,
-): StateTransitionHistory {
+): { inventory_transfer_history: InventoryTransferHistory; state_transition_history: StateTransitionHistory; history_observers: ReadonlySet<object> } {
+    const inventory_transfer_history = new InventoryTransferHistory();
     const state_transition_history = new StateTransitionHistory();
+    const history_observers = new Set<object>();
+    const attach = <S extends number>(observers: Observers<S>, observer: EntityObserver<S>) => {
+        observers.add(observer);
+        history_observers.add(observer);
+    };
 
-    // Add inserter state transition plugins
     simulation_context.inserters.forEach(it => {
+        attach(it.observers, new InserterTransferTracker(relative_tick_provider, it.inserter_state, inventory_transfer_history));
         const recorder = state_transition_history.recorderFor(it.inserter_state.entity_id, "inserter");
-        it.addPlugin(new InserterStateTransitionTrackerPlugin(relative_tick_provider, recorder));
+        attach(it.observers, new StateTransitionTracker(relative_tick_provider, recorder, inserterStatusOf));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioInserterState(it.inserter_state, it.sink_state), recorder));
+            attach(it.observers, new FactorioStateTracker(relative_tick_provider, () => factorioInserterState(it.inserter_state, it.sink_state), recorder));
         }
     });
 
-    // Add machine state transition plugins
     simulation_context.machines.forEach(it => {
         const recorder = state_transition_history.recorderFor(it.machine_state.entity_id, "machine");
-        it.addPlugin(new MachineStateTransitionTrackerPlugin(relative_tick_provider, recorder));
+        attach(it.observers, new StateTransitionTracker(relative_tick_provider, recorder, machineStatusOf));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioMachineState(it.machine_state), recorder));
+            attach(it.observers, new FactorioStateTracker(relative_tick_provider, () => factorioMachineState(it.machine_state), recorder));
         }
     });
 
-    // Add drill state transition plugins
     simulation_context.drills.forEach(it => {
+        const sink_machine = simulation_context.entity_registry.getEntityByIdOrThrow(it.drill_state.drill.sink_id);
+        // a drill into a chest has no transfers to record: its windows are made from its takers' (see chestDrillWindows)
+        if (Entity.isMachine(sink_machine)) {
+            attach(it.observers, new DrillTransferTracker(it.drill_state.drill, sink_machine, relative_tick_provider, inventory_transfer_history));
+        }
         const recorder = state_transition_history.recorderFor(it.drill_state.entity_id, "drill");
-        it.addPlugin(new DrillStateTransitionTrackerPlugin(relative_tick_provider, recorder));
+        attach(it.observers, new StateTransitionTracker(relative_tick_provider, recorder, drillStatusOf));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioDrillState(it.drill_state), recorder));
+            attach(it.observers, new DrillStateTracker(relative_tick_provider, it.drill_state, recorder));
         }
     });
 
-    return state_transition_history;
+    return { inventory_transfer_history, state_transition_history, history_observers };
 }

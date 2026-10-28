@@ -2,13 +2,14 @@ import { expect, it } from 'vitest';
 import { Config, ConfigSchema } from '../config/schema';
 import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
-import { CompositeControlLogic, TickControlLogic } from '../control-logic';
 import { Entity, EntityId } from '../entities';
-import { EntityState, MachineStatus } from '../state';
+import { MachineStatus } from '../state';
 import { SimulationContext } from './sequence/simulation-context';
 import { TimelineRecorder } from './timeline-recording';
 import { createInserterCoverageValidator, validateInserterCoverage } from '../config/inserter-coverage-validator';
 import { validateConfig } from './plan/validate-config';
+import { ContainerStorage } from '../simulation/components/container-storage';
+import { TickByHand } from './runner/tick-by-hand.fixture';
 
 const item = 'automation-science-pack';
 async function disposalConfig(explicit = false): Promise<Config> {
@@ -24,11 +25,11 @@ it.each([false, true])('accepts output with explicit filters=%s, records deliver
     const config = await disposalConfig(explicit);
     expect(validateConfig(config).period_ticks).toBeGreaterThan(0);
     const context = SimulationContext.fromConfig(config);
-    const chest = context.state_registry.getAllStates().find(EntityState.isInfinityChest)!;
+    const chest = context.state_registry.getAllStates().find(ContainerStorage.isConstant)!;
     const output = context.inserters.find(inserter => inserter.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id)!.inserter_state;
     expect([...output.inserter.filtered_items]).toEqual([item]);
     const recorder = new TimelineRecorder(context, { period_ticks: 6_000 });
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const tick = new TickByHand(context);
     const advance = () => { for (let i = 0; i < 1_000; i++) { tick.executeForTick(); recorder.record(); } };
     advance();
     const delivered = output.items_dropped;
@@ -54,7 +55,7 @@ it('keeps configured supplies constant while disposing of other incoming items',
     const config = await disposalConfig();
     config.chests![0] = { type: 'infinity-chest', id: 1, item_filter: [{ item_name: 'iron-plate', request_count: 10 }], remove_unfiltered_items: true };
     const context = SimulationContext.fromConfig(config);
-    const chest = context.state_registry.getAllStates().find(EntityState.isInfinityChest)!;
+    const chest = context.state_registry.getAllStates().find(ContainerStorage.isConstant)!;
     expect(chest.chest.getItemFilters()).toEqual(['iron-plate']);
     expect(chest.chest.acceptsItem(item)).toBe(true);
     chest.inventoryState.addQuantity(item, 500);
@@ -83,7 +84,7 @@ it('gives an actionable error for an empty receiving chest with removal disabled
     expect(parsed.success).toBe(false);
     if (!parsed.success) expect(parsed.error.issues[0].message).toContain('enable Remove unfiltered items');
     config.chests![0] = { type: 'infinity-chest', id: 1, item_filter: [{ item_name: item, request_count: 1 }] };
-    const chest = SimulationContext.fromConfig(config).state_registry.getAllStates().find(EntityState.isInfinityChest)!;
+    const chest = SimulationContext.fromConfig(config).state_registry.getAllStates().find(ContainerStorage.isConstant)!;
     expect(chest.chest.remove_unfiltered_items).toBe(false);
     expect(chest.getCurrentQuantity(item)).toBe(1);
     expect(chest.chest.acceptsItem('iron-plate')).toBe(false);
@@ -93,7 +94,7 @@ it('supports zero-stock filters as accepting endpoints without turning them into
     const config = await disposalConfig();
     config.chests![0] = { type: 'infinity-chest', id: 1, item_filter: [{ item_name: item, request_count: 0 }] };
     expect(ConfigSchema.safeParse(config).success).toBe(true);
-    const chest = SimulationContext.fromConfig(config).state_registry.getAllStates().find(EntityState.isInfinityChest)!;
+    const chest = SimulationContext.fromConfig(config).state_registry.getAllStates().find(ContainerStorage.isConstant)!;
     expect(chest.chest.getItemFilters()).toEqual([]);
     expect(chest.chest.acceptsItem(item)).toBe(true);
     expect(chest.getCurrentQuantity(item)).toBe(0);

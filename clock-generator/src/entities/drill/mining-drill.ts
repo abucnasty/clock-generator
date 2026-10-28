@@ -51,13 +51,19 @@ function create(args: {
     }
 }
 
-function createCraftingRate(
+/** A drill's mining speed: its prototype's, with its speed bonus */
+export function drillMiningSpeed(spec: MiningDrillSpec, speed_bonus: number): number {
+    return spec.mining_speed + spec.mining_speed * speed_bonus
+}
+
+/** A drill's rate on a resource: a craft is an item, mined in the resource's mining time at the drill's mining speed */
+export function drillCraftingRate(
     spec: MiningDrillSpec,
     resource: Resource,
     speed_bonus: number
 ): CraftingRate {
 
-    const crafting_speed = spec.mining_speed + spec.mining_speed * speed_bonus
+    const crafting_speed = drillMiningSpeed(spec, speed_bonus)
     const energy_required = resource.minable.mining_time
     // drills always mine 1 item per craft
     const amount_per_craft = fraction(1)
@@ -77,7 +83,7 @@ function createFromConfig(config: MiningDrillConfig): MiningDrill {
 
     const spec = FactorioDataService.getMiningDrillSpec(config.type)
 
-    const crafting_rate = createCraftingRate(
+    const crafting_rate = drillCraftingRate(
         spec,
         resource,
         config.speed_bonus,

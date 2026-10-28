@@ -5,7 +5,7 @@ import {loadConfigFromFile} from "../../../../src/config/loader";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {EntityState} from "../../../../src/state";
-import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../../../../src/simulation/components/hand-ports";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {BELT_SPEEDS, configAtSpeed, speedCapture} from "../../helpers/belt-speed-fixtures";
@@ -59,11 +59,11 @@ for (const speed of BELT_SPEEDS) for (const [swapped, nearCount] of [[false, 13]
             const sink = sim.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id);
             if (!EntityState.isMachine(sink)) throw new Error("Expected machine sink");
             sink.inventoryState.setQuantity(nearItem, nearCount);
-            const mode = InserterPickupMode.create({inserterState: input,
+            const pickup = bindHandPorts({inserterState: input,
                 sourceState: sim.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id),
-                sinkState: sink, tick_provider: sim.tick_provider});
+                sinkState: sink, tick_provider: sim.tick_provider}).pickup;
             sim.tick_provider.setCurrentTick(0);
-            mode.executeForTick();
+            pickup.pickup();
             expect(input.held_item).toEqual({item_name: first.held_item, quantity: first.held});
             fs.writeFileSync(path.join(capture.directory, "findings.json"), JSON.stringify({name, first_grab: first,
                 simulator: input.held_item}, null, 2) + "\n");

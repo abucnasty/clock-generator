@@ -44,6 +44,14 @@ export interface WritableInventoryState extends ReadableInventoryState {
 }
 
 /**
+ * What an inventory holds, by item in the order of the item names, for the key of the Storage that owns it (see
+ * simulationStateKey): every item it has a slot for, an empty slot too
+ */
+export function inventoryKey(inventory: ReadableInventoryState): string {
+    return JSON.stringify(Object.entries(inventory.export()).sort(([a], [b]) => a.localeCompare(b)));
+}
+
+/**
  * An item's quantity in one inventory, read off its live record: one map lookup buys all later reads, where
  * `getQuantity` pays one per ask. The record is fetched again when the inventory's structure moved (`clear`,
  * `resetItem`); an item without a slot answers 0, as `getQuantity` does, and is asked for again each time, since
@@ -93,10 +101,6 @@ export class InventoryState implements WritableInventoryState {
 
     public static clone(inventoryState: InventoryState): InventoryState {
         return new InventoryState(inventoryState.export());
-    }
-
-    public static fromRecord(items: Record<string, number>): InventoryState {
-        return new InventoryState(items);
     }
 
     public static fromMap(items: Map<string, number>): InventoryState {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Config, ConfigSchema } from '../config/schema';
-import { CompositeControlLogic, TickControlLogic } from '../control-logic';
-import { EntityState } from '../state';
 import { SimulationContext } from './sequence/simulation-context';
 import { generateClockAlternatives } from './alternatives';
+import { ContainerStorage } from '../simulation/components/container-storage';
+import { TickByHand } from './runner/tick-by-hand.fixture';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -26,7 +26,7 @@ function build(chests: object[], inserters: object[] = []): Config {
 
 function run(config: Config, ticks: number) {
     const context = SimulationContext.fromConfig(config);
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates(), ...context.drills]);
+    const tick = new TickByHand(context, { drills: true });
     for (let i = 0; i < ticks; i++) tick.executeForTick();
     return context;
 }
@@ -34,11 +34,11 @@ function run(config: Config, ticks: number) {
 describe('a drill that drops into a chest', () => {
     it('fills a car slot by slot to its 80 stacks of ore, then holds what it mined and stops', () => {
         const context = run(build([{ id: 1, type: 'car' }]), 20);
-        const car = context.state_registry.getAllStates().find(EntityState.isSlotContainer)!;
+        const car = context.state_registry.getAllStates().find(ContainerStorage.isSlots)!;
         expect(car.getCurrentQuantity('iron-ore')).toBe(4000);
         expect(car.inventoryState.slots.every(slot => slot.item === 'iron-ore' && slot.count === 50)).toBe(true);
         // what did not fit stays in the drill, and the drill mines no more: it holds less than a tick's ore
-        const held = context.drills[0].drill_state.inventoryState.getQuantity('iron-ore');
+        const held = context.drills[0].drill_state.held.getCurrentQuantity('iron-ore');
         expect(held).toBeGreaterThan(0);
         expect(held).toBeLessThan(618);
     });
@@ -47,10 +47,10 @@ describe('a drill that drops into a chest', () => {
         // the first tick mines 616 (the bonus bar's whole units; the mining bar has not wrapped) into the drill, the
         // second drops them
         const first = run(build([{ id: 1, type: 'car' }]), 1);
-        expect(first.state_registry.getAllStates().find(EntityState.isSlotContainer)!.getCurrentQuantity('iron-ore')).toBe(0);
-        expect(first.drills[0].drill_state.inventoryState.getQuantity('iron-ore')).toBe(616);
+        expect(first.state_registry.getAllStates().find(ContainerStorage.isSlots)!.getCurrentQuantity('iron-ore')).toBe(0);
+        expect(first.drills[0].drill_state.held.getCurrentQuantity('iron-ore')).toBe(616);
         const context = run(build([{ id: 1, type: 'car' }]), 2);
-        const car = context.state_registry.getAllStates().find(EntityState.isSlotContainer)!;
+        const car = context.state_registry.getAllStates().find(ContainerStorage.isSlots)!;
         const filled = car.inventoryState.slots.map(slot => slot.count);
         expect(car.getCurrentQuantity('iron-ore')).toBe(616);
         expect(filled.slice(0, 12)).toEqual(new Array(12).fill(50));
@@ -60,7 +60,7 @@ describe('a drill that drops into a chest', () => {
 
     it('drops again when an inserter takes from the full car', () => {
         const context = run(build([{ id: 1, type: 'car' }], [stack({ type: 'chest', id: 1 }, { type: 'machine', id: 1 })]), 2000);
-        const car = context.state_registry.getAllStates().find(EntityState.isSlotContainer)!;
+        const car = context.state_registry.getAllStates().find(ContainerStorage.isSlots)!;
         const taker = context.inserters[0].inserter_state;
         expect(taker.items_dropped).toBeGreaterThan(0);
         // the drill keeps the car full whatever the furnace takes
@@ -70,13 +70,13 @@ describe('a drill that drops into a chest', () => {
 
     it('fills a rocket silo by weight: 500 ore of 2,000 a piece in a rocket of 1,000,000', () => {
         const context = run(build([{ id: 1, type: 'rocket-silo' }]), 10);
-        const silo = context.state_registry.getAllStates().find(EntityState.isRocketSilo)!;
+        const silo = context.state_registry.getAllStates().find(ContainerStorage.isWeight)!;
         expect(silo.getCurrentQuantity('iron-ore')).toBe(500);
     });
 
     it('fills a buffer chest of its item to its slots', () => {
         const context = run(build([{ id: 1, type: 'buffer-chest', storage_size: 4, item_filter: 'iron-ore' }]), 5);
-        const chest = context.state_registry.getAllStates().find(EntityState.isBufferChest)!;
+        const chest = context.state_registry.getAllStates().find(ContainerStorage.isSingleItem)!;
         expect(chest.getCurrentQuantity()).toBe(200);
     });
 

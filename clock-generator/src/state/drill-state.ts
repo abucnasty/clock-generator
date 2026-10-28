@@ -1,30 +1,50 @@
-import { MiningDrill } from "../entities";
+import { EntityId, MiningDrill } from "../entities";
+import { Energy } from "../simulation/components/energy";
+import { HeldStorage } from "../simulation/components/held-storage";
+import { Placement } from "../simulation/components/placement";
 import { EntityState } from "./entity-state";
-import { InventoryState, WritableInventoryState } from "./inventory-state";
+import { WritableInventoryState } from "./inventory-state";
 import { DrillStatus } from "./entity-status";
+import { DrillStatusCode, drillStatusCodeOf, drillStatusOf } from "../simulation/status-codes";
 
-export interface DrillState extends EntityState {
-    drill: MiningDrill
-    inventoryState: WritableInventoryState
-    status: DrillStatus
-}
+export class DrillState implements EntityState {
+    public static fromEntity = fromMiningDrillEntity;
 
+    public readonly entity_id: EntityId;
+    /**
+     * The drill's status as its ticks go by it, WORKING or DISABLED, by its code: written by its archetype's control rule
+     * and read by the drill's key and by its state in the game (`factorioDrillState`)
+     */
+    public status_code: DrillStatusCode = DrillStatusCode.WORKING;
+    /** What it has mined and not yet dropped */
+    public readonly held: HeldStorage;
+    /** Drops what it holds into its target before it mines, bound to the target by `placeDrillInto` */
+    public readonly placement: Placement;
+    /** What it runs on: electric, or the buffer of a burner drill, whose fuel is assumed supplied (simulation/components) */
+    public readonly energy: Energy;
 
-function fromMiningDrillEntity(drill: MiningDrill): DrillState {
-    return {
-        entity_id: drill.entity_id,
-        status: DrillStatus.WORKING,
-        drill: drill,
-        inventoryState: InventoryState.createEmptyForSingleItem(drill.production_rate.item),
+    constructor(public readonly drill: MiningDrill) {
+        this.entity_id = drill.entity_id;
+        this.held = HeldStorage.forItem(drill.production_rate.item);
+        this.placement = new Placement(this.held, [drill.item.name], false);
+        this.energy = Energy.ofDrill(drill);
+    }
+
+    /** The status by the name the histories record (a view of the code) */
+    public get status(): DrillStatus {
+        return drillStatusOf(this.status_code);
+    }
+
+    public set status(value: DrillStatus) {
+        this.status_code = drillStatusCodeOf(value);
+    }
+
+    /** What it holds, as every entity's state shows it: its held Storage's inventory */
+    public get inventoryState(): WritableInventoryState {
+        return this.held.inventoryState;
     }
 }
 
-/** What drives the drill's next ticks besides its inventory (see simulationStateKey) */
-function stateKey(state: DrillState): string {
-    return state.status;
-}
-
-export const DrillState = {
-    fromEntity: fromMiningDrillEntity,
-    stateKey: stateKey,
+function fromMiningDrillEntity(drill: MiningDrill): DrillState {
+    return new DrillState(drill);
 }

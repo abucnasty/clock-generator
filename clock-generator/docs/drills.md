@@ -20,7 +20,7 @@ The two tolerances were measured by setting the bars by script: they hold at bon
 
 ## What a drill holds and when it drops
 
-Each tick an enabled drill first drops what it holds. An item it mines is held and dropped in the next tick.
+Each tick an enabled drill first drops what it holds. An item it mines is held and dropped in the next tick. Drills run before the inserters in a tick (`clock-generator/src/simulation/tick-phases.ts`).
 
 - **Into a machine** up to the drill's limit (the automated insertion limit + 64, `src/rules-of-the-game.ts` rule 3; see "The stop into a machine" below).
 - **Into a chest** as far as it has room (since 0.20.0, a drill's `target` of type `chest`; `src/rules-of-the-game.ts` rule 16). There is no cap on a tick's drop: a drill holding 25,000 ore fills a legendary steel chest's 6,000 in one tick. The drill drops what it mines as far as the chest has room, by the chest's own rules: the free slots of a car, a tank or a wagon in slot order, the rocket inventory of a silo by weight, a buffer chest of its item. What does not fit stays in the drill, which mines no more until it has dropped it: a full chest stops the drill. A drill into a full chest that gets room puts in what it held in that tick and what it mines then in the next (5, then 11, in the containers family's filtered car).
@@ -32,6 +32,8 @@ While a drill still holds anything after dropping, it waits, and its bars stand 
 ## A drill disabled by its circuit
 
 A drill disabled by its circuit neither drops nor mines, and keeps what it holds and both bars, also while an inserter takes from the chest it waits on. Its circuit reaches it in the same tick as an inserter's: a constant combinator wired to both, they act in the same tick after it changes, the drill built first or last.
+
+The state the game shows for a drill is recorded tick by tick (`tests/game/mechanics/drill-status/`): `disabled_by_control_behavior` from the last tick it mines before its circuit switches it off to the last tick it is off, and `waiting_for_space_in_destination` while it holds an item its destination has no room for (a full chest, a machine at its stop). The simulator's drill state follows both; a drill disabled by script (`disabled_by_script`) is not modelled.
 
 A drill that reads its resources (Read resources, on by default on a wired drill) puts the ore under it on its own circuit wire, so "Anything > 0" is always true there and the drill is never disabled. A clock's drill is set to Enable if Anything > 0 with Read resources off, as the clock's wiring line says.
 

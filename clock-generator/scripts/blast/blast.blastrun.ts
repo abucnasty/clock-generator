@@ -57,7 +57,7 @@ const SLOW = ['REAL_THAELN_CELL09', 'CHEMICAL_SCIENCE_SHARED_FOUNDRY', 'PROCESSI
     'REAL_STUPIDFATHOBBIT_CELL02', 'AGRICULTURAL_SCIENCE', 'REAL_OWNER_PINK_SCIENCE_ORIGINAL',
     'UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON', 'REAL_COMPOSITE04_CELL07'];
 
-interface Job { group: string; name: string; config: () => Promise<any>; refusal?: { error: string } }
+export interface Job { group: string; name: string; config: () => Promise<any>; refusal?: { error: string } }
 /** The front entrance (32) and front exit, backed up and on a moving config (16; #274); a worktree from before master
  * b77cc09f has no front fixtures and so no front jobs (its job list, and key, stay the 166 of the four other groups) */
 async function frontJobs(): Promise<Job[]> {
@@ -97,12 +97,12 @@ const baseJobs: Job[] = [
     ...(['different-items', 'same-item'] as const).flatMap(family => overHoodClockCases(family).map(variant =>
         ({ group: 'overhood', name: variant.name, config: async () => overHoodClockConfig(variant) }))),
 ];
-async function loadJobs(): Promise<Job[]> {
+export async function loadJobs(): Promise<Job[]> {
     return [...baseJobs, ...await frontJobs(), ...await blockedJobs(), ...await containerJobs()]
         .sort((a, b) => (SLOW.indexOf(a.name) < 0 ? SLOW.length : SLOW.indexOf(a.name)) - (SLOW.indexOf(b.name) < 0 ? SLOW.length : SLOW.indexOf(b.name)))
         .filter(job => GROUPS.includes(job.group) && !SKIP.includes(job.name) && (!ONLY || ONLY.includes(job.name)));
 }
-const keyOf = (job: Job) => `${job.group}-${job.name}`;
+export const keyOf = (job: Job) => `${job.group}-${job.name}`;
 
 /** Records the functions of dist/ that run between two takes (V8 coverage that blast.recorder.ts started before the engine
  * loaded; none unless BLAST_FUNCTIONS is 1 and the inspector is there) */

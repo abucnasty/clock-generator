@@ -1,5 +1,6 @@
 import { EntityState, InserterState, MachineState } from "../state";
 import { factorioInserterState } from "../state/factorio-entity-state";
+import type { TickRecorder } from "../simulation/observers/observer";
 
 /** What one machine held after each tick of a run */
 export interface MachineStockSeries {
@@ -60,8 +61,8 @@ function canPreallocate(expected_ticks: number | undefined): expected_ticks is n
 /** The series of one item of a machine, with the item they are about */
 type ItemSeries = readonly [item_name: string, series: number[]];
 
-/** Samples what the machines and inserters hold after each tick of a run */
-export class StockRecorder {
+/** Samples what the machines and inserters hold after each tick of a run: a recorder of the after-tick phase */
+export class StockRecorder implements TickRecorder {
     private ticks = 0;
     private readonly machines: { state: MachineState; series: MachineStockSeries; inputs: ItemSeries[]; outputs: ItemSeries[]; fuel_item: string | undefined }[];
     private readonly inserters: { state: InserterState; sink: EntityState; series: InserterHandSeries }[];
@@ -106,7 +107,7 @@ export class StockRecorder {
         this.ticks += 1;
         for (const { state, series, inputs, outputs, fuel_item } of this.machines) {
             for (const [item_name, item_series] of inputs) {
-                item_series[tick] = MachineState.ingredientQuantity(state, item_name);
+                item_series[tick] = state.ingress.ingredientQuantity(item_name);
             }
             for (const [item_name, item_series] of outputs) {
                 item_series[tick] = state.inventoryState.getQuantity(item_name);
@@ -118,7 +119,7 @@ export class StockRecorder {
             series.products_finished[tick] = state.productsFinished;
             series.crafts_started[tick] = state.craftsStarted;
             if (series.results_placed !== undefined) {
-                series.results_placed[tick] = state.resultsPlaced;
+                series.results_placed[tick] = state.placement.results_placed;
             }
             series.crafting_progress[tick] = barOf(state.craftingProgress.progress);
             series.bonus_progress[tick] = barOf(state.bonusProgress.progress);
