@@ -11,6 +11,8 @@ export function ValidationPanel({ issues, children, focusTargets = true }: {
     if (!issues.length) return null;
     const errors = issues.filter(issue => issue.blocksGeneration);
     const advice = issues.filter(issue => !issue.blocksGeneration);
+    // the sentence that opens one refusal, said once above the problems it lists
+    const lead = errors.find(issue => issue.lead)?.lead;
     return <Paper component="section" variant="outlined" aria-label="Build validation" id={focusTargets ? 'build-validation' : undefined}
         tabIndex={-1} sx={{ mb: 2, p: 1.5, '&:focus': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 1, mb: 1 }}>
@@ -19,6 +21,7 @@ export function ValidationPanel({ issues, children, focusTargets = true }: {
                 {[errors.length ? `${errors.length} ${errors.length === 1 ? 'error' : 'errors'}` : '', advice.length ? `${advice.length} ${advice.length === 1 ? 'advisory' : 'advisories'}` : ''].filter(Boolean).join(' · ')}
             </Typography>
         </Box>
+        {lead && <Typography variant="body2" sx={{ mb: 1 }}>{lead}</Typography>}
         <Box sx={{ maxHeight: focusTargets ? 480 : '35dvh', overflowY: 'auto', p: 0.5 }}>
             {[...errors, ...advice].map(issue => <Box key={issue.id} id={focusTargets ? validationIssueElementId(issue.id) : undefined}
                 role="group" aria-label={issue.text} tabIndex={-1}
