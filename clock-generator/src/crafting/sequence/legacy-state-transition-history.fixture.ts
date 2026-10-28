@@ -8,7 +8,7 @@ import { Entity, EntityId, ReadableEntityRegistry } from "../../entities";
 import { chestName } from "../../common/entity-types";
 import { TickProvider } from "../../simulation/current-tick-provider";
 import { reasonText } from "../../state/reason-table";
-import { FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
+import { DrillStateTracker, FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
 import type { StatusChangeReason } from "../../simulation/observers/observer";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
 import { EntityStatus, EntityTransitionRecorder, StateTransitionEntityType, StateTransitionHistory } from "./state-transition-history";
@@ -239,6 +239,10 @@ interface StateTransitionInternals extends TrackerInternals {
 interface FactorioStateInternals extends TrackerInternals {
     last_state: string | null;
 }
+/** A drill's tracker records a tick when the next one ends: the tick it records is the one before */
+interface DrillStateInternals extends FactorioStateInternals {
+    previous_tick: number;
+}
 
 /**
  * Until `restore` is called, every state transition history also records into an object-per-transition history, from
@@ -287,6 +291,16 @@ export function recordBothWays(seen: (recorded: RecordedBothWays) => void): { re
             const { recorder } = this;
             legacyOf(recorder.history).recordFactorioState(recorder.entity_id, recorder.entity_type,
                 { tick: this.tick_provider.getCurrentTick(), state: this.last_state });
+        }
+    });
+    const drill_state = DrillStateTracker.prototype as unknown as { onTick(): void };
+    patch(drill_state, "onTick", original => function (this: DrillStateInternals) {
+        const before = this.last_state;
+        const tick = this.previous_tick;
+        original.call(this);
+        if (this.last_state !== before && this.last_state !== null) {
+            const { recorder } = this;
+            legacyOf(recorder.history).recordFactorioState(recorder.entity_id, recorder.entity_type, { tick, state: this.last_state });
         }
     });
     patch(StateTransitionHistory.prototype, "clear", original => function (this: StateTransitionHistory) {

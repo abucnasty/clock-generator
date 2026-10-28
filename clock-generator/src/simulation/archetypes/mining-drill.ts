@@ -45,7 +45,7 @@ export function placeDrillInto(state: DrillState, sink_state: EntityState): void
  * and it starts WORKING with both bars at 0, while what it holds, its Placement and its observers are kept (same-tick
  * rule 12).
  *
- * Its status starts WORKING; `DrillState.status`, which the Factorio state reads, is never written (a known quirk, kept).
+ * Its status starts WORKING and is kept in its `DrillState` (`status_code`), which the Factorio state reads.
  */
 export class MiningDrillArchetype implements StatusChangeReason<DrillStatusCode> {
 
@@ -56,10 +56,15 @@ export class MiningDrillArchetype implements StatusChangeReason<DrillStatusCode>
     }): MiningDrillArchetype {
         const { drill_state, sink_state, enable_control = AlwaysEnabledControl } = args;
         placeDrillInto(drill_state, sink_state);
+        drill_state.status_code = DrillStatusCode.WORKING;
         return new MiningDrillArchetype(drill_state, Mining.forDrill(drill_state), new Control(enable_control));
     }
 
-    public status: DrillStatusCode = DrillStatusCode.WORKING;
+    /** The status, kept in the drill's state */
+    public get status(): DrillStatusCode {
+        return this.drill_state.status_code;
+    }
+
     /** What watches it (histories, the Factorio state, the transfers, debug output), by event in the order added */
     public readonly observers = new Observers<DrillStatusCode>();
 
@@ -76,7 +81,7 @@ export class MiningDrillArchetype implements StatusChangeReason<DrillStatusCode>
      */
     public useControl(next: EnableControl): void {
         this.control.use(next);
-        this.status = DrillStatusCode.WORKING;
+        this.drill_state.status_code = DrillStatusCode.WORKING;
         this.mining.resetForSwap();
     }
 
@@ -119,14 +124,15 @@ export class MiningDrillArchetype implements StatusChangeReason<DrillStatusCode>
     /** Observers first, then the status written (same-tick rule 17); a drill has no exit or enter steps */
     private changeStatus(to: DrillStatusCode): void {
         this.observers.tellStatusChange(this.status, to, this);
-        this.status = to;
+        this.drill_state.status_code = to;
     }
 
     /**
      * The drill's key (see simulationStateKey): its components' keys in a fixed order, "|" between them: what it holds
      * (its held Storage), its status as its code, and both bars (its Mining). Two equal keys one clock period apart mean
      * the drill repeats. Its Placement holds a running total and its Control is the same in every tick of a run, so
-     * neither is keyed, nor is `DrillState.status`, never written; observers only watch.
+     * neither is keyed; observers only watch. The state it shows in the game (working, disabled, or waiting to drop) is
+     * made from what is keyed: its status and what it holds.
      */
     public stateKey(): string {
         return `${this.drill_state.held.key()}|${this.status}|${this.mining.key()}`;

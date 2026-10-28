@@ -53,10 +53,11 @@ describe("the hand and the timing of an inserter (docs/rules-of-the-game.md, An 
         expect(inserter(id).hand.by_item).toEqual([{ item: "iron-gear-wheel", hand }]);
     });
 
-    it("waits for a full hand at a machine that places its results as the bulk ones do, the stack inserter's data beside it", () => {
+    it("waits for a full hand where its prototype has wait_for_full_hand: the stack inserter, not the bulk, fast or basic ones", () => {
         expect(inserter(1).hand.full_hand).toEqual({ at_placing_source: true, elsewhere: true });
-        expect(inserter(4).hand.full_hand.at_placing_source).toBe(true);
-        expect(inserter(2).hand.full_hand.at_placing_source).toBe(false);
+        for (const id of [2, 3, 4, 5]) {
+            expect(inserter(id).hand.full_hand, `inserter ${id}`).toEqual({ at_placing_source: false, elsewhere: false });
+        }
         expect([inserter(1).hand.wait_for_full_hand, inserter(1).hand.grab_less_to_match_belt_stack, inserter(1).hand.max_belt_stack_size]).toEqual([true, true, 4]);
         expect([inserter(4).hand.wait_for_full_hand, inserter(4).hand.max_belt_stack_size]).toEqual([false, 1]);
     });
@@ -184,11 +185,27 @@ describe("the energy of a burner (rule 4)", () => {
         expect(machine.energy.fuel).toMatchObject({ item: "nutrients", per_second: 0.25, per_craft: 0.075 });
     });
 
-    it("runs a stone furnace without fuel, as the simulator does today", () => {
-        const furnace = machineOf({ machines: [{ id: 1, recipe: "stone-brick", crafting_speed: 1, productivity: 0, prototype: "stone-furnace" }] });
-        expect(furnace.energy).toMatchObject({ source: "burner", energy_usage_kw: 90, fuel_modelled: false, fuel: null });
+    it("fuels a stone furnace from its burner: 90 kW, the first fuel of chemical, a slot limit of 5, the fuel an input an inserter fills", () => {
+        const furnace = machineOf({ machines: [{ id: 1, recipe: "stone-brick", crafting_speed: 1, productivity: 0, prototype: "stone-furnace", fuel: "coal" }] });
+        expect(furnace.energy).toMatchObject({ source: "burner", energy_usage_kw: 90, fuel_modelled: true });
         expect(furnace.energy.burner?.fuel_categories).toEqual(["chemical"]);
-        expect(furnace.input_limits.limits.map(limit => limit.kind)).toEqual(["ingredient"]);
+        // 90 kW on 4 MJ coal: 0.0225 a second; a plate's 3.2 s at speed 1 is 0.072 coal
+        expect(furnace.energy.fuel).toMatchObject({ item: "coal", fuel_value_mj: 4, per_second: 0.0225, slot_limit: 5 });
+        expect(furnace.energy.fuel!.per_craft).toBeCloseTo(0.0225 * 3.2 * 1 / 1, 10);
+        expect(furnace.input_limits.limits.map(limit => limit.kind)).toEqual(["ingredient", "fuel"]);
+    });
+
+    it("fuels a steel furnace and a captive biter spawner the same way, and gives an electric machine none", () => {
+        const steel = machineOf({ machines: [{ id: 1, recipe: "stone-brick", crafting_speed: 2, productivity: 0, prototype: "steel-furnace" }] });
+        expect(steel.energy).toMatchObject({ source: "burner", energy_usage_kw: 90, fuel_modelled: true });
+        // twice the speed, the same 90 kW: half the fuel for a brick
+        const stone = machineOf({ machines: [{ id: 1, recipe: "stone-brick", crafting_speed: 1, productivity: 0, prototype: "stone-furnace" }] });
+        expect(steel.energy.fuel!.per_craft).toBeCloseTo(stone.energy.fuel!.per_craft / 2, 10);
+        const spawner = machineOf({ machines: [{ id: 1, recipe: "biter-egg", crafting_speed: 1, productivity: 0, prototype: "captive-biter-spawner" }] });
+        expect(spawner.energy).toMatchObject({ source: "burner", energy_usage_kw: 100, fuel_modelled: true });
+        expect(spawner.energy.fuel).toMatchObject({ item: "bioflux", fuel_value_mj: 6, slot_limit: 5 });
+        const electric = machineOf({ machines: [{ id: 1, recipe: "stone-brick", crafting_speed: 2, productivity: 0, prototype: "electric-furnace" }] });
+        expect(electric.energy).toMatchObject({ fuel_modelled: false, fuel: null });
     });
 
     it("reads energy as the game data writes it", () => {

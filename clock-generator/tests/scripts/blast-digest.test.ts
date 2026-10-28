@@ -94,6 +94,15 @@ describe('the digest of an alternative and of a job', () => {
         expect(differ(clock_only)).toEqual(['clock_only_run']);
     });
 
+    it('hashes the fuel view\'s history as the serializable form writes it, whatever the reason numbers', () => {
+        const view = (state_transition_history: unknown) => ({ periods: 2, fuel_levels: [], state_transition_history });
+        const sealed = digestAlternative(alternative({}, { fuel_consumption_view: view(history) }), expandStateTransitionHistory);
+        const written = digestAlternative(alternative({}, { fuel_consumption_view: view(expandStateTransitionHistory(history)) }), expandStateTransitionHistory);
+        expect(sealed.results.fuel_consumption_view).toBe(written.results.fuel_consumption_view);
+        expect(digestAlternative(alternative({}, { fuel_consumption_view: undefined }), expandStateTransitionHistory).results.fuel_consumption_view)
+            .not.toBe(sealed.results.fuel_consumption_view);
+    });
+
     it('digests why_not_stable, the selected index and the ids for the job', () => {
         const job = digestJob({ why_not_stable: null, selected_index: 0, alternatives: [{ id: 'a' }, { id: 'b' }] });
         expect(Object.keys(job.results)).toEqual(['why_not_stable', 'selected_index', 'ids']);

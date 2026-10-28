@@ -46,8 +46,9 @@ export function machineStatusOf(code: CraftingStatus): MachineStatus {
 }
 
 /**
- * A drill's status, named after `defines.entity_status`. The game also shows `waiting_for_space_in_destination` for a
- * blocked drill; the simulator does not derive it, and the refactor adds no status.
+ * A drill's status, named after `defines.entity_status`. The game also shows `waiting_for_space_in_destination` while a
+ * drill holds an item it could not drop yet; that is not a status the drill's ticks go by, so it is derived from what
+ * the drill holds where its Factorio state is made (`factorioDrillState`).
  */
 export const DrillStatusCode = {
     WORKING: 0,

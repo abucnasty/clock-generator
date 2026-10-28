@@ -3,8 +3,8 @@ import { CraftingMachinePrototype } from "../../data/factorio-data-types";
 import * as Game from "../../data/generated/prototype-types";
 import { BurnerEnergySource } from "../machine/fuel/energy-source";
 import { FuelSlot } from "../machine/fuel/fuel-slot";
-import { fuelModelled } from "../machine/machine-rule";
-import { FuelConsumption } from "../machine/traits/fuel-consumption";
+import { FuelConsumption, MIN_ENERGY_CONSUMPTION_BONUS_PERCENT } from "../machine/traits/fuel-consumption";
+import { TICKS_PER_SECOND } from "../../data-types";
 
 const SI_PREFIX: Readonly<Record<string, number>> = { "": 1, k: 1e3, M: 1e6, G: 1e9, T: 1e12 };
 
@@ -46,9 +46,9 @@ export interface EnergyTrait {
     readonly energy_bonus: number;
     readonly burner: BurnerTrait | null;
     /**
-     * Whether the simulator models this burner's fuel today: only a burner on the nutrients fuel category that is no
-     * furnace (machine-rule.ts fuelModelled, the biochamber) burns fuel; the stone and steel furnaces, the captive biter
-     * spawner and the burner mining drill run without any (a kept quirk)
+     * Whether the machine burns fuel items from a fuel slot: every crafting machine on a burner energy source does (the
+     * stone and steel furnaces, the captive biter spawner, the biochamber). A mining drill never does: its fuel is
+     * assumed supplied (see drillEnergy)
      */
     readonly fuel_modelled: boolean;
     /** What it burns, where its fuel is modelled */
@@ -73,9 +73,13 @@ function burnerOf(source: Game.BurnerEnergySource): BurnerTrait {
     return burner;
 }
 
-/** A burner energy source from the data: the prototype's energy usage, burning the items of its fuel categories */
+/** A burner energy source from the data: the prototype's energy usage and effectivity, burning the items of its fuel categories */
 function burnerEnergySourceOf(energy_usage_kw: number, burner: BurnerTrait): BurnerEnergySource {
-    return { energy_usage_kw, fuels: burner.fuels.map(fuel => ({ item_name: fuel.item, fuel_value_mj: fuel.fuel_value_mj })) };
+    return {
+        energy_usage_kw,
+        effectivity: burner.effectivity,
+        fuels: burner.fuels.map(fuel => ({ item_name: fuel.item, fuel_value_mj: fuel.fuel_value_mj })),
+    };
 }
 
 function burnedFuelOf(consumption: FuelConsumption, slot: FuelSlot): BurnedFuel {
@@ -121,20 +125,19 @@ export function burnerFuelOf(
 }
 
 /**
- * The burner a machine of the prototype burns its fuel from, where its fuel is modelled (`fuel_modelled`): the
- * prototype's energy usage and the items of its burner's fuel categories, from the data; undefined for any other machine
- * and for one whose prototype the data does not hold
+ * The burner a machine of the prototype burns its fuel from: the prototype's energy usage and effectivity and the items
+ * of its burner's fuel categories, from the data; undefined for a machine on any other energy source and for one whose
+ * prototype the data does not hold. No name, class or fuel category decides it: every burner is fuelled.
  */
 export function modelledBurnerOf(prototype: CraftingMachinePrototype | null): BurnerEnergySource | undefined {
-    if (prototype === null || !fuelModelled(prototype) || prototype.energy_source.type !== "burner") {
+    if (prototype === null || prototype.energy_source.type !== "burner") {
         return undefined;
     }
     return burnerEnergySourceOf(energyValue(prototype.energy_usage, "W") / 1000, burnerOf(prototype.energy_source));
 }
 
 /**
- * A machine's energy, and where its fuel is modelled (`fuel_modelled`, machine-rule.ts) what it burns of the fuel the
- * config names, else of its first: the source from the data, the burn by fuel-consumption.ts and fuel-slot.ts. The
+ * A machine's energy, and for a burner (`fuel_modelled`) what it burns of the fuel the config names, else of its first: the source from the data, the burn by fuel-consumption.ts and fuel-slot.ts. The
  * machine (machine.ts) reads its fuel from here.
  */
 export function machineEnergy(
@@ -151,7 +154,23 @@ export function machineEnergy(
     return { ...energy, fuel_modelled: true, fuel: burnedFuelOf(consumption, slot) };
 }
 
-/** A drill's energy: its source and usage from the data; no drill's fuel is modelled */
+/**
+ * A drill's energy: its source and usage from the data. A burner drill has an energy buffer, but no fuel slot: nothing
+ * in a build feeds a drill, so its fuel is assumed supplied without limit (SuppliedBurnerEnergy).
+ */
 export function drillEnergy(prototype: { energy_source: Game.EnergySource; energy_usage: string }): EnergyTrait {
     return { ...energyOf(prototype, 0), fuel_modelled: false, fuel: null };
+}
+
+/**
+ * The energy a burner draws in a tick of work, in MJ of fuel: the usage with the energy consumption bonus (clamped at
+ * -80%) over the effectivity; null for any other energy source. A tick of work takes this much from the buffer,
+ * whatever the crafting speed, productivity or what is made (recorded: tests/game/mechanics/fuel).
+ */
+export function burnerEnergyPerTick(energy: Pick<EnergyTrait, "energy_usage_kw" | "energy_bonus" | "burner">): number | null {
+    if (energy.burner === null || energy.energy_usage_kw === null) {
+        return null;
+    }
+    const bonus = Math.max(energy.energy_bonus, MIN_ENERGY_CONSUMPTION_BONUS_PERCENT);
+    return energy.energy_usage_kw * (100 + bonus) / 100 / energy.burner.effectivity / 1000 / TICKS_PER_SECOND.toDecimal();
 }

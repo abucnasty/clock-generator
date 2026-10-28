@@ -8,7 +8,10 @@ import { MachineState } from "../../state";
 import type { InserterHandContents, InserterState } from "../../state/inserter-state";
 import { CraftingStatus, machineStatusOf } from "../status-codes";
 import { CraftEventListener } from "./craft-event-listener";
-import { FactorioStateTracker } from "./factorio-state-tracker";
+import { DrillStateTracker, FactorioStateTracker } from "./factorio-state-tracker";
+import { DrillState } from "../../state/drill-state";
+import { MiningDrill } from "../../entities";
+import { DrillStatusCode } from "../status-codes";
 import { HandChangeListener } from "./hand-change-listener";
 import { EntityObserver, Observers, StatusChangeReason } from "./observer";
 import { StateTransitionTracker } from "./state-transition-tracker";
@@ -97,6 +100,27 @@ describe("the Factorio state tracker", () => {
             tracker.onTick();
         }
         expect(recorded).toEqual([[0, "working"], [2, "no_power"], [4, "working"]]);
+    });
+});
+
+describe("the drill state tracker", () => {
+    const drillState = () => DrillState.fromEntity(MiningDrill.fromConfig(
+        { id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: { type: "chest", id: 1 } }));
+
+    it("records a tick when the next one ends: disabled when the drill is disabled in the next tick, else by what the drill holds", () => {
+        const ticks = MutableTickProvider.create(0);
+        const state = drillState();
+        const recorded: [number, string][] = [];
+        const tracker = new DrillStateTracker(ticks, state, { recordFactorioState: (at, name) => recorded.push([at, name]) });
+        // disabled in ticks 3 and 4, enabled again in 5
+        const disabled = [false, false, false, true, true, false, false];
+        disabled.forEach((off, tick) => {
+            ticks.setCurrentTick(tick);
+            state.status_code = off ? DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR : DrillStatusCode.WORKING;
+            tracker.onTick();
+        });
+        // no placement target: nothing is blocked; ticks 2 and 3 show disabled, one tick before the drill is disabled in them, and 4 is working
+        expect(recorded).toEqual([[0, "working"], [2, "disabled_by_control_behavior"], [4, "working"]]);
     });
 });
 

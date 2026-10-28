@@ -125,7 +125,12 @@ export function digestAlternative(alternative: any, expand: ExpandHistory | unde
             ...run.clock_only_run,
             state_transition_history: expandedLazily(run.clock_only_run.state_transition_history, expand),
         },
-        fuel_consumption_view: run.fuel_consumption_view,
+        // its history too as the serializable form writes it: the sealed form's reasons are numbers of the process's reason
+        // table, which another engine numbers otherwise for the same texts
+        fuel_consumption_view: run.fuel_consumption_view && {
+            ...run.fuel_consumption_view,
+            state_transition_history: expandedLazily(run.fuel_consumption_view.state_transition_history, expand),
+        },
     });
 }
 
