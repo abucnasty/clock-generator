@@ -104,8 +104,22 @@ describe('the gap between copies', () => {
         expect(copyOffsetShown({ x: 4, y: 2 })).toBe('diagonal');
     });
 
-    // the field has no name of its own (the number field drops its aria-label), so it is found by its id
     const tilesField = () => document.getElementById(ELEMENT_IDS.targetCopyOffset);
+
+    it('names its two fields, so that a screen reader reads what each one is for', () => {
+        form({ showCopyOffset: true, onCopyOffsetChange: () => {}, copyOffset: { x: 12, y: 0 } });
+        expect(screen.getByRole('textbox', { name: 'Tiles to the next copy' })).toBe(tilesField());
+        expect((screen.getByRole('textbox', { name: 'Tiles to the next copy' }) as HTMLInputElement).value).toBe('12');
+        expect(screen.getByRole('combobox', { name: 'Side of the next copy' }).textContent).toBe('east');
+    });
+
+    it('reports the side picked in the field named for it', async () => {
+        const onCopyOffsetChange = vi.fn();
+        const { user } = form({ showCopyOffset: true, onCopyOffsetChange, copyOffset: { x: 12, y: 0 } });
+        await user.click(screen.getByRole('combobox', { name: 'Side of the next copy' }));
+        await user.click(screen.getByRole('option', { name: 'north' }));
+        expect(onCopyOffsetChange).toHaveBeenCalledExactlyOnceWith({ x: 0, y: -12 });
+    });
 
     it('shows a step that runs off the four sides as it is', () => {
         form({ showCopyOffset: true, onCopyOffsetChange: () => {}, copyOffset: { x: 4, y: -2 } });

@@ -26,38 +26,23 @@ beforeEach(() => {
 });
 
 describe('Manual snapshot post-MUI focus recovery', () => {
-    it.each([
-        { kind: 'body', open: () => {}, spoil: () => {} },
-        { kind: 'html', open: () => document.documentElement.focus(), spoil: () => {} },
+    it.each<{ when: string; before?: () => void; spoil?: () => void; focused: 'toggle' | 'trigger' | 'heading' | 'body' }>([
+        { when: 'MUI restores to the body', focused: 'toggle' },
+        { when: 'MUI restores to html', before: () => document.documentElement.focus(), focused: 'toggle' },
         // a real document falls back to its body
-        { kind: 'disconnected', open: () => trigger.focus(), spoil: () => trigger.remove() },
-        { kind: 'hidden', open: () => trigger.focus(), spoil: () => { trigger.hidden = true; } },
-        { kind: 'not-rendered', open: () => trigger.focus(), spoil: () => { notRendered(trigger); } },
-        { kind: 'invisible', open: () => trigger.focus(), spoil: () => { trigger.style.visibility = 'hidden'; } },
-    ])('recovers $kind focus to the enabled selected workflow toggle', async ({ open, spoil }) => {
-        open(); await close(spoil);
-        expect(document.activeElement).toBe(toggle);
-    });
-    it('reads actual post-cleanup MUI restoration and preserves a rendered control or heading', async () => {
-        trigger.focus(); await close();
-        expect(document.activeElement).toBe(trigger);
-        heading.focus(); await close();
-        expect(document.activeElement).toBe(heading);
-    });
-    it('does not steal from another visible dialog while its autofocus is pending', async () => {
-        await close(() => document.body.insertAdjacentHTML('beforeend', '<div role="dialog"></div>'));
-        expect(document.activeElement).toBe(document.body);
-    });
-    it('hidden dialogs do not block recovery', async () => {
-        await close(() => document.body.insertAdjacentHTML('beforeend', '<div role="dialog" hidden></div>'));
-        expect(document.activeElement).toBe(toggle);
-    });
-    it.each(['disabled', 'aria-disabled'])('uses the rendered heading when the selected toggle is %s', async attribute => {
-        toggle.setAttribute(attribute, attribute === 'disabled' ? '' : 'true'); await close();
-        expect(document.activeElement).toBe(heading);
-    });
-    it('never focuses a hidden heading when neither fallback is usable', async () => {
-        notRendered(toggle); notRendered(heading); await close();
-        expect(document.activeElement).toBe(document.body);
+        { when: 'MUI restores to a disconnected trigger', before: () => trigger.focus(), spoil: () => trigger.remove(), focused: 'toggle' },
+        { when: 'MUI restores to a hidden trigger', before: () => trigger.focus(), spoil: () => { trigger.hidden = true; }, focused: 'toggle' },
+        { when: 'MUI restores to a not-rendered trigger', before: () => trigger.focus(), spoil: () => { notRendered(trigger); }, focused: 'toggle' },
+        { when: 'MUI restores to an invisible trigger', before: () => trigger.focus(), spoil: () => { trigger.style.visibility = 'hidden'; }, focused: 'toggle' },
+        { when: 'MUI restores to a rendered control', before: () => trigger.focus(), focused: 'trigger' },
+        { when: 'MUI restores to a rendered heading', before: () => heading.focus(), focused: 'heading' },
+        { when: 'a visible dialog has yet to autofocus', spoil: () => document.body.insertAdjacentHTML('beforeend', '<div role="dialog"></div>'), focused: 'body' },
+        { when: 'only a hidden dialog is open', spoil: () => document.body.insertAdjacentHTML('beforeend', '<div role="dialog" hidden></div>'), focused: 'toggle' },
+        { when: 'the selected toggle is disabled', before: () => toggle.setAttribute('disabled', ''), focused: 'heading' },
+        { when: 'the selected toggle is aria-disabled', before: () => toggle.setAttribute('aria-disabled', 'true'), focused: 'heading' },
+        { when: 'neither toggle nor heading is rendered', before: () => { notRendered(toggle); notRendered(heading); }, focused: 'body' },
+    ])('$when, focus ends on the $focused', async ({ before, spoil, focused }) => {
+        before?.(); await close(spoil);
+        expect(document.activeElement).toBe({ toggle, trigger, heading, body: document.body }[focused]);
     });
 });
