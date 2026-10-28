@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config'
+import DurationSequencer from './ci/duration-sequencer';
 
 const exclude = [
     ...configDefaults.exclude,
@@ -81,6 +82,8 @@ export default defineConfig({
     test: {
         silent: true,
         maxWorkers,
+        // `--shard` deals the files out by their measured duration instead of the hash of their paths (CI)
+        sequence: { sequencer: DurationSequencer },
         projects: [
             {
                 plugins: [engineFromBuild()],

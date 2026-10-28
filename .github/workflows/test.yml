@@ -125,9 +125,13 @@ jobs:
             echo "The generation tests are skipped: the pull request changes documentation only ($(wc -l < changed.txt) file(s))." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # The generation tests, in shards: vitest gives each shard the same share of the files by the hash of their paths, and
-  # the job's wall time is that of the slowest shard. Each shard is a runner of its own (4 vCPUs) and tests with all of
-  # it. The check that is named "Generation tests" is the job after the shards.
+  # The generation tests, in shards: the sequencer of clock-generator/ci/duration-sequencer.ts (set in vitest.config.ts)
+  # deals the files out to the shards by their measured durations (ci/generation-durations.json), longest first, and
+  # the job's wall time is that of the slowest shard. Plain `--shard` would give them out by the hash of their paths,
+  # which put the two slowest files in one shard. Every shard computes the whole split and takes its part, so no file
+  # is missed or run twice, and a new or renamed file still runs, counted as the median file. Refresh the durations with
+  # clock-generator/scripts/ci/update-generation-durations.js from the reports of a run. Each shard is a runner of its
+  # own (4 vCPUs) and tests with all of it. The check that is named "Generation tests" is the job after the shards.
   generation-shards:
     name: Generation tests (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
     needs: changes
