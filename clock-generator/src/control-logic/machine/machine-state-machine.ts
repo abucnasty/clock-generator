@@ -27,12 +27,30 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
     /**
      * Products the machine holds go to its output in the tick there is room for them, whatever mode it is in; a machine
      * that places its results itself puts what waits in its output into its result target, before it crafts and again
-     * after, so that what a tick's crafts give is in the container when the tick ends (recorded on the recycler)
+     * after, so that what a tick's crafts give is in the container when the tick ends (recorded on the recycler). The
+     * phase table runs the same steps one by one (simulation/tick-phases.ts).
      */
     public override executeForTick(): void {
+        this.placeResults();
+        this.putHeldProductsInOutput();
+        this.ruleStep();
+        this.modeStep();
+        this.placeResults();
+        this.tickObservers();
+    }
+
+    /** What waits in the output into the result target, where the machine places its results itself */
+    public placeResults(): void {
         this.working_mode.placeResults();
+    }
+
+    /** Products the machine holds into its output, as far as there is room */
+    public putHeldProductsInOutput(): void {
         this.working_mode.putHeldProductsInOutput();
-        // a copy of ModeStateMachine.executeForTick, see there
+    }
+
+    /** The status rule; a copy of ModeStateMachine.ruleStep, see ModeStateMachine.executeForTick */
+    public override ruleStep(): void {
         const evaluator = this.current_evaluator ?? this.modeEvaluatorForMode(this.current);
         const transition = evaluator.evaluateTransition();
         const next = transition instanceof Transition ? this.executeTransition(this.current, transition) : this.current;
@@ -40,8 +58,15 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
             this.current = next;
             this.current_evaluator = this.entered_evaluator ?? this.modeEvaluatorForMode(next);
         }
-        next.executeForTick();
-        this.working_mode.placeResults();
+    }
+
+    /** The status's step; a copy, see ModeStateMachine.executeForTick */
+    public override modeStep(): void {
+        this.current.executeForTick();
+    }
+
+    /** MachineStatusPlugin (added at build, so first) and the observers added after it; a copy, see there */
+    public override tickObservers(): void {
         const tick_plugins = this.tick_plugins;
         for (let index = 0; index < tick_plugins.length; index++) {
             tick_plugins[index].executeForTick!();

@@ -1,5 +1,6 @@
 import { ControlLogic } from "../../../control-logic";
 import { SimulationTick } from "../simulation-tick";
+import { AfterTickStep, NO_ENTITY, TickPhase, TickTracer } from "../../../simulation/tick-phases";
 import { Duration } from "../../../data-types";
 import { SimulationContext } from "../../sequence";
 import { RunnerStep, RunnerStepType } from "./runner-step";
@@ -16,6 +17,8 @@ export class SimulateStep implements RunnerStep {
         private readonly after_tick?: () => void,
         /** Asked after every simulated tick (after `after_tick`); the step stops early when it answers true */
         private readonly stop_early?: () => boolean,
+        /** Told of every step of every tick, the after-tick phase's included (a test of the phase table) */
+        private readonly tracer: TickTracer | null = null,
     ) {
         this.control_logic = this.build()
     }
@@ -26,6 +29,7 @@ export class SimulateStep implements RunnerStep {
     public execute(): void {
         const context = this.simulation_context
         const control_logic = this.control_logic;
+        const tracer = this.tracer;
 
         const start_tick = context.tick_provider.getCurrentTick();
         const end_tick = start_tick + this.duration.ticks;
@@ -36,7 +40,10 @@ export class SimulateStep implements RunnerStep {
                 break;
             }
             control_logic.executeForTick();
+            // the phase table's after-tick phase (simulation/tick-phases.ts)
+            if (tracer !== null) tracer.step(TickPhase.AFTER_TICK, NO_ENTITY, AfterTickStep.RECORDERS);
             this.after_tick?.();
+            if (tracer !== null) tracer.step(TickPhase.AFTER_TICK, NO_ENTITY, AfterTickStep.STOP_EARLY);
             if (this.stop_early?.() === true) {
                 break;
             }
@@ -45,6 +52,6 @@ export class SimulateStep implements RunnerStep {
     }
 
     private build(): ControlLogic {
-        return new SimulationTick(this.simulation_context);
+        return new SimulationTick(this.simulation_context, this.tracer);
     }
 }

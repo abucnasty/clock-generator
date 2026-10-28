@@ -34,13 +34,27 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
     /** The enable control when it is also a ControlLogic, as FractionalSwingEnableControl is, to run each tick */
     private readonly ticking_control: ControlLogic | undefined;
 
+    /** The steps of a tick in the order of the phase table (simulation/tick-phases.ts), which runs them one by one */
     public override executeForTick(): void {
-        // If the enable control implements ControlLogic, execute it each tick
-        // This allows controls like FractionalSwingEnableControl to track state transitions
+        this.tickControl();
+        this.ruleStep();
+        this.modeStep();
+        this.tickObservers();
+        this.writeShownEnabled();
+    }
+
+    /**
+     * If the enable control implements ControlLogic, execute it each tick. This allows controls like
+     * FractionalSwingEnableControl to track state transitions
+     */
+    public tickControl(): void {
         if (this.ticking_control) {
             this.ticking_control.executeForTick();
         }
-        // a copy of ModeStateMachine.executeForTick, see there
+    }
+
+    /** The phase rule; a copy of ModeStateMachine.ruleStep, see ModeStateMachine.executeForTick */
+    public override ruleStep(): void {
         const evaluator = this.current_evaluator ?? this.modeEvaluatorForMode(this.current);
         const transition = evaluator.evaluateTransition();
         const next = transition instanceof Transition ? this.executeTransition(this.current, transition) : this.current;
@@ -48,11 +62,26 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
             this.current = next;
             this.current_evaluator = this.entered_evaluator ?? this.modeEvaluatorForMode(next);
         }
-        next.executeForTick();
+    }
+
+    /** The phase's step; a copy, see ModeStateMachine.executeForTick */
+    public override modeStep(): void {
+        this.current.executeForTick();
+    }
+
+    /**
+     * The plugins of the tick in the order they were added (InserterStatusPlugin writes the phase in the rule, on the
+     * transition); a copy, see ModeStateMachine.executeForTick
+     */
+    public override tickObservers(): void {
         const tick_plugins = this.tick_plugins;
         for (let index = 0; index < tick_plugins.length; index++) {
             tick_plugins[index].executeForTick!();
         }
+    }
+
+    /** Whether the game shows the inserter enabled after this tick, for its game status and the next tick's readers */
+    public writeShownEnabled(): void {
         this.inserter_state.enabled = this.shownEnabled();
     }
 

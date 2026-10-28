@@ -1,4 +1,5 @@
-import { CompositeControlLogic, ControlLogic, EnableControl, TickControlLogic } from "../../../control-logic";
+import { ControlLogic, EnableControl } from "../../../control-logic";
+import { SimulationTick } from "../simulation-tick";
 import { assertIsChest, Entity, EntityId } from "../../../entities";
 import { EntityState, MachineState, MachineStatus } from "../../../state";
 import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../sequence";
@@ -99,7 +100,6 @@ export class PrepareStep implements RunnerStep {
 
     private build(): ControlLogic {
         const context = this.simulation_context
-        const tick_control_logic = new TickControlLogic(context.tick_provider);
         
         // Input inserters: inserters that drop into machines
         const input_inserters_only = context.inserters
@@ -149,13 +149,6 @@ export class PrepareStep implements RunnerStep {
             }
         });
 
-        return new CompositeControlLogic(
-            [
-                tick_control_logic,
-                ...cloned_context.drills,
-                cloned_context.inserterUpdates(),
-                ...cloned_context.machines,
-            ]
-        )
+        return new SimulationTick(cloned_context);
     }
 }

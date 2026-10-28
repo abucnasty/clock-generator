@@ -33,17 +33,33 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
     }
 
     /**
-     * A tick of the current mode. The state machines of inserters and machines run copies of it (see
-     * InserterStateMachine.executeForTick): a copy of their own calls into their own kinds of modes and evaluators,
-     * which the engine optimizes better than one place calling into every kind.
+     * A tick of the current mode: its rule, its step, the plugins of the tick. The phase table runs the three as steps
+     * of their own (simulation/tick-phases.ts). The state machines of inserters and machines run copies of them (see
+     * InserterStateMachine.ruleStep): a copy of their own calls into their own kinds of modes and evaluators, which the
+     * engine optimizes better than one place calling into every kind.
      */
     public executeForTick(): void {
+        this.ruleStep();
+        this.modeStep();
+        this.tickObservers();
+    }
+
+    /** The current mode's rule; on a change, the transition and the entered mode's evaluator */
+    public ruleStep(): void {
         const next = this.evaluateTransition();
         if (next !== this.current) {
             this.current = next;
             this.current_evaluator = this.entered_evaluator ?? this.modeEvaluatorForMode(next);
         }
-        next.executeForTick();
+    }
+
+    /** The tick of the mode the rule left the state machine in */
+    public modeStep(): void {
+        this.current.executeForTick();
+    }
+
+    /** The plugins that do something every tick, in the order they were added */
+    public tickObservers(): void {
         const tick_plugins = this.tick_plugins;
         for (let index = 0; index < tick_plugins.length; index++) {
             tick_plugins[index].executeForTick!();
