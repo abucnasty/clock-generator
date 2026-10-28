@@ -1,4 +1,4 @@
-import { CraftingMachineRuleFacts, fuelModelled, placesResultsItself } from "../machine/machine-rule";
+import { CraftingMachineRuleFacts, placesResultsItself } from "../machine/machine-rule";
 
 /** The data of a crafting machine prototype that its traits are read from, as far as they follow from the data alone */
 export interface CraftingMachineTraitFacts extends CraftingMachineRuleFacts {
@@ -12,8 +12,8 @@ export interface CraftingMachineTraitFacts extends CraftingMachineRuleFacts {
  */
 export interface PrototypeTraits {
     /**
-     * The Energy trait's `fuel_modelled`: the machine burns a fuel the simulator models (the biochamber's nutrients), so its
-     * energy consumption counts
+     * The Energy trait's `fuel_modelled`: the machine is a burner, whose fuel the simulator models (every burner is
+     * fuelled), so its energy consumption counts
      */
     readonly fuel_modelled: boolean;
     /** Whether the machine has a Placement trait: it places its results itself, at its `vector_to_place_result` (the recycler) */
@@ -22,9 +22,10 @@ export interface PrototypeTraits {
 
 /**
  * The traits of a crafting machine prototype that its data settles, by the tests the engine builds the traits with: the
- * Energy trait's `fuel_modelled` (energy.ts asks `fuelModelled`) and the Placement trait's presence (`buildTraits` asks
+ * Energy trait's `fuel_modelled` (energy.ts fuels every burner: the data lists a burner's fuel categories, none for any
+ * other source) and the Placement trait's presence (`buildTraits` asks
  * `placesResultsItself`, through `machinePlacesResults`). No name decides either.
  */
 export function prototypeTraitsOf(prototype: CraftingMachineTraitFacts): PrototypeTraits {
-    return { fuel_modelled: fuelModelled(prototype), places_results: placesResultsItself(prototype) };
+    return { fuel_modelled: prototype.burner_fuel_categories.length > 0, places_results: placesResultsItself(prototype) };
 }

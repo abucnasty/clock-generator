@@ -6,7 +6,7 @@ import { modelledBurnerOf } from "../../traits/energy";
 
 /** The biochamber's burner as the engine burned it before it was read from the data: 500 kW on 2 MJ nutrients */
 const NUTRIENTS: Fuel = { item_name: "nutrients", fuel_value_mj: 2 };
-const biochamber: BurnerEnergySource = { energy_usage_kw: 500, fuels: [NUTRIENTS] };
+const biochamber: BurnerEnergySource = { energy_usage_kw: 500, effectivity: 1, fuels: [NUTRIENTS] };
 
 describe("FuelConsumption", () => {
     it("burns 0.25 nutrients/s at 500kW with 2MJ nutrients", () => {
@@ -34,9 +34,15 @@ describe("FuelConsumption", () => {
         expect(c.amount_per_craft).toBeCloseTo(0.25 * 10.2617 / 56.122);
     });
 
+    it("burns the usage over the effectivity in fuel: half the effectivity, twice the fuel (unrecorded: 1 on every burner of 2.1.21)", () => {
+        const half = FuelConsumption.fromCraftingSpeed({ ...biochamber, effectivity: 0.5 }, NUTRIENTS, 2, 4);
+        expect(half.rate_per_second).toBeCloseTo(0.5);
+        expect(half.amount_per_craft).toBeCloseTo(1);
+    });
+
     it("works for any energy source and fuel", () => {
         const c = FuelConsumption.fromCraftingSpeed(
-            { energy_usage_kw: 90, fuels: [{ item_name: "coal", fuel_value_mj: 4 }] },
+            { energy_usage_kw: 90, effectivity: 1, fuels: [{ item_name: "coal", fuel_value_mj: 4 }] },
             { item_name: "coal", fuel_value_mj: 4 },
             1,
             1,
@@ -53,13 +59,22 @@ describe("BurnerEnergySource", () => {
         expect(burnerOf("biochamber")).toEqual(biochamber);
     });
 
-    it("is modelled for the biochamber only: electric machines have none, nor (a kept quirk) the other burners", () => {
-        for (const name of ["assembling-machine-3", "electric-furnace", "recycler", "stone-furnace", "steel-furnace", "captive-biter-spawner"]) {
+    it("is every burner's: the biochamber, the captive biter spawner and the stone and steel furnaces; electric machines have none", () => {
+        for (const name of ["assembling-machine-3", "electric-furnace", "recycler"]) {
             expect(burnerOf(name), name).toBeUndefined();
         }
         expect(modelledBurnerOf(null)).toBeUndefined();
         const burning = FactorioDataService.getAllCraftingMachines().filter(machine => modelledBurnerOf(machine) !== undefined);
-        expect(burning.map(machine => machine.name)).toEqual(["biochamber"]);
+        expect(burning.map(machine => machine.name).sort()).toEqual(["biochamber", "captive-biter-spawner", "steel-furnace", "stone-furnace"]);
+    });
+
+    it("takes each burner's usage and the items of its fuel categories from the data", () => {
+        expect(burnerOf("stone-furnace")).toMatchObject({ energy_usage_kw: 90, effectivity: 1 });
+        expect(burnerOf("steel-furnace")).toMatchObject({ energy_usage_kw: 90, effectivity: 1 });
+        expect(burnerOf("captive-biter-spawner")).toMatchObject({ energy_usage_kw: 100, effectivity: 1, fuels: [{ item_name: "bioflux", fuel_value_mj: 6 }] });
+        const chemical = burnerOf("stone-furnace")!.fuels.map(fuel => fuel.item_name);
+        expect(chemical).toEqual(expect.arrayContaining(["coal", "wood", "solid-fuel", "rocket-fuel"]));
+        expect(chemical).not.toContain("nutrients");
     });
 
     it("defaults to the first fuel and rejects fuels the source does not accept", () => {
