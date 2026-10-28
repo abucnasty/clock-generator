@@ -1,6 +1,7 @@
+// @vitest-environment happy-dom
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
-import { describe, expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ConfigSchema, FactorioDataService, validateConfig, type Config } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
@@ -8,8 +9,11 @@ import { addChest, switchedChest, updateChest } from './configForm/edits';
 import type { ChestFormData, ConfigFormData } from './configForm/formData';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { decodeShareLink, encodeShareLink, readShareHash } from './shareLink';
+import { containerChest, show } from '../test/fixtures';
 import { ChestFields } from '../components/EntityFields';
-import { paintSlotFilters } from './containerSlotFilters';
+import { paintSlotFilters, slotCountsText } from './containerSlotFilters';
+import { chestLabel } from './entityLabel';
+import { qualityLabel } from './machinePrototype';
 
 FactorioDataService.initialize(JSON.parse(factorioData));
 
@@ -41,6 +45,7 @@ const CONTAINERS = {
 };
 
 const containerOf = (form: ConfigFormData) => form.chests[0];
+const formChest = (container: Record<string, unknown>) => containerOf(configToFormData(build(container)));
 
 describe('cars, tanks, cargo wagons and rocket silos in the form', () => {
     it.each(Object.entries(CONTAINERS))('saves a %s as the config gives it, through config files, saved builds and share links', async (_name, container) => {
@@ -83,10 +88,8 @@ describe('cars, tanks, cargo wagons and rocket silos in the form', () => {
 });
 
 describe('switching chest types', () => {
-    const form = (container: Record<string, unknown>) => containerOf(configToFormData(build(container)));
-
     it('keeps the slot filters and contents from a car to a tank or a wagon, and the wagon quality back from a car', () => {
-        const car = form(CONTAINERS.car);
+        const car = formChest(CONTAINERS.car);
         const wagon = switchedChest(car, ChestType.CARGO_WAGON);
         expect(wagon).toMatchObject({ type: ChestType.CARGO_WAGON, slot_filters: CONTAINERS.car.slot_filters, contents: CONTAINERS.car.contents });
         const legendary = { ...wagon, quality: 'legendary' } as ChestFormData;
@@ -96,7 +99,7 @@ describe('switching chest types', () => {
     });
 
     it('keeps a silo\'s settings and a buffer chest\'s through a switch to the other and back', () => {
-        const silo = form(CONTAINERS.silo);
+        const silo = formChest(CONTAINERS.silo);
         const buffer = switchedChest(silo, ChestType.BUFFER_CHEST);
         expect(buffer).toMatchObject({ type: ChestType.BUFFER_CHEST, storage_size: 1, item_filter: '' });
         const filled = { ...buffer, item_filter: 'iron-plate', storage_size: 8 } as ChestFormData;
@@ -110,75 +113,84 @@ describe('switching chest types', () => {
     });
 
     it('saves none of what it remembers', () => {
-        const switched = switchedChest(switchedChest(form(CONTAINERS.car), ChestType.ROCKET_SILO), ChestType.CAR);
+        const switched = switchedChest(switchedChest(formChest(CONTAINERS.car), ChestType.ROCKET_SILO), ChestType.CAR);
         const config = formDataToConfig({ ...configToFormData(build(CONTAINERS.car)), chests: [switched] });
         expect(config.chests).toEqual([{ id: 1, ...CONTAINERS.car }]);
     });
 });
 
 describe('the fields of each type', () => {
-    const render = (container: Record<string, unknown>, dialog = false) => renderToStaticMarkup(
-        <ChestFields chest={form(container)} itemNames={['iron-plate', 'coal']} dialog={dialog} onChange={() => {}} onSwitchType={() => {}} />);
-    const form = (container: Record<string, unknown>) => containerOf(configToFormData(build(container)));
+    const showFields = (chest: ChestFormData, dialog = false, onChange = vi.fn()) =>
+        ({ ...show(<ChestFields chest={chest} itemNames={['iron-plate', 'coal']} dialog={dialog} onChange={onChange} onSwitchType={vi.fn()} />), onChange });
+    const slots = () => screen.getAllByRole('button', { name: /^Slot \d+: / });
 
-    it('offers slot filters and contents on a car and a tank, and the quality of a wagon only', () => {
-        for (const container of [CONTAINERS.car, CONTAINERS.tank, CONTAINERS.wagon]) {
-            const html = render(container);
-            expect(html).toContain('Filtered slots');
-            expect(html).toContain('Fill unfiltered slots');
-            expect(html).toContain('Shift + right-click copies');
-            expect(html).toContain('Contents');
-            expect(html.includes('aria-label="Quality, Cargo wagon 1"')).toBe(container === CONTAINERS.wagon);
-        }
-        expect(render(CONTAINERS.car)).toContain('aria-label="Item of contents 1, Car 1"');
+    it.each([
+        { type: 'car', items: ['coal'], quality: [] },
+        { type: 'tank', items: ['iron-plate'], quality: [] },
+        { type: 'wagon', items: [], quality: [qualityLabel('legendary')] },
+    ] as const)('offers slot filters and contents on a $type, and the quality of a wagon only', ({ type, items, quality }) => {
+        const chest = formChest(CONTAINERS[type]), name = chestLabel(chest);
+        showFields(chest);
+        expect(screen.getByRole('group', { name: `Filtered slots, ${name}` }).textContent).toMatch(/^Filtered slots.*Shift \+ right-click copies/);
+        expect(screen.getByRole('button', { name: 'Fill unfiltered slots' })).toBeDefined();
+        expect(screen.getByRole('group', { name: 'Contents' })).toBeDefined();
+        expect(screen.queryAllByRole<HTMLInputElement>('combobox', { name: `Item of contents 1, ${name}` }).map(field => field.value)).toEqual(items);
+        expect(screen.queryAllByRole('combobox', { name: `Quality, ${name}` }).map(field => field.textContent)).toEqual(quality);
     });
 
     it('offers a silo its recipe quality, crafting speed, productivity and contents, without slot filters', () => {
-        const html = render(CONTAINERS.silo, true);
-        for (const label of ['Recipe quality', 'Crafting Speed', 'Productivity (%)', 'Add contents']) expect(html).toContain(label);
-        expect(html).not.toContain('Filtered slots');
-        expect(html).toContain('Rare');
+        const chest = formChest(CONTAINERS.silo);
+        showFields(chest, true);
+        expect(screen.getByRole('combobox', { name: `Recipe quality, ${chestLabel(chest)}` }).textContent).toBe(qualityLabel('rare'));
+        expect(['Crafting Speed', 'Productivity (%)'].map(name => screen.getByRole<HTMLInputElement>('textbox', { name }).value)).toEqual(['2.5', '10']);
+        expect(screen.getByRole('button', { name: 'Add contents' })).toBeDefined();
+        expect(screen.queryByText('Filtered slots')).toBeNull();
     });
 
-    it('shows the whole inventory and keeps filters beyond a downgraded wagon visible for correction', () => {
-        const car = render(CONTAINERS.car);
-        expect(car).toContain('Slot 80: Unfiltered');
-        expect(car).not.toContain('Slot 81:');
-        const wagon = render({ ...CONTAINERS.wagon, quality: 'normal' });
-        expect(wagon).toContain('Slot 40: Unfiltered');
-        expect(wagon).not.toContain('Slot 41:');
-        expect(wagon).toContain('Some filters are outside this inventory');
-        expect(wagon).toContain('Remove filter for slot 100');
+    it('shows the whole inventory and keeps filters beyond a downgraded wagon visible for correction', async () => {
+        const { unmount } = showFields(formChest(CONTAINERS.car));
+        expect(slots()).toHaveLength(80);
+        expect(slots().at(-1)).toBe(screen.getByRole('button', { name: 'Slot 80: Unfiltered' }));
+        unmount();
+
+        const { user, onChange } = showFields(formChest({ ...CONTAINERS.wagon, quality: 'normal' }));
+        expect(slots()).toHaveLength(40);
+        expect(slots().at(-1)).toBe(screen.getByRole('button', { name: 'Slot 40: Unfiltered' }));
+        expect(screen.getByText(/^Some filters are outside this inventory/)).toBeDefined();
+        await user.click(screen.getByRole('button', { name: 'Remove filter for slot 100' }));
+        expect(onChange).toHaveBeenCalledExactlyOnceWith({ slot_filters: [] });
     });
 
     it('says nothing of unfiltered slots when every slot is filtered or blocked', () => {
-        const full = { type: ChestType.CAR, slot_filters: [...Array.from({ length: 5 }, (_, i) => ({ slot: i + 1, item: 'iron-plate' })),
-            ...Array.from({ length: 75 }, (_, i) => ({ slot: i + 6, blocked: true }))] };
-        const html = render(full);
-        expect(html).toContain('5 filtered · 75 blocked · 0 free');
-        expect(html).not.toContain('Unfiltered slots accept any item');
+        showFields(containerChest(1, ChestType.CAR, { slot_filters: [...Array.from({ length: 5 }, (_, i) => ({ slot: i + 1, item: 'iron-plate' })),
+            ...Array.from({ length: 75 }, (_, i) => ({ slot: i + 6, blocked: true as const }))] }));
+        expect(screen.getByText(slotCountsText({ filtered: 5, blocked: 75, free: 0 }))).toBeDefined();
+        expect(screen.queryByText(/Unfiltered slots accept any item/)).toBeNull();
     });
 
-    it('shows a slot blocked in the config as No item, and offers a way to block the remaining slots', () => {
-        const html = render(CONTAINERS.blockedCar);
-        expect(html).toContain('Slot 2: Blocked (no-item)');
-        expect(html).toContain('Slot 3: Blocked (no-item)');
-        expect(html).toContain('Block unfiltered slots');
-        expect(html).toContain('1 filtered · 2 blocked · 77 free · Unfiltered slots accept any item');
+    it('shows a slot blocked in the config as No item, and offers a way to block the remaining slots', async () => {
+        const chest = formChest(CONTAINERS.blockedCar);
+        const { user, onChange, announce } = showFields(chest);
+        expect(slots().slice(1, 3)).toEqual(['Slot 2: Blocked (no-item)', 'Slot 3: Blocked (no-item)'].map(name => screen.getByRole('button', { name })));
+        expect(screen.getByText(`${slotCountsText({ filtered: 1, blocked: 2, free: 77 })} · Unfiltered slots accept any item`)).toBeDefined();
         // the game draws no number in an empty slot's corner, and a filter faded
-        expect(html).not.toMatch(/<span aria-hidden="true"[^>]*>\d+<\/span>/);
-        expect(html).toContain('opacity:0.45');
-        expect(html).toContain('Middle-click a slot to set its filter, as in the game.');
+        expect(slots().map(slot => slot.textContent).join('')).toBe('');
+        expect(getComputedStyle(slots()[0].firstElementChild!).opacity).toBe('0.45');
+        expect(screen.getByText(/Middle-click a slot to set its filter, as in the game\./)).toBeDefined();
+        await user.click(screen.getByRole('button', { name: 'Block unfiltered slots' }));
+        expect(onChange).toHaveBeenCalledExactlyOnceWith({ slot_filters: [...CONTAINERS.blockedCar.slot_filters,
+            ...Array.from({ length: 77 }, (_, i) => ({ slot: i + 4, blocked: true, _marker: 'no-item' }))] });
+        expect(announce).toHaveBeenCalledWith(`Set no-item on 77 slots, ${chestLabel(chest)}.`);
         expect(() => validateConfig(ConfigSchema.parse(build(CONTAINERS.blockedCar)))).not.toThrow();
     });
 
     it('keeps the marker painted on a blocked slot in the form and saved builds, and saves it as blocked: true', () => {
-        const car = form(CONTAINERS.car);
+        const car = formChest(CONTAINERS.car);
         if (car.type !== ChestType.CAR) throw new Error('not a car');
         const painted = { ...car, slot_filters: paintSlotFilters(paintSlotFilters(car.slot_filters ?? [], [2], 'deconstruction-planner'), [3], 'no-item') };
-        const html = renderToStaticMarkup(<ChestFields chest={painted} itemNames={['iron-plate']} dialog={false} onChange={() => {}} onSwitchType={() => {}} />);
-        expect(html).toContain('Slot 2: Blocked (deconstruction-planner)');
-        expect(html).toContain('Slot 3: Blocked (no-item)');
+        showFields(painted);
+        expect(screen.getByRole('button', { name: 'Slot 2: Blocked (deconstruction-planner)' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Slot 3: Blocked (no-item)' })).toBeDefined();
         const saved = readSavedConfig(serializeConfig({ ...configToFormData(build(CONTAINERS.car)), chests: [painted] }))!;
         expect(containerOf(saved)).toMatchObject({ slot_filters: [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true, _marker: 'deconstruction-planner' }, { slot: 3, blocked: true, _marker: 'no-item' }] });
         expect(formDataToConfig(saved).chests![0]).toEqual({ ...build(CONTAINERS.car).chests![0],
@@ -190,7 +202,8 @@ describe('the fields of each type', () => {
         const expected = [{ slot: 1, item: 'iron-plate' }, { slot: 2, blocked: true, _marker: 'deconstruction-planner' }, { slot: 3, blocked: true, _marker: 'no-item' }];
         expect(containerOf(configToFormData(drafted))).toMatchObject({ slot_filters: expected });
         expect(containerOf(readSavedConfig(JSON.stringify({ ...drafted, chests: drafted.chests!.map(chest => ({ ...chest, _uuid: 'x' })) }))!)).toMatchObject({ slot_filters: expected });
-        expect(render(drafted.chests![0])).toContain('Slot 2: Blocked (deconstruction-planner)');
+        showFields(formChest(drafted.chests![0]));
+        expect(screen.getByRole('button', { name: 'Slot 2: Blocked (deconstruction-planner)' })).toBeDefined();
         expect(formDataToConfig(configToFormData(drafted)).chests![0]).toEqual(build(CONTAINERS.blockedCar).chests![0]);
         expect(ConfigSchema.parse(drafted).chests![0]).toEqual(build(CONTAINERS.blockedCar).chests![0]);
     });

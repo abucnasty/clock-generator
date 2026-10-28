@@ -1,121 +1,116 @@
-import { describe, expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment happy-dom
+import { screen } from '@testing-library/react';
+import { BELT_PICKUP_LAYOUT_LABELS } from 'clock-generator/light';
+import { expect, it, vi } from 'vitest';
+import { belt, inserter, show } from '../test/fixtures';
+import type { InserterFormData } from '../utils/configForm/formData';
+import { OUT_OF_SCOPE_PICKUP_SCOPE, OUT_OF_SCOPE_PICKUPS } from '../utils/pickupGeometry';
+import { NearLaneSelect } from './NearLaneSelect';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
 import { PickupTypeSelect } from './PickupTypeSelect';
-import { NearLaneSelect } from './NearLaneSelect';
-import type { BeltFormData } from '../utils/configForm/formData';
 
-const build = { inserters: [{ id: 8, source: { type: 'belt', pickup_length: 1 } }, { id: 3, source: { type: 'belt' } }] };
-const text = (html: string) => html.replace(/<style[^>]*>[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, '');
+type Source = InserterFormData['source'];
+const fromBelt = (fields: Partial<Source> = {}): Source => ({ type: 'belt', id: 1, ...fields });
+/** Inserter 8 picks up from a straight belt; inserter 3, saved before pickup types, from a belt of no known type */
+const twoInputs = { inserters: [inserter(8, { source: fromBelt({ pickup_length: 1 }) }), inserter(3, { source: fromBelt() })] };
+const underground = { inserters: [inserter(4, { source: fromBelt({ pickup_length: 0.5 }) })] };
+const bend = fromBelt({ pickup_layout: 'bend-right-upstream', pickup_length: 1, near_lane: 1, pickup_capture: { status: 'supported', model: 'belt',
+    model_version: 3, entity_type: 'transport-belt', sidecar_version: '0.15.0' } });
+/** A pickup Sidecar recorded but the generator cannot use, and why */
+const unsupported = (reason: string) => fromBelt({ pickup_capture: { status: 'unsupported', entity_type: 'transport-belt', reason } });
+const STRAIGHT_DEFAULT = 'Moving input belts · Straight belt is the default. Choose the belt shape and pickup approach.';
+const BACKED_UP = 'Backed-up input belts · Saturated supply with captured pickup rules.';
+const KNOWN_FOR_ALL = 'Moving input belts · Pickup type known for all 1 belt-fed inserter.';
 
-describe('pickup assumption presentation', () => {
-    it('explains the default and underground opt-in for current and prospective builds', () => {
-        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={build} onEdit={() => {}} />));
-        expect(html).toContain('Straight belt is the default');
-        expect(html).toContain('Choose the belt shape and pickup approach');
-        expect(html).not.toContain('missing');
-        expect(html).not.toContain('Saved results retain their original timing assumptions');
-    });
-    it('preserves legacy saved-run assumptions and provides a specific inserter action', () => {
-        const html = renderToStaticMarkup(<PickupGeometrySummary build={build} savedRun onEdit={() => {}} />);
-        expect(text(html)).toContain('Pickup type known for 1 of 2 belt-fed inserters');
-        expect(text(html)).toContain('Saved results retain their original timing assumptions');
-        expect(html).toContain('Set pickup for Inserter 3');
-        expect(html).not.toContain('Set pickup for Inserter 8');
-    });
-    it('does not imply missing geometry matters for backed-up timing', () => {
-        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={{ ...build, overrides: { backed_up_belts: true } }} />));
-        expect(html).toContain('Backed-up input belts');
-        expect(html).not.toContain('missing');
-    });
-    it('reports complete geometry without a missing-type action', () => {
-        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={{ inserters: [build.inserters[0]] }} savedRun />));
-        expect(html).toContain('Pickup type known for all 1');
-        expect(html).not.toContain('missing');
-    });
-    it('uses the same named picker for list and diagram without exposing fractional lengths', () => {
-        for (const compact of [false, true]) {
-            const html = renderToStaticMarkup(<PickupTypeSelect source={{ type: 'belt', id: 1, pickup_length: 0.5 }} compact={compact} entityLabel="Inserter 3" onChange={() => {}} />);
-            expect(html).toContain('Choose underground layout');
-            expect(html).toContain('Picks up from, Inserter 3');
-            expect(text(html)).not.toContain('0.5');
-        }
-        expect(renderToStaticMarkup(<PickupTypeSelect source={{ type: 'machine', id: 1 }} entityLabel="Inserter 3" onChange={() => {}} />)).toBe('');
-    });
-    it.each([
-        { reason: 'splitter', entity_type: 'splitter', label: 'splitter', detail: 'Its pickup tile is a splitter.' },
-        { reason: 'side-loaded', entity_type: 'transport-belt', label: 'side-loaded belt', detail: 'Another belt side-loads onto its pickup tile.' },
-    ])('keeps an out-of-scope $reason pickup visible as not supported in the editor and saved-run summary', ({ reason, entity_type, label, detail }) => {
-        const source = {type: 'belt' as const, id: 1, pickup_length: 1 as const,
-            pickup_capture: {status: 'unsupported' as const, entity_type, reason, sidecar_version: '0.11.0'}};
-        for (const compact of [false, true]) {
-            const html = renderToStaticMarkup(<PickupTypeSelect source={source} compact={compact} entityLabel="Inserter 3" onChange={() => {}} />);
-            expect(text(html)).toContain(`Not supported: ${label}`);
-            expect(text(html)).toContain(detail);
-            expect(text(html)).toContain('Splitters and side-loaded belt tiles are out of scope');
-            expect(text(html)).not.toContain('Unverified capture');
-            expect(html).toContain('aria-disabled="true"');
-            expect(html).not.toContain('value="side-straight"');
-        }
-        for (const savedRun of [false, true]) {
-            const summary = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 3, source}], overrides: {backed_up_belts: true}}} savedRun={savedRun} />));
-            expect(summary).toContain('1 belt pickup is not supported and blocks generation.');
-            expect(summary).toContain(`Not supported: Inserter 3 (${label}). Splitters and side-loaded belt tiles are out of scope.`);
-            expect(summary).toContain('Rebuild the pickup as one of these, then recapture it with Sidecar.');
-            expect(summary).not.toContain('(transport-belt)');
-            expect(summary).not.toContain('Unverified:');
-            expect(summary).not.toContain('Updating the mod alone does not update this saved capture');
-            expect(summary).not.toContain('Saturated supply with captured pickup rules');
-        }
-    });
-    it('keeps an unverified imported pickup apart from an out-of-scope one', () => {
-        const bend = {type: 'belt' as const, id: 1, pickup_capture: {status: 'unsupported' as const, entity_type: 'transport-belt', reason: 'bend'}};
-        const sideLoaded = {type: 'belt' as const, id: 2, pickup_capture: {status: 'unsupported' as const, entity_type: 'transport-belt', reason: 'side-loaded'}};
-        const select = text(renderToStaticMarkup(<PickupTypeSelect source={bend} entityLabel="Inserter 4" onChange={() => {}} />));
-        expect(select).toContain('Unverified capture');
-        expect(select).toContain('A supported Sidecar capture is required');
-        expect(select).not.toContain('out of scope');
-        const summary = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 4, source: bend}, {id: 5, source: sideLoaded}]}} />));
-        expect(summary).toContain('2 belt pickups need a supported capture before generation');
-        expect(summary).toContain('Not supported: Inserter 5 (side-loaded belt).');
-        expect(summary).toContain('Unverified: Inserter 4 (transport-belt). Update Sidecar and recapture when the geometry is supported.');
-        expect(summary).toContain('Updating the mod alone does not update this saved capture');
-    });
-    it('selects straight belt when geometry is omitted in either editor', () => {
-        for (const compact of [false, true]) {
-            const html = renderToStaticMarkup(<PickupTypeSelect source={{ type: 'belt', id: 1 }} compact={compact} entityLabel="Inserter 3" onChange={() => {}} />);
-            expect(html).toContain('value="side-straight"');
-            expect(text(html)).toContain('Straight belt');
-            expect(html).not.toContain('Not specified');
-        }
-    });
+/** The List row's picker and the diagram's, both of Inserter 3 */
+function showPickers(source: Source) {
+    const view = show(<>{[false, true].map(compact => <PickupTypeSelect key={String(compact)} source={source} compact={compact} entityLabel="Inserter 3" onChange={vi.fn()} />)}</>);
+    return { ...view, pickers: screen.getAllByRole('combobox', { name: 'Picks up from, Inserter 3' }) };
+}
+/** What each picker described by `description` shows, and whether it is disabled */
+const lockedPickers = (description: string) => screen.getAllByRole('combobox', { name: 'Picks up from, Inserter 3', description })
+    .map(picker => [picker.textContent, picker.getAttribute('aria-disabled')]);
+
+it.each([
+    { why: 'a current build', build: twoInputs, savedRun: false, says: STRAIGHT_DEFAULT },
+    { why: 'backed-up belts', build: { ...twoInputs, overrides: { backed_up_belts: true } }, savedRun: false, says: BACKED_UP },
+    { why: 'a saved run of complete geometry', build: { inserters: [twoInputs.inserters[0]] }, savedRun: true, says: KNOWN_FOR_ALL },
+    { why: 'a saved run of a measured right bend', build: { inserters: [inserter(4, { source: bend })] }, savedRun: true, says: KNOWN_FOR_ALL },
+])('explains the pickup assumption of $why without asking for a missing type', ({ build, savedRun, says }) => {
+    show(<PickupGeometrySummary build={build} savedRun={savedRun} onEdit={vi.fn()} />);
+    expect(screen.getByText(says)).toBeDefined();
+    expect(screen.queryByText(/missing|Saved results retain/)).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
 });
 
-it('requires a manual underground layout for moving and backed-up inputs', () => {
-    for (const backed_up_belts of [false, true]) {
-        const html = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 4,
-            source: {type: 'belt', pickup_length: 0.5}}], overrides: {backed_up_belts}}} onEdit={() => {}} />));
-        expect(html).toContain('Choose a pickup layout before generating again');
-        expect(html).toContain('Set pickup for Inserter 4');
+it.each([
+    { why: 'a legacy saved run', build: twoInputs, savedRun: true, says: 'Moving input belts · Pickup type known for 1 of 2 belt-fed inserters.', id: 3 },
+    { why: 'a moving underground pickup', build: underground, savedRun: false, says: STRAIGHT_DEFAULT, id: 4 },
+    { why: 'a backed-up underground pickup', build: { ...underground, overrides: { backed_up_belts: true } }, savedRun: false, says: BACKED_UP, id: 4 },
+])('asks for the pickup layout of each inserter that lacks one in $why', async ({ build, savedRun, says, id }) => {
+    const onEdit = vi.fn();
+    const { user } = show(<PickupGeometrySummary build={build} savedRun={savedRun} onEdit={onEdit} />);
+    expect(screen.getByText(says)).toBeDefined();
+    expect(screen.getByText('Pickup type is missing for 1 inserter. Choose a pickup layout before generating again. Saved results retain their original timing assumptions.')).toBeDefined();
+    expect(screen.getAllByRole('button').map(button => button.textContent)).toEqual([`Set pickup for Inserter ${id}`]);
+    await user.click(screen.getByRole('button'));
+    expect(onEdit).toHaveBeenCalledExactlyOnceWith(id);
+});
+
+it.each([
+    { why: 'straight belt for omitted geometry', source: fromBelt(), shown: BELT_PICKUP_LAYOUT_LABELS['side-straight'] },
+    { why: 'an underground layout to choose', source: fromBelt({ pickup_length: 0.5 }), shown: 'Choose underground layout' },
+    { why: 'the measured right-bend layout', source: bend, shown: BELT_PICKUP_LAYOUT_LABELS['bend-right-upstream'] },
+])('selects $why in the same named picker of the list and the diagram, never a fractional length', async ({ source, shown }) => {
+    const { user, pickers } = showPickers(source);
+    expect(pickers.map(picker => picker.textContent)).toEqual([shown, shown]);
+    await user.click(pickers[0]);
+    expect(screen.getByRole('option', { selected: true }).textContent).toBe(shown);
+    expect(screen.queryByText(/0\.5|Not specified|Unverified capture/)).toBeNull();
+});
+
+it('shows no pickup picker for an inserter that does not take from a belt', () => {
+    const { container } = show(<PickupTypeSelect source={{ type: 'machine', id: 1 }} entityLabel="Inserter 3" onChange={vi.fn()} />);
+    expect(container.firstChild).toBeNull();
+});
+
+it.each([
+    { reason: 'splitter', entity_type: 'splitter' },
+    { reason: 'side-loaded', entity_type: 'transport-belt' },
+] as const)('keeps an out-of-scope $reason pickup visible as not supported in the editor and saved-run summary', ({ reason, entity_type }) => {
+    const { label, detail } = OUT_OF_SCOPE_PICKUPS[reason];
+    const source = fromBelt({ pickup_length: 1, pickup_capture: { status: 'unsupported', entity_type, reason, sidecar_version: '0.11.0' } });
+    const { unmount } = showPickers(source);
+    const shown = `Not supported: ${label}`;
+    expect(lockedPickers(`This imported pickup is not supported. ${detail} ${OUT_OF_SCOPE_PICKUP_SCOPE}`)).toEqual([[shown, 'true'], [shown, 'true']]);
+    unmount();
+    for (const savedRun of [false, true]) {
+        const { unmount } = show(<PickupGeometrySummary build={{ inserters: [inserter(3, { source })], overrides: { backed_up_belts: true } }} savedRun={savedRun} />);
+        expect(screen.getByText('1 belt pickup is not supported and blocks generation.')).toBeDefined();
+        // named by what puts it out of scope, never by its entity type
+        expect(screen.getByText(`Not supported: Inserter 3 (${label}). ${OUT_OF_SCOPE_PICKUP_SCOPE}`)).toBeDefined();
+        expect(screen.queryByText(/\(transport-belt\)|Unverified|Updating the mod alone|Saturated supply/)).toBeNull();
+        unmount();
     }
 });
 
+it('keeps an unverified imported pickup apart from an out-of-scope one', () => {
+    const { unmount } = showPickers(unsupported('bend'));
+    const shown = 'Unverified capture';
+    expect(lockedPickers('This imported pickup is unverified. A supported Sidecar capture is required; choosing a default cannot classify it.'))
+        .toEqual([[shown, 'true'], [shown, 'true']]);
+    expect(screen.queryByText(/out of scope/)).toBeNull();
+    unmount();
+    show(<PickupGeometrySummary build={{ inserters: [inserter(4, { source: unsupported('bend') }), inserter(5, { source: unsupported('side-loaded') })] }} />);
+    expect(screen.getByText('2 belt pickups need a supported capture before generation. Recorded unsupported or unclassified pickups are retained when this build is saved.')).toBeDefined();
+    expect(screen.getByText(`Not supported: Inserter 5 (${OUT_OF_SCOPE_PICKUPS['side-loaded'].label}). ${OUT_OF_SCOPE_PICKUP_SCOPE}`)).toBeDefined();
+    expect(screen.getByText('Unverified: Inserter 4 (transport-belt). Update Sidecar and recapture when the geometry is supported.'
+        + ' Updating the mod alone does not update this saved capture.')).toBeDefined();
+});
 
-it('names the measured right-bend layout and explains its fixed lane in either editor', () => {
-    const source = {type: 'belt' as const, id: 1, pickup_layout: 'bend-right-upstream' as const, pickup_length: 1 as const,
-        near_lane: 1 as const, pickup_capture: {status: 'supported' as const, model: 'belt' as const, model_version: 3 as const,
-            entity_type: 'transport-belt' as const, sidecar_version: '0.15.0'}};
-    const belts: BeltFormData[] = [{id: 1, _uuid: 'bend', type: 'turbo-transport-belt', lanes: [
-        {ingredient: 'superconductor', stack_size: 4}, {ingredient: 'holmium-plate', stack_size: 4}]}];
-    for (const compact of [false, true]) {
-        const html = renderToStaticMarkup(<PickupTypeSelect source={source} compact={compact} entityLabel="Inserter 4" onChange={() => {}} />);
-        expect(text(html)).toContain('Right bend — upstream pickup');
-        expect(html).toContain('value="bend-right-upstream"');
-        expect(text(html)).not.toContain('Unverified capture');
-        const lane = text(renderToStaticMarkup(<NearLaneSelect source={source} belts={belts} compact={compact} entityLabel="Inserter 4" onChange={() => {}} />));
-        expect(lane).toContain('This bend pickup takes from lane 1 first. Its supported layout fixes the lane.');
-    }
-    const summary = text(renderToStaticMarkup(<PickupGeometrySummary build={{inserters: [{id: 4, source}]}} savedRun />));
-    expect(summary).toContain('Pickup type known for all 1');
-    expect(summary).not.toContain('missing');
+it('explains the fixed lane of a measured right bend in either editor', () => {
+    const belts = [belt(1, { lanes: [{ ingredient: 'superconductor', stack_size: 4 }, { ingredient: 'holmium-plate', stack_size: 4 }] })];
+    show(<>{[false, true].map(compact => <NearLaneSelect key={String(compact)} source={bend} belts={belts} compact={compact} entityLabel="Inserter 4" onChange={vi.fn()} />)}</>);
+    expect(screen.getAllByRole('combobox', { name: 'Nearest lane of the belt, Inserter 4',
+        description: 'This bend pickup takes from lane 1 first. Its supported layout fixes the lane.' })).toHaveLength(2);
 });

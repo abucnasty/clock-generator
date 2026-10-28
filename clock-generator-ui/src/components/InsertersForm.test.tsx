@@ -1,84 +1,87 @@
-import { expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { ChestType } from 'clock-generator/light';
+// @vitest-environment happy-dom
+import { screen, within } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
+import { belt, infinityChest, inserter, machine, show } from '../test/fixtures';
+import type { InserterFormData } from '../utils/configForm/formData';
+import { describeEnableRule } from '../utils/enableRuleLabel';
+import { BLACKLIST_NOTE } from '../utils/inserterFilters';
+import { DROP_ROUTE_READ_ONLY } from '../utils/inserterMetadata';
 import { InsertersForm } from './InsertersForm';
-import type { InserterFormData } from '../hooks/useConfigForm';
 
-const base: InserterFormData = { id: 2, _uuid: 'inserter-2', source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, filters: ['iron-plate', 'copper-plate'] };
-const machine = { id: 1, _uuid: 'machine-1', recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 };
-const chest = { id: 1, _uuid: 'chest-1', type: ChestType.INFINITY_CHEST, item_filter: [], remove_unfiltered_items: true };
-
-function render(inserter: InserterFormData = base) {
-    return renderToStaticMarkup(<InsertersForm inserters={[inserter]} machines={[machine]} belts={[]} chests={[chest]}
-        itemNames={['iron-plate', 'copper-plate', 'iron-gear-wheel']} getRecipeInfo={() => null} onAdd={() => {}} onUpdate={() => {}} onRemove={() => {}}
-        onReorder={() => {}} onDuplicate={() => {}} onBulkUpdate={() => {}} />);
-}
+const base = inserter(2, { filters: ['iron-plate', 'copper-plate'] });
+// two items on its lanes, so an inserter taking from it has a pickup type and a nearest lane
+const mixedBelt = belt(1, { lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'copper-plate', stack_size: 4 }] });
+const showForm = (fields: Partial<InserterFormData> = {}) => show(<InsertersForm inserters={[{ ...base, ...fields }]} machines={[machine()]}
+    belts={[mixedBelt]} chests={[infinityChest()]} itemNames={['iron-plate', 'copper-plate', 'iron-gear-wheel']} getRecipeInfo={() => null}
+    onAdd={vi.fn()} onUpdate={vi.fn()} onRemove={vi.fn()} onReorder={vi.fn()} onDuplicate={vi.fn()} onBulkUpdate={vi.fn()} />);
+const route = (side: 'Source' | 'Destination') => screen.getByRole<HTMLInputElement>('combobox', { name: `${side}, Inserter 2` });
+const slots = () => within(screen.getByRole('group', { name: 'Inserter filter slots' }));
+const slotNames = () => slots().getAllByRole('button').map(slot => slot.getAttribute('aria-label'));
+const slotPictures = () => slots().queryAllByRole('presentation').map(picture => picture.getAttribute('src'));
+const useAutomatic = () => screen.queryByRole('button', { name: 'Use automatic filters' });
 
 it('shows the editable source → five filter slots → destination workbench without a Routes/Filters toggle', () => {
-    const html = render();
-    expect(html).toContain('Source, Inserter 2');
-    expect(html).toContain('Destination, Inserter 2');
-    expect(html).toContain('aria-label="Inserter filter slots"');
-    expect((html.match(/aria-label="(?:Filter \d+:[^"]*|Add filter \d+)"/g) ?? [])).toHaveLength(5);
-    expect(html).toContain('/icons/iron-plate.png');
-    expect(html).toContain('/icons/copper-plate.png');
-    expect(html).not.toContain('Inserter view');
-    expect(html).not.toContain('Routes</');
-    expect(html).not.toContain('Filters</');
+    showForm();
+    expect([route('Source').readOnly, route('Destination').readOnly]).toEqual([false, false]);
+    expect(slotNames()).toHaveLength(5);
+    expect(screen.queryByRole('group', { name: 'Inserter view' })).toBeNull();
+    for (const toggle of [/Routes$/, /Filters$/]) expect(screen.queryByText(toggle)).toBeNull();
 });
 
-it('shows automatic filter mode and retains explicit item icons for multiple filters', () => {
-    const html = render({ ...base, filters: undefined });
-    expect(html).toContain('No items inferred. Choose an item to set an explicit filter.');
-    expect(html).not.toContain('Use automatic filters');
-    expect(html).toContain('aria-label="Add filter 5"');
-    const explicit = render();
-    expect(explicit.match(/\/icons\/iron-plate\.png/g)?.length).toBeGreaterThan(0);
-    expect(explicit.match(/\/icons\/copper-plate\.png/g)?.length).toBeGreaterThan(0);
-    expect(explicit).toContain('Use automatic filters');
-    expect(explicit).not.toContain('Filters · Explicit');
+it.each([
+    { mode: 'automatic', filters: undefined, slots: ['Add filter 1', 'Add filter 2', 'Add filter 3', 'Add filter 4', 'Add filter 5'], pictures: [], explicit: false },
+    { mode: 'explicit', filters: ['iron-plate', 'copper-plate'], slots: ['Filter 1: iron-plate', 'Filter 2: copper-plate', 'Add filter 3', 'Add filter 4', 'Add filter 5'],
+        pictures: ['/icons/iron-plate.png', '/icons/copper-plate.png'], explicit: true },
+])('shows $mode filters in their slots, with the way back to automatic only when explicit', ({ filters, slots, pictures, explicit }) => {
+    showForm({ filters });
+    expect(slotNames()).toEqual(slots);
+    expect(slotPictures()).toEqual(pictures);
+    // nothing to infer from a machine without recipe data
+    expect([screen.queryByText('No items inferred. Choose an item to set an explicit filter.'), useAutomatic()].map(Boolean)).toEqual([!explicit, explicit]);
+    expect(screen.queryByText('Filters · Explicit')).toBeNull();
 });
 
 it('explains that captured blacklists are unsupported', () => {
-    expect(render({ ...base, filter_mode: 'blacklist' })).toContain('Blacklist · Not supported');
+    showForm({ filter_mode: 'blacklist' });
+    expect(screen.getByText(BLACKLIST_NOTE)).toBeDefined();
 });
 
 it('keeps an imported drop destination read-only', () => {
-    const imported = { ...base, sink: { ...base.sink, drop: { lane: 1, position: 0.5 } } } as InserterFormData;
-    const html = render(imported);
-    expect(html).toContain('Destination, Inserter 2');
-    expect(html).toContain('readOnly');
-    expect(html).toContain('Imported geometry: route read-only.');
+    showForm({ sink: { ...base.sink, drop: { lane: 1, position: 0.5 } } } as Partial<InserterFormData>);
+    expect([route('Source').readOnly, route('Destination').readOnly]).toEqual([true, true]);
+    expect(screen.getByText(`Drop: lane 1, position 0.5. ${DROP_ROUTE_READ_ONLY}`)).toBeDefined();
 });
 
-it('keeps advanced stack settings out of the default workbench view', () => {
-    const html = render();
-    expect(html).not.toContain('Stack size');
-    expect(html).not.toContain('Pickup type');
-    expect(html).not.toContain('Nearest lane');
+it('keeps advanced stack settings out of the default workbench view, in Entity details', async () => {
+    const { user } = showForm({ source: { type: 'belt', id: 1 } });
+    const advanced = () => [screen.queryByRole('textbox', { name: 'Stack size' }), screen.queryByRole('combobox', { name: 'Picks up from, Inserter 2' }),
+        screen.queryByRole('combobox', { name: 'Nearest lane of the belt, Inserter 2' })];
+    expect(advanced()).toEqual([null, null, null]);
+    await user.click(screen.getByRole('button', { name: 'Entity details for Inserter 2' }));
+    expect(advanced()).not.toContain(null);
 });
 
-it('shows only the effective stack size in the row summary', () => {
-    const automatic = render({ ...base, stack_size: undefined });
-    const overridden = render({ ...base, stack_size: 1 });
-    expect(automatic).toContain('Stack 16');
-    expect(overridden).toContain('Stack 1');
-    for (const html of [automatic, overridden]) {
-        expect(html).not.toContain('(automatic)');
-        expect(html).not.toContain('(explicit)');
-    }
+it.each([
+    { stack: 'automatic', stack_size: undefined, shown: 16 },
+    { stack: 'overridden', stack_size: 1, shown: 1 },
+])('shows only the effective $stack stack size in the row summary', ({ stack_size, shown }) => {
+    showForm({ stack_size });
+    expect(screen.getByText(/^Stack /).textContent).toBe(`Stack ${shown} · ${describeEnableRule(undefined).chip}`);
+    expect(document.body.textContent).not.toMatch(/\((automatic|explicit)\)/);
 });
 
 it('keeps every imported filter editable when a legacy list exceeds five slots', () => {
-    const html = render({ ...base, filters: ['iron-plate', 'copper-plate', 'iron-gear-wheel', 'battery', 'stone', 'coal'] });
-    expect((html.match(/aria-label="Filter \d+:/g) ?? [])).toHaveLength(6);
-    expect(html).toContain('/icons/coal.png');
-    expect(html).not.toContain('Add filter 7');
+    const filters = ['iron-plate', 'copper-plate', 'iron-gear-wheel', 'battery', 'stone', 'coal'];
+    showForm({ filters });
+    // one slot each, and none to add a seventh
+    expect(slotNames()).toEqual(filters.map((item, index) => `Filter ${index + 1}: ${item}`));
+    expect(slotPictures()).toEqual(filters.map(item => `/icons/${item}.png`));
 });
 
 it('retains unavailable endpoint identities in the editable route', () => {
-    const html = render({ ...base, source: { type: 'machine', id: 99 }, sink: { type: 'chest', id: 98 } });
-    expect(html).toContain('Machine 99 is unavailable.');
-    expect(html).toContain('Chest 98 is unavailable.');
-    expect(html).toContain('Use automatic filters');
+    showForm({ source: { type: 'machine', id: 99 }, sink: { type: 'chest', id: 98 } });
+    expect([route('Source').getAttribute('aria-invalid'), route('Destination').getAttribute('aria-invalid')]).toEqual(['true', 'true']);
+    expect(screen.getByText('Machine 99 is unavailable.')).toBeDefined();
+    expect(screen.getByText('Chest 98 is unavailable.')).toBeDefined();
+    expect(useAutomatic()).not.toBeNull();
 });

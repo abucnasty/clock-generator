@@ -1,7 +1,10 @@
-import { expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment happy-dom
+import { screen } from '@testing-library/react';
 import { ConfigSchema, type Config } from 'clock-generator/browser';
+import { expect, it, vi } from 'vitest';
+import { show } from '../test/fixtures';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
+import type { ConfigFormData } from './configForm/formData';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { removeChest, removeMachine } from './configForm/edits';
 import { removalMessage } from './undoSnapshot';
@@ -24,25 +27,33 @@ it("keeps a drill's chest target through the form and a saved build", () => {
     expect(ConfigSchema.parse(formDataToConfig(saved))).toEqual(config);
 });
 
-it("shows a drill's container in the one Target picker, with its icon and the ore it holds", () => {
-    const form = configToFormData(config);
-    const html = renderToStaticMarkup(<DrillsForm drills={form.drills!.configs} resourceNames={['iron-ore']}
-        machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
-        onAdd={() => { }} onUpdate={() => { }} onRemove={() => { }} onReorder={() => { }} onDuplicate={() => { }} />);
-    expect(html).toContain('aria-label="Drop target, Drill 1"');
-    expect(html).toContain('value="Car 1 - iron-ore"');
-    expect(html).toContain('/icons/car.png');
-    expect(html).not.toMatch(/readonly/i);
-    expect(html).not.toContain('Target chest');
-    expect(html).not.toContain('Target machine');
+const showDrills = (form: ConfigFormData, onUpdate = vi.fn()) => show(<DrillsForm drills={form.drills!.configs} resourceNames={['iron-ore']}
+    machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
+    onAdd={vi.fn()} onUpdate={onUpdate} onRemove={vi.fn()} onReorder={vi.fn()} onDuplicate={vi.fn()} />);
+const target = () => screen.getByRole<HTMLInputElement>('combobox', { name: 'Drop target, Drill 1' });
+// the icons are drawn for the eye; the field says what they show
+const pictures = () => screen.queryAllByRole('presentation', { hidden: true }).map(picture => picture.getAttribute('src'));
+
+it("shows a drill's container in the one Target picker, with its icon and the ore it holds", async () => {
+    const onUpdate = vi.fn();
+    const { user } = showDrills(configToFormData(config), onUpdate);
+    expect(screen.getAllByRole('combobox', { name: /target/i })).toEqual([target()]);
+    expect(target().value).toBe('Car 1 - iron-ore');
+    expect(target().getAttribute('aria-invalid')).toBe('false');
+    expect(pictures()).toContain('/icons/car.png');
+    // a picker to choose from, not a fixed chest or machine
+    expect(document.body.textContent).not.toMatch(/Target (chest|machine)/i);
+    expect(screen.queryAllByLabelText(/Target (chest|machine)/i)).toEqual([]);
+    expect(['textbox', 'combobox', 'spinbutton'].flatMap(role => screen.queryAllByRole<HTMLInputElement>(role)).filter(field => field.readOnly)).toEqual([]);
+    await user.click(target());
+    await user.click(screen.getByRole('option', { name: /^Machine 1/ }));
+    expect(onUpdate).toHaveBeenCalledExactlyOnceWith(0, { target: { type: 'machine', id: 1 } });
 });
 
 it('marks an unset target', () => {
-    const form = removeChest(configToFormData(config), 0);
-    const html = renderToStaticMarkup(<DrillsForm drills={form.drills!.configs} resourceNames={['iron-ore']}
-        machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
-        onAdd={() => { }} onUpdate={() => { }} onRemove={() => { }} onReorder={() => { }} onDuplicate={() => { }} />);
-    expect(html).toMatch(/aria-invalid="true"[^>]*aria-label="Drop target, Drill 1"|aria-label="Drop target, Drill 1"[^>]*aria-invalid="true"/);
+    showDrills(removeChest(configToFormData(config), 0));
+    expect(target().value).toBe('');
+    expect(target().getAttribute('aria-invalid')).toBe('true');
 });
 
 it('unsets the target of a drill whose chest is removed, and keeps it on a machine removed', () => {
