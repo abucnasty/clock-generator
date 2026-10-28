@@ -105,12 +105,12 @@ describe("the memo of the runs of a generation", () => {
         const run = runBuild(config, options);
         expect(run).not.toHaveProperty("new_simulation_context");
         const context = run.simulation_context;
-        const state_machines = [...context.inserters, ...context.machines, ...context.drills];
+        const state_machines = [...context.inserters, ...context.drills];
         expect(state_machines.length).toBeGreaterThan(0);
-        for (const state_machine of state_machines) {
-            for (const plugin of state_machine.getPlugins()) {
-                expect(history_plugins.some(history_plugin => plugin instanceof history_plugin)).toBe(false);
-            }
+        expect(context.machines.length).toBeGreaterThan(0);
+        const plugins = [...state_machines.flatMap((it): object[] => it.getPlugins()), ...context.machines.flatMap(it => it.getObservers())];
+        for (const plugin of plugins) {
+            expect(history_plugins.some(history_plugin => plugin instanceof history_plugin)).toBe(false);
         }
         // what is still read off the returned context
         expect(context.entity_registry).toBeDefined();

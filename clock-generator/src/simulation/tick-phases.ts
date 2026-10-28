@@ -1,6 +1,6 @@
 import { DrillStateMachine } from "../control-logic/drill/drill-state-machine";
 import { InserterStateMachine } from "../control-logic/inserter/inserter-state-machine";
-import { MachineStateMachine } from "../control-logic/machine/machine-state-machine";
+import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
 import { World } from "./world";
 
 /**
@@ -104,11 +104,11 @@ export const TICK_PHASES: readonly TickPhaseRow[] = [
         steps: [
             { step: MachineStep.PLACE_BEFORE, name: "place_before", does: "what waits in the output into the result target", upholds: [5] },
             { step: MachineStep.HELD_TO_OUTPUT, name: "held_to_output", does: "held products into the output where there is room", upholds: [14] },
-            { step: MachineStep.STATUS_RULE, name: "status_rule", does: "the status rule; on a change, observers (the status written first), then exit and enter",
+            { step: MachineStep.STATUS_RULE, name: "status_rule", does: "the status rule; on a change, the status written, then observers (a machine has no exit or enter steps)",
                 upholds: [13, 17] },
             { step: MachineStep.STATUS_STEP, name: "status_step", does: "working: energy share, payouts, craft loop, energy spent", upholds: [14, 15] },
             { step: MachineStep.PLACE_AFTER, name: "place_after", does: "what the tick's crafts gave into the result target", upholds: [5, 6] },
-            { step: MachineStep.END_OF_TICK, name: "end_of_tick", does: "the wake flags and the decider cleared (MachineStatusPlugin), then tick plugins in the order added",
+            { step: MachineStep.END_OF_TICK, name: "end_of_tick", does: "the Wakes: the wake flags and the decider cleared, then tick observers in the order added",
                 upholds: [1, 3] },
         ],
     },
@@ -168,7 +168,7 @@ function runInserters(inserters: readonly InserterStateMachine[], tracer: TickTr
     }
 }
 
-function runMachines(machines: readonly MachineStateMachine[], tracer: TickTracer | null): void {
+function runMachines(machines: readonly CraftingMachineArchetype[], tracer: TickTracer | null): void {
     for (let index = 0; index < machines.length; index++) {
         const machine = machines[index];
         if (tracer !== null) tracer.step(TickPhase.MACHINES, index, MachineStep.PLACE_BEFORE);
@@ -176,12 +176,12 @@ function runMachines(machines: readonly MachineStateMachine[], tracer: TickTrace
         if (tracer !== null) tracer.step(TickPhase.MACHINES, index, MachineStep.HELD_TO_OUTPUT);
         machine.putHeldProductsInOutput();
         if (tracer !== null) tracer.step(TickPhase.MACHINES, index, MachineStep.STATUS_RULE);
-        machine.ruleStep();
+        machine.statusRule();
         if (tracer !== null) tracer.step(TickPhase.MACHINES, index, MachineStep.STATUS_STEP);
-        machine.modeStep();
+        machine.statusStep();
         if (tracer !== null) tracer.step(TickPhase.MACHINES, index, MachineStep.PLACE_AFTER);
         machine.placeResults();
         if (tracer !== null) tracer.step(TickPhase.MACHINES, index, MachineStep.END_OF_TICK);
-        machine.tickObservers();
+        machine.endOfTick();
     }
 }

@@ -92,7 +92,7 @@ describe("Yield: products held until the output has room", () => {
         expect(made.pendingOutput).toBe(0);
         expect(inventory.getQuantity("plastic-bar")).toBe(91);
         expect(user.crafted).toBe(2);
-        // a machine that does not place its results itself counts none placed; the working mode decides that
+        // a machine that does not place its results itself counts none placed; its Crafting and Placement decide that
         expect(user.placed).toBe(2);
     });
 });

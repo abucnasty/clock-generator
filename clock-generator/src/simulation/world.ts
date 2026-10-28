@@ -2,7 +2,7 @@ import { MutableTickProvider } from "../control-logic";
 import { DrillStateMachine } from "../control-logic/drill/drill-state-machine";
 import { inserterUpdateOrder } from "../control-logic/inserter/competing-takers";
 import { InserterStateMachine } from "../control-logic/inserter/inserter-state-machine";
-import { MachineStateMachine } from "../control-logic/machine/machine-state-machine";
+import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
 import { SimulationContext } from "../crafting/sequence/simulation-context";
 import { EntityState } from "../state";
 import { ContainerStorage } from "./components/container-storage";
@@ -29,7 +29,7 @@ export class World {
         /** Takers before feeders, the takers of one machine in the context's taker order (`inserterUpdateOrder`) */
         public readonly inserters: readonly InserterStateMachine[],
         /** In config order */
-        public readonly machines: readonly MachineStateMachine[],
+        public readonly machines: readonly CraftingMachineArchetype[],
         /** In config order; a belt has no step of its own in a tick yet */
         public readonly belts: readonly TransportBelt[],
         /** In config order; a container has no step of its own in a tick yet */

@@ -3,7 +3,7 @@ import { orderByMachineDependencies } from "../../common/order-by-machine-depend
 import { AlwaysEnabledControl, EnableControl, MutableTickProvider } from "../../control-logic";
 import { DrillStateMachine } from "../../control-logic/drill/drill-state-machine";
 import { InserterStateMachine } from "../../control-logic/inserter/inserter-state-machine";
-import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
+import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
@@ -30,7 +30,7 @@ export class SimulationContext {
         public readonly tick_provider: MutableTickProvider,
         public readonly entity_registry: WritableEntityRegistry,
         public readonly state_registry: WritableEntityStateRegistry,
-        public readonly machines: MachineStateMachine[],
+        public readonly machines: CraftingMachineArchetype[],
         public readonly inserters: InserterStateMachine[],
         public readonly drills: DrillStateMachine[],
         public readonly target_production_rate: TargetProductionRate,
@@ -100,7 +100,7 @@ export class SimulationContext {
     }
 }
 
-type MachineStateMachineInterceptor = (entity_state: EntityState) => MachineStateMachine | null
+type MachineInterceptor = (entity_state: EntityState) => CraftingMachineArchetype | null
 type InserterStateMachineInterceptor = (entity_state: EntityState) => InserterStateMachine | null
 
 /** The entities of a config: belts, machines, chests, inserters and drills, without any state */
@@ -171,7 +171,7 @@ function registryPutIntoView(entity_registry: EntityRegistry): PutIntoView {
 function createSimulationContextFromConfig(
     config: Config,
     interceptors: {
-        machine_interceptor?: MachineStateMachineInterceptor,
+        machine_interceptor?: MachineInterceptor,
         inserter_interceptor?: InserterStateMachineInterceptor,
     } = {}
 ): SimulationContext {
@@ -184,7 +184,7 @@ function createSimulationContextFromConfig(
 
     const tick_provider = new MutableTickProvider();
 
-    const machine_state_machines: MachineStateMachine[] = entity_state_registry
+    const machine_state_machines: CraftingMachineArchetype[] = entity_state_registry
         .getAllStates()
         .filter(EntityState.isMachine)
         .map(machine_state => {
@@ -196,7 +196,7 @@ function createSimulationContextFromConfig(
             const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
             assert(result_target_state === undefined || ContainerStorage.is(result_target_state) || EntityState.isMachine(result_target_state),
                 `${machine_state.machine} places its results into ${result_target}, which is neither a machine nor a chest`);
-            return MachineStateMachine.create({
+            return CraftingMachineArchetype.create({
                 machine_state: machine_state,
                 ...(result_target_state !== undefined && { result_target_state }),
             });

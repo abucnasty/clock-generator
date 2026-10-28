@@ -213,7 +213,7 @@ describe("the yield of a craft (rule 18)", () => {
     it("multiplies 1 of the 2 pentapod eggs by productivity", () => {
         const egg = machineOf({ machines: [{ id: 1, recipe: "pentapod-egg", crafting_speed: 64.5, productivity: 150, prototype: "biochamber", energy_consumption_bonus: 1020 }] });
         expect(egg.yield.results[0]).toMatchObject({ item: "pentapod-egg", amount: 2, ignored_by_productivity: 1, expected_per_craft: 1 + 1 * 2.5 });
-        // machine-state-machine.test.ts: recorded at 9 nutrients in its fuel slot
+        // simulation/archetypes/crafting-machine.test.ts: recorded at 9 nutrients in its fuel slot
         expect(egg.energy.fuel?.slot_limit).toBe(9);
     });
 });

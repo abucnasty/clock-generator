@@ -20,7 +20,7 @@ import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, Sign
 import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
 import { ModePlugin } from "../../control-logic/mode";
-import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
+import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { neverBlockingBranchesOf, type TerminalBranch } from "../terminal-rate";
@@ -589,20 +589,24 @@ interface RecordedBuild {
     relative_tick_provider: TickProvider;
     inventory_transfer_history: InventoryTransferHistory;
     state_transition_history: StateTransitionHistory;
-    /** The plugins that only feed the two histories */
-    history_plugins: ReadonlySet<ModePlugin<any>>;
+    /** The plugins and machine observers that only feed the two histories */
+    history_plugins: ReadonlySet<object>;
 }
 
-/** Every plugin on the state machines of a simulation */
-function pluginsOf(context: SimulationContext): ModePlugin<any>[] {
-    return [...context.inserters, ...context.machines, ...context.drills].flatMap((it): ModePlugin<any>[] => it.getPlugins());
+/** Every plugin on the state machines of a simulation, and every observer on its machines */
+function pluginsOf(context: SimulationContext): object[] {
+    return [...[...context.inserters, ...context.drills].flatMap((it): ModePlugin<any>[] => it.getPlugins()),
+        ...context.machines.flatMap(it => it.getObservers())];
 }
 
-/** Takes the plugins that only feed the two histories off every state machine of these contexts */
+/** Takes the plugins and observers that only feed the two histories off every entity of these contexts */
 function detachHistoryPlugins(build: RecordedBuild, ...contexts: SimulationContext[]): void {
     for (const context of contexts) {
-        for (const state_machine of [...context.inserters, ...context.machines, ...context.drills]) {
+        for (const state_machine of [...context.inserters, ...context.drills]) {
             state_machine.removePlugins(build.history_plugins);
+        }
+        for (const machine of context.machines) {
+            machine.removeObservers(build.history_plugins);
         }
     }
 }
@@ -685,7 +689,7 @@ function prepareBuild(build: RecordedBuild, debug: MutableDebugSettingsProvider,
 /** Empties the output machines (unless kept) and puts in what the machines hold at the start, when one is given */
 function setUpTheStart(
     simulation_context: SimulationContext,
-    output_machine_state_machines: MachineStateMachine[],
+    output_machine_state_machines: CraftingMachineArchetype[],
     options: RunOptions,
     logger: Logger,
 ): void {
@@ -1684,7 +1688,7 @@ export function checkedClock(
 /** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */
 interface PlannedCraftingCycle {
     target_production_rate: TargetProductionRate;
-    output_machine_state_machines: MachineStateMachine[];
+    output_machine_state_machines: CraftingMachineArchetype[];
     /** One output inserter per output machine, which the swings of a cycle are counted by */
     output_inserters: InserterState[];
     /** Every inserter that takes the target item out of the build */
@@ -2454,9 +2458,9 @@ function configureStateTransitionPlugins(
     // Add machine state transition plugins
     simulation_context.machines.forEach(it => {
         const recorder = state_transition_history.recorderFor(it.machine_state.entity_id, "machine");
-        it.addPlugin(new MachineStateTransitionTrackerPlugin(relative_tick_provider, recorder));
+        it.addObserver(new MachineStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioMachineState(it.machine_state), recorder));
+            it.addObserver(new FactorioStatePlugin(relative_tick_provider, () => factorioMachineState(it.machine_state), recorder));
         }
     });
 

@@ -8,16 +8,14 @@ import { InserterDropMode, InserterPickupMode } from "../../control-logic/insert
 /**
  * The fields holding a plain value in what the simulation keeps, by owner (an entity's state by its type, a mode or
  * an evaluator by its class; a mode's status names it). A field added to one of them goes into its owner's state key
- * when it drives the simulation, and in any case into this list.
+ * when it drives the simulation, and in any case into this list. A machine's state holds components only: its Crafting
+ * and its Wakes pin their own fields (simulation/components/crafting.test.ts), as Energy, Yield and Placement do; its
+ * archetype holds none (CraftingMachineArchetype is walked and must stay out of this list).
  */
 const PLAIN_FIELDS: Record<string, string[]> = {
-    // the running totals are left out of its key
-    MachineState: ["craftCount", "status", "totalCrafted", "craftsStarted", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick", "windowOpeningTakeDecider"],
     // `tick` and the counts of items are left out of its key
     inserter: ["status", "tick", "held_item", "items_picked_up", "items_dropped", "waits_for_sink", "enabled"],
     DrillState: ["status"],
-    // the container a machine places its results into (null where it has none), the same in every tick
-    MachineWorkingMode: ["result_target"],
     MachineDropLogic: ["current_tick"],
     ChestDropLogic: ["current_tick"],
     // where on the lane the hand puts its stacks down, the same in every tick
@@ -54,7 +52,12 @@ describe("simulationStateKey", () => {
             for (const state of context.state_registry.getAllStates()) {
                 add(state.constructor === Object ? state.entity_id.type : state.constructor.name, plainFields(state));
             }
-            for (const state_machine of [...context.machines, ...context.inserters, ...context.drills]) {
+            // a machine has no modes: its archetype keys its status alone (crafting-machine.test.ts) and holds references
+            // only (its result target null for none), so a plain field added to it shows up here
+            for (const machine of context.machines) {
+                add(machine.constructor.name, plainFields(machine, ["result_target"]));
+            }
+            for (const state_machine of [...context.inserters, ...context.drills]) {
                 for (const [mode, evaluator] of (state_machine as unknown as { graph: Map<object, object> }).graph) {
                     add(mode.constructor.name, plainFields(mode, ["status"]));
                     if (mode instanceof InserterPickupMode || mode instanceof InserterDropMode) {

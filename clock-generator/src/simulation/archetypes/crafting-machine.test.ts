@@ -1,12 +1,13 @@
 import { describe, test, expect } from "vitest"
-import { MachineStateMachine } from "./machine-state-machine";
+import { CraftingMachineArchetype, CraftingMachineObserver } from "./crafting-machine";
 import { MachineState, MachineStatus } from "../../state";
 import { Machine, MachineSpec, RecipeMetadata } from "../../entities";
-import { DebugPluginFactory, DebugSettingsProvider } from "../../crafting/sequence";
-import { TickProvider } from "../current-tick-provider";
-import { CompositeControlLogic } from "../composite-control-logic";
-import { TickControlLogic } from "../tick-control-logic";
-import { BurnerEnergy } from "../../simulation/components/burner-energy";
+import { Config, ConfigSchema } from "../../config/schema";
+import { AlwaysEnabledControl } from "../../control-logic";
+import { reasonText } from "../../control-logic/mode/reason-table";
+import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../crafting/sequence/simulation-context";
+import { BurnerEnergy } from "../components/burner-energy";
+import { CraftingStatus, machineStatusOf } from "../status-codes";
 
 /** A machine of the recipe; its prototype (none: an assembling machine) gives what it does by its kind, through its traits */
 const createMachine = (recipeName: string, metadata: Partial<MachineSpec> = {}): Machine => {
@@ -19,37 +20,14 @@ const createMachine = (recipeName: string, metadata: Partial<MachineSpec> = {}):
     })
 }
 
-const executeControlLogicForTicks = (state_machine: MachineStateMachine, ticks: number, debug: boolean = false) => {
-    const tick_provider = TickProvider.mutable()
-    if (debug) {
-        const settings_provider = DebugSettingsProvider.immutable({
-            enabled: true,
-            plugin_settings: {
-                craft_event: {
-                    print_bonus_progress: true,
-                    print_craft_progress: true,
-                }
-            }
-        })
-        const debug_plugin_factory = new DebugPluginFactory(
-            tick_provider,
-            settings_provider
-        )
-
-        debug_plugin_factory.forMachine(state_machine);
-    }
-
-    const control_logic = new CompositeControlLogic([
-        new TickControlLogic(tick_provider),
-        state_machine,
-    ])
-
+/** Whole ticks of the machine, every step in the phase table's order, as a context ticked by hand runs it */
+const executeForTicks = (machine: CraftingMachineArchetype, ticks: number) => {
     for (let i = 0; i < ticks; i++) {
-        control_logic.executeForTick();
+        machine.executeForTick();
     }
 }
 
-describe("Machine State Machine", () => {
+describe("Crafting machine", () => {
     test("machine never transitions while no inputs are fed to it", () => {
         const machine_state = MachineState.forMachine(
             createMachine("stone-brick", {
@@ -58,22 +36,17 @@ describe("Machine State Machine", () => {
             })
         )
 
-        const state_machine = MachineStateMachine.create({
-            machine_state: machine_state,
-            initial_mode_status: MachineStatus.INGREDIENT_SHORTAGE,
-        })
-        // const working_mode = Array.from(state_machine.modes).find(it => it.status === MachineStatus.WORKING);
-        // expect(working_mode).toBeDefined();
+        const machine = CraftingMachineArchetype.create({ machine_state })
         expect(machine_state.craftingProgress.progress).toBe(0);
 
-        expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
 
-        executeControlLogicForTicks(state_machine, 100);
+        executeForTicks(machine, 100);
 
-        expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
     });
 
-    test("machine transitions to working mode when all inputs are satisfied", () => {
+    test("machine starts working when all inputs are satisfied", () => {
         const machine_state = MachineState.forMachine(
             createMachine("stone-brick", {
                 crafting_speed: 91.899995803833,
@@ -81,23 +54,18 @@ describe("Machine State Machine", () => {
             })
         )
 
-        const state_machine = MachineStateMachine.create({
-            machine_state: machine_state,
-            initial_mode_status: MachineStatus.INGREDIENT_SHORTAGE,
-        })
-        // const working_mode = Array.from(state_machine.modes).find(it => it.status === MachineStatus.WORKING);
-        // expect(working_mode).toBeDefined();
+        const machine = CraftingMachineArchetype.create({ machine_state })
         expect(machine_state.craftingProgress.progress).toBe(0);
 
-        expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
 
-        executeControlLogicForTicks(state_machine, 100);
+        executeForTicks(machine, 100);
 
-        expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
 
         machine_state.inventoryState.addQuantity("stone", 100);
-        executeControlLogicForTicks(state_machine, 1);
-        expect(state_machine.current_mode.status).toBe(MachineStatus.WORKING);
+        executeForTicks(machine, 1);
+        expect(machine_state.status).toBe(MachineStatus.WORKING);
     });
 
     test.each([
@@ -115,13 +83,10 @@ describe("Machine State Machine", () => {
                     prototype: "electric-furnace"
                 })
             )
-            const state_machine = MachineStateMachine.create({
-                machine_state: machine_state,
-                initial_mode_status: MachineStatus.INGREDIENT_SHORTAGE,
-            })
+            const machine = CraftingMachineArchetype.create({ machine_state })
 
             machine_state.inventoryState.addQuantity("stone", input_amount);
-            executeControlLogicForTicks(state_machine, 500);
+            executeForTicks(machine, 500);
 
             const produced_stone_bricks = machine_state.inventoryState.getQuantity("stone-brick");
             expect(produced_stone_bricks).toBe(expected_output);
@@ -137,20 +102,17 @@ describe("Machine State Machine", () => {
                 prototype: "electric-furnace"
             })
         )
-        const state_machine = MachineStateMachine.create({
-            machine_state: machine_state,
-            initial_mode_status: MachineStatus.INGREDIENT_SHORTAGE,
-        })
+        const machine = CraftingMachineArchetype.create({ machine_state })
 
         machine_state.inventoryState.addQuantity("stone", 1_000_000);
 
         // Run for enough ticks to craft all possible items
-        executeControlLogicForTicks(state_machine, 200);
+        executeForTicks(machine, 200);
 
         const produced_stone_bricks = machine_state.inventoryState.getQuantity("stone-brick");
         expect(produced_stone_bricks).toBe(100);
 
-        expect(state_machine.current_mode.status).toBe(MachineStatus.OUTPUT_FULL);
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL);
     });
 
     test("assembly machine stops crafting when output reaches max stack size", () => {
@@ -160,20 +122,17 @@ describe("Machine State Machine", () => {
                 productivity: 100,
             })
         )
-        const state_machine = MachineStateMachine.create({
-            machine_state: machine_state,
-            initial_mode_status: MachineStatus.INGREDIENT_SHORTAGE,
-        })
+        const machine = CraftingMachineArchetype.create({ machine_state })
 
         machine_state.inventoryState.addQuantity("copper-plate", 1_000_000);
         machine_state.inventoryState.addQuantity("iron-gear-wheel", 1_000_000);
 
-        executeControlLogicForTicks(state_machine, 550);
+        executeForTicks(machine, 550);
 
         const produced_automation_science_packs = machine_state.inventoryState.getQuantity("automation-science-pack");
         expect(produced_automation_science_packs).toBe(200);
 
-        expect(state_machine.current_mode.status).toBe(MachineStatus.OUTPUT_FULL);
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL);
     });
 
     test("machine is output full when the next craft does not fit under max stack size", () => {
@@ -183,51 +142,50 @@ describe("Machine State Machine", () => {
                 productivity: 300,
             })
         )
-        const state_machine = MachineStateMachine.create({
-            machine_state: machine_state,
-            initial_mode_status: MachineStatus.WORKING,
-        })
+        const machine = CraftingMachineArchetype.create({ machine_state })
+        machine_state.status = MachineStatus.WORKING
 
         // e.g. a stack size 15 inserter leaves an odd count; 1 free slot cannot fit a 2-item craft
         machine_state.inventoryState.addQuantity("coal", 1_000);
         machine_state.inventoryState.addQuantity("plastic-bar", 99);
-        executeControlLogicForTicks(state_machine, 10);
+        executeForTicks(machine, 10);
 
         expect(machine_state.inventoryState.getQuantity("plastic-bar")).toBe(99);
-        expect(state_machine.current_mode.status).toBe(MachineStatus.OUTPUT_FULL);
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL);
     });
 });
-describe("Machine State Machine holding the products of a finished craft", () => {
+describe("Crafting machine holding the products of a finished craft", () => {
     // 2 plastic bars a craft from 1 coal, one craft a tick, under a stack size of 100
     const holdingMachine = () => {
         const machine_state = MachineState.forMachine(createMachine("plastic-bar", { crafting_speed: 60, productivity: 0 }))
-        const state_machine = MachineStateMachine.create({ machine_state, initial_mode_status: MachineStatus.WORKING })
+        const machine = CraftingMachineArchetype.create({ machine_state })
+        machine_state.status = MachineStatus.WORKING
         // the one coal makes a craft whose 2 bars do not fit next to the 99 in the output
         machine_state.inventoryState.addQuantity("coal", 1)
         machine_state.inventoryState.addQuantity("plastic-bar", 99)
-        executeControlLogicForTicks(state_machine, 5)
-        return { machine_state, state_machine }
+        executeForTicks(machine, 5)
+        return { machine_state, machine }
     }
 
     // Inserters update before machines in a tick and the recorder samples after both: an inserter that takes products from
     // a machine in a tick and the machine putting its held products in are in the same sample, as in the game
     test("a machine short of ingredients puts held products in its output in the tick there is room for them", () => {
-        const { machine_state, state_machine } = holdingMachine()
+        const { machine_state, machine } = holdingMachine()
         expect(machine_state.craftCount).toBe(1)
         expect(machine_state.yield.pendingOutput).toBe(2)
         expect(machine_state.inventoryState.getQuantity("plastic-bar")).toBe(99)
 
         // it waits while there is no room, and has nothing to craft with
-        executeControlLogicForTicks(state_machine, 3)
+        executeForTicks(machine, 3)
         expect(machine_state.yield.pendingOutput).toBe(2)
         expect(machine_state.inventoryState.getQuantity("coal")).toBe(0)
 
-        // an inserter takes 10 bars earlier in a tick: the machine's update in that same tick puts the 2 in, whatever mode it is in
+        // an inserter takes 10 bars earlier in a tick: the machine's update in that same tick puts the 2 in, whatever its status
         machine_state.inventoryState.setQuantity("plastic-bar", 89)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.yield.pendingOutput).toBe(0)
         expect(machine_state.inventoryState.getQuantity("plastic-bar")).toBe(91)
-        expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
     })
 })
 
@@ -236,7 +194,7 @@ describe("Machine State Machine holding the products of a finished craft", () =>
  * output is at overload multiplier x recipe amount (productivity not counted) and ingredient shortage below it,
  * but a machine with its ingredients keeps crafting past the block, up to the stack size.
  */
-describe("Machine State Machine at the output block", () => {
+describe("Crafting machine at the output block", () => {
     // rocket-fuel-from-jelly in the gleba rocket fuel recordings: 7.09 ticks per craft, 1 rocket fuel per craft and
     // 3 more from 300% productivity, output block 11 (overload multiplier 11 x 1), stack size 20
     const createRocketFuel = (rocket_fuel: number, crafts_of_ingredients: number) => {
@@ -247,8 +205,8 @@ describe("Machine State Machine at the output block", () => {
         machine_state.inventoryState.addQuantity("rocket-fuel", rocket_fuel)
         machine_state.inventoryState.addQuantity("jelly", 30 * crafts_of_ingredients)
         machine_state.inventoryState.addQuantity("bioflux", 2 * crafts_of_ingredients)
-        const state_machine = MachineStateMachine.create({ machine_state })
-        return { machine_state, state_machine }
+        const machine = CraftingMachineArchetype.create({ machine_state })
+        return { machine_state, machine }
     }
 
     test("the output block is the overload multiplier times the recipe amount, without productivity", () => {
@@ -276,25 +234,25 @@ describe("Machine State Machine at the output block", () => {
     })
 
     test("a machine tells the inserters that wait on it whether it finished a craft in its last tick, and whether its output was at the block then", () => {
-        const { machine_state, state_machine } = createRocketFuel(11, 2)
-        executeControlLogicForTicks(state_machine, 1)
+        const { machine_state, machine } = createRocketFuel(11, 2)
+        executeForTicks(machine, 1)
         expect(machine_state.outputBlockedAfterLastTick).toBe(true)
         expect(machine_state.finishedCraftInLastTick).toBe(false)
         // 7.09 ticks a craft: only the tick the first craft finishes in says so
         let ticks = 1
         while (machine_state.craftCount === 0 && ticks < 20) {
             expect(machine_state.finishedCraftInLastTick).toBe(false)
-            executeControlLogicForTicks(state_machine, 1)
+            executeForTicks(machine, 1)
             ticks += 1
         }
         expect(machine_state.craftCount).toBe(1)
         expect(machine_state.finishedCraftInLastTick).toBe(true)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.finishedCraftInLastTick).toBe(false)
         // an output inserter takes the products: the machine says so once its own tick is done
         machine_state.inventoryState.setQuantity("rocket-fuel", 0)
         expect(machine_state.outputBlockedAfterLastTick).toBe(true)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.outputBlockedAfterLastTick).toBe(false)
     })
 
@@ -313,10 +271,10 @@ describe("Machine State Machine at the output block", () => {
 
     test("keeps crafting with its ingredients while its output is over the block", () => {
         // in game a craft started with 12 rocket fuel in the output and finished at 14 (gleba recording, tick 65)
-        const { machine_state, state_machine } = createRocketFuel(12, 2)
-        executeControlLogicForTicks(state_machine, 1)
+        const { machine_state, machine } = createRocketFuel(12, 2)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
-        executeControlLogicForTicks(state_machine, 20)
+        executeForTicks(machine, 20)
         expect(machine_state.craftCount).toBe(2)
         expect(machine_state.inventoryState.getQuantity("rocket-fuel")).toBe(20)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
@@ -324,29 +282,29 @@ describe("Machine State Machine at the output block", () => {
 
     test("is output full once out of ingredients with its output at the block, and short of ingredients under it", () => {
         // in game: 16 rocket fuel and too little jelly shows full output, 8 left after a pickup shows ingredient shortage
-        const { machine_state, state_machine } = createRocketFuel(16, 0)
-        executeControlLogicForTicks(state_machine, 2)
+        const { machine_state, machine } = createRocketFuel(16, 0)
+        executeForTicks(machine, 2)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
         machine_state.inventoryState.setQuantity("rocket-fuel", 11)
-        executeControlLogicForTicks(state_machine, 2)
+        executeForTicks(machine, 2)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
         machine_state.inventoryState.setQuantity("rocket-fuel", 8)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
     })
 
     test("a full output machine works again as soon as its ingredients arrive, even at the block", () => {
         // in game an advanced circuit machine at its block of 21 started a craft the tick its copper cable arrived
-        const { machine_state, state_machine } = createRocketFuel(12, 0)
+        const { machine_state, machine } = createRocketFuel(12, 0)
         // a burner that worked before holds the energy that is over a tick of work, enough to start on
-        const machine = machine_state.machine
+        const entity = machine_state.machine
         const energy = machine_state.energy as BurnerEnergy
-        energy.energy_buffer_mj = machine.fuel_slot!.energy_per_craft_mj * machine.crafting_rate.crafts_per_tick / 15
-        executeControlLogicForTicks(state_machine, 2)
+        energy.energy_buffer_mj = entity.fuel_slot!.energy_per_craft_mj * entity.crafting_rate.crafts_per_tick / 15
+        executeForTicks(machine, 2)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
         machine_state.inventoryState.addQuantity("jelly", 30)
         machine_state.inventoryState.addQuantity("bioflux", 2)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
         expect(machine_state.inventoryState.getQuantity("jelly")).toBe(0)
     })
@@ -359,14 +317,14 @@ describe("Machine State Machine at the output block", () => {
     })
 
     test("an idle machine started with its output at the block shows full output", () => {
-        const { machine_state, state_machine } = createRocketFuel(11, 0)
+        const { machine_state, machine } = createRocketFuel(11, 0)
         expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
     })
 })
 
-describe("Machine State Machine with a fuel slot", () => {
+describe("Crafting machine with a fuel slot", () => {
     // 4s recipe at crafting speed 2: 120 ticks per craft, 1 MJ per craft, so one 2 MJ nutrient pays for 2 crafts
     const createBiochamberState = (mash: number, nutrients: number) => {
         const machine_state = MachineState.forMachine(
@@ -374,79 +332,79 @@ describe("Machine State Machine with a fuel slot", () => {
         )
         machine_state.inventoryState.addQuantity("yumako-mash", mash)
         machine_state.fuelInventory.addQuantity("nutrients", nutrients)
-        const state_machine = MachineStateMachine.create({ machine_state })
-        return { machine_state, state_machine }
+        const machine = CraftingMachineArchetype.create({ machine_state })
+        return { machine_state, machine }
     }
 
     // the nutrients the recipe makes are taken away so a full output never stops the machine
-    const run = (machine_state: MachineState, state_machine: MachineStateMachine, ticks: number) => {
+    const run = (machine_state: MachineState, machine: CraftingMachineArchetype, ticks: number) => {
         for (let i = 0; i < ticks; i++) {
-            executeControlLogicForTicks(state_machine, 1)
+            executeForTicks(machine, 1)
             machine_state.inventoryState.setQuantity("nutrients", 0)
         }
     }
 
     test("does not start a craft, or consume its ingredients, without fuel", () => {
-        const { machine_state, state_machine } = createBiochamberState(8, 0)
-        run(machine_state, state_machine, 300)
+        const { machine_state, machine } = createBiochamberState(8, 0)
+        run(machine_state, machine, 300)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
         expect(machine_state.craftCount).toBe(0)
         expect(machine_state.inventoryState.getQuantity("yumako-mash")).toBe(8)
     })
 
     test("burns one nutrient for every two crafts", () => {
-        const { machine_state, state_machine } = createBiochamberState(12, 1)
-        run(machine_state, state_machine, 600)
+        const { machine_state, machine } = createBiochamberState(12, 1)
+        run(machine_state, machine, 600)
         expect(machine_state.craftCount).toBe(2)
         expect(machine_state.fuelInventory.getQuantity("nutrients")).toBe(0)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
     })
 
     test("a machine with ingredients and no fuel is out of fuel, not short of ingredients", () => {
-        const { machine_state, state_machine } = createBiochamberState(8, 0)
-        executeControlLogicForTicks(state_machine, 1)
+        const { machine_state, machine } = createBiochamberState(8, 0)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
     })
 
     test("works on the tick after an inserter drops fuel in", () => {
-        const { machine_state, state_machine } = createBiochamberState(8, 0)
-        executeControlLogicForTicks(state_machine, 1)
+        const { machine_state, machine } = createBiochamberState(8, 0)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
         machine_state.ingress.insert("nutrients", 1)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
         // a craft started once the machine had fuel to burn
-        run(machine_state, state_machine, 120)
+        run(machine_state, machine, 120)
         expect(machine_state.craftCount).toBe(1)
     })
 
     test("a machine with fuel and no ingredients is short of ingredients, not out of fuel", () => {
-        const { machine_state, state_machine } = createBiochamberState(0, 1)
-        executeControlLogicForTicks(state_machine, 1)
+        const { machine_state, machine } = createBiochamberState(0, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
     })
 
     test("is out of fuel before it is output full", () => {
         // an idle machine with its output at the block shows full output, unless it has no fuel
-        const { machine_state, state_machine } = createBiochamberState(0, 0)
+        const { machine_state, machine } = createBiochamberState(0, 0)
         machine_state.inventoryState.setQuantity("nutrients", machine_state.machine.output.outputBlock.held_limit)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
         // with fuel, the full output is what stops it
         machine_state.ingress.insert("nutrients", 1)
-        executeControlLogicForTicks(state_machine, 1)
+        executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
     })
 
     test("a craft in progress waits for fuel and resumes where it stopped", () => {
-        const { machine_state, state_machine } = createBiochamberState(16, 1)
-        run(machine_state, state_machine, 180)
+        const { machine_state, machine } = createBiochamberState(16, 1)
+        run(machine_state, machine, 180)
         // second craft is half done and has used up the nutrient
         expect(machine_state.craftCount).toBe(1)
-        run(machine_state, state_machine, 100)
+        run(machine_state, machine, 100)
         expect(machine_state.craftCount).toBe(2)
         machine_state.fuelInventory.addQuantity("nutrients", 1)
-        run(machine_state, state_machine, 400)
+        run(machine_state, machine, 400)
         expect(machine_state.craftCount).toBe(4)
         expect(machine_state.inventoryState.getQuantity("yumako-mash")).toBe(0)
     })
@@ -454,7 +412,7 @@ describe("Machine State Machine with a fuel slot", () => {
     test("machines without a fuel slot are unaffected", () => {
         const machine_state = MachineState.forMachine(createMachine("iron-gear-wheel"))
         machine_state.inventoryState.addQuantity("iron-plate", 2)
-        executeControlLogicForTicks(MachineStateMachine.create({ machine_state }), 60)
+        executeForTicks(CraftingMachineArchetype.create({ machine_state }), 60)
         expect(machine_state.craftCount).toBe(1)
     })
 
@@ -467,11 +425,35 @@ describe("Machine State Machine with a fuel slot", () => {
         expect(machine_state.ingress.takes("coal")).toBe(false)
     })
 
+    // a burner tops its buffer up only after a tick it keeps working, so a stopped one keeps the 1/15 of a tick its buffer
+    // holds over a tick of work: the tick it starts again makes 1/15 of a tick's progress
+    test("starts again on the 1/15 of a tick of energy it kept when it stopped (same-tick rule 15)", () => {
+        const { machine_state, machine } = createBiochamberState(4, 1)
+        const entity = machine_state.machine
+        const per_tick = entity.fuel_slot!.energy_per_craft_mj * entity.crafting_rate.crafts_per_tick
+        let ticks = 0
+        while (machine_state.craftCount === 0 && ticks < 200) {
+            run(machine_state, machine, 1)
+            ticks += 1
+        }
+        expect(machine_state.craftCount).toBe(1)
+        // the craft that finished leaves nothing to craft with: the next tick it stops
+        run(machine_state, machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+        const energy = machine_state.energy as BurnerEnergy
+        expect(energy.energy_buffer_mj).toBeCloseTo(per_tick / 15, 12)
+
+        machine_state.inventoryState.addQuantity("yumako-mash", 4)
+        run(machine_state, machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.WORKING)
+        expect(machine_state.craftsStarted).toBe(2)
+        expect(machine_state.craftingProgress.progress).toBeCloseTo(entity.crafting_rate.crafts_per_tick / 15, 12)
+    })
 })
 
 // as recorded in Factorio 2.1.21 on a pentapod egg biochamber at crafting speed 64.5 with +150% productivity and
 // +1020% energy consumption: fuel slot filled up to 9 nutrients, ingredients up to 210 nutrients and 7 eggs
-describe("Machine State Machine with a pentapod egg recipe", () => {
+describe("Crafting machine with a pentapod egg recipe", () => {
     const createEggState = () => MachineState.forMachine(createMachine("pentapod-egg", {
         prototype: "biochamber", crafting_speed: 64.5, productivity: 150, energy_consumption_bonus: 1020,
     }))
@@ -514,14 +496,14 @@ describe("Machine State Machine with a pentapod egg recipe", () => {
         machine_state.fuelInventory.addQuantity("nutrients", 20)
         machine_state.inventoryState.addQuantity("nutrients", 60)
         machine_state.selfIngredients.setQuantity("pentapod-egg", 2)
-        const state_machine = MachineStateMachine.create({ machine_state })
+        const machine = CraftingMachineArchetype.create({ machine_state })
         // two crafts of 14 ticks each fill the bar 3 times
-        executeControlLogicForTicks(state_machine, 40)
+        executeForTicks(machine, 40)
         expect(machine_state.craftCount).toBe(2)
         expect(eggsMade(machine_state)).toBe(2 * 2 + 3)
         expect(eggsGiven(machine_state)).toBe(0)
         expect(nutrientsToCraft(machine_state)).toBe(0)
-        expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
     })
 
     test("makes 3.5 eggs a craft on average", () => {
@@ -529,14 +511,14 @@ describe("Machine State Machine with a pentapod egg recipe", () => {
     })
 })
 
-describe("Machine State Machine with several outputs", () => {
+describe("Crafting machine with several outputs", () => {
     // jellynut-processing: 1 jellynut -> 4 jelly and 1 jellynut-seed at 2%, in 1s
     const createProcessing = (productivity = 0) => {
         const machine_state = MachineState.forMachine(
             createMachine("jellynut-processing", { prototype: "biochamber", productivity })
         )
         machine_state.fuelInventory.addQuantity("nutrients", 5)
-        return { machine_state, state_machine: MachineStateMachine.create({ machine_state }) }
+        return { machine_state, machine: CraftingMachineArchetype.create({ machine_state }) }
     }
 
     test("the main product is the result with the largest expected amount", () => {
@@ -546,11 +528,11 @@ describe("Machine State Machine with several outputs", () => {
     })
 
     test("a by-product is made at its expected amount, carrying fractions over", () => {
-        const { machine_state, state_machine } = createProcessing()
+        const { machine_state, machine } = createProcessing()
         machine_state.inventoryState.addQuantity("jellynut", 50)
         // a tick more than the crafts take: a burner that has not worked yet takes its energy from the fuel first
         for (let i = 0; i < 50 * 60 + 1; i++) {
-            executeControlLogicForTicks(state_machine, 1)
+            executeForTicks(machine, 1)
             machine_state.inventoryState.setQuantity("jelly", 0)
             machine_state.fuelInventory.setQuantity("nutrients", 5)
         }
@@ -566,19 +548,166 @@ describe("Machine State Machine with several outputs", () => {
     })
 
     test("the machine is output full as soon as any output reaches its stack size", () => {
-        const { machine_state, state_machine } = createProcessing()
+        const { machine_state, machine } = createProcessing()
         const seed_stack_size = machine_state.machine.outputs[1].outputBlock.max_stack_size
         machine_state.inventoryState.addQuantity("jellynut", 10)
-        executeControlLogicForTicks(state_machine, 5)
+        executeForTicks(machine, 5)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
         machine_state.inventoryState.setQuantity("jellynut-seed", seed_stack_size)
-        executeControlLogicForTicks(state_machine, 120)
+        executeForTicks(machine, 120)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
         // the craft that was underway finished and no other started
         expect(machine_state.inventoryState.getQuantity("jellynut")).toBe(9)
 
         machine_state.inventoryState.setQuantity("jellynut-seed", 0)
-        executeControlLogicForTicks(state_machine, 10)
+        executeForTicks(machine, 10)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
+    })
+})
+
+describe("Crafting machine: its steps and observers", () => {
+    // iron gear wheels, 0.5 s a craft: at crafting speed 15 a craft takes 2 ticks, and +300% fills the bar 3 times a craft
+    const gears = (productivity: number) => {
+        const machine_state = MachineState.forMachine(createMachine("iron-gear-wheel", { crafting_speed: 15, productivity }))
+        machine_state.inventoryState.addQuantity("iron-plate", 2)
+        return { machine_state, machine: CraftingMachineArchetype.create({ machine_state }) }
+    }
+
+    /** What an observer is told, with the machine as it is at each call */
+    const watching = (machine_state: MachineState) => {
+        const changes: { from: string; to: string; reason: string; status_then: string; started_then: number }[] = []
+        const ticks: { finished: boolean; decider: number | null }[] = []
+        const observer: CraftingMachineObserver = {
+            onStatusChange(from, to, reason_id) {
+                changes.push({ from: machineStatusOf(from), to: machineStatusOf(to), reason: reasonText(reason_id),
+                    status_then: machine_state.status, started_then: machine_state.craftsStarted })
+            },
+            executeForTick() {
+                ticks.push({ finished: machine_state.finishedCraftInLastTick, decider: machine_state.windowOpeningTakeDecider })
+            },
+        }
+        return { observer, changes, ticks }
+    }
+
+    test("pays a full productivity bar at the start of the next working tick, in the status's step (same-tick rule 14)", () => {
+        const { machine_state, machine } = gears(300)
+        executeForTicks(machine, 1)
+        // half a craft fills the bar one and a half times: nothing is paid on the tick it fills
+        expect(machine_state.yield.bonusProgress.progress).toBeCloseTo(1.5, 12)
+        expect(machine_state.productsFinished).toBe(0)
+
+        machine.placeResults()
+        machine.putHeldProductsInOutput()
+        machine.statusRule()
+        // held products go in before the rule, but a full bar is not paid there
+        expect(machine_state.productsFinished).toBe(0)
+        machine.statusStep()
+        // the bar is paid as the working tick starts, then the craft finishes and pays the two bars it filled
+        expect(machine_state.productsFinished).toBe(4)
+        expect(machine_state.inventoryState.getQuantity("iron-gear-wheel")).toBe(4)
+        expect(machine_state.yield.bonusProgress.progress).toBe(0)
+    })
+
+    test("tells its observers of a change in the status rule, the status written first, before the machine crafts (same-tick rule 17)", () => {
+        const { machine_state, machine } = gears(0)
+        const { observer, changes } = watching(machine_state)
+        machine.addObserver(observer)
+        machine.placeResults()
+        machine.putHeldProductsInOutput()
+        machine.statusRule()
+        expect(changes).toEqual([{ from: "INGREDIENT_SHORTAGE", to: "WORKING", reason: "machine has enough inputs for craft",
+            status_then: "WORKING", started_then: 0 }])
+        machine.statusStep()
+        expect(machine_state.craftsStarted).toBe(1)
+        machine.placeResults()
+        machine.endOfTick()
+        // the craft finishes in the next tick; with no plates left the machine is short of ingredients in the one after
+        executeForTicks(machine, 2)
+        expect(machine_state.craftCount).toBe(1)
+        expect(changes.map(it => [it.from, it.to, it.reason])).toEqual([
+            ["INGREDIENT_SHORTAGE", "WORKING", "machine has enough inputs for craft"],
+            ["WORKING", "INGREDIENT_SHORTAGE", "not enough inputs for craft"],
+        ])
+    })
+
+    test("writes its Wakes after its tick and before the observers of the tick, the decider cleared (same-tick rules 1 and 3)", () => {
+        const { machine_state, machine } = gears(0)
+        const { observer, ticks } = watching(machine_state)
+        machine.addObserver(observer)
+        executeForTicks(machine, 1)
+        machine_state.windowOpeningTakeDecider = 3
+        executeForTicks(machine, 1)
+        // the craft finished in the second tick: the observers see the flags of that tick, and the decider gone
+        expect(ticks).toEqual([{ finished: false, decider: null }, { finished: true, decider: null }])
+        expect(machine_state.finishedCraftInLastTick).toBe(true)
+        expect(machine_state.windowOpeningTakeDecider).toBe(null)
+    })
+
+    test("counts the crafts its Wakes report from its build on", () => {
+        const machine_state = MachineState.forMachine(createMachine("iron-gear-wheel", { crafting_speed: 15 }))
+        machine_state.craftCount = 5
+        machine_state.craftsStarted = 5
+        const machine = CraftingMachineArchetype.create({ machine_state })
+        executeForTicks(machine, 1)
+        expect(machine_state.finishedCraftInLastTick).toBe(false)
+        expect(machine_state.startedCraftInLastTick).toBe(false)
+    })
+
+    test("tells observers taken off nothing more, and keeps the others", () => {
+        const { machine_state, machine } = gears(0)
+        const kept = watching(machine_state)
+        const taken = watching(machine_state)
+        machine.addObserver(kept.observer)
+        machine.addObserver(taken.observer)
+        machine.removeObservers(new Set([taken.observer]))
+        expect(machine.getObservers()).toEqual([kept.observer])
+        executeForTicks(machine, 1)
+        expect(kept.changes).toHaveLength(1)
+        expect(kept.ticks).toHaveLength(1)
+        expect(taken.changes).toHaveLength(0)
+        expect(taken.ticks).toHaveLength(0)
+    })
+
+    // the texts the machine's mode state machine and its state gave the same build before (0.24.0, R11)
+    test("keys its status with the text of the mode state machine it replaces", () => {
+        const { machine_state, machine } = gears(0)
+        expect(machine.stateKey()).toBe("INGREDIENT_SHORTAGE||||||||")
+        executeForTicks(machine, 1)
+        expect(machine_state.crafting.status).toBe(CraftingStatus.WORKING)
+        expect(machine.stateKey()).toBe("WORKING||||||||")
+        // the status, the started craft its Wakes report and the half craft, in its state's key
+        expect(MachineState.stateKey(machine_state)).toBe("WORKING;0;false;false;true;{};0.5;0;0;0;[];[]")
+    })
+})
+
+describe("Crafting machine in a control swap", () => {
+    // an assembler fed from an infinity chest, its gears taken into a car (the shape of the phase table's trace build)
+    const BUILD: Config = ConfigSchema.parse({
+        target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 }],
+        inserters: [
+            { id: 1, source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, filters: ["iron-plate"] },
+            { id: 2, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 2 }, filters: ["iron-gear-wheel"] },
+        ],
+        belts: [],
+        chests: [
+            { type: "infinity-chest", id: 1, item_filter: [{ item_name: "iron-plate", request_count: 100 }] },
+            { type: "car", id: 2 },
+        ],
+    }) as Config;
+
+    // the inserters and drills are rebuilt on their new controls (same-tick rule 12); a machine is kept as it is
+    test("keeps every machine as it is: the same archetype, its status and its observers", () => {
+        const context = SimulationContext.fromConfig(BUILD);
+        const [machine] = context.machines;
+        const observer: CraftingMachineObserver = { executeForTick() { } };
+        machine.addObserver(observer);
+        machine.machine_state.status = MachineStatus.WORKING;
+        const swapped = cloneSimulationContextWithInterceptors(context, { inserter: () => AlwaysEnabledControl });
+        expect(swapped.machines).toHaveLength(1);
+        expect(swapped.machines[0]).toBe(machine);
+        expect(swapped.machines[0].getObservers()).toEqual([observer]);
+        expect(swapped.machines[0].machine_state.status).toBe(MachineStatus.WORKING);
+        expect(swapped.inserters[0]).not.toBe(context.inserters[0]);
     })
 })

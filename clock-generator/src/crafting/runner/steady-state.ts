@@ -45,7 +45,7 @@ export function simulationStateKey(context: SimulationContext): string {
     const tick = context.tick_provider.getCurrentTick();
     return [
         ...context.state_registry.getAllStates().map(it => entityStateKey(it, tick)),
-        ...context.machines.map(it => it.stateKey(tick)),
+        ...context.machines.map(it => it.stateKey()),
         ...context.inserters.map(it => it.stateKey(tick)),
         ...context.drills.map(it => it.stateKey(tick)),
     ].join("\n");

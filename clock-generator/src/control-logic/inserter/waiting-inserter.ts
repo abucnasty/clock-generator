@@ -19,7 +19,7 @@
  * built after its own, as the game updates the last built first (`wokenThisTick`). A hand from a belt that waited for
  * the machine's own craft start has no such tick either (`wokenByItsMachinesCraftStart`).
  *
- * `sink` is the machine as its last tick left it: `MachineStatusPlugin` records after every tick of a machine whether
+ * `sink` is the machine as its last tick left it: its Wakes record after every tick of a machine whether
  * it was at its output block and whether it finished a craft, and the inserters read them in the next tick. Inserters
  * are updated before machines, and those that take from a machine before those that put into it, so a machine that
  * was at its block when its last tick was done, and is not now, has had its products taken in this tick.

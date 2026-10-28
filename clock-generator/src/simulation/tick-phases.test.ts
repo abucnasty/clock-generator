@@ -10,7 +10,7 @@ import { ContainerStorage } from "./components/container-storage";
 
 /**
  * The order of a tick as this test knows it: a change of the phase table changes this copy in the same commit. Each
- * step with the method of today's state machines that runs it.
+ * step with the method of today's state machine or archetype that runs it.
  */
 const EXPECTED: readonly { name: string; entities: TickPhaseRow["entities"]; run_by: TickPhaseRow["run_by"]; steps: [string, string][] }[] = [
     { name: "tick", entities: null, run_by: "loop", steps: [["increment", "incrementTick"]] },
@@ -20,8 +20,8 @@ const EXPECTED: readonly { name: string; entities: TickPhaseRow["entities"]; run
         steps: [["control_tick", "tickControl"], ["phase_rule", "ruleStep"], ["phase_step", "modeStep"], ["tick_observers", "tickObservers"],
             ["shown_enabled", "writeShownEnabled"]] },
     { name: "machines", entities: "machines", run_by: "loop",
-        steps: [["place_before", "placeResults"], ["held_to_output", "putHeldProductsInOutput"], ["status_rule", "ruleStep"],
-            ["status_step", "modeStep"], ["place_after", "placeResults"], ["end_of_tick", "tickObservers"]] },
+        steps: [["place_before", "placeResults"], ["held_to_output", "putHeldProductsInOutput"], ["status_rule", "statusRule"],
+            ["status_step", "statusStep"], ["place_after", "placeResults"], ["end_of_tick", "endOfTick"]] },
     { name: "after_tick", entities: null, run_by: "caller", steps: [["recorders", "after_tick"], ["stop_early", "stop_early"]] },
 ];
 

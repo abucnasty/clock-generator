@@ -34,8 +34,8 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
 
     /**
      * A tick of the current mode: its rule, its step, the plugins of the tick. The phase table runs the three as steps
-     * of their own (simulation/tick-phases.ts). The state machines of inserters and machines run copies of them (see
-     * InserterStateMachine.ruleStep): a copy of their own calls into their own kinds of modes and evaluators, which the
+     * of their own (simulation/tick-phases.ts). The state machine of inserters runs copies of them (see
+     * InserterStateMachine.ruleStep): a copy of its own calls into its own kinds of modes and evaluators, which the
      * engine optimizes better than one place calling into every kind.
      */
     public executeForTick(): void {
@@ -121,7 +121,7 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
     }
 
     /** Takes these plugins off, for a run whose observations nobody reads any more */
-    public removePlugins(plugins: ReadonlySet<ModePlugin<M>>): void {
+    public removePlugins(plugins: ReadonlySet<object>): void {
         for (const list of [this.plugins, this.tick_plugins]) {
             const kept = list.filter(plugin => !plugins.has(plugin));
             list.length = 0;

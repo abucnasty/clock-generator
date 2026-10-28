@@ -5,12 +5,19 @@ import { EntityState } from "./entity-state";
 import { Logger, defaultLogger } from "../common/logger";
 import { MachineStatus } from "./entity-status";
 import { BurnerEnergy } from "../simulation/components/burner-energy";
+import { Crafting } from "../simulation/components/crafting";
 import { Energy } from "../simulation/components/energy";
 import { Ingress } from "../simulation/components/ingress";
 import { MachineOutputPort } from "../simulation/components/machine-output-port";
+import { MachineWakes } from "../simulation/components/machine-wakes";
 import { Placement } from "../simulation/components/placement";
 import { Yield } from "../simulation/components/yield";
+import { craftingStatusOf, machineStatusOf } from "../simulation/status-codes";
 
+/**
+ * A crafting machine's state: its components, which every context over the build shares, and the names outside
+ * callers read and write (start stock, seeds, recorders, controls, the inserters' rules) as views of them
+ */
 export class MachineState implements EntityState {
 
     public static forMachine = forMachine
@@ -30,10 +37,15 @@ export class MachineState implements EntityState {
      */
     public readonly ingress: Ingress;
 
+    /** The craft underway, the crafts started and finished, the status and the status rule (simulation/components) */
+    public readonly crafting: Crafting;
+
+    /** What the machine's last tick tells the inserters that wait on it (simulation/components) */
+    public readonly wakes: MachineWakes = new MachineWakes();
+
     constructor(
         public readonly entity_id: EntityId,
         public readonly machine: Machine,
-        public readonly craftingProgress: ProgressState,
         made: Yield,
         /** What the machine runs on, and for a burner the energy it holds (simulation/components) */
         public readonly energy: Energy,
@@ -45,12 +57,51 @@ export class MachineState implements EntityState {
          * it is given apart from what it makes, and never crafts from its own products.
          */
         public readonly selfIngredients: WritableInventoryState,
-        public craftCount: number,
-        public status: MachineStatus,
-        public totalCrafted: number,
     ) {
         this.yield = made;
         this.ingress = new Ingress(machine, inventoryState, fuelInventory, selfIngredients);
+        this.crafting = new Crafting(machine, energy, made, this.placement, this.ingress);
+    }
+
+    /** The craft underway, a view of the Crafting component's for outside callers (start stock, recorders, controls) */
+    public get craftingProgress(): ProgressState {
+        return this.crafting.craftingProgress;
+    }
+
+    /** Crafts finished so far, a view of the Crafting component's */
+    public get craftCount(): number {
+        return this.crafting.craftCount;
+    }
+
+    public set craftCount(value: number) {
+        this.crafting.craftCount = value;
+    }
+
+    /** Crafts started so far, a view of the Crafting component's (see `Crafting.craftsStarted`) */
+    public get craftsStarted(): number {
+        return this.crafting.craftsStarted;
+    }
+
+    public set craftsStarted(value: number) {
+        this.crafting.craftsStarted = value;
+    }
+
+    /** The main product put in the output so far, a view of the Crafting component's */
+    public get totalCrafted(): number {
+        return this.crafting.totalCrafted;
+    }
+
+    public set totalCrafted(value: number) {
+        this.crafting.totalCrafted = value;
+    }
+
+    /** The status the machine shows, by the name the histories record (a view of the Crafting component's code) */
+    public get status(): MachineStatus {
+        return machineStatusOf(this.crafting.status);
+    }
+
+    public set status(value: MachineStatus) {
+        this.crafting.status = craftingStatusOf(value);
     }
 
     /** The productivity bar, a view of the Yield component's for outside callers (start stock, recorders, controls) */
@@ -77,16 +128,8 @@ export class MachineState implements EntityState {
     }
 
     /**
-     * Crafts started so far: the times the machine took the ingredients of a craft out of its inventory. The
-     * simulation reads only whether it grew in the machine's last tick (`startedCraftInLastTick`); the rule count of
-     * the inserter cost series reads it to check the starts it infers from `productsFinished` and the working status
-     * (see crafting/rule-count.ts).
-     */
-    public craftsStarted: number = 0;
-
-    /**
      * What a machine that places its results itself (rule 18) puts from its output into its result target, bound to the
-     * target when its state machine is built (simulation/components). Its `results_placed` counts what it placed where
+     * target when its archetype is built (simulation/components). Its `results_placed` counts what it placed where
      * inserters take them: into its result target, or into its own output where it has none. A tick in which it grew
      * woke the inserters waiting there for items (recorded on a recycler on scrap: a stack inserter waiting with a part
      * hand was woken by every result put in, of whatever item, and by no craft that gave none). Always 0 for any other
@@ -95,30 +138,41 @@ export class MachineState implements EntityState {
     public readonly placement: Placement = new Placement(new MachineOutputPort(this.inventoryState),
         this.machine.outputs.map(output => output.item_name), this.machine.metadata.places_results === true);
 
-    /**
-     * Whether the main product was at the output block when the machine's last tick was done. Inserters are updated
-     * before machines, so an inserter that finds this set and the block gone knows that another inserter took the
-     * products down in the tick it is in.
-     */
-    public outputBlockedAfterLastTick: boolean = false;
+    /** Whether the main product was at the output block after the machine's last tick, a view of its Wakes' */
+    public get outputBlockedAfterLastTick(): boolean {
+        return this.wakes.outputBlockedAfterLastTick;
+    }
 
-    /** Whether the machine finished a craft in its last tick, which wakes the inserters that wait on it */
-    public finishedCraftInLastTick: boolean = false;
+    public set outputBlockedAfterLastTick(value: boolean) {
+        this.wakes.outputBlockedAfterLastTick = value;
+    }
 
-    /**
-     * Whether the machine started a craft in its last tick, taking its ingredients: what wakes the inserters waiting
-     * to put into it (docs/wake-ups.md)
-     */
-    public startedCraftInLastTick: boolean = false;
+    /** Whether the machine finished a craft in its last tick, a view of its Wakes' */
+    public get finishedCraftInLastTick(): boolean {
+        return this.wakes.finishedCraftInLastTick;
+    }
 
-    /**
-     * Where the last built of the deciders stands (`decider_build_order`) whose inserters took the machine's products
-     * in this tick in the first tick of their window of a clock of the game; -1 for such an inserter whose decider is
-     * not known, null when none took them so. Set by those inserters, which are updated before the inserters that put
-     * into the machine, and cleared after the machine's tick. An inserter whose window opens in this tick too takes
-     * its first items in it only when that decider was built after its own (`wokenThisTick`).
-     */
-    public windowOpeningTakeDecider: number | null = null;
+    public set finishedCraftInLastTick(value: boolean) {
+        this.wakes.finishedCraftInLastTick = value;
+    }
+
+    /** Whether the machine started a craft in its last tick, a view of its Wakes' */
+    public get startedCraftInLastTick(): boolean {
+        return this.wakes.startedCraftInLastTick;
+    }
+
+    public set startedCraftInLastTick(value: boolean) {
+        this.wakes.startedCraftInLastTick = value;
+    }
+
+    /** The decider of the takers that took the products in the first tick of their window, a view of its Wakes' */
+    public get windowOpeningTakeDecider(): number | null {
+        return this.wakes.windowOpeningTakeDecider;
+    }
+
+    public set windowOpeningTakeDecider(value: number | null) {
+        this.wakes.windowOpeningTakeDecider = value;
+    }
 
     public toString(): string {
         return `MachineState(${this.entity_id},recipe=${this.machine.metadata.recipe.name},status=${this.status})`;
@@ -135,15 +189,11 @@ function forMachine(machine: Machine): MachineState {
     const state = new MachineState(
         machine.entity_id,
         machine,
-        ProgressState.empty(),
         new Yield(machine, inventoryState),
         Energy.of(machine, fuelInventory),
         inventoryState,
         fuelInventory,
         InventoryState.empty(),
-        0,
-        MachineStatus.INGREDIENT_SHORTAGE,
-        0,
     );
     // a recipe that makes its own ingredient cannot start from nothing: the machine begins with as much of it as
     // inserters would fill it up to, like the eggs a player puts in a pentapod egg biochamber by hand
@@ -158,19 +208,16 @@ function clone(machineState: MachineState): MachineState {
     const cloned = new MachineState(
         machineState.entity_id,
         machineState.machine,
-        ProgressState.clone(machineState.craftingProgress),
         machineState.yield.clone(inventoryState),
         machineState.energy.clone(fuelInventory),
         inventoryState,
         fuelInventory,
         machineState.selfIngredients.clone(),
-        machineState.craftCount,
-        machineState.status,
-        machineState.totalCrafted,
     );
-    cloned.craftsStarted = machineState.craftsStarted;
+    cloned.crafting.copyFrom(machineState.crafting);
     // a snapshot's Placement keeps the count and how it counts, unbound: it never places into the live target
     cloned.placement.copyCountFrom(machineState.placement);
+    // the flags of the machine's last tick, and not the decider (a known quirk, kept until after the refactor: P4 D14)
     cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
     cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.startedCraftInLastTick = machineState.startedCraftInLastTick;
@@ -182,14 +229,16 @@ function clone(machineState: MachineState): MachineState {
  * so they never repeat.
  */
 function stateKey(machineState: MachineState): string {
+    const crafting = machineState.crafting;
+    const wakes = machineState.wakes;
     return [
-        machineState.status,
+        machineStatusOf(crafting.status),
         machineState.yield.pendingOutput,
-        machineState.outputBlockedAfterLastTick,
-        machineState.finishedCraftInLastTick,
-        machineState.startedCraftInLastTick,
+        wakes.outputBlockedAfterLastTick,
+        wakes.finishedCraftInLastTick,
+        wakes.startedCraftInLastTick,
         JSON.stringify(machineState.selfIngredients.export()),
-        machineState.craftingProgress.progress,
+        crafting.craftingProgress.progress,
         machineState.yield.bonusProgress.progress,
         // a burner's future hangs on what is burning and what the fuel slot holds, which no other key carries: the
         // energy left in the burning item and the energy held, "0;0" for a machine that burns nothing

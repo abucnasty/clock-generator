@@ -9,7 +9,7 @@
 
 /**
  * 1. Output block (GOALS.md "Crafting Constraints"): the overload multiplier times the amount a craft makes, never
- * reached where that is more than a stack. Recorded cases: `control-logic/machine/machine-state-machine.test.ts`
+ * reached where that is more than a stack. Recorded cases: `simulation/archetypes/crafting-machine.test.ts`
  * ("at the output block": six recipes, and the plastic plant that takes coal at 100 of 100 bars).
  */
 export { OutputBlock } from "./entities/machine/output/output-block";
@@ -152,7 +152,8 @@ export { MiningProgress } from "./control-logic/drill/modes/mining-progress";
  * while a stack of any one of them waits there it starts no craft and takes no ingredients; with a result target (the
  * machine or container at its result spot) it puts what waits into that target each tick: into a machine by the
  * mining drill's stop (3, the shared `Placement` through `MachinePlacementPort`), into a container as far as it has
- * room, what the tick's crafts gave included. At its
+ * room, what the tick's crafts gave included. The machine's archetype binds its Placement to the target at build
+ * (`CraftingMachineArchetype.create`); `Crafting.countPlacedInOutput` counts what a craft puts in its own output. At its
  * output a bulk inserter waits for a full hand, and any other swings what it holds. A result that comes by chance is made
  * at its expected amount, the fraction carried to the next craft (`expectedAmount`: the chance times the amount and its
  * extra count fraction). Cases: `crafting/places-results.test.ts`. Recorded in the game (2.1.21, a lab on the ore voider
@@ -163,4 +164,5 @@ export { MiningProgress } from "./control-logic/drill/modes/mining-progress";
  * density structure on its own; on the ore voider's exact-speed cell under its clock (an hour), nothing left in its output
  * after any tick while its car had room, and no ore brought into it while a stack waited with its car full.
  */
-export { MachineWorkingMode } from "./control-logic/machine/modes/machine-working-mode";
+export { CraftingMachineArchetype } from "./simulation/archetypes/crafting-machine";
+export { Crafting } from "./simulation/components/crafting";
