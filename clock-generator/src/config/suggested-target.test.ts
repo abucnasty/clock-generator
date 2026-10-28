@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { Option } from "../data-types/option";
-import { Machine } from "../entities/machine/machine";
+import { computeMachineFacts } from "../entities/traits/machine-facts-of";
 import { MachineConfiguration, MachineConfigurationSchema } from "./schema";
 import { checkSidecarImport, LATEST_SIDECAR_VERSION } from "./sidecar-version";
 import { inferSuggestedTarget, parseSuggestedTarget, suggestedTargetOf } from "./suggested-target";
@@ -20,7 +20,7 @@ function assembler(recipe: string, crafting_speed = 0.75, productivity = 0): Mac
 
 /** What the site's machine facts show as the output rate of this machine */
 function factsRate(machine: MachineInput): number {
-    return Machine.computeMachineFacts({
+    return computeMachineFacts({
         recipe: machine.recipe,
         productivity: machine.productivity,
         crafting_speed: machine.crafting_speed,

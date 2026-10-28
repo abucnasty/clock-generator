@@ -5,6 +5,8 @@
 //            levels and repeat detection
 //   plan     the planning run of the config (runBuild as planRun runs it, with the machine stock and fuel levels
 //            watched), and the figures planRun reads off it (its windows, lane capacity check)
+//   fuel     where the plan has fuel inserters: the view of the fuel being consumed that a clock's export makes (its own
+//            run with the fuel clocks), on the plan's clock, its history's reasons as texts
 //   speed    the as-built run again with nothing recorded, for ticks per second and scavenges per million ticks
 //   losses   with --losses: backpressureLossOf on the stored windows (supply gates)
 // It writes what every run observed, as hashes: per signal (an entity's field, or its events) and per period of the
@@ -273,6 +275,21 @@ const RUNS = {
             return { signals, period: run.duration.ticks, ticks: run.recorded_duration.ticks, ticks_simulated: run.ticks_simulated };
         };
     },
+    fuel(engine, job) {
+        return () => {
+            // the view of the fuel being consumed, as a clock's export makes it (a run of its own with the fuel clocks), on
+            // the plan's own clock; only builds with fuel inserters have one. Its history carries the reason table's
+            // numbers, which are this process's: it is hashed with its reasons as texts (toPortable)
+            const plan = engine.planRun(job.config, { logger: quiet });
+            const signals = new Signals();
+            const has_fuel = [...plan.run.inserter_clocks.values()].some(clock => clock.kind === 'fuel');
+            const view = has_fuel ? engine.exportClock(plan, engine.clockOfPlan(plan), engine.clockOfPlan(plan).windows,
+                { fuel_consumption_view: true, modulo_blueprint: false }).fuel_consumption_view : undefined;
+            signals.whole('fuel_consumption_view', view === undefined ? null
+                : { ...view, state_transition_history: engine.toPortable(view.state_transition_history) });
+            return { signals, period: plan.run.duration.ticks, ticks: 0, ticks_simulated: 0 };
+        };
+    },
     speed(engine, job) {
         if (!job.windows) return null;
         return () => {
@@ -306,7 +323,7 @@ async function main() {
     }
     const result = { format: FORMAT, key: job.key, group: job.group, name: job.name, period: job.period ?? null, runs: {} };
     let expected;
-    for (const name of ['asbuilt', 'plan', 'speed', ...(options.losses ? ['losses'] : [])]) {
+    for (const name of ['asbuilt', 'plan', 'fuel', 'speed', ...(options.losses ? ['losses'] : [])]) {
         const make = RUNS[name](engine, job, expected);
         if (!make) continue;
         const { value, error, ms, scavenges } = measured(make);

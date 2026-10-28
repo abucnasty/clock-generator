@@ -85,8 +85,11 @@ export type NodeTraits = MachineTraits | DrillTraits | InserterTraits | LaneTrai
  */
 export type ConfigTraits = Readonly<Record<string, NodeTraits>>;
 
-/** A machine's traits, with what its placement, its chests and its inserters read of it */
-function machineTraitsOf(config: MachineConfiguration): MachineTraits {
+/**
+ * A machine's traits, with what its placement, its chests and its inserters read of it. The machine's facts read them too
+ * (machine-facts-of.ts), built from the fields of the configuration the machine keeps.
+ */
+export function machineTraitsOf(config: MachineConfiguration): MachineTraits {
     const prototype = config.prototype === undefined ? null : FactorioDataService.findCraftingMachine(config.prototype);
     const recipe = RecipeMetadata.fromRecipeName(config.recipe);
     const overload_multiplier = OverloadMultiplier.fromCraftingSpeed(config.crafting_speed, recipe.energy_required);
@@ -94,7 +97,7 @@ function machineTraitsOf(config: MachineConfiguration): MachineTraits {
     const crafting_rate = machineCraftingRate(recipe, config.crafting_speed);
     const main = mainProductOf(recipe, crafting_rate, config.productivity);
     const recipe_selection = recipeSelectionOf(prototype?.type ?? null);
-    // only a burner on nutrients burns fuel today (machine-rule.ts fuelModelled): a kept quirk, see energy.fuel_modelled
+    // every burner burns fuel from its energy source (energy.ts modelledBurnerOf)
     const energy = machineEnergy(prototype, config, recipe.energy_required);
     const outputs = recipe.outputs.map(output => output.name);
     const yield_trait = machineYield(recipe, crafting_rate, config.productivity);

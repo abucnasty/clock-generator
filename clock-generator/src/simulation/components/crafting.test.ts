@@ -170,7 +170,7 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         expect([crafting.craftCount, crafting.craftsStarted, crafting.totalCrafted]).toEqual([2, 3, 4]);
     });
 
-    it("is copied whole onto a snapshot, but the decider (a known quirk, kept)", () => {
+    it("is copied whole onto a snapshot, the decider too", () => {
         const state = stateOf("iron-gear-wheel");
         state.crafting.craftingProgress.progress = 0.25;
         Object.assign(state.crafting, { craftCount: 2, craftsStarted: 3, totalCrafted: 4, status: CraftingStatus.WORKING });
@@ -182,7 +182,7 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         expect([cloned.craftingProgress.progress, cloned.craftCount, cloned.craftsStarted, cloned.totalCrafted, cloned.status])
             .toEqual([0.25, 2, 3, 4, MachineStatus.WORKING]);
         expect(cloned.wakes).toMatchObject({ outputBlockedAfterLastTick: true, finishedCraftInLastTick: true, startedCraftInLastTick: true,
-            windowOpeningTakeDecider: null });
+            windowOpeningTakeDecider: 1 });
         expect([cloned.storageKey(), cloned.crafting.key(), cloned.yield.key(), cloned.wakes.key(), cloned.energy.key()])
             .toEqual([state.storageKey(), state.crafting.key(), state.yield.key(), state.wakes.key(), state.energy.key()]);
     });

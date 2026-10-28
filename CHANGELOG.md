@@ -17,6 +17,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ### Fixed
 - Stone and steel furnaces, burner mining drills and captive biter spawners now use up fuel in the simulation, as in the game.
 - Screen readers name the copy spacing and side fields, and the transfer history's marks can be reached by keyboard.
+- A clock's items a second are no longer overstated on short clock periods, so the closest clock shown when none holds can change.
+- Productivity no longer applies to recipe results the game excludes from it, such as the chunks returned by asteroid crushing and barrel filling and emptying.
+- Only inserters that wait for a full hand in the game, such as the stack inserter, wait for one in the simulation.
 
 ## [0.24.0] - 2026-10-27
 
