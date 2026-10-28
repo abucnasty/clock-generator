@@ -1,0 +1,247 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_ORE_VOIDER_OVERBEACONED",
+  "target": {
+    "item": "iron-ore",
+    "counts": "destroyed",
+    "per_copy": {
+      "numerator": 400,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#iron-ore"
+      ]
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "ports": [
+        "chest:2#iron-ore"
+      ]
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-ore",
+      "from": "chest:1#iron-ore",
+      "from_ports": [
+        "chest:1#iron-ore"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "iron-ore",
+      "from": "chest:1#iron-ore",
+      "from_ports": [
+        "chest:1#iron-ore"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-ore",
+      "from": "chest:2#iron-ore",
+      "from_ports": [
+        "chest:2#iron-ore"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "destroyed"
+    },
+    {
+      "key": "inserter:4/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-ore",
+      "from": "chest:2#iron-ore",
+      "from_ports": [
+        "chest:2#iron-ore"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "destroyed"
+    },
+    {
+      "key": "inserter:5/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "iron-ore",
+      "from": "chest:2#iron-ore",
+      "from_ports": [
+        "chest:2#iron-ore"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "destroyed"
+    },
+    {
+      "key": "inserter:6/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "iron-ore",
+      "from": "chest:2#iron-ore",
+      "from_ports": [
+        "chest:2#iron-ore"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "destroyed"
+    },
+    {
+      "key": "placement:machine:1/iron-ore",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "iron-ore",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:1#iron-ore",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    }
+  ],
+  "components": [
+    {
+      "key": "loop:1",
+      "members": [
+        "machine:1",
+        "chest:1#iron-ore"
+      ],
+      "looping_items": [],
+      "inside": [
+        "inserter:1/iron-ore",
+        "inserter:2/iron-ore",
+        "placement:machine:1/iron-ore"
+      ],
+      "in": [
+        "inserter:3/iron-ore",
+        "inserter:4/iron-ore",
+        "inserter:5/iron-ore",
+        "inserter:6/iron-ore"
+      ],
+      "out": []
+    }
+  ],
+  "order": [
+    "chest:2#iron-ore",
+    "loop:1",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "chest:1#iron-ore",
+        "item": "iron-ore",
+        "edges": [
+          "inserter:1/iron-ore",
+          "inserter:2/iron-ore"
+        ]
+      },
+      {
+        "at": "chest:2#iron-ore",
+        "item": "iron-ore",
+        "edges": [
+          "inserter:3/iron-ore",
+          "inserter:4/iron-ore",
+          "inserter:5/iron-ore",
+          "inserter:6/iron-ore"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "machine:1",
+        "item": "iron-ore",
+        "edges": [
+          "inserter:1/iron-ore",
+          "inserter:2/iron-ore",
+          "inserter:3/iron-ore",
+          "inserter:4/iron-ore",
+          "inserter:5/iron-ore",
+          "inserter:6/iron-ore"
+        ]
+      }
+    ],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:3/iron-ore",
+    "inserter:4/iron-ore",
+    "inserter:5/iron-ore",
+    "inserter:6/iron-ore"
+  ]
+}

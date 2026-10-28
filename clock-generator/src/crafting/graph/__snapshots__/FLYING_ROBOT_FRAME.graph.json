@@ -1,0 +1,187 @@
+{
+  "schema": 1,
+  "sample": "FLYING_ROBOT_FRAME",
+  "target": {
+    "item": "flying-robot-frame",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 20,
+      "denominator": 3
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#processing-unit"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#flying-robot-frame"
+      ]
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#steel-plate"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:2#electric-engine-unit"
+      ]
+    },
+    {
+      "key": "belt:5/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:5/lane:1#electronic-circuit"
+      ]
+    },
+    {
+      "key": "belt:5/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:5/lane:2#battery"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "flying-robot-frame",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:1/lane:2#flying-robot-frame",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:2/steel-plate",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "steel-plate",
+      "from": "belt:2/lane:1#steel-plate",
+      "from_ports": [
+        "belt:2/lane:1#steel-plate"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/electric-engine-unit",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "electric-engine-unit",
+      "from": "belt:2/lane:2#electric-engine-unit",
+      "from_ports": [
+        "belt:2/lane:2#electric-engine-unit"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/electronic-circuit",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "electronic-circuit",
+      "from": "belt:5/lane:1#electronic-circuit",
+      "from_ports": [
+        "belt:5/lane:1#electronic-circuit"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/battery",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "battery",
+      "from": "belt:5/lane:2#battery",
+      "from_ports": [
+        "belt:5/lane:2#battery"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:1#processing-unit",
+    "belt:2/lane:1#steel-plate",
+    "belt:2/lane:2#electric-engine-unit",
+    "belt:5/lane:1#electronic-circuit",
+    "belt:5/lane:2#battery",
+    "machine:1",
+    "belt:1/lane:2#flying-robot-frame",
+    "sink"
+  ],
+  "shared": {
+    "out": [],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:1/flying-robot-frame"
+  ]
+}

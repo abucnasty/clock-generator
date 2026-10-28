@@ -1,0 +1,480 @@
+{
+  "schema": 1,
+  "sample": "LOW_DENSITY_STRUCTURE",
+  "target": {
+    "item": "low-density-structure",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 240,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#low-density-structure"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#coal"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#plastic-bar"
+      ]
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "ports": [
+        "chest:2#plastic-bar"
+      ]
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "low-density-structure",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:1/lane:1#low-density-structure",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:2/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "low-density-structure",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "belt:1/lane:1#low-density-structure",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:3/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "plastic-bar",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "plastic-bar",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "plastic-bar",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "chest:1#plastic-bar",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "plastic-bar",
+      "from": "chest:1#plastic-bar",
+      "from_ports": [
+        "chest:1#plastic-bar"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:7/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "plastic-bar",
+      "from": "chest:1#plastic-bar",
+      "from_ports": [
+        "chest:1#plastic-bar"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:8/coal",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "coal",
+      "from": "belt:2/lane:1#coal",
+      "from_ports": [
+        "belt:2/lane:1#coal"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:9/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "low-density-structure",
+      "from": "machine:4",
+      "from_ports": [
+        "machine:4"
+      ],
+      "to": "belt:1/lane:1#low-density-structure",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:10/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "low-density-structure",
+      "from": "machine:5",
+      "from_ports": [
+        "machine:5"
+      ],
+      "to": "belt:1/lane:1#low-density-structure",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:11/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "plastic-bar",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "chest:2#plastic-bar",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:12/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:12",
+      "group": "inserter:12",
+      "item": "plastic-bar",
+      "from": "chest:2#plastic-bar",
+      "from_ports": [
+        "chest:2#plastic-bar"
+      ],
+      "to": "machine:4",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:13/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:13",
+      "group": "inserter:13",
+      "item": "plastic-bar",
+      "from": "chest:2#plastic-bar",
+      "from_ports": [
+        "chest:2#plastic-bar"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:14/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:14",
+      "group": "inserter:14",
+      "item": "plastic-bar",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:4",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:15/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:15",
+      "group": "inserter:15",
+      "item": "plastic-bar",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:2/lane:1#coal",
+    "machine:3",
+    "chest:1#plastic-bar",
+    "machine:1",
+    "machine:2",
+    "chest:2#plastic-bar",
+    "machine:4",
+    "machine:5",
+    "belt:1/lane:1#low-density-structure",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:3",
+        "item": "plastic-bar",
+        "edges": [
+          "inserter:3/plastic-bar",
+          "inserter:4/plastic-bar",
+          "inserter:5/plastic-bar",
+          "inserter:11/plastic-bar",
+          "inserter:14/plastic-bar",
+          "inserter:15/plastic-bar"
+        ]
+      },
+      {
+        "at": "chest:1#plastic-bar",
+        "item": "plastic-bar",
+        "edges": [
+          "inserter:6/plastic-bar",
+          "inserter:7/plastic-bar"
+        ]
+      },
+      {
+        "at": "chest:2#plastic-bar",
+        "item": "plastic-bar",
+        "edges": [
+          "inserter:12/plastic-bar",
+          "inserter:13/plastic-bar"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "belt:1/lane:1#low-density-structure",
+        "item": "low-density-structure",
+        "edges": [
+          "inserter:1/low-density-structure",
+          "inserter:2/low-density-structure",
+          "inserter:9/low-density-structure",
+          "inserter:10/low-density-structure"
+        ]
+      },
+      {
+        "at": "machine:1",
+        "item": "plastic-bar",
+        "edges": [
+          "inserter:3/plastic-bar",
+          "inserter:6/plastic-bar"
+        ]
+      },
+      {
+        "at": "machine:2",
+        "item": "plastic-bar",
+        "edges": [
+          "inserter:4/plastic-bar",
+          "inserter:7/plastic-bar"
+        ]
+      },
+      {
+        "at": "machine:4",
+        "item": "plastic-bar",
+        "edges": [
+          "inserter:12/plastic-bar",
+          "inserter:14/plastic-bar"
+        ]
+      },
+      {
+        "at": "machine:5",
+        "item": "plastic-bar",
+        "edges": [
+          "inserter:13/plastic-bar",
+          "inserter:15/plastic-bar"
+        ]
+      }
+    ],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:1/low-density-structure",
+    "inserter:2/low-density-structure",
+    "inserter:9/low-density-structure",
+    "inserter:10/low-density-structure"
+  ]
+}

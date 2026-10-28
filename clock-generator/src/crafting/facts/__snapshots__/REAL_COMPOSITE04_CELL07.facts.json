@@ -1,0 +1,1344 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "advanced-circuit",
+    "counts": "made",
+    "items_per_second": 90,
+    "copies": 1,
+    "per_copy": {
+      "numerator": 90,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:1",
+        "belt": "belt:1",
+        "lane": 1,
+        "listed": true,
+        "item": "coal",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:2",
+        "belt": "belt:1",
+        "lane": 2,
+        "listed": true,
+        "item": "coal",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "advanced-circuit",
+        "prototype": "electromagnetic-plant",
+        "prototype_type": "assembling-machine",
+        "speed": 100.0625,
+        "energy_required": 6,
+        "ticks_per_craft": 3.5977514053716426,
+        "crafts_per_tick": 0.2779513888888889,
+        "productivity": 175,
+        "bonus_per_craft": 1.75,
+        "ticks_per_bonus": 6.296064959400375,
+        "inputs": [
+          {
+            "item": "electronic-circuit",
+            "per_craft": 2,
+            "per_second": 33.354166666666664,
+            "per_tick": 0.5559027777777777
+          },
+          {
+            "item": "plastic-bar",
+            "per_craft": 2,
+            "per_second": 33.354166666666664,
+            "per_tick": 0.5559027777777777
+          },
+          {
+            "item": "copper-cable",
+            "per_craft": 4,
+            "per_second": 66.70833333333333,
+            "per_tick": 1.1118055555555555
+          }
+        ],
+        "insertion_duration_ticks": 27.47373800465619,
+        "crafts_per_second": {
+          "numerator": 1601,
+          "denominator": 96
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "advanced-circuit",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 2.75,
+            "per_second": {
+              "numerator": 40715535479657,
+              "denominator": 887784090863
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 21,
+        "limits": [
+          {
+            "item": "electronic-circuit",
+            "limit": 42,
+            "kind": "ingredient"
+          },
+          {
+            "item": "plastic-bar",
+            "limit": 42,
+            "kind": "ingredient"
+          },
+          {
+            "item": "copper-cable",
+            "limit": 84,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "advanced-circuit",
+            "rule": "overload",
+            "ingredients_blocked_at": 21,
+            "held_limit": 21,
+            "stack": 200
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 2000,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "entity": "machine:2",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "plastic-bar",
+        "prototype": "chemical-plant",
+        "prototype_type": "assembling-machine",
+        "speed": 38.936,
+        "energy_required": 1,
+        "ticks_per_craft": 1.540990343127183,
+        "crafts_per_tick": 0.6489333333333334,
+        "productivity": 300,
+        "bonus_per_craft": 3,
+        "ticks_per_bonus": 4.622971029381549,
+        "inputs": [
+          {
+            "item": "coal",
+            "per_craft": 1,
+            "per_second": 38.936,
+            "per_tick": 0.6489333333333334
+          }
+        ],
+        "insertion_duration_ticks": 9.0533182658722,
+        "crafts_per_second": {
+          "numerator": 4867,
+          "denominator": 125
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "plastic-bar",
+            "amount": 2,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 8,
+            "per_second": {
+              "numerator": 38936,
+              "denominator": 125
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 47,
+        "limits": [
+          {
+            "item": "coal",
+            "limit": 47,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "plastic-bar",
+            "rule": "overload",
+            "ingredients_blocked_at": 94,
+            "held_limit": 94,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 210,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "entity": "machine:3",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "casting-copper-cable",
+        "prototype": "foundry",
+        "prototype_type": "assembling-machine",
+        "speed": 157.075,
+        "energy_required": 1,
+        "ticks_per_craft": 0.3819831290784657,
+        "crafts_per_tick": 2.6179166666666664,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 0.5729746936176986,
+        "inputs": [],
+        "insertion_duration_ticks": 7.639662581569314,
+        "crafts_per_second": {
+          "numerator": 6283,
+          "denominator": 40
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "copper-cable",
+            "amount": 2,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 5,
+            "per_second": {
+              "numerator": 6283,
+              "denominator": 8
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 100,
+        "limits": []
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "copper-cable",
+            "rule": "overload",
+            "ingredients_blocked_at": 200,
+            "held_limit": 200,
+            "stack": 200
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 2500,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "entity": "machine:4",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "plastic-bar",
+        "prototype": "chemical-plant",
+        "prototype_type": "assembling-machine",
+        "speed": 38.936,
+        "energy_required": 1,
+        "ticks_per_craft": 1.540990343127183,
+        "crafts_per_tick": 0.6489333333333334,
+        "productivity": 300,
+        "bonus_per_craft": 3,
+        "ticks_per_bonus": 4.622971029381549,
+        "inputs": [
+          {
+            "item": "coal",
+            "per_craft": 1,
+            "per_second": 38.936,
+            "per_tick": 0.6489333333333334
+          }
+        ],
+        "insertion_duration_ticks": 9.0533182658722,
+        "crafts_per_second": {
+          "numerator": 4867,
+          "denominator": 125
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "plastic-bar",
+            "amount": 2,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 8,
+            "per_second": {
+              "numerator": 38936,
+              "denominator": 125
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 47,
+        "limits": [
+          {
+            "item": "coal",
+            "limit": 47,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "plastic-bar",
+            "rule": "overload",
+            "ingredients_blocked_at": 94,
+            "held_limit": 94,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 210,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "entity": "machine:5",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "advanced-circuit",
+        "prototype": "electromagnetic-plant",
+        "prototype_type": "assembling-machine",
+        "speed": 100.0625,
+        "energy_required": 6,
+        "ticks_per_craft": 3.5977514053716426,
+        "crafts_per_tick": 0.2779513888888889,
+        "productivity": 175,
+        "bonus_per_craft": 1.75,
+        "ticks_per_bonus": 6.296064959400375,
+        "inputs": [
+          {
+            "item": "electronic-circuit",
+            "per_craft": 2,
+            "per_second": 33.354166666666664,
+            "per_tick": 0.5559027777777777
+          },
+          {
+            "item": "plastic-bar",
+            "per_craft": 2,
+            "per_second": 33.354166666666664,
+            "per_tick": 0.5559027777777777
+          },
+          {
+            "item": "copper-cable",
+            "per_craft": 4,
+            "per_second": 66.70833333333333,
+            "per_tick": 1.1118055555555555
+          }
+        ],
+        "insertion_duration_ticks": 27.47373800465619,
+        "crafts_per_second": {
+          "numerator": 1601,
+          "denominator": 96
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "advanced-circuit",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 2.75,
+            "per_second": {
+              "numerator": 40715535479657,
+              "denominator": 887784090863
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 21,
+        "limits": [
+          {
+            "item": "electronic-circuit",
+            "limit": 42,
+            "kind": "ingredient"
+          },
+          {
+            "item": "plastic-bar",
+            "limit": 42,
+            "kind": "ingredient"
+          },
+          {
+            "item": "copper-cable",
+            "limit": 84,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "advanced-circuit",
+            "rule": "overload",
+            "ingredients_blocked_at": 21,
+            "held_limit": 21,
+            "stack": 200
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 2000,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "entity": "chest:1",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "advanced-circuit",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "advanced-circuit"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "entity": "chest:2",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "electronic-circuit",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "electronic-circuit"
+        ],
+        "gives": [
+          "electronic-circuit"
+        ],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:3",
+      "kind": "container",
+      "entity": "chest:3",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "electronic-circuit",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "electronic-circuit"
+        ],
+        "gives": [
+          "electronic-circuit"
+        ],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:4",
+      "kind": "container",
+      "entity": "chest:4",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "advanced-circuit",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "advanced-circuit"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/advanced-circuit",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "advanced-circuit",
+      "from": "machine:1",
+      "to": "chest:1",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "advanced-circuit"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/electronic-circuit",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "electronic-circuit",
+      "from": "chest:2",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "electronic-circuit"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "plastic-bar",
+      "from": "machine:2",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "plastic-bar"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/copper-cable",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "copper-cable",
+      "from": "machine:3",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "copper-cable"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:5/coal",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "coal",
+      "from": "belt:1/lane:1",
+      "to": "machine:2",
+      "from_lanes": [
+        "belt:1/lane:1",
+        "belt:1/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "coal"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/coal",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "coal",
+      "from": "belt:1/lane:1",
+      "to": "machine:4",
+      "from_lanes": [
+        "belt:1/lane:1",
+        "belt:1/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "coal"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:7/copper-cable",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "copper-cable",
+      "from": "machine:3",
+      "to": "machine:5",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "copper-cable"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:8/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "plastic-bar",
+      "from": "machine:4",
+      "to": "machine:5",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "plastic-bar"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:9/electronic-circuit",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "electronic-circuit",
+      "from": "chest:3",
+      "to": "machine:5",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "electronic-circuit"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:10/advanced-circuit",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "advanced-circuit",
+      "from": "machine:5",
+      "to": "chest:4",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "advanced-circuit"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/advanced-circuit",
+          "item": "advanced-circuit",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:2",
+      "edges": [
+        {
+          "edge": "inserter:2/electronic-circuit",
+          "item": "electronic-circuit",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/plastic-bar",
+          "item": "plastic-bar",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/copper-cable",
+          "item": "copper-cable",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:5",
+      "edges": [
+        {
+          "edge": "inserter:5/coal",
+          "item": "coal",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:6",
+      "edges": [
+        {
+          "edge": "inserter:6/coal",
+          "item": "coal",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:7",
+      "edges": [
+        {
+          "edge": "inserter:7/copper-cable",
+          "item": "copper-cable",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:8",
+      "edges": [
+        {
+          "edge": "inserter:8/plastic-bar",
+          "item": "plastic-bar",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:9",
+      "edges": [
+        {
+          "edge": "inserter:9/electronic-circuit",
+          "item": "electronic-circuit",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:10",
+      "edges": [
+        {
+          "edge": "inserter:10/advanced-circuit",
+          "item": "advanced-circuit",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    }
+  ]
+}

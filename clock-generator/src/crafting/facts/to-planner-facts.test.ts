@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
@@ -18,6 +20,8 @@ import { SpoilageTrait } from "../../entities/traits/spoilage";
 import { StorageTrait } from "../../entities/traits/storage";
 import { YieldTrait } from "../../entities/traits/yield";
 import { toPlannerFacts } from "./to-planner-facts";
+
+const SNAPSHOTS = path.join(__dirname, "__snapshots__");
 
 /** The facts as the snapshot keeps them */
 const jsonOf = (facts: Facts.PlannerFacts) => `${JSON.stringify(facts, null, 2)}\n`;
@@ -51,13 +55,14 @@ describe("the planner facts", () => {
     });
 
     describe.each(Object.entries(ConfigPaths))("of %s", (key, file) => {
-        it("are plain data and come out the same each time", async () => {
+        it("match the snapshot, are plain data and come out the same each time", async () => {
             const facts = await factsOf(file);
             const json = jsonOf(facts);
             // JSON-safe: no class instance, no undefined field, no NaN
             expect(JSON.parse(json)).toStrictEqual(facts);
             // deterministic: built again from the config read again, byte for byte the same
             expect(jsonOf(await factsOf(file))).toBe(json);
+            await expect(json).toMatchFileSnapshot(path.join(SNAPSHOTS, `${key}.facts.json`));
         });
 
         it("hold together: edges between nodes, one per carried item, ceilings from floors", async () => {
@@ -101,7 +106,10 @@ describe("the planner facts", () => {
         });
     });
 
-    it("list moved drops of samples that exist only", () => {
+    it("keep no snapshot of a sample that is gone", () => {
+        const keys = new Set(Object.keys(ConfigPaths).map(key => `${key}.facts.json`));
+        const files = fs.existsSync(SNAPSHOTS) ? fs.readdirSync(SNAPSHOTS).filter(file => file.endsWith(".facts.json")) : [];
+        expect(files.filter(file => !keys.has(file))).toEqual([]);
         expect(Object.keys(MOVED_DROPS).filter(key => !(key in ConfigPaths))).toEqual([]);
     });
 });

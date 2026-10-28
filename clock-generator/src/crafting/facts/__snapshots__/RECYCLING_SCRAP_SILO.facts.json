@@ -1,0 +1,1881 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "scrap",
+    "counts": "destroyed",
+    "items_per_second": 2,
+    "copies": 1,
+    "per_copy": {
+      "numerator": 2,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "scrap-recycling",
+        "prototype": "recycler",
+        "prototype_type": "furnace",
+        "speed": 0.5,
+        "energy_required": 0.2,
+        "ticks_per_craft": 24,
+        "crafts_per_tick": 0.041666666666666664,
+        "productivity": 300,
+        "bonus_per_craft": 3,
+        "ticks_per_bonus": 72,
+        "inputs": [
+          {
+            "item": "scrap",
+            "per_craft": 1,
+            "per_second": 2.5,
+            "per_tick": 0.041666666666666664
+          }
+        ],
+        "insertion_duration_ticks": 120,
+        "crafts_per_second": {
+          "numerator": 5,
+          "denominator": 2
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "iron-gear-wheel",
+            "amount": 1,
+            "probability": 0.2,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.8,
+            "per_second": {
+              "numerator": 2,
+              "denominator": 1
+            },
+            "main": true,
+            "stochastic": true
+          },
+          {
+            "item": "solid-fuel",
+            "amount": 1,
+            "probability": 0.07,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.28,
+            "per_second": {
+              "numerator": 7,
+              "denominator": 10
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "concrete",
+            "amount": 1,
+            "probability": 0.06,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.24,
+            "per_second": {
+              "numerator": 3,
+              "denominator": 5
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "ice",
+            "amount": 1,
+            "probability": 0.04999999999999999,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.2,
+            "per_second": {
+              "numerator": 1,
+              "denominator": 2
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "steel-plate",
+            "amount": 1,
+            "probability": 0.040000000000000036,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.16000000000000017,
+            "per_second": {
+              "numerator": 2,
+              "denominator": 5
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "battery",
+            "amount": 1,
+            "probability": 0.040000000000000036,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.16000000000000017,
+            "per_second": {
+              "numerator": 2,
+              "denominator": 5
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "stone",
+            "amount": 1,
+            "probability": 0.039999999999999925,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.16,
+            "per_second": {
+              "numerator": 2,
+              "denominator": 5
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "advanced-circuit",
+            "amount": 1,
+            "probability": 0.030000000000000027,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.12,
+            "per_second": {
+              "numerator": 3,
+              "denominator": 10
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "copper-cable",
+            "amount": 1,
+            "probability": 0.030000000000000027,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.12,
+            "per_second": {
+              "numerator": 3,
+              "denominator": 10
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "processing-unit",
+            "amount": 1,
+            "probability": 0.019999999999999907,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.07999999999999961,
+            "per_second": {
+              "numerator": 1,
+              "denominator": 5
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "low-density-structure",
+            "amount": 1,
+            "probability": 0.010000000000000009,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.04,
+            "per_second": {
+              "numerator": 1,
+              "denominator": 10
+            },
+            "main": false,
+            "stochastic": true
+          },
+          {
+            "item": "holmium-ore",
+            "amount": 1,
+            "probability": 0.010000000000000009,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 0.04,
+            "per_second": {
+              "numerator": 1,
+              "denominator": 10
+            },
+            "main": false,
+            "stochastic": true
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 4,
+        "limits": [
+          {
+            "item": "scrap",
+            "limit": 4,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "iron-gear-wheel",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          },
+          {
+            "item": "solid-fuel",
+            "rule": "stack",
+            "ingredients_blocked_at": 50,
+            "held_limit": 50,
+            "stack": 50
+          },
+          {
+            "item": "concrete",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          },
+          {
+            "item": "ice",
+            "rule": "stack",
+            "ingredients_blocked_at": 50,
+            "held_limit": 50,
+            "stack": 50
+          },
+          {
+            "item": "steel-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          },
+          {
+            "item": "battery",
+            "rule": "stack",
+            "ingredients_blocked_at": 200,
+            "held_limit": 200,
+            "stack": 200
+          },
+          {
+            "item": "stone",
+            "rule": "stack",
+            "ingredients_blocked_at": 50,
+            "held_limit": 50,
+            "stack": 50
+          },
+          {
+            "item": "advanced-circuit",
+            "rule": "stack",
+            "ingredients_blocked_at": 200,
+            "held_limit": 200,
+            "stack": 200
+          },
+          {
+            "item": "copper-cable",
+            "rule": "stack",
+            "ingredients_blocked_at": 200,
+            "held_limit": 200,
+            "stack": 200
+          },
+          {
+            "item": "processing-unit",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          },
+          {
+            "item": "low-density-structure",
+            "rule": "stack",
+            "ingredients_blocked_at": 50,
+            "held_limit": 50,
+            "stack": 50
+          },
+          {
+            "item": "holmium-ore",
+            "rule": "stack",
+            "ingredients_blocked_at": 50,
+            "held_limit": 50,
+            "stack": 50
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": {
+        "mechanism": "result-placement",
+        "vector_to_place_result": [
+          -0.35,
+          -2.3
+        ],
+        "target": "chest:14",
+        "per_result": [
+          {
+            "item": "iron-gear-wheel",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "solid-fuel",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "concrete",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "ice",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "steel-plate",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "battery",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "stone",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "advanced-circuit",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "copper-cable",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "processing-unit",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "low-density-structure",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          },
+          {
+            "item": "holmium-ore",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          }
+        ],
+        "into_container": "room",
+        "phase": "before-and-after-craft",
+        "stops_while_stack_waits": true
+      },
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "entity": "chest:1",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "iron-gear-wheel",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "iron-gear-wheel"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "entity": "chest:2",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "solid-fuel",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "solid-fuel"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:3",
+      "kind": "container",
+      "entity": "chest:3",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "concrete",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "concrete"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:4",
+      "kind": "container",
+      "entity": "chest:4",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "ice",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "ice"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:5",
+      "kind": "container",
+      "entity": "chest:5",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "steel-plate",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "steel-plate"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:6",
+      "kind": "container",
+      "entity": "chest:6",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "battery",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "battery"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:7",
+      "kind": "container",
+      "entity": "chest:7",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "stone",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "stone"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:8",
+      "kind": "container",
+      "entity": "chest:8",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "advanced-circuit",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "advanced-circuit"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:9",
+      "kind": "container",
+      "entity": "chest:9",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "copper-cable",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "copper-cable"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:10",
+      "kind": "container",
+      "entity": "chest:10",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "processing-unit",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "processing-unit"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:11",
+      "kind": "container",
+      "entity": "chest:11",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "low-density-structure",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "low-density-structure"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:12",
+      "kind": "container",
+      "entity": "chest:12",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "holmium-ore",
+            "capacity": null
+          }
+        ],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [
+          "holmium-ore"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:13",
+      "kind": "container",
+      "entity": "chest:13",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "scrap",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "scrap"
+        ],
+        "gives": [
+          "scrap"
+        ],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:14",
+      "kind": "container",
+      "entity": "chest:14",
+      "storage": {
+        "kind": "weight",
+        "chest_type": "rocket-silo",
+        "capacity_by_item": [
+          {
+            "item": "iron-gear-wheel",
+            "capacity": 1000
+          },
+          {
+            "item": "solid-fuel",
+            "capacity": 1000
+          },
+          {
+            "item": "concrete",
+            "capacity": 100
+          },
+          {
+            "item": "ice",
+            "capacity": 1000
+          },
+          {
+            "item": "steel-plate",
+            "capacity": 400
+          },
+          {
+            "item": "battery",
+            "capacity": 400
+          },
+          {
+            "item": "stone",
+            "capacity": 500
+          },
+          {
+            "item": "advanced-circuit",
+            "capacity": 1000
+          },
+          {
+            "item": "copper-cable",
+            "capacity": 4000
+          },
+          {
+            "item": "processing-unit",
+            "capacity": 300
+          },
+          {
+            "item": "low-density-structure",
+            "capacity": 200
+          },
+          {
+            "item": "holmium-ore",
+            "capacity": 500
+          }
+        ],
+        "accepts": "any",
+        "gives": [
+          "iron-gear-wheel",
+          "solid-fuel",
+          "concrete",
+          "ice",
+          "steel-plate",
+          "battery",
+          "stone",
+          "advanced-circuit",
+          "copper-cable",
+          "processing-unit",
+          "low-density-structure",
+          "holmium-ore"
+        ],
+        "items_put_in": [
+          "iron-gear-wheel",
+          "solid-fuel",
+          "concrete",
+          "ice",
+          "steel-plate",
+          "battery",
+          "stone",
+          "advanced-circuit",
+          "copper-cable",
+          "processing-unit",
+          "low-density-structure",
+          "holmium-ore"
+        ],
+        "never_refuses": false,
+        "constant_supply": false,
+        "slots": null,
+        "input_slots": {
+          "overload_multiplier": 2,
+          "limits": []
+        }
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-gear-wheel",
+      "from": "chest:14",
+      "to": "chest:1",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-gear-wheel"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/solid-fuel",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "solid-fuel",
+      "from": "chest:14",
+      "to": "chest:2",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "solid-fuel"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/concrete",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "concrete",
+      "from": "chest:14",
+      "to": "chest:3",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "concrete"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/ice",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "ice",
+      "from": "chest:14",
+      "to": "chest:4",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "ice"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:5/steel-plate",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "steel-plate",
+      "from": "chest:14",
+      "to": "chest:5",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "steel-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/battery",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "battery",
+      "from": "chest:14",
+      "to": "chest:6",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "battery"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:7/stone",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "stone",
+      "from": "chest:14",
+      "to": "chest:7",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "stone"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:8/advanced-circuit",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "advanced-circuit",
+      "from": "chest:14",
+      "to": "chest:8",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "advanced-circuit"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:9/copper-cable",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "copper-cable",
+      "from": "chest:14",
+      "to": "chest:9",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "copper-cable"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:10/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "processing-unit",
+      "from": "chest:14",
+      "to": "chest:10",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "processing-unit"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:11/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "low-density-structure",
+      "from": "chest:14",
+      "to": "chest:11",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "low-density-structure"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:12/holmium-ore",
+      "via": "inserter",
+      "entity": "inserter:12",
+      "group": "inserter:12",
+      "item": "holmium-ore",
+      "from": "chest:14",
+      "to": "chest:12",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "holmium-ore"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:13/scrap",
+      "via": "inserter",
+      "entity": "inserter:13",
+      "group": "inserter:13",
+      "item": "scrap",
+      "from": "chest:13",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "normal",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "scrap"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 11,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24,
+        "pickup_to_drop": 13,
+        "per_second": {
+          "numerator": 40,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 24
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": false,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "placement:machine:1/iron-gear-wheel",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "iron-gear-wheel",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/solid-fuel",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "solid-fuel",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/concrete",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "concrete",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/ice",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "ice",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/steel-plate",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "steel-plate",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/battery",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "battery",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/stone",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "stone",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/advanced-circuit",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "advanced-circuit",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/copper-cable",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "copper-cable",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/processing-unit",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "processing-unit",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/low-density-structure",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "low-density-structure",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    },
+    {
+      "key": "placement:machine:1/holmium-ore",
+      "via": "placement",
+      "entity": "machine:1",
+      "item": "holmium-ore",
+      "from": "machine:1",
+      "to": "chest:14",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "result-placement",
+      "ceiling": null
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/iron-gear-wheel",
+          "item": "iron-gear-wheel",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:2",
+      "edges": [
+        {
+          "edge": "inserter:2/solid-fuel",
+          "item": "solid-fuel",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/concrete",
+          "item": "concrete",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/ice",
+          "item": "ice",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:5",
+      "edges": [
+        {
+          "edge": "inserter:5/steel-plate",
+          "item": "steel-plate",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:6",
+      "edges": [
+        {
+          "edge": "inserter:6/battery",
+          "item": "battery",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:7",
+      "edges": [
+        {
+          "edge": "inserter:7/stone",
+          "item": "stone",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:8",
+      "edges": [
+        {
+          "edge": "inserter:8/advanced-circuit",
+          "item": "advanced-circuit",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:9",
+      "edges": [
+        {
+          "edge": "inserter:9/copper-cable",
+          "item": "copper-cable",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:10",
+      "edges": [
+        {
+          "edge": "inserter:10/processing-unit",
+          "item": "processing-unit",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:11",
+      "edges": [
+        {
+          "edge": "inserter:11/low-density-structure",
+          "item": "low-density-structure",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:12",
+      "edges": [
+        {
+          "edge": "inserter:12/holmium-ore",
+          "item": "holmium-ore",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    },
+    {
+      "group": "inserter:13",
+      "edges": [
+        {
+          "edge": "inserter:13/scrap",
+          "item": "scrap",
+          "hand": 16,
+          "floor_cycle": 24
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1088 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "iron-bacteria",
+    "counts": "made",
+    "items_per_second": 380,
+    "copies": 1,
+    "per_copy": {
+      "numerator": 380,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:1",
+        "belt": "belt:1",
+        "lane": 1,
+        "listed": true,
+        "item": "bioflux",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:2",
+        "belt": "belt:1",
+        "lane": 2,
+        "listed": true,
+        "item": "nutrients",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "iron-bacteria-cultivation",
+        "prototype": "biochamber",
+        "prototype_type": "assembling-machine",
+        "speed": 90.375,
+        "energy_required": 4,
+        "ticks_per_craft": 2.6556016597510372,
+        "crafts_per_tick": 0.3765625,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 3.983402489626556,
+        "inputs": [
+          {
+            "item": "iron-bacteria",
+            "per_craft": 1,
+            "per_second": 22.59375,
+            "per_tick": 0.3765625
+          },
+          {
+            "item": "bioflux",
+            "per_craft": 1,
+            "per_second": 22.59375,
+            "per_tick": 0.3765625
+          }
+        ],
+        "insertion_duration_ticks": 7.435684647302905,
+        "crafts_per_second": {
+          "numerator": 723,
+          "denominator": 32
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "iron-bacteria",
+            "amount": 4,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 10,
+            "per_second": {
+              "numerator": 3615,
+              "denominator": 16
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 28,
+        "limits": [
+          {
+            "item": "iron-bacteria",
+            "limit": 28,
+            "kind": "ingredient"
+          },
+          {
+            "item": "bioflux",
+            "limit": 28,
+            "kind": "ingredient"
+          },
+          {
+            "item": "nutrients",
+            "limit": 12,
+            "kind": "fuel"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "iron-bacteria",
+            "rule": "overload",
+            "ingredients_blocked_at": 112,
+            "held_limit": 50,
+            "stack": 50
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "burner",
+        "energy_usage_kw": 500,
+        "energy_bonus": 1309.8000000000002,
+        "burner": {
+          "fuel_categories": [
+            "nutrients"
+          ],
+          "effectivity": 1,
+          "fuel_inventory_size": 1,
+          "fuels": [
+            {
+              "item": "nutrients",
+              "fuel_value_mj": 2
+            }
+          ]
+        },
+        "fuel_modelled": true,
+        "fuel": {
+          "item": "nutrients",
+          "fuel_value_mj": 2,
+          "per_craft": 0.15599446749654222,
+          "per_second": 3.5245000000000006,
+          "per_tick": 0.05874166666666668,
+          "slot_limit": 12,
+          "energy_per_craft_mj": 0.31198893499308444
+        }
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "iron-bacteria",
+            "spoil_ticks": 3600,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "iron-ore"
+          },
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          },
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [
+          "iron-bacteria"
+        ],
+        "looping_ingredients": [
+          "iron-bacteria"
+        ],
+        "seeded": true
+      }
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "entity": "machine:2",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "iron-bacteria-cultivation",
+        "prototype": "biochamber",
+        "prototype_type": "assembling-machine",
+        "speed": 90.375,
+        "energy_required": 4,
+        "ticks_per_craft": 2.6556016597510372,
+        "crafts_per_tick": 0.3765625,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 3.983402489626556,
+        "inputs": [
+          {
+            "item": "iron-bacteria",
+            "per_craft": 1,
+            "per_second": 22.59375,
+            "per_tick": 0.3765625
+          },
+          {
+            "item": "bioflux",
+            "per_craft": 1,
+            "per_second": 22.59375,
+            "per_tick": 0.3765625
+          }
+        ],
+        "insertion_duration_ticks": 7.435684647302905,
+        "crafts_per_second": {
+          "numerator": 723,
+          "denominator": 32
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "iron-bacteria",
+            "amount": 4,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 10,
+            "per_second": {
+              "numerator": 3615,
+              "denominator": 16
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 28,
+        "limits": [
+          {
+            "item": "iron-bacteria",
+            "limit": 28,
+            "kind": "ingredient"
+          },
+          {
+            "item": "bioflux",
+            "limit": 28,
+            "kind": "ingredient"
+          },
+          {
+            "item": "nutrients",
+            "limit": 12,
+            "kind": "fuel"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "iron-bacteria",
+            "rule": "overload",
+            "ingredients_blocked_at": 112,
+            "held_limit": 50,
+            "stack": 50
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "burner",
+        "energy_usage_kw": 500,
+        "energy_bonus": 1309.8000000000002,
+        "burner": {
+          "fuel_categories": [
+            "nutrients"
+          ],
+          "effectivity": 1,
+          "fuel_inventory_size": 1,
+          "fuels": [
+            {
+              "item": "nutrients",
+              "fuel_value_mj": 2
+            }
+          ]
+        },
+        "fuel_modelled": true,
+        "fuel": {
+          "item": "nutrients",
+          "fuel_value_mj": 2,
+          "per_craft": 0.15599446749654222,
+          "per_second": 3.5245000000000006,
+          "per_tick": 0.05874166666666668,
+          "slot_limit": 12,
+          "energy_per_craft_mj": 0.31198893499308444
+        }
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "iron-bacteria",
+            "spoil_ticks": 3600,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "iron-ore"
+          },
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          },
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [
+          "iron-bacteria"
+        ],
+        "looping_ingredients": [
+          "iron-bacteria"
+        ],
+        "seeded": true
+      }
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "entity": "chest:1",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "iron-bacteria",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "iron-bacteria"
+        ],
+        "gives": [
+          "iron-bacteria"
+        ],
+        "items_put_in": [
+          "iron-bacteria"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "iron-bacteria",
+            "spoil_ticks": 3600,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "iron-ore"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-bacteria",
+      "from": "machine:1",
+      "to": "chest:1",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-bacteria"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-bacteria",
+      "from": "machine:1",
+      "to": "chest:1",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-bacteria"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-bacteria",
+      "from": "machine:2",
+      "to": "chest:1",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-bacteria"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "iron-bacteria",
+      "from": "machine:2",
+      "to": "chest:1",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-bacteria"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:7/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "iron-bacteria",
+      "from": "machine:2",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-bacteria"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:8/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "iron-bacteria",
+      "from": "machine:1",
+      "to": "machine:2",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-bacteria"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:9/bioflux",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "bioflux",
+      "from": "belt:1/lane:1",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:1/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "bioflux",
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:9/nutrients",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "nutrients",
+      "from": "belt:1/lane:2",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:1/lane:2"
+      ],
+      "lands_in": "fuel",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "bioflux",
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:10/bioflux",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "bioflux",
+      "from": "belt:1/lane:1",
+      "to": "machine:2",
+      "from_lanes": [
+        "belt:1/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "bioflux",
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:10/nutrients",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "nutrients",
+      "from": "belt:1/lane:2",
+      "to": "machine:2",
+      "from_lanes": [
+        "belt:1/lane:2"
+      ],
+      "lands_in": "fuel",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "bioflux",
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/iron-bacteria",
+          "item": "iron-bacteria",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/iron-bacteria",
+          "item": "iron-bacteria",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/iron-bacteria",
+          "item": "iron-bacteria",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:6",
+      "edges": [
+        {
+          "edge": "inserter:6/iron-bacteria",
+          "item": "iron-bacteria",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:7",
+      "edges": [
+        {
+          "edge": "inserter:7/iron-bacteria",
+          "item": "iron-bacteria",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:8",
+      "edges": [
+        {
+          "edge": "inserter:8/iron-bacteria",
+          "item": "iron-bacteria",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:9",
+      "edges": [
+        {
+          "edge": "inserter:9/bioflux",
+          "item": "bioflux",
+          "hand": 16,
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:9/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:10",
+      "edges": [
+        {
+          "edge": "inserter:10/bioflux",
+          "item": "bioflux",
+          "hand": 16,
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:10/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    }
+  ]
+}

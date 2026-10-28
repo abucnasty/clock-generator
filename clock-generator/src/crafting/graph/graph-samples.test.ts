@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { InserterCoverageError, InserterCoverageIssue } from "../../config/errors";
@@ -9,6 +11,7 @@ import { plannerGraphOf } from "./build-graph";
 import { graphInvariantIssues, portsOfCoverageIssues, uncoveredPortsOf } from "./invariants";
 import { graphSnapshotOf } from "./snapshot";
 
+const SNAPSHOTS = path.join(__dirname, "__snapshots__");
 
 async function graphOf(file: string) {
     const config = await loadConfigFromFile(file) as Config;
@@ -104,7 +107,7 @@ const TERMINAL: Readonly<Record<string, number>> = {
 
 describe("the planner graph", () => {
     describe.each(Object.entries(ConfigPaths))("of %s", (key, file) => {
-        it("holds its invariants, leaves uncovered the ports the coverage check reports, and comes out the same each time", async () => {
+        it("holds its invariants, leaves uncovered the ports the coverage check reports, and matches its snapshot", async () => {
             const { config, facts, graph } = await graphOf(file);
             expect(graphInvariantIssues(facts, graph, portsOfCoverageIssues(coverageIssuesOf(config)))).toEqual([]);
             const json = graphSnapshotOf(graph, key);
@@ -112,6 +115,7 @@ describe("the planner graph", () => {
             expect(graphSnapshotOf((await graphOf(file)).graph, key)).toBe(json);
             // small: a few hundred nodes and edges at most (P3 1.6 item 9); the largest, Thaeln's cell 09, is 24 kB
             expect(json.length).toBeLessThan(64 * 1024);
+            await expect(json).toMatchFileSnapshot(path.join(SNAPSHOTS, `${key}.graph.json`));
         });
 
         it("finds the loops and the terminal edges of the paper check", async () => {
@@ -136,8 +140,10 @@ describe("the planner graph", () => {
         expect(graph.nodes.length + graph.edges.length).toBeLessThan(100);
     });
 
-    it("keeps an expectation for every sample", () => {
+    it("keeps no snapshot of a sample that is gone, and an expectation for every sample", () => {
         const keys = new Set(Object.keys(ConfigPaths));
+        const files = fs.existsSync(SNAPSHOTS) ? fs.readdirSync(SNAPSHOTS).filter(file => file.endsWith(".graph.json")) : [];
+        expect(files.filter(file => !keys.has(file.replace(/\.graph\.json$/, "")))).toEqual([]);
         expect(Object.keys(LOOPS).filter(key => !keys.has(key))).toEqual([]);
         expect(Object.keys(TERMINAL).sort()).toEqual([...keys].sort());
     });

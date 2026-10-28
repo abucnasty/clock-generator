@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "sample": "SAMPLE_CONFIG",
+  "target": {
+    "item": "logistic-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 240,
+      "denominator": 11
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#logistic-science-pack",
+        "belt:1/lane:1#transport-belt"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#inserter"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/transport-belt",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "transport-belt",
+      "from": "belt:1/lane:1#transport-belt",
+      "from_ports": [
+        "belt:1/lane:1#transport-belt"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:1/inserter",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "inserter",
+      "from": "belt:1/lane:2#inserter",
+      "from_ports": [
+        "belt:1/lane:2#inserter"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/logistic-science-pack",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "logistic-science-pack",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:1/lane:1#logistic-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:1#transport-belt",
+    "belt:1/lane:2#inserter",
+    "machine:1",
+    "belt:1/lane:1#logistic-science-pack",
+    "sink"
+  ],
+  "shared": {
+    "out": [],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:2/logistic-science-pack"
+  ]
+}

@@ -1,0 +1,345 @@
+{
+  "schema": 1,
+  "sample": "IRON_BACTERIA_CULTIVATION",
+  "target": {
+    "item": "iron-bacteria",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 380,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#bioflux"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#nutrients"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#iron-bacteria"
+      ]
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-bacteria",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:1#iron-bacteria",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:3/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-bacteria",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:1#iron-bacteria",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:4/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-bacteria",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "chest:1#iron-bacteria",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:6/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "iron-bacteria",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "chest:1#iron-bacteria",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:7/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "iron-bacteria",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:8/iron-bacteria",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "iron-bacteria",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:9/bioflux",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "bioflux",
+      "from": "belt:1/lane:1#bioflux",
+      "from_ports": [
+        "belt:1/lane:1#bioflux"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:9/nutrients",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "nutrients",
+      "from": "belt:1/lane:2#nutrients",
+      "from_ports": [
+        "belt:1/lane:2#nutrients"
+      ],
+      "to": "machine:1",
+      "lands_in": "fuel",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:10/bioflux",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "bioflux",
+      "from": "belt:1/lane:1#bioflux",
+      "from_ports": [
+        "belt:1/lane:1#bioflux"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:10/nutrients",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "nutrients",
+      "from": "belt:1/lane:2#nutrients",
+      "from_ports": [
+        "belt:1/lane:2#nutrients"
+      ],
+      "to": "machine:2",
+      "lands_in": "fuel",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    }
+  ],
+  "components": [
+    {
+      "key": "loop:1",
+      "members": [
+        "machine:1",
+        "machine:2"
+      ],
+      "looping_items": [
+        "iron-bacteria"
+      ],
+      "inside": [
+        "inserter:7/iron-bacteria",
+        "inserter:8/iron-bacteria"
+      ],
+      "in": [
+        "inserter:9/bioflux",
+        "inserter:9/nutrients",
+        "inserter:10/bioflux",
+        "inserter:10/nutrients"
+      ],
+      "out": [
+        "inserter:1/iron-bacteria",
+        "inserter:3/iron-bacteria",
+        "inserter:4/iron-bacteria",
+        "inserter:6/iron-bacteria"
+      ]
+    }
+  ],
+  "order": [
+    "belt:1/lane:1#bioflux",
+    "belt:1/lane:2#nutrients",
+    "loop:1",
+    "chest:1#iron-bacteria",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:1",
+        "item": "iron-bacteria",
+        "edges": [
+          "inserter:1/iron-bacteria",
+          "inserter:3/iron-bacteria",
+          "inserter:8/iron-bacteria"
+        ]
+      },
+      {
+        "at": "machine:2",
+        "item": "iron-bacteria",
+        "edges": [
+          "inserter:4/iron-bacteria",
+          "inserter:6/iron-bacteria",
+          "inserter:7/iron-bacteria"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "chest:1#iron-bacteria",
+        "item": "iron-bacteria",
+        "edges": [
+          "inserter:1/iron-bacteria",
+          "inserter:3/iron-bacteria",
+          "inserter:4/iron-bacteria",
+          "inserter:6/iron-bacteria"
+        ]
+      }
+    ],
+    "lanes": [
+      {
+        "at": "belt:1/lane:1#bioflux",
+        "item": "bioflux",
+        "edges": [
+          "inserter:9/bioflux",
+          "inserter:10/bioflux"
+        ]
+      },
+      {
+        "at": "belt:1/lane:2#nutrients",
+        "item": "nutrients",
+        "edges": [
+          "inserter:9/nutrients",
+          "inserter:10/nutrients"
+        ]
+      }
+    ]
+  },
+  "terminal": [
+    "inserter:1/iron-bacteria",
+    "inserter:3/iron-bacteria",
+    "inserter:4/iron-bacteria",
+    "inserter:6/iron-bacteria"
+  ]
+}

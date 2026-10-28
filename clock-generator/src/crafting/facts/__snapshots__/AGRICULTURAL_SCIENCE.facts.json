@@ -1,0 +1,1810 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "agricultural-science-pack",
+    "counts": "made",
+    "items_per_second": 250,
+    "copies": 5,
+    "per_copy": {
+      "numerator": 50,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:1",
+        "belt": "belt:1",
+        "lane": 1,
+        "listed": true,
+        "item": "bioflux",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:2",
+        "belt": "belt:1",
+        "lane": 2,
+        "listed": true,
+        "item": "nutrients",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "nutrients-from-bioflux",
+        "prototype": "biochamber",
+        "prototype_type": "assembling-machine",
+        "speed": 18.4776,
+        "energy_required": 2,
+        "ticks_per_craft": 6.494349915573451,
+        "crafts_per_tick": 0.15398,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 9.741524873360177,
+        "inputs": [
+          {
+            "item": "bioflux",
+            "per_craft": 5,
+            "per_second": 46.194,
+            "per_tick": 0.7699
+          }
+        ],
+        "insertion_duration_ticks": 0.779321989868814,
+        "crafts_per_second": {
+          "numerator": 23097,
+          "denominator": 2500
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "nutrients",
+            "amount": 40,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 100,
+            "per_second": {
+              "numerator": 4619400000000001,
+              "denominator": 5000000000000
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 12,
+        "limits": [
+          {
+            "item": "bioflux",
+            "limit": 60,
+            "kind": "ingredient"
+          },
+          {
+            "item": "nutrients",
+            "limit": 8,
+            "kind": "fuel"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "nutrients",
+            "rule": "overload",
+            "ingredients_blocked_at": 480,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "burner",
+        "energy_usage_kw": 500,
+        "energy_bonus": 814.9699999999999,
+        "burner": {
+          "fuel_categories": [
+            "nutrients"
+          ],
+          "effectivity": 1,
+          "fuel_inventory_size": 1,
+          "fuels": [
+            {
+              "item": "nutrients",
+              "fuel_value_mj": 2
+            }
+          ]
+        },
+        "fuel_modelled": true,
+        "fuel": {
+          "item": "nutrients",
+          "fuel_value_mj": 2,
+          "per_craft": 0.24758897259384335,
+          "per_second": 2.287425,
+          "per_tick": 0.03812375,
+          "slot_limit": 8,
+          "energy_per_craft_mj": 0.4951779451876867
+        }
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          },
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "entity": "machine:2",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "nutrients-from-bioflux",
+        "prototype": "biochamber",
+        "prototype_type": "assembling-machine",
+        "speed": 18.4776,
+        "energy_required": 2,
+        "ticks_per_craft": 6.494349915573451,
+        "crafts_per_tick": 0.15398,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 9.741524873360177,
+        "inputs": [
+          {
+            "item": "bioflux",
+            "per_craft": 5,
+            "per_second": 46.194,
+            "per_tick": 0.7699
+          }
+        ],
+        "insertion_duration_ticks": 0.779321989868814,
+        "crafts_per_second": {
+          "numerator": 23097,
+          "denominator": 2500
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "nutrients",
+            "amount": 40,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 100,
+            "per_second": {
+              "numerator": 4619400000000001,
+              "denominator": 5000000000000
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 12,
+        "limits": [
+          {
+            "item": "bioflux",
+            "limit": 60,
+            "kind": "ingredient"
+          },
+          {
+            "item": "nutrients",
+            "limit": 8,
+            "kind": "fuel"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "nutrients",
+            "rule": "overload",
+            "ingredients_blocked_at": 480,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "burner",
+        "energy_usage_kw": 500,
+        "energy_bonus": 814.9699999999999,
+        "burner": {
+          "fuel_categories": [
+            "nutrients"
+          ],
+          "effectivity": 1,
+          "fuel_inventory_size": 1,
+          "fuels": [
+            {
+              "item": "nutrients",
+              "fuel_value_mj": 2
+            }
+          ]
+        },
+        "fuel_modelled": true,
+        "fuel": {
+          "item": "nutrients",
+          "fuel_value_mj": 2,
+          "per_craft": 0.24758897259384335,
+          "per_second": 2.287425,
+          "per_tick": 0.03812375,
+          "slot_limit": 8,
+          "energy_per_craft_mj": 0.4951779451876867
+        }
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          },
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "entity": "machine:3",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "pentapod-egg",
+        "prototype": "biochamber",
+        "prototype_type": "assembling-machine",
+        "speed": 64.5,
+        "energy_required": 15,
+        "ticks_per_craft": 13.953488372093023,
+        "crafts_per_tick": 0.07166666666666667,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 20.930232558139537,
+        "inputs": [
+          {
+            "item": "pentapod-egg",
+            "per_craft": 1,
+            "per_second": 4.3,
+            "per_tick": 0.07166666666666667
+          },
+          {
+            "item": "nutrients",
+            "per_craft": 30,
+            "per_second": 129,
+            "per_tick": 2.15
+          }
+        ],
+        "insertion_duration_ticks": 27.906976744186046,
+        "crafts_per_second": {
+          "numerator": 43,
+          "denominator": 10
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "pentapod-egg",
+            "amount": 2,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 1,
+            "expected_per_craft": 3.5,
+            "per_second": {
+              "numerator": 301,
+              "denominator": 20
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 7,
+        "limits": [
+          {
+            "item": "pentapod-egg",
+            "limit": 7,
+            "kind": "ingredient"
+          },
+          {
+            "item": "nutrients",
+            "limit": 210,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "pentapod-egg",
+            "rule": "overload",
+            "ingredients_blocked_at": 14,
+            "held_limit": 14,
+            "stack": 20
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "burner",
+        "energy_usage_kw": 500,
+        "energy_bonus": 1019.9999999999999,
+        "burner": {
+          "fuel_categories": [
+            "nutrients"
+          ],
+          "effectivity": 1,
+          "fuel_inventory_size": 1,
+          "fuels": [
+            {
+              "item": "nutrients",
+              "fuel_value_mj": 2
+            }
+          ]
+        },
+        "fuel_modelled": true,
+        "fuel": {
+          "item": "nutrients",
+          "fuel_value_mj": 2,
+          "per_craft": 0.6511627906976744,
+          "per_second": 2.8,
+          "per_tick": 0.04666666666666666,
+          "slot_limit": 9,
+          "energy_per_craft_mj": 1.3023255813953487
+        }
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "pentapod-egg",
+            "spoil_ticks": 54000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": null
+          },
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [
+          "pentapod-egg"
+        ],
+        "looping_ingredients": [
+          "pentapod-egg"
+        ],
+        "seeded": true
+      }
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "entity": "machine:4",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "pentapod-egg",
+        "prototype": "biochamber",
+        "prototype_type": "assembling-machine",
+        "speed": 64.5,
+        "energy_required": 15,
+        "ticks_per_craft": 13.953488372093023,
+        "crafts_per_tick": 0.07166666666666667,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 20.930232558139537,
+        "inputs": [
+          {
+            "item": "pentapod-egg",
+            "per_craft": 1,
+            "per_second": 4.3,
+            "per_tick": 0.07166666666666667
+          },
+          {
+            "item": "nutrients",
+            "per_craft": 30,
+            "per_second": 129,
+            "per_tick": 2.15
+          }
+        ],
+        "insertion_duration_ticks": 27.906976744186046,
+        "crafts_per_second": {
+          "numerator": 43,
+          "denominator": 10
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "pentapod-egg",
+            "amount": 2,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 1,
+            "expected_per_craft": 3.5,
+            "per_second": {
+              "numerator": 301,
+              "denominator": 20
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 7,
+        "limits": [
+          {
+            "item": "pentapod-egg",
+            "limit": 7,
+            "kind": "ingredient"
+          },
+          {
+            "item": "nutrients",
+            "limit": 210,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "pentapod-egg",
+            "rule": "overload",
+            "ingredients_blocked_at": 14,
+            "held_limit": 14,
+            "stack": 20
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "burner",
+        "energy_usage_kw": 500,
+        "energy_bonus": 1019.9999999999999,
+        "burner": {
+          "fuel_categories": [
+            "nutrients"
+          ],
+          "effectivity": 1,
+          "fuel_inventory_size": 1,
+          "fuels": [
+            {
+              "item": "nutrients",
+              "fuel_value_mj": 2
+            }
+          ]
+        },
+        "fuel_modelled": true,
+        "fuel": {
+          "item": "nutrients",
+          "fuel_value_mj": 2,
+          "per_craft": 0.6511627906976744,
+          "per_second": 2.8,
+          "per_tick": 0.04666666666666666,
+          "slot_limit": 9,
+          "energy_per_craft_mj": 1.3023255813953487
+        }
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "pentapod-egg",
+            "spoil_ticks": 54000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": null
+          },
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [
+          "pentapod-egg"
+        ],
+        "looping_ingredients": [
+          "pentapod-egg"
+        ],
+        "seeded": true
+      }
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "entity": "machine:5",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "agricultural-science-pack",
+        "prototype": "biochamber",
+        "prototype_type": "assembling-machine",
+        "speed": 90.375,
+        "energy_required": 4,
+        "ticks_per_craft": 2.6556016597510372,
+        "crafts_per_tick": 0.3765625,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 3.983402489626556,
+        "inputs": [
+          {
+            "item": "bioflux",
+            "per_craft": 1,
+            "per_second": 22.59375,
+            "per_tick": 0.3765625
+          },
+          {
+            "item": "pentapod-egg",
+            "per_craft": 1,
+            "per_second": 22.59375,
+            "per_tick": 0.3765625
+          }
+        ],
+        "insertion_duration_ticks": 29.74273858921162,
+        "crafts_per_second": {
+          "numerator": 723,
+          "denominator": 32
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "agricultural-science-pack",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 2.5,
+            "per_second": {
+              "numerator": 3615,
+              "denominator": 64
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 28,
+        "limits": [
+          {
+            "item": "bioflux",
+            "limit": 28,
+            "kind": "ingredient"
+          },
+          {
+            "item": "pentapod-egg",
+            "limit": 28,
+            "kind": "ingredient"
+          },
+          {
+            "item": "nutrients",
+            "limit": 12,
+            "kind": "fuel"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "agricultural-science-pack",
+            "rule": "overload",
+            "ingredients_blocked_at": 28,
+            "held_limit": 28,
+            "stack": 200
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "burner",
+        "energy_usage_kw": 500,
+        "energy_bonus": 1309.8000000000002,
+        "burner": {
+          "fuel_categories": [
+            "nutrients"
+          ],
+          "effectivity": 1,
+          "fuel_inventory_size": 1,
+          "fuels": [
+            {
+              "item": "nutrients",
+              "fuel_value_mj": 2
+            }
+          ]
+        },
+        "fuel_modelled": true,
+        "fuel": {
+          "item": "nutrients",
+          "fuel_value_mj": 2,
+          "per_craft": 0.15599446749654222,
+          "per_second": 3.5245000000000006,
+          "per_tick": 0.05874166666666668,
+          "slot_limit": 12,
+          "energy_per_craft_mj": 0.31198893499308444
+        }
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          },
+          {
+            "item": "pentapod-egg",
+            "spoil_ticks": 54000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": null
+          },
+          {
+            "item": "agricultural-science-pack",
+            "spoil_ticks": 216000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          },
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "entity": "chest:1",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "agricultural-science-pack",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "agricultural-science-pack"
+        ],
+        "gives": [
+          "agricultural-science-pack"
+        ],
+        "items_put_in": [
+          "agricultural-science-pack"
+        ],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "agricultural-science-pack",
+            "spoil_ticks": 216000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/nutrients",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "nutrients",
+      "from": "belt:1/lane:2",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:1/lane:2"
+      ],
+      "lands_in": "fuel",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "nutrients",
+          "bioflux"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:1/bioflux",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "bioflux",
+      "from": "belt:1/lane:1",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:1/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "nutrients",
+          "bioflux"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/nutrients",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "nutrients",
+      "from": "belt:1/lane:2",
+      "to": "machine:2",
+      "from_lanes": [
+        "belt:1/lane:2"
+      ],
+      "lands_in": "fuel",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "nutrients",
+          "bioflux"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/bioflux",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "bioflux",
+      "from": "belt:1/lane:1",
+      "to": "machine:2",
+      "from_lanes": [
+        "belt:1/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "nutrients",
+          "bioflux"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/nutrients",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "nutrients",
+      "from": "machine:1",
+      "to": "machine:3",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/nutrients",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "nutrients",
+      "from": "machine:1",
+      "to": "machine:3",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:5/pentapod-egg",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "pentapod-egg",
+      "from": "machine:4",
+      "to": "machine:3",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "pentapod-egg"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/nutrients",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "nutrients",
+      "from": "machine:2",
+      "to": "machine:4",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:7/nutrients",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "nutrients",
+      "from": "machine:2",
+      "to": "machine:4",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:8/pentapod-egg",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "pentapod-egg",
+      "from": "machine:3",
+      "to": "machine:4",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "pentapod-egg"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:9/pentapod-egg",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "pentapod-egg",
+      "from": "machine:3",
+      "to": "machine:5",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "pentapod-egg"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:10/pentapod-egg",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "pentapod-egg",
+      "from": "machine:4",
+      "to": "machine:5",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "pentapod-egg"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:11/bioflux",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "bioflux",
+      "from": "belt:1/lane:1",
+      "to": "machine:5",
+      "from_lanes": [
+        "belt:1/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "bioflux",
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:11/nutrients",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "nutrients",
+      "from": "belt:1/lane:2",
+      "to": "machine:5",
+      "from_lanes": [
+        "belt:1/lane:2"
+      ],
+      "lands_in": "fuel",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "bioflux",
+          "nutrients"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:12/agricultural-science-pack",
+      "via": "inserter",
+      "entity": "inserter:12",
+      "group": "inserter:12",
+      "item": "agricultural-science-pack",
+      "from": "machine:5",
+      "to": "chest:1",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "agricultural-science-pack"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:1/bioflux",
+          "item": "bioflux",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:2",
+      "edges": [
+        {
+          "edge": "inserter:2/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:2/bioflux",
+          "item": "bioflux",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:5",
+      "edges": [
+        {
+          "edge": "inserter:5/pentapod-egg",
+          "item": "pentapod-egg",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:6",
+      "edges": [
+        {
+          "edge": "inserter:6/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:7",
+      "edges": [
+        {
+          "edge": "inserter:7/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:8",
+      "edges": [
+        {
+          "edge": "inserter:8/pentapod-egg",
+          "item": "pentapod-egg",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:9",
+      "edges": [
+        {
+          "edge": "inserter:9/pentapod-egg",
+          "item": "pentapod-egg",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:10",
+      "edges": [
+        {
+          "edge": "inserter:10/pentapod-egg",
+          "item": "pentapod-egg",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:11",
+      "edges": [
+        {
+          "edge": "inserter:11/bioflux",
+          "item": "bioflux",
+          "hand": 16,
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:11/nutrients",
+          "item": "nutrients",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:12",
+      "edges": [
+        {
+          "edge": "inserter:12/agricultural-science-pack",
+          "item": "agricultural-science-pack",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    }
+  ]
+}
