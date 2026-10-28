@@ -1,5 +1,6 @@
 import { EntityState, InserterState, MachineState } from "../state";
 import { factorioInserterState } from "../state/factorio-entity-state";
+import type { TickRecorder } from "../simulation/observers/observer";
 
 /** What one machine held after each tick of a run */
 export interface MachineStockSeries {
@@ -60,8 +61,8 @@ function canPreallocate(expected_ticks: number | undefined): expected_ticks is n
 /** The series of one item of a machine, with the item they are about */
 type ItemSeries = readonly [item_name: string, series: number[]];
 
-/** Samples what the machines and inserters hold after each tick of a run */
-export class StockRecorder {
+/** Samples what the machines and inserters hold after each tick of a run: a recorder of the after-tick phase */
+export class StockRecorder implements TickRecorder {
     private ticks = 0;
     private readonly machines: { state: MachineState; series: MachineStockSeries; inputs: ItemSeries[]; outputs: ItemSeries[]; fuel_item: string | undefined }[];
     private readonly inserters: { state: InserterState; sink: EntityState; series: InserterHandSeries }[];

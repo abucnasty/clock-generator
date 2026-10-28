@@ -1,6 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
-import { ConfigSchema, FactorioDataService, FeasibilityError, Machine, validateConfig, type Config } from 'clock-generator/browser';
+import { computeMachineFacts, ConfigSchema, FactorioDataService, FeasibilityError, validateConfig, type Config } from 'clock-generator/browser';
 import oreVoiderExact from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-exact-speed.json';
 import oreVoiderOverbeaconed from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-overbeaconed.json';
 import { configToFormData } from './configForm/configMapping';
@@ -39,7 +39,7 @@ describe('target capacity agrees with actual engine validation', () => {
     it.each([0.5, 2.25, 5.5, 0.001, 0.0625])('accepts the exact maximum and rejects an excess with %s Copies', copies => {
         for (const crafting_speed of [5, 1.123456789]) {
             const config = build(copies, 1, crafting_speed);
-            const facts = Machine.computeMachineFacts(config.machines[0]);
+            const facts = computeMachineFacts(config.machines[0]);
             expect(facts.output_rate_ratio).toBeDefined();
             const max = machinesMaxOf(config.target_output.recipe, [{ id: 1, facts }])!;
             const capacity = totalMachineCapacity(max, copies);
@@ -64,7 +64,7 @@ describe('target capacity agrees with actual engine validation', () => {
 
     it('a machine making 10/s supports 5/s but not 6/s with half a copy', () => {
         const config = build(0.5, 5, 5);
-        const facts = Machine.computeMachineFacts(config.machines[0]);
+        const facts = computeMachineFacts(config.machines[0]);
         expect(facts.output_rate_per_second).toBe(10);
         const max = machinesMaxOf('iron-gear-wheel', [{ id: 1, facts }])!;
         expect(totalMachineCapacity(max, 0.5)).toBe(5);
@@ -83,7 +83,7 @@ describe('target capacity agrees with actual engine validation', () => {
         [0.5, 0.301, true],
     ] as const)('retains engine normalization at %s Copies, %s/s', (copies, rate, refused) => {
         const config = build(copies, rate, 0.3);
-        const facts = Machine.computeMachineFacts(config.machines[0]);
+        const facts = computeMachineFacts(config.machines[0]);
         expect(facts.output_rate_ratio).toEqual({ numerator: 3, denominator: 5 });
         const max = machinesMaxOf('iron-gear-wheel', [{ id: 1, facts }])!;
         expect(isTargetAboveMax(rate, copies, max)).toBe(refused);
@@ -93,7 +93,7 @@ describe('target capacity agrees with actual engine validation', () => {
 
     it('defers a schema-valid tiny rate to the engine without changing it', () => {
         const config = build(2.25, 1e-23, 0.3);
-        const facts = Machine.computeMachineFacts(config.machines[0]);
+        const facts = computeMachineFacts(config.machines[0]);
         const max = machinesMaxOf('iron-gear-wheel', [{ id: 1, facts }])!;
         expect(isTargetAboveMax(config.target_output.items_per_second, 2.25, max)).toBe(false);
         expect(() => validateConfig(config)).toThrow(/fraction: too many decimal places/);
@@ -115,7 +115,7 @@ describe('the most a recycler destroys agrees with the engine\'s check of the or
     const maxOf = (sample: unknown) => {
         const config = ConfigSchema.parse(sample);
         const form = configToFormData(config);
-        const facts = Machine.computeMachineFacts(config.machines[0]);
+        const facts = computeMachineFacts(config.machines[0]);
         const comesBack = resultComesBack(form.machines[0], form.inserters, 'iron-ore');
         return { config, max: machinesMaxOf('iron-ore', [{ id: 1, facts, comesBack }], 'destroyed')! };
     };

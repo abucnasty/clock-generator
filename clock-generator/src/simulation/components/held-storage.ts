@@ -1,5 +1,5 @@
 import { ItemName } from "../../data";
-import { InventoryState, WritableInventoryState } from "../../state/inventory-state";
+import { InventoryState, inventoryKey, WritableInventoryState } from "../../state/inventory-state";
 import type { PickupPort } from "./ports";
 
 /**
@@ -33,5 +33,10 @@ export class HeldStorage implements PickupPort {
     /** What the drill's bars completed */
     public insert(item: ItemName, amount: number): void {
         this.inventoryState.addQuantity(item, amount);
+    }
+
+    /** What it holds, for the drill's key: while it holds anything the drill mines nothing */
+    public key(): string {
+        return inventoryKey(this.inventoryState);
     }
 }

@@ -219,20 +219,23 @@ describe("Yield: what the machine's state keeps of it", () => {
         expect(made.carryKey()).toBe(carried);
     });
 
-    // the fields that drive the next ticks, each in the machine's key (P4 3.4); productsFinished only grows, so is left out
-    it("changes the machine's key with each field that drives the next ticks", () => {
-        const { state, made } = yieldOf("uranium-processing", 50);
-        const keys = new Set([MachineState.stateKey(state)]);
+    // the fields that drive the next ticks, each in its key (P4 3.4); productsFinished only grows, so is left out. Every
+    // field, in the key or out of it, is pinned with every component's (crafting/runner/steady-state.test.ts).
+    it("keys the products it holds, its productivity bar and its carry, each field apart", () => {
+        const { made } = yieldOf("uranium-processing", 50);
+        expect(made.key()).toBe("0;0;[]");
+        const keys = new Set([made.key()]);
         made.pendingOutput = 1;
-        keys.add(MachineState.stateKey(state));
+        keys.add(made.key());
         made.bonusProgress.progress = 0.25;
-        keys.add(MachineState.stateKey(state));
+        keys.add(made.key());
         made.finishCraft(crafting());
-        keys.add(MachineState.stateKey(state));
+        keys.add(made.key());
         expect(keys.size).toBe(4);
-        const own = Object.entries(made).filter(([, value]) => value === null || typeof value !== "object").map(([key]) => key);
-        expect(own).toEqual(["pendingOutput", "productsFinished", "places_results", "output_name", "output_amount", "output_by_chance",
-            "output_stack_size", "amount_per_bonus", "bonus_per_craft", "ingredients_blocked_at", "main_carry_slot"]);
+        expect(made.key()).toBe(`${made.pendingOutput};${made.bonusProgress.progress};${made.carryKey()}`);
+        const before = made.key();
+        made.productsFinished += 1;
+        expect(made.key()).toBe(before);
     });
 
     it("shows its fields to outside callers through the machine's state", () => {

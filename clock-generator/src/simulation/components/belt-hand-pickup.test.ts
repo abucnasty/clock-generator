@@ -12,7 +12,7 @@ let sample: Config;
 beforeAll(async () => { sample = await loadConfigFromFile(GameFixturePaths.SAME_ITEM_CONFIG); });
 
 /**
- * The belt's pickup port as the hand of inserter 2 reaches it, bound as its state machine binds it (to the lane slots
+ * The belt's pickup port as the hand of inserter 2 reaches it, bound as its archetype binds it (to the lane slots
  * the context's build gave the hand), and a take of one tick through it
  */
 function pickup(config: Config) {

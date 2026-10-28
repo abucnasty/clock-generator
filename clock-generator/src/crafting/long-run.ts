@@ -37,7 +37,7 @@ interface LongRunVerdict {
     expected_total: number;
     /** The judged span as a whole is further off than the tolerance */
     span_off: boolean;
-    /** Items a clock period moved on average over the judged span, rounded */
+    /** Items a clock period moved on average over the judged span, not rounded: a reader that prints it rounds it for display */
     output_items_per_period: number;
 }
 
@@ -117,7 +117,7 @@ export function judgeProvenCycle(
         total,
         expected_total,
         span_off,
-        output_items_per_period: judged_periods > 0 ? Math.round(total / judged_periods) : expected_per_period,
+        output_items_per_period: judged_periods > 0 ? total / judged_periods : expected_per_period,
     };
 }
 
@@ -182,6 +182,6 @@ export function judgeLongRun(
         total,
         expected_total,
         span_off,
-        output_items_per_period: judged_periods > 0 ? Math.round(total / judged_periods) : expected_per_period,
+        output_items_per_period: judged_periods > 0 ? total / judged_periods : expected_per_period,
     };
 }

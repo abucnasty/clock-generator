@@ -1,36 +1,24 @@
 import { ItemName } from "../data";
-import { handSizeFor, Inserter } from "../entities";
+import { Inserter } from "../entities";
 import { EntityState } from "./entity-state";
 import { InventoryState } from "./inventory-state";
 import { InserterStatus } from "./entity-status";
 import { BeltPickupArm } from "./belt-pickup-arm";
 import { InserterTrace } from "./inserter-trace";
 
-
-type InserterStatusState = {
-    status: InserterStatus;
-    tick: number;
-}
-
 export interface InserterHandContents {
     item_name: ItemName;
     quantity: number;
 }
 
-export const InserterHandContents = {
-    clone(contents: InserterHandContents | null): InserterHandContents | null {
-        if (contents == null) {
-            return null;
-        }
-        return {
-            item_name: contents.item_name,
-            quantity: contents.quantity,
-        };
-    }
-}
-
-export interface InserterState extends EntityState, InserterStatusState {
-    /** Opt-in observer, kept across control replacement but not copied into an independent state clone. */
+export interface InserterState extends EntityState {
+    /**
+     * The status as written at the Hand's last change of phase, which the game's status of the inserter and the
+     * recordings read. It parts from the Hand's phase where a pickup finds nothing (set idle, the phase stays) and
+     * through a control swap (kept, the new Hand starts idle): same-tick rules 11 and 12.
+     */
+    status: InserterStatus;
+    /** Opt-in observer, kept across control replacement. */
     trace?: InserterTrace;
     /** Physical collection reach retained across control replacement, independently of diagnostic history. */
     pickup_arm?: BeltPickupArm;
@@ -55,7 +43,6 @@ function createIdleInserterState(inserter: Inserter): InserterState {
         inventoryState: InventoryState.empty(),
         inserter,
         status: InserterStatus.IDLE,
-        tick: 0,
         held_item: null,
         items_picked_up: 0,
         items_dropped: 0,
@@ -64,36 +51,6 @@ function createIdleInserterState(inserter: Inserter): InserterState {
     };
 }
 
-function clone(state: InserterState): InserterState {
-    return {
-        entity_id: state.entity_id,
-        inventoryState: state.inventoryState.clone(),
-        inserter: state.inserter,
-        status: state.status,
-        tick: state.tick,
-        pickup_arm: state.pickup_arm?.clone(),
-        held_item: state.held_item ? { ...state.held_item } : null,
-        items_picked_up: state.items_picked_up,
-        items_dropped: state.items_dropped,
-        waits_for_sink: state.waits_for_sink,
-        enabled: state.enabled,
-    };
-}
-
-/**
- * What drives the inserter's next ticks besides its inventory (see simulationStateKey). The counts of items only grow,
- * and `tick` is never updated, so relative to the current tick it would never repeat either.
- */
-function stateKey(state: InserterState, tick: number): string {
-    // A new hand initializes its own collection reach. Old reach cannot affect an empty/full hand's future,
-    // and retaining it here would delay repeat detection despite identical physical outcomes.
-    const held = state.held_item;
-    const arm = held && held.quantity < handSizeFor(state.inserter, held.item_name) ? state.pickup_arm?.stateKey(tick) : undefined;
-    return [state.status, state.waits_for_sink, state.enabled, JSON.stringify(held), arm].join(";");
-}
-
 export const InserterState = {
     createIdle: createIdleInserterState,
-    clone: clone,
-    stateKey: stateKey,
 };

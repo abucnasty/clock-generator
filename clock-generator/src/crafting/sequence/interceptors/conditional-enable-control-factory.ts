@@ -1,4 +1,4 @@
-import { EnableControl, LatchedEnableControl } from "../../../control-logic";
+import { EnableControl, LatchedEnableControl } from "../../../simulation/controls/enable-control";
 import {
     Condition,
     ComparisonOperator,

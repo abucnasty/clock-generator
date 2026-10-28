@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { assertLaneCapacity, laneCapacity, laneCapacityIssues, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, warnLanesSharedByCopies } from './lane-capacity-validator';
+import { assertLaneCapacity, laneCapacityIssues, laneLoads, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, warnLanesSharedByCopies } from './lane-capacity-validator';
 import { FeasibilityError, LaneCapacityError } from './errors';
 import { Config } from './schema';
 import { validateConfig } from '../crafting/plan/validate-config';
@@ -54,10 +54,15 @@ const feasibilityIssuesOf = (config: Config) => {
 const issuesOf = (config: Config) => laneCapacityIssues(config).map(({ kind, belt_id, lanes, inserter_ids, items_per_second, capacity_per_second }) =>
     ({ kind, belt_id, lanes, inserter_ids, items_per_second, capacity_per_second }));
 
-describe('laneCapacity', () => {
+describe('what a lane carries', () => {
     it.each(BELTS.flatMap(([type, speed]) => STACKS.map(stack => [type, speed, stack] as const)))(
         '%s at stack %i carries half its %i items a second times the stack on a lane', (type, speed, stack) => {
-            expect(laneCapacity(belt(1, ['iron-plate'], type, stack), 1).toDecimal()).toBe(speed / 2 * stack);
+            // the take off lane 1 of the input belt, and both sides of the one-lane output belt the gears drop onto
+            const loads = laneLoads(gears({ items_per_second: 1, input: belt(1, ['iron-plate'], type, stack), output: belt(2, ['iron-gear-wheel'], type, stack) }));
+            expect(loads.map(load => [load.belt_id, load.kind, load.lanes, load.capacity_per_second.toDecimal()])).toEqual([
+                [1, 'take', [1], speed / 2 * stack],
+                [2, 'drop', [1, 2], speed * stack],
+            ]);
         });
 });
 

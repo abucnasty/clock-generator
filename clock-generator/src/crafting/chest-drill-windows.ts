@@ -1,7 +1,7 @@
 import { Config } from "../config";
 import { EnableControlMode } from "../common/enable-control-types";
 import { ChestType, chestName } from "../common/entity-types";
-import { clockPosition } from "../control-logic/enable-control";
+import { clockPosition } from "../simulation/controls/enable-control";
 import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Chest, Entity, EntityId, handSizeFor, MiningDrill, ReadableEntityRegistry } from "../entities";
@@ -279,7 +279,7 @@ function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: r
             period_index = index;
             // the first period's takes may come up short, so a cycle that holds is one of the periods after it
             if (index >= 1) {
-                const key = `${position};${stock()};${hold()};${mining.stateKey()}`;
+                const key = `${position};${stock()};${hold()};${mining.key()}`;
                 if (seen.has(key)) {
                     return { passes: true, proven: true };
                 }

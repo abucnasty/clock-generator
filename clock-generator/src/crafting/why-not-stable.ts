@@ -155,7 +155,7 @@ function shortfallOf(clock: WhyNotStableClock): string {
     if (output.repeat_periods !== undefined && output.repeat_periods > 1 && output.repeat_output_items !== undefined) {
         return `${output.repeat_output_items} of ${clock.expected_output_items * output.repeat_periods} items over ${output.repeat_periods} periods`;
     }
-    return `${output.items} of ${clock.expected_output_items} items a period`;
+    return `${figure(output.items)} of ${clock.expected_output_items} items a period`;
 }
 
 /** What the config says of its belts and its target, which every clock of a generation shares */

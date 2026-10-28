@@ -1,5 +1,6 @@
 import { ItemName } from "../../data";
 import { EntityId, SlotContainer } from "../../entities";
+import { inventoryKey } from "../../state/inventory-state";
 import { SlotInventoryState } from "../../state/slot-inventory";
 import { SupplyGate } from "../../state/supply-gate";
 import type { MixedStorage } from "./container-storage";
@@ -95,8 +96,9 @@ export class SlotStorage implements MixedStorage {
         return this.inventoryState.lastItemAmong(allowed);
     }
 
-    public slotKey(): string {
-        return this.inventoryState.slotKey();
+    /** What it holds, what its supply gate withholds and refuses, and its slots: where the items are decides what is taken next */
+    public key(): string {
+        return `${inventoryKey(this.inventoryState)};${this.supply.key()};${this.inventoryState.slotKey()}`;
     }
 
     /** The items whose room says whether it is full: those the build puts into it, else those it can give */

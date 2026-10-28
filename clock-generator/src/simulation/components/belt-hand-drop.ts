@@ -1,12 +1,12 @@
 import { AssertionError } from "../../common/assert";
-import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { TickProvider } from "../current-tick-provider";
 import { ItemName } from "../../data";
 import { Belt } from "../../entities/belt";
 import type { BeltDropSpot } from "../../entities/inserter/inserter";
 import type { InserterState } from "../../state/inserter-state";
 import type { TransportBelt } from "../archetypes/transport-belt";
 import type { BeltLane, LaneDrop } from "./belt-lane";
-import { dropFromHand, HandDropPort } from "./hand";
+import { dropFromHand, HandDropPort, HandScratch } from "./hand";
 
 /**
  * A belt's drop port, its lane, as one hand reaches it: one stack in a tick, on the lane of the hand's drop spot (or of
@@ -26,6 +26,7 @@ export class BeltHandDrop implements HandDropPort {
 
     constructor(
         private readonly state: InserterState,
+        private readonly scratch: HandScratch,
         private readonly sink: TransportBelt,
         private readonly tick_provider: TickProvider,
     ) {
@@ -74,6 +75,11 @@ export class BeltHandDrop implements HandDropPort {
         return true;
     }
 
+    /** A belt is never full for a hand: it waits a tick for room for each stack in its drop phase */
+    public fullFor(): boolean {
+        return false;
+    }
+
     private dropOnLane(): void {
         const state = this.state;
         const held_item = state.held_item;
@@ -85,7 +91,7 @@ export class BeltHandDrop implements HandDropPort {
         const index = this.at_spot ? 0 : laneForDrop(this.lanes, held_item.item_name);
         const lane = this.lanes[index];
         if (lane.insert(this.drops[index], this.tick_provider.getCurrentTick(), this.spot_ticks)) {
-            dropFromHand(state, lane.stack_size);
+            dropFromHand(state, this.scratch, lane.stack_size);
         } else {
             state.trace?.record({ type: "wait", phase: "drop", reason: "output_space", item: held_item.item_name });
         }

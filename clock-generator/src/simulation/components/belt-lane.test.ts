@@ -19,7 +19,7 @@ function twoLaneBelt(): TransportBelt {
     });
 }
 
-/** The key as the belt state before the lanes were components wrote it, over the same lane contents */
+/** The lanes' part of the key as the belt state before the lanes were components wrote it, over the same lane contents */
 function keyOfOneBeltState(lane_traffic: { stateKey(tick: number): string }[], drop_lanes: Map<string, LaneTraffic[]>,
     pickup_lanes: Map<string, BeltPickupStock[]>, tick: number): string {
     return lane_traffic.map(it => it.stateKey(tick)).join("|")
@@ -64,7 +64,7 @@ describe("TransportBelt", () => {
         expect(belt.supply.isOpen()).toBe(true);
     });
 
-    test("keys its lanes exactly as the belt state did: shared traffic, then each hand's own tiles, then each hand's reach", () => {
+    test("keys its inventory, its supply gate and its lanes as the belt's state did: shared traffic, then each hand's own tiles, then each hand's reach", () => {
         const belt = twoLaneBelt();
         const [first, second] = belt.lanes;
         // The old formula is fed the traffics and stocks this test makes, not what the belt hands back for them
@@ -80,9 +80,14 @@ describe("TransportBelt", () => {
 
         const tick = 3;
         const key = belt.stateKey(tick);
-        expect(key).toBe(keyOfOneBeltState(shared.map(drop => drop.traffic), drop_lanes, pickup_lanes, tick));
+        // the belt's inventory (what its lanes give, the same in every tick) and its gate (open: nothing) come first
+        const inventory = JSON.stringify(Object.entries(belt.inventoryState.export()).sort(([a], [b]) => a.localeCompare(b)));
+        expect(key).toBe(`${inventory};;` + keyOfOneBeltState(shared.map(drop => drop.traffic), drop_lanes, pickup_lanes, tick));
         // shared traffic of both lanes; own tiles of inserters 3 and 1 by lane; the reach of inserters 4 and 2 by lane
-        expect(key).toBe("-7|;inserter:3:|;inserter:1:|-6;inserter:4:32;false;|32;false;;inserter:2:32;false;2:0|32;false;");
+        expect(key).toBe(`[["copper-plate",8],["iron-plate",16]];;`
+            + "-7|;inserter:3:|;inserter:1:|-6;inserter:4:32;false;|32;false;;inserter:2:32;false;2:0|32;false;");
+        belt.supply.withheld.add("iron-plate");
+        expect(belt.stateKey(tick)).toBe(key.replace(";;", ";W:iron-plate;R:;"));
     });
 
     test("tells apart a stack taken and one not taken", () => {

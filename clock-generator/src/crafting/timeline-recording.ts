@@ -4,6 +4,7 @@ import { factorioInserterState, factorioMachineState } from "../state/factorio-e
 import { BurnerEnergy } from "../simulation/components/burner-energy";
 import type { SimulationContext } from "./sequence/simulation-context";
 import { ContainerStorage } from "../simulation/components/container-storage";
+import type { TickRecorder } from "../simulation/observers/observer";
 
 export type TimelineValue = number | string;
 /** Step changes, including the initial value at tick 0. Values hold until the next change. */
@@ -66,8 +67,11 @@ export interface TimelineRecordingOptions {
 type ReadSignal = { signal: TimelineSeries; read: () => TimelineValue };
 type WatchCounter = { read: () => number; before: number; event: Omit<TimelineEvent, "tick" | "amount">; item?: () => string | undefined };
 
-/** Optional observer only: no changes to inventory, controls, counters or simulation order. */
-export class TimelineRecorder {
+/**
+ * Samples every entity's signals and counts its events after each tick of a run: a recorder of the after-tick phase,
+ * which only reads (no change to inventories, controls, counters or the order of the simulation).
+ */
+export class TimelineRecorder implements TickRecorder {
     private readonly reads: ReadSignal[] = [];
     private readonly counters: WatchCounter[] = [];
     private readonly entities: TimelineEntity[] = [];

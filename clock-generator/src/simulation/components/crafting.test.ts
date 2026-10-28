@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EntityId, Machine, MachineSpec, RecipeMetadata } from "../../entities";
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { reasonText } from "../../state/reason-table";
 import { MachineStatus } from "../../state/entity-status";
 import { MachineState } from "../../state/machine-state";
 import { CraftingStatus } from "../status-codes";
@@ -155,9 +155,9 @@ describe("MachineWakes", () => {
 });
 
 describe("Crafting and Wakes: what the machine's state keeps of them", () => {
-    it("shows their fields to outside callers through the machine's state, the status by the name the histories record", () => {
+    it("shows the fields of Crafting to outside callers through the machine's state, the status by the name the histories record", () => {
         const state = stateOf("iron-gear-wheel");
-        const { crafting, wakes } = state;
+        const { crafting } = state;
         expect(state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
         state.status = MachineStatus.OUTPUT_FULL;
         expect(crafting.status).toBe(CraftingStatus.FULL_OUTPUT);
@@ -168,15 +168,9 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         state.craftsStarted = 3;
         state.totalCrafted = 4;
         expect([crafting.craftCount, crafting.craftsStarted, crafting.totalCrafted]).toEqual([2, 3, 4]);
-        state.outputBlockedAfterLastTick = true;
-        state.finishedCraftInLastTick = true;
-        state.startedCraftInLastTick = true;
-        state.windowOpeningTakeDecider = 5;
-        expect(wakes).toMatchObject({ outputBlockedAfterLastTick: true, finishedCraftInLastTick: true, startedCraftInLastTick: true,
-            windowOpeningTakeDecider: 5 });
     });
 
-    it("is copied whole onto a snapshot, but the decider (a known quirk, kept)", () => {
+    it("is copied whole onto a snapshot, the decider too", () => {
         const state = stateOf("iron-gear-wheel");
         state.crafting.craftingProgress.progress = 0.25;
         Object.assign(state.crafting, { craftCount: 2, craftsStarted: 3, totalCrafted: 4, status: CraftingStatus.WORKING });
@@ -188,39 +182,34 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         expect([cloned.craftingProgress.progress, cloned.craftCount, cloned.craftsStarted, cloned.totalCrafted, cloned.status])
             .toEqual([0.25, 2, 3, 4, MachineStatus.WORKING]);
         expect(cloned.wakes).toMatchObject({ outputBlockedAfterLastTick: true, finishedCraftInLastTick: true, startedCraftInLastTick: true,
-            windowOpeningTakeDecider: null });
-        expect(MachineState.stateKey(cloned)).toBe(MachineState.stateKey(state));
+            windowOpeningTakeDecider: 1 });
+        expect([cloned.storageKey(), cloned.crafting.key(), cloned.yield.key(), cloned.wakes.key(), cloned.energy.key()])
+            .toEqual([state.storageKey(), state.crafting.key(), state.yield.key(), state.wakes.key(), state.energy.key()]);
     });
 
-    // the fields that drive the next ticks, each in the machine's key (P4 3.4); the running totals only grow, and the
-    // decider is cleared after every tick of the machine, so they are left out
-    it("changes the machine's key with each field that drives the next ticks, and keeps its text", () => {
+    // the fields that drive the next ticks, each in its component's key (P4 3.4); the running totals only grow, and the
+    // decider is cleared after every tick of the machine, so they are left out. Every field of both, in the key or out of
+    // it, is pinned with every component's (crafting/runner/steady-state.test.ts).
+    it("keys the status as its code and the craft underway, and the Wakes their three flags; each field apart", () => {
         const state = stateOf("iron-gear-wheel", { crafting_speed: 15 });
-        const key = () => MachineState.stateKey(state);
-        expect(key()).toBe("INGREDIENT_SHORTAGE;0;false;false;false;{};0;0;0;0;[];[]");
+        const { crafting, wakes } = state;
+        const key = () => `${crafting.key()}|${wakes.key()}`;
+        expect(key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0|false;false;false`);
         const keys = new Set([key()]);
         for (const status of STATUSES) {
-            state.crafting.status = status;
+            crafting.status = status;
             keys.add(key());
         }
-        state.crafting.craftingProgress.progress = 0.5;
+        crafting.craftingProgress.progress = 0.5;
         keys.add(key());
         for (const flag of ["outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick"] as const) {
-            state.wakes[flag] = true;
+            wakes[flag] = true;
             keys.add(key());
         }
         expect(keys.size).toBe(1 + 3 + 1 + 3);
         const before = key();
-        Object.assign(state.crafting, { craftCount: 9, craftsStarted: 9, totalCrafted: 9 });
-        state.wakes.windowOpeningTakeDecider = 2;
+        Object.assign(crafting, { craftCount: 9, craftsStarted: 9, totalCrafted: 9 });
+        wakes.windowOpeningTakeDecider = 2;
         expect(key()).toBe(before);
-
-        const plain = (value: object) => Object.entries(value)
-            .filter(([, field]) => field === null || typeof field !== "object").map(([name]) => name).sort();
-        // crafts_per_tick is the build's in every tick
-        expect(plain(state.crafting)).toEqual(["craftCount", "craftsStarted", "crafts_per_tick", "status", "totalCrafted"]);
-        // the seen counts are running totals, as the crafting's
-        expect(plain(state.wakes)).toEqual(["crafts_seen", "finishedCraftInLastTick", "outputBlockedAfterLastTick", "startedCraftInLastTick",
-            "starts_seen", "windowOpeningTakeDecider"]);
     });
 });

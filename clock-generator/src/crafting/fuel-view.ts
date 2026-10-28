@@ -1,6 +1,7 @@
 import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../entities";
 import { MachineState } from "../state";
 import { BurnerEnergy } from "../simulation/components/burner-energy";
+import type { TickRecorder } from "../simulation/observers/observer";
 import { mergedClockTicks } from "./blueprint";
 import { InserterClock, fuelOnlyInserters } from "./sequence/unplanned-inserter-clock";
 
@@ -192,8 +193,8 @@ const MAX_FUEL_LEVEL_SAMPLES = 480;
 // absorbs floating point drift in the energy left of the burning item
 const FUEL_EPSILON = 1e-6;
 
-/** Samples the fuel of every burner machine after each tick of a run */
-export class FuelLevelRecorder {
+/** Samples the fuel of every burner machine after each tick of a run: a recorder of the after-tick phase */
+export class FuelLevelRecorder implements TickRecorder {
     private readonly levels: Map<MachineState, { energy: BurnerEnergy; levels: number[] }>;
 
     constructor(machine_states: readonly MachineState[]) {

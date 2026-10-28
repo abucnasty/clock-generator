@@ -5,7 +5,6 @@ import {expect, test} from "vitest";
 import {Config, ConfigSchema} from "../../../../src/config";
 import {FactorioBlueprintFile} from "../../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../../src/blueprints/serde";
-import {CompositeControlLogic, TickControlLogic} from "../../../../src/control-logic";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {miningDrillMaxInsertion} from "../../../../src/entities";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
@@ -13,6 +12,7 @@ import {EntityState, MachineState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
 import {MiningDrillArchetype} from "../../../../src/simulation/archetypes/mining-drill";
+import { TickByHand } from "../../../../src/crafting/runner/tick-by-hand.fixture";
 
 /**
  * Mining drills at a low research level, set by script, against the simulator tick by tick: a big mining drill at 0.25
@@ -159,7 +159,7 @@ export function replayDrill(config: Config, log: Row[]): {ticks: Tick[]; machine
 /** The simulator's run of the whole build: every entity simulated, the drill always enabled */
 export function simulateDrillBuild(config: Config, ticks: number): Tick[] {
     const context = SimulationContext.fromConfig(config);
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates(), ...context.drills]);
+    const tick = new TickByHand(context, { drills: true });
     const drill_state = context.drills[0].drill_state;
     const item = drill_state.drill.item.name;
     const sink = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id);

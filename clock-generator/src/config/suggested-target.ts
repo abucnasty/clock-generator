@@ -1,6 +1,6 @@
 import { Option } from "../data-types/option";
-import { Machine } from "../entities/machine/machine";
 import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
+import { computeMachineFacts } from "../entities/traits/machine-facts-of";
 import { MachineConfiguration, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
 
 /**
@@ -34,7 +34,7 @@ interface RecipeGroup {
 
 function outputRateOf(machine: MachineConfiguration): number | null {
     try {
-        return Machine.computeMachineFacts({
+        return computeMachineFacts({
             recipe: machine.recipe,
             productivity: machine.productivity,
             crafting_speed: machine.crafting_speed,

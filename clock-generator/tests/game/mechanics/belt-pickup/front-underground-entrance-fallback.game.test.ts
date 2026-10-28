@@ -5,7 +5,7 @@ import { compactFrontEntranceAtSpeed, compactFrontUndergroundRouting, connectFro
 import { expect, test } from "vitest";
 import { Config } from "../../../../src/config";
 import { loadConfigFromFile } from "../../../../src/config/loader";
-import { InserterPickupMode } from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { EntityState } from "../../../../src/state";
@@ -26,15 +26,15 @@ function simulatedHand(config: Config, start: number, item: string) {
     const state = simulation.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
     const source = simulation.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw new Error("expected belt input");
-    const mode = InserterPickupMode.create({
+    const pickup = bindHandPorts({
         inserterState: state, sourceState: source, tick_provider: simulation.tick_provider,
         sinkState: simulation.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
-    });
+    }).pickup;
     const lanes = source.pickupsOf(state.entity_id.id);
     const counts: number[] = [], selected: number[] = [];
     for (let tick = start; tick < start + 40; tick++) {
         simulation.tick_provider.setCurrentTick(tick);
-        mode.executeForTick();
+        pickup.pickup();
         expect(state.held_item?.item_name).toBe(item);
         counts.push(state.held_item!.quantity);
         if (lanes) {
