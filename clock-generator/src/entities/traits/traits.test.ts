@@ -53,10 +53,11 @@ describe("the hand and the timing of an inserter (docs/rules-of-the-game.md, An 
         expect(inserter(id).hand.by_item).toEqual([{ item: "iron-gear-wheel", hand }]);
     });
 
-    it("waits for a full hand at a machine that places its results as the bulk ones do, the stack inserter's data beside it", () => {
+    it("waits for a full hand where its prototype has wait_for_full_hand: the stack inserter, not the bulk, fast or basic ones", () => {
         expect(inserter(1).hand.full_hand).toEqual({ at_placing_source: true, elsewhere: true });
-        expect(inserter(4).hand.full_hand.at_placing_source).toBe(true);
-        expect(inserter(2).hand.full_hand.at_placing_source).toBe(false);
+        for (const id of [2, 3, 4, 5]) {
+            expect(inserter(id).hand.full_hand, `inserter ${id}`).toEqual({ at_placing_source: false, elsewhere: false });
+        }
         expect([inserter(1).hand.wait_for_full_hand, inserter(1).hand.grab_less_to_match_belt_stack, inserter(1).hand.max_belt_stack_size]).toEqual([true, true, 4]);
         expect([inserter(4).hand.wait_for_full_hand, inserter(4).hand.max_belt_stack_size]).toEqual([false, 1]);
     });

@@ -41,8 +41,8 @@ const BEFORE = {
     ]),
     /** The belt speed switch (belt.ts) */
     belt_speed: new Map([["transport-belt", 15], ["fast-transport-belt", 30], ["express-transport-belt", 45], ["turbo-transport-belt", 60]]),
-    /** isBulkInserter (inserter-spec.ts): the prototypes that waited for a full hand at a machine that places its results */
-    bulk: new Set(["bulk-inserter", "stack-inserter"]),
+    /** The prototypes that wait for a full hand: those with `wait_for_full_hand` in the game data (before the fix of #452, the `bulk` ones at a placer) */
+    waits_for_full_hand: new Set(["stack-inserter"]),
     /** The arm gate (belt-hand-pickup.ts) and the scope check (inserter-scope.ts isLegendaryStackInserter) */
     belt_arm: (prototype: string, quality: string) => prototype === "stack-inserter" && quality === "legendary",
 };
@@ -200,13 +200,14 @@ function checkInserters(context: SimulationContext, traits: ConfigTraits): void 
         same(t.hand.research, fullResearchHandSize(type), `${id} research hand`);
         same(t.hand.items, Array.from(inserter.filtered_items), `${id} items in order`);
         same(t.hand.by_item.map(hand => [hand.item, hand.hand]), Array.from(inserter.hand_sizes ?? []), `${id} hands`);
-        // the full-hand rule as the Hand's pickup rule is bound to it, at a machine that places its results itself, and
-        // as isBulkInserter gave it
+        // the full-hand rule as the Hand's pickup rule is bound to it: the prototype's wait_for_full_hand, at a machine that
+        // places its results itself and elsewhere
         const source = registry.getEntityById(inserter.source.entity_id);
-        same(t.hand.full_hand.at_placing_source, BEFORE.bulk.has(type), `${id} full hand by the old rule`);
+        same(t.hand.full_hand.at_placing_source, BEFORE.waits_for_full_hand.has(type), `${id} full hand at a placer by the data`);
+        same(t.hand.full_hand.elsewhere, BEFORE.waits_for_full_hand.has(type), `${id} full hand elsewhere by the data`);
+        same(decided.get(id)!.swings_part_hands, !BEFORE.waits_for_full_hand.has(type), `${id} part hand swung`);
         if (source !== null && Entity.isMachine(source) && source.metadata.places_results === true) {
             checked.hands_at_placers += 1;
-            same(decided.get(id)!.swings_part_hands, !BEFORE.bulk.has(type), `${id} full hand at a placer`);
             same(!t.hand.full_hand.at_placing_source, decided.get(id)!.swings_part_hands, `${id} full hand trait at a placer`);
         }
         same(t.timing.rotation_ticks, inserter.animation.rotation.ticks, `${id} rotation`);

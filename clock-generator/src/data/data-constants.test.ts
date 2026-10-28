@@ -52,9 +52,8 @@ describe("the game data and the engine's constants", () => {
         expect(FactorioDataService.findTransportBeltOrThrow(name).speed * 480).toBe(speed);
     });
 
-    // The engine's full-hand rule follows `bulk` today (the Hand trait's fullHandOf: a bulk inserter waits for a full hand
-    // at a machine that places its results itself), not `wait_for_full_hand`, which the bulk inserter does not set
-    // (decision 9e is open); the cases below tie the data's `bulk` to that rule and record the data's full-hand fields beside it.
+    // The engine's full-hand rule follows the prototype's own `wait_for_full_hand` (the Hand trait's fullHandOf), which in the
+    // game data only the stack inserter sets; the bulk inserter has `bulk` alone. The cases below tie the data to that rule.
     it("gives the stack inserter a full hand to wait for, matched to belt stacks of up to 4, and the bulk inserter a bulk hand only", () => {
         const stack = FactorioDataService.findInserterOrThrow("stack-inserter");
         expect(stack.wait_for_full_hand).toBe(true);
@@ -65,15 +64,22 @@ describe("the game data and the engine's constants", () => {
         expect(bulk.bulk).toBe(true);
         expect(bulk.wait_for_full_hand ?? false).toBe(false);
         expect(fullHandOf(stack.name).at_placing_source).toBe(true);
-        expect(fullHandOf(bulk.name).at_placing_source).toBe(true);
+        expect(fullHandOf(bulk.name)).toEqual({ at_placing_source: false, elsewhere: false });
     });
 
-    it("makes no other inserter a bulk one", () => {
+    it("gives only the stack inserter a wait for a full hand", () => {
+        const waiting = FactorioDataService.getAllInserters().filter(inserter => fullHandOf(inserter.name).elsewhere);
+        expect(waiting.map(inserter => inserter.name)).toEqual(["stack-inserter"]);
+        expect(FactorioDataService.getAllInserters().filter(inserter => inserter.wait_for_full_hand === true).map(inserter => inserter.name)).toEqual(["stack-inserter"]);
+        expect(fullHandOf("stack-inserter")).toEqual({ at_placing_source: true, elsewhere: true });
+    });
+
+    it("makes no other inserter a bulk one, nor one that waits for a full hand", () => {
         const others = FactorioDataService.getAllInserters().filter(inserter => !["stack-inserter", "bulk-inserter"].includes(inserter.name));
         expect(others.map(inserter => inserter.name).sort()).toEqual(["burner-inserter", "fast-inserter", "inserter", "long-handed-inserter"]);
         for (const inserter of others) {
             expect(inserter.bulk ?? false, inserter.name).toBe(false);
-            expect(fullHandOf(inserter.name).at_placing_source, inserter.name).toBe(false);
+            expect(fullHandOf(inserter.name), inserter.name).toEqual({ at_placing_source: false, elsewhere: false });
         }
     });
 

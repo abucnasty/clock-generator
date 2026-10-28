@@ -282,8 +282,8 @@ export interface HandBinding {
      */
     readonly from_belt: boolean;
     /**
-     * Whether it swings a part hand at its source: at a machine that places its results itself, an inserter whose Hand
-     * trait does not wait for a full hand there (rule 18)
+     * Whether it swings a part hand at its source: an inserter whose Hand trait does not wait for a full hand there (its
+     * prototype's `wait_for_full_hand`; at a machine that places its results itself, rule 18)
      */
     readonly swings_part_hands: boolean;
     /** Ticks a swing takes, either way */
