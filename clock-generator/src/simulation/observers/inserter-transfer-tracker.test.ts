@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { InventoryTransferHistory } from "../../../crafting/sequence/inventory-transfer-history";
-import { EntityId } from "../../../entities";
-import { InserterState } from "../../../state";
-import { InserterPhase } from "../../../simulation/status-codes";
-import { MutableTickProvider } from "../../current-tick-provider";
-import { InserterInventoryHistoryPlugin } from "./inserter-inventory-transfer-plugin";
+import { InventoryTransferHistory } from "../../crafting/sequence/inventory-transfer-history";
+import { EntityId } from "../../entities";
+import { InserterState } from "../../state";
+import { InserterPhase } from "../status-codes";
+import { MutableTickProvider } from "../../control-logic/current-tick-provider";
+import { InserterTransferTracker } from "./inserter-transfer-tracker";
 
 /** An inserter that takes `item` in its pickup, swings and drops, driven through the changes of phase its Hand makes */
 function setUp() {
@@ -13,16 +13,16 @@ function setUp() {
     const id = { id: "inserter" } as unknown as EntityId;
     (state as { entity_id: EntityId }).entity_id = id;
     const history = new InventoryTransferHistory();
-    const plugin = new InserterInventoryHistoryPlugin(ticks, state, history);
+    const tracker = new InserterTransferTracker(ticks, state, history);
     const step = (tick: number, from: InserterPhase, to: InserterPhase, held: { item_name: string; quantity: number } | null) => {
         ticks.setCurrentTick(tick);
         (state as { held_item: unknown }).held_item = held;
-        plugin.onStatusChange(from, to);
+        tracker.onStatusChange(from, to);
     };
     return { history, id, step, ticks };
 }
 
-describe("the inserter transfer history plugin", () => {
+describe("the inserter transfer tracker", () => {
     it("records a swing that ends in a change other than the drop-off, from its pickup to that change", () => {
         const { history, id, step } = setUp();
         history.recording = true;
@@ -62,5 +62,20 @@ describe("the inserter transfer history plugin", () => {
         step(30, InserterPhase.SWING, InserterPhase.IDLE, { item_name: "copper-plate", quantity: 4 });
         expect(history.get(id)!.map(it => [it.item_name, it.tick_range.start_inclusive, it.tick_range.end_inclusive, it.amount]))
             .toEqual([["iron-plate", 10, 20, 1], ["copper-plate", 20, 30, 4]]);
+    });
+
+    it("records a transfer with its fields in the order the histories have always had them", () => {
+        const { history, id, step } = setUp();
+        history.recording = true;
+        step(10, InserterPhase.IDLE, InserterPhase.PICKUP, null);
+        step(12, InserterPhase.PICKUP, InserterPhase.SWING, { item_name: "iron-plate", quantity: 2 });
+        // a swing into the drop is no transfer's end
+        step(16, InserterPhase.SWING, InserterPhase.DROP, { item_name: "iron-plate", quantity: 2 });
+        expect(history.get(id)).toBeUndefined();
+        step(17, InserterPhase.DROP, InserterPhase.SWING, null);
+        step(21, InserterPhase.SWING, InserterPhase.IDLE, null);
+        const [transfer] = history.get(id)!;
+        expect(Object.keys(transfer)).toEqual(["item_name", "tick_range", "amount", "pickup_tick_before_run"]);
+        expect([transfer.tick_range.start_inclusive, transfer.tick_range.end_inclusive]).toEqual([10, 21]);
     });
 });

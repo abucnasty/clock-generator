@@ -1,5 +1,6 @@
 import { describe, test, expect } from "vitest"
-import { CraftingMachineArchetype, CraftingMachineObserver } from "./crafting-machine";
+import type { CraftingMachineObserver } from "../observers/observer";
+import { CraftingMachineArchetype } from "./crafting-machine";
 import { MachineState, MachineStatus } from "../../state";
 import { Machine, MachineSpec, RecipeMetadata } from "../../entities";
 import { Config, ConfigSchema } from "../../config/schema";
@@ -578,11 +579,11 @@ describe("Crafting machine: its steps and observers", () => {
         const changes: { from: string; to: string; reason: string; status_then: string; started_then: number }[] = []
         const ticks: { finished: boolean; decider: number | null }[] = []
         const observer: CraftingMachineObserver = {
-            onStatusChange(from, to, reason_id) {
-                changes.push({ from: machineStatusOf(from), to: machineStatusOf(to), reason: reasonText(reason_id),
+            onStatusChange(from, to, reason) {
+                changes.push({ from: machineStatusOf(from), to: machineStatusOf(to), reason: reasonText(reason.reasonId(from, to)),
                     status_then: machine_state.status, started_then: machine_state.craftsStarted })
             },
-            executeForTick() {
+            onTick() {
                 ticks.push({ finished: machine_state.finishedCraftInLastTick, decider: machine_state.windowOpeningTakeDecider })
             },
         }
@@ -611,7 +612,7 @@ describe("Crafting machine: its steps and observers", () => {
     test("tells its observers of a change in the status rule, the status written first, before the machine crafts (same-tick rule 17)", () => {
         const { machine_state, machine } = gears(0)
         const { observer, changes } = watching(machine_state)
-        machine.addObserver(observer)
+        machine.observers.add(observer)
         machine.placeResults()
         machine.putHeldProductsInOutput()
         machine.statusRule()
@@ -633,7 +634,7 @@ describe("Crafting machine: its steps and observers", () => {
     test("writes its Wakes after its tick and before the observers of the tick, the decider cleared (same-tick rules 1 and 3)", () => {
         const { machine_state, machine } = gears(0)
         const { observer, ticks } = watching(machine_state)
-        machine.addObserver(observer)
+        machine.observers.add(observer)
         executeForTicks(machine, 1)
         machine_state.windowOpeningTakeDecider = 3
         executeForTicks(machine, 1)
@@ -657,10 +658,10 @@ describe("Crafting machine: its steps and observers", () => {
         const { machine_state, machine } = gears(0)
         const kept = watching(machine_state)
         const taken = watching(machine_state)
-        machine.addObserver(kept.observer)
-        machine.addObserver(taken.observer)
-        machine.removeObservers(new Set([taken.observer]))
-        expect(machine.getObservers()).toEqual([kept.observer])
+        machine.observers.add(kept.observer)
+        machine.observers.add(taken.observer)
+        machine.observers.remove(new Set([taken.observer]))
+        expect(machine.observers.list()).toEqual([kept.observer])
         executeForTicks(machine, 1)
         expect(kept.changes).toHaveLength(1)
         expect(kept.ticks).toHaveLength(1)
@@ -700,15 +701,15 @@ describe("Crafting machine in a control swap", () => {
     test("leaves every machine as it is: the same archetype, its status and its observers", () => {
         const context = SimulationContext.fromConfig(BUILD);
         const [machine] = context.machines;
-        const observer: CraftingMachineObserver = { executeForTick() { } };
-        machine.addObserver(observer);
+        const observer: CraftingMachineObserver = { onTick() { } };
+        machine.observers.add(observer);
         machine.machine_state.status = MachineStatus.WORKING;
         const machines = context.machines;
         context.useControls({ inserter: () => AlwaysEnabledControl });
         expect(context.machines).toBe(machines);
         expect(context.machines).toHaveLength(1);
         expect(context.machines[0]).toBe(machine);
-        expect(context.machines[0].getObservers()).toEqual([observer]);
+        expect(context.machines[0].observers.list()).toEqual([observer]);
         expect(context.machines[0].machine_state.status).toBe(MachineStatus.WORKING);
     })
 })

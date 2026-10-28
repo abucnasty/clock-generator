@@ -105,18 +105,22 @@ describe("a machine's Ingress", () => {
 
     it("puts a hand of fuel only in the fuel slot, and one of fuel that is an ingredient there while it is below its limit", () => {
         const only_fuel = rocketFuel();
+        // bound before anything is put in, as an enable control binds it: it follows the slot it reads
+        const only_fuel_put_in = only_fuel.ingress.quantityPutInOf("nutrients");
         only_fuel.fuelInventory.setQuantity("nutrients", 100);
         only_fuel.ingress.insert("nutrients", 4);
         expect(only_fuel.fuelInventory.getQuantity("nutrients")).toBe(104);
-        expect(only_fuel.ingress.quantityPutIn("nutrients")).toBe(104);
+        expect(only_fuel_put_in.get()).toBe(104);
 
         const state = eggs();
+        const put_in = state.ingress.quantityPutInOf("nutrients");
         state.fuelInventory.addQuantity("nutrients", 8);
         state.ingress.insert("nutrients", 16);
         expect([state.fuelInventory.getQuantity("nutrients"), state.ingress.ingredientQuantity("nutrients")]).toEqual([24, 0]);
+        expect(put_in.get()).toBe(0);
         state.ingress.insert("nutrients", 16);
         expect([state.fuelInventory.getQuantity("nutrients"), state.ingress.ingredientQuantity("nutrients")]).toEqual([24, 16]);
-        expect(state.ingress.quantityPutIn("nutrients")).toBe(16);
+        expect(put_in.get()).toBe(16);
         // an ingredient the recipe also makes goes apart from the output
         state.ingress.insert("pentapod-egg", 1);
         expect(state.selfIngredients.getQuantity("pentapod-egg")).toBe(8);

@@ -15,6 +15,7 @@ import { InserterPhase } from "../status-codes";
 import { ContainerStorage } from "./container-storage";
 import { Hand, HandReason, HandScratch, STAY } from "./hand";
 import { bindHandPorts } from "./hand-ports";
+import { reasonText } from "../../control-logic/mode/reason-table";
 
 
 /** A turbo belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
@@ -170,6 +171,27 @@ describe("an inserter's Hand (belt to machine)", () => {
             expect(scratch).toEqual(new HandScratch());
             expect([state.held_item, state.status, state.waits_for_sink]).toEqual([held, InserterStatus.WAITING_FOR_SINK, true]);
             expect(state.held_item).toBe(held);
+        })
+    })
+
+    // A reason's text is made only when an observer that records it asks (P4 section 8), so this checks every code
+    // whether or not a run's observers ask for it
+    describe("its reasons", () => {
+
+        test("give a text for every code, a template's with the item and the quantity, and fail on a code with none", () => {
+            const testContext = createTestContext();
+            const hand = handOf(testContext.inserterState, testContext.sourceState, testContext.sinkState);
+            const textOf = (reason: number) => {
+                Object.assign(hand.scratch, { reason, reason_item: "iron-plate", reason_quantity: 7 });
+                return reasonText(hand.reasonId());
+            };
+            const texts = Object.values(HandReason).map(textOf);
+
+            expect(new Set(texts).size).toBe(Object.values(HandReason).length);
+            expect(textOf(HandReason.MACHINE_HAS)).toBe("machine has 7 of iron-plate to pickup");
+            expect(textOf(HandReason.INSERTER_ENABLED)).toBe("inserter enabled");
+            expect(() => textOf(-1)).toThrow("No reason has the code -1");
+            expect(() => textOf(Object.values(HandReason).length)).toThrow();
         })
     })
 

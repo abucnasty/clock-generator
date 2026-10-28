@@ -16,7 +16,8 @@ import { HandScratch } from "../components/hand";
 import { InserterPhase, inserterStatusOf } from "../status-codes";
 import { runTick } from "../tick-phases";
 import { World } from "../world";
-import { InserterArchetype, InserterObserver } from "./inserter";
+import type { InserterObserver, StatusChangeReason } from "../observers/observer";
+import { InserterArchetype } from "./inserter";
 import { TransportBelt } from "./transport-belt";
 
 const gearMachine = () => Machine.createMachine(1, {
@@ -48,9 +49,9 @@ function inserterOf(source: EntityState, sink: EntityState, item: string, id: nu
 function watch(archetype: InserterArchetype, tick_provider: MutableTickProvider) {
     const changes: string[] = [];
     const state = archetype.inserter_state;
-    archetype.addObserver({
-        onStatusChange(from, to, reason_id) {
-            changes.push(`${tick_provider.getCurrentTick()} ${inserterStatusOf(from)}->${inserterStatusOf(to)} "${reasonText(reason_id)}"`
+    archetype.observers.add({
+        onStatusChange(from, to, reason) {
+            changes.push(`${tick_provider.getCurrentTick()} ${inserterStatusOf(from)}->${inserterStatusOf(to)} "${reasonText(reason.reasonId(from, to))}"`
                 + ` status=${state.status} phase=${inserterStatusOf(archetype.hand.phase)} waits=${state.waits_for_sink}`);
         },
     });
@@ -80,7 +81,7 @@ function run(is_game_clock: boolean) {
     const changes = watch(archetype, tick_provider);
     // what a tick observer sees: after the phase's step, before the Wakes
     const seen_enabled: boolean[] = [];
-    archetype.addObserver({ executeForTick() { seen_enabled.push(inserter_state.enabled); } });
+    archetype.observers.add({ onTick() { seen_enabled.push(inserter_state.enabled); } });
     const held: number[] = [];
     const shown: FactorioInserterState[] = [];
     for (let tick = 0; tick < 20; tick++) {
@@ -205,8 +206,8 @@ function gearsToChest(held: number, enable_control: EnableControl = AlwaysEnable
 }
 
 describe("an inserter's changes of phase", () => {
-    // same-tick rule 17: the status written first (as the status plugin did, first of the observers), then the
-    // observers, then the exit and enter steps
+    // same-tick rule 17: the status written first (the Hand's own write, before any observer), then the observers,
+    // then the exit and enter steps
     test("tell the observers after the status is written and before the exit and enter steps, with the reason's text", () => {
         const { tick, changes, archetype } = gearsToChest(100);
         const swing_ticks = archetype.inserter_state.inserter.animation.rotation.ticks;
@@ -277,7 +278,8 @@ describe("an inserter's changes of phase", () => {
         expect(changes[1]).toBe(`3 PICKUP->SWING "Picked up full stack of iron-gear-wheel" status=SWING phase=PICKUP waits=false`);
     });
 
-    test("make the reason's number only for a change someone watches", () => {
+    // P4 section 8: no reason's text is made in a tick unless an observer that records it asks for it
+    test("make no reason's number themselves: the Hand answers it to an observer that asks, during the change", () => {
         const source_state = MachineState.forMachine(gearMachine());
         source_state.inventoryState.setQuantity("iron-gear-wheel", 100);
         const sink_state = ContainerStorage.forChest(Chest.fromConfig({ type: "buffer-chest", id: 2, storage_size: 1, item_filter: "iron-gear-wheel" }));
@@ -285,18 +287,23 @@ describe("an inserter's changes of phase", () => {
         const tick_provider = MutableTickProvider.create(0);
         const archetype = InserterArchetype.create({ inserter_state, source_state, sink_state, tick_provider, enable_control: AlwaysEnabledControl });
         const reason = vi.spyOn(archetype.hand, "reasonId");
+        // told of the change, it does not ask
+        const silent: InserterObserver = { onStatusChange: vi.fn() };
+        archetype.observers.add(silent);
         tick_provider.incrementTick();
         archetype.executeForTick();
         expect([inserter_state.status, reason.mock.calls.length]).toEqual([InserterStatus.PICKUP, 0]);
-        const observer: InserterObserver = { onStatusChange: vi.fn() };
-        archetype.addObserver(observer);
+        expect(silent.onStatusChange).toHaveBeenCalledWith(InserterPhase.IDLE, InserterPhase.PICKUP, archetype.hand);
+        // one that records the reason asks during the change
+        const texts: string[] = [];
+        const asking: InserterObserver = { onStatusChange: (from, to, of: StatusChangeReason<InserterPhase>) => texts.push(reasonText(of.reasonId(from, to))) };
+        archetype.observers.add(asking);
         tick_provider.incrementTick();
         archetype.executeForTick();
         expect([inserter_state.status, reason.mock.calls.length]).toEqual([InserterStatus.SWING, 1]);
-        expect(observer.onStatusChange).toHaveBeenCalledWith(InserterPhase.PICKUP, InserterPhase.SWING, reason.mock.results[0].value);
-        expect(reasonText(reason.mock.results[0].value as number)).toBe("Picked up full stack of iron-gear-wheel");
-        archetype.removeObservers(new Set([observer]));
-        expect(archetype.getObservers()).toEqual([]);
+        expect(texts).toEqual(["Picked up full stack of iron-gear-wheel"]);
+        archetype.observers.remove(new Set([silent, asking]));
+        expect(archetype.observers.list()).toEqual([]);
     });
 });
 
@@ -352,8 +359,8 @@ describe("a control swap", () => {
     // same-tick rule 12
     test("keeps the inserter and puts it on the new control: at idle with its scratch set back, its status and observers kept", async () => {
         const context = SimulationContext.fromConfig(await loadConfigFromFile(GameFixturePaths.DIFFERENT_ITEMS_CONFIG));
-        const observer: InserterObserver = { onStatusChange: vi.fn(), executeForTick: vi.fn() };
-        context.inserters.forEach(it => it.addObserver(observer));
+        const observer: InserterObserver = { onStatusChange: vi.fn(), onTick: vi.fn() };
+        context.inserters.forEach(it => it.observers.add(observer));
         const inserter = context.inserters[0];
         const { hand, control, wakes } = inserter;
         const scratch = hand.scratch;
@@ -373,12 +380,12 @@ describe("a control swap", () => {
         expect(inserter.inserter_state.status).toBe(InserterStatus.SWING);
         expect(scratch).toEqual(new HandScratch());
         expect([control.enabled(), control.is_game_clock, control.looks_ahead, control.decider_build_order]).toEqual([false, true, false, 4]);
-        expect(inserter.getObservers()).toEqual([observer]);
+        expect(inserter.observers.list()).toEqual([observer]);
         expect(observer.onStatusChange).not.toHaveBeenCalled();
         inserter.executeForTick();
         // on the new control it goes from idle to its disabled phase, and its observers are told
-        expect(observer.onStatusChange).toHaveBeenCalledWith(InserterPhase.IDLE, InserterPhase.DISABLED, expect.any(Number));
-        expect(observer.executeForTick).toHaveBeenCalledTimes(1);
+        expect(observer.onStatusChange).toHaveBeenCalledWith(InserterPhase.IDLE, InserterPhase.DISABLED, hand);
+        expect(observer.onTick).toHaveBeenCalledTimes(1);
     });
 
     test("leaves each inserter as one built anew over its state on the same control: the same phase, scratch and key", async () => {

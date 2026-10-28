@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { ConfigSchema } from '../../../config/schema';
-import { createEntityRegistryFromConfig } from '../../../crafting/sequence/simulation-context';
-import { InventoryTransferHistory } from '../../../crafting/sequence/inventory-transfer-history';
-import { EntityId, Machine, MiningDrill } from '../../../entities';
-import { DrillStatusCode } from '../../../simulation/status-codes';
-import { MutableTickProvider } from '../../current-tick-provider';
-import { DrillInventoryTransferPlugin } from './drill-inventory-transfer-plugin';
+import { ConfigSchema } from '../../config/schema';
+import { createEntityRegistryFromConfig } from '../../crafting/sequence/simulation-context';
+import { InventoryTransferHistory } from '../../crafting/sequence/inventory-transfer-history';
+import { EntityId, Machine, MiningDrill } from '../../entities';
+import { DrillStatusCode } from '../status-codes';
+import { MutableTickProvider } from '../../control-logic/current-tick-provider';
+import { DrillTransferTracker } from './drill-transfer-tracker';
 
-/** A drill into a machine, as the stone brick samples have it, with the plugin that records its enabled runs */
+/** A drill into a machine, as the stone brick samples have it, with the tracker that records its enabled runs */
 function recorder() {
     const config = ConfigSchema.parse({
         target_output: { recipe: 'stone-brick', items_per_second: 1, copies: 1 },
@@ -21,11 +21,11 @@ function recorder() {
     const ticks = MutableTickProvider.create();
     const history = new InventoryTransferHistory();
     const drill = registry.getEntityByIdOrThrow(EntityId.forDrill(1)) as MiningDrill;
-    const plugin = new DrillInventoryTransferPlugin(drill, registry.getEntityByIdOrThrow(EntityId.forMachine(1)) as Machine, ticks, history);
+    const tracker = new DrillTransferTracker(drill, registry.getEntityByIdOrThrow(EntityId.forMachine(1)) as Machine, ticks, history);
     const [disabled, working] = [DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR, DrillStatusCode.WORKING];
     const at = (tick: number, from: DrillStatusCode, to: DrillStatusCode) => {
         ticks.setCurrentTick(tick);
-        plugin.onStatusChange(from, to);
+        tracker.onStatusChange(from, to);
     };
     const ranges = () => (history.getAllTransfers().get(drill.entity_id) ?? []).map(it => [it.tick_range.start_inclusive, it.tick_range.end_inclusive]);
     return { at, disabled, working, ranges };
@@ -39,7 +39,7 @@ describe('the windows a drill into a machine records in the planning run', () =>
         expect(ranges()).toEqual([[10, 14]]);
     });
 
-    // Found, not changed: the plugin has no clamp at the warm-up's end, as the inserters' has. The recorded ticks start
+    // Found, not changed: the tracker has no clamp at the warm-up's end, as the inserters' has. The recorded ticks start
     // again at 0 there, so a drill enabled across it records a reversed range. No exported clock has one: the 609 drill
     // ranges of the 238 blast jobs at 7ef358c0 all run forward. A fix is an item of its own, with its own blast.
     it.fails('start at 0 when the drill was enabled before the warm-up ended', () => {

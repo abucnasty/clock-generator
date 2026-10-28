@@ -248,11 +248,13 @@ export class EnableControlFactory {
                 const planned_swings = item_transfers.find(it => it.item_name === source_item_name)?.transfer_count.getNumerator
                     ?? Number.POSITIVE_INFINITY;
 
+                // what the sink holds of the item, bound once: the control asks it every tick
+                const put_in = sink_state.ingress.quantityPutInOf(source_item_name);
                 let refilling = false;
                 let hands_dropped_before_refill = 0;
                 return EnableControl.lambda(() => {
                     countDroppedHands();
-                    const sink_quantity = sink_state.ingress.quantityPutIn(source_item_name);
+                    const sink_quantity = put_in.get();
                     const dropped = hands_dropped.get(source_item_name) ?? 0;
                     if (refilling) {
                         if (sink_quantity >= automated_insertion_limit || dropped - hands_dropped_before_refill >= planned_swings) {
@@ -409,17 +411,18 @@ export class EnableControlFactory {
 
         const minimum_required = sink_input.consumption_rate.amount_per_craft;
         const automated_insertion_limit = sink_input.automated_insertion_limit.quantity;
+        const put_in = sink_state.ingress.quantityPutInOf(item_name);
 
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
                 // Enable when sink needs items (below buffer threshold) AND chest has items
-                const sink_quantity = sink_state.ingress.quantityPutIn(item_name);
+                const sink_quantity = put_in.get();
                 const chest_has_items = source_state.getCurrentQuantity(item_name) > 0;
                 return chest_has_items && sink_quantity < minimum_required * buffer_multiplier;
             }),
             release: EnableControl.lambda(() => {
                 // Release when sink is at insertion limit OR chest is empty (for buffer chests)
-                const sink_quantity = sink_state.ingress.quantityPutIn(item_name);
+                const sink_quantity = put_in.get();
                 const chest_is_empty = source_state.isEmpty();
                 return sink_quantity >= automated_insertion_limit || chest_is_empty;
             })
@@ -517,6 +520,7 @@ export class EnableControlFactory {
         const time_to_transfer_minimum_amount = Math.ceil(minimum_required / drill_output_per_tick)
 
         const max_insertion_amount = miningDrillMaxInsertion(drill, sink_machine);
+        const put_in = sink_state.ingress.quantityPutInOf(source_item_name);
 
         const ensure_at_least_once_per_cycle = this.clockedForCycle(
             [OpenRange.from(1, 1)]
@@ -527,13 +531,13 @@ export class EnableControlFactory {
                 base: EnableControl.any([
                     ensure_at_least_once_per_cycle,
                     EnableControl.lambda(() => {
-                        const sink_quantity = sink_state.ingress.quantityPutIn(source_item_name);
+                        const sink_quantity = put_in.get();
                         const sink_quantity_after_transfer = sink_quantity - Math.ceil(sink_consumption_per_tick * time_to_transfer_minimum_amount);
                         return sink_quantity_after_transfer < minimum_required * 4
                     })
                 ]),
                 release: EnableControl.lambda(() => {
-                    const sink_quantity = sink_state.ingress.quantityPutIn(source_item_name);
+                    const sink_quantity = put_in.get();
                     return sink_quantity >= max_insertion_amount
                 })
             })
@@ -1220,13 +1224,14 @@ export class EnableControlFactory {
         const sink_input = sink.machine.getInsertableInputOrThrow(sink_input_item_name);
         const minimum_required = sink_input.consumption_rate.amount_per_craft
         const automated_insertion_limit = sink_input.automated_insertion_limit.quantity;
+        const put_in = sink.ingress.quantityPutInOf(sink_input_item_name);
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
-                const sink_quantity = sink.ingress.quantityPutIn(sink_input_item_name);
+                const sink_quantity = put_in.get();
                 return sink_quantity <= minimum_required * buffer_multiplier
             }),
             release: EnableControl.lambda(() => {
-                const sink_quantity = sink.ingress.quantityPutIn(sink_input_item_name);
+                const sink_quantity = put_in.get();
                 return sink_quantity >= automated_insertion_limit
             })
         })

@@ -9,7 +9,6 @@ import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { DrillState, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
-import { DebugPluginFactory } from "./debug";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
 import { InserterTrace, InserterTraceOptions } from "../../state/inserter-trace";
 import assert from "../../common/assert";
@@ -110,19 +109,6 @@ export class SimulationContext {
                 drill.useControl(drill_policy(drill_state, sink_state));
             }
         }
-    }
-
-    public addDebuggerPlugins(debug_plugin_factory: DebugPluginFactory): void {
-        this.machines.forEach(it => debug_plugin_factory.forMachine(it));
-
-        this.inserters.forEach(it => {
-            it.addObserver(debug_plugin_factory.inserterModeChangePlugin(it));
-            it.addObserver(debug_plugin_factory.inserterHandContentsChangePlugin(it));
-        });
-
-        this.drills.forEach(it => {
-            it.addObserver(debug_plugin_factory.drillModeChangePlugin(it.drill_state))
-        })
     }
 }
 

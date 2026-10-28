@@ -70,7 +70,7 @@ export class StateTransitionHistory {
     /** The recorders that recorded something since the last clear, in the order they first did */
     private listed: EntityTransitionRecorder[] = [];
 
-    /** The recorder of an entity, made when its plugins are set up; it is listed once it records something */
+    /** The recorder of an entity, made when its observers are attached; it is listed once it records something */
     recorderFor(entity_id: EntityId, entity_type: StateTransitionEntityType): EntityTransitionRecorder {
         const recorder = new EntityTransitionRecorder(this, entity_id, entity_type);
         this.recorders.push(recorder);

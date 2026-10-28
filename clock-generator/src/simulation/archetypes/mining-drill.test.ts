@@ -8,7 +8,8 @@ import { DrillState, DrillStatus, MachineState } from "../../state";
 import { ContainerStorage } from "../components/container-storage";
 import { Mining } from "../components/mining";
 import { DrillStatusCode } from "../status-codes";
-import { DrillObserver, MiningDrillArchetype } from "./mining-drill";
+import type { DrillObserver } from "../observers/observer";
+import { MiningDrillArchetype } from "./mining-drill";
 
 /**
  * A drill's progress model against the game, its cases from recordings in Factorio 2.1.21 of a big mining drill (4
@@ -180,7 +181,7 @@ describe("a drill's control rule", () => {
         let asked = 0;
         const { drill } = machineBuild(440, { isEnabled: () => answers[asked++] });
         const seen: string[] = [];
-        drill.addObserver({ onStatusChange: (from, to, reason_id) => seen.push(`${from}>${to} ${reasonText(reason_id)} now ${drill.status}`) });
+        drill.observers.add({ onStatusChange: (from, to, reason) => seen.push(`${from}>${to} ${reasonText(reason.reasonId(from, to))} now ${drill.status}`) });
         for (let tick = 0; tick < answers.length; tick++) drill.executeForTick();
         expect(asked).toBe(answers.length);
         expect(seen).toEqual([
@@ -193,18 +194,18 @@ describe("a drill's control rule", () => {
     it("runs the observers of the tick after its step, in the order added, and takes off those it is told to", () => {
         const { drill, held } = machineBuild(440);
         const order: string[] = [];
-        const first = { executeForTick: () => order.push(`first ${held()}`) };
-        const second = { executeForTick: () => order.push("second") };
-        drill.addObserver(first);
-        drill.addObserver({ onStatusChange: () => order.push("change") });
-        drill.addObserver(second);
+        const first = { onTick: () => order.push(`first ${held()}`) };
+        const second = { onTick: () => order.push("second") };
+        drill.observers.add(first);
+        drill.observers.add({ onStatusChange: () => order.push("change") });
+        drill.observers.add(second);
         drill.executeForTick();
         // after the step: the first tick's 1.35 ore a tick is held already
         expect(order).toEqual(["first 1", "second"]);
-        drill.removeObservers(new Set([first]));
+        drill.observers.remove(new Set([first]));
         drill.executeForTick();
         expect(order.slice(2)).toEqual(["second"]);
-        expect(drill.getObservers()).toHaveLength(2);
+        expect(drill.observers.list()).toHaveLength(2);
     });
 
     it("keys its status and bars with the text of the drill's mode state machine before it", () => {
@@ -236,7 +237,7 @@ describe("a control swap", () => {
         const { context, drill, car, held } = carBuild(70, 5, 78);
         const changes: string[] = [];
         const observer: DrillObserver = { onStatusChange: (from, to) => changes.push(`${from}>${to}`) };
-        drill.addObserver(observer);
+        drill.observers.add(observer);
         let on = true;
         context.useControls({ drill: () => ({ isEnabled: () => on }) });
         for (let tick = 0; tick < 6; tick++) drill.executeForTick();
@@ -254,7 +255,7 @@ describe("a control swap", () => {
         expect(context.drills[0]).toBe(drill);
         expect(drill.mining).toBe(mining);
         expect(drill.control).toBe(control);
-        expect(drill.getObservers()).toEqual([observer]);
+        expect(drill.observers.list()).toEqual([observer]);
         // as a drill built anew over the same state, and nobody told of it
         expect([drill.status, drill.stateKey()]).toEqual([DrillStatusCode.WORKING, `${DrillStatus.WORKING}|0;0|||`]);
         expect(changes).toHaveLength(1);

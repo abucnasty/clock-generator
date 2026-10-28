@@ -8,19 +8,8 @@ import type { MachineWakes } from "../components/machine-wakes";
 import { MachinePlacementPort } from "../components/machine-placement-port";
 import type { Placement } from "../components/placement";
 import type { Yield } from "../components/yield";
+import { Observers, StatusChangeReason } from "../observers/observer";
 import { CraftingStatus, machineStatusOf } from "../status-codes";
-
-/**
- * What watches a crafting machine (histories, the Factorio state, craft events, debug output): told of each change of
- * its status in the status rule, after the status is written and before the machine crafts in that tick (same-tick rule
- * 17), and after the machine's Wakes in every tick. It owns nothing a later tick of the machine reads.
- */
-export interface CraftingMachineObserver {
-    /** A change of status, with the number of its reason in the reason table (`reasonText` gives its text) */
-    onStatusChange?(from: CraftingStatus, to: CraftingStatus, reason_id: number): void;
-    /** After the machine's tick and its Wakes, every tick, in the order the observers were added */
-    executeForTick?(): void;
-}
 
 /**
  * A crafting machine in a run: its state (`MachineState`: Storage, Ingress, Energy, Crafting, Yield, Placement and
@@ -29,13 +18,17 @@ export interface CraftingMachineObserver {
  * into the result target, held products into the output, the status rule, the status's step (a working machine
  * crafts), the target again (so a tick's crafts reach it in that tick), then the Wakes and the tick's observers.
  *
+ * What watches it is told at the phase table's two event points of a machine: a change of status in its status rule,
+ * after the status is written and before it crafts in that tick (same-tick rule 17), with the machine to answer the
+ * reason; and its tick after its Wakes (rules 1 and 3). Observers own nothing a later tick of it reads.
+ *
  * Built once for a machine when its context is built; a control swap leaves it as it is
  * (`SimulationContext.useControls` swaps the controls of inserters and drills only), with its status, observers and
  * Wakes. One archetype per MachineState: the state's Wakes count the crafts seen from the archetype's build on
  * (`MachineWakes.watchFrom`), so a second archetype built over the same state and ticked would share and reset that
  * count.
  */
-export class CraftingMachineArchetype implements ControlLogic {
+export class CraftingMachineArchetype implements ControlLogic, StatusChangeReason<CraftingStatus> {
 
     /**
      * The machine with its Placement bound to its result target, if it has one: into a machine up to the drill's stop
@@ -61,9 +54,8 @@ export class CraftingMachineArchetype implements ControlLogic {
     private readonly placement: Placement;
     private readonly ingress: Ingress;
     private readonly wakes: MachineWakes;
-    private readonly observers: CraftingMachineObserver[] = [];
-    /** The observers that do something every tick; most only watch changes of status */
-    private readonly tick_observers: CraftingMachineObserver[] = [];
+    /** What watches it (histories, the Factorio state, craft events, debug output), by event in the order added */
+    public readonly observers = new Observers<CraftingStatus>();
 
     private constructor(
         public readonly machine_state: MachineState,
@@ -115,10 +107,7 @@ export class CraftingMachineArchetype implements ControlLogic {
      */
     public endOfTick(): void {
         this.wakes.endOfTick(this.crafting, this.ingress);
-        const tick_observers = this.tick_observers;
-        for (let index = 0; index < tick_observers.length; index++) {
-            tick_observers[index].executeForTick!();
-        }
+        this.observers.tellTick();
     }
 
     /** A whole tick of the machine, for callers that tick a context's entities by hand */
@@ -131,26 +120,14 @@ export class CraftingMachineArchetype implements ControlLogic {
         this.endOfTick();
     }
 
-    public addObserver(observer: CraftingMachineObserver): void {
-        this.observers.push(observer);
-        if (observer.executeForTick) {
-            this.tick_observers.push(observer);
-        }
-    }
-
-    /** Takes these observers off, for a run whose observations nobody reads any more */
-    public removeObservers(observers: ReadonlySet<object>): void {
-        for (const list of [this.observers, this.tick_observers]) {
-            const kept = list.filter(observer => !observers.has(observer));
-            list.length = 0;
-            for (const observer of kept) {
-                list.push(observer);
-            }
-        }
-    }
-
-    public getObservers(): CraftingMachineObserver[] {
-        return [...this.observers];
+    /**
+     * The number of the reason of the change of status being told, from `from` to `to` (`Crafting.reasonOf`): a text
+     * read off the output (a full output's, the drop under the block) is made here, when an observer that records it
+     * asks, from the state the status rule read. Nothing it reads is written between the rule and the observers: the
+     * status, written before them, is not read.
+     */
+    public reasonId(from: CraftingStatus, to: CraftingStatus): number {
+        return this.crafting.reasonOf(from, to, this.result_target);
     }
 
     /**
@@ -164,18 +141,10 @@ export class CraftingMachineArchetype implements ControlLogic {
 
     /**
      * The status written first, then every observer told in the order added; a machine has no exit or enter steps. The
-     * reason's number is made only for a change someone watches.
+     * machine answers the reason (`reasonId`) for an observer that asks.
      */
     private changeStatus(from: CraftingStatus, to: CraftingStatus): void {
-        const observers = this.observers;
-        if (observers.length === 0) {
-            this.crafting.status = to;
-            return;
-        }
-        const reason_id = this.crafting.reasonOf(from, to, this.result_target);
         this.crafting.status = to;
-        for (let index = 0; index < observers.length; index++) {
-            observers[index].onStatusChange?.(from, to, reason_id);
-        }
+        this.observers.tellStatusChange(from, to, this);
     }
 }

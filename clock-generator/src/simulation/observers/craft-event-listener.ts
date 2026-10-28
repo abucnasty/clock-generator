@@ -1,38 +1,38 @@
-import { Duration, OpenRange } from "../../../data-types";
-import { MachineState } from "../../../state";
-import { TickProvider } from "../../current-tick-provider";
-import type { CraftingMachineObserver } from "../../../simulation/archetypes/crafting-machine";
-import { CraftingStatus } from "../../../simulation/status-codes";
+import type { TickProvider } from "../../control-logic/current-tick-provider";
+import { OpenRange } from "../../data-types";
+import { MachineState } from "../../state";
+import { CraftingStatus } from "../status-codes";
+import type { CraftingMachineObserver } from "./observer";
 
-interface CraftEventListenerArgs {
+interface CraftEvent {
     readonly craft_index: number,
     readonly state: Readonly<MachineState>
     readonly craft_ticks: OpenRange
 }
-type CraftEventListener = (args: CraftEventListenerArgs) => void;
+type OnCraftEvent = (event: CraftEvent) => void;
 
-export class CraftEventListenerPlugin implements CraftingMachineObserver {
+/**
+ * Tells of each tick a machine finished crafts in (the debug log): how many it had finished before, the ticks since its
+ * last such tick or since it started working, and the machine as it is then (copied only when the listener reads it)
+ */
+export class CraftEventListener implements CraftingMachineObserver {
     constructor(
         private readonly machine_state: MachineState,
         private readonly tick_provider: TickProvider,
-        private readonly onCraftEvent: CraftEventListener,
+        private readonly onCraftEvent: OnCraftEvent,
     ) { }
 
     private craft_index = 0;
 
-    private readonly craft_duration = Duration.ofTicks(
-        this.machine_state.machine.crafting_rate.ticks_per_craft
-    )
-
     private last_craft_tick: number = 0;
 
-    onStatusChange(from: CraftingStatus, to: CraftingStatus): void {
+    public onStatusChange(from: CraftingStatus, to: CraftingStatus): void {
         if (to === CraftingStatus.WORKING) {
             this.last_craft_tick = this.tick_provider.getCurrentTick();
         }
     }
 
-    executeForTick(): void {
+    public onTick(): void {
         if (this.machine_state.craftCount > this.craft_index) {
             const current_tick = this.tick_provider.getCurrentTick();
             const machine_state = this.machine_state;

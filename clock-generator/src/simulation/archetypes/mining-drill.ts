@@ -8,23 +8,12 @@ import { ContainerStorage } from "../components/container-storage";
 import { Control } from "../components/control";
 import { MachinePlacementPort } from "../components/machine-placement-port";
 import { Mining } from "../components/mining";
+import { Observers, StatusChangeReason } from "../observers/observer";
 import { DrillStatusCode, drillStatusOf } from "../status-codes";
 
 /** The reasons of a drill's two changes of status, numbered once */
 const DRILL_ENABLED = reasonId("drill enabled");
 const DRILL_DISABLED = reasonId("drill disabled");
-
-/**
- * What watches a drill (histories, the Factorio state, debug output): told of each change of its status, before the
- * drill drops or mines in that tick (same-tick rule 17), and after the drill's step in every tick. It owns nothing a
- * later tick of the drill reads.
- */
-export interface DrillObserver {
-    /** A change of status, with the number of its reason in the reason table */
-    onStatusChange?(from: DrillStatusCode, to: DrillStatusCode, reason_id: number): void;
-    /** After the drill's step, every tick, in the order the observers were added */
-    executeForTick?(): void;
-}
 
 /**
  * Binds the drill's Placement to its target: a chest drops by the chest's own rules (slots for a car, a tank or a
@@ -49,13 +38,17 @@ export function placeDrillInto(state: DrillState, sink_state: EntityState): void
  * its steps in the phase table's order (simulation/tick-phases.ts): the control rule, then, while working, Mining
  * (drop, then mine), then the observers of the tick.
  *
+ * What watches it is told at the phase table's two event points of a drill: a change of status in its control rule,
+ * before the status is written and before it drops or mines in that tick (same-tick rule 17), with the drill to answer
+ * the reason; and its tick after its mining. Observers own nothing a later tick of it reads.
+ *
  * A control swap keeps it (`useControl`, through `SimulationContext.useControls`): its Control asks the new control
  * and it starts WORKING with both bars at 0, while what it holds, its Placement and its observers are kept (same-tick
  * rule 12).
  *
  * Its status starts WORKING; `DrillState.status`, which the Factorio state reads, is never written (a known quirk, kept).
  */
-export class MiningDrillArchetype implements ControlLogic {
+export class MiningDrillArchetype implements ControlLogic, StatusChangeReason<DrillStatusCode> {
 
     public static create(args: {
         drill_state: DrillState,
@@ -68,9 +61,8 @@ export class MiningDrillArchetype implements ControlLogic {
     }
 
     public status: DrillStatusCode = DrillStatusCode.WORKING;
-    private readonly observers: DrillObserver[] = [];
-    /** The observers that do something every tick; most only watch changes of status */
-    private readonly tick_observers: DrillObserver[] = [];
+    /** What watches it (histories, the Factorio state, the transfers, debug output), by event in the order added */
+    public readonly observers = new Observers<DrillStatusCode>();
 
     private constructor(
         public readonly drill_state: DrillState,
@@ -94,10 +86,10 @@ export class MiningDrillArchetype implements ControlLogic {
         const enabled = this.control.enabled();
         if (this.status === DrillStatusCode.WORKING) {
             if (!enabled) {
-                this.changeStatus(DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR, DRILL_DISABLED);
+                this.changeStatus(DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR);
             }
         } else if (enabled) {
-            this.changeStatus(DrillStatusCode.WORKING, DRILL_ENABLED);
+            this.changeStatus(DrillStatusCode.WORKING);
         }
     }
 
@@ -108,12 +100,9 @@ export class MiningDrillArchetype implements ControlLogic {
         }
     }
 
-    /** The observers that do something every tick, in the order they were added */
+    /** The observers of its tick, in the order they were added */
     public tickObservers(): void {
-        const tick_observers = this.tick_observers;
-        for (let index = 0; index < tick_observers.length; index++) {
-            tick_observers[index].executeForTick!();
-        }
+        this.observers.tellTick();
     }
 
     /** A whole tick of the drill, for callers that tick a context's entities by hand */
@@ -123,36 +112,15 @@ export class MiningDrillArchetype implements ControlLogic {
         this.tickObservers();
     }
 
+    /** The number of the reason of a change of status being told, by the status it changes to: both texts are fixed */
+    public reasonId(from: DrillStatusCode, to: DrillStatusCode): number {
+        return to === DrillStatusCode.WORKING ? DRILL_ENABLED : DRILL_DISABLED;
+    }
+
     /** Observers first, then the status written (same-tick rule 17); a drill has no exit or enter steps */
-    private changeStatus(to: DrillStatusCode, reason_id: number): void {
-        const from = this.status;
-        const observers = this.observers;
-        for (let index = 0; index < observers.length; index++) {
-            observers[index].onStatusChange?.(from, to, reason_id);
-        }
+    private changeStatus(to: DrillStatusCode): void {
+        this.observers.tellStatusChange(this.status, to, this);
         this.status = to;
-    }
-
-    public addObserver(observer: DrillObserver): void {
-        this.observers.push(observer);
-        if (observer.executeForTick) {
-            this.tick_observers.push(observer);
-        }
-    }
-
-    /** Takes these observers off, for a run whose observations nobody reads any more */
-    public removeObservers(observers: ReadonlySet<object>): void {
-        for (const list of [this.observers, this.tick_observers]) {
-            const kept = list.filter(observer => !observers.has(observer));
-            list.length = 0;
-            for (const observer of kept) {
-                list.push(observer);
-            }
-        }
-    }
-
-    public getObservers(): DrillObserver[] {
-        return [...this.observers];
     }
 
     /**

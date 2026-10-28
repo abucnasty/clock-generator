@@ -1,18 +1,22 @@
 import chalk from "chalk";
 import { TickProvider } from "../../../control-logic";
-import { InserterHandContentsChangePlugin } from "../../../control-logic/inserter/plugins";
-import { CraftEventListenerPlugin } from "../../../control-logic/machine/plugins";
 import { reasonText } from "../../../control-logic/mode/reason-table";
 import { DrillState, MachineState } from "../../../state";
 import { DebugLoggerFactory } from "./debug-logger-factory";
 import { DebugSettingsProvider } from "./debug-settings-provider";
-import type { CraftingMachineArchetype, CraftingMachineObserver } from "../../../simulation/archetypes/crafting-machine";
-import type { InserterArchetype, InserterObserver } from "../../../simulation/archetypes/inserter";
-import type { DrillObserver } from "../../../simulation/archetypes/mining-drill";
+import type { InserterArchetype } from "../../../simulation/archetypes/inserter";
+import { CraftEventListener } from "../../../simulation/observers/craft-event-listener";
+import { HandChangeListener } from "../../../simulation/observers/hand-change-listener";
+import type { CraftingMachineObserver, DrillObserver, InserterObserver } from "../../../simulation/observers/observer";
 import { drillStatusOf, inserterStatusOf, machineStatusOf } from "../../../simulation/status-codes";
-import { CraftEventPluginSettings } from "./debug-settings";
+import type { SimulationContext } from "../simulation-context";
+import { CraftEventObserverSettings } from "./debug-settings";
 
-export class DebugPluginFactory {
+/**
+ * The observers that write a run's debug log: each entity's changes of status with their reasons, a machine's crafts
+ * and an inserter's hand. They log, and ask for a reason's text, only while debugging is switched on.
+ */
+export class DebugObserverFactory {
     constructor(
         private readonly tick_provider: TickProvider,
         private readonly settings_provider: DebugSettingsProvider
@@ -24,29 +28,45 @@ export class DebugPluginFactory {
         return this.settings_provider.settings().enabled === true;
     }
 
+    /** Every debug observer onto every entity of a context: machines, then inserters, then drills */
+    public attachTo(context: SimulationContext): void {
+        context.machines.forEach(it => {
+            it.observers.add(this.machineStatusChange(it.machine_state));
+            it.observers.add(this.machineCraftEvents(it.machine_state));
+        });
 
-    public inserterHandContentsChangePlugin(inserter: InserterArchetype): InserterHandContentsChangePlugin {
+        context.inserters.forEach(it => {
+            it.observers.add(this.inserterPhaseChange(it));
+            it.observers.add(this.inserterHandChange(it));
+        });
+
+        context.drills.forEach(it => {
+            it.observers.add(this.drillStatusChange(it.drill_state));
+        });
+    }
+
+    private inserterHandChange(inserter: InserterArchetype): HandChangeListener {
         const debugLog = this.log_factory.forEntity(inserter.inserter_state.inserter);
-        return new InserterHandContentsChangePlugin(inserter.inserter_state, (oldContents, newContents) => {
-            if (!newContents || !this.enabled()) {
+        return new HandChangeListener(inserter.inserter_state, (current) => {
+            if (!current || !this.enabled()) {
                 return;
             }
 
-            const message = `held_item "${newContents?.item_name}"=${newContents?.quantity}`
+            const message = `held_item "${current?.item_name}"=${current?.quantity}`
 
             debugLog(chalk.dim(message));
         })
     }
 
-    public inserterModeChangePlugin(inserter: InserterArchetype): InserterObserver {
+    private inserterPhaseChange(inserter: InserterArchetype): InserterObserver {
         const debugLog = this.log_factory.forEntity(inserter.inserter_state.inserter);
         const enabled = () => this.enabled();
         return {
-            onStatusChange(from, to, reason_id) {
+            onStatusChange(from, to, reason) {
                 if (!enabled()) {
                     return;
                 }
-                const message = `status=${inserterStatusOf(to)} \t reason="${reasonText(reason_id)}"`;
+                const message = `status=${inserterStatusOf(to)} \t reason="${reasonText(reason.reasonId(from, to))}"`;
 
                 debugLog(chalk.dim(message));
             },
@@ -54,29 +74,29 @@ export class DebugPluginFactory {
     }
 
 
-    public machineModeChangePlugin(machine_state: MachineState): CraftingMachineObserver {
+    private machineStatusChange(machine_state: MachineState): CraftingMachineObserver {
         const debugLog = this.log_factory.forEntity(machine_state.machine);
         const enabled = () => this.enabled();
         return {
-            onStatusChange(from, to, reason_id) {
+            onStatusChange(from, to, reason) {
                 if (!enabled()) {
                     return;
                 }
-                debugLog(chalk.yellow(`${machineStatusOf(from)} -> ${machineStatusOf(to)} reason=${reasonText(reason_id)}`));
+                debugLog(chalk.yellow(`${machineStatusOf(from)} -> ${machineStatusOf(to)} reason=${reasonText(reason.reasonId(from, to))}`));
             }
         }
     }
 
-    public machineCraftEventPlugin(machine_state: MachineState) {
+    private machineCraftEvents(machine_state: MachineState): CraftEventListener {
         const debugLog = this.log_factory.forEntity(machine_state.machine);
-        return new CraftEventListenerPlugin(machine_state, this.tick_provider, (event) => {
+        return new CraftEventListener(machine_state, this.tick_provider, (event) => {
             if (!this.enabled()) {
                 return;
             }
             const { state } = event;
             let message = `craft event #${machine_state.craftCount}:`;
 
-            const options: Partial<CraftEventPluginSettings> = this.settings_provider.settings().plugin_settings?.craft_event ?? {};
+            const options: Partial<CraftEventObserverSettings> = this.settings_provider.settings().observer_settings?.craft_event ?? {};
 
             if (options.print_bonus_progress) {
                 // print 14 decimal places for debugging since Lua console commands
@@ -101,21 +121,16 @@ export class DebugPluginFactory {
         })
     }
 
-    public drillModeChangePlugin(drill_state: DrillState): DrillObserver {
+    private drillStatusChange(drill_state: DrillState): DrillObserver {
         const debugLog = this.log_factory.forEntity(drill_state.drill);
         const enabled = () => this.enabled();
         return {
-            onStatusChange(from, to, reason_id) {
+            onStatusChange(from, to, reason) {
                 if (!enabled()) {
                     return;
                 }
-                debugLog(chalk.yellow(`${drillStatusOf(from)} -> ${drillStatusOf(to)} reason=${reasonText(reason_id)}`));
+                debugLog(chalk.yellow(`${drillStatusOf(from)} -> ${drillStatusOf(to)} reason=${reasonText(reason.reasonId(from, to))}`));
             }
         }
-    }
-
-    public forMachine(machine: CraftingMachineArchetype): void {
-        machine.addObserver(this.machineModeChangePlugin(machine.machine_state));
-        machine.addObserver(this.machineCraftEventPlugin(machine.machine_state));
     }
 }

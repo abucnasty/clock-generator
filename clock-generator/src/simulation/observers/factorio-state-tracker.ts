@@ -1,4 +1,5 @@
-import { TickProvider } from "../current-tick-provider";
+import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { EntityObserver } from "./observer";
 
 /** Where the states of an entity are recorded (a recorder of the state transition history) */
 interface FactorioStateRecorder {
@@ -11,16 +12,17 @@ interface FactorioStateRecorder {
  * while the simulator's phase does not: an idle inserter waits for items, then for the machine to take them, and stays
  * idle throughout.
  */
-export class FactorioStatePlugin {
+export class FactorioStateTracker implements EntityObserver<number> {
     private last_state: string | null = null;
 
     constructor(
         private readonly tick_provider: TickProvider,
+        /** The state the entity shows now, made once when the tracker is attached */
         private readonly derive: () => string,
         private readonly recorder: FactorioStateRecorder,
     ) {}
 
-    executeForTick(): void {
+    public onTick(): void {
         const state = this.derive();
         if (state === this.last_state) {
             return;

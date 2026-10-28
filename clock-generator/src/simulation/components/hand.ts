@@ -405,7 +405,10 @@ export class Hand {
         this.scratch.reset();
     }
 
-    /** The number of the reason of the change the rule just gave, made only when an observer is told of it */
+    /**
+     * The number of the reason of the change the rule just gave, made only when an observer of the change asks for it
+     * while it is told (one that records the reason's text): the Hand answers the reason of its archetype's changes
+     */
     public reasonId(): number {
         const scratch = this.scratch;
         return reasonIdOf(scratch.reason, scratch.reason_item, scratch.reason_quantity);

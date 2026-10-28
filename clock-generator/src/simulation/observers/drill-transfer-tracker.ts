@@ -1,11 +1,15 @@
-import { OpenRange } from "../../../data-types";
-import { Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
-import { TickProvider } from "../../current-tick-provider";
-import { InventoryTransferHistory } from "../../../crafting/sequence/inventory-transfer-history";
-import type { DrillObserver } from "../../../simulation/archetypes/mining-drill";
-import { DrillStatusCode } from "../../../simulation/status-codes";
+import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { InventoryTransferHistory } from "../../crafting/sequence/inventory-transfer-history";
+import { OpenRange } from "../../data-types";
+import { Machine, MiningDrill, miningDrillMaxInsertion } from "../../entities";
+import { DrillStatusCode } from "../status-codes";
+import type { DrillObserver } from "./observer";
 
-export class DrillInventoryTransferPlugin implements DrillObserver {
+/**
+ * Records the enabled runs of a drill into a machine into the run's transfer history, from its changes of status: a
+ * run from the tick it is enabled to the tick it is disabled again, as a transfer of what the drill puts in at most.
+ */
+export class DrillTransferTracker implements DrillObserver {
 
     private last_enabled_tick: number | null = null;
 
@@ -37,4 +41,3 @@ export class DrillInventoryTransferPlugin implements DrillObserver {
         }
     }
 }
-

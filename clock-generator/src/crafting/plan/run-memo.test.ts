@@ -8,11 +8,10 @@ import { generateClockAlternatives } from "../alternatives";
 import { generateClockForConfig } from "../generate-clock";
 import { backpressureLossKey, backpressureLossVerdictOf } from "../trial";
 import { BlueprintGenerationResult, planRun, runBuild, trialRunOf } from "./plan-run";
-import { InserterInventoryHistoryPlugin } from "../../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
-import { DrillInventoryTransferPlugin } from "../../control-logic/drill/plugins/drill-inventory-transfer-plugin";
-import { InserterStateTransitionTrackerPlugin } from "../../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
-import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
-import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plugins/drill-state-transition-tracker-plugin";
+import { InserterTransferTracker } from "../../simulation/observers/inserter-transfer-tracker";
+import { DrillTransferTracker } from "../../simulation/observers/drill-transfer-tracker";
+import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
+import { FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
 import { RUN_MEMO_MIN_TICKS, RunMemo, canonicalKey, currentRunMemo, withRunMemo } from "./run-memo";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -100,18 +99,18 @@ describe("the memo of the runs of a generation", () => {
         }, 0);
     });
 
-    it("keeps one context, the build's own on its controls, and no plugin that feeds a history, so a kept run pins no raw history", () => {
-        const history_plugins = [InserterInventoryHistoryPlugin, DrillInventoryTransferPlugin, InserterStateTransitionTrackerPlugin,
-            MachineStateTransitionTrackerPlugin, DrillStateTransitionTrackerPlugin];
+    it("keeps one context, the build's own on its controls, and no observer that feeds a history, so a kept run pins no raw history", () => {
+        const history_observers = [InserterTransferTracker, DrillTransferTracker, StateTransitionTracker, FactorioStateTracker];
         const run = runBuild(config, options);
         // a control swap is made in place (same-tick rule 12): no second context is made, and none is kept
         expect(Object.values(run).filter(value => value instanceof SimulationContext)).toEqual([run.simulation_context]);
         const context = run.simulation_context;
         expect(context.inserters.length).toBeGreaterThan(0);
         expect(context.machines.length).toBeGreaterThan(0);
-        const plugins = [...context.inserters.flatMap((it): object[] => it.getObservers()), ...context.machines.flatMap(it => it.getObservers()), ...context.drills.flatMap(it => it.getObservers())];
-        for (const plugin of plugins) {
-            expect(history_plugins.some(history_plugin => plugin instanceof history_plugin)).toBe(false);
+        const observers = [...context.inserters.flatMap((it): object[] => it.observers.list()), ...context.machines.flatMap(it => it.observers.list()),
+            ...context.drills.flatMap(it => it.observers.list())];
+        for (const observer of observers) {
+            expect(history_observers.some(history_observer => observer instanceof history_observer)).toBe(false);
         }
         // what is still read off the returned context
         expect(context.entity_registry).toBeDefined();
